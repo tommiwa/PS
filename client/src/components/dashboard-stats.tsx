@@ -1,0 +1,177 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Car, Calendar, Clock, Users, TrendingUp, MapPin } from "lucide-react"
+
+export interface DashboardStat {
+  title: string
+  value: string | number
+  icon: React.ReactNode
+  description?: string
+  trend?: {
+    value: number
+    isPositive: boolean
+  }
+}
+
+interface DashboardStatsProps {
+  userRole: "admin" | "owner" | "renter" | "waitlist"
+}
+
+export function DashboardStats({ userRole }: DashboardStatsProps) {
+  // Mock data - in real app this would come from API
+  const getStatsForRole = () => {
+    switch (userRole) {
+      case "admin":
+        return [
+          {
+            title: "Total Spots",
+            value: 150,
+            icon: <Car className="h-4 w-4" />,
+            description: "Across 4 locations",
+            trend: { value: 0, isPositive: true }
+          },
+          {
+            title: "Active Users",
+            value: 1000,
+            icon: <Users className="h-4 w-4" />,
+            description: "Registered employees",
+            trend: { value: 5, isPositive: true }
+          },
+          {
+            title: "Today's Bookings",
+            value: 89,
+            icon: <Calendar className="h-4 w-4" />,
+            description: "59% occupancy",
+            trend: { value: 12, isPositive: true }
+          },
+          {
+            title: "Waiting List",
+            value: 245,
+            icon: <Clock className="h-4 w-4" />,
+            description: "Pending assignments",
+            trend: { value: 8, isPositive: false }
+          }
+        ]
+      case "owner":
+        return [
+          {
+            title: "My Spots",
+            value: 2,
+            icon: <Car className="h-4 w-4" />,
+            description: "Owned parking spots"
+          },
+          {
+            title: "This Month's Earnings",
+            value: "$450",
+            icon: <TrendingUp className="h-4 w-4" />,
+            description: "18 bookings",
+            trend: { value: 15, isPositive: true }
+          },
+          {
+            title: "Upcoming Bookings",
+            value: 6,
+            icon: <Calendar className="h-4 w-4" />,
+            description: "Next 7 days"
+          },
+          {
+            title: "Availability Listed",
+            value: "85%",
+            icon: <Clock className="h-4 w-4" />,
+            description: "This month"
+          }
+        ]
+      case "renter":
+        return [
+          {
+            title: "Active Bookings",
+            value: 3,
+            icon: <Calendar className="h-4 w-4" />,
+            description: "Confirmed reservations"
+          },
+          {
+            title: "This Month Spent",
+            value: "$75",
+            icon: <TrendingUp className="h-4 w-4" />,
+            description: "3 bookings"
+          },
+          {
+            title: "Favorite Locations",
+            value: 2,
+            icon: <MapPin className="h-4 w-4" />,
+            description: "Saved preferences"
+          },
+          {
+            title: "Booking History",
+            value: 23,
+            icon: <Clock className="h-4 w-4" />,
+            description: "Total bookings"
+          }
+        ]
+      case "waitlist":
+        return [
+          {
+            title: "Queue Position",
+            value: "#47",
+            icon: <Clock className="h-4 w-4" />,
+            description: "Main Building"
+          },
+          {
+            title: "Estimated Wait",
+            value: "6-8 months",
+            icon: <Calendar className="h-4 w-4" />,
+            description: "Based on current rate"
+          },
+          {
+            title: "Temporary Bookings",
+            value: 8,
+            icon: <Car className="h-4 w-4" />,
+            description: "This month"
+          },
+          {
+            title: "Waitlist Since",
+            value: "Jan 2024",
+            icon: <Users className="h-4 w-4" />,
+            description: "5 months ago"
+          }
+        ]
+      default:
+        return []
+    }
+  }
+
+  const stats = getStatsForRole()
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="dashboard-stats">
+      {stats.map((stat, index) => (
+        <Card key={index} className="hover-elevate" data-testid={`stat-card-${index}`}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              {stat.title}
+            </CardTitle>
+            <div className="text-muted-foreground">
+              {stat.icon}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold" data-testid={`stat-value-${index}`}>
+              {stat.value}
+            </div>
+            {stat.description && (
+              <p className="text-xs text-muted-foreground mt-1">
+                {stat.description}
+              </p>
+            )}
+            {stat.trend && (
+              <div className={`text-xs mt-1 flex items-center gap-1 ${
+                stat.trend.isPositive ? 'text-green-600' : 'text-red-600'
+              }`}>
+                <TrendingUp className={`h-3 w-3 ${!stat.trend.isPositive ? 'rotate-180' : ''}`} />
+                {stat.trend.isPositive ? '+' : '-'}{Math.abs(stat.trend.value)}% from last month
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  )
+}

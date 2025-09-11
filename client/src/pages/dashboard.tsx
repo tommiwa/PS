@@ -1,0 +1,301 @@
+import { DashboardStats } from "@/components/dashboard-stats"
+import { BookingCard } from "@/components/booking-card"
+import { ParkingSpotCard } from "@/components/parking-spot-card"
+import { WaitlistPosition } from "@/components/waitlist-position"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Calendar, MapPin, Clock, Plus, Users, Car } from "lucide-react"
+
+interface DashboardProps {
+  userRole?: "admin" | "owner" | "renter" | "waitlist"
+}
+
+export default function Dashboard({ userRole = "owner" }: DashboardProps) {
+  //todo: remove mock functionality
+  const mockUpcomingBookings = [
+    {
+      id: "B-001",
+      spotNumber: "A-15",
+      location: "Main Building - Level 2",
+      date: "2024-01-16",
+      startTime: "8:00 AM",
+      endTime: "6:00 PM",
+      price: 25,
+      status: "confirmed" as const,
+      paymentStatus: "received" as const,
+      owner: "Sarah Chen",
+      canCancel: true,
+      canEdit: false
+    },
+    {
+      id: "B-002",
+      spotNumber: "B-08",
+      location: "North Parking Lot",
+      date: "2024-01-17",
+      startTime: "9:00 AM",
+      endTime: "5:00 PM",
+      price: 20,
+      status: "confirmed" as const,
+      paymentStatus: "sent" as const,
+      owner: "Mike Johnson",
+      canCancel: true,
+      canEdit: true
+    }
+  ]
+
+  const mockAvailableSpots = [
+    {
+      id: "P-003",
+      spotNumber: "C-12",
+      location: "South Parking Lot",
+      type: "regular" as const,
+      isInside: false,
+      price: 15,
+      availability: {
+        date: "2024-01-18",
+        startTime: "7:00 AM",
+        endTime: "7:00 PM"
+      },
+      owner: "Lisa Anderson",
+      isAvailable: true
+    },
+    {
+      id: "P-004",
+      spotNumber: "A-22",
+      location: "Main Building - Level 1",
+      type: "accessible" as const,
+      isInside: true,
+      price: 30,
+      availability: {
+        date: "2024-01-18",
+        startTime: "8:00 AM",
+        endTime: "6:00 PM"
+      },
+      owner: "David Park",
+      isAvailable: true
+    }
+  ]
+
+  const mockWaitlistEntries = [
+    {
+      location: "Main Building - Level 2",
+      position: 47,
+      totalInQueue: 120,
+      estimatedWaitMonths: 6,
+      joinedDate: "Jan 2024",
+      lastMovement: "Moved up 3 positions last week"
+    }
+  ]
+
+  const renderRoleSpecificContent = () => {
+    switch (userRole) {
+      case "waitlist":
+        return (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-xl font-semibold mb-4">Your Waiting List Position</h2>
+              <WaitlistPosition entries={mockWaitlistEntries} />
+            </div>
+            
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold">Available Spots Today</h2>
+                <Button size="sm">
+                  <MapPin className="h-4 w-4 mr-2" />
+                  Find More
+                </Button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {mockAvailableSpots.map((spot) => (
+                  <ParkingSpotCard key={spot.id} spot={spot} />
+                ))}
+              </div>
+            </div>
+          </div>
+        )
+        
+      case "renter":
+        return (
+          <div className="space-y-6">
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold">Upcoming Bookings</h2>
+                <Button size="sm">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  View All
+                </Button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {mockUpcomingBookings.map((booking) => (
+                  <BookingCard key={booking.id} booking={booking} />
+                ))}
+              </div>
+            </div>
+            
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold">Available Spots</h2>
+                <Button size="sm">
+                  <MapPin className="h-4 w-4 mr-2" />
+                  Search All
+                </Button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {mockAvailableSpots.map((spot) => (
+                  <ParkingSpotCard key={spot.id} spot={spot} />
+                ))}
+              </div>
+            </div>
+          </div>
+        )
+        
+      case "owner":
+        return (
+          <div className="space-y-6">
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold">Recent Bookings</h2>
+                <Button size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  List Availability
+                </Button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {mockUpcomingBookings.map((booking) => (
+                  <BookingCard 
+                    key={booking.id} 
+                    booking={booking} 
+                    showRenterInfo={true}
+                  />
+                ))}
+              </div>
+            </div>
+            
+            <div>
+              <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="hover-elevate cursor-pointer">
+                  <CardContent className="p-6 text-center">
+                    <Calendar className="h-8 w-8 mx-auto mb-2 text-primary" />
+                    <h3 className="font-medium">List Spot</h3>
+                    <p className="text-sm text-muted-foreground">Make your spot available</p>
+                  </CardContent>
+                </Card>
+                <Card className="hover-elevate cursor-pointer">
+                  <CardContent className="p-6 text-center">
+                    <Clock className="h-8 w-8 mx-auto mb-2 text-primary" />
+                    <h3 className="font-medium">Set Recurring</h3>
+                    <p className="text-sm text-muted-foreground">Weekly availability</p>
+                  </CardContent>
+                </Card>
+                <Card className="hover-elevate cursor-pointer">
+                  <CardContent className="p-6 text-center">
+                    <MapPin className="h-8 w-8 mx-auto mb-2 text-primary" />
+                    <h3 className="font-medium">Manage Spots</h3>
+                    <p className="text-sm text-muted-foreground">Edit spot details</p>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </div>
+        )
+        
+      case "admin":
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Today's Occupancy
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">89/150</div>
+                  <p className="text-xs text-green-600">59% utilization</p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Pending Issues
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">3</div>
+                  <p className="text-xs text-yellow-600">Require attention</p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Revenue Today
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">$1,890</div>
+                  <p className="text-xs text-green-600">+12% vs yesterday</p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    New Registrations
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">7</div>
+                  <p className="text-xs text-muted-foreground">This week</p>
+                </CardContent>
+              </Card>
+            </div>
+            
+            <div>
+              <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Button variant="outline" className="h-20 flex-col gap-2">
+                  <Users className="h-6 w-6" />
+                  Manage Users
+                </Button>
+                <Button variant="outline" className="h-20 flex-col gap-2">
+                  <Car className="h-6 w-6" />
+                  Assign Spots
+                </Button>
+                <Button variant="outline" className="h-20 flex-col gap-2">
+                  <Clock className="h-6 w-6" />
+                  View Waitlist
+                </Button>
+                <Button variant="outline" className="h-20 flex-col gap-2">
+                  <MapPin className="h-6 w-6" />
+                  Generate Report
+                </Button>
+              </div>
+            </div>
+          </div>
+        )
+        
+      default:
+        return null
+    }
+  }
+
+  return (
+    <div className="p-6 space-y-6" data-testid="page-dashboard">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <p className="text-muted-foreground">
+            Welcome back! Here's what's happening with your parking.
+          </p>
+        </div>
+      </div>
+      
+      <DashboardStats userRole={userRole} />
+      
+      {renderRoleSpecificContent()}
+    </div>
+  )
+}
