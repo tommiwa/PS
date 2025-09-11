@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
-import { Car, MapPin, DollarSign, Clock, Edit, Plus, Eye, Calendar, Users, TrendingUp } from "lucide-react"
+import { ParkingCalendar } from "@/components/parking-calendar"
+import { Car, MapPin, DollarSign, Clock, Edit, Plus, Eye, Calendar, Users, TrendingUp, Grid } from "lucide-react"
 
 type ParkingSpot = {
   id: string
@@ -38,6 +39,7 @@ export default function MySpots() {
   const [showAddSpot, setShowAddSpot] = useState(false)
   const [selectedSpot, setSelectedSpot] = useState<ParkingSpot | null>(null)
   const [showEditSpot, setShowEditSpot] = useState(false)
+  const [activeTab, setActiveTab] = useState("management")
 
   //todo: remove mock functionality
   const mockSpots: ParkingSpot[] = [
@@ -206,9 +208,25 @@ export default function MySpots() {
         </Card>
       </div>
 
-      {/* Spots List */}
-      <div className="space-y-4">
-        {mockSpots.map((spot) => (
+      {/* Tabs for Management vs Calendar View */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <div className="flex items-center justify-between mb-4">
+          <TabsList className="grid w-[300px] grid-cols-2">
+            <TabsTrigger value="management" className="flex items-center gap-2" data-testid="tab-management">
+              <Grid className="h-4 w-4" />
+              Spot Management
+            </TabsTrigger>
+            <TabsTrigger value="calendar" className="flex items-center gap-2" data-testid="tab-calendar">
+              <Calendar className="h-4 w-4" />
+              Calendar View
+            </TabsTrigger>
+          </TabsList>
+        </div>
+
+        <TabsContent value="management" className="space-y-4">
+          {/* Spots List */}
+          <div className="space-y-4">
+            {mockSpots.map((spot) => (
           <Card key={spot.id} className={`${!spot.isActive ? 'opacity-60' : ''}`}>
             <CardContent className="p-6">
               <div className="flex items-start justify-between mb-4">
@@ -342,8 +360,40 @@ export default function MySpots() {
               </div>
             </CardContent>
           </Card>
-        ))}
-      </div>
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="calendar" className="space-y-4">
+          <Card className="h-[600px]">
+            <CardContent className="p-0 h-full">
+              <ParkingCalendar
+                spots={mockSpots.map(spot => ({
+                  id: spot.id,
+                  spotNumber: spot.spotNumber,
+                  location: spot.location,
+                  type: spot.type,
+                  isInside: spot.isInside,
+                  price: spot.basePrice,
+                  isAvailable: spot.isActive && !spot.currentBooking,
+                  owner: "You",
+                  availability: {
+                    date: spot.currentBooking?.date || new Date().toISOString().split('T')[0],
+                    startTime: spot.currentBooking?.startTime || "8:00 AM",
+                    endTime: spot.currentBooking?.endTime || "6:00 PM"
+                  }
+                }))}
+                onBookSpot={(spotId) => {
+                  const spot = mockSpots.find(s => s.id === spotId);
+                  if (spot) {
+                    console.log('Managing availability for spot:', spot);
+                  }
+                }}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Add New Spot Dialog */}
       <Dialog open={showAddSpot} onOpenChange={setShowAddSpot}>

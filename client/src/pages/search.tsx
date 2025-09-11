@@ -1,12 +1,14 @@
 import { useState } from "react"
 import { SearchFilters, SearchFilters as SearchFiltersType } from "@/components/search-filters"
 import { ParkingSpotCard } from "@/components/parking-spot-card"
+import { ParkingCalendar } from "@/components/parking-calendar"
 import { BookingForm } from "@/components/booking-form"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { MapPin, Filter, SortAsc } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { MapPin, Filter, SortAsc, Calendar, Grid } from "lucide-react"
 
 export default function Search() {
   const [filters, setFilters] = useState<SearchFiltersType>({
@@ -21,6 +23,7 @@ export default function Search() {
   const [selectedSpot, setSelectedSpot] = useState<any>(null)
   const [showBookingForm, setShowBookingForm] = useState(false)
   const [sortBy, setSortBy] = useState("price")
+  const [activeTab, setActiveTab] = useState("tiles")
 
   //todo: remove mock functionality
   const mockSpots = [
@@ -148,69 +151,99 @@ export default function Search() {
         onSearch={handleSearch}
       />
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <h2 className="text-xl font-semibold">
-            Available Spots ({sortedSpots.length})
-          </h2>
-          {getActiveFilterCount() > 0 && (
-            <Badge variant="secondary" className="gap-1">
-              <Filter className="h-3 w-3" />
-              {getActiveFilterCount()} filter{getActiveFilterCount() !== 1 ? 's' : ''} active
-            </Badge>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-4">
+            <TabsList className="grid w-[200px] grid-cols-2">
+              <TabsTrigger value="tiles" className="flex items-center gap-2" data-testid="tab-tiles">
+                <Grid className="h-4 w-4" />
+                Tiles
+              </TabsTrigger>
+              <TabsTrigger value="calendar" className="flex items-center gap-2" data-testid="tab-calendar">
+                <Calendar className="h-4 w-4" />
+                Calendar
+              </TabsTrigger>
+            </TabsList>
+            
+            <div className="flex items-center gap-4">
+              <h2 className="text-xl font-semibold">
+                Available Spots ({sortedSpots.length})
+              </h2>
+              {getActiveFilterCount() > 0 && (
+                <Badge variant="secondary" className="gap-1">
+                  <Filter className="h-3 w-3" />
+                  {getActiveFilterCount()} filter{getActiveFilterCount() !== 1 ? 's' : ''} active
+                </Badge>
+              )}
+            </div>
+          </div>
+          
+          {activeTab === "tiles" && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Sort by:</span>
+              <select 
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="px-3 py-1 border rounded-md text-sm"
+                data-testid="select-sort"
+              >
+                <option value="price">Price (Low to High)</option>
+                <option value="location">Location</option>
+                <option value="distance">Distance</option>
+              </select>
+              <Button variant="ghost" size="sm">
+                <SortAsc className="h-4 w-4" />
+              </Button>
+            </div>
           )}
         </div>
-        
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Sort by:</span>
-          <select 
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="px-3 py-1 border rounded-md text-sm"
-            data-testid="select-sort"
-          >
-            <option value="price">Price (Low to High)</option>
-            <option value="location">Location</option>
-            <option value="distance">Distance</option>
-          </select>
-          <Button variant="ghost" size="sm">
-            <SortAsc className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
 
-      {sortedSpots.length === 0 ? (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <MapPin className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-lg font-semibold mb-2">No spots found</h3>
-            <p className="text-muted-foreground mb-4">
-              Try adjusting your search filters to find more available parking spots.
-            </p>
-            <Button onClick={() => setFilters({
-              location: "",
-              spotType: "",
-              date: "",
-              priceMin: "",
-              priceMax: "",
-              isInside: ""
-            })}>
-              Clear All Filters
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sortedSpots.map((spot) => (
-            <ParkingSpotCard 
-              key={spot.id} 
-              spot={spot}
-              onBook={handleBookSpot}
-              onViewDetails={(spotId) => console.log('View details:', spotId)}
-            />
-          ))}
-        </div>
-      )}
+        <TabsContent value="tiles" className="space-y-4">
+          {sortedSpots.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <MapPin className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-semibold mb-2">No spots found</h3>
+                <p className="text-muted-foreground mb-4">
+                  Try adjusting your search filters to find more available parking spots.
+                </p>
+                <Button onClick={() => setFilters({
+                  location: "all",
+                  spotType: "all",
+                  date: "",
+                  priceMin: "",
+                  priceMax: "",
+                  isInside: "all"
+                })}>
+                  Clear All Filters
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {sortedSpots.map((spot) => (
+                <ParkingSpotCard 
+                  key={spot.id} 
+                  spot={spot}
+                  onBook={handleBookSpot}
+                  onViewDetails={(spotId) => console.log('View details:', spotId)}
+                />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="calendar" className="space-y-4">
+          <Card className="h-[600px]">
+            <CardContent className="p-0 h-full">
+              <ParkingCalendar
+                spots={sortedSpots}
+                onBookSpot={handleBookSpot}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Booking Dialog */}
       <Dialog open={showBookingForm} onOpenChange={setShowBookingForm}>
