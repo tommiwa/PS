@@ -31,6 +31,7 @@ function Router() {
       <Route path="/search" component={Search} />
       <Route path="/my-bookings" component={MyBookings} />
       <Route path="/my-spots" component={MySpots} />
+      <Route path="/waitlist" component={() => <Dashboard userRole="waitlist" />} />
       <Route path="/profile" component={Profile} />
       <Route path="/settings" component={Settings} />
       {/* Admin routes */}
