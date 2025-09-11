@@ -40,23 +40,24 @@ export function SearchFilters({ onFilterChange, onSearch }: SearchFiltersProps) 
     
     // Update active filters for display
     const newActiveFilters = Object.entries(newFilters)
-      .filter(([_, val]) => val !== "")
+      .filter(([_, val]) => val !== "" && val !== "all")
       .map(([key, _]) => key)
     setActiveFilters(newActiveFilters)
   }
 
   const clearFilter = (key: keyof SearchFilters) => {
-    updateFilter(key, "")
+    const clearValue = (key === "location" || key === "spotType" || key === "isInside") ? "all" : ""
+    updateFilter(key, clearValue)
   }
 
   const clearAllFilters = () => {
     const emptyFilters: SearchFilters = {
-      location: "",
-      spotType: "",
+      location: "all",
+      spotType: "all",
       date: "",
       priceMin: "",
       priceMax: "",
-      isInside: ""
+      isInside: "all"
     }
     setFilters(emptyFilters)
     setActiveFilters([])
@@ -97,7 +98,7 @@ export function SearchFilters({ onFilterChange, onSearch }: SearchFiltersProps) 
                 <SelectValue placeholder="Any location" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Any location</SelectItem>
+                <SelectItem value="all">Any location</SelectItem>
                 <SelectItem value="main-building">Main Building</SelectItem>
                 <SelectItem value="north-lot">North Parking Lot</SelectItem>
                 <SelectItem value="south-lot">South Parking Lot</SelectItem>
@@ -113,7 +114,7 @@ export function SearchFilters({ onFilterChange, onSearch }: SearchFiltersProps) 
                 <SelectValue placeholder="Any type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Any type</SelectItem>
+                <SelectItem value="all">Any type</SelectItem>
                 <SelectItem value="regular">Regular</SelectItem>
                 <SelectItem value="accessible">Accessible</SelectItem>
                 <SelectItem value="electric">Electric Vehicle</SelectItem>
@@ -160,7 +161,7 @@ export function SearchFilters({ onFilterChange, onSearch }: SearchFiltersProps) 
                 <SelectValue placeholder="Any" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Any</SelectItem>
+                <SelectItem value="all">Any</SelectItem>
                 <SelectItem value="true">Inside Building</SelectItem>
                 <SelectItem value="false">Outside/Public</SelectItem>
               </SelectContent>

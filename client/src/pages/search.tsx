@@ -10,12 +10,12 @@ import { MapPin, Filter, SortAsc } from "lucide-react"
 
 export default function Search() {
   const [filters, setFilters] = useState<SearchFiltersType>({
-    location: "",
-    spotType: "",
+    location: "all",
+    spotType: "all",
     date: "",
     priceMin: "",
     priceMax: "",
-    isInside: ""
+    isInside: "all"
   })
   
   const [selectedSpot, setSelectedSpot] = useState<any>(null)
@@ -87,11 +87,11 @@ export default function Search() {
   ]
 
   const filteredSpots = mockSpots.filter(spot => {
-    if (filters.location && !spot.location.toLowerCase().includes(filters.location.toLowerCase())) return false
-    if (filters.spotType && spot.type !== filters.spotType) return false
+    if (filters.location && filters.location !== "all" && !spot.location.toLowerCase().includes(filters.location.toLowerCase())) return false
+    if (filters.spotType && filters.spotType !== "all" && spot.type !== filters.spotType) return false
     if (filters.priceMin && spot.price < parseInt(filters.priceMin)) return false
     if (filters.priceMax && spot.price > parseInt(filters.priceMax)) return false
-    if (filters.isInside && spot.isInside !== (filters.isInside === "true")) return false
+    if (filters.isInside && filters.isInside !== "all" && spot.isInside !== (filters.isInside === "true")) return false
     return true
   })
 

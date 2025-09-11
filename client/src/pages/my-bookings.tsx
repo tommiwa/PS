@@ -328,7 +328,7 @@ export default function MyBookings() {
                 key={booking.id} 
                 booking={booking}
                 showRenterInfo={true}
-                showBookButton={false}
+
                 onCancel={handleCancelBooking}
                 onEdit={handleEditBooking}
               />
@@ -343,7 +343,7 @@ export default function MyBookings() {
                 key={booking.id} 
                 booking={booking}
                 showRenterInfo={true}
-                showBookButton={false}
+
               />
             ))}
           </div>
@@ -356,7 +356,7 @@ export default function MyBookings() {
                 key={booking.id} 
                 booking={booking}
                 showRenterInfo={true}
-                showBookButton={false}
+
               />
             ))}
           </div>
