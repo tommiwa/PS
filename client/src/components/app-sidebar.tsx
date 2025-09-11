@@ -10,7 +10,8 @@ import {
   Shield,
   Search,
   ListOrdered,
-  ParkingCircle
+  ParkingCircle,
+  Bell
 } from "lucide-react"
 import { Link, useLocation } from "wouter"
 import {
@@ -55,7 +56,7 @@ const mainMenuItems = [
     title: "Waiting List",
     url: "/waitlist",
     icon: Clock,
-    roles: ["waitlist", "admin"]
+    roles: ["waitlist", "admin", "renter"]
   },
 ]
 
@@ -100,6 +101,12 @@ const settingsMenuItems = [
     url: "/profile",
     icon: Users,
     roles: ["admin", "owner", "renter", "waitlist"]
+  },
+  {
+    title: "Notification Settings",
+    url: "/notifications",
+    icon: Bell,
+    roles: ["renter", "owner"]
   },
   {
     title: "Settings",

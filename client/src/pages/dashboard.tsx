@@ -115,8 +115,28 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
         )
         
       case "renter":
+        // For demo purposes, show waitlist status conditionally
+        const hasWaitlistEntries = mockWaitlistEntries.length > 0;
+        
         return (
           <div className="space-y-6">
+            {/* Waitlist Status - Optional, only shown if user has joined waitlists */}
+            {hasWaitlistEntries && (
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-5 w-5 text-primary" />
+                    <h2 className="text-xl font-semibold">Your Waiting List Status</h2>
+                  </div>
+                  <Button size="sm" variant="outline">
+                    <Clock className="h-4 w-4 mr-2" />
+                    Manage Waitlists
+                  </Button>
+                </div>
+                <WaitlistPosition entries={mockWaitlistEntries} />
+              </div>
+            )}
+
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold">Upcoming Bookings</h2>
@@ -152,9 +172,10 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
       case "owner":
         return (
           <div className="space-y-6">
+            {/* Owner's Rental Business Section */}
             <div>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold">Recent Bookings</h2>
+                <h2 className="text-xl font-semibold">Your Spots - Recent Bookings</h2>
                 <Button size="sm">
                   <Plus className="h-4 w-4 mr-2" />
                   List Availability
@@ -171,8 +192,9 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
               </div>
             </div>
             
+            {/* Owner Quick Actions */}
             <div>
-              <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
+              <h2 className="text-xl font-semibold mb-4">Spot Management</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Card className="hover-elevate cursor-pointer">
                   <CardContent className="p-6 text-center">
@@ -195,6 +217,46 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
                     <p className="text-sm text-muted-foreground">Edit spot details</p>
                   </CardContent>
                 </Card>
+              </div>
+            </div>
+
+            {/* Renter Functionality for Owners */}
+            <div className="border-t pt-6">
+              <div className="flex items-center gap-2 mb-6">
+                <Car className="h-5 w-5 text-primary" />
+                <h2 className="text-xl font-semibold">Your Bookings - When You Need Parking</h2>
+              </div>
+              
+              <div className="space-y-6">
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-medium">Your Upcoming Bookings</h3>
+                    <Button size="sm" variant="outline">
+                      <Calendar className="h-4 w-4 mr-2" />
+                      View All
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {mockUpcomingBookings.slice(0, 2).map((booking) => (
+                      <BookingCard key={`renter-${booking.id}`} booking={booking} />
+                    ))}
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-medium">Available Spots to Book</h3>
+                    <Button size="sm" variant="outline">
+                      <MapPin className="h-4 w-4 mr-2" />
+                      Search All
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {mockAvailableSpots.map((spot) => (
+                      <ParkingSpotCard key={spot.id} spot={spot} />
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
