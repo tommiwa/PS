@@ -20,6 +20,7 @@ import MySpots from "@/pages/my-spots";
 import AdminUserManagement from "@/pages/admin-user-management";
 import AdminAnalytics from "@/pages/admin-analytics";
 import AdminWaitlist from "@/pages/admin-waitlist";
+import AdminParkingSpaces from "@/pages/admin-parking-spaces";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -36,7 +37,7 @@ function Router() {
       <Route path="/admin" component={Admin} />
       <Route path="/admin/users" component={AdminUserManagement} />
       <Route path="/admin/waitlist" component={AdminWaitlist} />
-      <Route path="/admin/parking-spaces" component={() => <div>Parking Space Administration - Coming Soon</div>} />
+      <Route path="/admin/parking-spaces" component={AdminParkingSpaces} />
       <Route path="/admin/analytics" component={AdminAnalytics} />
       {/* Different role dashboards */}
       <Route path="/admin/dashboard" component={() => <Dashboard userRole="admin" />} />
