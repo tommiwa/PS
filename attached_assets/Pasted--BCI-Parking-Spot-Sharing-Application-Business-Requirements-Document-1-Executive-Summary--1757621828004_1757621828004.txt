@@ -1,0 +1,554 @@
+# BCI Parking Spot Sharing Application - Business Requirements Document
+
+## 1. Executive Summary
+
+### 1.1 Purpose
+This document outlines the comprehensive business requirements for a parking spot sharing application for BCI company. The application will facilitate efficient parking spot allocation and sharing among 1000 employees who compete for only 150 parking spots across four different locations.
+
+### 1.2 Business Objectives
+- Maximize utilization of available parking spots
+- Reduce parking-related conflicts and frustrations
+- Enable fair and transparent spot allocation
+- Facilitate peer-to-peer parking spot sharing
+- Provide administrative control over parking management
+- Ensure legal compliance and risk mitigation
+
+### 1.3 Scope
+The application will be available as both a web application and mobile application, accessible to all BCI employees with proper authentication through the company's existing employee login system.
+
+## 2. Business Context
+
+### 2.1 Current Situation
+- **Total Employees**: 1000 across 4 locations
+- **Available Spots**: 150 total parking spots
+- **Spot Types**: Regular spots, accessible spots, electric vehicle charging spots
+- **Locations**: Spots inside BCI building and public spots outside BCI
+- **Current Process**: Manual waiting list management with no systematic sharing mechanism
+
+### 2.2 Key Challenges
+- High demand with limited supply (15% availability ratio)
+- Inefficient use of assigned spots when owners are absent
+- No systematic way for spot owners to share unused spots
+- Manual waiting list management is time-consuming and error-prone
+- Payment arrangements between employees lack tracking
+
+## 3. User Roles and Permissions
+
+### 3.1 System Administrator
+**Responsibilities:**
+- Manage all parking spots and assignments
+- Oversee waiting list and allocation process
+- Handle disputes and exceptions
+- Generate reports and analytics
+- Configure system settings and policies
+- Monitor all transactions and activities
+
+**Capabilities:**
+- Full access to all system features
+- Override any user actions
+- Assign/revoke parking spots
+- Manage user accounts and permissions
+- View all bookings and transactions
+- Access comprehensive reporting
+
+### 3.2 Parking Spot Owner
+**Responsibilities:**
+- Register owned parking spots
+- List spots for sharing when not needed
+- Set pricing for spot rentals
+- Manage booking requests
+- Track payment status
+
+**Capabilities:**
+- Register multiple parking spots
+- Create one-time or recurring availability
+- Set custom pricing per listing
+- Accept/reject booking requests (if enabled)
+- Mark payment status as received
+- Book other available spots as a renter
+- View booking history for owned spots
+
+### 3.3 Parking Spot Renter (Non-Owner)
+**Responsibilities:**
+- Search for available parking spots
+- Book available spots
+- Complete payment arrangements with owners
+- Confirm payment completion
+
+**Capabilities:**
+- View available parking spots
+- Filter spots by location, type, date, and price
+- Book spots up to 30 days in advance
+- View booking history
+- Cancel bookings with proper notice
+- Join waiting list for permanent spots
+
+### 3.4 Waiting List Member
+**Responsibilities:**
+- Register for permanent spot allocation
+- Maintain active status on waiting list
+- Accept spot offers within time limit
+
+**Capabilities:**
+- Join waiting list for specific locations
+- View position in queue
+- Receive notifications about available spots
+- Accept or decline spot assignments
+
+## 4. Functional Requirements
+
+### 4.1 User Registration and Authentication
+
+#### 4.1.1 Employee Authentication
+- Users must log in using BCI's existing employee authentication system
+- System must verify employee status before granting access
+- Support for password reset through corporate IT
+- Session management with automatic timeout
+- Remember me functionality for trusted devices
+
+#### 4.1.2 User Profile Management
+- Display employee name and department
+- Contact information (email and phone)
+- Notification preferences
+- Payment preference settings
+- Vehicle information (make, model, license plate)
+- Accessibility requirements if applicable
+
+### 4.2 Parking Spot Management
+
+#### 4.2.1 Spot Registration
+- Spot owners can register their assigned spots
+- Required information:
+  - Spot number/identifier
+  - Location (building/lot name)
+  - Spot type (regular, accessible, electric vehicle)
+  - Inside BCI building or public location
+  - Default hourly/daily rate
+- Support for multiple spot registration
+- Ability to edit spot details
+- Option to temporarily or permanently remove spots
+
+#### 4.2.2 Spot Categorization
+- **Regular Spots**: Standard parking spaces
+- **Accessible Spots**: ADA-compliant spaces for users with disabilities
+- **Electric Vehicle Spots**: Spaces with charging stations
+- **Location Types**: Inside building vs. outside/public spots
+- Visual indicators for each spot type
+
+### 4.3 Spot Listing and Availability
+
+#### 4.3.1 Creating Listings
+- **One-Time Availability**: Specific date and time range
+- **Multi-Day Availability**: Date range selection
+- **Recurring Availability**: 
+  - Weekly patterns (e.g., every Monday and Wednesday)
+  - Monthly patterns (e.g., first Friday of each month)
+  - Custom recurrence rules
+- Set different prices for different time periods
+- Add special instructions or notes
+- Set booking deadlines
+
+#### 4.3.2 Managing Listings
+- View all active listings
+- Edit listing details before bookings
+- Cancel listings with appropriate notice
+- View booking status for each listing
+- Duplicate previous listings
+- Bulk create listings for multiple dates
+
+### 4.4 Booking System
+
+#### 4.4.1 Search and Discovery
+- Search by date and time needed
+- Filter by:
+  - Location/building
+  - Spot type
+  - Price range
+  - Distance from building entrance
+  - Covered/uncovered
+- Sort by price, distance, or availability
+- Map view of available spots
+- Save search preferences
+
+#### 4.4.2 Booking Process
+- Real-time availability checking
+- Maximum 30-day advance booking
+- Booking confirmation with details
+- Automatic conflict detection
+- Instant booking or request approval options
+- Booking modification capabilities
+- Cancellation with 2-hour minimum notice
+
+#### 4.4.3 Booking Management
+- View upcoming bookings
+- View past booking history
+- Cancel bookings
+- Extend booking duration if available
+- Receive booking reminders
+- Rate and review parking experience
+
+### 4.5 Payment Tracking
+
+#### 4.5.1 Payment Methods
+- **Interac e-Transfer**: Record transaction details
+- **Cash**: Mark as cash payment
+- **Note**: All payments occur outside the application
+
+#### 4.5.2 Payment Status Tracking
+- Payment status options:
+  - Pending
+  - Payment Sent
+  - Payment Received
+  - Disputed
+  - Completed
+- Both parties can update payment status
+- Payment reminder notifications
+- Payment history tracking
+- Dispute flagging mechanism
+
+#### 4.5.3 Pricing Management
+- Spot owners set their own prices
+- Suggested pricing based on demand
+- Different rates for different times
+- Special event pricing options
+- Free listing option for goodwill sharing
+
+### 4.6 Waiting List Management
+
+#### 4.6.1 Joining the Waiting List
+- Register for specific locations
+- Provide vehicle information
+- Specify spot type preferences
+- Acknowledge first-come-first-served policy
+- Agree to response time requirements
+
+#### 4.6.2 Queue Management
+- Transparent queue position display
+- Estimated wait time (if available)
+- Notification when approaching top of list
+- Automatic advancement in queue
+- Grace period for spot acceptance
+- Penalty for declining offers
+
+#### 4.6.3 Spot Assignment
+- Automatic notification when spot available
+- 48-hour response window
+- Clear acceptance/rejection process
+- Immediate assignment upon acceptance
+- Return to queue or removal upon rejection
+
+### 4.7 Administrative Features
+
+#### 4.7.1 User Management
+- View all registered users
+- Activate/deactivate user accounts
+- Assign/revoke spot ownership
+- Manage user roles and permissions
+- View user activity logs
+- Handle user complaints/issues
+
+#### 4.7.2 Spot Administration
+- Add/remove parking spots
+- Assign spots to employees
+- Configure spot attributes
+- Set spot availability rules
+- Manage spot maintenance schedules
+- Handle emergency spot reassignments
+
+#### 4.7.3 Waiting List Administration
+- View complete waiting list
+- Manually adjust queue positions
+- Override automatic assignments
+- Process special requests
+- Manage multiple waiting lists
+- Set allocation policies
+
+#### 4.7.4 Reporting and Analytics
+- **Utilization Reports**: Occupancy rates by location and time
+- **Financial Reports**: Payment tracking summaries
+- **User Reports**: Active users, bookings per user
+- **Compliance Reports**: Accessibility usage, policy violations
+- **Trend Analysis**: Peak usage times, popular locations
+- **Custom Reports**: Configurable report generation
+
+### 4.8 Notifications and Communications
+
+#### 4.8.1 Notification Types
+- **Booking Confirmations**: Immediate confirmation upon booking
+- **Booking Reminders**: Day before and morning of booking
+- **Payment Reminders**: When payment is due
+- **Availability Alerts**: When preferred spots become available
+- **Waiting List Updates**: Position changes and offers
+- **System Announcements**: Maintenance, policy changes
+
+#### 4.8.2 Notification Channels
+- Email notifications (primary)
+- SMS notifications (urgent matters)
+- In-app notifications
+- Dashboard alerts
+- Mobile push notifications
+
+#### 4.8.3 Notification Preferences
+- Channel selection per notification type
+- Frequency settings
+- Quiet hours configuration
+- Opt-out options for non-critical notifications
+
+### 4.9 Legal and Compliance
+
+#### 4.9.1 Terms of Service
+- Clear platform disclaimer
+- User responsibilities outline
+- Liability limitations
+- Dispute resolution process
+- Privacy policy
+- Acceptable use policy
+
+#### 4.9.2 Legal Disclaimers
+- BCI not responsible for:
+  - Money transfers between users
+  - Spot condition during rental period
+  - Disputes between users
+  - Tax implications of spot rentals
+  - Vehicle damage or theft
+- Users must acknowledge all disclaimers
+
+#### 4.9.3 Audit Trail
+- Record all transactions
+- Track user actions
+- Maintain booking history
+- Log payment status changes
+- Document disputes and resolutions
+- Generate compliance reports
+
+## 5. User Experience Requirements
+
+### 5.1 Accessibility
+- Support for users with disabilities
+- Screen reader compatibility
+- Keyboard navigation
+- High contrast mode
+- Large text options
+- Alternative formats for documents
+
+### 5.2 Multi-Platform Support
+- Web browser compatibility (Chrome, Firefox, Safari, Edge)
+- Mobile responsive design
+- Native mobile app features
+- Offline viewing of booked spots
+- Synchronization across devices
+
+### 5.3 User Interface Design
+- BCI corporate branding and colors
+- Intuitive navigation
+- Clear visual hierarchy
+- Consistent design patterns
+- Professional appearance
+- Helpful tooltips and guidance
+
+### 5.4 Performance Expectations
+- Fast page load times
+- Quick search results
+- Real-time availability updates
+- Smooth transitions
+- Minimal downtime
+- Reliable booking process
+
+## 6. Business Rules
+
+### 6.1 Booking Rules
+- Maximum 30-day advance booking period
+- 2-hour minimum cancellation notice
+- No double-booking allowed
+- First-come-first-served basis
+- Maximum booking duration limits
+- Recurring booking limits
+
+### 6.2 Waiting List Rules
+- Strictly first-come-first-served
+- 48-hour response time for offers
+- Three declined offers result in removal
+- Annual re-registration required
+- Priority for accessibility needs
+- No queue jumping allowed
+
+### 6.3 Payment Rules
+- Owners set their own prices
+- Payment occurs outside the platform
+- Both parties must confirm payment
+- Disputes flagged for admin review
+- No commission or fees from BCI
+- Price changes don't affect existing bookings
+
+### 6.4 Spot Assignment Rules
+- One permanent spot per employee maximum
+- Spot inheritance not allowed
+- Spots return to pool upon employee departure
+- Temporary assignments for medical needs
+- Executive spots handled separately
+
+## 7. Integration Requirements
+
+### 7.1 Authentication System
+- Integration with BCI's Active Directory
+- Single Sign-On (SSO) support
+- Automatic user provisioning
+- Role synchronization
+- Password policy enforcement
+
+### 7.2 Calendar Integration
+- Sync with corporate calendar
+- Automatic out-of-office detection
+- Meeting location awareness
+- Booking reminders in calendar
+
+### 7.3 Communication Systems
+- Email through corporate mail server
+- SMS gateway integration
+- Corporate instant messaging
+- Emergency broadcast system
+
+## 8. Data Management
+
+### 8.1 Data Retention
+- Booking history: 2 years
+- Payment records: 7 years
+- User activity logs: 1 year
+- Dispute records: 3 years
+- System logs: 90 days
+
+### 8.2 Privacy Requirements
+- Comply with privacy regulations
+- User consent for data usage
+- Right to data access
+- Right to data correction
+- Right to data deletion (where legally allowed)
+- Data breach notification procedures
+
+### 8.3 Backup and Recovery
+- Daily data backups
+- Disaster recovery plan
+- Data restoration procedures
+- Business continuity planning
+- Regular recovery testing
+
+## 9. Support and Training
+
+### 9.1 User Support
+- Help documentation
+- FAQ section
+- Video tutorials
+- In-app help system
+- Support ticket system
+- Admin contact information
+
+### 9.2 Training Requirements
+- New user onboarding
+- Admin training program
+- Spot owner guidelines
+- Best practices documentation
+- Regular tips and updates
+
+## 10. Success Criteria
+
+### 10.1 Measurable Objectives
+- Achieve 85% parking utilization during peak hours
+- Reduce waiting list processing time by 75%
+- 90% user satisfaction rating
+- Less than 5% payment disputes
+- 95% system availability
+- 50% reduction in parking-related complaints
+
+### 10.2 Key Performance Indicators
+- Average spots shared per month
+- Booking completion rate
+- User engagement metrics
+- Wait time reduction
+- Revenue generated for spot owners
+- Administrative time savings
+
+## 11. Implementation Priorities
+
+### 11.1 Phase 1 - Core Functionality (Critical)
+- User authentication and profiles
+- Basic spot registration
+- Simple booking system
+- Payment status tracking
+- Admin dashboard
+- Email notifications
+
+### 11.2 Phase 2 - Enhanced Features (High Priority)
+- Recurring bookings
+- Advanced search and filters
+- Waiting list automation
+- SMS notifications
+- Mobile optimization
+- Basic reporting
+
+### 11.3 Phase 3 - Advanced Capabilities (Nice to Have)
+- Predictive availability
+- Advanced analytics
+- Calendar integration
+- Carpooling coordination
+- Spot recommendations
+- Gamification features
+
+## 12. Constraints and Assumptions
+
+### 12.1 Constraints
+- Must use existing BCI authentication
+- Cannot process financial transactions
+- Must comply with corporate policies
+- Limited to BCI employees only
+- Must respect accessibility regulations
+
+### 12.2 Assumptions
+- Employees have corporate email access
+- Users have internet-capable devices
+- Spot owners willing to share
+- Compliance with honor system for payments
+- IT infrastructure supports integration
+
+## 13. Technical Requirements Overview
+
+### 13.1 Architecture
+- **Frontend Framework**: React with TypeScript for type safety
+- **Backend Framework**: Python with Django/FastAPI
+- **Database**: PostgreSQL with proper indexing for performance
+- **Caching**: Redis for session management and frequently accessed data
+- **API Design**: RESTful APIs with JSON responses
+
+### 13.2 Frontend Requirements
+- **React Components**: Modular, reusable component architecture
+- **State Management**: Centralized state management for complex data flows
+- **Responsive Design**: Mobile-first approach supporting tablets and desktops
+- **Progressive Web App**: Offline capability and installable on mobile devices
+- **Browser Support**: Chrome, Firefox, Safari, Edge (latest 2 versions)
+
+### 13.3 Backend Requirements
+- **Python Services**: Microservices architecture for scalability
+- **API Gateway**: Centralized API management and routing
+- **Authentication**: JWT tokens with Azure AD integration
+- **Data Validation**: Input validation and sanitization
+- **Error Handling**: Comprehensive error logging and user-friendly messages
+
+### 13.4 Security Requirements
+- **HTTPS**: All communications encrypted with TLS 1.3
+- **Authentication**: Multi-factor authentication support
+- **Authorization**: Role-based access control (RBAC)
+- **Data Protection**: Encryption at rest for sensitive data
+- **Audit Logging**: Complete audit trail of all transactions
+
+### 13.5 Performance Requirements
+- **Response Time**: Page loads under 2 seconds
+- **API Response**: Under 200ms for standard queries
+- **Concurrent Users**: Support for 500+ simultaneous users
+- **Availability**: 99.9% uptime during business hours
+- **Scalability**: Horizontal scaling capability
+
+### 13.6 Development Best Practices
+- **Version Control**: Git-based source control
+- **Code Quality**: Automated testing with 80% coverage minimum
+- **Documentation**: API documentation and user guides
+- **CI/CD**: Automated deployment pipeline
+- **Monitoring**: Real-time application monitoring and alerting
