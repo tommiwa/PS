@@ -14,6 +14,11 @@ import Dashboard from "@/pages/dashboard";
 import Search from "@/pages/search";
 import Admin from "@/pages/admin";
 import Profile from "@/pages/profile";
+import Settings from "@/pages/settings";
+import MyBookings from "@/pages/my-bookings";
+import MySpots from "@/pages/my-spots";
+import AdminUserManagement from "@/pages/admin-user-management";
+import AdminAnalytics from "@/pages/admin-analytics";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -22,8 +27,14 @@ function Router() {
       <Route path="/" component={() => <Dashboard userRole="owner" />} />
       <Route path="/dashboard" component={() => <Dashboard userRole="owner" />} />
       <Route path="/search" component={Search} />
-      <Route path="/admin" component={Admin} />
+      <Route path="/my-bookings" component={MyBookings} />
+      <Route path="/my-spots" component={MySpots} />
       <Route path="/profile" component={Profile} />
+      <Route path="/settings" component={Settings} />
+      {/* Admin routes */}
+      <Route path="/admin" component={Admin} />
+      <Route path="/admin/users" component={AdminUserManagement} />
+      <Route path="/admin/analytics" component={AdminAnalytics} />
       {/* Different role dashboards */}
       <Route path="/admin/dashboard" component={() => <Dashboard userRole="admin" />} />
       <Route path="/renter/dashboard" component={() => <Dashboard userRole="renter" />} />

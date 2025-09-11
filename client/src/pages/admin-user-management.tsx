@@ -1,0 +1,440 @@
+import { useState } from "react"
+import { AdminUsersTable } from "@/components/admin-users-table"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Textarea } from "@/components/ui/textarea"
+import { 
+  Users, 
+  UserPlus, 
+  Search, 
+  Filter, 
+  Download, 
+  Upload, 
+  Mail, 
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  Clock
+} from "lucide-react"
+
+export default function AdminUserManagement() {
+  const [searchTerm, setSearchTerm] = useState("")
+  const [filterRole, setFilterRole] = useState("all")
+  const [filterStatus, setFilterStatus] = useState("all")
+  const [showAddUser, setShowAddUser] = useState(false)
+  const [showBulkActions, setShowBulkActions] = useState(false)
+
+  //todo: remove mock functionality
+  const mockUsers = [
+    {
+      id: "user-001",
+      name: "Sarah Chen",
+      email: "sarah.chen@bci.com",
+      department: "Engineering",
+      role: "owner" as const,
+      spotsOwned: 2,
+      bookingsCount: 15,
+      status: "active" as const,
+      lastLogin: "2024-01-15",
+      memberSince: "Jan 2023",
+      totalEarnings: 450,
+      phoneNumber: "(555) 123-4567",
+      vehicleInfo: "Tesla Model 3 (ABC-123)"
+    },
+    {
+      id: "user-002", 
+      name: "Michael Rodriguez",
+      email: "m.rodriguez@bci.com",
+      department: "Marketing",
+      role: "renter" as const,
+      spotsOwned: 0,
+      bookingsCount: 8,
+      status: "active" as const,
+      lastLogin: "2024-01-14",
+      memberSince: "Mar 2023",
+      totalSpent: 180,
+      phoneNumber: "(555) 234-5678",
+      vehicleInfo: "Honda Civic (XYZ-789)"
+    },
+    {
+      id: "user-003",
+      name: "Jennifer Kim",
+      email: "j.kim@bci.com", 
+      department: "Finance",
+      role: "waitlist" as const,
+      spotsOwned: 0,
+      bookingsCount: 3,
+      status: "active" as const,
+      lastLogin: "2024-01-12",
+      memberSince: "Dec 2023",
+      totalSpent: 45,
+      phoneNumber: "(555) 345-6789",
+      waitlistPosition: 15
+    },
+    {
+      id: "user-004",
+      name: "David Thompson",
+      email: "d.thompson@bci.com",
+      department: "IT",
+      role: "admin" as const,
+      spotsOwned: 0,
+      bookingsCount: 0,
+      status: "active" as const,
+      lastLogin: "2024-01-15",
+      memberSince: "Jan 2022",
+      phoneNumber: "(555) 456-7890"
+    },
+    {
+      id: "user-005",
+      name: "Emma Wilson",
+      email: "e.wilson@bci.com",
+      department: "HR",
+      role: "renter" as const,
+      spotsOwned: 0,
+      bookingsCount: 12,
+      status: "suspended" as const,
+      lastLogin: "2024-01-10",
+      memberSince: "Jun 2023",
+      totalSpent: 240,
+      phoneNumber: "(555) 567-8901",
+      vehicleInfo: "BMW X3 (DEF-456)"
+    }
+  ]
+
+  const filteredUsers = mockUsers.filter(user => {
+    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         user.department.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    const matchesRole = filterRole === "all" || user.role === filterRole
+    const matchesStatus = filterStatus === "all" || user.status === filterStatus
+    
+    return matchesSearch && matchesRole && matchesStatus
+  })
+
+  const handleEditUser = (userId: string) => {
+    console.log('Edit user:', userId)
+  }
+
+  const handleDeleteUser = (userId: string) => {
+    console.log('Delete user:', userId)
+  }
+
+  const handleSuspendUser = (userId: string) => {
+    console.log('Suspend user:', userId)
+  }
+
+  const handleAssignSpot = (userId: string) => {
+    console.log('Assign spot to user:', userId)
+  }
+
+  const handleSendNotification = (userId: string) => {
+    console.log('Send notification to user:', userId)
+  }
+
+  const handleBulkAction = (action: string) => {
+    console.log('Bulk action:', action)
+  }
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "active":
+        return <CheckCircle className="h-4 w-4 text-green-600" />
+      case "suspended":
+        return <XCircle className="h-4 w-4 text-red-600" />
+      case "pending":
+        return <Clock className="h-4 w-4 text-yellow-600" />
+      default:
+        return null
+    }
+  }
+
+  const roleStats = {
+    admin: mockUsers.filter(u => u.role === "admin").length,
+    owner: mockUsers.filter(u => u.role === "owner").length,
+    renter: mockUsers.filter(u => u.role === "renter").length,
+    waitlist: mockUsers.filter(u => u.role === "waitlist").length
+  }
+
+  return (
+    <div className="p-6 space-y-6" data-testid="page-admin-users">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">User Management</h1>
+          <p className="text-muted-foreground">
+            Manage user accounts, roles, and permissions across the parking system.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline">
+            <Upload className="h-4 w-4 mr-2" />
+            Import Users
+          </Button>
+          <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
+            <DialogTrigger asChild>
+              <Button>
+                <UserPlus className="h-4 w-4 mr-2" />
+                Add User
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Add New User</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="user-name">Full Name</Label>
+                    <Input id="user-name" placeholder="John Doe" />
+                  </div>
+                  <div>
+                    <Label htmlFor="user-email">Email Address</Label>
+                    <Input id="user-email" placeholder="john.doe@bci.com" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="user-department">Department</Label>
+                    <Input id="user-department" placeholder="Engineering" />
+                  </div>
+                  <div>
+                    <Label htmlFor="user-role">Role</Label>
+                    <Select>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="renter">Renter</SelectItem>
+                        <SelectItem value="owner">Spot Owner</SelectItem>
+                        <SelectItem value="admin">Administrator</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="user-phone">Phone Number</Label>
+                  <Input id="user-phone" placeholder="(555) 123-4567" />
+                </div>
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button variant="outline" onClick={() => setShowAddUser(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={() => setShowAddUser(false)}>
+                    Add User
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      {/* User Role Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Administrators</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{roleStats.admin}</div>
+            <Badge variant="secondary" className="text-xs">System access</Badge>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Spot Owners</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{roleStats.owner}</div>
+            <Badge variant="default" className="text-xs">Revenue generators</Badge>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Renters</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{roleStats.renter}</div>
+            <Badge variant="outline" className="text-xs">Active users</Badge>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Waitlist</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{roleStats.waitlist}</div>
+            <Badge variant="secondary" className="text-xs">Pending access</Badge>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Search and Filters */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-wrap gap-4 items-center">
+            <div className="flex-1 min-w-[250px]">
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search users by name, email, or department..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-8"
+                  data-testid="input-search-users"
+                />
+              </div>
+            </div>
+            <Select value={filterRole} onValueChange={setFilterRole}>
+              <SelectTrigger className="w-[150px]" data-testid="select-filter-role">
+                <SelectValue placeholder="All Roles" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Roles</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="owner">Owner</SelectItem>
+                <SelectItem value="renter">Renter</SelectItem>
+                <SelectItem value="waitlist">Waitlist</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-[150px]" data-testid="select-filter-status">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="suspended">Suspended</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" onClick={() => setShowBulkActions(!showBulkActions)}>
+              <Filter className="h-4 w-4 mr-2" />
+              Bulk Actions
+            </Button>
+            <Button variant="outline">
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Bulk Actions */}
+      {showBulkActions && (
+        <Card className="border-yellow-200 bg-yellow-50 dark:bg-yellow-900/20">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-4">
+              <span className="text-sm font-medium">Bulk Actions:</span>
+              <Button size="sm" variant="outline" onClick={() => handleBulkAction('send-notification')}>
+                <Mail className="h-4 w-4 mr-1" />
+                Send Notification
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => handleBulkAction('export-selected')}>
+                <Download className="h-4 w-4 mr-1" />
+                Export Selected
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => handleBulkAction('suspend')}>
+                <AlertTriangle className="h-4 w-4 mr-1" />
+                Suspend Users
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Detailed Users Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Users ({filteredUsers.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="border-b">
+                <tr className="text-left">
+                  <th className="p-4 font-medium">User</th>
+                  <th className="p-4 font-medium">Role</th>
+                  <th className="p-4 font-medium">Status</th>
+                  <th className="p-4 font-medium">Activity</th>
+                  <th className="p-4 font-medium">Financial</th>
+                  <th className="p-4 font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredUsers.map((user) => (
+                  <tr key={user.id} className="border-b hover:bg-muted/50">
+                    <td className="p-4">
+                      <div>
+                        <div className="font-medium">{user.name}</div>
+                        <div className="text-sm text-muted-foreground">{user.email}</div>
+                        <div className="text-xs text-muted-foreground">{user.department}</div>
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <Badge variant={user.role === "admin" ? "default" : "outline"}>
+                        {user.role}
+                      </Badge>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-2">
+                        {getStatusIcon(user.status)}
+                        <span className="text-sm">{user.status}</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Last login: {user.lastLogin}
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <div className="text-sm">
+                        <div>Bookings: {user.bookingsCount}</div>
+                        {user.spotsOwned > 0 && <div>Spots: {user.spotsOwned}</div>}
+                        {user.role === "waitlist" && user.waitlistPosition && (
+                          <div>Position: #{user.waitlistPosition}</div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <div className="text-sm">
+                        {user.totalEarnings && <div>Earned: ${user.totalEarnings}</div>}
+                        {user.totalSpent && <div>Spent: ${user.totalSpent}</div>}
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="outline" onClick={() => handleEditUser(user.id)}>
+                          Edit
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => handleSendNotification(user.id)}>
+                          <Mail className="h-3 w-3" />
+                        </Button>
+                        {user.status === "active" ? (
+                          <Button size="sm" variant="outline" onClick={() => handleSuspendUser(user.id)}>
+                            Suspend
+                          </Button>
+                        ) : (
+                          <Button size="sm" variant="outline" onClick={() => handleEditUser(user.id)}>
+                            Activate
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
