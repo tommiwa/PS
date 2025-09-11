@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { AuthService, userTypeDescriptions, demoCredentials } from "@/lib/auth";
 import { UserRole } from "@shared/schema";
+import { useAuth } from "@/contexts/auth-context";
 import { Car, Users, Shield, Clock, ChevronRight, Loader2, AlertCircle, ArrowLeft, Building2 } from "lucide-react";
 import BCILogo, { BCIHeroLogo } from "@/components/bci-logo";
 
@@ -49,6 +50,7 @@ const userTypeIconBgs: Record<UserRole, string> = {
 
 export default function Login() {
   const [, setLocation] = useLocation();
+  const { login } = useAuth();
   const [selectedUserType, setSelectedUserType] = useState<UserRole | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -85,25 +87,10 @@ export default function Login() {
     setError(null);
 
     try {
-      await AuthService.demoLogin(selectedUserType, data.email);
+      await login(selectedUserType, data.email);
       
-      // Redirect based on user role
-      switch (selectedUserType) {
-        case "admin":
-          setLocation("/admin/dashboard");
-          break;
-        case "renter":
-          setLocation("/renter/dashboard");
-          break;
-        case "owner":
-          setLocation("/dashboard");
-          break;
-        case "waitlist":
-          setLocation("/waitlist/dashboard");
-          break;
-        default:
-          setLocation("/dashboard");
-      }
+      // Redirect all roles to main dashboard which handles role-specific rendering
+      setLocation("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed. Please try again.");
     } finally {
@@ -117,25 +104,8 @@ export default function Login() {
     setError(null);
 
     try {
-      await AuthService.demoLogin(userType);
-      
-      // Redirect based on user role
-      switch (userType) {
-        case "admin":
-          setLocation("/admin/dashboard");
-          break;
-        case "renter":
-          setLocation("/renter/dashboard");
-          break;
-        case "owner":
-          setLocation("/dashboard");
-          break;
-        case "waitlist":
-          setLocation("/waitlist/dashboard");
-          break;
-        default:
-          setLocation("/dashboard");
-      }
+      await login(userType);
+      setLocation("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed. Please try again.");
     } finally {

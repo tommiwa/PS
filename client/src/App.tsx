@@ -127,22 +127,19 @@ function AuthenticatedApp() {
           <main className="flex-1 overflow-auto bg-muted/30">
             <Switch>
               {/* Default dashboard based on user role */}
-              <Route path="/" component={() => <Dashboard userRole={user?.role} />} />
+              <Route path="/">
+                <Dashboard userRole={user?.role} />
+              </Route>
+              
+              {/* Main dashboard - handles all role-based rendering */}
+              <Route path="/dashboard">
+                <Dashboard userRole={user?.role} />
+              </Route>
               
               {/* General pages available to all authenticated users */}
-              <Route path="/dashboard" component={() => <Dashboard userRole={user?.role} />} />
               <Route path="/search" component={Search} />
               <Route path="/profile" component={Profile} />
               <Route path="/settings" component={Settings} />
-              
-              {/* Waiting List page */}
-              <Route path="/waitlist" component={() => <Dashboard userRole="waitlist" />} />
-              
-              {/* Role-specific dashboards */}
-              <Route path="/admin/dashboard" component={() => <Dashboard userRole="admin" />} />
-              <Route path="/renter/dashboard" component={() => <Dashboard userRole="renter" />} />
-              <Route path="/owner/dashboard" component={() => <Dashboard userRole="owner" />} />
-              <Route path="/waitlist/dashboard" component={() => <Dashboard userRole="waitlist" />} />
               
               {/* Renter-specific pages */}
               <Route path="/my-bookings" component={MyBookings} />
@@ -158,7 +155,7 @@ function AuthenticatedApp() {
               <Route path="/admin/analytics" component={AdminAnalytics} />
               
               {/* Fallback to 404 */}
-              <Route component={NotFound} />
+              <Route path="(.*)" component={NotFound} />
             </Switch>
           </main>
         </div>
