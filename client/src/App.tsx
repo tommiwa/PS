@@ -56,44 +56,8 @@ function ProtectedRouter() {
     return <Login />;
   }
 
-  // Router for authenticated users
-  return (
-    <Switch>
-      {/* Default dashboard based on user role */}
-      <Route path="/" component={() => <Dashboard userRole={user?.role} />} />
-      
-      {/* General pages available to all authenticated users */}
-      <Route path="/dashboard" component={() => <Dashboard userRole={user?.role} />} />
-      <Route path="/search" component={Search} />
-      <Route path="/profile" component={Profile} />
-      <Route path="/settings" component={Settings} />
-      
-      {/* Role-specific dashboards */}
-      <Route path="/admin/dashboard" component={() => <Dashboard userRole="admin" />} />
-      <Route path="/renter/dashboard" component={() => <Dashboard userRole="renter" />} />
-      <Route path="/owner/dashboard" component={() => <Dashboard userRole="owner" />} />
-      <Route path="/waitlist/dashboard" component={() => <Dashboard userRole="waitlist" />} />
-      
-      {/* Renter-specific pages */}
-      <Route path="/my-bookings" component={MyBookings} />
-      
-      {/* Owner-specific pages */}
-      <Route path="/my-spots" component={MySpots} />
-      
-      {/* Admin-only pages */}
-      <Route path="/admin" component={Admin} />
-      <Route path="/admin/users" component={AdminUserManagement} />
-      <Route path="/admin/waitlist" component={AdminWaitlist} />
-      <Route path="/admin/parking-spaces" component={AdminParkingSpaces} />
-      <Route path="/admin/analytics" component={AdminAnalytics} />
-      
-      {/* Login page for authenticated users (will redirect) */}
-      <Route path="/login" component={() => { setLocation("/dashboard"); return null; }} />
-      
-      {/* Fallback to 404 */}
-      <Route component={NotFound} />
-    </Switch>
-  );
+  // Render authenticated app with layout
+  return <AuthenticatedApp />;
 }
 
 // Main authenticated app layout
@@ -161,7 +125,41 @@ function AuthenticatedApp() {
             </div>
           </header>
           <main className="flex-1 overflow-auto bg-muted/30">
-            <ProtectedRouter />
+            <Switch>
+              {/* Default dashboard based on user role */}
+              <Route path="/" component={() => <Dashboard userRole={user?.role} />} />
+              
+              {/* General pages available to all authenticated users */}
+              <Route path="/dashboard" component={() => <Dashboard userRole={user?.role} />} />
+              <Route path="/search" component={Search} />
+              <Route path="/profile" component={Profile} />
+              <Route path="/settings" component={Settings} />
+              
+              {/* Waiting List page */}
+              <Route path="/waitlist" component={() => <Dashboard userRole="waitlist" />} />
+              
+              {/* Role-specific dashboards */}
+              <Route path="/admin/dashboard" component={() => <Dashboard userRole="admin" />} />
+              <Route path="/renter/dashboard" component={() => <Dashboard userRole="renter" />} />
+              <Route path="/owner/dashboard" component={() => <Dashboard userRole="owner" />} />
+              <Route path="/waitlist/dashboard" component={() => <Dashboard userRole="waitlist" />} />
+              
+              {/* Renter-specific pages */}
+              <Route path="/my-bookings" component={MyBookings} />
+              
+              {/* Owner-specific pages */}
+              <Route path="/my-spots" component={MySpots} />
+              
+              {/* Admin-only pages */}
+              <Route path="/admin" component={Admin} />
+              <Route path="/admin/users" component={AdminUserManagement} />
+              <Route path="/admin/waitlist" component={AdminWaitlist} />
+              <Route path="/admin/parking-spaces" component={AdminParkingSpaces} />
+              <Route path="/admin/analytics" component={AdminAnalytics} />
+              
+              {/* Fallback to 404 */}
+              <Route component={NotFound} />
+            </Switch>
           </main>
         </div>
       </div>
@@ -175,7 +173,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AuthProvider>
-          <AuthenticatedApp />
+          <ProtectedRouter />
         </AuthProvider>
         <Toaster />
       </TooltipProvider>
