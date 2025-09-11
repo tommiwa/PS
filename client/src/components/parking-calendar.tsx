@@ -26,7 +26,7 @@ interface ParkingSpot {
   isInside: boolean
   price: number
   isAvailable: boolean
-  availability: {
+  availability?: {
     date: string
     startTime: string
     endTime: string
@@ -95,8 +95,22 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
 
   const getSpotsForDate = (date: Date) => {
     return spots.filter(spot => {
-      const spotDate = new Date(spot.availability.date)
-      return isSameDay(spotDate, date) && spot.isAvailable
+      // Show available spots on all dates
+      if (spot.isAvailable) {
+        // If spot has availability date, check if it matches
+        if (spot.availability?.date) {
+          const spotDate = new Date(spot.availability.date)
+          return isSameDay(spotDate, date)
+        }
+        // If no specific availability date, show on all dates
+        return true
+      }
+      // For unavailable spots, only show on their specific booking date if available
+      if (spot.availability?.date) {
+        const spotDate = new Date(spot.availability.date)
+        return isSameDay(spotDate, date)
+      }
+      return false
     })
   }
 
@@ -175,10 +189,12 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                           <DollarSign className="h-4 w-4" />
                           ${spot.price}
                         </div>
-                        <div className="text-sm text-muted-foreground flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {spot.availability.startTime} - {spot.availability.endTime}
-                        </div>
+                        {spot.availability?.startTime && spot.availability?.endTime && (
+                          <div className="text-sm text-muted-foreground flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {spot.availability.startTime} - {spot.availability.endTime}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="mt-2 flex items-center gap-2">
@@ -237,9 +253,11 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                         {getSpotTypeIcon(spot.type)}
                         <span>${spot.price}</span>
                       </div>
-                      <div className="text-xs opacity-75">
-                        {spot.availability.startTime}
-                      </div>
+                      {spot.availability?.startTime && (
+                        <div className="text-xs opacity-75">
+                          {spot.availability.startTime}
+                        </div>
+                      )}
                     </div>
                   ))}
                   {daySpots.length > 3 && (

@@ -17,9 +17,9 @@ interface BookingFormProps {
 
 export function BookingForm({ spot, onSubmit, onCancel }: BookingFormProps) {
   const [formData, setFormData] = useState({
-    date: spot.availability.date,
-    startTime: spot.availability.startTime,
-    endTime: spot.availability.endTime,
+    date: spot.availability?.date || new Date().toISOString().split('T')[0],
+    startTime: spot.availability?.startTime || "8:00 AM",
+    endTime: spot.availability?.endTime || "6:00 PM",
     paymentMethod: "",
     specialInstructions: "",
     contactPhone: "",

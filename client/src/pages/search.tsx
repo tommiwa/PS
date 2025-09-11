@@ -34,11 +34,7 @@ export default function Search() {
       type: "electric" as const,
       isInside: true,
       price: 25,
-      availability: {
-        date: "2024-01-15",
-        startTime: "8:00 AM",
-        endTime: "6:00 PM"
-      },
+      // Available spots don't have specific dates - they're available every day
       owner: "Sarah Chen",
       isAvailable: true
     },
@@ -49,11 +45,7 @@ export default function Search() {
       type: "regular" as const,
       isInside: false,
       price: 20,
-      availability: {
-        date: "2024-01-15",
-        startTime: "7:00 AM",
-        endTime: "7:00 PM"
-      },
+      // Available spots don't have specific dates - they're available every day
       owner: "Mike Johnson",
       isAvailable: true
     },
@@ -64,11 +56,7 @@ export default function Search() {
       type: "accessible" as const,
       isInside: false,
       price: 15,
-      availability: {
-        date: "2024-01-15",
-        startTime: "8:00 AM",
-        endTime: "5:00 PM"
-      },
+      // Available spots don't have specific dates - they're available every day
       owner: "Lisa Anderson",
       isAvailable: true
     },
@@ -80,7 +68,7 @@ export default function Search() {
       isInside: true,
       price: 30,
       availability: {
-        date: "2024-01-15",
+        date: new Date().toISOString().split('T')[0], // Today's date for booked spot
         startTime: "9:00 AM",
         endTime: "6:00 PM"
       },

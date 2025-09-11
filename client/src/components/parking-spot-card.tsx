@@ -89,13 +89,17 @@ export function ParkingSpotCard({
       
       <CardContent className="pt-0 pb-4">
         <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm">
-            <Calendar className="h-4 w-4" />
-            {spot.availability.date}
-          </div>
-          <div className="text-sm text-muted-foreground">
-            {spot.availability.startTime} - {spot.availability.endTime}
-          </div>
+          {spot.availability?.date && (
+            <div className="flex items-center gap-2 text-sm">
+              <Calendar className="h-4 w-4" />
+              {spot.availability.date}
+            </div>
+          )}
+          {spot.availability?.startTime && spot.availability?.endTime && (
+            <div className="text-sm text-muted-foreground">
+              {spot.availability.startTime} - {spot.availability.endTime}
+            </div>
+          )}
           <div className="flex items-center gap-2 text-sm font-medium">
             <DollarSign className="h-4 w-4" />
             ${spot.price}/day
