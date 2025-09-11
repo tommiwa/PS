@@ -12,7 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { AuthService, userTypeDescriptions, demoCredentials } from "@/lib/auth";
 import { UserRole } from "@shared/schema";
-import { Car, Users, Shield, Clock, ChevronRight, Loader2, AlertCircle } from "lucide-react";
+import { Car, Users, Shield, Clock, ChevronRight, Loader2, AlertCircle, ArrowLeft, Building2 } from "lucide-react";
+import BCILogo, { BCIHeroLogo } from "@/components/bci-logo";
 
 // Form validation schema
 const loginSchema = z.object({
@@ -30,12 +31,20 @@ const userTypeIcons: Record<UserRole, React.ComponentType<any>> = {
   waitlist: Clock,
 };
 
-// Color mapping for user type cards
+// Professional color mapping for user type cards
 const userTypeColors: Record<UserRole, string> = {
-  renter: "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800",
-  owner: "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800",
-  admin: "bg-purple-50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-800",
-  waitlist: "bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800",
+  renter: "border-primary/20 bg-primary/5 hover:bg-primary/10 hover:border-primary/30",
+  owner: "border-emerald-200 dark:border-emerald-800/50 bg-emerald-50/50 dark:bg-emerald-950/20 hover:bg-emerald-100/50 dark:hover:bg-emerald-950/30",
+  admin: "border-violet-200 dark:border-violet-800/50 bg-violet-50/50 dark:bg-violet-950/20 hover:bg-violet-100/50 dark:hover:bg-violet-950/30",
+  waitlist: "border-amber-200 dark:border-amber-800/50 bg-amber-50/50 dark:bg-amber-950/20 hover:bg-amber-100/50 dark:hover:bg-amber-950/30",
+};
+
+// Professional icon backgrounds for user types
+const userTypeIconBgs: Record<UserRole, string> = {
+  renter: "bg-primary/10 text-primary",
+  owner: "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400",
+  admin: "bg-violet-100 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400",
+  waitlist: "bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400",
 };
 
 export default function Login() {
@@ -135,242 +144,415 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5 flex items-center justify-center p-4">
-      <div className="w-full max-w-4xl space-y-8">
-        {/* Header */}
-        <div className="text-center space-y-2">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="h-12 w-12 rounded-lg bg-primary flex items-center justify-center">
-              <Car className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold">BCI Parking</h1>
-              <p className="text-muted-foreground">Spot Sharing Application</p>
-            </div>
-          </div>
-          <p className="text-lg text-muted-foreground">
-            Select your user type to access the parking system
-          </p>
-        </div>
-
-        {/* User Type Selection */}
-        {!showCredentials && (
-          <div>
-            <h2 className="text-xl font-semibold text-center mb-6">Choose Your Role</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {(Object.entries(userTypeDescriptions) as [UserRole, typeof userTypeDescriptions[UserRole]][]).map(([role, info]) => {
-                const Icon = userTypeIcons[role];
-                const isSelected = selectedUserType === role;
-                const credentials = demoCredentials[role];
-                
-                return (
-                  <Card
-                    key={role}
-                    className={`cursor-pointer transition-all duration-200 hover-elevate ${
-                      isSelected 
-                        ? `ring-2 ring-primary ${userTypeColors[role]}` 
-                        : "hover:shadow-md"
-                    }`}
-                    onClick={() => handleUserTypeSelect(role)}
-                    data-testid={`card-user-type-${role}`}
-                  >
-                    <CardHeader className="text-center pb-4">
-                      <div className="flex justify-center mb-3">
-                        <div className={`h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center`}>
-                          <Icon className="h-6 w-6 text-primary" />
-                        </div>
-                      </div>
-                      <CardTitle className="text-lg">{info.title}</CardTitle>
-                      <CardDescription className="text-sm">
-                        {info.description}
-                      </CardDescription>
-                    </CardHeader>
-                    
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <h4 className="text-sm font-medium text-muted-foreground">Sample User:</h4>
-                        <div className="text-sm">
-                          <p className="font-medium">{credentials.email.split('@')[0].replace('.', ' ').replace(/\b\w/g, l => l.toUpperCase())}</p>
-                          <p className="text-muted-foreground">{credentials.email}</p>
-                        </div>
-                      </div>
-                      
-                      <Separator />
-                      
-                      <div className="space-y-2">
-                        <h4 className="text-sm font-medium text-muted-foreground">Features:</h4>
-                        <ul className="text-xs space-y-1">
-                          {info.features.slice(0, 3).map((feature, index) => (
-                            <li key={index} className="flex items-center gap-2">
-                              <div className="h-1 w-1 bg-primary rounded-full flex-shrink-0" />
-                              {feature}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                      
-                      <div className="pt-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="w-full group"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleQuickLogin(role);
-                          }}
-                          disabled={isLoading}
-                          data-testid={`button-quick-login-${role}`}
-                        >
-                          {isLoading ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <>
-                              Quick Login
-                              <ChevronRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Login Form */}
-        {showCredentials && (
-          <Card className="max-w-md mx-auto">
-            <CardHeader className="text-center">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                {selectedUserType && (() => {
-                  const Icon = userTypeIcons[selectedUserType];
-                  return <Icon className="h-5 w-5 text-primary" />;
-                })()}
-                <CardTitle>
-                  {selectedUserType && userTypeDescriptions[selectedUserType].title}
-                </CardTitle>
-              </div>
-              <CardDescription>
-                Enter your credentials to continue
-              </CardDescription>
-            </CardHeader>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-primary/5 dark:from-slate-950 dark:via-slate-900 dark:to-primary/5">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 bg-grid-slate-100 dark:bg-grid-slate-800 bg-[size:20px_20px] opacity-50" />
+      <div className="absolute inset-0 bg-gradient-to-br from-white/50 via-transparent to-primary/10 dark:from-slate-950/50 dark:via-transparent dark:to-primary/5" />
+      
+      <div className="relative flex items-center justify-center min-h-screen p-4">
+        <div className="w-full max-w-5xl space-y-8">
+          {/* Hero Logo Section */}
+          <div className="text-center py-8">
+            <BCIHeroLogo className="mx-auto" />
             
-            <CardContent>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="your.name@bci.com"
-                    {...form.register("email")}
-                    data-testid="input-email"
-                  />
-                  {form.formState.errors.email && (
-                    <p className="text-sm text-destructive">
-                      {form.formState.errors.email.message}
-                    </p>
-                  )}
-                </div>
+            {!showCredentials && (
+              <div className="mt-8 space-y-3">
+                <h2 className="text-2xl font-semibold text-foreground">
+                  Welcome to BCI Parking
+                </h2>
+                <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                  Select your role to access our enterprise parking management system. 
+                  Streamline your parking experience with our professional solution.
+                </p>
+              </div>
+            )}
+            
+            {showCredentials && (
+              <div className="mt-6 space-y-2">
+                <h2 className="text-xl font-semibold text-foreground">
+                  Sign In to Your Account
+                </h2>
+                <p className="text-muted-foreground">
+                  Welcome back! Please enter your credentials to continue.
+                </p>
+              </div>
+            )}
+          </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Enter your password"
-                    {...form.register("password")}
-                    data-testid="input-password"
-                  />
-                  {form.formState.errors.password && (
-                    <p className="text-sm text-destructive">
-                      {form.formState.errors.password.message}
-                    </p>
-                  )}
-                </div>
+          {/* User Type Selection */}
+          {!showCredentials && (
+            <div className="space-y-8">
+              {/* Section Header */}
+              <div className="text-center space-y-3">
+                <h3 className="text-xl font-semibold text-foreground">Select Your Account Type</h3>
+                <p className="text-muted-foreground">Choose the option that best describes your role in the organization</p>
+              </div>
 
-                {error && (
-                  <Alert variant="destructive" data-testid="alert-login-error">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-
-                <div className="space-y-3">
-                  <Button 
-                    type="submit" 
-                    className="w-full"
-                    disabled={isLoading}
-                    data-testid="button-login"
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Logging in...
-                      </>
-                    ) : (
-                      "Log In"
-                    )}
-                  </Button>
+              {/* User Type Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                {(Object.entries(userTypeDescriptions) as [UserRole, typeof userTypeDescriptions[UserRole]][]).map(([role, info]) => {
+                  const Icon = userTypeIcons[role];
+                  const isSelected = selectedUserType === role;
+                  const credentials = demoCredentials[role];
                   
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => {
-                      setShowCredentials(false);
-                      setSelectedUserType(null);
-                      form.reset();
-                      setError(null);
-                    }}
-                    className="w-full"
-                    data-testid="button-back"
-                  >
-                    Back to Role Selection
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Demo Credentials Info */}
-        <Card className="max-w-2xl mx-auto bg-muted/30">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-blue-600" />
-              Demo Application
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              This is a demonstration of the BCI Parking Spot Sharing Application. 
-              You can quickly login with any role using the "Quick Login" buttons above.
-            </p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-              <div>
-                <h4 className="font-medium mb-2">Available Demo Accounts:</h4>
-                <ul className="space-y-1 text-muted-foreground">
-                  <li>• Renter: michael.rodriguez@bci.com</li>
-                  <li>• Owner: sarah.chen@bci.com</li>
-                  <li>• Admin: david.thompson@bci.com</li>
-                  <li>• Waitlist: jennifer.kim@bci.com</li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-medium mb-2">Features:</h4>
-                <ul className="space-y-1 text-muted-foreground">
-                  <li>• Role-based access control</li>
-                  <li>• Persistent authentication</li>
-                  <li>• Responsive design</li>
-                  <li>• Real-time availability</li>
-                </ul>
+                  return (
+                    <Card
+                      key={role}
+                      className={`cursor-pointer transition-all duration-300 hover-elevate group relative overflow-hidden ${
+                        isSelected 
+                          ? `ring-2 ring-primary/50 shadow-lg ${userTypeColors[role]}` 
+                          : `${userTypeColors[role]} hover:shadow-md border`
+                      }`}
+                      onClick={() => handleUserTypeSelect(role)}
+                      data-testid={`card-user-type-${role}`}
+                    >
+                      {/* Selection indicator */}
+                      {isSelected && (
+                        <div className="absolute top-0 right-0 h-0 w-0 border-l-[40px] border-t-[40px] border-l-transparent border-t-primary/20" />
+                      )}
+                      
+                      <CardHeader className="pb-4">
+                        <div className="flex items-start gap-4">
+                          {/* Icon */}
+                          <div className={`h-14 w-14 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-300 group-hover:scale-110 ${userTypeIconBgs[role]}`}>
+                            <Icon className="h-7 w-7" />
+                          </div>
+                          
+                          {/* Title and Description */}
+                          <div className="flex-1 space-y-2">
+                            <CardTitle className="text-lg font-semibold group-hover:text-primary transition-colors">
+                              {info.title}
+                            </CardTitle>
+                            <CardDescription className="text-sm leading-relaxed">
+                              {info.description}
+                            </CardDescription>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      
+                      <CardContent className="space-y-4">
+                        {/* Demo User Info */}
+                        <div className="bg-muted/30 rounded-lg p-3 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">Demo Account</Badge>
+                          </div>
+                          <div className="text-sm">
+                            <p className="font-medium text-foreground">
+                              {credentials.email.split('@')[0].replace('.', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            </p>
+                            <p className="text-muted-foreground text-xs">{credentials.email}</p>
+                          </div>
+                        </div>
+                        
+                        {/* Key Features */}
+                        <div className="space-y-2">
+                          <h4 className="text-sm font-medium text-muted-foreground">Key Features:</h4>
+                          <ul className="space-y-1">
+                            {info.features.slice(0, 2).map((feature, index) => (
+                              <li key={index} className="flex items-start gap-2 text-xs text-muted-foreground">
+                                <div className="h-1.5 w-1.5 bg-primary rounded-full mt-1.5 flex-shrink-0" />
+                                <span className="leading-relaxed">{feature}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        
+                        {/* Action Buttons */}
+                        <div className="flex gap-2 pt-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="flex-1 group/btn text-xs"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleQuickLogin(role);
+                            }}
+                            disabled={isLoading}
+                            data-testid={`button-quick-login-${role}`}
+                          >
+                            {isLoading ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <>
+                                Quick Login
+                                <ChevronRight className="h-3 w-3 ml-1 group-hover/btn:translate-x-0.5 transition-transform" />
+                              </>
+                            )}
+                          </Button>
+                          
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="px-3 text-xs"
+                            onClick={() => handleUserTypeSelect(role)}
+                            data-testid={`button-select-${role}`}
+                          >
+                            Select
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             </div>
-          </CardContent>
-        </Card>
+          )}
+
+          {/* Login Form */}
+          {showCredentials && (
+            <div className="max-w-lg mx-auto">
+              <Card className="shadow-xl border-0 bg-white/95 dark:bg-card/95 backdrop-blur-sm">
+                <CardHeader className="text-center pb-6">
+                  {/* Back Button */}
+                  <div className="flex items-center mb-4">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setShowCredentials(false);
+                        setSelectedUserType(null);
+                        form.reset();
+                        setError(null);
+                      }}
+                      className="gap-2"
+                      data-testid="button-back"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                      Back to Role Selection
+                    </Button>
+                  </div>
+                  
+                  {/* Selected User Type Info */}
+                  {selectedUserType && (
+                    <div className="bg-muted/30 rounded-lg p-4 mb-4">
+                      <div className="flex items-center justify-center gap-3 mb-2">
+                        {(() => {
+                          const Icon = userTypeIcons[selectedUserType];
+                          return (
+                            <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${userTypeIconBgs[selectedUserType]}`}>
+                              <Icon className="h-5 w-5" />
+                            </div>
+                          );
+                        })()}
+                        <div className="text-left">
+                          <CardTitle className="text-lg">
+                            {userTypeDescriptions[selectedUserType].title}
+                          </CardTitle>
+                          <p className="text-sm text-muted-foreground">
+                            {demoCredentials[selectedUserType].email}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <CardDescription className="text-base">
+                    Enter your credentials to access the BCI Parking system
+                  </CardDescription>
+                </CardHeader>
+                
+                <CardContent className="space-y-6">
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    {/* Email Field */}
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="text-sm font-medium">
+                        Email Address
+                      </Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="your.name@bci.com"
+                        className="h-11 text-base"
+                        {...form.register("email")}
+                        data-testid="input-email"
+                      />
+                      {form.formState.errors.email && (
+                        <p className="text-sm text-destructive flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" />
+                          {form.formState.errors.email.message}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Password Field */}
+                    <div className="space-y-2">
+                      <Label htmlFor="password" className="text-sm font-medium">
+                        Password
+                      </Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        placeholder="Enter your password"
+                        className="h-11 text-base"
+                        {...form.register("password")}
+                        data-testid="input-password"
+                      />
+                      {form.formState.errors.password && (
+                        <p className="text-sm text-destructive flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" />
+                          {form.formState.errors.password.message}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Error Alert */}
+                    {error && (
+                      <Alert variant="destructive" data-testid="alert-login-error">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>{error}</AlertDescription>
+                      </Alert>
+                    )}
+
+                    {/* Demo Credentials Helper */}
+                    <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/50 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="h-6 w-6 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <Building2 className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                            Demo Account
+                          </p>
+                          <p className="text-xs text-blue-700 dark:text-blue-300">
+                            Use the pre-filled credentials or click "Log In" to access the demo system.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Login Button */}
+                    <Button 
+                      type="submit" 
+                      className="w-full h-11 text-base font-medium"
+                      disabled={isLoading}
+                      data-testid="button-login"
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Signing in...
+                        </>
+                      ) : (
+                        "Sign In to BCI Parking"
+                      )}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Demo Credentials Info */}
+          {!showCredentials && (
+            <div className="max-w-4xl mx-auto">
+              <Card className="bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800">
+                <CardHeader className="text-center pb-4">
+                  <div className="flex items-center justify-center gap-2 mb-3">
+                    <div className="h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center">
+                      <Building2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <CardTitle className="text-lg font-semibold text-foreground">
+                      Demo Environment
+                    </CardTitle>
+                  </div>
+                  <CardDescription className="text-base">
+                    Experience the full BCI Parking Management System with our interactive demo
+                  </CardDescription>
+                </CardHeader>
+                
+                <CardContent className="space-y-6">
+                  <div className="text-center space-y-2">
+                    <p className="text-sm text-muted-foreground">
+                      This demonstration showcases our enterprise parking solution with role-based access control, 
+                      real-time availability tracking, and comprehensive management features.
+                    </p>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Demo Accounts */}
+                    <div className="space-y-3">
+                      <h4 className="font-semibold text-sm text-foreground flex items-center gap-2">
+                        <Users className="h-4 w-4 text-primary" />
+                        Demo Accounts Available
+                      </h4>
+                      <div className="space-y-2">
+                        {(Object.entries(demoCredentials) as [UserRole, typeof demoCredentials[UserRole]][]).map(([role, credentials]) => (
+                          <div key={role} className="flex items-center gap-3 p-2 rounded-lg bg-white/50 dark:bg-slate-800/50">
+                            {(() => {
+                              const Icon = userTypeIcons[role];
+                              return (
+                                <div className={`h-6 w-6 rounded flex items-center justify-center ${userTypeIconBgs[role]}`}>
+                                  <Icon className="h-3 w-3" />
+                                </div>
+                              );
+                            })()}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium text-foreground capitalize">
+                                {userTypeDescriptions[role].title}
+                              </p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {credentials.email}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {/* System Features */}
+                    <div className="space-y-3">
+                      <h4 className="font-semibold text-sm text-foreground flex items-center gap-2">
+                        <Shield className="h-4 w-4 text-primary" />
+                        Enterprise Features
+                      </h4>
+                      <ul className="space-y-2 text-xs text-muted-foreground">
+                        <li className="flex items-start gap-2">
+                          <div className="h-1.5 w-1.5 bg-primary rounded-full mt-1.5 flex-shrink-0" />
+                          <span>Role-based access control with admin oversight</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <div className="h-1.5 w-1.5 bg-primary rounded-full mt-1.5 flex-shrink-0" />
+                          <span>Real-time parking availability and booking management</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <div className="h-1.5 w-1.5 bg-primary rounded-full mt-1.5 flex-shrink-0" />
+                          <span>Waitlist management and automatic notifications</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <div className="h-1.5 w-1.5 bg-primary rounded-full mt-1.5 flex-shrink-0" />
+                          <span>Comprehensive analytics and reporting dashboard</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <div className="h-1.5 w-1.5 bg-primary rounded-full mt-1.5 flex-shrink-0" />
+                          <span>Responsive design optimized for all devices</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                  
+                  {/* Quick Start Instructions */}
+                  <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <Car className="h-3 w-3 text-primary" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-primary">
+                          Quick Start Guide
+                        </p>
+                        <p className="text-xs text-primary/80">
+                          Select any account type above to explore the system, or use the "Quick Login" buttons for instant access. 
+                          All demo accounts are pre-configured with sample data to showcase the full functionality.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
