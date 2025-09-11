@@ -8,7 +8,9 @@ import {
   Users, 
   BarChart3, 
   Shield,
-  Search
+  Search,
+  ListOrdered,
+  ParkingCircle
 } from "lucide-react"
 import { Link, useLocation } from "wouter"
 import {
@@ -69,6 +71,18 @@ const adminMenuItems = [
     title: "User Management",
     url: "/admin/users",
     icon: Users,
+    roles: ["admin"]
+  },
+  {
+    title: "Waiting List Admin",
+    url: "/admin/waitlist",
+    icon: ListOrdered,
+    roles: ["admin"]
+  },
+  {
+    title: "Parking Space Admin",
+    url: "/admin/parking-spaces",
+    icon: ParkingCircle,
     roles: ["admin"]
   },
   {

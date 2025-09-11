@@ -34,6 +34,8 @@ function Router() {
       {/* Admin routes */}
       <Route path="/admin" component={Admin} />
       <Route path="/admin/users" component={AdminUserManagement} />
+      <Route path="/admin/waitlist" component={() => <div>Waiting List Administration - Coming Soon</div>} />
+      <Route path="/admin/parking-spaces" component={() => <div>Parking Space Administration - Coming Soon</div>} />
       <Route path="/admin/analytics" component={AdminAnalytics} />
       {/* Different role dashboards */}
       <Route path="/admin/dashboard" component={() => <Dashboard userRole="admin" />} />
@@ -54,13 +56,13 @@ function App() {
 
   //todo: remove mock functionality - get from auth context
   const currentUser = {
-    id: "user-001",
-    name: "Sarah Chen",
-    email: "sarah.chen@bci.com",
-    phone: "(555) 123-4567",
-    department: "Engineering",
-    role: "owner" as const,
-    memberSince: "January 2023"
+    id: "user-004",
+    name: "David Thompson",
+    email: "d.thompson@bci.com",
+    phone: "(555) 456-7890",
+    department: "IT",
+    role: "admin" as const,
+    memberSince: "January 2022"
   };
 
   const getInitials = (name: string) => {
