@@ -1,5 +1,6 @@
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
+import { useLocation } from "wouter";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,6 +33,7 @@ const roleConfig = {
 
 export function RoleSwitcher() {
   const { user, getCurrentViewRole, switchViewRole, resetViewRole, isAdmin } = useAuth();
+  const [, setLocation] = useLocation();
 
   // Only show for admin users
   if (!isAdmin()) {
@@ -42,11 +44,31 @@ export function RoleSwitcher() {
   const currentConfig = roleConfig[currentViewRole as UserRole] || roleConfig.admin;
   const CurrentIcon = currentConfig.icon;
 
+  // Mock function to check if spot owner has registered spots  
+  // In real app, this would query the database
+  const hasRegisteredSpots = (userId: string) => {
+    // Mock data - some users have spots, some don't
+    // Demo spot owner "user-owner-001" has registered spots
+    const usersWithSpots = ['user-admin-001', 'owner-002', 'owner-004']; 
+    return usersWithSpots.includes(userId);
+  };
+
   const handleRoleSwitch = (role: UserRole) => {
     if (role === "admin") {
       resetViewRole(); // Reset to admin view
+      setLocation("/dashboard", { replace: true });
     } else {
       switchViewRole(role); // Switch to other role view
+      
+      // Redirect to appropriate landing page for the role
+      if (role === "owner") {
+        // Spot owners: My Bookings if they have spots, My Spots if they don't
+        const targetPage = hasRegisteredSpots(user?.id || "") ? "/my-bookings" : "/my-spots";
+        setLocation(targetPage, { replace: true });
+      } else if (role === "renter") {
+        // Renters: Search page
+        setLocation("/search", { replace: true });
+      }
     }
   };
 
