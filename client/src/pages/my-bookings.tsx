@@ -141,8 +141,8 @@ export default function MyBookings() {
     const matchesSearch = item.spotNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (isOwner() ? 
-                           (item.renterName?.toLowerCase().includes(searchTerm.toLowerCase()) || false) :
-                           (item.owner?.toLowerCase().includes(searchTerm.toLowerCase()) || false))
+                           ('renterName' in item && item.renterName?.toLowerCase().includes(searchTerm.toLowerCase()) || false) :
+                           ('owner' in item && item.owner?.toLowerCase().includes(searchTerm.toLowerCase()) || false))
     
     const matchesStatus = filterStatus === "all" || item.status === filterStatus
     
@@ -163,7 +163,7 @@ export default function MyBookings() {
   })
 
   // Categories for different user types
-  let activeItems, completedItems, cancelledItems, unusedItems
+  let activeItems: any[], completedItems: any[], cancelledItems: any[], unusedItems: any[]
 
   if (isOwner()) {
     // For owners - categorize their listings
@@ -175,7 +175,7 @@ export default function MyBookings() {
     // For renters - categorize their bookings
     activeItems = mockBookings.filter(b => b.status === "confirmed" || b.status === "pending")
     completedItems = mockBookings.filter(b => b.status === "confirmed" && isPastDate(b.date))
-    cancelledItems = mockBookings.filter(b => b.status === "cancelled")
+    cancelledItems = [] // No cancelled status in current mock data
     unusedItems = [] // Renters don't have unused items
   }
 
