@@ -53,16 +53,16 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Parse the search query intelligently
-  const parseSearchQuery = (searchQuery: string): ParsedSearch => {
+  const parseSearchQuery = (searchQuery: string, filters: string[] = activeFilters): ParsedSearch => {
     const parsed: ParsedSearch = {
       query: searchQuery,
-      quickFilters: [...activeFilters]
+      quickFilters: [...filters]
     }
 
     const terms = searchQuery.toLowerCase().split(/\s+/)
 
     // Handle active filters first
-    activeFilters.forEach(filterValue => {
+    filters.forEach(filterValue => {
       if (filterValue === "today") {
         parsed.date = new Date().toISOString().split('T')[0]
       } else if (filterValue === "electric") {
@@ -186,9 +186,7 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
     setActiveFilters(newActiveFilters)
     setQuery(newQuery)
     
-    const parsed = parseSearchQuery(newQuery)
-    // Add active filters to the parsed result
-    parsed.quickFilters = newActiveFilters
+    const parsed = parseSearchQuery(newQuery, newActiveFilters)
     onSearch(parsed)
   }
 

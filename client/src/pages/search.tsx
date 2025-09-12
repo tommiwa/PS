@@ -363,8 +363,9 @@ export default function Search() {
           <Card className="h-[600px]">
             <CardContent className="p-0 h-full">
               <ParkingCalendar
-                spots={baseFilteredSpots}
+                spots={searchCriteria.date ? filteredSpots : baseFilteredSpots}
                 onBookSpot={handleBookSpot}
+                selectedDate={searchCriteria.date ? new Date(searchCriteria.date) : new Date()}
               />
             </CardContent>
           </Card>
