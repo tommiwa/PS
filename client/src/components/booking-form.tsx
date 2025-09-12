@@ -23,11 +23,14 @@ interface BookingFormProps {
   spot: ParkingSpot
   onSubmit: (bookingData: BookingData) => void
   onCancel: () => void
+  selectedDate?: string // Pre-selected date from calendar
+  isDateLocked?: boolean // Whether date can be changed
 }
 
-export function BookingForm({ spot, onSubmit, onCancel }: BookingFormProps) {
+export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLocked = false }: BookingFormProps) {
   // Ensure we don't default to a past date
   const getValidDate = () => {
+    if (selectedDate) return selectedDate;
     const proposedDate = spot.availability?.date || getTodayString();
     return isPastDate(proposedDate) ? getTodayString() : proposedDate;
   };
@@ -46,6 +49,11 @@ export function BookingForm({ spot, onSubmit, onCancel }: BookingFormProps) {
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
 
   const updateFormData = (key: string, value: string) => {
+    // Don't allow date changes if locked
+    if (key === "date" && isDateLocked) {
+      return; // Ignore date changes when locked
+    }
+    
     // Validate date to prevent past date selection
     if (key === "date") {
       if (isPastDate(value)) {
@@ -180,9 +188,16 @@ export function BookingForm({ spot, onSubmit, onCancel }: BookingFormProps) {
               min={getTodayString()}
               onChange={(e) => updateFormData("date", e.target.value)}
               required
+              disabled={isDateLocked}
               data-testid="input-booking-date"
-              className="w-full md:w-auto"
+              className={`w-full md:w-auto ${isDateLocked ? 'bg-muted cursor-not-allowed' : ''}`}
             />
+            {isDateLocked && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Calendar className="h-4 w-4" />
+                Date selected from calendar and cannot be changed
+              </div>
+            )}
             {(dateError || validationErrors.date) && (
               <div className="flex items-center gap-2 text-sm text-red-600">
                 <AlertTriangle className="h-4 w-4" />

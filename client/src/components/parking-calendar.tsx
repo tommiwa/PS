@@ -178,13 +178,16 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
     return null
   }
 
-  const handleSpotClick = (spot: ParkingSpot) => {
+  const [bookingDate, setBookingDate] = useState<Date | null>(null)
+
+  const handleSpotClick = (spot: ParkingSpot, clickedDate?: Date) => {
     // Prevent booking spots with past availability dates
     if (spot.availability?.date && isPastDate(spot.availability.date)) {
       return; // Don't allow booking past spots
     }
     
     setSelectedSpot(spot)
+    setBookingDate(clickedDate || currentDate)
     setShowBookingForm(true)
   }
 
@@ -220,7 +223,7 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                       ? getOwnershipColor(spot.isOwned || false)
                       : getSpotTypeColor(spot.type)
                   }`}
-                  onClick={() => handleSpotClick(spot)}
+                  onClick={() => handleSpotClick(spot, currentDate)}
                   data-testid={`calendar-spot-${spot.id}`}
                 >
                   <CardContent className="p-4">
@@ -301,7 +304,7 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                           ? getOwnershipColor(spot.isOwned || false)
                           : getSpotTypeColor(spot.type)
                       }`}
-                      onClick={() => handleSpotClick(spot)}
+                      onClick={() => handleSpotClick(spot, day)}
                       data-testid={`calendar-spot-${spot.id}`}
                     >
                       <div className="font-medium">{spot.spotNumber}</div>
@@ -363,7 +366,7 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                           ? getOwnershipColor(spot.isOwned || false)
                           : getSpotTypeColor(spot.type)
                       }`}
-                      onClick={() => handleSpotClick(spot)}
+                      onClick={() => handleSpotClick(spot, day)}
                       data-testid={`calendar-spot-${spot.id}`}
                     >
                       <div className="flex items-center gap-1">
@@ -458,6 +461,8 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
               spot={selectedSpot}
               onSubmit={handleBookingSubmit}
               onCancel={() => setShowBookingForm(false)}
+              selectedDate={bookingDate ? bookingDate.toISOString().split('T')[0] : undefined}
+              isDateLocked={bookingDate !== null}
             />
           )}
         </DialogContent>
