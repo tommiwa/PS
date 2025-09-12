@@ -63,7 +63,7 @@ function ProtectedRouter() {
 
 // Component to handle landing page redirects
 function LandingPageRedirect() {
-  const { user } = useAuth();
+  const { user, getCurrentViewRole } = useAuth();
   const [, setLocation] = useLocation();
   
   // Mock function to check if spot owner has registered spots
@@ -78,10 +78,13 @@ function LandingPageRedirect() {
   useEffect(() => {
     if (!user) return;
     
+    // Use current view role for admins, otherwise use actual role
+    const effectiveRole = getCurrentViewRole() || user.role;
+    
     // Use replace: true to keep browser history clean
-    if (user.role === "admin") {
+    if (effectiveRole === "admin") {
       setLocation("/dashboard", { replace: true });
-    } else if (user.role === "owner") {
+    } else if (effectiveRole === "owner") {
       // Spot owners: My Bookings if they have spots, My Spots if they don't
       const targetPage = hasRegisteredSpots(user.id) ? "/my-bookings" : "/my-spots";
       setLocation(targetPage, { replace: true });
@@ -89,7 +92,7 @@ function LandingPageRedirect() {
       // Renters and others: Search
       setLocation("/search", { replace: true });
     }
-  }, [user, setLocation]);
+  }, [user, getCurrentViewRole, setLocation]);
   
   // Show loading while redirecting
   return (

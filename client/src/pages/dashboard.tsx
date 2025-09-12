@@ -6,12 +6,17 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Calendar, MapPin, Clock, Plus, Users, Car, TrendingUp, BarChart3, PieChart, Target, DollarSign, AlertTriangle } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
 
 interface DashboardProps {
   userRole?: "admin" | "owner" | "renter"
 }
 
 export default function Dashboard({ userRole = "owner" }: DashboardProps) {
+  const { getCurrentViewRole } = useAuth();
+  
+  // Use current view role for admins, otherwise use the actual user role
+  const effectiveRole = getCurrentViewRole() || userRole;
   //todo: remove mock functionality
   const mockUpcomingBookings = [
     {
@@ -79,7 +84,7 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
 
 
   const renderRoleSpecificContent = () => {
-    switch (userRole) {
+    switch (effectiveRole) {
       case "renter":
         return (
           <div className="space-y-6">
