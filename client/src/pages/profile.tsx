@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { useToast } from "@/hooks/use-toast"
 import { 
   Car, 
   Settings, 
@@ -41,6 +42,7 @@ import { useAuth } from "@/contexts/auth-context"
 export default function Profile() {
   const { user, isOwner, isRenter } = useAuth()
   const [, setLocation] = useLocation()
+  const { toast } = useToast()
   
   // State for various settings
   const [darkMode, setDarkMode] = useState(false)
@@ -51,14 +53,6 @@ export default function Profile() {
   const [activeTab, setActiveTab] = useState("notifications")
   const [isEnrolledInWaitingList, setIsEnrolledInWaitingList] = useState(false)
   const [availabilityAlertsEnabled, setAvailabilityAlertsEnabled] = useState(false)
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
-  const [confirmDialogData, setConfirmDialogData] = useState({
-    title: "",
-    message: "",
-    icon: null as React.ReactNode,
-    confirmText: "",
-    action: () => {}
-  })
 
   if (!user) {
     return (
@@ -125,65 +119,43 @@ export default function Profile() {
     setActiveTab("notifications")
   }
 
-  const showConfirmDialog = (title: string, message: string, icon: React.ReactNode, confirmText: string, action: () => void) => {
-    setConfirmDialogData({ title, message, icon, confirmText, action })
-    setConfirmDialogOpen(true)
-  }
-
-  const handleConfirmAction = () => {
-    confirmDialogData.action()
-    setConfirmDialogOpen(false)
-  }
-
   const handleEnrollWaitingList = () => {
     if (isEnrolledInWaitingList) {
-      showConfirmDialog(
-        "Leave Waiting List",
-        "Are you sure you want to leave the waiting list? You won't receive notifications about available spots anymore.",
-        <XCircle className="h-12 w-12 text-destructive" />,
-        "Leave Waiting List",
-        () => {
-          console.log('Leaving waiting list')
-          setIsEnrolledInWaitingList(false)
-        }
-      )
+      console.log('Leaving waiting list')
+      setIsEnrolledInWaitingList(false)
+      toast({
+        title: "Left Waiting List",
+        description: "You've been removed from the waiting list. You can re-enroll anytime.",
+        variant: "default",
+      })
     } else {
-      showConfirmDialog(
-        "Join Waiting List",
-        "Great choice! You'll be enrolled in the waiting list and we'll notify you as soon as spots become available that match your preferences.",
-        <CheckCircle className="h-12 w-12 text-green-500" />,
-        "Enroll Now",
-        () => {
-          console.log('Enrolling in waiting list')
-          setIsEnrolledInWaitingList(true)
-        }
-      )
+      console.log('Enrolling in waiting list')
+      setIsEnrolledInWaitingList(true)
+      toast({
+        title: "✅ Enrolled in Waiting List!",
+        description: "You'll receive notifications when spots become available that match your preferences.",
+        variant: "default",
+      })
     }
   }
 
   const handleAvailabilityAlerts = () => {
     if (availabilityAlertsEnabled) {
-      showConfirmDialog(
-        "Disable Availability Alerts",
-        "You won't receive push notifications when your preferred parking spots become available. You can always re-enable this later.",
-        <XCircle className="h-12 w-12 text-orange-500" />,
-        "Disable Alerts",
-        () => {
-          console.log('Disabling availability alerts')
-          setAvailabilityAlertsEnabled(false)
-        }
-      )
+      console.log('Disabling availability alerts')
+      setAvailabilityAlertsEnabled(false)
+      toast({
+        title: "Availability Alerts Disabled",
+        description: "You won't receive push notifications about available spots. You can re-enable this anytime.",
+        variant: "default",
+      })
     } else {
-      showConfirmDialog(
-        "Enable Availability Alerts",
-        "Perfect! You'll receive instant notifications when parking spots matching your preferences become available. Never miss out on a great spot!",
-        <CheckCircle className="h-12 w-12 text-green-500" />,
-        "Enable Alerts",
-        () => {
-          console.log('Enabling availability alerts')
-          setAvailabilityAlertsEnabled(true)
-        }
-      )
+      console.log('Enabling availability alerts')
+      setAvailabilityAlertsEnabled(true)
+      toast({
+        title: "🔔 Availability Alerts Enabled!",
+        description: "You'll get instant notifications when your preferred spots become available. Never miss out!",
+        variant: "default",
+      })
     }
   }
 
@@ -736,36 +708,6 @@ export default function Profile() {
         </DialogContent>
       </Dialog>
 
-      {/* Confirmation Dialog */}
-      <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
-        <DialogContent className="sm:max-w-[400px]">
-          <div className="flex flex-col items-center text-center space-y-4 py-6">
-            {confirmDialogData.icon}
-            <div className="space-y-2">
-              <h2 className="text-lg font-semibold">{confirmDialogData.title}</h2>
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                {confirmDialogData.message}
-              </p>
-            </div>
-            <div className="flex gap-3 w-full pt-4">
-              <Button 
-                variant="outline" 
-                onClick={() => setConfirmDialogOpen(false)} 
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleConfirmAction} 
-                className="flex-1"
-                data-testid="button-confirm-action"
-              >
-                {confirmDialogData.confirmText}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
