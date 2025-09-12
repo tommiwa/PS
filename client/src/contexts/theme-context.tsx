@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 
-type Theme = "light" | "dark" | "system";
+type Theme = "bci" | "light" | "dark" | "system";
 
 interface ThemeContextType {
   theme: Theme;
@@ -15,7 +15,7 @@ interface ThemeProviderProps {
 }
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
-  const [theme, setThemeState] = useState<Theme>("system");
+  const [theme, setThemeState] = useState<Theme>("bci");
   const [actualTheme, setActualTheme] = useState<"light" | "dark">("light");
 
   // Get system theme preference
@@ -42,12 +42,20 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   // Initialize theme on mount
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme") as Theme;
-    const initialTheme = savedTheme || "system";
+    const initialTheme = savedTheme || "bci";
     
     setThemeState(initialTheme);
     
-    const resolvedTheme = initialTheme === "system" ? getSystemTheme() : initialTheme;
-    applyTheme(resolvedTheme as "light" | "dark");
+    let resolvedTheme: "light" | "dark";
+    if (initialTheme === "system") {
+      resolvedTheme = getSystemTheme();
+    } else if (initialTheme === "bci") {
+      resolvedTheme = "light"; // BCI theme uses light mode as base
+    } else {
+      resolvedTheme = initialTheme as "light" | "dark";
+    }
+    
+    applyTheme(resolvedTheme);
   }, []);
 
   // Listen for system theme changes when theme is set to "system"
@@ -74,8 +82,16 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     setThemeState(newTheme);
     localStorage.setItem("theme", newTheme);
     
-    const resolvedTheme = newTheme === "system" ? getSystemTheme() : newTheme;
-    applyTheme(resolvedTheme as "light" | "dark");
+    let resolvedTheme: "light" | "dark";
+    if (newTheme === "system") {
+      resolvedTheme = getSystemTheme();
+    } else if (newTheme === "bci") {
+      resolvedTheme = "light"; // BCI theme uses light mode as base
+    } else {
+      resolvedTheme = newTheme as "light" | "dark";
+    }
+    
+    applyTheme(resolvedTheme);
   };
 
   const value: ThemeContextType = {

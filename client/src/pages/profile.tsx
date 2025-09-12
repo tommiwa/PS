@@ -466,6 +466,12 @@ export default function Profile() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="bci">
+                          <div className="flex items-center gap-2">
+                            <Shield className="h-4 w-4" />
+                            BCI Corporate
+                          </div>
+                        </SelectItem>
                         <SelectItem value="light">
                           <div className="flex items-center gap-2">
                             <Sun className="h-4 w-4" />
