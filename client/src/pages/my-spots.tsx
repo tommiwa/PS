@@ -5,7 +5,7 @@ import type { ParkingSpot as DBParkingSpot, InsertParkingSpot } from "@shared/sc
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
@@ -14,32 +14,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Car, MapPin, DollarSign, Clock, Edit, Plus, Eye, Users, TrendingUp, Grid, Trash2 } from "lucide-react"
 
-type ParkingSpot = {
-  id: string
-  spotNumber: string
-  location: string
-  type: "regular" | "electric" | "accessible"
-  isInside: boolean
-  basePrice: number | null
-  isActive: boolean
-  currentBooking?: {
-    id: string
-    renterName: string
-    date: string
-    startTime: string
-    endTime: string
-    status: "confirmed" | "pending"
-  }
-  monthlyEarnings: number
-  totalBookings: number
-  rating: number
-  description?: string
-  amenities: string[]
-}
+// Use the database type directly since we're fetching real data now
+// type ParkingSpot = DBParkingSpot
 
 export default function MySpots() {
   const [showAddSpot, setShowAddSpot] = useState(false)
-  const [selectedSpot, setSelectedSpot] = useState<ParkingSpot | null>(null)
+  const [selectedSpot, setSelectedSpot] = useState<DBParkingSpot | null>(null)
   const [showEditSpot, setShowEditSpot] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [spotToDelete, setSpotToDelete] = useState<any>(null)
@@ -179,10 +159,8 @@ export default function MySpots() {
     }
   ]
 
-  const totalEarnings = mockSpots.reduce((sum, spot) => sum + spot.monthlyEarnings, 0)
-  const totalBookings = mockSpots.reduce((sum, spot) => sum + spot.totalBookings, 0)
-  const activeSpots = mockSpots.filter(spot => spot.isActive).length
-  const averageRating = mockSpots.filter(spot => spot.rating > 0).reduce((sum, spot) => sum + spot.rating, 0) / mockSpots.filter(spot => spot.rating > 0).length
+  const activeSpots = userSpots.filter(spot => spot.isActive).length
+  const totalSpots = userSpots.length
 
   const handleAddSpot = () => {
     setShowAddSpot(true)
@@ -201,7 +179,7 @@ export default function MySpots() {
     })
   }
 
-  const handleEditSpot = (spot: ParkingSpot) => {
+  const handleEditSpot = (spot: DBParkingSpot) => {
     setSelectedSpot(spot)
     setShowEditSpot(true)
   }
@@ -275,43 +253,43 @@ export default function MySpots() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{activeSpots}</div>
-            <p className="text-xs text-muted-foreground">Out of {mockSpots.length} total</p>
+            <p className="text-xs text-muted-foreground">Out of {totalSpots} total</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <DollarSign className="h-4 w-4" />
-              Monthly Earnings
+              Total Spots
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalEarnings}</div>
-            <p className="text-xs text-green-600">+12% from last month</p>
+            <div className="text-2xl font-bold">{totalSpots}</div>
+            <p className="text-xs text-muted-foreground">Registered spots</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Users className="h-4 w-4" />
-              Total Bookings
+              Inactive Spots
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalBookings}</div>
-            <p className="text-xs text-muted-foreground">This month</p>
+            <div className="text-2xl font-bold">{totalSpots - activeSpots}</div>
+            <p className="text-xs text-muted-foreground">Need activation</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
-              Average Rating
+              Utilization
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{averageRating.toFixed(1)}</div>
-            <p className="text-xs text-muted-foreground">Out of 5.0</p>
+            <div className="text-2xl font-bold">{totalSpots > 0 ? Math.round((activeSpots / totalSpots) * 100) : 0}%</div>
+            <p className="text-xs text-muted-foreground">Active spots</p>
           </CardContent>
         </Card>
       </div>
@@ -342,19 +320,19 @@ export default function MySpots() {
           ) : (
             /* Spots List */
             <div className="space-y-4">
-              {mockSpots.map((spot) => (
+              {userSpots.map((spot) => (
           <Card key={spot.id} className={`${!spot.isActive ? 'opacity-60' : ''}`}>
             <CardContent className="p-6">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="text-2xl">{getSpotTypeIcon(spot.type)}</div>
+                  <div className="text-2xl">{getSpotTypeIcon(spot.spotType)}</div>
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="text-xl font-semibold">Spot {spot.spotNumber}</h3>
-                      <Badge className={getSpotTypeColor(spot.type)}>
-                        {spot.type}
+                      <Badge className={getSpotTypeColor(spot.spotType)}>
+                        {spot.spotType}
                       </Badge>
-                      {spot.isInside && (
+                      {spot.isIndoor && (
                         <Badge variant="outline">Indoor</Badge>
                       )}
                     </div>
@@ -386,65 +364,11 @@ export default function MySpots() {
                 <p className="text-sm text-muted-foreground mb-4">{spot.description}</p>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                <div>
-                  <p className="text-xs text-muted-foreground">Price</p>
-                  <p className="text-lg font-semibold">{spot.basePrice ? `$${spot.basePrice}/day` : 'Set when listing'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Monthly Earnings</p>
-                  <p className="text-lg font-semibold">${spot.monthlyEarnings}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Total Bookings</p>
-                  <p className="text-lg font-semibold">{spot.totalBookings}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Rating</p>
-                  <p className="text-lg font-semibold">{spot.rating > 0 ? `${spot.rating}/5` : 'No ratings'}</p>
-                </div>
+              <div className="mb-4">
+                <p className="text-xs text-muted-foreground">Price</p>
+                <p className="text-lg font-semibold">Set when creating listings</p>
               </div>
 
-              {spot.amenities.length > 0 && (
-                <div className="mb-4">
-                  <p className="text-xs text-muted-foreground mb-2">Amenities</p>
-                  <div className="flex flex-wrap gap-1">
-                    {spot.amenities.map((amenity: string, index: number) => (
-                      <Badge key={index} variant="outline" className="text-xs">
-                        {amenity}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {spot.currentBooking && spot.currentBooking !== undefined && (
-                <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg mb-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Clock className="h-4 w-4 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-900 dark:text-blue-100">Current Booking</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Renter: </span>
-                      <span className="font-medium">{spot.currentBooking.renterName}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Date: </span>
-                      <span className="font-medium">{spot.currentBooking.date}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Time: </span>
-                      <span className="font-medium">{spot.currentBooking.startTime} - {spot.currentBooking.endTime}</span>
-                    </div>
-                    <div>
-                      <Badge variant={spot.currentBooking.status === "confirmed" ? "default" : "secondary"}>
-                        {spot.currentBooking.status}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              )}
 
               <div className="flex items-center justify-between pt-4 border-t">
                 <div className="flex items-center gap-2">
@@ -593,7 +517,7 @@ export default function MySpots() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="edit-spot-type">Spot Type</Label>
-                  <Select defaultValue={selectedSpot.type}>
+                  <Select defaultValue={selectedSpot.spotType}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -614,10 +538,10 @@ export default function MySpots() {
               </div>
               <div>
                 <Label htmlFor="edit-description">Description</Label>
-                <Textarea id="edit-description" defaultValue={selectedSpot.description} />
+                <Textarea id="edit-description" defaultValue={selectedSpot.description || ""} />
               </div>
               <div className="flex items-center space-x-2">
-                <Switch id="edit-is-indoor" defaultChecked={selectedSpot.isInside} />
+                <Switch id="edit-is-indoor" defaultChecked={selectedSpot.isIndoor} />
                 <Label htmlFor="edit-is-indoor">Indoor parking</Label>
               </div>
               <div className="flex justify-end gap-2 pt-4">
