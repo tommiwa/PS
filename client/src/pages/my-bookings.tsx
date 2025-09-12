@@ -6,7 +6,9 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import { Calendar, Search, Filter, Download, Clock, CheckCircle, XCircle, Car, MapPin, DollarSign, AlertTriangle } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { SpotListingForm } from "@/components/spot-listing-form"
+import { Calendar, Search, Filter, Download, Clock, CheckCircle, XCircle, Car, MapPin, DollarSign, AlertTriangle, Plus } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { isPastDate } from "@/utils/date-utils"
 
@@ -15,6 +17,7 @@ export default function MyBookings() {
   const [searchTerm, setSearchTerm] = useState("")
   const [sortBy, setSortBy] = useState("date")
   const [filterStatus, setFilterStatus] = useState("all")
+  const [showListingForm, setShowListingForm] = useState(false)
 
   //todo: remove mock functionality
   // For renters - their bookings
@@ -361,10 +364,18 @@ export default function MyBookings() {
             }
           </p>
         </div>
-        <Button onClick={handleDownloadHistory} variant="outline">
-          <Download className="h-4 w-4 mr-2" />
-          Download History
-        </Button>
+        <div className="flex gap-2">
+          {isOwner() && (
+            <Button onClick={() => setShowListingForm(true)} data-testid="button-list-spot">
+              <Plus className="h-4 w-4 mr-2" />
+              List My Spot
+            </Button>
+          )}
+          <Button onClick={handleDownloadHistory} variant="outline">
+            <Download className="h-4 w-4 mr-2" />
+            Download History
+          </Button>
+        </div>
       </div>
 
       {/* Quick Stats */}
@@ -543,6 +554,16 @@ export default function MyBookings() {
           </div>
         </TabsContent>
       </Tabs>
+      
+      {/* Spot Listing Dialog */}
+      <Dialog open={showListingForm} onOpenChange={setShowListingForm}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>List Your Parking Spot</DialogTitle>
+          </DialogHeader>
+          <SpotListingForm onSubmit={() => setShowListingForm(false)} onCancel={() => setShowListingForm(false)} />
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
