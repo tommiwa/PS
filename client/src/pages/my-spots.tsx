@@ -21,7 +21,7 @@ type ParkingSpot = {
   location: string
   type: "regular" | "electric" | "accessible"
   isInside: boolean
-  basePrice: number
+  basePrice: number | null
   isActive: boolean
   currentBooking?: {
     id: string
@@ -98,7 +98,7 @@ export default function MySpots() {
     location: spot.location,
     type: spot.spotType,
     isInside: spot.isIndoor,
-    basePrice: 25, // Default price, could be enhanced
+    basePrice: null, // Price is set when creating listings, not spots
     isActive: spot.isActive,
     monthlyEarnings: 0, // Will be calculated from bookings
     totalBookings: 0, // Will be calculated from bookings
@@ -361,8 +361,8 @@ export default function MySpots() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                 <div>
-                  <p className="text-xs text-muted-foreground">Base Price</p>
-                  <p className="text-lg font-semibold">${spot.basePrice}/day</p>
+                  <p className="text-xs text-muted-foreground">Price</p>
+                  <p className="text-lg font-semibold">{spot.basePrice ? `$${spot.basePrice}/day` : 'Set when listing'}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Monthly Earnings</p>
@@ -608,8 +608,11 @@ export default function MySpots() {
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="edit-base-price">Base Price (per day)</Label>
-                  <Input id="edit-base-price" type="number" defaultValue={selectedSpot.basePrice} />
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+                    <p className="text-sm text-blue-800 dark:text-blue-200">
+                      💡 <strong>Note:</strong> Price is set when you create a listing for this spot, not at the spot level.
+                    </p>
+                  </div>
                 </div>
               </div>
               <div>
