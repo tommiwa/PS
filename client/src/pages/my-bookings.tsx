@@ -25,7 +25,7 @@ export default function MyBookings() {
   const [selectedListing, setSelectedListing] = useState<any>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [listingToDelete, setListingToDelete] = useState<any>(null)
-  const [activeTab, setActiveTab] = useState("active")
+  const [activeTab, setActiveTab] = useState("calendar")
 
   // Fetch real data based on user role
   const { data: renterBookings = [], isLoading: isLoadingBookings } = useQuery({
@@ -577,37 +577,37 @@ export default function MyBookings() {
       {/* Enhanced Status-Based Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="active">
-            <div className="flex items-center gap-1">
-              <CheckCircle className="h-3 w-3" />
-              Active ({activeItems.length})
-            </div>
-          </TabsTrigger>
-          <TabsTrigger value="pending">
-            <div className="flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              Pending ({pendingItems.length})
-            </div>
-          </TabsTrigger>
-          <TabsTrigger value="payment-pending">
-            <div className="flex items-center gap-1">
-              <CreditCard className="h-3 w-3" />
-              Payment ({paymentPendingItems.length})
-            </div>
-          </TabsTrigger>
-          <TabsTrigger value="completed">
-            <div className="flex items-center gap-1">
-              <CheckCircle className="h-3 w-3" />
-              Completed ({completedItems.length})
-            </div>
-          </TabsTrigger>
-          <TabsTrigger value="calendar">
+          <TabsTrigger value="calendar" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900 dark:data-[state=active]:bg-blue-900 dark:data-[state=active]:text-blue-100">
             <div className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
               Calendar
             </div>
           </TabsTrigger>
-          <TabsTrigger value="all">
+          <TabsTrigger value="active" className="data-[state=active]:bg-green-100 data-[state=active]:text-green-900 dark:data-[state=active]:bg-green-900 dark:data-[state=active]:text-green-100">
+            <div className="flex items-center gap-1">
+              <CheckCircle className="h-3 w-3" />
+              Active ({activeItems.length})
+            </div>
+          </TabsTrigger>
+          <TabsTrigger value="pending" className="data-[state=active]:bg-amber-100 data-[state=active]:text-amber-900 dark:data-[state=active]:bg-amber-900 dark:data-[state=active]:text-amber-100">
+            <div className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              Pending ({pendingItems.length})
+            </div>
+          </TabsTrigger>
+          <TabsTrigger value="payment-pending" className="data-[state=active]:bg-orange-100 data-[state=active]:text-orange-900 dark:data-[state=active]:bg-orange-900 dark:data-[state=active]:text-orange-100">
+            <div className="flex items-center gap-1">
+              <CreditCard className="h-3 w-3" />
+              Payment ({paymentPendingItems.length})
+            </div>
+          </TabsTrigger>
+          <TabsTrigger value="completed" className="data-[state=active]:bg-purple-100 data-[state=active]:text-purple-900 dark:data-[state=active]:bg-purple-900 dark:data-[state=active]:text-purple-100">
+            <div className="flex items-center gap-1">
+              <CheckCircle className="h-3 w-3" />
+              Completed ({completedItems.length})
+            </div>
+          </TabsTrigger>
+          <TabsTrigger value="all" className="data-[state=active]:bg-gray-100 data-[state=active]:text-gray-900 dark:data-[state=active]:bg-gray-900 dark:data-[state=active]:text-gray-100">
             All ({sortedItems.length})
           </TabsTrigger>
         </TabsList>
