@@ -11,8 +11,29 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle, CalendarDays, Repeat } from "lucide-react"
 import { getTodayString } from "@/utils/date-utils"
 
+interface SpotListingData {
+  spotNumber: string
+  location: string
+  spotType: "regular" | "electric" | "accessible"
+  isInside: boolean
+  price: string
+  // Single day
+  date: string
+  // Period
+  startDate: string
+  endDate: string
+  // Recurring
+  recurringDays: string[]
+  recurringStartDate: string
+  recurringEndDate: string
+  // Common
+  description: string
+  specialInstructions: string
+  listingType: "single" | "period" | "recurring"
+}
+
 interface SpotListingFormProps {
-  onSubmit: (listingData: any) => void
+  onSubmit: (listingData: SpotListingData) => void
   onCancel: () => void
 }
 
@@ -51,16 +72,82 @@ export function SpotListingForm({ onSubmit, onCancel }: SpotListingFormProps) {
     updateFormData("recurringDays", newDays)
   }
 
+  const [submitError, setSubmitError] = useState("")
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {}
+
+    // Basic required fields
+    if (!formData.spotNumber.trim()) {
+      errors.spotNumber = "Spot number is required"
+    }
+    if (!formData.location) {
+      errors.location = "Location is required"
+    }
+    if (!formData.price || parseFloat(formData.price) <= 0) {
+      errors.price = "Valid price is required"
+    }
+
+    // Date validations based on listing type
+    if (listingType === "single") {
+      if (!formData.date) {
+        errors.date = "Date is required"
+      }
+    } else if (listingType === "period") {
+      if (!formData.startDate) {
+        errors.startDate = "Start date is required"
+      }
+      if (!formData.endDate) {
+        errors.endDate = "End date is required"
+      }
+      if (formData.startDate && formData.endDate && formData.startDate > formData.endDate) {
+        errors.endDate = "End date must be after start date"
+      }
+    } else if (listingType === "recurring") {
+      if (formData.recurringDays.length === 0) {
+        errors.recurringDays = "Please select at least one day of the week"
+      }
+      if (!formData.recurringStartDate) {
+        errors.recurringStartDate = "Start date is required"
+      }
+    }
+
+    setValidationErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setSubmitError("")
+    setValidationErrors({})
+
+    if (!validateForm()) {
+      return
+    }
+
     setIsSubmitting(true)
     
-    // Simulate API call
-    setTimeout(() => {
-      console.log('Submitting spot listing:', { ...formData, listingType })
+    try {
+      // Simulate API call with potential failure
+      await new Promise((resolve, reject) => {
+        setTimeout(() => {
+          // Simulate 90% success rate for testing
+          if (Math.random() > 0.1) {
+            console.log('Submitting spot listing:', { ...formData, listingType })
+            resolve(true)
+          } else {
+            reject(new Error("Failed to create listing. Please try again."))
+          }
+        }, 1000)
+      })
+      
       onSubmit({ ...formData, listingType })
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "An unexpected error occurred")
+    } finally {
       setIsSubmitting(false)
-    }, 1000)
+    }
   }
 
   const weekDays = [
@@ -142,6 +229,9 @@ export function SpotListingForm({ onSubmit, onCancel }: SpotListingFormProps) {
                   required
                   data-testid="input-spot-number"
                 />
+                {validationErrors.spotNumber && (
+                  <p className="text-sm text-red-600">{validationErrors.spotNumber}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="location">Location *</Label>
@@ -158,6 +248,9 @@ export function SpotListingForm({ onSubmit, onCancel }: SpotListingFormProps) {
                     <SelectItem value="West Parking Lot">West Parking Lot</SelectItem>
                   </SelectContent>
                 </Select>
+                {validationErrors.location && (
+                  <p className="text-sm text-red-600">{validationErrors.location}</p>
+                )}
               </div>
             </div>
 
@@ -179,12 +272,17 @@ export function SpotListingForm({ onSubmit, onCancel }: SpotListingFormProps) {
                 <Label htmlFor="price">Daily Price ($) *</Label>
                 <Input
                   type="number"
+                  min="0"
+                  step="0.01"
                   placeholder="25"
                   value={formData.price}
                   onChange={(e) => updateFormData("price", e.target.value)}
                   required
                   data-testid="input-price"
                 />
+                {validationErrors.price && (
+                  <p className="text-sm text-red-600">{validationErrors.price}</p>
+                )}
               </div>
             </div>
 
@@ -217,6 +315,9 @@ export function SpotListingForm({ onSubmit, onCancel }: SpotListingFormProps) {
                   required
                   data-testid="input-date"
                 />
+                {validationErrors.date && (
+                  <p className="text-sm text-red-600">{validationErrors.date}</p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -250,6 +351,9 @@ export function SpotListingForm({ onSubmit, onCancel }: SpotListingFormProps) {
                     required
                     data-testid="input-end-date"
                   />
+                  {validationErrors.endDate && (
+                    <p className="text-sm text-red-600">{validationErrors.endDate}</p>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -291,6 +395,9 @@ export function SpotListingForm({ onSubmit, onCancel }: SpotListingFormProps) {
                     </div>
                   </div>
                 )}
+                {validationErrors.recurringDays && (
+                  <p className="text-sm text-red-600">{validationErrors.recurringDays}</p>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -304,6 +411,9 @@ export function SpotListingForm({ onSubmit, onCancel }: SpotListingFormProps) {
                     required
                     data-testid="input-recurring-start"
                   />
+                  {validationErrors.recurringStartDate && (
+                    <p className="text-sm text-red-600">{validationErrors.recurringStartDate}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="recurringEndDate">End Date (Optional)</Label>
@@ -365,6 +475,16 @@ export function SpotListingForm({ onSubmit, onCancel }: SpotListingFormProps) {
             </div>
           </div>
         </div>
+
+        {/* Submit Error Display */}
+        {submitError && (
+          <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
+              <AlertTriangle className="h-4 w-4" />
+              {submitError}
+            </div>
+          </div>
+        )}
 
         {/* Action Buttons */}
         <div className="flex gap-3 pt-4">

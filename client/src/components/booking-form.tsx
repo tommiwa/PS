@@ -10,9 +10,18 @@ import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle } from "lucide-
 import { ParkingSpot } from "./parking-spot-card"
 import { isPastDate, getTodayString } from "@/utils/date-utils"
 
+interface BookingData {
+  date: string
+  paymentMethod: string
+  specialInstructions: string
+  contactPhone: string
+  vehicleLicense: string
+  spotId: string
+}
+
 interface BookingFormProps {
   spot: ParkingSpot
-  onSubmit: (bookingData: any) => void
+  onSubmit: (bookingData: BookingData) => void
   onCancel: () => void
 }
 
@@ -33,6 +42,8 @@ export function BookingForm({ spot, onSubmit, onCancel }: BookingFormProps) {
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [dateError, setDateError] = useState("")
+  const [submitError, setSubmitError] = useState("")
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
 
   const updateFormData = (key: string, value: string) => {
     // Validate date to prevent past date selection
@@ -48,23 +59,69 @@ export function BookingForm({ spot, onSubmit, onCancel }: BookingFormProps) {
     setFormData(prev => ({ ...prev, [key]: value }))
   }
 
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {}
+
+    // Date validation
+    if (!formData.date) {
+      errors.date = "Date is required"
+    } else if (isPastDate(formData.date)) {
+      errors.date = "Cannot book parking spots for past dates"
+    }
+
+    // Payment method validation
+    if (!formData.paymentMethod) {
+      errors.paymentMethod = "Payment method is required"
+    }
+
+    // Contact phone validation (basic)
+    if (!formData.contactPhone.trim()) {
+      errors.contactPhone = "Contact phone is required"
+    } else if (!/^[\d\s\-\(\)\+]+$/.test(formData.contactPhone)) {
+      errors.contactPhone = "Please enter a valid phone number"
+    }
+
+    // Vehicle license validation
+    if (!formData.vehicleLicense.trim()) {
+      errors.vehicleLicense = "Vehicle license plate is required"
+    }
+
+    setValidationErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    // Final validation - prevent past date bookings
-    if (isPastDate(formData.date)) {
-      setDateError("Cannot book parking spots for past dates");
-      return;
+    setSubmitError("")
+    setDateError("")
+    setValidationErrors({})
+
+    if (!validateForm()) {
+      return
     }
     
     setIsSubmitting(true)
-    console.log('Submitting booking:', { ...formData, spotId: spot.id })
     
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // Simulate API call with potential failure
+      await new Promise<void>((resolve, reject) => {
+        setTimeout(() => {
+          // Simulate 90% success rate for testing
+          if (Math.random() > 0.1) {
+            console.log('Submitting booking:', { ...formData, spotId: spot.id })
+            resolve()
+          } else {
+            reject(new Error("Failed to create booking. Please try again."))
+          }
+        }, 1000)
+      })
+      
       onSubmit({ ...formData, spotId: spot.id })
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "An unexpected error occurred")
+    } finally {
       setIsSubmitting(false)
-    }, 1000)
+    }
   }
 
   const getSpotTypeIcon = () => {
@@ -126,10 +183,10 @@ export function BookingForm({ spot, onSubmit, onCancel }: BookingFormProps) {
               data-testid="input-booking-date"
               className="w-full md:w-auto"
             />
-            {dateError && (
+            {(dateError || validationErrors.date) && (
               <div className="flex items-center gap-2 text-sm text-red-600">
                 <AlertTriangle className="h-4 w-4" />
-                {dateError}
+                {dateError || validationErrors.date}
               </div>
             )}
             <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
@@ -152,6 +209,9 @@ export function BookingForm({ spot, onSubmit, onCancel }: BookingFormProps) {
                 <SelectItem value="cash">Cash</SelectItem>
               </SelectContent>
             </Select>
+            {validationErrors.paymentMethod && (
+              <p className="text-sm text-red-600">{validationErrors.paymentMethod}</p>
+            )}
           </div>
 
           {/* Contact Details */}
@@ -166,6 +226,9 @@ export function BookingForm({ spot, onSubmit, onCancel }: BookingFormProps) {
                 required
                 data-testid="input-contact-phone"
               />
+              {validationErrors.contactPhone && (
+                <p className="text-sm text-red-600">{validationErrors.contactPhone}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="vehicleLicense">Vehicle License Plate</Label>
@@ -176,6 +239,9 @@ export function BookingForm({ spot, onSubmit, onCancel }: BookingFormProps) {
                 required
                 data-testid="input-vehicle-license"
               />
+              {validationErrors.vehicleLicense && (
+                <p className="text-sm text-red-600">{validationErrors.vehicleLicense}</p>
+              )}
             </div>
           </div>
 
@@ -206,6 +272,16 @@ export function BookingForm({ spot, onSubmit, onCancel }: BookingFormProps) {
               </div>
             </div>
           </div>
+
+          {/* Submit Error Display */}
+          {submitError && (
+            <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
+                <AlertTriangle className="h-4 w-4" />
+                {submitError}
+              </div>
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex gap-3 pt-4">

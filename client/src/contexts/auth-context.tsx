@@ -21,7 +21,26 @@ interface AuthContextType {
   isViewingAs: (role: UserRole) => boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+// Create a default context value to prevent HMR issues
+const defaultAuthContextValue: AuthContextType = {
+  user: null,
+  isAuthenticated: false,
+  isLoading: true,
+  login: async () => { throw new Error("AuthProvider not initialized") },
+  logout: () => { throw new Error("AuthProvider not initialized") },
+  hasRole: () => false,
+  hasAnyRole: () => false,
+  isAdmin: () => false,
+  isOwner: () => false,
+  isRenter: () => false,
+  viewRole: null,
+  switchViewRole: () => { throw new Error("AuthProvider not initialized") },
+  resetViewRole: () => { throw new Error("AuthProvider not initialized") },
+  getCurrentViewRole: () => null,
+  isViewingAs: () => false,
+};
+
+const AuthContext = createContext<AuthContextType>(defaultAuthContextValue);
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -136,9 +155,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
 export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
+  
+  // In development, provide more helpful debugging information
+  if (context === defaultAuthContextValue && import.meta.env.DEV) {
+    console.warn("useAuth is using default context value. Make sure AuthProvider is properly wrapped around your component tree.");
   }
+  
   return context;
 }
 
