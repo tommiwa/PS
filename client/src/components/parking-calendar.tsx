@@ -15,6 +15,7 @@ import {
   Car
 } from "lucide-react"
 import { format, startOfWeek, addDays, addWeeks, addMonths, subWeeks, subMonths, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, getDay } from "date-fns"
+import { isPastDate } from "@/utils/date-utils"
 
 type CalendarView = "day" | "week" | "month"
 
@@ -95,19 +96,32 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
 
   const getSpotsForDate = (date: Date) => {
     return spots.filter(spot => {
+      // Hide past spots for renters - they can't book past dates
+      if (isPastDate(date)) {
+        return false;
+      }
+
       // Show available spots on all dates
       if (spot.isAvailable) {
         // If spot has availability date, check if it matches
         if (spot.availability?.date) {
           const spotDate = new Date(spot.availability.date)
+          // Don't show if the spot's availability date is in the past
+          if (isPastDate(spotDate)) {
+            return false;
+          }
           return isSameDay(spotDate, date)
         }
-        // If no specific availability date, show on all dates
+        // If no specific availability date, show on all dates (except past dates)
         return true
       }
       // For unavailable spots, only show on their specific booking date if available
       if (spot.availability?.date) {
         const spotDate = new Date(spot.availability.date)
+        // Don't show past bookings in the calendar for renters
+        if (isPastDate(spotDate)) {
+          return false;
+        }
         return isSameDay(spotDate, date)
       }
       return false
@@ -137,6 +151,11 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
   }
 
   const handleSpotClick = (spot: ParkingSpot) => {
+    // Prevent booking spots with past availability dates
+    if (spot.availability?.date && isPastDate(spot.availability.date)) {
+      return; // Don't allow booking past spots
+    }
+    
     setSelectedSpot(spot)
     setShowBookingForm(true)
   }

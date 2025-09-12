@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { MapPin, Filter, SortAsc, Calendar, Grid, Sparkles } from "lucide-react"
+import { isPastDate } from "@/utils/date-utils"
 
 export default function Search() {
   const [searchCriteria, setSearchCriteria] = useState<ParsedSearch>({
@@ -70,12 +71,48 @@ export default function Search() {
       },
       owner: "David Park",
       isAvailable: false
+    },
+    // Past spots - these should NOT appear in renter views but can appear in owner history
+    {
+      id: "P-005",
+      spotNumber: "B-15",
+      location: "Main Building - Level 3",
+      type: "regular" as const,
+      isInside: true,
+      price: 22,
+      availability: {
+        date: "2024-12-01", // Past date
+        startTime: "8:00 AM",
+        endTime: "5:00 PM"
+      },
+      owner: "Jennifer Clark",
+      isAvailable: false
+    },
+    {
+      id: "P-006", 
+      spotNumber: "C-20",
+      location: "South Parking Lot",
+      type: "electric" as const,
+      isInside: false,
+      price: 18,
+      availability: {
+        date: "2024-11-25", // Past date
+        startTime: "7:30 AM", 
+        endTime: "6:30 PM"
+      },
+      owner: "Robert Wilson",
+      isAvailable: false
     }
   ]
 
   // Base filtering without date constraints (for calendar view)
   const baseFilteredSpots = mockSpots.filter(spot => {
     const { location, spotType, priceMin, priceMax, isInside, query } = searchCriteria
+    
+    // Filter out spots with past availability dates
+    if (spot.availability?.date && isPastDate(spot.availability.date)) {
+      return false; // Don't show past spots to renters
+    }
     
     // Basic availability filtering - only show generally available spots for calendar
     if (!spot.isAvailable) {
@@ -122,6 +159,11 @@ export default function Search() {
     // If no date specified, show all base filtered spots
     if (!date) return true
     
+    // Don't show spots for past search dates
+    if (isPastDate(date)) {
+      return false;
+    }
+    
     // Availability filtering with date constraints for tiles view
     if (spot.isAvailable) {
       // Spot is generally available, but if searching for a specific date and spot has availability constraints, check them
@@ -130,6 +172,10 @@ export default function Search() {
         const searchDate = date
         if (spotDate !== searchDate) {
           return false
+        }
+        // Double-check the spot date is not in the past
+        if (isPastDate(spotDate)) {
+          return false;
         }
       }
       // If no specific availability constraint, spot is available for the search date
@@ -141,6 +187,10 @@ export default function Search() {
       }
       const spotDate = new Date(spot.availability.date).toISOString().split('T')[0]
       const searchDate = date
+      // Don't show past bookings
+      if (isPastDate(spotDate)) {
+        return false;
+      }
       return spotDate === searchDate
     }
   })

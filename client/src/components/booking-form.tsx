@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle } from "lucide-react"
 import { ParkingSpot } from "./parking-spot-card"
+import { isPastDate, getTodayString } from "@/utils/date-utils"
 
 interface BookingFormProps {
   spot: ParkingSpot
@@ -16,8 +17,14 @@ interface BookingFormProps {
 }
 
 export function BookingForm({ spot, onSubmit, onCancel }: BookingFormProps) {
+  // Ensure we don't default to a past date
+  const getValidDate = () => {
+    const proposedDate = spot.availability?.date || getTodayString();
+    return isPastDate(proposedDate) ? getTodayString() : proposedDate;
+  };
+
   const [formData, setFormData] = useState({
-    date: spot.availability?.date || new Date().toISOString().split('T')[0],
+    date: getValidDate(),
     startTime: spot.availability?.startTime || "8:00 AM",
     endTime: spot.availability?.endTime || "6:00 PM",
     paymentMethod: "",
@@ -27,15 +34,32 @@ export function BookingForm({ spot, onSubmit, onCancel }: BookingFormProps) {
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [dateError, setDateError] = useState("")
 
   const updateFormData = (key: string, value: string) => {
+    // Validate date to prevent past date selection
+    if (key === "date") {
+      if (isPastDate(value)) {
+        setDateError("Cannot book parking spots for past dates");
+        return; // Don't update the form data
+      } else {
+        setDateError(""); // Clear any existing error
+      }
+    }
+    
     setFormData(prev => ({ ...prev, [key]: value }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsSubmitting(true)
     
+    // Final validation - prevent past date bookings
+    if (isPastDate(formData.date)) {
+      setDateError("Cannot book parking spots for past dates");
+      return;
+    }
+    
+    setIsSubmitting(true)
     console.log('Submitting booking:', { ...formData, spotId: spot.id })
     
     // Simulate API call
@@ -99,10 +123,17 @@ export function BookingForm({ spot, onSubmit, onCancel }: BookingFormProps) {
               <Input
                 type="date"
                 value={formData.date}
+                min={getTodayString()}
                 onChange={(e) => updateFormData("date", e.target.value)}
                 required
                 data-testid="input-booking-date"
               />
+              {dateError && (
+                <div className="flex items-center gap-2 text-sm text-red-600">
+                  <AlertTriangle className="h-4 w-4" />
+                  {dateError}
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="startTime">Start Time</Label>
