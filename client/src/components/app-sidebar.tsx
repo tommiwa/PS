@@ -29,12 +29,6 @@ import { UserRole } from "@shared/schema"
 // Main navigation items
 const mainMenuItems = [
   {
-    title: "Dashboard",
-    url: "/dashboard",
-    icon: Home,
-    roles: ["admin", "owner", "renter"]
-  },
-  {
     title: "Find Parking",
     url: "/search",
     icon: Search,
@@ -45,6 +39,12 @@ const mainMenuItems = [
     url: "/my-bookings",
     icon: Calendar,
     roles: ["owner", "renter"]
+  },
+  {
+    title: "Dashboard",
+    url: "/dashboard",
+    icon: Home,
+    roles: ["admin", "owner", "renter"]
   },
   {
     title: "My Spots",
