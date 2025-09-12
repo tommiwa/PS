@@ -138,9 +138,9 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
         }
       }
       
-      // For Dashboard item, show "Reports" for renter/owner roles, "Dashboard" for admin
+      // For Dashboard item, show "Statistics" for renter/owner roles, "Dashboard" for admin
       const displayTitle = item.title === "Dashboard" && (userRole === "renter" || userRole === "owner") 
-        ? "Reports" 
+        ? "Statistics" 
         : item.title;
       
       return (

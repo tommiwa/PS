@@ -19,7 +19,7 @@ export default function Search() {
   const [selectedSpot, setSelectedSpot] = useState<any>(null)
   const [showBookingForm, setShowBookingForm] = useState(false)
   const [sortBy, setSortBy] = useState("price")
-  const [activeTab, setActiveTab] = useState("tiles")
+  const [activeTab, setActiveTab] = useState("calendar")
 
   //todo: remove mock functionality
   const mockSpots = [

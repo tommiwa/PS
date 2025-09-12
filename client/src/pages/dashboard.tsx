@@ -293,7 +293,9 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
     <div className="p-6 space-y-6" data-testid="page-dashboard">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <h1 className="text-3xl font-bold">
+            {userRole === "admin" ? "Dashboard" : "Statistics"}
+          </h1>
           <p className="text-muted-foreground">
             Welcome back! Here's what's happening with your parking.
           </p>
