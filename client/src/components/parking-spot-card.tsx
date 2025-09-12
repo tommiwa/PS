@@ -10,7 +10,7 @@ export interface ParkingSpot {
   type: "regular" | "accessible" | "electric"
   isInside: boolean
   price: number
-  availability: {
+  availability?: {
     date: string
     startTime: string
     endTime: string

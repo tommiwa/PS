@@ -1,0 +1,301 @@
+import { useState, useEffect, useRef, useMemo } from "react"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Search, X, MapPin, Car, Zap, Accessibility, DollarSign, Calendar, Clock, Filter } from "lucide-react"
+
+export interface ParsedSearch {
+  query: string
+  location?: string
+  spotType?: "regular" | "accessible" | "electric" | "all"
+  priceMin?: number
+  priceMax?: number
+  date?: string
+  isInside?: boolean
+  quickFilters: string[]
+}
+
+interface EnhancedSearchProps {
+  onSearch: (parsed: ParsedSearch) => void
+  className?: string
+}
+
+const SEARCH_SUGGESTIONS = [
+  "main building electric",
+  "accessible spots under $25", 
+  "north lot today",
+  "inside spots",
+  "electric charging",
+  "level 2",
+  "south parking $15-20",
+  "accessible tomorrow",
+  "regular spots main building",
+  "outside parking cheap"
+]
+
+const QUICK_FILTERS = [
+  { label: "Electric Charging", value: "electric", icon: Zap, type: "spotType" },
+  { label: "Accessible", value: "accessible", icon: Accessibility, type: "spotType" },
+  { label: "Inside Building", value: "inside", icon: MapPin, type: "location" },
+  { label: "Under $25", value: "cheap", icon: DollarSign, type: "price" },
+  { label: "Main Building", value: "main building", icon: MapPin, type: "location" },
+  { label: "Today", value: "today", icon: Calendar, type: "date" }
+]
+
+export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
+  const [query, setQuery] = useState("")
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [activeFilters, setActiveFilters] = useState<string[]>([])
+  const [focused, setFocused] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  // Parse the search query intelligently
+  const parseSearchQuery = (searchQuery: string): ParsedSearch => {
+    const parsed: ParsedSearch = {
+      query: searchQuery,
+      quickFilters: [...activeFilters]
+    }
+
+    const terms = searchQuery.toLowerCase().split(/\s+/)
+
+    // Location parsing
+    if (terms.some(t => ["main", "building"].every(w => searchQuery.toLowerCase().includes(w)))) {
+      parsed.location = "main building"
+    } else if (terms.includes("north")) {
+      parsed.location = "north lot"
+    } else if (terms.includes("south")) {
+      parsed.location = "south lot"
+    } else if (terms.includes("west")) {
+      parsed.location = "west garage"
+    }
+
+    // Spot type parsing
+    if (terms.includes("electric") || terms.includes("ev") || terms.includes("charging")) {
+      parsed.spotType = "electric"
+    } else if (terms.includes("accessible") || terms.includes("handicap") || terms.includes("disabled")) {
+      parsed.spotType = "accessible"
+    } else if (terms.includes("regular") || terms.includes("normal")) {
+      parsed.spotType = "regular"
+    }
+
+    // Location type parsing (inside/outside)
+    if (terms.includes("inside") || terms.includes("indoor") || terms.includes("covered")) {
+      parsed.isInside = true
+    } else if (terms.includes("outside") || terms.includes("outdoor") || terms.includes("open")) {
+      parsed.isInside = false
+    }
+
+    // Price parsing
+    const priceMatch = searchQuery.match(/\$?(\d+)[\s-]*(?:to|-)?\s*\$?(\d+)?/)
+    if (priceMatch) {
+      parsed.priceMin = parseInt(priceMatch[1])
+      if (priceMatch[2]) {
+        parsed.priceMax = parseInt(priceMatch[2])
+      }
+    } else if (searchQuery.includes("under") || searchQuery.includes("less than") || searchQuery.includes("below")) {
+      const underMatch = searchQuery.match(/(?:under|less than|below)\s*\$?(\d+)/)
+      if (underMatch) {
+        parsed.priceMax = parseInt(underMatch[1])
+      }
+    } else if (searchQuery.includes("over") || searchQuery.includes("more than") || searchQuery.includes("above")) {
+      const overMatch = searchQuery.match(/(?:over|more than|above)\s*\$?(\d+)/)
+      if (overMatch) {
+        parsed.priceMin = parseInt(overMatch[1])
+      }
+    } else if (terms.includes("cheap") || terms.includes("affordable")) {
+      parsed.priceMax = 25
+    } else if (terms.includes("expensive") || terms.includes("premium")) {
+      parsed.priceMin = 30
+    }
+
+    // Date parsing
+    if (terms.includes("today")) {
+      parsed.date = new Date().toISOString().split('T')[0]
+    } else if (terms.includes("tomorrow")) {
+      const tomorrow = new Date()
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      parsed.date = tomorrow.toISOString().split('T')[0]
+    }
+
+    return parsed
+  }
+
+  // Filter suggestions based on current input
+  const filteredSuggestions = useMemo(() => {
+    if (!query.trim()) return SEARCH_SUGGESTIONS.slice(0, 6)
+    
+    const queryLower = query.toLowerCase()
+    return SEARCH_SUGGESTIONS.filter(suggestion =>
+      suggestion.toLowerCase().includes(queryLower) ||
+      queryLower.split(' ').some(term => suggestion.toLowerCase().includes(term))
+    ).slice(0, 6)
+  }, [query])
+
+  const handleSearch = () => {
+    const parsed = parseSearchQuery(query)
+    onSearch(parsed)
+    setShowSuggestions(false)
+  }
+
+  const handleSuggestionSelect = (suggestion: string) => {
+    setQuery(suggestion)
+    setShowSuggestions(false)
+    const parsed = parseSearchQuery(suggestion)
+    onSearch(parsed)
+  }
+
+  const handleQuickFilter = (filter: typeof QUICK_FILTERS[0]) => {
+    let newQuery = query
+
+    // Add or remove filter
+    const filterExists = activeFilters.includes(filter.value)
+    let newActiveFilters = [...activeFilters]
+
+    if (filterExists) {
+      newActiveFilters = newActiveFilters.filter(f => f !== filter.value)
+      // Remove from query if it exists
+      newQuery = newQuery.replace(new RegExp(`\\b${filter.value}\\b`, 'gi'), '').replace(/\s+/g, ' ').trim()
+    } else {
+      newActiveFilters.push(filter.value)
+      // Add to query if not already there
+      if (!newQuery.toLowerCase().includes(filter.value.toLowerCase())) {
+        newQuery = newQuery ? `${newQuery} ${filter.value}` : filter.value
+      }
+    }
+
+    setActiveFilters(newActiveFilters)
+    setQuery(newQuery)
+    
+    const parsed = parseSearchQuery(newQuery)
+    onSearch(parsed)
+  }
+
+  const clearSearch = () => {
+    setQuery("")
+    setActiveFilters([])
+    onSearch({ query: "", quickFilters: [] })
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleSearch()
+    } else if (e.key === 'Escape') {
+      setShowSuggestions(false)
+    }
+  }
+
+  useEffect(() => {
+    if (focused && query.length > 0) {
+      setShowSuggestions(true)
+    }
+  }, [focused, query])
+
+  return (
+    <div className={`space-y-4 ${className}`} data-testid="enhanced-search">
+      {/* Quick Filters */}
+      <div className="flex flex-wrap gap-2">
+        <span className="text-sm font-medium text-muted-foreground flex items-center gap-1 py-1">
+          <Filter className="h-3 w-3" />
+          Quick filters:
+        </span>
+        {QUICK_FILTERS.map((filter) => {
+          const Icon = filter.icon
+          const isActive = activeFilters.includes(filter.value)
+          return (
+            <Badge
+              key={filter.value}
+              variant={isActive ? "default" : "secondary"}
+              className={`cursor-pointer gap-1 hover-elevate ${isActive ? 'bg-primary text-primary-foreground' : ''}`}
+              onClick={() => handleQuickFilter(filter)}
+              data-testid={`filter-${filter.value}`}
+            >
+              <Icon className="h-3 w-3" />
+              {filter.label}
+              {isActive && <X className="h-3 w-3" />}
+            </Badge>
+          )
+        })}
+      </div>
+
+      {/* Search Input */}
+      <Popover open={showSuggestions} onOpenChange={setShowSuggestions}>
+        <PopoverTrigger asChild>
+          <div className="relative">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                ref={inputRef}
+                type="text"
+                placeholder="Search parking spots... (e.g., 'main building electric $20-30', 'accessible north lot today')"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onFocus={() => setFocused(true)}
+                onBlur={() => setTimeout(() => setFocused(false), 200)}
+                className="pl-10 pr-12 h-12 text-base"
+                data-testid="input-enhanced-search"
+              />
+              {query && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearSearch}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+                  data-testid="button-clear-search"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+            <Button
+              onClick={handleSearch}
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8"
+              size="sm"
+              data-testid="button-search"
+            >
+              Search
+            </Button>
+          </div>
+        </PopoverTrigger>
+        
+        <PopoverContent 
+          className="w-[var(--radix-popover-trigger-width)] p-0"
+          align="start"
+          sideOffset={4}
+        >
+          <Command>
+            <CommandList>
+              {filteredSuggestions.length > 0 ? (
+                <CommandGroup heading="Suggestions">
+                  {filteredSuggestions.map((suggestion, index) => (
+                    <CommandItem
+                      key={index}
+                      onSelect={() => handleSuggestionSelect(suggestion)}
+                      className="cursor-pointer"
+                      data-testid={`suggestion-${index}`}
+                    >
+                      <Search className="h-4 w-4 mr-2" />
+                      {suggestion}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              ) : (
+                <CommandEmpty>No suggestions found.</CommandEmpty>
+              )}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+
+      {/* Search Examples */}
+      <div className="text-sm text-muted-foreground">
+        <span className="font-medium">Try searching:</span> "main building electric", "accessible under $25", "north lot today", or "inside spots"
+      </div>
+    </div>
+  )
+}

@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { SearchFilters, SearchFilters as SearchFiltersType } from "@/components/search-filters"
+import { EnhancedSearch, ParsedSearch } from "@/components/enhanced-search"
 import { ParkingSpotCard } from "@/components/parking-spot-card"
 import { ParkingCalendar } from "@/components/parking-calendar"
 import { BookingForm } from "@/components/booking-form"
@@ -8,16 +8,12 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { MapPin, Filter, SortAsc, Calendar, Grid } from "lucide-react"
+import { MapPin, Filter, SortAsc, Calendar, Grid, Sparkles } from "lucide-react"
 
 export default function Search() {
-  const [filters, setFilters] = useState<SearchFiltersType>({
-    location: "all",
-    spotType: "all",
-    date: "",
-    priceMin: "",
-    priceMax: "",
-    isInside: "all"
+  const [searchCriteria, setSearchCriteria] = useState<ParsedSearch>({
+    query: "",
+    quickFilters: []
   })
   
   const [selectedSpot, setSelectedSpot] = useState<any>(null)
@@ -77,13 +73,76 @@ export default function Search() {
     }
   ]
 
-  const filteredSpots = mockSpots.filter(spot => {
-    if (filters.location && filters.location !== "all" && !spot.location.toLowerCase().includes(filters.location.toLowerCase())) return false
-    if (filters.spotType && filters.spotType !== "all" && spot.type !== filters.spotType) return false
-    if (filters.priceMin && spot.price < parseInt(filters.priceMin)) return false
-    if (filters.priceMax && spot.price > parseInt(filters.priceMax)) return false
-    if (filters.isInside && filters.isInside !== "all" && spot.isInside !== (filters.isInside === "true")) return false
+  // Base filtering without date constraints (for calendar view)
+  const baseFilteredSpots = mockSpots.filter(spot => {
+    const { location, spotType, priceMin, priceMax, isInside, query } = searchCriteria
+    
+    // Basic availability filtering - only show generally available spots for calendar
+    if (!spot.isAvailable) {
+      return false // Don't show unavailable spots in calendar view
+    }
+    
+    // Text-based search across multiple fields
+    if (query && query.trim()) {
+      const queryLower = query.toLowerCase()
+      const searchableText = [
+        spot.spotNumber,
+        spot.location,
+        spot.type,
+        spot.owner,
+        spot.isInside ? 'inside' : 'outside'
+      ].join(' ').toLowerCase()
+      
+      if (!searchableText.includes(queryLower) && 
+          !queryLower.split(' ').some(term => searchableText.includes(term))) {
+        return false
+      }
+    }
+    
+    // Location filtering
+    if (location && !spot.location.toLowerCase().includes(location.toLowerCase())) return false
+    
+    // Spot type filtering
+    if (spotType && spotType !== "all" && spot.type !== spotType) return false
+    
+    // Price filtering
+    if (priceMin !== undefined && spot.price < priceMin) return false
+    if (priceMax !== undefined && spot.price > priceMax) return false
+    
+    // Inside/outside filtering
+    if (isInside !== undefined && spot.isInside !== isInside) return false
+    
     return true
+  })
+
+  // Date-specific filtering for tiles view
+  const filteredSpots = baseFilteredSpots.filter(spot => {
+    const { date } = searchCriteria
+    
+    // If no date specified, show all base filtered spots
+    if (!date) return true
+    
+    // Availability filtering with date constraints for tiles view
+    if (spot.isAvailable) {
+      // Spot is generally available, but if searching for a specific date and spot has availability constraints, check them
+      if (spot.availability?.date) {
+        const spotDate = new Date(spot.availability.date).toISOString().split('T')[0]
+        const searchDate = date
+        if (spotDate !== searchDate) {
+          return false
+        }
+      }
+      // If no specific availability constraint, spot is available for the search date
+      return true
+    } else {
+      // Spot is not generally available, only show if searching for its specific booking date
+      if (!spot.availability?.date) {
+        return false // Don't show unavailable spots unless they have a specific availability date
+      }
+      const spotDate = new Date(spot.availability.date).toISOString().split('T')[0]
+      const searchDate = date
+      return spotDate === searchDate
+    }
   })
 
   const sortedSpots = [...filteredSpots].sort((a, b) => {
@@ -114,30 +173,69 @@ export default function Search() {
     // Show success message, redirect, etc.
   }
 
-  const handleSearch = () => {
-    console.log('Search triggered with filters:', filters)
+  const handleSearch = (parsed: ParsedSearch) => {
+    console.log('Search triggered with criteria:', parsed)
+    setSearchCriteria(parsed)
     // In real app, this would trigger API call
   }
 
   const getActiveFilterCount = () => {
-    return Object.values(filters).filter(value => value !== "").length
+    const { location, spotType, priceMin, priceMax, isInside, date, query, quickFilters } = searchCriteria
+    let count = 0
+    if (location) count++
+    if (spotType && spotType !== "all") count++
+    if (priceMin !== undefined) count++
+    if (priceMax !== undefined) count++
+    if (isInside !== undefined) count++
+    if (date) count++
+    if (query && query.trim()) count++
+    return count + (quickFilters?.length || 0)
+  }
+
+  const getResultsLabel = () => {
+    const filterCount = getActiveFilterCount()
+    const { date, query } = searchCriteria
+    
+    if (filterCount === 0) {
+      return `Available Spots (${sortedSpots.length})`
+    }
+    
+    let label = `Search Results (${sortedSpots.length})`
+    
+    if (date) {
+      const today = new Date().toISOString().split('T')[0]
+      const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      
+      if (date === today) {
+        label = `Spots Available Today (${sortedSpots.length})`
+      } else if (date === tomorrow) {
+        label = `Spots Available Tomorrow (${sortedSpots.length})`
+      } else {
+        const displayDate = new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        label = `Spots Available ${displayDate} (${sortedSpots.length})`
+      }
+    } else if (query && query.trim()) {
+      label = `Search Results for "${query.trim()}" (${sortedSpots.length})`
+    }
+    
+    return label
   }
 
   return (
     <div className="p-6 space-y-6" data-testid="page-search">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Find Parking</h1>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <Sparkles className="h-8 w-8 text-primary" />
+            Smart Parking Search
+          </h1>
           <p className="text-muted-foreground">
-            Search for available parking spots across all BCI locations.
+            Find parking spots instantly with intelligent search across all BCI locations.
           </p>
         </div>
       </div>
 
-      <SearchFilters 
-        onFilterChange={setFilters}
-        onSearch={handleSearch}
-      />
+      <EnhancedSearch onSearch={handleSearch} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="flex items-center justify-between mb-4">
@@ -155,7 +253,7 @@ export default function Search() {
             
             <div className="flex items-center gap-4">
               <h2 className="text-xl font-semibold">
-                Available Spots ({sortedSpots.length})
+                {getResultsLabel()}
               </h2>
               {getActiveFilterCount() > 0 && (
                 <Badge variant="secondary" className="gap-1">
@@ -195,15 +293,11 @@ export default function Search() {
                 <p className="text-muted-foreground mb-4">
                   Try adjusting your search filters to find more available parking spots.
                 </p>
-                <Button onClick={() => setFilters({
-                  location: "all",
-                  spotType: "all",
-                  date: "",
-                  priceMin: "",
-                  priceMax: "",
-                  isInside: "all"
+                <Button onClick={() => setSearchCriteria({
+                  query: "",
+                  quickFilters: []
                 })}>
-                  Clear All Filters
+                  Clear Search
                 </Button>
               </CardContent>
             </Card>
@@ -225,7 +319,7 @@ export default function Search() {
           <Card className="h-[600px]">
             <CardContent className="p-0 h-full">
               <ParkingCalendar
-                spots={sortedSpots}
+                spots={baseFilteredSpots}
                 onBookSpot={handleBookSpot}
               />
             </CardContent>
