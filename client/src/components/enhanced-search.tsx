@@ -61,7 +61,24 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
 
     const terms = searchQuery.toLowerCase().split(/\s+/)
 
-    // Location parsing
+    // Handle active filters first
+    activeFilters.forEach(filterValue => {
+      if (filterValue === "today") {
+        parsed.date = new Date().toISOString().split('T')[0]
+      } else if (filterValue === "electric") {
+        parsed.spotType = "electric"
+      } else if (filterValue === "accessible") {
+        parsed.spotType = "accessible"
+      } else if (filterValue === "inside") {
+        parsed.isInside = true
+      } else if (filterValue === "cheap") {
+        parsed.priceMax = 25
+      } else if (filterValue === "main building") {
+        parsed.location = "main building"
+      }
+    })
+
+    // Location parsing from query text
     if (terms.some(t => ["main", "building"].every(w => searchQuery.toLowerCase().includes(w)))) {
       parsed.location = "main building"
     } else if (terms.includes("north")) {
@@ -72,7 +89,7 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
       parsed.location = "west garage"
     }
 
-    // Spot type parsing
+    // Spot type parsing from query text
     if (terms.includes("electric") || terms.includes("ev") || terms.includes("charging")) {
       parsed.spotType = "electric"
     } else if (terms.includes("accessible") || terms.includes("handicap") || terms.includes("disabled")) {
@@ -81,14 +98,14 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
       parsed.spotType = "regular"
     }
 
-    // Location type parsing (inside/outside)
+    // Location type parsing (inside/outside) from query text
     if (terms.includes("inside") || terms.includes("indoor") || terms.includes("covered")) {
       parsed.isInside = true
     } else if (terms.includes("outside") || terms.includes("outdoor") || terms.includes("open")) {
       parsed.isInside = false
     }
 
-    // Price parsing
+    // Price parsing from query text
     const priceMatch = searchQuery.match(/\$?(\d+)[\s-]*(?:to|-)?\s*\$?(\d+)?/)
     if (priceMatch) {
       parsed.priceMin = parseInt(priceMatch[1])
@@ -111,7 +128,7 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
       parsed.priceMin = 30
     }
 
-    // Date parsing
+    // Date parsing from query text
     if (terms.includes("today")) {
       parsed.date = new Date().toISOString().split('T')[0]
     } else if (terms.includes("tomorrow")) {
@@ -160,8 +177,8 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
       newQuery = newQuery.replace(new RegExp(`\\b${filter.value}\\b`, 'gi'), '').replace(/\s+/g, ' ').trim()
     } else {
       newActiveFilters.push(filter.value)
-      // Add to query if not already there
-      if (!newQuery.toLowerCase().includes(filter.value.toLowerCase())) {
+      // Only add to query text if it's not a date filter
+      if (filter.type !== "date" && !newQuery.toLowerCase().includes(filter.value.toLowerCase())) {
         newQuery = newQuery ? `${newQuery} ${filter.value}` : filter.value
       }
     }
@@ -170,6 +187,8 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
     setQuery(newQuery)
     
     const parsed = parseSearchQuery(newQuery)
+    // Add active filters to the parsed result
+    parsed.quickFilters = newActiveFilters
     onSearch(parsed)
   }
 
