@@ -30,10 +30,12 @@ function ProtectedRouter() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const [location, setLocation] = useLocation();
 
-  // Redirect to login if not authenticated
+  // Redirect to login if not authenticated, or away from login if authenticated
   useEffect(() => {
     if (!isLoading && !isAuthenticated && location !== "/login") {
       setLocation("/login");
+    } else if (isAuthenticated && location === "/login") {
+      setLocation("/"); // Move away from /login to let LandingPageRedirect handle role-based routing
     }
   }, [isAuthenticated, isLoading, location, setLocation]);
 
@@ -75,15 +77,16 @@ function LandingPageRedirect() {
   useEffect(() => {
     if (!user) return;
     
+    // Use replace: true to keep browser history clean
     if (user.role === "admin") {
-      setLocation("/dashboard");
+      setLocation("/dashboard", { replace: true });
     } else if (user.role === "owner") {
       // Spot owners: My Bookings if they have spots, My Spots if they don't
       const targetPage = hasRegisteredSpots(user.id) ? "/my-bookings" : "/my-spots";
-      setLocation(targetPage);
+      setLocation(targetPage, { replace: true });
     } else {
       // Renters and others: Search
-      setLocation("/search");
+      setLocation("/search", { replace: true });
     }
   }, [user, setLocation]);
   

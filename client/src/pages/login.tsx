@@ -86,8 +86,8 @@ export default function Login() {
     try {
       await login(selectedUserType, data.email);
       
-      // Redirect all roles to main dashboard which handles role-specific rendering
-      setLocation("/dashboard");
+      // Redirect to root path, let LandingPageRedirect handle role-based routing
+      setLocation("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed. Please try again.");
     } finally {
@@ -102,7 +102,7 @@ export default function Login() {
 
     try {
       await login(userType);
-      setLocation("/dashboard");
+      setLocation("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed. Please try again.");
     } finally {

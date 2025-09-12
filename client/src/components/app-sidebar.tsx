@@ -151,8 +151,10 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
       if (location === "/") {
         if (item.url === "/dashboard" && userRole === "admin") {
           isActive = true; // Admin lands on dashboard, so dashboard should be active
-        } else if (item.url === "/search" && (userRole === "renter" || userRole === "owner")) {
-          isActive = true; // Renter/Owner lands on search, so search should be active
+        } else if (item.url === "/search" && userRole === "renter") {
+          isActive = true; // Renter lands on search, so search should be active
+        } else if (item.url === "/my-bookings" && userRole === "owner") {
+          isActive = true; // Owner lands on my-bookings (if has spots), so my-bookings should be active
         }
       }
       
