@@ -58,6 +58,46 @@ function ProtectedRouter() {
   return <AuthenticatedApp />;
 }
 
+// Component to handle landing page redirects
+function LandingPageRedirect() {
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
+  
+  // Mock function to check if spot owner has registered spots
+  // In real app, this would query the database
+  const hasRegisteredSpots = (userId: string) => {
+    // Mock data - some users have spots, some don't
+    // Demo spot owner "user-owner-001" has registered spots
+    const usersWithSpots = ['user-owner-001', 'owner-002', 'owner-004']; 
+    return usersWithSpots.includes(userId);
+  };
+  
+  useEffect(() => {
+    if (!user) return;
+    
+    if (user.role === "admin") {
+      setLocation("/dashboard");
+    } else if (user.role === "owner") {
+      // Spot owners: My Bookings if they have spots, My Spots if they don't
+      const targetPage = hasRegisteredSpots(user.id) ? "/my-bookings" : "/my-spots";
+      setLocation(targetPage);
+    } else {
+      // Renters and others: Search
+      setLocation("/search");
+    }
+  }, [user, setLocation]);
+  
+  // Show loading while redirecting
+  return (
+    <div className="flex items-center justify-center h-full">
+      <div className="text-center space-y-4">
+        <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    </div>
+  );
+}
+
 // Main authenticated app layout
 function AuthenticatedApp() {
   const { user, logout } = useAuth();
@@ -66,15 +106,6 @@ function AuthenticatedApp() {
   const style = {
     "--sidebar-width": "20rem",       // 320px for better navigation
     "--sidebar-width-icon": "4rem",   // default icon width
-  };
-
-  // Mock function to check if spot owner has registered spots
-  // In real app, this would query the database
-  const hasRegisteredSpots = (userId: string) => {
-    // Mock data - some users have spots, some don't
-    // Demo spot owner "user-owner-001" has registered spots
-    const usersWithSpots = ['user-owner-001', 'owner-002', 'owner-004']; 
-    return usersWithSpots.includes(userId);
   };
 
   const getInitials = (name: string) => {
@@ -133,19 +164,9 @@ function AuthenticatedApp() {
           </header>
           <main className="flex-1 overflow-auto bg-muted/30">
             <Switch>
-              {/* Default landing page based on user role */}
+              {/* Default landing page - redirects based on user role */}
               <Route path="/">
-                {(() => {
-                  if (user?.role === "admin") {
-                    return <Dashboard userRole={user?.role} />;
-                  } else if (user?.role === "owner") {
-                    // Spot owners: My Bookings if they have spots, My Spots if they don't
-                    return hasRegisteredSpots(user.id) ? <MyBookings /> : <MySpots />;
-                  } else {
-                    // Renters and others: Search
-                    return <Search />;
-                  }
-                })()}
+                <LandingPageRedirect />
               </Route>
               
               {/* Main dashboard - handles all role-based rendering */}
