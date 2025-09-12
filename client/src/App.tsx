@@ -125,9 +125,13 @@ function AuthenticatedApp() {
           </header>
           <main className="flex-1 overflow-auto bg-muted/30">
             <Switch>
-              {/* Default dashboard based on user role */}
+              {/* Default landing page based on user role */}
               <Route path="/">
-                <Dashboard userRole={user?.role} />
+                {user?.role === "admin" ? (
+                  <Dashboard userRole={user?.role} />
+                ) : (
+                  <Search />
+                )}
               </Route>
               
               {/* Main dashboard - handles all role-based rendering */}

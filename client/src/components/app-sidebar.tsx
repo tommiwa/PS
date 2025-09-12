@@ -126,7 +126,17 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
 
   const renderMenuItems = (items: typeof mainMenuItems) => {
     return items.map((item) => {
-      const isActive = location === item.url || (item.url === "/dashboard" && location === "/");
+      // Handle active state based on role and current location
+      let isActive = location === item.url;
+      
+      // Special handling for root path active states
+      if (location === "/") {
+        if (item.url === "/dashboard" && userRole === "admin") {
+          isActive = true; // Admin lands on dashboard, so dashboard should be active
+        } else if (item.url === "/search" && (userRole === "renter" || userRole === "owner")) {
+          isActive = true; // Renter/Owner lands on search, so search should be active
+        }
+      }
       
       // For Dashboard item, show "Reports" for renter/owner roles, "Dashboard" for admin
       const displayTitle = item.title === "Dashboard" && (userRole === "renter" || userRole === "owner") 
