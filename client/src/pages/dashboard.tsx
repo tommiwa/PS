@@ -88,50 +88,21 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
       case "renter":
         return (
           <div className="space-y-6">
-            {/* Spending Analytics */}
+            {/* Simplified Spending Overview */}
             <div>
-              <h2 className="text-xl font-semibold mb-4">Spending Analytics</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <h2 className="text-xl font-semibold mb-4">Spending Overview</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4" />
-                      Monthly Trend
+                      <DollarSign className="h-4 w-4" />
+                      This Month
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>This Month</span>
-                        <span className="font-medium">$75</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span>Last Month</span>
-                        <span className="font-medium">$95</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-green-600">Savings</span>
-                        <span className="font-medium text-green-600">$20</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                      <BarChart3 className="h-4 w-4" />
-                      Cost Per Booking
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">$25</div>
-                    <div className="text-xs text-muted-foreground">Average this month</div>
-                    <div className="mt-2">
-                      <Badge variant="secondary" className="text-xs">
-                        15% below company average
-                      </Badge>
-                    </div>
+                    <div className="text-2xl font-bold">$75</div>
+                    <div className="text-xs text-muted-foreground mb-2">8 bookings • $25 avg per day</div>
+                    <div className="text-xs text-green-600">$20 saved vs last month</div>
                   </CardContent>
                 </Card>
                 
@@ -139,18 +110,14 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                       <Target className="h-4 w-4" />
-                      Budget Goal
+                      Monthly Budget
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-sm">Used: $75</span>
-                        <span className="text-sm">Budget: $100</span>
-                      </div>
-                      <Progress value={75} className="h-2" />
-                      <div className="text-xs text-green-600">$25 remaining this month</div>
-                    </div>
+                    <div className="text-2xl font-bold">$100</div>
+                    <div className="text-xs text-muted-foreground mb-2">Budget limit</div>
+                    <Progress value={75} className="h-2" />
+                    <div className="text-xs text-green-600 mt-1">$25 remaining</div>
                   </CardContent>
                 </Card>
               </div>
@@ -201,28 +168,28 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <Clock className="h-5 w-5" />
-                      Peak Booking Times
+                      <Calendar className="h-5 w-5" />
+                      Peak Booking Days
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm">Morning (7-9 AM)</span>
-                        <Badge variant="default">Most Active</Badge>
+                        <span className="text-sm">Tuesday</span>
+                        <Badge variant="default">Most Popular</Badge>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm">Afternoon (12-2 PM)</span>
-                        <Badge variant="secondary">Moderate</Badge>
+                        <span className="text-sm">Wednesday</span>
+                        <Badge variant="secondary">High Demand</Badge>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm">Evening (5-7 PM)</span>
-                        <Badge variant="outline">Light</Badge>
+                        <span className="text-sm">Monday</span>
+                        <Badge variant="outline">Moderate</Badge>
                       </div>
                     </div>
                     <div className="pt-3 border-t">
                       <div className="text-xs text-muted-foreground">
-                        💡 Book 2+ days ahead for 20% better rates
+                        💡 Book 2+ days ahead for better availability
                       </div>
                     </div>
                   </CardContent>
@@ -230,92 +197,40 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
               </div>
             </div>
 
-            {/* Performance Metrics */}
+            {/* Simple Performance Summary */}
             <div>
-              <h2 className="text-xl font-semibold mb-4">Booking Performance</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <h2 className="text-xl font-semibold mb-4">Booking Summary</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                      <PieChart className="h-4 w-4" />
+                      <Calendar className="h-4 w-4" />
+                      Advance Booking
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">2.3 days</div>
+                    <div className="text-xs text-muted-foreground">Average notice given</div>
+                    <div className="mt-2 text-xs text-blue-600">
+                      Great for securing preferred spots
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4" />
                       Success Rate
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-green-600">94%</div>
-                    <div className="text-xs text-muted-foreground">Bookings completed</div>
+                    <div className="text-xs text-muted-foreground">Bookings completed successfully</div>
                     <div className="mt-2">
                       <Badge variant="secondary" className="text-xs text-green-600">
-                        Above average
+                        Excellent performance
                       </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      Advance Planning
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">2.3</div>
-                    <div className="text-xs text-muted-foreground">Days average notice</div>
-                    <div className="mt-2 text-xs text-blue-600">
-                      Great for getting preferred spots!
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                      <Users className="h-4 w-4" />
-                      Wait List Status
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-lg font-bold text-blue-600">Active</div>
-                    <div className="text-xs text-muted-foreground">Position #12 for Main Building</div>
-                    <div className="mt-2">
-                      <Badge variant="outline" className="text-xs">
-                        Avg 3-day wait
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-
-            {/* Quick Insights */}
-            <div>
-              <h2 className="text-xl font-semibold mb-4">Insights & Recommendations</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card className="border-l-4 border-l-green-500">
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-3">
-                      <TrendingUp className="h-5 w-5 text-green-500 mt-0.5" />
-                      <div>
-                        <div className="font-medium text-green-700">Smart Savings</div>
-                        <div className="text-sm text-muted-foreground">
-                          You've saved $45 this month by booking outdoor spots during off-peak times.
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card className="border-l-4 border-l-blue-500">
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-3">
-                      <Target className="h-5 w-5 text-blue-500 mt-0.5" />
-                      <div>
-                        <div className="font-medium text-blue-700">Booking Tip</div>
-                        <div className="text-sm text-muted-foreground">
-                          Tuesday mornings have the highest spot availability at your preferred location.
-                        </div>
-                      </div>
                     </div>
                   </CardContent>
                 </Card>
