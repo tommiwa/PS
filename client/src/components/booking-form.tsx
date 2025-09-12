@@ -44,7 +44,7 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
     paymentMethod: "",
     specialInstructions: "",
     contactPhone: authUser?.phone || "", // Auto-populate from user profile
-    vehicleLicense: "" // Could be auto-populated from extended profile in the future
+    vehicleLicense: authUser?.vehicleInfo?.licensePlate || "" // Auto-populate from user profile
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -265,17 +265,33 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="vehicleLicense">Vehicle License Plate</Label>
+              <Label htmlFor="vehicleLicense" className="flex items-center gap-2">
+                Vehicle License Plate
+                {authUser?.vehicleInfo?.licensePlate && (
+                  <Badge variant="secondary" className="text-xs">
+                    <User className="h-3 w-3 mr-1" />
+                    From Profile
+                  </Badge>
+                )}
+              </Label>
               <Input
                 placeholder="ABC-123"
                 value={formData.vehicleLicense}
                 onChange={(e) => updateFormData("vehicleLicense", e.target.value)}
                 required
                 data-testid="input-vehicle-license"
+                className={authUser?.vehicleInfo?.licensePlate ? "border-blue-200 bg-blue-50/50 dark:bg-blue-950/50" : ""}
               />
-              <p className="text-xs text-muted-foreground">
-                💡 Tip: Add your vehicle info to your profile to auto-fill this field next time
-              </p>
+              {authUser?.vehicleInfo?.licensePlate ? (
+                <p className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                  <User className="h-3 w-3" />
+                  Auto-filled from your profile • Can be changed if using different car
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  💡 Tip: Add your vehicle info to your profile to auto-fill this field next time
+                </p>
+              )}
               {validationErrors.vehicleLicense && (
                 <p className="text-sm text-red-600">{validationErrors.vehicleLicense}</p>
               )}

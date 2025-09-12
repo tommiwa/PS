@@ -140,6 +140,11 @@ export interface AuthUser {
   role: UserRole;
   memberSince?: string;
   lastLogin?: Date | null;
+  vehicleInfo?: {
+    make?: string;
+    model?: string;
+    licensePlate?: string;
+  };
 }
 
 export interface LoginCredentials {
@@ -158,7 +163,12 @@ export const sampleUsers: Record<UserRole, AuthUser> = {
     department: "Marketing",
     role: "renter",
     memberSince: "March 2023",
-    lastLogin: new Date("2024-01-15T08:30:00Z")
+    lastLogin: new Date("2024-01-15T08:30:00Z"),
+    vehicleInfo: {
+      make: "Toyota",
+      model: "Camry",
+      licensePlate: "ABC-123"
+    }
   },
   owner: {
     id: "user-owner-001", 
@@ -168,7 +178,12 @@ export const sampleUsers: Record<UserRole, AuthUser> = {
     department: "Engineering", 
     role: "owner",
     memberSince: "January 2023",
-    lastLogin: new Date("2024-01-15T07:45:00Z")
+    lastLogin: new Date("2024-01-15T07:45:00Z"),
+    vehicleInfo: {
+      make: "Honda",
+      model: "Civic",
+      licensePlate: "XYZ-789"
+    }
   },
   admin: {
     id: "user-admin-001",
@@ -178,6 +193,11 @@ export const sampleUsers: Record<UserRole, AuthUser> = {
     department: "IT",
     role: "admin",
     memberSince: "January 2022",
-    lastLogin: new Date("2024-01-15T09:15:00Z")
+    lastLogin: new Date("2024-01-15T09:15:00Z"),
+    vehicleInfo: {
+      make: "BMW",
+      model: "X3",
+      licensePlate: "DEF-456"
+    }
   }
 };
