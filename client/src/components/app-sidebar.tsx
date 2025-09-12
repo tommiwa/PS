@@ -127,12 +127,18 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
   const renderMenuItems = (items: typeof mainMenuItems) => {
     return items.map((item) => {
       const isActive = location === item.url || (item.url === "/dashboard" && location === "/");
+      
+      // For Dashboard item, show "Reports" for renter/owner roles, "Dashboard" for admin
+      const displayTitle = item.title === "Dashboard" && (userRole === "renter" || userRole === "owner") 
+        ? "Reports" 
+        : item.title;
+      
       return (
         <SidebarMenuItem key={item.title}>
           <SidebarMenuButton asChild data-active={isActive}>
-            <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
+            <Link href={item.url} data-testid={`link-${displayTitle.toLowerCase().replace(/\s+/g, '-')}`}>
               <item.icon />
-              <span>{item.title}</span>
+              <span>{displayTitle}</span>
             </Link>
           </SidebarMenuButton>
         </SidebarMenuItem>
