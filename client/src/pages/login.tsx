@@ -29,7 +29,6 @@ const userTypeIcons: Record<UserRole, React.ComponentType<any>> = {
   renter: Car,
   owner: Users,
   admin: Shield,
-  waitlist: Clock,
 };
 
 // Professional color mapping for user type cards
@@ -37,7 +36,6 @@ const userTypeColors: Record<UserRole, string> = {
   renter: "border-primary/20 bg-primary/5 hover:bg-primary/10 hover:border-primary/30",
   owner: "border-emerald-200 dark:border-emerald-800/50 bg-emerald-50/50 dark:bg-emerald-950/20 hover:bg-emerald-100/50 dark:hover:bg-emerald-950/30",
   admin: "border-violet-200 dark:border-violet-800/50 bg-violet-50/50 dark:bg-violet-950/20 hover:bg-violet-100/50 dark:hover:bg-violet-950/30",
-  waitlist: "border-amber-200 dark:border-amber-800/50 bg-amber-50/50 dark:bg-amber-950/20 hover:bg-amber-100/50 dark:hover:bg-amber-950/30",
 };
 
 // Professional icon backgrounds for user types
@@ -45,7 +43,6 @@ const userTypeIconBgs: Record<UserRole, string> = {
   renter: "bg-primary/10 text-primary",
   owner: "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400",
   admin: "bg-violet-100 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400",
-  waitlist: "bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400",
 };
 
 export default function Login() {
