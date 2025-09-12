@@ -91,12 +91,6 @@ const settingsMenuItems = [
     roles: ["admin", "owner", "renter"]
   },
   {
-    title: "Notification Settings",
-    url: "/notifications",
-    icon: Bell,
-    roles: ["renter", "owner"]
-  },
-  {
     title: "Settings",
     url: "/settings",
     icon: Settings,

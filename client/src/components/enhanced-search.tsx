@@ -224,8 +224,8 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
       {/* Search Input */}
       <Popover open={showSuggestions} onOpenChange={setShowSuggestions}>
         <PopoverTrigger asChild>
-          <div className="relative">
-            <div className="relative">
+          <div className="flex gap-2 items-center">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 ref={inputRef}
@@ -236,7 +236,7 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
                 onKeyDown={handleKeyDown}
                 onFocus={() => setFocused(true)}
                 onBlur={() => setTimeout(() => setFocused(false), 200)}
-                className="pl-10 pr-12 h-12 text-base"
+                className={`pl-10 h-12 text-base ${query ? 'pr-12' : 'pr-4'}`}
                 data-testid="input-enhanced-search"
               />
               {query && (
@@ -254,10 +254,10 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
             </div>
             <Button
               onClick={handleSearch}
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8"
-              size="sm"
+              className="h-12 px-6"
               data-testid="button-search"
             >
+              <Search className="h-4 w-4 mr-2" />
               Search
             </Button>
           </div>
