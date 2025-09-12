@@ -25,8 +25,6 @@ export function BookingForm({ spot, onSubmit, onCancel }: BookingFormProps) {
 
   const [formData, setFormData] = useState({
     date: getValidDate(),
-    startTime: spot.availability?.startTime || "8:00 AM",
-    endTime: spot.availability?.endTime || "6:00 PM",
     paymentMethod: "",
     specialInstructions: "",
     contactPhone: "",
@@ -116,44 +114,29 @@ export function BookingForm({ spot, onSubmit, onCancel }: BookingFormProps) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Date and Time */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="date">Date</Label>
-              <Input
-                type="date"
-                value={formData.date}
-                min={getTodayString()}
-                onChange={(e) => updateFormData("date", e.target.value)}
-                required
-                data-testid="input-booking-date"
-              />
-              {dateError && (
-                <div className="flex items-center gap-2 text-sm text-red-600">
-                  <AlertTriangle className="h-4 w-4" />
-                  {dateError}
-                </div>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="startTime">Start Time</Label>
-              <Input
-                type="time"
-                value={formData.startTime}
-                onChange={(e) => updateFormData("startTime", e.target.value)}
-                required
-                data-testid="input-start-time"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="endTime">End Time</Label>
-              <Input
-                type="time"
-                value={formData.endTime}
-                onChange={(e) => updateFormData("endTime", e.target.value)}
-                required
-                data-testid="input-end-time"
-              />
+          {/* Date Selection */}
+          <div className="space-y-2">
+            <Label htmlFor="date">Select Date</Label>
+            <Input
+              type="date"
+              value={formData.date}
+              min={getTodayString()}
+              onChange={(e) => updateFormData("date", e.target.value)}
+              required
+              data-testid="input-booking-date"
+              className="w-full md:w-auto"
+            />
+            {dateError && (
+              <div className="flex items-center gap-2 text-sm text-red-600">
+                <AlertTriangle className="h-4 w-4" />
+                {dateError}
+              </div>
+            )}
+            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
+                <Calendar className="h-4 w-4" />
+                This reservation is for the full day (12:00 AM - 11:59 PM)
+              </div>
             </div>
           </div>
 
