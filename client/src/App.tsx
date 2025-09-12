@@ -68,6 +68,14 @@ function AuthenticatedApp() {
     "--sidebar-width-icon": "4rem",   // default icon width
   };
 
+  // Mock function to check if spot owner has registered spots
+  // In real app, this would query the database
+  const hasRegisteredSpots = (userId: string) => {
+    // Mock data - some users have spots, some don't
+    const usersWithSpots = ['owner-001', 'owner-002', 'owner-004']; 
+    return usersWithSpots.includes(userId);
+  };
+
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
@@ -126,11 +134,17 @@ function AuthenticatedApp() {
             <Switch>
               {/* Default landing page based on user role */}
               <Route path="/">
-                {user?.role === "admin" ? (
-                  <Dashboard userRole={user?.role} />
-                ) : (
-                  <Search />
-                )}
+                {(() => {
+                  if (user?.role === "admin") {
+                    return <Dashboard userRole={user?.role} />;
+                  } else if (user?.role === "owner") {
+                    // Spot owners: My Bookings if they have spots, My Spots if they don't
+                    return hasRegisteredSpots(user.id) ? <MyBookings /> : <MySpots />;
+                  } else {
+                    // Renters and others: Search
+                    return <Search />;
+                  }
+                })()}
               </Route>
               
               {/* Main dashboard - handles all role-based rendering */}
