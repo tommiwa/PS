@@ -65,9 +65,7 @@ export default function Search() {
       isInside: true,
       price: 30,
       availability: {
-        date: new Date().toISOString().split('T')[0], // Today's date for booked spot
-        startTime: "9:00 AM",
-        endTime: "6:00 PM"
+        date: new Date().toISOString().split('T')[0] // Today's date for booked spot
       },
       owner: "David Park",
       isAvailable: false
@@ -81,9 +79,7 @@ export default function Search() {
       isInside: true,
       price: 22,
       availability: {
-        date: "2024-12-01", // Past date
-        startTime: "8:00 AM",
-        endTime: "5:00 PM"
+        date: "2024-12-01" // Past date
       },
       owner: "Jennifer Clark",
       isAvailable: false
@@ -96,9 +92,7 @@ export default function Search() {
       isInside: false,
       price: 18,
       availability: {
-        date: "2024-11-25", // Past date
-        startTime: "7:30 AM", 
-        endTime: "6:30 PM"
+        date: "2024-11-25" // Past date
       },
       owner: "Robert Wilson",
       isAvailable: false

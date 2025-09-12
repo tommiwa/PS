@@ -24,8 +24,6 @@ export default function MyBookings() {
       spotNumber: "A-15",
       location: "Main Building - Level 2",
       date: "2025-01-20",
-      startTime: "8:00 AM",
-      endTime: "6:00 PM",
       price: 25,
       status: "confirmed" as const,
       paymentStatus: "completed" as const,
@@ -40,8 +38,6 @@ export default function MyBookings() {
       spotNumber: "B-08",
       location: "North Parking Lot",
       date: "2025-01-18",
-      startTime: "9:00 AM",
-      endTime: "5:00 PM",
       price: 20,
       status: "pending" as const,
       paymentStatus: "pending" as const,
@@ -56,8 +52,6 @@ export default function MyBookings() {
       spotNumber: "C-12",
       location: "South Parking Lot",
       date: "2024-12-10",
-      startTime: "8:00 AM",
-      endTime: "5:00 PM",
       price: 15,
       status: "confirmed" as const,
       paymentStatus: "completed" as const,
@@ -76,8 +70,6 @@ export default function MyBookings() {
       spotNumber: "A-15",
       location: "Main Building - Level 2",
       date: "2025-01-20",
-      startTime: "8:00 AM",
-      endTime: "6:00 PM",
       price: 25,
       status: "booked" as const,
       renterName: "Michael Rodriguez",
@@ -90,8 +82,6 @@ export default function MyBookings() {
       spotNumber: "A-15",
       location: "Main Building - Level 2",
       date: "2025-01-18",
-      startTime: "8:00 AM",
-      endTime: "6:00 PM",
       price: 25,
       status: "available" as const,
       renterName: null,
@@ -104,8 +94,6 @@ export default function MyBookings() {
       spotNumber: "A-15",
       location: "Main Building - Level 2",
       date: "2024-12-15",
-      startTime: "8:00 AM",
-      endTime: "6:00 PM",
       price: 25,
       status: "used" as const, // Past date, was booked and used
       renterName: "Sarah Johnson",
@@ -118,8 +106,6 @@ export default function MyBookings() {
       spotNumber: "A-15",
       location: "Main Building - Level 2",
       date: "2024-12-12",
-      startTime: "8:00 AM",
-      endTime: "6:00 PM",
       price: 25,
       status: "unused" as const, // Past date, was not booked
       renterName: null,
@@ -132,8 +118,6 @@ export default function MyBookings() {
       spotNumber: "A-15",
       location: "Main Building - Level 2",
       date: "2024-12-08",
-      startTime: "8:00 AM",
-      endTime: "6:00 PM",
       price: 25,
       status: "used" as const, // Past date, was booked and used
       renterName: "David Park",
@@ -246,9 +230,9 @@ export default function MyBookings() {
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
         <div>
-          <p className="text-xs text-muted-foreground">Date & Time</p>
+          <p className="text-xs text-muted-foreground">Date</p>
           <p className="text-sm font-medium">{listing.date}</p>
-          <p className="text-xs text-muted-foreground">{listing.startTime} - {listing.endTime}</p>
+          <p className="text-xs text-muted-foreground">Full Day</p>
         </div>
         <div>
           <p className="text-xs text-muted-foreground">
@@ -317,9 +301,9 @@ export default function MyBookings() {
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
         <div>
-          <p className="text-xs text-muted-foreground">Date & Time</p>
+          <p className="text-xs text-muted-foreground">Date</p>
           <p className="text-sm font-medium">{booking.date}</p>
-          <p className="text-xs text-muted-foreground">{booking.startTime} - {booking.endTime}</p>
+          <p className="text-xs text-muted-foreground">Full Day</p>
         </div>
         <div>
           <p className="text-xs text-muted-foreground">Owner</p>

@@ -12,8 +12,6 @@ export interface ParkingSpot {
   price: number
   availability?: {
     date: string
-    startTime: string
-    endTime: string
   }
   owner: string
   isAvailable: boolean
@@ -92,12 +90,7 @@ export function ParkingSpotCard({
           {spot.availability?.date && (
             <div className="flex items-center gap-2 text-sm">
               <Calendar className="h-4 w-4" />
-              {spot.availability.date}
-            </div>
-          )}
-          {spot.availability?.startTime && spot.availability?.endTime && (
-            <div className="text-sm text-muted-foreground">
-              {spot.availability.startTime} - {spot.availability.endTime}
+              {spot.availability.date} - Full Day
             </div>
           )}
           <div className="flex items-center gap-2 text-sm font-medium">

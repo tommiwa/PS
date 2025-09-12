@@ -8,8 +8,6 @@ export interface Booking {
   spotNumber: string
   location: string
   date: string
-  startTime: string
-  endTime: string
   price: number
   status: "confirmed" | "pending" | "cancelled"
   paymentStatus: "pending" | "sent" | "received" | "completed"
@@ -102,7 +100,7 @@ export function BookingCard({
           </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Clock className="h-4 w-4" />
-            {booking.startTime} - {booking.endTime}
+            Full Day
           </div>
           <div className="flex items-center gap-2 text-sm font-medium">
             <DollarSign className="h-4 w-4" />
