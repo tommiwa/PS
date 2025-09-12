@@ -103,6 +103,36 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
   const filteredMainItems = mainMenuItems.filter(item => 
     item.roles.includes(userRole)
   );
+
+  // Custom ordering for spot owners: My Bookings, My Spots, Find Parking, Statistics
+  const getOrderedMainItems = () => {
+    if (userRole === "owner") {
+      const orderedItems = [];
+      
+      // 1. My Bookings (first)
+      const myBookings = filteredMainItems.find(item => item.title === "My Bookings");
+      if (myBookings) orderedItems.push(myBookings);
+      
+      // 2. My Spots (second) 
+      const mySpots = filteredMainItems.find(item => item.title === "My Spots");
+      if (mySpots) orderedItems.push(mySpots);
+      
+      // 3. Find Parking (third)
+      const findParking = filteredMainItems.find(item => item.title === "Find Parking");
+      if (findParking) orderedItems.push(findParking);
+      
+      // 4. Statistics/Dashboard (last)
+      const dashboard = filteredMainItems.find(item => item.title === "Dashboard");
+      if (dashboard) orderedItems.push(dashboard);
+      
+      return orderedItems;
+    }
+    
+    // For other roles, use original order
+    return filteredMainItems;
+  };
+
+  const orderedMainItems = getOrderedMainItems();
   
   const filteredAdminItems = adminMenuItems.filter(item => 
     item.roles.includes(userRole)
@@ -152,7 +182,7 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {renderMenuItems(filteredMainItems)}
+              {renderMenuItems(orderedMainItems)}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
