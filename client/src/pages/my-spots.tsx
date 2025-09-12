@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { ParkingCalendar } from "@/components/parking-calendar"
-import { Car, MapPin, DollarSign, Clock, Edit, Plus, Eye, Calendar, Users, TrendingUp, Grid } from "lucide-react"
+import { Car, MapPin, DollarSign, Clock, Edit, Plus, Eye, Calendar, Users, TrendingUp, Grid, Trash2 } from "lucide-react"
 
 type ParkingSpot = {
   id: string
@@ -42,6 +42,8 @@ export default function MySpots() {
   const [showAddSpot, setShowAddSpot] = useState(false)
   const [selectedSpot, setSelectedSpot] = useState<ParkingSpot | null>(null)
   const [showEditSpot, setShowEditSpot] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [spotToDelete, setSpotToDelete] = useState<any>(null)
   const [activeTab, setActiveTab] = useState("management")
   const [newSpotData, setNewSpotData] = useState({
     spotNumber: "",
@@ -89,6 +91,22 @@ export default function MySpots() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/my-spots'] })
       setShowEditSpot(false)
+    }
+  })
+
+  // Delete spot mutation
+  const deleteSpotMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/my-spots/${id}`, {
+        method: 'DELETE'
+      })
+      if (!response.ok) throw new Error('Failed to delete spot')
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/my-spots'] })
+      setShowDeleteConfirm(false)
+      setSpotToDelete(null)
     }
   })
 
@@ -187,6 +205,17 @@ export default function MySpots() {
   const handleEditSpot = (spot: ParkingSpot) => {
     setSelectedSpot(spot)
     setShowEditSpot(true)
+  }
+
+  const handleDeleteSpot = (spot: any) => {
+    setSpotToDelete(spot)
+    setShowDeleteConfirm(true)
+  }
+
+  const confirmDeleteSpot = () => {
+    if (spotToDelete) {
+      deleteSpotMutation.mutate(spotToDelete.id)
+    }
   }
 
   const handleToggleSpotStatus = (spotId: string) => {
@@ -349,9 +378,14 @@ export default function MySpots() {
                       {spot.isActive ? "Active" : "Inactive"}
                     </Badge>
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => handleEditSpot(spot)}>
-                    <Edit className="h-4 w-4" />
-                  </Button>
+                  <div className="flex gap-1">
+                    <Button variant="outline" size="sm" onClick={() => handleEditSpot(spot)} data-testid={`button-edit-spot-${spot.id}`}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleDeleteSpot(spot)} data-testid={`button-delete-spot-${spot.id}`} className="text-red-600 hover:text-red-700 hover:border-red-300">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
 
@@ -633,6 +667,54 @@ export default function MySpots() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Parking Spot</DialogTitle>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Trash2 className="h-5 w-5 text-red-600" />
+                <p className="font-semibold text-red-900 dark:text-red-200">Warning: This action cannot be undone</p>
+              </div>
+              <p className="text-sm text-red-800 dark:text-red-300">
+                Deleting this parking spot will permanently remove it from your account. 
+                Any active listings for this spot will also be removed.
+              </p>
+            </div>
+
+            {spotToDelete && (
+              <div className="border rounded-lg p-3 bg-gray-50 dark:bg-gray-800">
+                <p className="font-medium">Spot {spotToDelete.spotNumber}</p>
+                <p className="text-sm text-muted-foreground">{spotToDelete.location}</p>
+                <p className="text-sm text-muted-foreground">{spotToDelete.type} spot</p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDeleteConfirm(false)}
+              data-testid="button-cancel-delete"
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmDeleteSpot}
+              disabled={deleteSpotMutation.isPending}
+              data-testid="button-confirm-delete"
+            >
+              {deleteSpotMutation.isPending ? "Deleting..." : "Delete Spot"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
