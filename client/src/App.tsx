@@ -72,7 +72,8 @@ function AuthenticatedApp() {
   // In real app, this would query the database
   const hasRegisteredSpots = (userId: string) => {
     // Mock data - some users have spots, some don't
-    const usersWithSpots = ['owner-001', 'owner-002', 'owner-004']; 
+    // Demo spot owner "user-owner-001" has registered spots
+    const usersWithSpots = ['user-owner-001', 'owner-002', 'owner-004']; 
     return usersWithSpots.includes(userId);
   };
 
