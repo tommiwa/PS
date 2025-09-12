@@ -90,12 +90,6 @@ const settingsMenuItems = [
     icon: Users,
     roles: ["admin", "owner", "renter"]
   },
-  {
-    title: "Settings",
-    url: "/settings",
-    icon: Settings,
-    roles: ["admin", "owner", "renter"]
-  },
 ]
 
 interface AppSidebarProps {

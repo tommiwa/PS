@@ -1,14 +1,49 @@
+import { useState } from "react"
 import { UserProfileCard } from "@/components/user-profile-card"
-import { BookingCard } from "@/components/booking-card"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Switch } from "@/components/ui/switch"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Calendar, Car, Clock, Settings, Bell, Shield, MapPin, DollarSign, Star, Users } from "lucide-react"
+import { Separator } from "@/components/ui/separator"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { 
+  Car, 
+  Settings, 
+  Bell, 
+  Shield, 
+  MapPin, 
+  Users,
+  User,
+  Mail,
+  Phone,
+  Key,
+  Download,
+  Trash2,
+  AlertTriangle,
+  Sun,
+  Moon,
+  Globe,
+  Smartphone,
+  Clock,
+  DollarSign
+} from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 
 export default function Profile() {
   const { user, isOwner, isRenter } = useAuth()
+  
+  // State for various settings
+  const [darkMode, setDarkMode] = useState(false)
+  const [emailNotifications, setEmailNotifications] = useState(true)
+  const [smsNotifications, setSmsNotifications] = useState(true)
+  const [pushNotifications, setPushNotifications] = useState(true)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
 
   if (!user) {
     return (
@@ -38,99 +73,60 @@ export default function Profile() {
     memberSince: user.memberSince || "Recently"
   }
 
-  const mockBookingHistory = [
-    {
-      id: "B-001",
-      spotNumber: "A-15",
-      location: "Main Building - Level 2",
-      date: "2024-01-10",
-      startTime: "8:00 AM",
-      endTime: "6:00 PM",
-      price: 25,
-      status: "confirmed" as const,
-      paymentStatus: "completed" as const,
-      renter: "Mike Johnson",
-      canCancel: false,
-      canEdit: false
-    },
-    {
-      id: "B-002",
-      spotNumber: "B-08",
-      location: "North Parking Lot",
-      date: "2024-01-12",
-      startTime: "9:00 AM",
-      endTime: "5:00 PM",
-      price: 20,
-      status: "confirmed" as const,
-      paymentStatus: "completed" as const,
-      renter: "Lisa Anderson",
-      canCancel: false,
-      canEdit: false
-    }
-  ]
+  const handleSaveProfile = () => {
+    console.log('Save profile changes')
+    setEditDialogOpen(false)
+    // Handle profile update
+  }
+
+  const handleChangePassword = () => {
+    console.log('Change password')
+    // Handle password change
+  }
+
+  const handleDeleteAccount = () => {
+    console.log('Delete account request')
+    // Show confirmation dialog for account deletion
+  }
+
+  const handleExportData = () => {
+    console.log('Export user data')
+    // Generate and download user data
+  }
+
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase()
+  }
+
+  const handleEditProfile = () => {
+    setEditDialogOpen(true)
+  }
 
   return (
     <div className="p-6 space-y-6" data-testid="page-profile">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Profile</h1>
+          <h1 className="text-3xl font-bold">Profile & Settings</h1>
           <p className="text-muted-foreground">
-            Manage your account settings and view your activity.
+            Manage your account settings, preferences, and personal information.
           </p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <UserProfileCard user={userProfile} />
+          <UserProfileCard user={userProfile} onEditProfile={handleEditProfile} />
           
-          <Tabs defaultValue="bookings" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="bookings">Booking History</TabsTrigger>
+          <Tabs defaultValue="notifications" className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="notifications">Notifications</TabsTrigger>
+              <TabsTrigger value="vehicle">Vehicle</TabsTrigger>
               <TabsTrigger value="privacy">Privacy</TabsTrigger>
+              <TabsTrigger value="account">Account</TabsTrigger>
             </TabsList>
             
-            <TabsContent value="bookings" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Calendar className="h-5 w-5" />
-                    {isRenter() ? "My Booking History" : "Recent Spot Rentals"}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {isRenter() && (
-                      <div className="text-sm text-muted-foreground mb-4">
-                        Track your parking bookings and history. Your most recent bookings are shown below.
-                      </div>
-                    )}
-                    {isOwner() && (
-                      <div className="text-sm text-muted-foreground mb-4">
-                        Recent rentals of your parking spots. View who booked your spots and earnings.
-                      </div>
-                    )}
-                    
-                    {mockBookingHistory.map((booking) => (
-                      <BookingCard 
-                        key={booking.id} 
-                        booking={booking}
-                        showRenterInfo={isOwner()}
-                      />
-                    ))}
-                    
-                    {mockBookingHistory.length === 0 && (
-                      <div className="text-center py-8 text-muted-foreground">
-                        {isRenter() ? "No bookings yet. Start by searching for available spots!" : "No rentals yet. Consider listing your spots when available."}
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="notifications" className="space-y-4">
+            {/* Notification Settings */}
+            <TabsContent value="notifications" className="space-y-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -138,80 +134,153 @@ export default function Profile() {
                     Notification Preferences
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium">Booking Confirmations</h4>
-                      <p className="text-sm text-muted-foreground">Get notified when bookings are confirmed</p>
+                <CardContent className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4" />
+                          <Label>Email Notifications</Label>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Receive booking confirmations and updates via email
+                        </p>
+                      </div>
+                      <Switch 
+                        checked={emailNotifications}
+                        onCheckedChange={setEmailNotifications}
+                        data-testid="switch-email-notifications"
+                      />
                     </div>
-                    <Badge variant="default">Email + SMS</Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium">Payment Reminders</h4>
-                      <p className="text-sm text-muted-foreground">Reminders for pending payments</p>
+                    
+                    <Separator />
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Smartphone className="h-4 w-4" />
+                          <Label>SMS Notifications</Label>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Get urgent updates and reminders via text message
+                        </p>
+                      </div>
+                      <Switch 
+                        checked={smsNotifications}
+                        onCheckedChange={setSmsNotifications}
+                        data-testid="switch-sms-notifications"
+                      />
                     </div>
-                    <Badge variant="default">Email</Badge>
+                    
+                    <Separator />
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Bell className="h-4 w-4" />
+                          <Label>Push Notifications</Label>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Browser notifications for real-time updates
+                        </p>
+                      </div>
+                      <Switch 
+                        checked={pushNotifications}
+                        onCheckedChange={setPushNotifications}
+                        data-testid="switch-push-notifications"
+                      />
+                    </div>
                   </div>
                   
-                  {isRenter() && (
-                    <>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">Waiting List Updates</h4>
-                          <p className="text-sm text-muted-foreground">Get notified when spots become available from waiting list</p>
-                        </div>
-                        <Badge variant="secondary">Off</Badge>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">Preferred Location Alerts</h4>
-                          <p className="text-sm text-muted-foreground">Get notified when spots open in your favorite locations</p>
-                        </div>
-                        <Badge variant="default">Email</Badge>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">Last-Minute Availability</h4>
-                          <p className="text-sm text-muted-foreground">Get notified about same-day spot cancellations</p>
-                        </div>
-                        <Badge variant="outline">Email</Badge>
-                      </div>
-                    </>
-                  )}
+                  <Separator />
                   
-                  {isOwner() && (
-                    <>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">Spot Availability Alerts</h4>
-                          <p className="text-sm text-muted-foreground">Get notified when preferred spots become available</p>
+                  <div className="space-y-4">
+                    <h4 className="font-medium">Notification Types</h4>
+                    <div className="space-y-3">
+                      {[
+                        { id: "booking-confirmations", label: "Booking Confirmations", enabled: true },
+                        { id: "payment-reminders", label: "Payment Reminders", enabled: true },
+                        { id: "spot-availability", label: "Spot Availability Updates", enabled: false },
+                        { id: "weekly-summary", label: "Weekly Summary Reports", enabled: true },
+                        { id: "system-maintenance", label: "System Maintenance Alerts", enabled: true }
+                      ].map((item) => (
+                        <div key={item.id} className="flex items-center justify-between">
+                          <Label htmlFor={item.id}>{item.label}</Label>
+                          <Switch id={item.id} defaultChecked={item.enabled} />
                         </div>
-                        <Badge variant="default">Email</Badge>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">Rental Requests</h4>
-                          <p className="text-sm text-muted-foreground">Get notified when someone wants to book your spot</p>
-                        </div>
-                        <Badge variant="default">Email + SMS</Badge>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">Earnings Reports</h4>
-                          <p className="text-sm text-muted-foreground">Monthly summary of your parking spot earnings</p>
-                        </div>
-                        <Badge variant="secondary">Email</Badge>
-                      </div>
-                    </>
-                  )}
+                      ))}
+                    </div>
+                  </div>
                   
-                  <Button className="w-full" data-testid="button-update-notification-preferences">Update Preferences</Button>
+                  <Button className="w-full" data-testid="button-update-notification-preferences">
+                    Update Preferences
+                  </Button>
                 </CardContent>
               </Card>
             </TabsContent>
-            
-            <TabsContent value="privacy" className="space-y-4">
+
+            {/* Vehicle Settings */}
+            <TabsContent value="vehicle" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Car className="h-5 w-5" />
+                    Vehicle Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="vehicle-make">Make</Label>
+                      <Input id="vehicle-make" placeholder="e.g., Tesla" defaultValue="Tesla" />
+                    </div>
+                    <div>
+                      <Label htmlFor="vehicle-model">Model</Label>
+                      <Input id="vehicle-model" placeholder="e.g., Model 3" defaultValue="Model 3" />
+                    </div>
+                    <div>
+                      <Label htmlFor="vehicle-year">Year</Label>
+                      <Input id="vehicle-year" placeholder="e.g., 2023" defaultValue="2023" />
+                    </div>
+                    <div>
+                      <Label htmlFor="vehicle-color">Color</Label>
+                      <Input id="vehicle-color" placeholder="e.g., White" defaultValue="White" />
+                    </div>
+                    <div>
+                      <Label htmlFor="license-plate">License Plate</Label>
+                      <Input id="license-plate" placeholder="e.g., ABC-123" defaultValue="ABC-123" />
+                    </div>
+                    <div>
+                      <Label htmlFor="vehicle-type">Vehicle Type</Label>
+                      <Select defaultValue="electric">
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="sedan">Sedan</SelectItem>
+                          <SelectItem value="suv">SUV</SelectItem>
+                          <SelectItem value="hatchback">Hatchback</SelectItem>
+                          <SelectItem value="truck">Truck</SelectItem>
+                          <SelectItem value="electric">Electric Vehicle</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Switch id="is-electric" defaultChecked />
+                    <Label htmlFor="is-electric">Electric Vehicle (requires charging spots)</Label>
+                  </div>
+                  
+                  <div className="flex justify-end">
+                    <Button data-testid="button-save-vehicle-info">Save Vehicle Info</Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Privacy Settings */}
+            <TabsContent value="privacy" className="space-y-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -219,26 +288,182 @@ export default function Profile() {
                     Privacy & Security
                   </CardTitle>
                 </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>Profile Visibility</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Who can see your profile information
+                        </p>
+                      </div>
+                      <Select defaultValue="colleagues">
+                        <SelectTrigger className="w-[200px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="colleagues">BCI Employees Only</SelectItem>
+                          <SelectItem value="private">Private</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>Contact Information Sharing</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Share your contact info with spot owners/renters
+                        </p>
+                      </div>
+                      <Switch defaultChecked />
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>Booking History Visibility</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Allow others to see your booking statistics
+                        </p>
+                      </div>
+                      <Switch />
+                    </div>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div className="space-y-4">
+                    <h4 className="font-medium">Security Settings</h4>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>Two-Factor Authentication</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Add an extra layer of security to your account
+                        </p>
+                      </div>
+                      <Badge variant="outline">Not Enabled</Badge>
+                    </div>
+                    <Button variant="outline" className="w-full">
+                      <Key className="h-4 w-4 mr-2" />
+                      Enable Two-Factor Authentication
+                    </Button>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div className="space-y-2">
+                    <h4 className="font-medium">Recent Login Activity</h4>
+                    <div className="text-sm text-muted-foreground space-y-1">
+                      <p>Last login: January 15, 2024 at 9:30 AM (Current session)</p>
+                      <p>Previous login: January 14, 2024 at 8:15 AM</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Account Settings */}
+            <TabsContent value="account" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Account Security</CardTitle>
+                </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Data Sharing</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Your contact information is only shared with spot owners when you book their spots.
+                  <Button variant="outline" onClick={handleChangePassword} className="w-full">
+                    <Key className="h-4 w-4 mr-2" />
+                    Change Password
+                  </Button>
+                  <Button variant="outline" onClick={handleExportData} className="w-full" data-testid="button-download-history">
+                    <Download className="h-4 w-4 mr-2" />
+                    Download My Data
+                  </Button>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Globe className="h-5 w-5" />
+                    Application Preferences
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Theme</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Choose your preferred theme
+                      </p>
+                    </div>
+                    <Select defaultValue="system">
+                      <SelectTrigger className="w-[150px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="light">
+                          <div className="flex items-center gap-2">
+                            <Sun className="h-4 w-4" />
+                            Light
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="dark">
+                          <div className="flex items-center gap-2">
+                            <Moon className="h-4 w-4" />
+                            Dark
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="system">System</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Language</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Choose your preferred language
+                      </p>
+                    </div>
+                    <Select defaultValue="en">
+                      <SelectTrigger className="w-[150px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="en">English</SelectItem>
+                        <SelectItem value="es">Español</SelectItem>
+                        <SelectItem value="fr">Français</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="border-red-200 bg-red-50 dark:bg-red-900/20">
+                <CardHeader>
+                  <CardTitle className="text-red-700 dark:text-red-300 flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5" />
+                    Danger Zone
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label className="text-red-700 dark:text-red-300">Delete Account</Label>
+                    <p className="text-sm text-red-600 dark:text-red-400">
+                      Once you delete your account, there is no going back. Please be certain.
                     </p>
                   </div>
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Activity Visibility</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Your booking history is private and only visible to you and administrators.
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Account Security</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Last login: January 15, 2024 at 9:30 AM
-                    </p>
-                  </div>
-                  <Button variant="outline" className="w-full">Change Password</Button>
+                  <Button 
+                    variant="destructive" 
+                    onClick={handleDeleteAccount}
+                    className="w-full"
+                    data-testid="button-delete-account"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete My Account
+                  </Button>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -333,15 +558,81 @@ export default function Profile() {
                   Manage My Spots
                 </Button>
               )}
-              
-              <Button variant="outline" className="w-full justify-start" size="sm" data-testid="button-download-history">
-                <Clock className="h-4 w-4 mr-2" />
-                Download History
-              </Button>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      {/* Profile Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Edit Profile
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6">
+            <div className="flex items-center gap-6">
+              <Avatar className="h-20 w-20">
+                <AvatarFallback className="text-lg">
+                  {getInitials(user.name)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="space-y-2">
+                <Button variant="outline" size="sm">
+                  Change Photo
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  JPG, PNG or GIF. Max size 2MB.
+                </p>
+              </div>
+            </div>
+            
+            <Separator />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="full-name">Full Name</Label>
+                <Input id="full-name" defaultValue={user.name} />
+              </div>
+              <div>
+                <Label htmlFor="email">Email Address</Label>
+                <Input id="email" defaultValue={user.email} disabled />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Contact IT to change your email address
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input id="phone" defaultValue={user.phone || "(555) 000-0000"} />
+              </div>
+              <div>
+                <Label htmlFor="department">Department</Label>
+                <Input id="department" defaultValue={user.department || "Unknown"} disabled />
+              </div>
+            </div>
+            
+            <div>
+              <Label htmlFor="bio">Bio (Optional)</Label>
+              <Textarea 
+                id="bio" 
+                placeholder="Tell others about yourself..."
+                className="mt-1"
+              />
+            </div>
+            
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveProfile} data-testid="button-save-profile">
+                Save Changes
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

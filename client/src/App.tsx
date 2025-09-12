@@ -17,7 +17,6 @@ import Dashboard from "@/pages/dashboard";
 import Search from "@/pages/search";
 import Admin from "@/pages/admin";
 import Profile from "@/pages/profile";
-import Settings from "@/pages/settings";
 import MyBookings from "@/pages/my-bookings";
 import MySpots from "@/pages/my-spots";
 import AdminUserManagement from "@/pages/admin-user-management";
@@ -142,7 +141,6 @@ function AuthenticatedApp() {
               {/* General pages available to all authenticated users */}
               <Route path="/search" component={Search} />
               <Route path="/profile" component={Profile} />
-              <Route path="/settings" component={Settings} />
               
               {/* Renter-specific pages */}
               <Route path="/my-bookings" component={MyBookings} />
