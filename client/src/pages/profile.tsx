@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useLocation } from "wouter"
 import { UserProfileCard } from "@/components/user-profile-card"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -37,6 +38,7 @@ import { useAuth } from "@/contexts/auth-context"
 
 export default function Profile() {
   const { user, isOwner, isRenter } = useAuth()
+  const [, setLocation] = useLocation()
   
   // State for various settings
   const [darkMode, setDarkMode] = useState(false)
@@ -44,6 +46,7 @@ export default function Profile() {
   const [smsNotifications, setSmsNotifications] = useState(true)
   const [pushNotifications, setPushNotifications] = useState(true)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState("notifications")
 
   if (!user) {
     return (
@@ -102,6 +105,29 @@ export default function Profile() {
     setEditDialogOpen(true)
   }
 
+  const handleUpdateVehicle = () => {
+    setActiveTab("vehicle")
+  }
+
+  const handleNotificationSettings = () => {
+    setActiveTab("notifications")
+  }
+
+  const handleEnrollWaitingList = () => {
+    console.log('Enrolling in waiting list')
+    // Handle waiting list enrollment
+    alert('You have been enrolled in the waiting list! You will be notified when spots become available.')
+  }
+
+  const handleAvailabilityAlerts = () => {
+    setActiveTab("notifications")
+    // Focus on availability alerts
+  }
+
+  const handleManageSpots = () => {
+    setLocation('/my-spots')
+  }
+
   return (
     <div className="p-6 space-y-6" data-testid="page-profile">
       <div className="flex items-center justify-between">
@@ -117,7 +143,7 @@ export default function Profile() {
         <div className="lg:col-span-2 space-y-6">
           <UserProfileCard user={userProfile} onEditProfile={handleEditProfile} />
           
-          <Tabs defaultValue="notifications" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="notifications">Notifications</TabsTrigger>
               <TabsTrigger value="vehicle">Vehicle</TabsTrigger>
@@ -530,22 +556,22 @@ export default function Profile() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Button variant="outline" className="w-full justify-start" size="sm" data-testid="button-update-vehicle">
+              <Button variant="outline" className="w-full justify-start" size="sm" onClick={handleUpdateVehicle} data-testid="button-update-vehicle">
                 <Car className="h-4 w-4 mr-2" />
                 Update Vehicle Info
               </Button>
-              <Button variant="outline" className="w-full justify-start" size="sm" data-testid="button-notification-settings">
+              <Button variant="outline" className="w-full justify-start" size="sm" onClick={handleNotificationSettings} data-testid="button-notification-settings">
                 <Bell className="h-4 w-4 mr-2" />
                 Notification Settings
               </Button>
               
               {isRenter() && (
                 <>
-                  <Button variant="outline" className="w-full justify-start" size="sm" data-testid="button-enroll-waiting-list">
+                  <Button variant="outline" className="w-full justify-start" size="sm" onClick={handleEnrollWaitingList} data-testid="button-enroll-waiting-list">
                     <Users className="h-4 w-4 mr-2" />
                     Enroll in Waiting List
                   </Button>
-                  <Button variant="outline" className="w-full justify-start" size="sm" data-testid="button-enable-notifications">
+                  <Button variant="outline" className="w-full justify-start" size="sm" onClick={handleAvailabilityAlerts} data-testid="button-enable-notifications">
                     <Bell className="h-4 w-4 mr-2" />
                     Availability Alerts
                   </Button>
@@ -553,7 +579,7 @@ export default function Profile() {
               )}
               
               {isOwner() && (
-                <Button variant="outline" className="w-full justify-start" size="sm" data-testid="button-manage-spots">
+                <Button variant="outline" className="w-full justify-start" size="sm" onClick={handleManageSpots} data-testid="button-manage-spots">
                   <MapPin className="h-4 w-4 mr-2" />
                   Manage My Spots
                 </Button>
