@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -6,9 +6,10 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle } from "lucide-react"
+import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle, User } from "lucide-react"
 import { ParkingSpot } from "./parking-spot-card"
 import { isPastDate, getTodayString } from "@/utils/date-utils"
+import { AuthService } from "@/lib/auth"
 
 interface BookingData {
   date: string
@@ -28,6 +29,9 @@ interface BookingFormProps {
 }
 
 export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLocked = false }: BookingFormProps) {
+  // Get authenticated user for auto-population
+  const authUser = AuthService.getAuthUser();
+  
   // Ensure we don't default to a past date
   const getValidDate = () => {
     if (selectedDate) return selectedDate;
@@ -39,8 +43,8 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
     date: getValidDate(),
     paymentMethod: "",
     specialInstructions: "",
-    contactPhone: "",
-    vehicleLicense: ""
+    contactPhone: authUser?.phone || "", // Auto-populate from user profile
+    vehicleLicense: "" // Could be auto-populated from extended profile in the future
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -232,7 +236,15 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
           {/* Contact Details */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="contactPhone">Contact Phone</Label>
+              <Label htmlFor="contactPhone" className="flex items-center gap-2">
+                Contact Phone
+                {authUser?.phone && (
+                  <Badge variant="secondary" className="text-xs">
+                    <User className="h-3 w-3 mr-1" />
+                    From Profile
+                  </Badge>
+                )}
+              </Label>
               <Input
                 type="tel"
                 placeholder="(555) 123-4567"
@@ -240,7 +252,14 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
                 onChange={(e) => updateFormData("contactPhone", e.target.value)}
                 required
                 data-testid="input-contact-phone"
+                className={authUser?.phone ? "border-blue-200 bg-blue-50/50 dark:bg-blue-950/50" : ""}
               />
+              {authUser?.phone && (
+                <p className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                  <User className="h-3 w-3" />
+                  Auto-filled from your profile
+                </p>
+              )}
               {validationErrors.contactPhone && (
                 <p className="text-sm text-red-600">{validationErrors.contactPhone}</p>
               )}
@@ -254,6 +273,9 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
                 required
                 data-testid="input-vehicle-license"
               />
+              <p className="text-xs text-muted-foreground">
+                💡 Tip: Add your vehicle info to your profile to auto-fill this field next time
+              </p>
               {validationErrors.vehicleLicense && (
                 <p className="text-sm text-red-600">{validationErrors.vehicleLicense}</p>
               )}
