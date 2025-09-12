@@ -32,7 +32,9 @@ import {
   Globe,
   Smartphone,
   Clock,
-  DollarSign
+  DollarSign,
+  CheckCircle,
+  XCircle
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 
@@ -49,6 +51,14 @@ export default function Profile() {
   const [activeTab, setActiveTab] = useState("notifications")
   const [isEnrolledInWaitingList, setIsEnrolledInWaitingList] = useState(false)
   const [availabilityAlertsEnabled, setAvailabilityAlertsEnabled] = useState(false)
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
+  const [confirmDialogData, setConfirmDialogData] = useState({
+    title: "",
+    message: "",
+    icon: null as React.ReactNode,
+    confirmText: "",
+    action: () => {}
+  })
 
   if (!user) {
     return (
@@ -115,27 +125,65 @@ export default function Profile() {
     setActiveTab("notifications")
   }
 
+  const showConfirmDialog = (title: string, message: string, icon: React.ReactNode, confirmText: string, action: () => void) => {
+    setConfirmDialogData({ title, message, icon, confirmText, action })
+    setConfirmDialogOpen(true)
+  }
+
+  const handleConfirmAction = () => {
+    confirmDialogData.action()
+    setConfirmDialogOpen(false)
+  }
+
   const handleEnrollWaitingList = () => {
     if (isEnrolledInWaitingList) {
-      console.log('Leaving waiting list')
-      setIsEnrolledInWaitingList(false)
-      alert('You have been removed from the waiting list.')
+      showConfirmDialog(
+        "Leave Waiting List",
+        "Are you sure you want to leave the waiting list? You won't receive notifications about available spots anymore.",
+        <XCircle className="h-12 w-12 text-destructive" />,
+        "Leave Waiting List",
+        () => {
+          console.log('Leaving waiting list')
+          setIsEnrolledInWaitingList(false)
+        }
+      )
     } else {
-      console.log('Enrolling in waiting list')
-      setIsEnrolledInWaitingList(true)
-      alert('You have been enrolled in the waiting list! You will be notified when spots become available.')
+      showConfirmDialog(
+        "Join Waiting List",
+        "Great choice! You'll be enrolled in the waiting list and we'll notify you as soon as spots become available that match your preferences.",
+        <CheckCircle className="h-12 w-12 text-green-500" />,
+        "Enroll Now",
+        () => {
+          console.log('Enrolling in waiting list')
+          setIsEnrolledInWaitingList(true)
+        }
+      )
     }
   }
 
   const handleAvailabilityAlerts = () => {
     if (availabilityAlertsEnabled) {
-      console.log('Disabling availability alerts')
-      setAvailabilityAlertsEnabled(false)
-      alert('Availability alerts have been disabled.')
+      showConfirmDialog(
+        "Disable Availability Alerts",
+        "You won't receive push notifications when your preferred parking spots become available. You can always re-enable this later.",
+        <XCircle className="h-12 w-12 text-orange-500" />,
+        "Disable Alerts",
+        () => {
+          console.log('Disabling availability alerts')
+          setAvailabilityAlertsEnabled(false)
+        }
+      )
     } else {
-      console.log('Enabling availability alerts')
-      setAvailabilityAlertsEnabled(true)
-      alert('Availability alerts have been enabled! You will receive notifications when preferred spots become available.')
+      showConfirmDialog(
+        "Enable Availability Alerts",
+        "Perfect! You'll receive instant notifications when parking spots matching your preferences become available. Never miss out on a great spot!",
+        <CheckCircle className="h-12 w-12 text-green-500" />,
+        "Enable Alerts",
+        () => {
+          console.log('Enabling availability alerts')
+          setAvailabilityAlertsEnabled(true)
+        }
+      )
     }
   }
 
@@ -682,6 +730,37 @@ export default function Profile() {
               </Button>
               <Button onClick={handleSaveProfile} data-testid="button-save-profile">
                 Save Changes
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <div className="flex flex-col items-center text-center space-y-4 py-6">
+            {confirmDialogData.icon}
+            <div className="space-y-2">
+              <h2 className="text-lg font-semibold">{confirmDialogData.title}</h2>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                {confirmDialogData.message}
+              </p>
+            </div>
+            <div className="flex gap-3 w-full pt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setConfirmDialogOpen(false)} 
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleConfirmAction} 
+                className="flex-1"
+                data-testid="button-confirm-action"
+              >
+                {confirmDialogData.confirmText}
               </Button>
             </div>
           </div>
