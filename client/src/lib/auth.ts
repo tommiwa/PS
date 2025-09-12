@@ -102,10 +102,6 @@ export class AuthService {
     return this.hasRole("renter");
   }
 
-  // Check if user is on waitlist
-  static isWaitlist(): boolean {
-    return this.hasRole("waitlist");
-  }
 }
 
 // User type descriptions for the login page
@@ -139,16 +135,6 @@ export const userTypeDescriptions: Record<UserRole, { title: string; description
       "Monitor system usage",
       "Generate reports and analytics"
     ]
-  },
-  waitlist: {
-    title: "Waitlist User",
-    description: "Waiting for permanent parking assignment",
-    features: [
-      "Track your waitlist position",
-      "Book temporary available spots",
-      "Get notified of spot openings",
-      "View estimated wait time"
-    ]
   }
 };
 
@@ -165,9 +151,5 @@ export const demoCredentials: Record<UserRole, { email: string; password: string
   admin: {
     email: "david.thompson@bci.com",
     password: "admin123"
-  },
-  waitlist: {
-    email: "jennifer.kim@bci.com",
-    password: "demo123"
   }
 };

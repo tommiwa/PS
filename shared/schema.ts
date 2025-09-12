@@ -4,7 +4,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Define user roles enum
-export const userRoles = z.enum(["admin", "owner", "renter", "waitlist"]);
+export const userRoles = z.enum(["admin", "owner", "renter"]);
 export type UserRole = z.infer<typeof userRoles>;
 
 export const users = pgTable("users", {
@@ -81,15 +81,5 @@ export const sampleUsers: Record<UserRole, AuthUser> = {
     role: "admin",
     memberSince: "January 2022",
     lastLogin: new Date("2024-01-15T09:15:00Z")
-  },
-  waitlist: {
-    id: "user-waitlist-001",
-    email: "jennifer.kim@bci.com",
-    name: "Jennifer Kim", 
-    phone: "(555) 345-6789",
-    department: "Finance",
-    role: "waitlist",
-    memberSince: "December 2023",
-    lastLogin: new Date("2024-01-12T10:00:00Z")
   }
 };
