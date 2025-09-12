@@ -13,6 +13,12 @@ interface AuthContextType {
   isAdmin: () => boolean;
   isOwner: () => boolean;
   isRenter: () => boolean;
+  // Role switching for admins
+  viewRole: UserRole | null;
+  switchViewRole: (role: UserRole) => void;
+  resetViewRole: () => void;
+  getCurrentViewRole: () => UserRole | null;
+  isViewingAs: (role: UserRole) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,6 +30,7 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [viewRole, setViewRole] = useState<UserRole | null>(null);
 
   // Initialize auth state from localStorage on mount
   useEffect(() => {
@@ -57,6 +64,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const logout = () => {
     AuthService.clearAuth();
     setUser(null);
+    setViewRole(null);
   };
 
   const hasRole = (role: UserRole): boolean => {
@@ -79,6 +87,27 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return hasRole("renter");
   };
 
+  // Role switching functions for admins
+  const switchViewRole = (role: UserRole) => {
+    if (user?.role === "admin") {
+      setViewRole(role);
+    }
+  };
+
+  const resetViewRole = () => {
+    setViewRole(null);
+  };
+
+  const getCurrentViewRole = (): UserRole | null => {
+    if (user?.role === "admin" && viewRole) {
+      return viewRole;
+    }
+    return user?.role || null;
+  };
+
+  const isViewingAs = (role: UserRole): boolean => {
+    return getCurrentViewRole() === role;
+  };
 
   const value: AuthContextType = {
     user,
@@ -91,6 +120,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isAdmin,
     isOwner,
     isRenter,
+    viewRole,
+    switchViewRole,
+    resetViewRole,
+    getCurrentViewRole,
+    isViewingAs,
   };
 
   return (

@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { RoleSwitcher } from "@/components/role-switcher";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { AuthProvider, useAuth } from "@/contexts/auth-context";
@@ -153,6 +154,7 @@ function AuthenticatedApp() {
                   </AvatarFallback>
                 </Avatar>
               </div>
+              <RoleSwitcher />
               <Button
                 variant="ghost"
                 size="icon"
