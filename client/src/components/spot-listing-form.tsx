@@ -135,19 +135,31 @@ export function SpotListingForm({ onSubmit, onCancel }: SpotListingFormProps) {
     setIsSubmitting(true)
     
     try {
-      // Simulate API call with potential failure
-      await new Promise((resolve, reject) => {
-        setTimeout(() => {
-          // Simulate 90% success rate for testing
-          if (Math.random() > 0.1) {
-            console.log('Submitting spot listing:', { ...formData, listingType })
-            resolve(true)
-          } else {
-            reject(new Error("Failed to create listing. Please try again."))
-          }
-        }, 1000)
+      // Create listing via API
+      const listingData = {
+        spotId: formData.spotId,
+        listingType,
+        price: parseFloat(formData.price),
+        singleDate: listingType === "single" ? formData.date : null,
+        periodStartDate: listingType === "period" ? formData.startDate : null,
+        periodEndDate: listingType === "period" ? formData.endDate : null,
+        recurringStartDate: listingType === "recurring" ? formData.recurringStartDate : null,
+        recurringEndDate: listingType === "recurring" ? formData.recurringEndDate || null : null,
+        daysOfWeek: listingType === "recurring" ? formData.recurringDays : null,
+        notes: formData.description || null
+      }
+
+      const response = await fetch('/api/spot-listings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(listingData)
       })
-      
+
+      if (!response.ok) {
+        throw new Error("Failed to create listing. Please try again.")
+      }
+
+      console.log('Submitting spot listing:', { ...formData, listingType })
       onSubmit({ ...formData, listingType })
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : "An unexpected error occurred")

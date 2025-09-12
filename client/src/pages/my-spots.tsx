@@ -391,7 +391,7 @@ export default function MySpots() {
                 </div>
               )}
 
-              {spot.currentBooking && (
+              {spot.currentBooking && spot.currentBooking !== undefined && (
                 <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg mb-4">
                   <div className="flex items-center gap-2 mb-2">
                     <Clock className="h-4 w-4 text-blue-600" />
