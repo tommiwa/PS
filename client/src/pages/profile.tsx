@@ -38,11 +38,13 @@ import {
   XCircle
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
+import { useTheme } from "@/contexts/theme-context"
 
 export default function Profile() {
   const { user, isOwner, isRenter } = useAuth()
   const [, setLocation] = useLocation()
   const { toast } = useToast()
+  const { theme, setTheme } = useTheme()
   
   // State for various settings
   const [darkMode, setDarkMode] = useState(false)
@@ -459,7 +461,7 @@ export default function Profile() {
                         Choose your preferred theme
                       </p>
                     </div>
-                    <Select defaultValue="system">
+                    <Select value={theme} onValueChange={setTheme} data-testid="select-theme">
                       <SelectTrigger className="w-[150px]">
                         <SelectValue />
                       </SelectTrigger>
@@ -476,7 +478,12 @@ export default function Profile() {
                             Dark
                           </div>
                         </SelectItem>
-                        <SelectItem value="system">System</SelectItem>
+                        <SelectItem value="system">
+                          <div className="flex items-center gap-2">
+                            <Globe className="h-4 w-4" />
+                            System
+                          </div>
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

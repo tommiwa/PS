@@ -10,6 +10,7 @@ import { RoleSwitcher } from "@/components/role-switcher";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { AuthProvider, useAuth } from "@/contexts/auth-context";
+import { ThemeProvider } from "@/contexts/theme-context";
 import { LogOut, Loader2 } from "lucide-react";
 import { useEffect } from "react";
 
@@ -213,10 +214,12 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AuthProvider>
-          <ProtectedRouter />
-        </AuthProvider>
-        <Toaster />
+        <ThemeProvider>
+          <AuthProvider>
+            <ProtectedRouter />
+          </AuthProvider>
+          <Toaster />
+        </ThemeProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

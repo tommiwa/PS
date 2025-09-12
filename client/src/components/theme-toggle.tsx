@@ -1,30 +1,17 @@
 import { Moon, Sun } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { useState, useEffect } from "react"
+import { useTheme } from "@/contexts/theme-context"
 
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<"light" | "dark">("light")
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("theme") as "light" | "dark" || "light"
-    setTheme(savedTheme)
-    
-    if (savedTheme === "dark") {
-      document.documentElement.classList.add("dark")
-    } else {
-      document.documentElement.classList.remove("dark")
-    }
-  }, [])
+  const { theme, setTheme, actualTheme } = useTheme()
 
   const toggleTheme = () => {
-    const newTheme = theme === "light" ? "dark" : "light"
-    setTheme(newTheme)
-    localStorage.setItem("theme", newTheme)
-    
-    if (newTheme === "dark") {
-      document.documentElement.classList.add("dark")
+    if (theme === "light") {
+      setTheme("dark")
+    } else if (theme === "dark") {
+      setTheme("system")
     } else {
-      document.documentElement.classList.remove("dark")
+      setTheme("light")
     }
   }
 
@@ -35,7 +22,7 @@ export function ThemeToggle() {
       onClick={toggleTheme}
       data-testid="button-theme-toggle"
     >
-      {theme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+      {actualTheme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
       <span className="sr-only">Toggle theme</span>
     </Button>
   )
