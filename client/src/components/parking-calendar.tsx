@@ -29,8 +29,6 @@ interface ParkingSpot {
   isAvailable: boolean
   availability?: {
     date: string
-    startTime: string
-    endTime: string
   }
   owner: string
 }
@@ -208,12 +206,10 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                           <DollarSign className="h-4 w-4" />
                           ${spot.price}
                         </div>
-                        {spot.availability?.startTime && spot.availability?.endTime && (
-                          <div className="text-sm text-muted-foreground flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {spot.availability.startTime} - {spot.availability.endTime}
-                          </div>
-                        )}
+                        <div className="text-sm text-muted-foreground flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          Full Day
+                        </div>
                       </div>
                     </div>
                     <div className="mt-2 flex items-center gap-2">
@@ -272,11 +268,9 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                         {getSpotTypeIcon(spot.type)}
                         <span>${spot.price}</span>
                       </div>
-                      {spot.availability?.startTime && (
-                        <div className="text-xs opacity-75">
-                          {spot.availability.startTime}
-                        </div>
-                      )}
+                      <div className="text-xs opacity-75">
+                        Full Day
+                      </div>
                     </div>
                   ))}
                   {daySpots.length > 3 && (
