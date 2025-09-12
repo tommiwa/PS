@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Car, Calendar, Clock, Users, TrendingUp, MapPin } from "lucide-react"
+import { UserRole } from "@shared/schema"
 
 export interface DashboardStat {
   title: string
@@ -13,7 +14,7 @@ export interface DashboardStat {
 }
 
 interface DashboardStatsProps {
-  userRole: "admin" | "owner" | "renter" | "waitlist"
+  userRole: UserRole
 }
 
 export function DashboardStats({ userRole }: DashboardStatsProps) {
@@ -44,11 +45,11 @@ export function DashboardStats({ userRole }: DashboardStatsProps) {
             trend: { value: 12, isPositive: true }
           },
           {
-            title: "Waiting List",
-            value: 245,
-            icon: <Clock className="h-4 w-4" />,
-            description: "Pending assignments",
-            trend: { value: 8, isPositive: false }
+            title: "Revenue This Month",
+            value: "$12,340",
+            icon: <TrendingUp className="h-4 w-4" />,
+            description: "From spot rentals",
+            trend: { value: 18, isPositive: true }
           }
         ]
       case "owner":
@@ -104,33 +105,6 @@ export function DashboardStats({ userRole }: DashboardStatsProps) {
             value: 23,
             icon: <Clock className="h-4 w-4" />,
             description: "Total bookings"
-          }
-        ]
-      case "waitlist":
-        return [
-          {
-            title: "Queue Position",
-            value: "#47",
-            icon: <Clock className="h-4 w-4" />,
-            description: "Main Building"
-          },
-          {
-            title: "Estimated Wait",
-            value: "6-8 months",
-            icon: <Calendar className="h-4 w-4" />,
-            description: "Based on current rate"
-          },
-          {
-            title: "Temporary Bookings",
-            value: 8,
-            icon: <Car className="h-4 w-4" />,
-            description: "This month"
-          },
-          {
-            title: "Waitlist Since",
-            value: "Jan 2024",
-            icon: <Users className="h-4 w-4" />,
-            description: "5 months ago"
           }
         ]
       default:

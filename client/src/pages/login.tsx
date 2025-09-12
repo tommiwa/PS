@@ -484,7 +484,7 @@ export default function Login() {
                         </li>
                         <li className="flex items-start gap-2">
                           <div className="h-1.5 w-1.5 bg-primary rounded-full mt-1.5 flex-shrink-0" />
-                          <span>Waitlist management and automatic notifications</span>
+                          <span>Real-time notifications and system alerts</span>
                         </li>
                         <li className="flex items-start gap-2">
                           <div className="h-1.5 w-1.5 bg-primary rounded-full mt-1.5 flex-shrink-0" />

@@ -13,7 +13,6 @@ interface AuthContextType {
   isAdmin: () => boolean;
   isOwner: () => boolean;
   isRenter: () => boolean;
-  isWaitlist: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -80,9 +79,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return hasRole("renter");
   };
 
-  const isWaitlist = (): boolean => {
-    return hasRole("waitlist");
-  };
 
   const value: AuthContextType = {
     user,
@@ -95,7 +91,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isAdmin,
     isOwner,
     isRenter,
-    isWaitlist,
   };
 
   return (

@@ -10,7 +10,7 @@ export interface UserProfile {
   email: string
   phone: string
   department: string
-  role: "admin" | "owner" | "renter" | "waitlist"
+  role: "admin" | "owner" | "renter"
   avatar?: string
   vehicleInfo?: {
     make: string
@@ -33,7 +33,6 @@ export function UserProfileCard({ user, onEditProfile, showEditButton = true }: 
       admin: { variant: "default" as const, label: "Administrator" },
       owner: { variant: "secondary" as const, label: "Spot Owner" },
       renter: { variant: "outline" as const, label: "Renter" },
-      waitlist: { variant: "secondary" as const, label: "Waiting List" }
     }
     
     const config = roleConfig[user.role]

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is a corporate parking spot sharing application for BCI company, serving 1000 employees across 4 locations with 150 total parking spots. The system facilitates efficient parking allocation through peer-to-peer spot sharing, automated waiting list management, and administrative controls. The application supports multiple user roles (administrators, spot owners, renters, and waitlist members) with role-specific functionality for booking management, spot sharing, and system administration.
+This is a corporate parking spot sharing application for BCI company, serving 1000 employees across 4 locations with 150 total parking spots. The system facilitates efficient parking allocation through peer-to-peer spot sharing and administrative controls. The application supports three user roles (administrators, spot owners, and renters) with role-specific functionality for booking management, spot sharing, and system administration.
 
 ## User Preferences
 
@@ -32,7 +32,7 @@ Preferred communication style: Simple, everyday language.
 - **Database Pool**: Connection pooling with @neondatabase/serverless
 
 ### Authentication & Authorization
-- **User Management**: Role-based access control (admin, owner, renter, waitlist)
+- **User Management**: Role-based access control (admin, owner, renter)
 - **Session-based Authentication**: Server-side session management
 - **Employee Integration**: Designed for company employee login system integration
 - **Permission System**: Route-level and component-level role checking
@@ -49,7 +49,7 @@ Preferred communication style: Simple, everyday language.
 - **Calendar Integration**: Custom parking calendar for availability visualization
 - **Search & Filtering**: Advanced filtering for location, spot type, pricing
 - **Admin Management**: User management, analytics, and system administration
-- **Waitlist System**: Automated position tracking and notifications
+- **Notification System**: Real-time alerts and booking confirmations
 
 ## External Dependencies
 

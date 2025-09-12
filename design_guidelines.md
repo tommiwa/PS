@@ -19,7 +19,7 @@ This utility-focused application prioritizes efficiency, data clarity, and profe
 
 **Accent Colors:**
 - Success: 142 70% 45% (Green for confirmed bookings)
-- Warning: 38 90% 50% (Orange for pending/waitlist status)
+- Warning: 38 90% 50% (Orange for pending/temporary status)
 - Error: 0 70% 50% (Red for conflicts/cancellations)
 
 ### Typography
@@ -38,7 +38,7 @@ This utility-focused application prioritizes efficiency, data clarity, and profe
 
 **Core Components:**
 - **Data Cards**: Parking spot cards with availability status, location badges
-- **Status Indicators**: Color-coded badges for booking states, waitlist positions
+- **Status Indicators**: Color-coded badges for booking states and availability
 - **Date/Time Pickers**: Calendar components for scheduling recurring availability
 - **Data Tables**: Sortable tables for booking history, user management
 - **Search Filters**: Advanced filtering for location, time, spot type
@@ -57,7 +57,7 @@ This utility-focused application prioritizes efficiency, data clarity, and profe
 **Data Displays:**
 - **Availability Calendar**: Grid-based calendar with color-coded availability
 - **Occupancy Maps**: Visual floor plans with real-time spot status
-- **Queue Visualization**: Clear waitlist position indicators
+- **Booking Visualization**: Clear booking status and availability indicators
 - **Analytics Charts**: Usage reports and occupancy trends
 
 **Enterprise Features:**

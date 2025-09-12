@@ -12,7 +12,7 @@ export interface AdminUser {
   name: string
   email: string
   department: string
-  role: "admin" | "owner" | "renter" | "waitlist"
+  role: "admin" | "owner" | "renter"
   spotsOwned: number
   bookingsCount: number
   status: "active" | "inactive"
@@ -51,7 +51,6 @@ export function AdminUsersTable({
       admin: { variant: "default" as const, label: "Admin" },
       owner: { variant: "secondary" as const, label: "Owner" },
       renter: { variant: "outline" as const, label: "Renter" },
-      waitlist: { variant: "secondary" as const, label: "Waitlist" }
     }
     
     const config = roleConfig[role as keyof typeof roleConfig]
@@ -89,7 +88,6 @@ export function AdminUsersTable({
     total: users.length,
     active: users.filter(u => u.status === "active").length,
     owners: users.filter(u => u.role === "owner").length,
-    waitlist: users.filter(u => u.role === "waitlist").length
   }
 
   return (
@@ -105,7 +103,6 @@ export function AdminUsersTable({
               <span>{stats.total} total users</span>
               <span>{stats.active} active</span>
               <span>{stats.owners} spot owners</span>
-              <span>{stats.waitlist} on waitlist</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -129,7 +126,6 @@ export function AdminUsersTable({
               <option value="admin">Admin</option>
               <option value="owner">Owner</option>
               <option value="renter">Renter</option>
-              <option value="waitlist">Waitlist</option>
             </select>
           </div>
         </div>
@@ -186,16 +182,6 @@ export function AdminUsersTable({
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
-                      {user.role === "waitlist" && (
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleAssignSpot(user.id)}
-                          data-testid={`button-assign-${user.id}`}
-                        >
-                          <Car className="h-4 w-4" />
-                        </Button>
-                      )}
                       <Button 
                         variant="ghost" 
                         size="sm"

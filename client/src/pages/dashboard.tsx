@@ -1,13 +1,12 @@
 import { DashboardStats } from "@/components/dashboard-stats"
 import { BookingCard } from "@/components/booking-card"
 import { ParkingSpotCard } from "@/components/parking-spot-card"
-import { WaitlistPosition } from "@/components/waitlist-position"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Calendar, MapPin, Clock, Plus, Users, Car } from "lucide-react"
 
 interface DashboardProps {
-  userRole?: "admin" | "owner" | "renter" | "waitlist"
+  userRole?: "admin" | "owner" | "renter"
 }
 
 export default function Dashboard({ userRole = "owner" }: DashboardProps) {
@@ -76,66 +75,12 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
     }
   ]
 
-  const mockWaitlistEntries = [
-    {
-      location: "Main Building - Level 2",
-      position: 47,
-      totalInQueue: 120,
-      estimatedWaitMonths: 6,
-      joinedDate: "Jan 2024",
-      lastMovement: "Moved up 3 positions last week"
-    }
-  ]
 
   const renderRoleSpecificContent = () => {
     switch (userRole) {
-      case "waitlist":
-        return (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-xl font-semibold mb-4">Your Waiting List Position</h2>
-              <WaitlistPosition entries={mockWaitlistEntries} />
-            </div>
-            
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold">Available Spots Today</h2>
-                <Button size="sm">
-                  <MapPin className="h-4 w-4 mr-2" />
-                  Find More
-                </Button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {mockAvailableSpots.map((spot) => (
-                  <ParkingSpotCard key={spot.id} spot={spot} />
-                ))}
-              </div>
-            </div>
-          </div>
-        )
-        
       case "renter":
-        // For demo purposes, show waitlist status conditionally
-        const hasWaitlistEntries = mockWaitlistEntries.length > 0;
-        
         return (
           <div className="space-y-6">
-            {/* Waitlist Status - Optional, only shown if user has joined waitlists */}
-            {hasWaitlistEntries && (
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-5 w-5 text-primary" />
-                    <h2 className="text-xl font-semibold">Your Waiting List Status</h2>
-                  </div>
-                  <Button size="sm" variant="outline">
-                    <Clock className="h-4 w-4 mr-2" />
-                    Manage Waitlists
-                  </Button>
-                </div>
-                <WaitlistPosition entries={mockWaitlistEntries} />
-              </div>
-            )}
 
             <div>
               <div className="flex items-center justify-between mb-4">
@@ -328,7 +273,7 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
                 </Button>
                 <Button variant="outline" className="h-20 flex-col gap-2">
                   <Clock className="h-6 w-6" />
-                  View Waitlist
+                  View Reports
                 </Button>
                 <Button variant="outline" className="h-20 flex-col gap-2">
                   <MapPin className="h-6 w-6" />

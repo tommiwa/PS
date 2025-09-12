@@ -125,10 +125,10 @@ export default function Profile() {
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="font-medium">Waitlist Updates</h4>
-                      <p className="text-sm text-muted-foreground">Updates on your waitlist position</p>
+                      <h4 className="font-medium">Spot Availability Alerts</h4>
+                      <p className="text-sm text-muted-foreground">Get notified when preferred spots become available</p>
                     </div>
-                    <Badge variant="outline">Disabled</Badge>
+                    <Badge variant="default">Email</Badge>
                   </div>
                   <Button className="w-full">Update Preferences</Button>
                 </CardContent>

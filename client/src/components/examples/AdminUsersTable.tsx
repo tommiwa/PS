@@ -32,7 +32,7 @@ export default function AdminUsersTableExample() {
       name: "Jennifer Kim",
       email: "j.kim@bci.com", 
       department: "Finance",
-      role: "waitlist" as const,
+      role: "renter" as const,
       spotsOwned: 0,
       bookingsCount: 3,
       status: "active" as const,

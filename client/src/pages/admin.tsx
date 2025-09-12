@@ -37,7 +37,7 @@ export default function Admin() {
       name: "Jennifer Kim",
       email: "j.kim@bci.com", 
       department: "Finance",
-      role: "waitlist" as const,
+      role: "renter" as const,
       spotsOwned: 0,
       bookingsCount: 3,
       status: "active" as const,
@@ -148,14 +148,14 @@ export default function Admin() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Clock className="h-4 w-4" />
-              Waitlist Status
+              Active Bookings
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">245</div>
-            <p className="text-xs text-muted-foreground">People waiting for spots</p>
+            <div className="text-2xl font-bold">89</div>
+            <p className="text-xs text-muted-foreground">Spots currently booked</p>
             <div className="mt-2">
-              <Badge variant="secondary" className="text-xs">Avg wait: 6 months</Badge>
+              <Badge variant="default" className="text-xs">59% occupancy</Badge>
             </div>
           </CardContent>
         </Card>
@@ -184,7 +184,7 @@ export default function Admin() {
                 <div className="h-2 w-2 bg-green-500 rounded-full"></div>
                 <div>
                   <p className="text-sm font-medium">New user registration</p>
-                  <p className="text-xs text-muted-foreground">Emma Wilson joined the waitlist</p>
+                  <p className="text-xs text-muted-foreground">Emma Wilson registered as renter</p>
                 </div>
               </div>
               <span className="text-xs text-muted-foreground">2 hours ago</span>

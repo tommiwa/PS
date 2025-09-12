@@ -1,7 +1,7 @@
 import { 
   Calendar, 
   Car, 
-  Clock, 
+ 
   Home, 
   MapPin, 
   Settings, 
@@ -9,7 +9,6 @@ import {
   BarChart3, 
   Shield,
   Search,
-  ListOrdered,
   ParkingCircle,
   Bell
 } from "lucide-react"
@@ -25,6 +24,7 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from "@/components/ui/sidebar"
+import { UserRole } from "@shared/schema"
 
 // Main navigation items
 const mainMenuItems = [
@@ -32,13 +32,13 @@ const mainMenuItems = [
     title: "Dashboard",
     url: "/dashboard",
     icon: Home,
-    roles: ["admin", "owner", "renter", "waitlist"]
+    roles: ["admin", "owner", "renter"]
   },
   {
     title: "Find Parking",
     url: "/search",
     icon: Search,
-    roles: ["owner", "renter", "waitlist"]
+    roles: ["owner", "renter"]
   },
   {
     title: "My Bookings",
@@ -51,12 +51,6 @@ const mainMenuItems = [
     url: "/my-spots",
     icon: Car,
     roles: ["owner"]
-  },
-  {
-    title: "Waiting List",
-    url: "/waitlist",
-    icon: Clock,
-    roles: ["waitlist", "admin", "renter"]
   },
 ]
 
@@ -72,12 +66,6 @@ const adminMenuItems = [
     title: "User Management",
     url: "/admin/users",
     icon: Users,
-    roles: ["admin"]
-  },
-  {
-    title: "Waiting List Admin",
-    url: "/admin/waitlist",
-    icon: ListOrdered,
     roles: ["admin"]
   },
   {
@@ -100,7 +88,7 @@ const settingsMenuItems = [
     title: "Profile",
     url: "/profile",
     icon: Users,
-    roles: ["admin", "owner", "renter", "waitlist"]
+    roles: ["admin", "owner", "renter"]
   },
   {
     title: "Notification Settings",
@@ -112,12 +100,12 @@ const settingsMenuItems = [
     title: "Settings",
     url: "/settings",
     icon: Settings,
-    roles: ["admin", "owner", "renter", "waitlist"]
+    roles: ["admin", "owner", "renter"]
   },
 ]
 
 interface AppSidebarProps {
-  userRole?: string;
+  userRole?: UserRole;
 }
 
 export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {

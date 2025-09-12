@@ -108,12 +108,12 @@ export class AuthService {
 export const userTypeDescriptions: Record<UserRole, { title: string; description: string; features: string[] }> = {
   renter: {
     title: "Spot Renter",
-    description: "Book parking spaces and join waiting list for regular spots",
+    description: "Search and book available parking spaces from other employees",
     features: [
       "Search and book available parking spots",
-      "Join waiting lists for popular spots",
-      "Manage your bookings and waitlist position",
-      "Get notified when spots become available"
+      "View real-time spot availability",
+      "Manage your bookings and history",
+      "Get notified about booking confirmations"
     ]
   },
   owner: {

@@ -67,7 +67,7 @@ export default function AdminUserManagement() {
       name: "Jennifer Kim",
       email: "j.kim@bci.com", 
       department: "Finance",
-      role: "waitlist" as const,
+      role: "renter" as const,
       spotsOwned: 0,
       bookingsCount: 3,
       status: "active" as const,
@@ -75,7 +75,7 @@ export default function AdminUserManagement() {
       memberSince: "Dec 2023",
       totalSpent: 45,
       phoneNumber: "(555) 345-6789",
-      waitlistPosition: 15
+      vehicleInfo: "Toyota Camry (JKL-012)"
     },
     {
       id: "user-004",
@@ -159,7 +159,6 @@ export default function AdminUserManagement() {
     admin: mockUsers.filter(u => u.role === "admin").length,
     owner: mockUsers.filter(u => u.role === "owner").length,
     renter: mockUsers.filter(u => u.role === "renter").length,
-    waitlist: mockUsers.filter(u => u.role === "waitlist").length
   }
 
   return (
@@ -264,15 +263,6 @@ export default function AdminUserManagement() {
             <Badge variant="outline" className="text-xs">Active users</Badge>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Waitlist</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{roleStats.waitlist}</div>
-            <Badge variant="secondary" className="text-xs">Pending access</Badge>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Search and Filters */}
@@ -300,7 +290,6 @@ export default function AdminUserManagement() {
                 <SelectItem value="admin">Admin</SelectItem>
                 <SelectItem value="owner">Owner</SelectItem>
                 <SelectItem value="renter">Renter</SelectItem>
-                <SelectItem value="waitlist">Waitlist</SelectItem>
               </SelectContent>
             </Select>
             <Select value={filterStatus} onValueChange={setFilterStatus}>
@@ -398,9 +387,6 @@ export default function AdminUserManagement() {
                       <div className="text-sm">
                         <div>Bookings: {user.bookingsCount}</div>
                         {user.spotsOwned > 0 && <div>Spots: {user.spotsOwned}</div>}
-                        {user.role === "waitlist" && user.waitlistPosition && (
-                          <div>Position: #{user.waitlistPosition}</div>
-                        )}
                       </div>
                     </td>
                     <td className="p-4">
