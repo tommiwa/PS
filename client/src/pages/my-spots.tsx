@@ -1,4 +1,7 @@
 import { useState } from "react"
+import { useQuery, useMutation } from "@tanstack/react-query"
+import { apiRequest, queryClient } from "@/lib/queryClient"
+import type { ParkingSpot as DBParkingSpot, InsertParkingSpot } from "@shared/schema"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -40,9 +43,73 @@ export default function MySpots() {
   const [selectedSpot, setSelectedSpot] = useState<ParkingSpot | null>(null)
   const [showEditSpot, setShowEditSpot] = useState(false)
   const [activeTab, setActiveTab] = useState("management")
+  const [newSpotData, setNewSpotData] = useState({
+    spotNumber: "",
+    location: "",
+    spotType: "regular" as const,
+    isIndoor: false,
+    description: ""
+  })
 
-  //todo: remove mock functionality
-  const mockSpots: ParkingSpot[] = [
+  // Fetch user's parking spots
+  const { data: userSpots = [], isLoading, refetch } = useQuery<DBParkingSpot[]>({
+    queryKey: ['/api/my-spots'],
+    enabled: true
+  })
+
+  // Create spot mutation
+  const createSpotMutation = useMutation({
+    mutationFn: async (spotData: InsertParkingSpot) => {
+      const response = await fetch('/api/my-spots', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(spotData)
+      })
+      if (!response.ok) throw new Error('Failed to create spot')
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/my-spots'] })
+      setShowAddSpot(false)
+      setNewSpotData({ spotNumber: "", location: "", spotType: "regular", isIndoor: false, description: "" })
+    }
+  })
+
+  // Update spot mutation
+  const updateSpotMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string, data: Partial<InsertParkingSpot> }) => {
+      const response = await fetch(`/api/my-spots/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+      if (!response.ok) throw new Error('Failed to update spot')
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/my-spots'] })
+      setShowEditSpot(false)
+    }
+  })
+
+  const mockSpots = userSpots.length > 0 ? userSpots.map(spot => ({
+    id: spot.id,
+    spotNumber: spot.spotNumber,
+    location: spot.location,
+    type: spot.spotType,
+    isInside: spot.isIndoor,
+    basePrice: 25, // Default price, could be enhanced
+    isActive: spot.isActive,
+    monthlyEarnings: 0, // Will be calculated from bookings
+    totalBookings: 0, // Will be calculated from bookings
+    rating: 0, // Will be calculated from reviews
+    description: spot.description || "",
+    amenities: spot.spotType === "electric" ? ["EV Charging"] : spot.spotType === "accessible" ? ["Accessible"] : [],
+    currentBooking: undefined // Will be populated from actual booking data
+  })) : []
+
+  // Legacy mock data for empty state (keep some for demo)
+  const defaultMockSpots = [
     {
       id: "spot-001",
       spotNumber: "A-15",
@@ -104,6 +171,19 @@ export default function MySpots() {
     setShowAddSpot(true)
   }
 
+  const handleCreateSpot = () => {
+    if (!newSpotData.spotNumber || !newSpotData.location) return
+    
+    createSpotMutation.mutate({
+      spotNumber: newSpotData.spotNumber,
+      location: newSpotData.location,
+      spotType: newSpotData.spotType,
+      isIndoor: newSpotData.isIndoor,
+      description: newSpotData.description || undefined,
+      ownerId: "mock-user-id" // This would come from auth context in real app
+    })
+  }
+
   const handleEditSpot = (spot: ParkingSpot) => {
     setSelectedSpot(spot)
     setShowEditSpot(true)
@@ -150,7 +230,7 @@ export default function MySpots() {
             Manage your parking spaces and track your earnings.
           </p>
         </div>
-        <Button onClick={handleAddSpot}>
+        <Button onClick={handleAddSpot} data-testid="button-add-new-spot">
           <Plus className="h-4 w-4 mr-2" />
           Add New Spot
         </Button>
@@ -224,9 +304,23 @@ export default function MySpots() {
         </div>
 
         <TabsContent value="management" className="space-y-4">
-          {/* Spots List */}
-          <div className="space-y-4">
-            {mockSpots.map((spot) => (
+          {/* Loading State */}
+          {isLoading ? (
+            <div className="text-center py-8">
+              <div className="text-muted-foreground">Loading your parking spots...</div>
+            </div>
+          ) : userSpots.length === 0 ? (
+            <div className="text-center py-8 space-y-4">
+              <div className="text-muted-foreground">No parking spots yet.</div>
+              <Button onClick={handleAddSpot} data-testid="button-add-first-spot">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Your First Spot
+              </Button>
+            </div>
+          ) : (
+            /* Spots List */
+            <div className="space-y-4">
+              {mockSpots.map((spot) => (
           <Card key={spot.id} className={`${!spot.isActive ? 'opacity-60' : ''}`}>
             <CardContent className="p-6">
               <div className="flex items-start justify-between mb-4">
@@ -288,7 +382,7 @@ export default function MySpots() {
                 <div className="mb-4">
                   <p className="text-xs text-muted-foreground mb-2">Amenities</p>
                   <div className="flex flex-wrap gap-1">
-                    {spot.amenities.map((amenity, index) => (
+                    {spot.amenities.map((amenity: string, index: number) => (
                       <Badge key={index} variant="outline" className="text-xs">
                         {amenity}
                       </Badge>
@@ -360,8 +454,9 @@ export default function MySpots() {
               </div>
             </CardContent>
           </Card>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="calendar" className="space-y-4">
@@ -405,18 +500,36 @@ export default function MySpots() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="spot-number">Spot Number</Label>
-                <Input id="spot-number" placeholder="e.g., A-15" />
+                <Input 
+                  id="spot-number" 
+                  placeholder="e.g., A-15" 
+                  value={newSpotData.spotNumber}
+                  onChange={(e) => setNewSpotData(prev => ({ ...prev, spotNumber: e.target.value }))}
+                  data-testid="input-new-spot-number"
+                />
               </div>
               <div>
                 <Label htmlFor="location">Location</Label>
-                <Input id="location" placeholder="e.g., Main Building - Level 2" />
+                <Select value={newSpotData.location} onValueChange={(value) => setNewSpotData(prev => ({ ...prev, location: value }))}>
+                  <SelectTrigger data-testid="select-new-spot-location">
+                    <SelectValue placeholder="Select location" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Main Building - Level 1">Main Building - Level 1</SelectItem>
+                    <SelectItem value="Main Building - Level 2">Main Building - Level 2</SelectItem>
+                    <SelectItem value="Main Building - Level 3">Main Building - Level 3</SelectItem>
+                    <SelectItem value="North Parking Lot">North Parking Lot</SelectItem>
+                    <SelectItem value="South Parking Lot">South Parking Lot</SelectItem>
+                    <SelectItem value="West Parking Lot">West Parking Lot</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <div>
                 <Label htmlFor="spot-type">Spot Type</Label>
-                <Select>
-                  <SelectTrigger>
+                <Select value={newSpotData.spotType} onValueChange={(value) => setNewSpotData(prev => ({ ...prev, spotType: value as any }))}>
+                  <SelectTrigger data-testid="select-new-spot-type">
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -426,25 +539,36 @@ export default function MySpots() {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label htmlFor="base-price">Base Price (per day)</Label>
-                <Input id="base-price" type="number" placeholder="25" />
-              </div>
             </div>
             <div>
-              <Label htmlFor="description">Description</Label>
-              <Textarea id="description" placeholder="Describe your parking spot..." />
+              <Label htmlFor="description">Description (Optional)</Label>
+              <Textarea 
+                id="description" 
+                placeholder="Describe your parking spot..."
+                value={newSpotData.description}
+                onChange={(e) => setNewSpotData(prev => ({ ...prev, description: e.target.value }))}
+                data-testid="textarea-new-spot-description"
+              />
             </div>
             <div className="flex items-center space-x-2">
-              <Switch id="is-indoor" />
+              <Switch 
+                id="is-indoor" 
+                checked={newSpotData.isIndoor}
+                onCheckedChange={(checked) => setNewSpotData(prev => ({ ...prev, isIndoor: !!checked }))}
+                data-testid="switch-new-spot-indoor"
+              />
               <Label htmlFor="is-indoor">Indoor parking</Label>
             </div>
             <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" onClick={() => setShowAddSpot(false)}>
+              <Button variant="outline" onClick={() => setShowAddSpot(false)} data-testid="button-cancel-new-spot">
                 Cancel
               </Button>
-              <Button onClick={() => setShowAddSpot(false)}>
-                Add Spot
+              <Button 
+                onClick={handleCreateSpot}
+                disabled={createSpotMutation.isPending || !newSpotData.spotNumber || !newSpotData.location}
+                data-testid="button-create-spot"
+              >
+                {createSpotMutation.isPending ? "Creating..." : "Add Spot"}
               </Button>
             </div>
           </div>
