@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -10,12 +10,11 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle, CalendarDays, Repeat } from "lucide-react"
 import { getTodayString } from "@/utils/date-utils"
+import { useQuery } from "@tanstack/react-query"
+import type { ParkingSpot } from "@shared/schema"
 
 interface SpotListingData {
-  spotNumber: string
-  location: string
-  spotType: "regular" | "electric" | "accessible"
-  isInside: boolean
+  spotId: string
   price: string
   // Single day
   date: string
@@ -40,10 +39,7 @@ interface SpotListingFormProps {
 export function SpotListingForm({ onSubmit, onCancel }: SpotListingFormProps) {
   const [listingType, setListingType] = useState<"single" | "period" | "recurring">("single")
   const [formData, setFormData] = useState({
-    spotNumber: "",
-    location: "",
-    spotType: "regular" as const,
-    isInside: false,
+    spotId: "",
     price: "",
     // Single day
     date: getTodayString(),
@@ -58,11 +54,24 @@ export function SpotListingForm({ onSubmit, onCancel }: SpotListingFormProps) {
     description: "",
     specialInstructions: ""
   })
+  const [selectedSpot, setSelectedSpot] = useState<ParkingSpot | null>(null)
 
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  // Fetch user's parking spots
+  const { data: userSpots = [], isLoading: spotsLoading } = useQuery<ParkingSpot[]>({
+    queryKey: ['/api/my-spots'],
+    enabled: true // Always fetch spots when form opens
+  })
+
   const updateFormData = (key: string, value: any) => {
     setFormData(prev => ({ ...prev, [key]: value }))
+  }
+
+  const handleSpotSelection = (spotId: string) => {
+    const spot = userSpots.find((s) => s.id === spotId)
+    setSelectedSpot(spot || null)
+    updateFormData("spotId", spotId)
   }
 
   const handleRecurringDayChange = (day: string, checked: boolean) => {
@@ -79,11 +88,8 @@ export function SpotListingForm({ onSubmit, onCancel }: SpotListingFormProps) {
     const errors: Record<string, string> = {}
 
     // Basic required fields
-    if (!formData.spotNumber.trim()) {
-      errors.spotNumber = "Spot number is required"
-    }
-    if (!formData.location) {
-      errors.location = "Location is required"
+    if (!formData.spotId) {
+      errors.spotId = "Please select a parking spot"
     }
     if (!formData.price || parseFloat(formData.price) <= 0) {
       errors.price = "Valid price is required"
@@ -160,8 +166,7 @@ export function SpotListingForm({ onSubmit, onCancel }: SpotListingFormProps) {
     { value: "sunday", label: "Sunday" }
   ]
 
-  const getSpotTypeIcon = () => {
-    const spotType = formData.spotType as "regular" | "electric" | "accessible"
+  const getSpotTypeIcon = (spotType?: string) => {
     switch (spotType) {
       case "electric":
         return <Car className="h-4 w-4 text-blue-600" />
@@ -221,53 +226,51 @@ export function SpotListingForm({ onSubmit, onCancel }: SpotListingFormProps) {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="spotNumber">Spot Number *</Label>
-                <Input
-                  placeholder="e.g., A-15"
-                  value={formData.spotNumber}
-                  onChange={(e) => updateFormData("spotNumber", e.target.value)}
-                  required
-                  data-testid="input-spot-number"
-                />
-                {validationErrors.spotNumber && (
-                  <p className="text-sm text-red-600">{validationErrors.spotNumber}</p>
+                <Label htmlFor="spotId">Select Your Parking Spot *</Label>
+                {spotsLoading ? (
+                  <div className="text-sm text-muted-foreground">Loading your spots...</div>
+                ) : userSpots.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">
+                    No spots found. Please add a spot in "My Spots" first.
+                  </div>
+                ) : (
+                  <Select value={formData.spotId} onValueChange={handleSpotSelection}>
+                    <SelectTrigger data-testid="select-parking-spot">
+                      <SelectValue placeholder="Select your parking spot" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {userSpots.map((spot) => (
+                        <SelectItem key={spot.id} value={spot.id}>
+                          {spot.spotNumber} - {spot.location}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                {validationErrors.spotId && (
+                  <p className="text-sm text-red-600">{validationErrors.spotId}</p>
                 )}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="location">Location *</Label>
-                <Select value={formData.location} onValueChange={(value) => updateFormData("location", value)}>
-                  <SelectTrigger data-testid="select-location">
-                    <SelectValue placeholder="Select location" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Main Building - Level 1">Main Building - Level 1</SelectItem>
-                    <SelectItem value="Main Building - Level 2">Main Building - Level 2</SelectItem>
-                    <SelectItem value="Main Building - Level 3">Main Building - Level 3</SelectItem>
-                    <SelectItem value="North Parking Lot">North Parking Lot</SelectItem>
-                    <SelectItem value="South Parking Lot">South Parking Lot</SelectItem>
-                    <SelectItem value="West Parking Lot">West Parking Lot</SelectItem>
-                  </SelectContent>
-                </Select>
-                {validationErrors.location && (
-                  <p className="text-sm text-red-600">{validationErrors.location}</p>
-                )}
-              </div>
+              {selectedSpot && (
+                <div className="space-y-2">
+                  <Label>Selected Spot Details</Label>
+                  <div className="p-3 bg-muted rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      {getSpotTypeIcon(selectedSpot.spotType)}
+                      <span className="font-semibold">{selectedSpot.spotNumber}</span>
+                      <Badge variant="outline">{selectedSpot.spotType}</Badge>
+                      {selectedSpot.isIndoor && <Badge variant="secondary">Indoor</Badge>}
+                    </div>
+                    <p className="text-sm text-muted-foreground flex items-center gap-1">
+                      <MapPin className="h-3 w-3" />
+                      {selectedSpot.location}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="spotType">Spot Type</Label>
-                <Select value={formData.spotType} onValueChange={(value) => updateFormData("spotType", value)}>
-                  <SelectTrigger data-testid="select-spot-type">
-                    <SelectValue placeholder="Select spot type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="regular">Regular</SelectItem>
-                    <SelectItem value="electric">Electric Vehicle Charging</SelectItem>
-                    <SelectItem value="accessible">Accessible</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="grid grid-cols-1 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="price">Daily Price ($) *</Label>
                 <Input
@@ -286,15 +289,6 @@ export function SpotListingForm({ onSubmit, onCancel }: SpotListingFormProps) {
               </div>
             </div>
 
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="isInside" 
-                checked={formData.isInside}
-                onCheckedChange={(checked) => updateFormData("isInside", checked)}
-                data-testid="checkbox-inside"
-              />
-              <Label htmlFor="isInside">Indoor parking spot</Label>
-            </div>
           </CardContent>
         </Card>
 
@@ -501,8 +495,7 @@ export function SpotListingForm({ onSubmit, onCancel }: SpotListingFormProps) {
             type="submit" 
             disabled={
               isSubmitting || 
-              !formData.spotNumber || 
-              !formData.location || 
+              !formData.spotId || 
               !formData.price ||
               (listingType === "recurring" && formData.recurringDays.length === 0)
             }
