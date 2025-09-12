@@ -71,19 +71,24 @@ export default function MyBookings() {
   })
 
   // Categories for different user types
-  let activeItems: any[], completedItems: any[], cancelledItems: any[], unusedItems: any[]
+  let activeItems: any[], pendingItems: any[], paymentPendingItems: any[], completedItems: any[], cancelledItems: any[], unusedItems: any[]
 
   if (isOwner()) {
     // For owners - categorize their listings
     activeItems = listings.filter(l => l.status === "available" || l.status === "booked")
-    completedItems = listings.filter(l => l.status === "used") // Past spots that were booked
+    pendingItems = [] // Owners don't have pending bookings in this context
+    paymentPendingItems = listings.filter(l => l.status === "used" && !l.paymentReceived)
+    completedItems = listings.filter(l => l.status === "used" && l.paymentReceived) // Fully completed with payment
     cancelledItems = [] // Owners don't have cancelled bookings in this context
     unusedItems = listings.filter(l => l.status === "unused") // Past spots that were not booked
   } else {
     // For renters - categorize their bookings
-    activeItems = mockBookings.filter(b => b.status === "confirmed" || b.status === "pending")
-    completedItems = mockBookings.filter(b => b.status === "confirmed" && isPastDate(b.date))
-    cancelledItems = [] // No cancelled status in current mock data
+    const today = new Date().toISOString().split('T')[0]
+    activeItems = mockBookings.filter(b => b.status === "confirmed" && b.date >= today)
+    pendingItems = mockBookings.filter(b => b.status === "pending") 
+    paymentPendingItems = mockBookings.filter(b => b.status === "confirmed" && !b.paymentReceived && b.date >= today)
+    completedItems = mockBookings.filter(b => b.status === "completed" || (b.status === "confirmed" && b.paymentReceived && b.date < today))
+    cancelledItems = mockBookings.filter(b => b.status === "cancelled")
     unusedItems = [] // Renters don't have unused items
   }
 
@@ -569,14 +574,38 @@ export default function MyBookings() {
         </CardContent>
       </Card>
 
-      {/* Restructured Tabs: Active → Calendar → All */}
+      {/* Enhanced Status-Based Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="active">
-            Active ({activeItems.length})
+            <div className="flex items-center gap-1">
+              <CheckCircle className="h-3 w-3" />
+              Active ({activeItems.length})
+            </div>
+          </TabsTrigger>
+          <TabsTrigger value="pending">
+            <div className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              Pending ({pendingItems.length})
+            </div>
+          </TabsTrigger>
+          <TabsTrigger value="payment-pending">
+            <div className="flex items-center gap-1">
+              <CreditCard className="h-3 w-3" />
+              Payment ({paymentPendingItems.length})
+            </div>
+          </TabsTrigger>
+          <TabsTrigger value="completed">
+            <div className="flex items-center gap-1">
+              <CheckCircle className="h-3 w-3" />
+              Completed ({completedItems.length})
+            </div>
           </TabsTrigger>
           <TabsTrigger value="calendar">
-            Calendar View
+            <div className="flex items-center gap-1">
+              <Calendar className="h-3 w-3" />
+              Calendar
+            </div>
           </TabsTrigger>
           <TabsTrigger value="all">
             All ({sortedItems.length})
@@ -600,6 +629,72 @@ export default function MyBookings() {
             <div className="space-y-4">
               {activeItems.map((item) => (
                 isOwner() ? renderOwnerListingWithActions(item) : renderRenterBooking(item)
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="pending" className="space-y-4">
+          {pendingItems.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-semibold mb-2">
+                  No pending bookings
+                </h3>
+                <p className="text-muted-foreground">
+                  {isOwner() ? "No pending bookings for your spots." : "You have no pending booking requests at this time."}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {pendingItems.map((item) => (
+                isOwner() ? renderOwnerListingWithActions(item) : renderRenterBooking(item)
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="payment-pending" className="space-y-4">
+          {paymentPendingItems.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <CreditCard className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-semibold mb-2">
+                  No payment pending
+                </h3>
+                <p className="text-muted-foreground">
+                  {isOwner() ? "All your bookings have been paid for." : "All your booking payments are up to date."}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {paymentPendingItems.map((item) => (
+                isOwner() ? renderOwnerListingWithPayment(item) : renderRenterBooking(item)
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="completed" className="space-y-4">
+          {completedItems.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <CheckCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-semibold mb-2">
+                  No completed bookings
+                </h3>
+                <p className="text-muted-foreground">
+                  {isOwner() ? "No completed bookings for your spots yet." : "You haven't completed any bookings yet."}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {completedItems.map((item) => (
+                isOwner() ? renderOwnerListingWithPayment(item) : renderRenterBooking(item)
               ))}
             </div>
           )}
