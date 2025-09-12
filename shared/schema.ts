@@ -115,6 +115,7 @@ export const bookings = pgTable("bookings", {
   dailyRate: decimal("daily_rate", { precision: 10, scale: 2 }).notNull(),
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
   status: text("status").notNull().$type<BookingStatus>().default("confirmed"),
+  paymentReceived: boolean("payment_received").notNull().default(false), // Track payment status
   notes: text("notes"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),

@@ -12,8 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
-import { ParkingCalendar } from "@/components/parking-calendar"
-import { Car, MapPin, DollarSign, Clock, Edit, Plus, Eye, Calendar, Users, TrendingUp, Grid, Trash2 } from "lucide-react"
+import { Car, MapPin, DollarSign, Clock, Edit, Plus, Eye, Users, TrendingUp, Grid, Trash2 } from "lucide-react"
 
 type ParkingSpot = {
   id: string
@@ -44,7 +43,7 @@ export default function MySpots() {
   const [showEditSpot, setShowEditSpot] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [spotToDelete, setSpotToDelete] = useState<any>(null)
-  const [activeTab, setActiveTab] = useState("management")
+  // Removed activeTab state as calendar functionality moved to MyBookings
   const [newSpotData, setNewSpotData] = useState({
     spotNumber: "",
     location: "",
@@ -317,22 +316,16 @@ export default function MySpots() {
         </Card>
       </div>
 
-      {/* Tabs for Management vs Calendar View */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      {/* Spot Management */}
+      <div className="w-full">
         <div className="flex items-center justify-between mb-4">
-          <TabsList className="grid w-[300px] grid-cols-2">
-            <TabsTrigger value="management" className="flex items-center gap-2" data-testid="tab-management">
-              <Grid className="h-4 w-4" />
-              Spot Management
-            </TabsTrigger>
-            <TabsTrigger value="calendar" className="flex items-center gap-2" data-testid="tab-calendar">
-              <Calendar className="h-4 w-4" />
-              Calendar View
-            </TabsTrigger>
-          </TabsList>
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <Grid className="h-5 w-5" />
+            Spot Management
+          </h2>
         </div>
 
-        <TabsContent value="management" className="space-y-4">
+        <div className="space-y-4">
           {/* Loading State */}
           {isLoading ? (
             <div className="text-center py-8">
@@ -481,8 +474,8 @@ export default function MySpots() {
                     onClick={() => handleEditSpot(spot)}
                     data-testid={`button-edit-${spot.id}`}
                   >
-                    <Calendar className="h-4 w-4 mr-1" />
-                    Manage Availability
+                    <Edit className="h-4 w-4 mr-1" />
+                    Edit Spot
                   </Button>
                 </div>
               </div>
@@ -491,38 +484,8 @@ export default function MySpots() {
               ))}
             </div>
           )}
-        </TabsContent>
-
-        <TabsContent value="calendar" className="space-y-4">
-          <Card className="h-[600px]">
-            <CardContent className="p-0 h-full">
-              <ParkingCalendar
-                spots={mockSpots.map(spot => ({
-                  id: spot.id,
-                  spotNumber: spot.spotNumber,
-                  location: spot.location,
-                  type: spot.type,
-                  isInside: spot.isInside,
-                  price: spot.basePrice,
-                  isAvailable: spot.isActive && !spot.currentBooking,
-                  owner: "You",
-                  availability: {
-                    date: spot.currentBooking?.date || new Date().toISOString().split('T')[0],
-                    startTime: spot.currentBooking?.startTime || "8:00 AM",
-                    endTime: spot.currentBooking?.endTime || "6:00 PM"
-                  }
-                }))}
-                onBookSpot={(spotId) => {
-                  const spot = mockSpots.find(s => s.id === spotId);
-                  if (spot) {
-                    console.log('Managing availability for spot:', spot);
-                  }
-                }}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
 
       {/* Add New Spot Dialog */}
       <Dialog open={showAddSpot} onOpenChange={setShowAddSpot}>

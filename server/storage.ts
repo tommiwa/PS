@@ -39,6 +39,9 @@ export interface IStorage {
   createSpotListing(listing: InsertSpotListing): Promise<SpotListing>;
   updateSpotListing(id: string, updates: Partial<InsertSpotListing>): Promise<SpotListing | undefined>;
   deleteSpotListing(id: string): Promise<boolean>;
+  // Alias methods for API endpoints
+  updateListing(id: string, updates: Partial<InsertSpotListing>): Promise<SpotListing | undefined>;
+  deleteListing(id: string): Promise<boolean>;
 
   // Booking operations
   getBooking(id: string): Promise<Booking | undefined>;
@@ -50,6 +53,8 @@ export interface IStorage {
   createBooking(booking: InsertBooking): Promise<Booking>;
   updateBooking(id: string, updates: Partial<InsertBooking>): Promise<Booking | undefined>;
   deleteBooking(id: string): Promise<boolean>;
+  // Payment marking functionality
+  markPaymentReceived(id: string, paymentReceived: boolean): Promise<Booking | undefined>;
 
   // Availability checking
   checkSpotAvailability(spotId: string, date: string): Promise<boolean>;
@@ -250,6 +255,7 @@ export class MemStorage implements IStorage {
     const booking: Booking = { 
       ...insertBooking,
       status: (insertBooking.status as BookingStatus) ?? "confirmed",
+      paymentReceived: insertBooking.paymentReceived ?? false,
       notes: insertBooking.notes ?? null,
       id,
       createdAt: new Date(),
@@ -275,6 +281,30 @@ export class MemStorage implements IStorage {
 
   async deleteBooking(id: string): Promise<boolean> {
     return this.bookings.delete(id);
+  }
+
+  // Alias methods for API endpoints
+  async updateListing(id: string, updates: Partial<InsertSpotListing>): Promise<SpotListing | undefined> {
+    return this.updateSpotListing(id, updates);
+  }
+
+  async deleteListing(id: string): Promise<boolean> {
+    return this.deleteSpotListing(id);
+  }
+
+  // Payment marking functionality
+  async markPaymentReceived(id: string, paymentReceived: boolean): Promise<Booking | undefined> {
+    const existingBooking = this.bookings.get(id);
+    if (!existingBooking) return undefined;
+    
+    // Update the booking with payment status - assuming we add this field to the schema
+    const updatedBooking: Booking = { 
+      ...existingBooking, 
+      paymentReceived,
+      updatedAt: new Date()
+    };
+    this.bookings.set(id, updatedBooking);
+    return updatedBooking;
   }
 
   // Availability checking

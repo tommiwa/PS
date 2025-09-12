@@ -31,6 +31,7 @@ interface ParkingSpot {
     date: string
   }
   owner: string
+  isOwned?: boolean // Flag to indicate if this is user's own listing
 }
 
 interface ParkingCalendarProps {
@@ -38,9 +39,10 @@ interface ParkingCalendarProps {
   onBookSpot: (spotId: string) => void
   selectedDate?: Date
   onDateChange?: (date: Date) => void
+  isOwnerView?: boolean
 }
 
-export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), onDateChange }: ParkingCalendarProps) {
+export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), onDateChange, isOwnerView = false }: ParkingCalendarProps) {
   const [currentDate, setCurrentDate] = useState(selectedDate)
   const [view, setView] = useState<CalendarView>("week")
   const [selectedSpot, setSelectedSpot] = useState<ParkingSpot | null>(null)
@@ -137,6 +139,17 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
     }
   }
 
+  // Get ownership-based styling with dark mode support
+  const getOwnershipColor = (isOwned: boolean) => {
+    if (isOwned) {
+      // Owner's listings - warm gold/amber color
+      return "bg-amber-50 text-amber-900 border-amber-300 dark:bg-amber-900/30 dark:text-amber-100 dark:border-amber-700"
+    } else {
+      // Others' listings - neutral gray
+      return "bg-gray-50 text-gray-900 border-gray-200 dark:bg-gray-800/50 dark:text-gray-100 dark:border-gray-600"
+    }
+  }
+
   const getSpotTypeColor = (type: string) => {
     switch (type) {
       case "electric":
@@ -146,6 +159,23 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
       default:
         return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900 dark:text-gray-200"
     }
+  }
+
+  const getOwnershipBadge = (isOwned: boolean) => {
+    if (isOwned && isOwnerView) {
+      return (
+        <Badge variant="outline" className="text-xs bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/50 dark:text-amber-200 dark:border-amber-600">
+          Your Listing
+        </Badge>
+      )
+    } else if (!isOwned && isOwnerView) {
+      return (
+        <Badge variant="outline" className="text-xs bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600">
+          Other Owner
+        </Badge>
+      )
+    }
+    return null
   }
 
   const handleSpotClick = (spot: ParkingSpot) => {
@@ -185,7 +215,11 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
               {daySpots.map((spot) => (
                 <Card 
                   key={spot.id} 
-                  className={`cursor-pointer hover-elevate transition-all border-l-4 ${getSpotTypeColor(spot.type)}`}
+                  className={`cursor-pointer hover-elevate transition-all border-l-4 ${
+                    isOwnerView 
+                      ? getOwnershipColor(spot.isOwned || false)
+                      : getSpotTypeColor(spot.type)
+                  }`}
                   onClick={() => handleSpotClick(spot)}
                   data-testid={`calendar-spot-${spot.id}`}
                 >
@@ -221,9 +255,12 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                           Indoor
                         </Badge>
                       )}
-                      <Badge variant="secondary" className="text-xs">
-                        {spot.owner}
-                      </Badge>
+                      {getOwnershipBadge(spot.isOwned || false)}
+                      {!isOwnerView && (
+                        <Badge variant="secondary" className="text-xs">
+                          {spot.owner}
+                        </Badge>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -259,7 +296,11 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                   {daySpots.slice(0, 3).map((spot) => (
                     <div
                       key={spot.id}
-                      className={`p-2 rounded text-xs cursor-pointer hover-elevate transition-all ${getSpotTypeColor(spot.type)}`}
+                      className={`p-2 rounded text-xs cursor-pointer hover-elevate transition-all ${
+                        isOwnerView 
+                          ? getOwnershipColor(spot.isOwned || false)
+                          : getSpotTypeColor(spot.type)
+                      }`}
                       onClick={() => handleSpotClick(spot)}
                       data-testid={`calendar-spot-${spot.id}`}
                     >
@@ -317,7 +358,11 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                   {daySpots.slice(0, 2).map((spot) => (
                     <div
                       key={spot.id}
-                      className={`p-1 rounded text-xs cursor-pointer hover-elevate transition-all ${getSpotTypeColor(spot.type)}`}
+                      className={`p-1 rounded text-xs cursor-pointer hover-elevate transition-all ${
+                        isOwnerView 
+                          ? getOwnershipColor(spot.isOwned || false)
+                          : getSpotTypeColor(spot.type)
+                      }`}
                       onClick={() => handleSpotClick(spot)}
                       data-testid={`calendar-spot-${spot.id}`}
                     >

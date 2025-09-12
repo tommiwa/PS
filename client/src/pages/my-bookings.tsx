@@ -1,16 +1,19 @@
 import { useState } from "react"
 import { BookingCard } from "@/components/booking-card"
+import { ParkingCalendar } from "@/components/parking-calendar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { SpotListingForm } from "@/components/spot-listing-form"
-import { Calendar, Search, Filter, Download, Clock, CheckCircle, XCircle, Car, MapPin, DollarSign, AlertTriangle, Plus } from "lucide-react"
+import { Calendar, Search, Filter, Download, Clock, CheckCircle, XCircle, Car, MapPin, DollarSign, AlertTriangle, Plus, Edit, Trash2, CreditCard } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { isPastDate } from "@/utils/date-utils"
+import { useMutation, useQuery } from "@tanstack/react-query"
+import { apiRequest, queryClient } from "@/lib/queryClient"
 
 export default function MyBookings() {
   const { user, isOwner } = useAuth()
@@ -18,124 +21,29 @@ export default function MyBookings() {
   const [sortBy, setSortBy] = useState("date")
   const [filterStatus, setFilterStatus] = useState("all")
   const [showListingForm, setShowListingForm] = useState(false)
+  const [showEditListing, setShowEditListing] = useState(false)
+  const [selectedListing, setSelectedListing] = useState<any>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [listingToDelete, setListingToDelete] = useState<any>(null)
+  const [activeTab, setActiveTab] = useState("active")
 
-  //todo: remove mock functionality
-  // For renters - their bookings
-  const mockRenterBookings = [
-    {
-      id: "B-001",
-      spotNumber: "A-15",
-      location: "Main Building - Level 2",
-      date: "2025-01-20",
-      price: 25,
-      status: "confirmed" as const,
-      paymentStatus: "completed" as const,
-      owner: "Sarah Chen",
-      canCancel: true,
-      canEdit: true,
-      bookedDate: "2025-01-15",
-      vehicleUsed: "Tesla Model 3 (ABC-123)"
-    },
-    {
-      id: "B-002",
-      spotNumber: "B-08",
-      location: "North Parking Lot",
-      date: "2025-01-18",
-      price: 20,
-      status: "pending" as const,
-      paymentStatus: "pending" as const,
-      owner: "Mike Johnson",
-      canCancel: true,
-      canEdit: true,
-      bookedDate: "2025-01-14",
-      vehicleUsed: "Honda Civic (XYZ-789)"
-    },
-    {
-      id: "B-003",
-      spotNumber: "C-12",
-      location: "South Parking Lot",
-      date: "2024-12-10",
-      price: 15,
-      status: "confirmed" as const,
-      paymentStatus: "completed" as const,
-      owner: "Lisa Anderson",
-      canCancel: false,
-      canEdit: false,
-      bookedDate: "2024-12-08",
-      vehicleUsed: "Ford Focus (DEF-456)"
-    }
-  ]
+  // Fetch real data based on user role
+  const { data: renterBookings = [], isLoading: isLoadingBookings } = useQuery({
+    queryKey: ['/api/my-bookings'],
+    enabled: !isOwner(), // Only fetch if user is a renter
+  })
 
-  // For owners - their spot listings and booking history
-  const mockOwnerListings = [
-    {
-      id: "L-001",
-      spotNumber: "A-15",
-      location: "Main Building - Level 2",
-      date: "2025-01-20",
-      price: 25,
-      status: "booked" as const,
-      renterName: "Michael Rodriguez",
-      renterVehicle: "Toyota Camry (ABC-123)",
-      bookedDate: "2025-01-15",
-      paymentReceived: true
-    },
-    {
-      id: "L-002",
-      spotNumber: "A-15",
-      location: "Main Building - Level 2",
-      date: "2025-01-18",
-      price: 25,
-      status: "available" as const,
-      renterName: null,
-      renterVehicle: null,
-      bookedDate: null,
-      paymentReceived: false
-    },
-    {
-      id: "L-003",
-      spotNumber: "A-15",
-      location: "Main Building - Level 2",
-      date: "2024-12-15",
-      price: 25,
-      status: "used" as const, // Past date, was booked and used
-      renterName: "Sarah Johnson",
-      renterVehicle: "Honda Civic (XYZ-789)",
-      bookedDate: "2024-12-10",
-      paymentReceived: true
-    },
-    {
-      id: "L-004",
-      spotNumber: "A-15",
-      location: "Main Building - Level 2",
-      date: "2024-12-12",
-      price: 25,
-      status: "unused" as const, // Past date, was not booked
-      renterName: null,
-      renterVehicle: null,
-      bookedDate: null,
-      paymentReceived: false
-    },
-    {
-      id: "L-005",
-      spotNumber: "A-15",
-      location: "Main Building - Level 2",
-      date: "2024-12-08",
-      price: 25,
-      status: "used" as const, // Past date, was booked and used
-      renterName: "David Park",
-      renterVehicle: "BMW X3 (DEF-456)",
-      bookedDate: "2024-12-05",
-      paymentReceived: true
-    }
-  ]
+  const { data: ownerListings = [], isLoading: isLoadingListings } = useQuery({
+    queryKey: ['/api/my-listings'],
+    enabled: isOwner(), // Only fetch if user is an owner
+  })
 
   // Use appropriate data based on user role
-  const mockBookings = isOwner() ? [] : mockRenterBookings
-  const ownerListings = isOwner() ? mockOwnerListings : []
+  const mockBookings = isOwner() ? [] : renterBookings
+  const listings = isOwner() ? ownerListings : []
 
   // Filter and sort logic for both renters and owners
-  const allItems = isOwner() ? ownerListings : mockBookings
+  const allItems = isOwner() ? listings : mockBookings
 
   const filteredItems = allItems.filter(item => {
     const matchesSearch = item.spotNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -167,10 +75,10 @@ export default function MyBookings() {
 
   if (isOwner()) {
     // For owners - categorize their listings
-    activeItems = ownerListings.filter(l => l.status === "available" || l.status === "booked")
-    completedItems = ownerListings.filter(l => l.status === "used") // Past spots that were booked
+    activeItems = listings.filter(l => l.status === "available" || l.status === "booked")
+    completedItems = listings.filter(l => l.status === "used") // Past spots that were booked
     cancelledItems = [] // Owners don't have cancelled bookings in this context
-    unusedItems = ownerListings.filter(l => l.status === "unused") // Past spots that were not booked
+    unusedItems = listings.filter(l => l.status === "unused") // Past spots that were not booked
   } else {
     // For renters - categorize their bookings
     activeItems = mockBookings.filter(b => b.status === "confirmed" || b.status === "pending")
@@ -194,6 +102,82 @@ export default function MyBookings() {
     // Generate and download booking history report
   }
 
+  const handleEditListing = (listing: any) => {
+    setSelectedListing(listing)
+    setShowEditListing(true)
+  }
+
+  const handleDeleteListing = (listing: any) => {
+    setListingToDelete(listing)
+    setShowDeleteConfirm(true)
+  }
+
+  const handleBookSpot = (spotId: string) => {
+    console.log('Book spot:', spotId)
+    // Handle spot booking from calendar
+  }
+
+  // Transform real listing data for calendar
+  const transformListingsToCalendarSpots = (listings: any[]) => {
+    return listings.map((listing: any) => ({
+      id: listing.id,
+      spotNumber: listing.spotNumber || `Spot-${listing.id.slice(-4)}`,
+      location: listing.location || "Location not specified",
+      type: listing.spotType || "regular" as const,
+      isInside: listing.isIndoor || false,
+      price: Number(listing.dailyRate) || 0,
+      isAvailable: listing.status === "active" || listing.status === "available",
+      owner: isOwner() ? "You" : "Other Owner",
+      availability: { 
+        date: listing.singleDate || listing.periodStartDate || new Date().toISOString().split('T')[0]
+      },
+      isOwned: true // All listings in MyBookings are owned by the current user
+    }))
+  }
+
+  const calendarSpots = isOwner() ? transformListingsToCalendarSpots(listings) : []
+
+  // Mutations for listing management
+  const updateListingMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string, data: any }) => {
+      return apiRequest('PATCH', `/api/listings/${id}`, data)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/my-listings'] })
+      setShowEditListing(false)
+    }
+  })
+
+  const deleteListingMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest('DELETE', `/api/listings/${id}`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/my-listings'] })
+      setShowDeleteConfirm(false)
+      setListingToDelete(null)
+    }
+  })
+
+  const markPaymentMutation = useMutation({
+    mutationFn: async ({ id, paid }: { id: string, paid: boolean }) => {
+      return apiRequest('PATCH', `/api/bookings/${id}/payment`, { paymentReceived: paid })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/my-listings'] })
+    }
+  })
+
+  const confirmDeleteListing = () => {
+    if (listingToDelete) {
+      deleteListingMutation.mutate(listingToDelete.id)
+    }
+  }
+
+  const handleMarkPayment = (listingId: string, currentlyPaid: boolean) => {
+    markPaymentMutation.mutate({ id: listingId, paid: !currentlyPaid })
+  }
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "confirmed":
@@ -212,7 +196,8 @@ export default function MyBookings() {
     }
   }
 
-  const renderOwnerListing = (listing: any) => (
+  // Owner listing with edit/delete actions (for Active tab)
+  const renderOwnerListingWithActions = (listing: any) => (
     <div key={listing.id} className="border rounded-lg p-4">
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
@@ -222,13 +207,104 @@ export default function MyBookings() {
             <p className="text-sm text-muted-foreground">{listing.location}</p>
           </div>
         </div>
-        <Badge 
-          variant={listing.status === "used" || listing.status === "booked" ? "default" : 
-                  listing.status === "available" ? "secondary" : 
-                  listing.status === "unused" ? "destructive" : "outline"}
-        >
-          {listing.status}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge 
+            variant={listing.status === "used" || listing.status === "booked" ? "default" : 
+                    listing.status === "available" ? "secondary" : 
+                    listing.status === "unused" ? "destructive" : "outline"}
+          >
+            {listing.status}
+          </Badge>
+          {(listing.status === "available" || listing.status === "booked") && (
+            <div className="flex gap-1">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => handleEditListing(listing)}
+                data-testid={`button-edit-listing-${listing.id}`}
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => handleDeleteListing(listing)}
+                className="text-red-600 hover:text-red-700 hover:border-red-300"
+                data-testid={`button-delete-listing-${listing.id}`}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+        <div>
+          <p className="text-xs text-muted-foreground">Date</p>
+          <p className="text-sm font-medium">{listing.date}</p>
+          <p className="text-xs text-muted-foreground">Full Day</p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">
+            {listing.status === "unused" ? "No Renter" : "Renter"}
+          </p>
+          <p className="text-sm font-medium">
+            {listing.renterName || "Not booked"}
+          </p>
+          {listing.renterVehicle && (
+            <p className="text-xs text-muted-foreground">{listing.renterVehicle}</p>
+          )}
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">Price</p>
+          <p className="text-sm font-medium">${listing.price}</p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">Status</p>
+          <p className="text-sm font-medium">
+            {listing.status === "unused" && "Listed but unused"}
+            {listing.status === "used" && "Successfully rented"}
+            {listing.status === "booked" && "Currently booked"}
+            {listing.status === "available" && "Available for booking"}
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+
+  // Owner listing with payment management (for All tab)
+  const renderOwnerListingWithPayment = (listing: any) => (
+    <div key={listing.id} className="border rounded-lg p-4">
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center gap-3">
+          {getStatusIcon(listing.status)}
+          <div>
+            <h3 className="font-semibold">Spot {listing.spotNumber}</h3>
+            <p className="text-sm text-muted-foreground">{listing.location}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge 
+            variant={listing.status === "used" || listing.status === "booked" ? "default" : 
+                    listing.status === "available" ? "secondary" : 
+                    listing.status === "unused" ? "destructive" : "outline"}
+          >
+            {listing.status}
+          </Badge>
+          {listing.status === "used" && (
+            <Button
+              variant={listing.paymentReceived ? "outline" : "default"}
+              size="sm"
+              onClick={() => handleMarkPayment(listing.id, listing.paymentReceived)}
+              disabled={markPaymentMutation.isPending}
+              data-testid={`button-payment-${listing.id}`}
+            >
+              <CreditCard className="h-4 w-4 mr-1" />
+              {listing.paymentReceived ? "Unmark" : "Mark Paid"}
+            </Button>
+          )}
+        </div>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
@@ -352,6 +428,20 @@ export default function MyBookings() {
     </div>
   )
 
+  // Show loading state while fetching data
+  if (isLoadingBookings || isLoadingListings) {
+    return (
+      <div className="p-6 space-y-6" data-testid="page-my-bookings">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading {isOwner() ? 'listings' : 'bookings'}...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="p-6 space-y-6" data-testid="page-my-bookings">
       <div className="flex items-center justify-between">
@@ -419,7 +509,7 @@ export default function MyBookings() {
           <CardContent>
             <div className="text-2xl font-bold">
               ${isOwner() ? 
-                ownerListings.filter(l => l.status === "used").reduce((sum, l) => sum + l.price, 0) :
+                listings.filter(l => l.status === "used").reduce((sum, l) => sum + l.price, 0) :
                 180
               }
             </div>
@@ -479,20 +569,59 @@ export default function MyBookings() {
         </CardContent>
       </Card>
 
-      {/* Bookings/Listings Tabs */}
-      <Tabs defaultValue="all" className="w-full">
-        <TabsList className={`grid w-full ${isOwner() ? 'grid-cols-4' : 'grid-cols-4'}`}>
-          <TabsTrigger value="all">All ({sortedItems.length})</TabsTrigger>
+      {/* Restructured Tabs: Active → Calendar → All */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="active">
-            {isOwner() ? "Active" : "Active"} ({activeItems.length})
+            Active ({activeItems.length})
           </TabsTrigger>
-          <TabsTrigger value="completed">
-            {isOwner() ? "Used" : "Completed"} ({completedItems.length})
+          <TabsTrigger value="calendar">
+            Calendar View
           </TabsTrigger>
-          <TabsTrigger value={isOwner() ? "unused" : "cancelled"}>
-            {isOwner() ? "Unused" : "Cancelled"} ({isOwner() ? unusedItems.length : cancelledItems.length})
+          <TabsTrigger value="all">
+            All ({sortedItems.length})
           </TabsTrigger>
         </TabsList>
+        
+        <TabsContent value="active" className="space-y-4">
+          {activeItems.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-semibold mb-2">
+                  {isOwner() ? "No active listings" : "No active bookings"}
+                </h3>
+                <p className="text-muted-foreground">
+                  {isOwner() ? "Create a new listing to start earning from your parking spots." : "Book a parking spot to see it here."}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {activeItems.map((item) => (
+                isOwner() ? renderOwnerListingWithActions(item) : renderRenterBooking(item)
+              ))}
+            </div>
+          )}
+        </TabsContent>
+        
+        <TabsContent value="calendar" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Calendar View</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                {isOwner() ? "View and manage your spot availability" : "Browse available parking spots"}
+              </p>
+            </CardHeader>
+            <CardContent>
+              <ParkingCalendar 
+                spots={calendarSpots}
+                onBookSpot={handleBookSpot}
+                isOwnerView={isOwner()}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
         
         <TabsContent value="all" className="space-y-4">
           {sortedItems.length === 0 ? (
@@ -510,48 +639,10 @@ export default function MyBookings() {
           ) : (
             <div className="space-y-4">
               {sortedItems.map((item) => (
-                isOwner() ? renderOwnerListing(item) : renderRenterBooking(item)
+                isOwner() ? renderOwnerListingWithPayment(item) : renderRenterBooking(item)
               ))}
             </div>
           )}
-        </TabsContent>
-        
-        <TabsContent value="active" className="space-y-4">
-          <div className="space-y-4">
-            {activeItems.map((item) => (
-              isOwner() ? renderOwnerListing(item) : renderRenterBooking(item)
-            ))}
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="completed" className="space-y-4">
-          <div className="space-y-4">
-            {completedItems.map((item) => (
-              isOwner() ? renderOwnerListing(item) : renderRenterBooking(item)
-            ))}
-          </div>
-        </TabsContent>
-        
-        <TabsContent value={isOwner() ? "unused" : "cancelled"} className="space-y-4">
-          <div className="space-y-4">
-            {isOwner() ? (
-              unusedItems.length === 0 ? (
-                <Card>
-                  <CardContent className="p-8 text-center">
-                    <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-500" />
-                    <h3 className="text-lg font-semibold mb-2">Great job!</h3>
-                    <p className="text-muted-foreground">
-                      All your listed parking spots have been successfully booked.
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : (
-                unusedItems.map((item) => renderOwnerListing(item))
-              )
-            ) : (
-              cancelledItems.map((item) => renderRenterBooking(item))
-            )}
-          </div>
         </TabsContent>
       </Tabs>
       
@@ -562,6 +653,70 @@ export default function MyBookings() {
             <DialogTitle>List Your Parking Spot</DialogTitle>
           </DialogHeader>
           <SpotListingForm onSubmit={() => setShowListingForm(false)} onCancel={() => setShowListingForm(false)} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Listing Dialog */}
+      <Dialog open={showEditListing} onOpenChange={setShowEditListing}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Your Listing</DialogTitle>
+          </DialogHeader>
+          {selectedListing && (
+            <SpotListingForm 
+              initialData={selectedListing}
+              onSubmit={() => setShowEditListing(false)} 
+              onCancel={() => setShowEditListing(false)} 
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Listing Confirmation Dialog */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Listing</DialogTitle>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Trash2 className="h-5 w-5 text-red-600" />
+                <p className="font-semibold text-red-900 dark:text-red-200">Warning: This action cannot be undone</p>
+              </div>
+              <p className="text-sm text-red-800 dark:text-red-300">
+                Deleting this listing will permanently remove it and any existing bookings will be cancelled.
+              </p>
+            </div>
+
+            {listingToDelete && (
+              <div className="border rounded-lg p-3 bg-gray-50 dark:bg-gray-800">
+                <p className="font-medium">Spot {listingToDelete.spotNumber}</p>
+                <p className="text-sm text-muted-foreground">{listingToDelete.location}</p>
+                <p className="text-sm text-muted-foreground">Date: {listingToDelete.date}</p>
+                <p className="text-sm text-muted-foreground">Price: ${listingToDelete.price}</p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDeleteConfirm(false)}
+              data-testid="button-cancel-delete-listing"
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmDeleteListing}
+              disabled={deleteListingMutation.isPending}
+              data-testid="button-confirm-delete-listing"
+            >
+              {deleteListingMutation.isPending ? "Deleting..." : "Delete Listing"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

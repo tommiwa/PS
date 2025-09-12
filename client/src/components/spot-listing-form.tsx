@@ -34,9 +34,10 @@ interface SpotListingData {
 interface SpotListingFormProps {
   onSubmit: (listingData: SpotListingData) => void
   onCancel: () => void
+  initialData?: any
 }
 
-export function SpotListingForm({ onSubmit, onCancel }: SpotListingFormProps) {
+export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListingFormProps) {
   const [listingType, setListingType] = useState<"single" | "period" | "recurring">("single")
   const [formData, setFormData] = useState({
     spotId: "",
