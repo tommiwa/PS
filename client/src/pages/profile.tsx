@@ -47,6 +47,8 @@ export default function Profile() {
   const [pushNotifications, setPushNotifications] = useState(true)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [activeTab, setActiveTab] = useState("notifications")
+  const [isEnrolledInWaitingList, setIsEnrolledInWaitingList] = useState(false)
+  const [availabilityAlertsEnabled, setAvailabilityAlertsEnabled] = useState(false)
 
   if (!user) {
     return (
@@ -114,14 +116,27 @@ export default function Profile() {
   }
 
   const handleEnrollWaitingList = () => {
-    console.log('Enrolling in waiting list')
-    // Handle waiting list enrollment
-    alert('You have been enrolled in the waiting list! You will be notified when spots become available.')
+    if (isEnrolledInWaitingList) {
+      console.log('Leaving waiting list')
+      setIsEnrolledInWaitingList(false)
+      alert('You have been removed from the waiting list.')
+    } else {
+      console.log('Enrolling in waiting list')
+      setIsEnrolledInWaitingList(true)
+      alert('You have been enrolled in the waiting list! You will be notified when spots become available.')
+    }
   }
 
   const handleAvailabilityAlerts = () => {
-    setActiveTab("notifications")
-    // Focus on availability alerts
+    if (availabilityAlertsEnabled) {
+      console.log('Disabling availability alerts')
+      setAvailabilityAlertsEnabled(false)
+      alert('Availability alerts have been disabled.')
+    } else {
+      console.log('Enabling availability alerts')
+      setAvailabilityAlertsEnabled(true)
+      alert('Availability alerts have been enabled! You will receive notifications when preferred spots become available.')
+    }
   }
 
   const handleManageSpots = () => {
@@ -521,7 +536,9 @@ export default function Profile() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Wait List Status</span>
-                    <Badge variant="outline">Not Enrolled</Badge>
+                    <Badge variant={isEnrolledInWaitingList ? "default" : "outline"}>
+                      {isEnrolledInWaitingList ? "Enrolled" : "Not Enrolled"}
+                    </Badge>
                   </div>
                 </>
               )}
@@ -548,44 +565,55 @@ export default function Profile() {
             </CardContent>
           </Card>
           
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="h-5 w-5" />
-                Quick Actions
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button variant="outline" className="w-full justify-start" size="sm" onClick={handleUpdateVehicle} data-testid="button-update-vehicle">
-                <Car className="h-4 w-4 mr-2" />
-                Update Vehicle Info
-              </Button>
-              <Button variant="outline" className="w-full justify-start" size="sm" onClick={handleNotificationSettings} data-testid="button-notification-settings">
-                <Bell className="h-4 w-4 mr-2" />
-                Notification Settings
-              </Button>
-              
-              {isRenter() && (
-                <>
-                  <Button variant="outline" className="w-full justify-start" size="sm" onClick={handleEnrollWaitingList} data-testid="button-enroll-waiting-list">
-                    <Users className="h-4 w-4 mr-2" />
-                    Enroll in Waiting List
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start" size="sm" onClick={handleAvailabilityAlerts} data-testid="button-enable-notifications">
-                    <Bell className="h-4 w-4 mr-2" />
-                    Availability Alerts
-                  </Button>
-                </>
-              )}
-              
-              {isOwner() && (
+          {isRenter() && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5" />
+                  Waiting List Options
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Button 
+                  variant={isEnrolledInWaitingList ? "default" : "outline"} 
+                  className="w-full justify-start" 
+                  size="sm" 
+                  onClick={handleEnrollWaitingList} 
+                  data-testid="button-enroll-waiting-list"
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  {isEnrolledInWaitingList ? "Leave Waiting List" : "Enroll in Waiting List"}
+                </Button>
+                <Button 
+                  variant={availabilityAlertsEnabled ? "default" : "outline"} 
+                  className="w-full justify-start" 
+                  size="sm" 
+                  onClick={handleAvailabilityAlerts} 
+                  data-testid="button-enable-notifications"
+                >
+                  <Bell className="h-4 w-4 mr-2" />
+                  {availabilityAlertsEnabled ? "Disable Availability Alerts" : "Enable Availability Alerts"}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+          
+          {isOwner() && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Spot Management
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
                 <Button variant="outline" className="w-full justify-start" size="sm" onClick={handleManageSpots} data-testid="button-manage-spots">
                   <MapPin className="h-4 w-4 mr-2" />
                   Manage My Spots
                 </Button>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 
