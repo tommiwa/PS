@@ -72,6 +72,244 @@ export class MemStorage implements IStorage {
     this.parkingSpots = new Map();
     this.spotListings = new Map();
     this.bookings = new Map();
+    
+    // Add sample data for testing
+    this.seedTestData();
+  }
+
+  private seedTestData() {
+    // Create mock user (the user we're testing with)
+    const mockUserId = "mock-user-id";
+    const user: User = {
+      id: mockUserId,
+      email: "test@example.com",
+      name: "Test User",
+      password: "hashedpassword",
+      phone: "(555) 123-4567",
+      department: "Engineering",
+      role: "owner",
+      memberSince: "2024-01-01",
+      lastLogin: new Date()
+    };
+    this.users.set(mockUserId, user);
+
+    // Create sample parking spots owned by this user
+    const spot1: ParkingSpot = {
+      id: "spot-1",
+      spotNumber: "A-15",
+      location: "Main Building - Level 2",
+      spotType: "electric",
+      description: "Electric charging spot",
+      isIndoor: true,
+      isActive: true,
+      ownerId: mockUserId,
+      createdAt: new Date()
+    };
+
+    const spot2: ParkingSpot = {
+      id: "spot-2", 
+      spotNumber: "B-08",
+      location: "North Parking Lot",
+      spotType: "regular",
+      description: "Regular outdoor spot",
+      isIndoor: false,
+      isActive: true,
+      ownerId: mockUserId,
+      createdAt: new Date()
+    };
+
+    this.parkingSpots.set(spot1.id, spot1);
+    this.parkingSpots.set(spot2.id, spot2);
+
+    // Create sample listings with different statuses for testing 6-tab system
+    const today = new Date().toISOString().split('T')[0];
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+
+    // Active listing (available)
+    const listing1: SpotListing = {
+      id: "listing-1",
+      spotId: spot1.id,
+      ownerId: mockUserId,
+      listingType: "single_day",
+      status: "available",
+      singleDate: tomorrow,
+      dailyRate: "25.00",
+      notes: "Electric charging available",
+      periodStartDate: null,
+      periodEndDate: null,
+      recurringStartDate: null,
+      recurringEndDate: null,
+      daysOfWeek: null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    // Booked listing (also active)
+    const listing2: SpotListing = {
+      id: "listing-2",
+      spotId: spot2.id,
+      ownerId: mockUserId,
+      listingType: "single_day", 
+      status: "booked",
+      singleDate: today,
+      dailyRate: "20.00",
+      notes: null,
+      periodStartDate: null,
+      periodEndDate: null,
+      recurringStartDate: null,
+      recurringEndDate: null,
+      daysOfWeek: null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    // Used listing without payment (payment pending)
+    const listing3: SpotListing = {
+      id: "listing-3",
+      spotId: spot1.id,
+      ownerId: mockUserId,
+      listingType: "single_day",
+      status: "used",
+      singleDate: yesterday,
+      dailyRate: "25.00", 
+      notes: null,
+      periodStartDate: null,
+      periodEndDate: null,
+      recurringStartDate: null,
+      recurringEndDate: null,
+      daysOfWeek: null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    // Used listing with payment (completed)
+    const listing4: SpotListing = {
+      id: "listing-4",
+      spotId: spot2.id,
+      ownerId: mockUserId,
+      listingType: "single_day",
+      status: "used",
+      singleDate: yesterday,
+      dailyRate: "20.00",
+      notes: null,
+      periodStartDate: null,
+      periodEndDate: null,
+      recurringStartDate: null,
+      recurringEndDate: null,
+      daysOfWeek: null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    // Unused listing (past date, not booked)
+    const listing5: SpotListing = {
+      id: "listing-5",
+      spotId: spot1.id,
+      ownerId: mockUserId,
+      listingType: "single_day",
+      status: "unused",
+      singleDate: yesterday,
+      dailyRate: "25.00",
+      notes: null,
+      periodStartDate: null,
+      periodEndDate: null,
+      recurringStartDate: null,
+      recurringEndDate: null,
+      daysOfWeek: null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    this.spotListings.set(listing1.id, listing1);
+    this.spotListings.set(listing2.id, listing2);
+    this.spotListings.set(listing3.id, listing3);
+    this.spotListings.set(listing4.id, listing4);
+    this.spotListings.set(listing5.id, listing5);
+
+    // Create sample bookings for renter testing
+    const renterUserId = "renter-user-id";
+    const renterUser: User = {
+      id: renterUserId,
+      email: "renter@example.com",
+      name: "Renter User",
+      password: "hashedpassword",
+      phone: "(555) 987-6543",
+      department: "Marketing",
+      role: "renter",
+      memberSince: "2024-02-01",
+      lastLogin: new Date()
+    };
+    this.users.set(renterUserId, renterUser);
+
+    // Active booking (confirmed for future)
+    const booking1: Booking = {
+      id: "booking-1",
+      listingId: listing1.id,
+      spotId: spot1.id,
+      renterId: renterUserId,
+      ownerId: mockUserId,
+      bookingDate: tomorrow,
+      status: "confirmed",
+      paymentReceived: false,
+      totalCost: "25.00",
+      notes: null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    // Pending booking
+    const booking2: Booking = {
+      id: "booking-2",
+      listingId: listing2.id,
+      spotId: spot2.id,
+      renterId: renterUserId,
+      ownerId: mockUserId,
+      bookingDate: today,
+      status: "pending",
+      paymentReceived: false,
+      totalCost: "20.00", 
+      notes: null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    // Completed booking (past with payment)
+    const booking3: Booking = {
+      id: "booking-3",
+      listingId: listing4.id,
+      spotId: spot2.id,
+      renterId: renterUserId,
+      ownerId: mockUserId,
+      bookingDate: yesterday,
+      status: "confirmed",
+      paymentReceived: true,
+      totalCost: "20.00",
+      notes: null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    // Payment pending booking (future without payment)
+    const booking4: Booking = {
+      id: "booking-4",
+      listingId: listing3.id,
+      spotId: spot1.id,
+      renterId: renterUserId,
+      ownerId: mockUserId,
+      bookingDate: tomorrow,
+      status: "confirmed",
+      paymentReceived: false,
+      totalCost: "25.00",
+      notes: null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    this.bookings.set(booking1.id, booking1);
+    this.bookings.set(booking2.id, booking2);
+    this.bookings.set(booking3.id, booking3);
+    this.bookings.set(booking4.id, booking4);
   }
 
   // User operations

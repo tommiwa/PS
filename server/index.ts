@@ -6,6 +6,15 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Block HEAD requests to /api early to prevent spam
+app.use((req, res, next) => {
+  if (req.method === "HEAD" && req.path === "/api") {
+    console.log(`[BLOCKED] HEAD /api request from ${req.ip} - User-Agent: ${req.get('User-Agent') || 'unknown'}`);
+    return res.status(200).end();
+  }
+  next();
+});
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;

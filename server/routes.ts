@@ -9,6 +9,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // use storage to perform CRUD operations on the storage interface
   // e.g. storage.insertUser(user) or storage.getUserByUsername(username)
 
+  // Add explicit handler for /api to stop excessive HEAD requests
+  app.all("/api", (req, res) => {
+    if (req.method === "HEAD") {
+      console.log("HEAD request to /api blocked");
+      return res.status(200).end();
+    }
+    res.status(404).json({ error: "API endpoint not found" });
+  });
+
   // Get user's parking spots
   app.get("/api/my-spots", async (req, res) => {
     try {
