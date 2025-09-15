@@ -20,6 +20,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { useToast } from "@/hooks/use-toast"
+import { useConfirm, confirmations } from "@/hooks/use-confirm"
 import { 
   Car, 
   Settings, 
@@ -89,6 +90,7 @@ export default function Profile() {
   const [, setLocation] = useLocation()
   const { toast } = useToast()
   const { theme, setTheme } = useTheme()
+  const { confirm } = useConfirm()
   
   // State for various settings
   const [darkMode, setDarkMode] = useState(false)
@@ -275,9 +277,12 @@ export default function Profile() {
     // Handle password change
   }
 
-  const handleDeleteAccount = () => {
-    console.log('Delete account request')
-    // Show confirmation dialog for account deletion
+  const handleDeleteAccount = async () => {
+    const confirmed = await confirm(confirmations.deleteAccount(user?.name))
+    if (confirmed) {
+      console.log('Delete account request')
+      // TODO: Implement actual account deletion logic
+    }
   }
 
   const handleExportData = () => {

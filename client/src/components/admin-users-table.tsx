@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Search, Edit, Trash2, Users, Car, Clock } from "lucide-react"
+import { useConfirm, confirmations } from "@/hooks/use-confirm"
 
 export interface AdminUser {
   id: string
@@ -35,6 +36,7 @@ export function AdminUsersTable({
 }: AdminUsersTableProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [roleFilter, setRoleFilter] = useState<string>("all")
+  const { confirm } = useConfirm()
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -74,9 +76,15 @@ export function AdminUsersTable({
     onEditUser?.(userId)
   }
 
-  const handleDelete = (userId: string) => {
-    console.log('Delete user:', userId)
-    onDeleteUser?.(userId)
+  const handleDelete = async (userId: string) => {
+    const user = users.find(u => u.id === userId)
+    if (!user) return
+
+    const confirmed = await confirm(confirmations.deleteUser(user.name))
+    if (confirmed) {
+      console.log('Delete user:', userId)
+      onDeleteUser?.(userId)
+    }
   }
 
   const handleAssignSpot = (userId: string) => {

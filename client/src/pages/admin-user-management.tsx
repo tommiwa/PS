@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
+import { useConfirm, confirmations } from "@/hooks/use-confirm"
 import { 
   Users, 
   UserPlus, 
@@ -24,6 +25,7 @@ import {
 } from "lucide-react"
 
 export default function AdminUserManagement() {
+  const { confirm } = useConfirm()
   const [searchTerm, setSearchTerm] = useState("")
   const [filterRole, setFilterRole] = useState("all")
   const [filterStatus, setFilterStatus] = useState("all")
@@ -122,12 +124,35 @@ export default function AdminUserManagement() {
     console.log('Edit user:', userId)
   }
 
-  const handleDeleteUser = (userId: string) => {
-    console.log('Delete user:', userId)
+  const handleDeleteUser = async (userId: string) => {
+    const user = mockUsers.find(u => u.id === userId)
+    if (!user) return
+
+    const confirmed = await confirm(confirmations.deleteUser(user.name))
+    if (confirmed) {
+      console.log('Delete user:', userId)
+      // TODO: Implement actual user deletion logic
+    }
   }
 
-  const handleSuspendUser = (userId: string) => {
-    console.log('Suspend user:', userId)
+  const handleSuspendUser = async (userId: string) => {
+    const user = mockUsers.find(u => u.id === userId)
+    if (!user) return
+
+    const confirmed = await confirm({
+      title: user.status === "active" ? "Suspend User" : "Activate User",
+      description: user.status === "active" 
+        ? `Are you sure you want to suspend ${user.name}? They will lose access to the parking system and their active bookings will be cancelled.`
+        : `Are you sure you want to activate ${user.name}? They will regain access to the parking system.`,
+      confirmText: user.status === "active" ? "Suspend User" : "Activate User",
+      cancelText: "Cancel",
+      variant: user.status === "active" ? "destructive" : "default"
+    })
+    
+    if (confirmed) {
+      console.log('Suspend/Activate user:', userId)
+      // TODO: Implement actual user suspension/activation logic
+    }
   }
 
   const handleAssignSpot = (userId: string) => {
@@ -397,18 +422,18 @@ export default function AdminUserManagement() {
                     </td>
                     <td className="p-4">
                       <div className="flex gap-1">
-                        <Button size="sm" variant="outline" onClick={() => handleEditUser(user.id)}>
+                        <Button size="sm" variant="outline" onClick={() => handleEditUser(user.id)} data-testid={`button-edit-${user.id}`}>
                           Edit
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => handleSendNotification(user.id)}>
+                        <Button size="sm" variant="outline" onClick={() => handleSendNotification(user.id)} data-testid={`button-notify-${user.id}`}>
                           <Mail className="h-3 w-3" />
                         </Button>
                         {user.status === "active" ? (
-                          <Button size="sm" variant="outline" onClick={() => handleSuspendUser(user.id)}>
+                          <Button size="sm" variant="outline" onClick={() => handleSuspendUser(user.id)} data-testid={`button-suspend-${user.id}`}>
                             Suspend
                           </Button>
                         ) : (
-                          <Button size="sm" variant="outline" onClick={() => handleEditUser(user.id)}>
+                          <Button size="sm" variant="outline" onClick={() => handleSuspendUser(user.id)} data-testid={`button-activate-${user.id}`}>
                             Activate
                           </Button>
                         )}

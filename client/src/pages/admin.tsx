@@ -2,6 +2,7 @@ import { useState } from "react"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { queryClient, apiRequest } from "@/lib/queryClient"
 import { useToast } from "@/hooks/use-toast"
+import { useConfirm, confirmations } from "@/hooks/use-confirm"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -38,6 +39,7 @@ type ParkingSpace = {
 
 export default function Admin() {
   const { toast } = useToast()
+  const { confirm } = useConfirm()
   const [searchTerm, setSearchTerm] = useState("")
   const [filterType, setFilterType] = useState("all")
   const [selectedWaitingListItem, setSelectedWaitingListItem] = useState<string | null>(null)
@@ -202,13 +204,17 @@ export default function Admin() {
     });
   }
 
-  const handleDeleteSpot = (spotId: string) => {
-    console.log('Delete spot:', spotId);
-    toast({
-      title: "Spot Deleted",
-      description: "Parking spot has been removed from the system.",
-      variant: "default"
-    });
+  const handleDeleteSpot = async (spotId: string) => {
+    const spot = allSpots.find(s => s.id === spotId);
+    const confirmed = await confirm(confirmations.deleteSpot(spot?.spotNumber || 'Unknown'));
+    if (confirmed) {
+      console.log('Delete spot:', spotId);
+      toast({
+        title: "Spot Deleted",
+        description: "Parking spot has been removed from the system.",
+        variant: "default"
+      });
+    }
   }
 
   const handleAddSpot = () => {

@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { AuthProvider, useAuth } from "@/contexts/auth-context";
 import { ThemeProvider } from "@/contexts/theme-context";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { ConfirmProvider } from "@/hooks/use-confirm";
 import { NotificationCenter } from "@/components/notification-center";
 import { LogOut, Loader2 } from "lucide-react";
 import { useEffect } from "react";
@@ -218,9 +219,11 @@ function App() {
         <TooltipProvider>
           <ThemeProvider>
             <AuthProvider>
-              <ProtectedRouter />
+              <ConfirmProvider>
+                <ProtectedRouter />
+                <Toaster />
+              </ConfirmProvider>
             </AuthProvider>
-            <Toaster />
           </ThemeProvider>
         </TooltipProvider>
       </QueryClientProvider>

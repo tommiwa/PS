@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { MapPin, Calendar, Clock, DollarSign, User, X, Edit } from "lucide-react"
+import { useConfirm, confirmations } from "@/hooks/use-confirm"
 
 export interface Booking {
   id: string
@@ -32,6 +33,7 @@ export function BookingCard({
   onUpdatePayment,
   showRenterInfo = false
 }: BookingCardProps) {
+  const { confirm } = useConfirm()
   const getStatusBadge = () => {
     const statusConfig = {
       confirmed: { variant: "default" as const, label: "Confirmed" },
@@ -55,9 +57,16 @@ export function BookingCard({
     return <Badge variant={config.variant}>{config.label}</Badge>
   }
 
-  const handleCancel = () => {
-    console.log(`Cancelling booking ${booking.id}`)
-    onCancel?.(booking.id)
+  const handleCancel = async () => {
+    const confirmed = await confirm(confirmations.cancelBooking(
+      `Spot ${booking.spotNumber}`, 
+      booking.date
+    ))
+    
+    if (confirmed) {
+      console.log(`Cancelling booking ${booking.id}`)
+      onCancel?.(booking.id)
+    }
   }
 
   const handleEdit = () => {

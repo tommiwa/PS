@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Separator } from "@/components/ui/separator"
 import { useAuth } from "@/contexts/auth-context"
+import { useConfirm, confirmations } from "@/hooks/use-confirm"
 import { 
   Bell, 
   Car, 
@@ -55,6 +56,7 @@ const notificationColors = {
 export function NotificationCenter() {
   const { user } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
+  const { confirm } = useConfirm()
 
   // Query user notifications
   const { data: notifications = [], isLoading, refetch } = useQuery<InAppNotification[]>({
@@ -222,13 +224,16 @@ export function NotificationCenter() {
                               variant="ghost"
                               size="icon"
                               className="h-6 w-6 opacity-0 group-hover:opacity-100"
-                              onClick={(e) => {
+                              onClick={async (e) => {
                                 e.stopPropagation();
-                                deleteNotificationMutation.mutate(notification.id);
+                                const confirmed = await confirm(confirmations.deleteNotification());
+                                if (confirmed) {
+                                  deleteNotificationMutation.mutate(notification.id);
+                                }
                               }}
                               data-testid={`button-delete-notification-${notification.id}`}
                             >
-                              <X className="h-3 w-3" />
+                              <Trash2 className="h-3 w-3" />
                             </Button>
                           </div>
                         </div>

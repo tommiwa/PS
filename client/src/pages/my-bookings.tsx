@@ -15,6 +15,7 @@ import { isPastDate } from "@/utils/date-utils"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { apiRequest, queryClient } from "@/lib/queryClient"
 import type { Booking, SpotListing } from "@shared/schema"
+import { useConfirm, confirmations } from "@/hooks/use-confirm"
 
 export default function MyBookings() {
   const { user, isOwner } = useAuth()
@@ -24,9 +25,8 @@ export default function MyBookings() {
   const [showListingForm, setShowListingForm] = useState(false)
   const [showEditListing, setShowEditListing] = useState(false)
   const [selectedListing, setSelectedListing] = useState<any>(null)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [listingToDelete, setListingToDelete] = useState<any>(null)
   const [activeTab, setActiveTab] = useState("calendar")
+  const { confirm } = useConfirm()
 
   // Fetch real data based on user role
   const { data: renterBookings = [], isLoading: isLoadingBookings } = useQuery<Booking[]>({
@@ -100,9 +100,18 @@ export default function MyBookings() {
     unusedItems = [] // Renters don't have unused items
   }
 
-  const handleCancelBooking = (bookingId: string) => {
-    console.log('Cancel booking:', bookingId)
-    // Show confirmation dialog and handle cancellation
+  const handleCancelBooking = async (bookingId: string) => {
+    const booking = mockBookings.find(b => b.id === bookingId)
+    
+    const confirmed = await confirm(confirmations.cancelBooking(
+      booking ? `Spot ${booking.spotNumber || 'Unknown'}` : undefined,
+      booking?.bookingDate
+    ))
+    
+    if (confirmed) {
+      console.log('Cancel booking:', bookingId)
+      // TODO: Implement actual booking cancellation logic
+    }
   }
 
   const handleEditBooking = (bookingId: string) => {
@@ -120,9 +129,11 @@ export default function MyBookings() {
     setShowEditListing(true)
   }
 
-  const handleDeleteListing = (listing: any) => {
-    setListingToDelete(listing)
-    setShowDeleteConfirm(true)
+  const handleDeleteListing = async (listing: any) => {
+    const confirmed = await confirm(confirmations.deleteListing(listing.spotNumber))
+    if (confirmed) {
+      deleteListingMutation.mutate(listing.id)
+    }
   }
 
   const handleBookSpot = (spotId: string) => {
@@ -167,8 +178,6 @@ export default function MyBookings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/my-listings'] })
-      setShowDeleteConfirm(false)
-      setListingToDelete(null)
     }
   })
 
@@ -181,11 +190,6 @@ export default function MyBookings() {
     }
   })
 
-  const confirmDeleteListing = () => {
-    if (listingToDelete) {
-      deleteListingMutation.mutate(listingToDelete.id)
-    }
-  }
 
   const handleMarkPayment = (listingId: string, currentlyPaid: boolean) => {
     markPaymentMutation.mutate({ id: listingId, paid: !currentlyPaid })
@@ -775,53 +779,6 @@ export default function MyBookings() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Listing Confirmation Dialog */}
-      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Listing</DialogTitle>
-          </DialogHeader>
-          
-          <div className="py-4">
-            <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg mb-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Trash2 className="h-5 w-5 text-red-600" />
-                <p className="font-semibold text-red-900 dark:text-red-200">Warning: This action cannot be undone</p>
-              </div>
-              <p className="text-sm text-red-800 dark:text-red-300">
-                Deleting this listing will permanently remove it and any existing bookings will be cancelled.
-              </p>
-            </div>
-
-            {listingToDelete && (
-              <div className="border rounded-lg p-3 bg-gray-50 dark:bg-gray-800">
-                <p className="font-medium">Spot {listingToDelete.spotNumber}</p>
-                <p className="text-sm text-muted-foreground">{listingToDelete.location}</p>
-                <p className="text-sm text-muted-foreground">Date: {listingToDelete.date}</p>
-                <p className="text-sm text-muted-foreground">Price: ${listingToDelete.price}</p>
-              </div>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setShowDeleteConfirm(false)}
-              data-testid="button-cancel-delete-listing"
-            >
-              Cancel
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={confirmDeleteListing}
-              disabled={deleteListingMutation.isPending}
-              data-testid="button-confirm-delete-listing"
-            >
-              {deleteListingMutation.isPending ? "Deleting..." : "Delete Listing"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
