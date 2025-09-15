@@ -48,6 +48,8 @@ export default function Admin() {
   const [showDirectAssignDialog, setShowDirectAssignDialog] = useState(false)
   const [selectedSpot, setSelectedSpot] = useState<ParkingSpace | null>(null)
   const [selectedSpotForAssign, setSelectedSpotForAssign] = useState<ParkingSpace | null>(null)
+  const [selectedUserForWaiting, setSelectedUserForWaiting] = useState("")
+  const [selectedUserForAssign, setSelectedUserForAssign] = useState("")
   const [activeSpotTab, setActiveSpotTab] = useState("all")
   
   // Fetch waiting list data for metrics
@@ -62,6 +64,11 @@ export default function Admin() {
   // Fetch unallocated spots
   const { data: unallocatedSpots = [] } = useQuery<ParkingSpace[]>({
     queryKey: ["/api/admin/unallocated-spots"],
+  });
+
+  // Fetch all users for dropdown selection
+  const { data: allUsers = [] } = useQuery({
+    queryKey: ["/api/admin/users"],
   });
 
   // Mock all spots data for demonstration
@@ -226,8 +233,18 @@ export default function Admin() {
   }
 
   const handleAddToWaitingList = () => {
-    console.log('Add user to waiting list');
+    if (!selectedUserForWaiting) {
+      toast({
+        title: "No User Selected",
+        description: "Please select a user from the dropdown.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    console.log('Add user to waiting list:', selectedUserForWaiting);
     setShowAddToWaitingDialog(false);
+    setSelectedUserForWaiting("");
     toast({
       title: "User Added to Waiting List",
       description: "User has been successfully added to the waiting list.",
@@ -236,9 +253,19 @@ export default function Admin() {
   }
 
   const handleDirectAssign = () => {
-    console.log('Direct assign spot:', selectedSpotForAssign);
+    if (!selectedUserForAssign) {
+      toast({
+        title: "No User Selected",
+        description: "Please select a user from the dropdown.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    console.log('Direct assign spot:', selectedSpotForAssign, 'to user:', selectedUserForAssign);
     setShowDirectAssignDialog(false);
     setSelectedSpotForAssign(null);
+    setSelectedUserForAssign("");
     toast({
       title: "Spot Assigned",
       description: "Parking spot has been assigned to the user.",
@@ -759,8 +786,22 @@ export default function Admin() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">User Email</label>
-              <Input placeholder="user@bci.ca" data-testid="input-user-email" />
+              <label className="text-sm font-medium">Select User</label>
+              <Select value={selectedUserForWaiting} onValueChange={setSelectedUserForWaiting}>
+                <SelectTrigger data-testid="select-user-waiting">
+                  <SelectValue placeholder="Search and select user..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {allUsers.map((user: any) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{user.name}</span>
+                        <span className="text-xs text-muted-foreground">{user.email} • {user.department}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Preferred Spot Type</label>
@@ -819,8 +860,22 @@ export default function Admin() {
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">User Email</label>
-                <Input placeholder="user@bci.ca" data-testid="input-assign-user-email" />
+                <label className="text-sm font-medium">Select User</label>
+                <Select value={selectedUserForAssign} onValueChange={setSelectedUserForAssign}>
+                  <SelectTrigger data-testid="select-user-assign">
+                    <SelectValue placeholder="Search and select user..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allUsers.map((user: any) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{user.name}</span>
+                          <span className="text-xs text-muted-foreground">{user.email} • {user.department}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Assignment Duration</label>
