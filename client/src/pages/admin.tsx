@@ -239,7 +239,7 @@ export default function Admin() {
         <div>
           <h1 className="text-3xl font-bold">Parking Management</h1>
           <p className="text-muted-foreground">
-            Manage parking spots, waiting list, and spot assignments.
+            Manage parking spots, waiting list, and system settings.
           </p>
         </div>
         <Button data-testid="button-add-user">
