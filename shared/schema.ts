@@ -130,6 +130,37 @@ export const insertBookingSchema = createInsertSchema(bookings).omit({
 export type InsertBooking = z.infer<typeof insertBookingSchema>;
 export type Booking = typeof bookings.$inferSelect;
 
+// Waiting List Schema
+export const waitingList = pgTable("waiting_list", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(), // References users.id
+  userName: text("user_name").notNull(),
+  userEmail: text("user_email").notNull(),
+  userDepartment: text("user_department").notNull(),
+  preferredSpotType: text("preferred_spot_type").$type<SpotType>(),
+  preferredBuilding: text("preferred_building"),
+  priority: integer("priority").notNull().default(1), // 1 = highest priority
+  status: text("status").notNull().default("active"), // active, assigned, cancelled
+  reason: text("reason"), // Why they need parking
+  enrolledDate: timestamp("enrolled_date").notNull().defaultNow(),
+  assignedDate: timestamp("assigned_date"),
+  assignedSpotId: varchar("assigned_spot_id"), // References parking_spots.id when assigned
+  enrolledBy: text("enrolled_by").notNull().default("user"), // user, admin
+  adminNotes: text("admin_notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertWaitingListSchema = createInsertSchema(waitingList).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  enrolledDate: true,
+});
+
+export type InsertWaitingList = z.infer<typeof insertWaitingListSchema>;
+export type WaitingList = typeof waitingList.$inferSelect;
+
 // Auth types for frontend
 export interface AuthUser {
   id: string;

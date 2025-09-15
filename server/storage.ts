@@ -7,6 +7,8 @@ import {
   type InsertSpotListing,
   type Booking,
   type InsertBooking,
+  type WaitingList,
+  type InsertWaitingList,
   type UserRole,
   type SpotType,
   type ListingType,
@@ -59,6 +61,16 @@ export interface IStorage {
   // Availability checking
   checkSpotAvailability(spotId: string, date: string): Promise<boolean>;
   getBookingsForDate(date: string): Promise<Booking[]>;
+
+  // Waiting List operations
+  getWaitingListEntry(id: string): Promise<WaitingList | undefined>;
+  getWaitingListByUser(userId: string): Promise<WaitingList | undefined>;
+  getAllWaitingList(): Promise<WaitingList[]>;
+  getActiveWaitingList(): Promise<WaitingList[]>;
+  createWaitingListEntry(entry: InsertWaitingList): Promise<WaitingList>;
+  updateWaitingListEntry(id: string, updates: Partial<InsertWaitingList>): Promise<WaitingList | undefined>;
+  deleteWaitingListEntry(id: string): Promise<boolean>;
+  assignWaitingListUser(waitingListId: string, spotId: string): Promise<WaitingList | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -66,12 +78,14 @@ export class MemStorage implements IStorage {
   private parkingSpots: Map<string, ParkingSpot>;
   private spotListings: Map<string, SpotListing>;
   private bookings: Map<string, Booking>;
+  private waitingList: Map<string, WaitingList>;
 
   constructor() {
     this.users = new Map();
     this.parkingSpots = new Map();
     this.spotListings = new Map();
     this.bookings = new Map();
+    this.waitingList = new Map();
     
     // Add sample data for testing
     this.seedTestData();
@@ -562,6 +576,79 @@ export class MemStorage implements IStorage {
     return Array.from(this.bookings.values()).filter(
       (booking) => booking.bookingDate === date
     );
+  }
+
+  // Waiting List operations
+  async getWaitingListEntry(id: string): Promise<WaitingList | undefined> {
+    return this.waitingList.get(id);
+  }
+
+  async getWaitingListByUser(userId: string): Promise<WaitingList | undefined> {
+    return Array.from(this.waitingList.values()).find(entry => entry.userId === userId && entry.status === 'active');
+  }
+
+  async getAllWaitingList(): Promise<WaitingList[]> {
+    return Array.from(this.waitingList.values()).sort((a, b) => a.priority - b.priority);
+  }
+
+  async getActiveWaitingList(): Promise<WaitingList[]> {
+    return Array.from(this.waitingList.values())
+      .filter(entry => entry.status === 'active')
+      .sort((a, b) => a.priority - b.priority);
+  }
+
+  async createWaitingListEntry(insertEntry: InsertWaitingList): Promise<WaitingList> {
+    const id = randomUUID();
+    const entry: WaitingList = {
+      ...insertEntry,
+      id,
+      status: insertEntry.status || 'active',
+      priority: insertEntry.priority || 1,
+      enrolledBy: insertEntry.enrolledBy || 'user',
+      enrolledDate: new Date(),
+      assignedDate: insertEntry.assignedDate || null,
+      assignedSpotId: insertEntry.assignedSpotId || null,
+      adminNotes: insertEntry.adminNotes || null,
+      reason: insertEntry.reason || null,
+      preferredSpotType: insertEntry.preferredSpotType || null,
+      preferredBuilding: insertEntry.preferredBuilding || null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.waitingList.set(id, entry);
+    return entry;
+  }
+
+  async updateWaitingListEntry(id: string, updates: Partial<InsertWaitingList>): Promise<WaitingList | undefined> {
+    const existingEntry = this.waitingList.get(id);
+    if (!existingEntry) return undefined;
+
+    const updatedEntry: WaitingList = {
+      ...existingEntry,
+      ...updates,
+      updatedAt: new Date()
+    };
+    this.waitingList.set(id, updatedEntry);
+    return updatedEntry;
+  }
+
+  async deleteWaitingListEntry(id: string): Promise<boolean> {
+    return this.waitingList.delete(id);
+  }
+
+  async assignWaitingListUser(waitingListId: string, spotId: string): Promise<WaitingList | undefined> {
+    const entry = this.waitingList.get(waitingListId);
+    if (!entry) return undefined;
+
+    const updatedEntry: WaitingList = {
+      ...entry,
+      status: 'assigned',
+      assignedDate: new Date(),
+      assignedSpotId: spotId,
+      updatedAt: new Date()
+    };
+    this.waitingList.set(waitingListId, updatedEntry);
+    return updatedEntry;
   }
 }
 
