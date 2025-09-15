@@ -616,6 +616,7 @@ export default function Admin() {
                       <Button
                         variant="outline"
                         size="sm"
+                        className="border-green-500 text-green-600 hover:bg-green-50 dark:border-green-400 dark:text-green-400 dark:hover:bg-green-950"
                         onClick={() => handleBulkToggleBookability(true)}
                         disabled={bulkToggleBookabilityMutation.isPending}
                         data-testid="button-bulk-enable-bookability"
@@ -626,6 +627,7 @@ export default function Admin() {
                       <Button
                         variant="outline"
                         size="sm"
+                        className="border-red-500 text-red-600 hover:bg-red-50 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-950"
                         onClick={() => handleBulkToggleBookability(false)}
                         disabled={bulkToggleBookabilityMutation.isPending}
                         data-testid="button-bulk-disable-bookability"
@@ -700,7 +702,11 @@ export default function Admin() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="flex-1"
+                          className={`flex-1 ${
+                            spot.isBookable 
+                              ? "border-red-500 text-red-600 hover:bg-red-50 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-950"
+                              : "border-green-500 text-green-600 hover:bg-green-50 dark:border-green-400 dark:text-green-400 dark:hover:bg-green-950"
+                          }`}
                           onClick={() => handleToggleSpotBookability(spot.id, spot.isBookable)}
                           disabled={toggleBookabilityMutation.isPending}
                           data-testid={`button-toggle-bookability-${spot.id}`}
