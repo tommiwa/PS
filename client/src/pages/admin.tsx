@@ -1,19 +1,40 @@
-import { AdminUsersTable } from "@/components/admin-users-table"
-import { DashboardStats } from "@/components/dashboard-stats"
+import { useState } from "react"
+import { useQuery, useMutation } from "@tanstack/react-query"
+import { queryClient, apiRequest } from "@/lib/queryClient"
+import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useQuery } from "@tanstack/react-query"
-import { Link } from "wouter"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { 
   Users, Car, Clock, AlertTriangle, TrendingUp, Plus, 
   ListOrdered, CalendarDays, UserPlus, ArrowRight,
-  Timer, Target, CheckCircle2
+  Timer, Target, CheckCircle2, Search, Filter,
+  Zap, Accessibility, Building, MoreHorizontal
 } from "lucide-react"
 import type { WaitingList } from "@shared/schema"
 
+type ParkingSpace = {
+  id: string
+  spotNumber: string
+  building: string
+  type: "standard" | "electric" | "accessible"
+  status: "available" | "occupied" | "maintenance"
+  owner?: { name: string; email: string; department: string }
+}
+
 export default function Admin() {
+  const { toast } = useToast()
+  const [searchTerm, setSearchTerm] = useState("")
+  const [filterType, setFilterType] = useState("all")
+  const [selectedWaitingListItem, setSelectedWaitingListItem] = useState<string | null>(null)
+  const [showAssignDialog, setShowAssignDialog] = useState(false)
+  
   // Fetch waiting list data for metrics
   const { data: allWaitingList, isLoading: isLoadingWaitingList } = useQuery<WaitingList[]>({
     queryKey: ["/api/waiting-list"],
@@ -23,14 +44,19 @@ export default function Admin() {
     queryKey: ["/api/waiting-list/active"],
   });
 
+  // Fetch unallocated spots
+  const { data: unallocatedSpots = [] } = useQuery<ParkingSpace[]>({
+    queryKey: ["/api/admin/unallocated-spots"],
+  });
+
   // Calculate waiting list metrics
   const waitingListMetrics = {
     total: allWaitingList?.length || 0,
     active: activeWaitingList?.length || 0,
     assigned: allWaitingList?.filter(entry => entry.status === "assigned").length || 0,
-    highPriority: activeWaitingList?.filter(entry => entry.priority === 1).length || 0,
-    mediumPriority: activeWaitingList?.filter(entry => entry.priority === 2).length || 0,
-    lowPriority: activeWaitingList?.filter(entry => entry.priority === 3).length || 0,
+    highPriority: activeWaitingList?.filter(entry => entry.priority === "high").length || 0,
+    mediumPriority: activeWaitingList?.filter(entry => entry.priority === "medium").length || 0,
+    lowPriority: activeWaitingList?.filter(entry => entry.priority === "low").length || 0,
     averageWaitTime: activeWaitingList?.length > 0 
       ? Math.round(activeWaitingList.reduce((sum, entry) => {
           const daysSinceEnrollment = Math.floor((Date.now() - new Date(entry.enrolledDate).getTime()) / (1000 * 60 * 60 * 24));
@@ -44,82 +70,63 @@ export default function Admin() {
     }).length || 0
   };
 
-  const mockUsers = [
-    {
-      id: "user-001",
-      name: "Sarah Chen",
-      email: "sarah.chen@bci.ca",
-      department: "Engineering",
-      role: "owner" as const,
-      spotsOwned: 2,
-      bookingsCount: 15,
-      status: "active" as const,
-      lastLogin: "2024-01-15",
-      memberSince: "Jan 2023"
+  // Filter waiting list
+  const filteredWaitingList = activeWaitingList?.filter(item => {
+    const matchesSearch = item.userName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         item.userEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         item.reason?.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesType = filterType === "all" || item.preferredSpotType === filterType
+    return matchesSearch && matchesType
+  }) || []
+
+  // Assignment mutation
+  const assignFromWaitingListMutation = useMutation({
+    mutationFn: async ({ waitingListId, spotId, spotDetails }: { 
+      waitingListId: string; 
+      spotId: string; 
+      spotDetails: { spotNumber: string; location: string; building: string }
+    }) => {
+      const response = await apiRequest("POST", `/api/waiting-list/${waitingListId}/assign`, {
+        spotId,
+        spotDetails
+      });
+      return response.json();
     },
-    {
-      id: "user-002", 
-      name: "Michael Rodriguez",
-      email: "m.rodriguez@bci.ca",
-      department: "Marketing",
-      role: "renter" as const,
-      spotsOwned: 0,
-      bookingsCount: 8,
-      status: "active" as const,
-      lastLogin: "2024-01-14",
-      memberSince: "Mar 2023"
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] });
+      
+      toast({
+        title: "Assignment Successful",
+        description: `User has been assigned to the parking spot. ${data.notificationsSent?.emailSent ? 'Email notification sent.' : ''}`,
+        variant: "default"
+      });
+      
+      setShowAssignDialog(false);
+      setSelectedWaitingListItem(null);
     },
-    {
-      id: "user-003",
-      name: "Jennifer Kim",
-      email: "j.kim@bci.ca", 
-      department: "Finance",
-      role: "renter" as const,
-      spotsOwned: 0,
-      bookingsCount: 3,
-      status: "active" as const,
-      lastLogin: "2024-01-12",
-      memberSince: "Dec 2023"
-    },
-    {
-      id: "user-004",
-      name: "David Thompson",
-      email: "d.thompson@bci.ca",
-      department: "IT",
-      role: "admin" as const,
-      spotsOwned: 0,
-      bookingsCount: 0,
-      status: "active" as const,
-      lastLogin: "2024-01-15",
-      memberSince: "Jan 2022"
-    },
-    {
-      id: "user-005",
-      name: "Emma Wilson",
-      email: "e.wilson@bci.ca",
-      department: "HR",
-      role: "renter" as const,
-      spotsOwned: 0,
-      bookingsCount: 12,
-      status: "active" as const,
-      lastLogin: "2024-01-13",
-      memberSince: "Jun 2023"
+    onError: (error) => {
+      toast({
+        title: "Assignment Failed",
+        description: error instanceof Error ? error.message : "Failed to assign user. Please try again.",
+        variant: "destructive"
+      });
     }
-  ]
+  });
 
-  const handleEditUser = (userId: string) => {
-    console.log('Edit user:', userId)
-    // Navigate to user edit form
-  }
-
-  const handleDeleteUser = (userId: string) => {
-    console.log('Delete user:', userId)
-    // Show confirmation dialog
-  }
-
-  const handleAssignSpot = (userId: string) => {
-    console.log('Assign spot to user:', userId)
-    // Open spot assignment dialog
+  const handleAssignSpot = (waitingListId: string, spotId: string) => {
+    const spot = unallocatedSpots.find(s => s.id === spotId);
+    if (!spot) return;
+    
+    assignFromWaitingListMutation.mutate({
+      waitingListId,
+      spotId,
+      spotDetails: {
+        spotNumber: spot.spotNumber,
+        location: `Building ${spot.building}`,
+        building: spot.building
+      }
+    });
   }
 
   return (
@@ -131,239 +138,224 @@ export default function Admin() {
             Manage users, parking spots, waiting list, and system settings.
           </p>
         </div>
-        <div className="flex gap-2">
-          <Link href="/admin/users">
-            <Button data-testid="button-manage-users">
-              <Users className="h-4 w-4 mr-2" />
-              Manage Users
-            </Button>
-          </Link>
-          <Link href="/admin/parking-spaces">
-            <Button variant="outline" data-testid="button-manage-spots">
-              <Car className="h-4 w-4 mr-2" />
-              Manage Spots
-            </Button>
-          </Link>
-        </div>
+        <Button data-testid="button-add-user">
+          <Plus className="h-4 w-4 mr-2" />
+          Add User
+        </Button>
       </div>
 
-      {/* Admin Dashboard Stats */}
-      <DashboardStats userRole="admin" />
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card data-testid="card-total-spots">
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold text-blue-600">{unallocatedSpots.length}</div>
+            <div className="text-sm text-muted-foreground">Available Spots</div>
+          </CardContent>
+        </Card>
+        <Card data-testid="card-waiting-users">
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold text-orange-600">{waitingListMetrics.active}</div>
+            <div className="text-sm text-muted-foreground">Users Waiting</div>
+          </CardContent>
+        </Card>
+        <Card data-testid="card-avg-wait">
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold text-purple-600">{waitingListMetrics.averageWaitTime}</div>
+            <div className="text-sm text-muted-foreground">Avg Wait Days</div>
+          </CardContent>
+        </Card>
+        <Card data-testid="card-assignments">
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold text-green-600">{waitingListMetrics.recentAssignments}</div>
+            <div className="text-sm text-muted-foreground">Recent Assignments</div>
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* Waiting List Metrics */}
-      <Card data-testid="card-waiting-list-metrics">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ListOrdered className="h-5 w-5" />
-            Waiting List Overview
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoadingWaitingList || isLoadingActiveWaitingList ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="space-y-2">
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-8 w-16" />
-                  <Skeleton className="h-3 w-24" />
+      {/* Parking Management */}
+      <Tabs defaultValue="waiting-list" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="waiting-list" data-testid="tab-waiting-list">
+            <ListOrdered className="h-4 w-4 mr-2" />
+            Waiting List ({waitingListMetrics.active})
+          </TabsTrigger>
+          <TabsTrigger value="spots" data-testid="tab-spots">
+            <Car className="h-4 w-4 mr-2" />
+            Available Spots ({unallocatedSpots.length})
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="waiting-list" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Waiting List Management</CardTitle>
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <Input
+                    placeholder="Search users..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="max-w-sm"
+                    data-testid="input-search-waiting"
+                  />
                 </div>
-              ))}
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <div className="text-center p-4 border rounded-lg" data-testid="metric-total-waiting">
-                  <div className="text-2xl font-bold text-blue-600">{waitingListMetrics.total}</div>
-                  <div className="text-sm text-muted-foreground">Total Entries</div>
-                </div>
-                <div className="text-center p-4 border rounded-lg" data-testid="metric-active-waiting">
-                  <div className="text-2xl font-bold text-orange-600">{waitingListMetrics.active}</div>
-                  <div className="text-sm text-muted-foreground">Active Waiting</div>
-                </div>
-                <div className="text-center p-4 border rounded-lg" data-testid="metric-average-wait">
-                  <div className="text-2xl font-bold text-purple-600">{waitingListMetrics.averageWaitTime}</div>
-                  <div className="text-sm text-muted-foreground">Avg. Wait Days</div>
-                </div>
-                <div className="text-center p-4 border rounded-lg" data-testid="metric-recent-assignments">
-                  <div className="text-2xl font-bold text-green-600">{waitingListMetrics.recentAssignments}</div>
-                  <div className="text-sm text-muted-foreground">Assignments (30d)</div>
-                </div>
+                <Select value={filterType} onValueChange={setFilterType}>
+                  <SelectTrigger className="w-40" data-testid="select-filter-type">
+                    <SelectValue placeholder="Filter by type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="standard">Standard</SelectItem>
+                    <SelectItem value="electric">Electric</SelectItem>
+                    <SelectItem value="accessible">Accessible</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Priority Breakdown */}
-                <div className="space-y-3">
-                  <h4 className="font-medium flex items-center gap-2">
-                    <Target className="h-4 w-4" />
-                    Priority Breakdown
-                  </h4>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between p-2 bg-red-50 rounded">
-                      <span className="text-sm font-medium">High Priority</span>
-                      <Badge variant="destructive" data-testid="badge-high-priority">{waitingListMetrics.highPriority}</Badge>
-                    </div>
-                    <div className="flex items-center justify-between p-2 bg-yellow-50 rounded">
-                      <span className="text-sm font-medium">Medium Priority</span>
-                      <Badge variant="secondary" data-testid="badge-medium-priority">{waitingListMetrics.mediumPriority}</Badge>
-                    </div>
-                    <div className="flex items-center justify-between p-2 bg-green-50 rounded">
-                      <span className="text-sm font-medium">Low Priority</span>
-                      <Badge variant="outline" data-testid="badge-low-priority">{waitingListMetrics.lowPriority}</Badge>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Quick Actions */}
-                <div className="space-y-3">
-                  <h4 className="font-medium flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4" />
-                    Quick Actions
-                  </h4>
-                  <div className="space-y-2">
-                    <Link href="/admin/parking-spaces">
-                      <Button variant="outline" className="w-full justify-between" data-testid="button-view-waiting-list">
-                        <span>View Waiting List</span>
-                        <ArrowRight className="h-4 w-4" />
-                      </Button>
-                    </Link>
-                    <Button variant="outline" className="w-full justify-between" data-testid="button-process-assignments">
-                      <span>Process Assignments</span>
-                      <UserPlus className="h-4 w-4" />
-                    </Button>
-                    <Link href="/admin/analytics">
-                      <Button variant="outline" className="w-full justify-between" data-testid="button-waiting-analytics">
-                        <span>View Analytics</span>
-                        <TrendingUp className="h-4 w-4" />
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* System Status - Updated with waiting list context */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {waitingListMetrics.highPriority > 0 && (
-          <Card className="border-red-200 bg-red-50 dark:bg-red-900/20" data-testid="alert-high-priority-waiting">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-red-800 dark:text-red-200 flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4" />
-                High Priority Waiting
-              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-900 dark:text-red-100">{waitingListMetrics.highPriority}</div>
-              <p className="text-xs text-red-700 dark:text-red-300">Urgent assignments needed</p>
-              <div className="mt-2">
-                <Badge variant="destructive" className="text-xs">Requires immediate attention</Badge>
+              {isLoadingWaitingList ? (
+                <div className="space-y-3">
+                  {[...Array(3)].map((_, i) => (
+                    <Skeleton key={i} className="h-16 w-full" />
+                  ))}
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>User</TableHead>
+                      <TableHead>Department</TableHead>
+                      <TableHead>Preferred Type</TableHead>
+                      <TableHead>Priority</TableHead>
+                      <TableHead>Wait Time</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredWaitingList.length > 0 ? filteredWaitingList.map((item) => {
+                      const waitDays = Math.floor((Date.now() - new Date(item.enrolledDate).getTime()) / (1000 * 60 * 60 * 24));
+                      return (
+                        <TableRow key={item.id} data-testid={`row-waiting-${item.id}`}>
+                          <TableCell>
+                            <div>
+                              <div className="font-medium">{item.userName}</div>
+                              <div className="text-sm text-muted-foreground">{item.userEmail}</div>
+                            </div>
+                          </TableCell>
+                          <TableCell>{item.userDepartment}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              {item.preferredSpotType === "electric" && <Zap className="h-4 w-4" />}
+                              {item.preferredSpotType === "accessible" && <Accessibility className="h-4 w-4" />}
+                              {item.preferredSpotType === "standard" && <Car className="h-4 w-4" />}
+                              <span className="capitalize">{item.preferredSpotType}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge 
+                              variant={item.priority === "high" ? "destructive" : item.priority === "medium" ? "secondary" : "outline"}
+                              data-testid={`badge-priority-${item.priority}`}
+                            >
+                              {item.priority}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{waitDays} days</TableCell>
+                          <TableCell>
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                setSelectedWaitingListItem(item.id);
+                                setShowAssignDialog(true);
+                              }}
+                              data-testid={`button-assign-${item.id}`}
+                            >
+                              Assign Spot
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    }) : (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                          No users in waiting list
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="spots" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Available Parking Spots</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {unallocatedSpots.map((spot) => (
+                  <Card key={spot.id} className="p-4" data-testid={`card-spot-${spot.id}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="font-semibold">{spot.spotNumber}</div>
+                      <Badge variant="outline">Available</Badge>
+                    </div>
+                    <div className="space-y-1 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Building className="h-3 w-3" />
+                        Building {spot.building}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {spot.type === "electric" && <Zap className="h-3 w-3" />}
+                        {spot.type === "accessible" && <Accessibility className="h-3 w-3" />}
+                        {spot.type === "standard" && <Car className="h-3 w-3" />}
+                        <span className="capitalize">{spot.type}</span>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
               </div>
             </CardContent>
           </Card>
-        )}
+        </TabsContent>
+      </Tabs>
 
-        <Card data-testid="card-system-status">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              Average Wait Time
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{waitingListMetrics.averageWaitTime}</div>
-            <p className="text-xs text-muted-foreground">Days in waiting list</p>
-            <div className="mt-2">
-              <Badge variant={waitingListMetrics.averageWaitTime > 14 ? "destructive" : "default"} className="text-xs">
-                {waitingListMetrics.averageWaitTime > 14 ? "Above target" : "Within target"}
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card data-testid="card-assignment-rate">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4" />
-              Assignment Rate
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{waitingListMetrics.recentAssignments}</div>
-            <p className="text-xs text-muted-foreground">Assignments last 30 days</p>
-            <div className="mt-2">
-              <Badge variant="default" className="text-xs">Processing active</Badge>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Users Management Table */}
-      <AdminUsersTable 
-        users={mockUsers}
-        onEditUser={handleEditUser}
-        onDeleteUser={handleDeleteUser}
-        onAssignSpot={handleAssignSpot}
-      />
-
-      {/* Recent Activity - Updated with waiting list activities */}
-      <Card data-testid="card-recent-activity">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            Recent Activity
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4" data-testid="recent-activity-list">
-            {/* Waiting list activities */}
-            <div className="flex items-center justify-between p-3 bg-muted rounded-lg" data-testid="activity-waiting-enrollment">
-              <div className="flex items-center gap-3">
-                <div className="h-2 w-2 bg-blue-500 rounded-full"></div>
-                <div>
-                  <p className="text-sm font-medium">Waiting list enrollment</p>
-                  <p className="text-xs text-muted-foreground">Maria Santos enrolled for accessible spot</p>
-                </div>
-              </div>
-              <span className="text-xs text-muted-foreground">3 days ago</span>
-            </div>
-            
-            <div className="flex items-center justify-between p-3 bg-muted rounded-lg" data-testid="activity-spot-assignment">
-              <div className="flex items-center gap-3">
-                <div className="h-2 w-2 bg-green-500 rounded-full"></div>
-                <div>
-                  <p className="text-sm font-medium">Spot assignment completed</p>
-                  <p className="text-xs text-muted-foreground">David Park assigned to spot A-15 from waiting list</p>
-                </div>
-              </div>
-              <span className="text-xs text-muted-foreground">5 days ago</span>
-            </div>
-            
-            <div className="flex items-center justify-between p-3 bg-muted rounded-lg" data-testid="activity-priority-update">
-              <div className="flex items-center gap-3">
-                <div className="h-2 w-2 bg-red-500 rounded-full"></div>
-                <div>
-                  <p className="text-sm font-medium">Priority update</p>
-                  <p className="text-xs text-muted-foreground">Jennifer Wilson priority elevated due to pregnancy</p>
-                </div>
-              </div>
-              <span className="text-xs text-muted-foreground">1 week ago</span>
-            </div>
-            
-            <div className="flex items-center justify-between p-3 bg-muted rounded-lg" data-testid="activity-enrollment-review">
-              <div className="flex items-center gap-3">
-                <div className="h-2 w-2 bg-purple-500 rounded-full"></div>
-                <div>
-                  <p className="text-sm font-medium">Admin enrollment</p>
-                  <p className="text-xs text-muted-foreground">Admin enrolled Alex Johnson for client meeting needs</p>
-                </div>
-              </div>
-              <span className="text-xs text-muted-foreground">2 weeks ago</span>
+      {/* Assignment Dialog */}
+      <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Assign Parking Spot</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Select an available parking spot to assign to the selected user.
+            </p>
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {unallocatedSpots.map((spot) => (
+                <Button
+                  key={spot.id}
+                  variant="outline"
+                  className="w-full justify-between"
+                  onClick={() => selectedWaitingListItem && handleAssignSpot(selectedWaitingListItem, spot.id)}
+                  disabled={assignFromWaitingListMutation.isPending}
+                  data-testid={`button-select-spot-${spot.id}`}
+                >
+                  <div className="flex items-center gap-2">
+                    {spot.type === "electric" && <Zap className="h-4 w-4" />}
+                    {spot.type === "accessible" && <Accessibility className="h-4 w-4" />}
+                    {spot.type === "standard" && <Car className="h-4 w-4" />}
+                    <span>{spot.spotNumber}</span>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Building {spot.building}
+                  </div>
+                </Button>
+              ))}
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
