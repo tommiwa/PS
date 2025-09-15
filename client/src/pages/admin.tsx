@@ -70,7 +70,7 @@ export default function Admin() {
   });
 
   // Fetch all users for dropdown selection
-  const { data: allUsers = [] } = useQuery({
+  const { data: allUsers = [], isLoading: isLoadingUsers, error: usersError } = useQuery({
     queryKey: ["/api/admin/users"],
   });
 
@@ -860,14 +860,22 @@ Available for Assignment
                   <SelectValue placeholder="Search and select user..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {allUsers.map((user: any) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      <div className="flex flex-col">
-                        <span className="font-medium">{user.name}</span>
-                        <span className="text-xs text-muted-foreground">{user.email} • {user.department}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
+                  {isLoadingUsers ? (
+                    <SelectItem value="loading" disabled>Loading users...</SelectItem>
+                  ) : usersError ? (
+                    <SelectItem value="error" disabled>Error loading users</SelectItem>
+                  ) : allUsers.length === 0 ? (
+                    <SelectItem value="empty" disabled>No users found</SelectItem>
+                  ) : (
+                    allUsers.map((user: any) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{user.name}</span>
+                          <span className="text-xs text-muted-foreground">{user.email} • {user.department}</span>
+                        </div>
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -934,14 +942,22 @@ Available for Assignment
                     <SelectValue placeholder="Search and select user..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {allUsers.map((user: any) => (
-                      <SelectItem key={user.id} value={user.id}>
-                        <div className="flex flex-col">
-                          <span className="font-medium">{user.name}</span>
-                          <span className="text-xs text-muted-foreground">{user.email} • {user.department}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
+                    {isLoadingUsers ? (
+                      <SelectItem value="loading" disabled>Loading users...</SelectItem>
+                    ) : usersError ? (
+                      <SelectItem value="error" disabled>Error loading users</SelectItem>
+                    ) : allUsers.length === 0 ? (
+                      <SelectItem value="empty" disabled>No users found</SelectItem>
+                    ) : (
+                      allUsers.map((user: any) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{user.name}</span>
+                            <span className="text-xs text-muted-foreground">{user.email} • {user.department}</span>
+                          </div>
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>

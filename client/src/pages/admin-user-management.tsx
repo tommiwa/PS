@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useQuery } from "@tanstack/react-query"
 import { AdminUsersTable } from "@/components/admin-users-table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -32,8 +33,30 @@ export default function AdminUserManagement() {
   const [showAddUser, setShowAddUser] = useState(false)
   const [showBulkActions, setShowBulkActions] = useState(false)
 
-  //todo: remove mock functionality
-  const mockUsers = [
+  // Fetch all users for admin management
+  const { data: allUsers = [], isLoading: isLoadingUsers, error: usersError } = useQuery({
+    queryKey: ["/api/admin/users"],
+  });
+
+  // Convert API user data to match expected format with additional fields for display
+  const mockUsers = allUsers.map((user: any) => ({
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    department: user.department || "Unknown",
+    role: "renter" as const, // Default role, could be enhanced to come from API
+    spotsOwned: 0, // Could be calculated from actual data
+    bookingsCount: 0, // Could be calculated from actual data
+    status: "active" as const, // Default status
+    lastLogin: "2024-01-15", // Placeholder
+    memberSince: "Jan 2023", // Placeholder
+    totalSpent: 0, // Placeholder
+    phoneNumber: "(555) 000-0000", // Placeholder
+    vehicleInfo: "Vehicle info not available" // Placeholder
+  }));
+
+  // Keep the original mock data for reference (commented out)
+  const originalMockUsers = [
     {
       id: "user-001",
       name: "Sarah Chen",
@@ -107,9 +130,9 @@ export default function AdminUserManagement() {
       phoneNumber: "(555) 567-8901",
       vehicleInfo: "BMW X3 (DEF-456)"
     }
-  ]
+  ];
 
-  const filteredUsers = mockUsers.filter(user => {
+  const filteredUsers = (isLoadingUsers ? [] : mockUsers).filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.department.toLowerCase().includes(searchTerm.toLowerCase())
@@ -181,9 +204,9 @@ export default function AdminUserManagement() {
   }
 
   const roleStats = {
-    admin: mockUsers.filter(u => u.role === "admin").length,
-    owner: mockUsers.filter(u => u.role === "owner").length,
-    renter: mockUsers.filter(u => u.role === "renter").length,
+    admin: allUsers.filter((u: any) => u.role === "admin").length || 1, // At least the current admin
+    owner: allUsers.filter((u: any) => u.role === "owner").length,
+    renter: allUsers.filter((u: any) => u.role === "renter").length || allUsers.length, // Default to showing total users
   }
 
   return (
@@ -266,7 +289,9 @@ export default function AdminUserManagement() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Administrators</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{roleStats.admin}</div>
+            <div className="text-2xl font-bold">
+              {isLoadingUsers ? "..." : roleStats.admin}
+            </div>
             <Badge variant="secondary" className="text-xs">System access</Badge>
           </CardContent>
         </Card>
@@ -275,17 +300,21 @@ export default function AdminUserManagement() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Spot Owners</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{roleStats.owner}</div>
+            <div className="text-2xl font-bold">
+              {isLoadingUsers ? "..." : roleStats.owner}
+            </div>
             <Badge variant="default" className="text-xs">Revenue generators</Badge>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Renters</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Users</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{roleStats.renter}</div>
-            <Badge variant="outline" className="text-xs">Active users</Badge>
+            <div className="text-2xl font-bold">
+              {isLoadingUsers ? "..." : allUsers.length}
+            </div>
+            <Badge variant="outline" className="text-xs">System users</Badge>
           </CardContent>
         </Card>
       </div>
