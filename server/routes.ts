@@ -20,6 +20,17 @@ import {
   type SpotType
 } from "@shared/schema";
 
+// Zod schemas for admin endpoints
+const toggleBookabilitySchema = z.object({
+  spotId: z.string().min(1, "spotId is required"),
+  isBookable: z.boolean()
+});
+
+const bulkToggleBookabilitySchema = z.object({
+  spotIds: z.array(z.string().min(1, "spotId is required")).min(1, "At least one spotId is required"),
+  isBookable: z.boolean()
+});
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication middleware
   await setupAuth(app);
@@ -484,6 +495,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting parking spot:", error);
       res.status(500).json({ error: "Failed to delete parking spot" });
+    }
+  });
+
+  // Toggle spot bookability (Admin only)
+  app.post("/api/admin/spots/toggle-bookability", requireAdmin, async (req, res) => {
+    try {
+      // Validate request body with Zod
+      const validatedData = toggleBookabilitySchema.parse(req.body);
+      const { spotId, isBookable } = validatedData;
+      
+      const updatedSpot = await storage.toggleSpotBookability(spotId, isBookable);
+      if (!updatedSpot) {
+        return res.status(404).json({ error: "Parking spot not found" });
+      }
+      
+      res.json({ 
+        success: true, 
+        spot: updatedSpot,
+        message: `Spot ${updatedSpot.spotNumber} bookability ${isBookable ? 'enabled' : 'disabled'}` 
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input data", details: error.errors });
+      }
+      console.error("Error toggling spot bookability:", error);
+      res.status(500).json({ error: "Failed to toggle spot bookability" });
+    }
+  });
+
+  // Bulk toggle spot bookability (Admin only)
+  app.post("/api/admin/spots/bulk-toggle-bookability", requireAdmin, async (req, res) => {
+    try {
+      // Validate request body with Zod
+      const validatedData = bulkToggleBookabilitySchema.parse(req.body);
+      const { spotIds, isBookable } = validatedData;
+      
+      const updatedSpots = await storage.bulkToggleSpotBookability(spotIds, isBookable);
+      
+      res.json({ 
+        success: true, 
+        updatedSpots,
+        count: updatedSpots.length,
+        message: `${updatedSpots.length} spots bookability ${isBookable ? 'enabled' : 'disabled'}` 
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input data", details: error.errors });
+      }
+      console.error("Error bulk toggling spot bookability:", error);
+      res.status(500).json({ error: "Failed to bulk toggle spot bookability" });
+    }
+  });
+
+  // Get recent assignments (Admin only)
+  app.get("/api/admin/recent-assignments", requireAdmin, async (req, res) => {
+    try {
+      const { days } = req.query;
+      const daysBack = days ? parseInt(days as string) : 7;
+      
+      if (isNaN(daysBack) || daysBack <= 0) {
+        return res.status(400).json({ error: "Invalid days parameter" });
+      }
+      
+      const recentAssignments = await storage.getRecentAssignments(daysBack);
+      
+      // Enrich with spot details
+      const enrichedAssignments = await Promise.all(
+        recentAssignments.map(async (assignment) => {
+          const spot = assignment.assignedSpotId 
+            ? await storage.getParkingSpot(assignment.assignedSpotId)
+            : null;
+          
+          return {
+            ...assignment,
+            spotDetails: spot ? {
+              spotNumber: spot.spotNumber,
+              location: spot.location,
+              spotType: spot.spotType,
+              isIndoor: spot.isIndoor
+            } : null
+          };
+        })
+      );
+      
+      res.json(enrichedAssignments);
+    } catch (error) {
+      console.error("Error fetching recent assignments:", error);
+      res.status(500).json({ error: "Failed to fetch recent assignments" });
     }
   });
 

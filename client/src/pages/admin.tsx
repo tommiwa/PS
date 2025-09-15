@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -40,6 +41,10 @@ export default function Admin() {
   const [selectedUserForAssign, setSelectedUserForAssign] = useState("")
   const [activeSpotTab, setActiveSpotTab] = useState("all")
   
+  // Bookability control state
+  const [selectedSpots, setSelectedSpots] = useState<Set<string>>(new Set())
+  const [isSelectAllChecked, setIsSelectAllChecked] = useState(false)
+  
   // Form state for edit dialog
   const [editFormData, setEditFormData] = useState({
     spotNumber: "",
@@ -47,6 +52,7 @@ export default function Admin() {
     spotType: "regular" as SpotType,
     isIndoor: false,
     isActive: true,
+    isBookable: true,
     description: "",
     ownerId: null as string | null
   })
@@ -73,6 +79,11 @@ export default function Admin() {
   // Fetch all users for dropdown selection
   const { data: allUsers = [], isLoading: isLoadingUsers, error: usersError } = useQuery({
     queryKey: ["/api/admin/users"],
+  });
+
+  // Fetch recent assignments for the new tab
+  const { data: recentAssignments = [], isLoading: isLoadingRecentAssignments } = useQuery({
+    queryKey: ["/api/admin/recent-assignments"],
   });
 
   // Remove all mock data - use server data only
@@ -242,6 +253,125 @@ export default function Admin() {
       data: editFormData 
     });
   }
+
+  // Bookability toggle mutations
+  const toggleBookabilityMutation = useMutation({
+    mutationFn: async ({ spotId, isBookable }: { spotId: string; isBookable: boolean }) => {
+      const response = await apiRequest("POST", "/api/admin/spots/toggle-bookability", {
+        spotId,
+        isBookable
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/all-spots"] });
+      
+      toast({
+        title: "Bookability Updated",
+        description: data.message || "Spot bookability has been updated.",
+        variant: "default"
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Update Failed",
+        description: error instanceof Error ? error.message : "Failed to update spot bookability.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const bulkToggleBookabilityMutation = useMutation({
+    mutationFn: async ({ spotIds, isBookable }: { spotIds: string[]; isBookable: boolean }) => {
+      const response = await apiRequest("POST", "/api/admin/spots/bulk-toggle-bookability", {
+        spotIds,
+        isBookable
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/all-spots"] });
+      
+      // Clear selection after successful bulk operation
+      setSelectedSpots(new Set());
+      setIsSelectAllChecked(false);
+      
+      toast({
+        title: "Bulk Update Successful",
+        description: data.message || `Updated ${data.count} spots.`,
+        variant: "default"
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Bulk Update Failed",
+        description: error instanceof Error ? error.message : "Failed to update spot bookability.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Bookability control handlers
+  const handleToggleSpotBookability = async (spotId: string, currentBookable: boolean) => {
+    const spot = unallocatedSpots.find(s => s.id === spotId);
+    const newBookableState = !currentBookable;
+    
+    const confirmed = await confirm({
+      title: `${newBookableState ? 'Enable' : 'Disable'} Bookability`,
+      description: `Are you sure you want to ${newBookableState ? 'enable' : 'disable'} bookability for spot ${spot?.spotNumber}? ${newBookableState ? 'Users will be able to book this spot.' : 'Users will no longer be able to book this spot.'}`,
+      confirmText: newBookableState ? 'Enable' : 'Disable',
+    });
+    
+    if (confirmed) {
+      toggleBookabilityMutation.mutate({ spotId, isBookable: newBookableState });
+    }
+  }
+
+  const handleBulkToggleBookability = async (isBookable: boolean) => {
+    const selectedSpotIds = Array.from(selectedSpots);
+    if (selectedSpotIds.length === 0) {
+      toast({
+        title: "No Spots Selected",
+        description: "Please select spots to update.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const confirmed = await confirm({
+      title: `${isBookable ? 'Enable' : 'Disable'} Bookability for ${selectedSpotIds.length} Spots`,
+      description: `Are you sure you want to ${isBookable ? 'enable' : 'disable'} bookability for ${selectedSpotIds.length} selected spots?`,
+      confirmText: `${isBookable ? 'Enable' : 'Disable'} All`,
+    });
+    
+    if (confirmed) {
+      bulkToggleBookabilityMutation.mutate({ spotIds: selectedSpotIds, isBookable });
+    }
+  }
+
+  const handleSpotSelection = (spotId: string, checked: boolean) => {
+    const newSelectedSpots = new Set(selectedSpots);
+    if (checked) {
+      newSelectedSpots.add(spotId);
+    } else {
+      newSelectedSpots.delete(spotId);
+    }
+    setSelectedSpots(newSelectedSpots);
+    
+    // Update select all checkbox state
+    setIsSelectAllChecked(newSelectedSpots.size === unallocatedSpots.length);
+  }
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedSpots(new Set(unallocatedSpots.map(spot => spot.id)));
+    } else {
+      setSelectedSpots(new Set());
+    }
+    setIsSelectAllChecked(checked);
+  }
   
   // Initialize form data when spot is selected for editing
   const handleOpenEditDialog = (spot: ParkingSpot) => {
@@ -356,6 +486,10 @@ export default function Admin() {
           <TabsTrigger value="spots" data-testid="tab-spots">
             <Car className="h-4 w-4 mr-2" />
             Available Spots ({unallocatedSpots.length})
+          </TabsTrigger>
+          <TabsTrigger value="recent-assignments" data-testid="tab-recent-assignments">
+            <CalendarDays className="h-4 w-4 mr-2" />
+            Recent Assignments ({recentAssignments.length})
           </TabsTrigger>
         </TabsList>
 
@@ -480,7 +614,53 @@ export default function Admin() {
         <TabsContent value="spots" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Available Parking Spots</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>Available Parking Spots</CardTitle>
+                <div className="flex items-center gap-2">
+                  {selectedSpots.size > 0 && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleBulkToggleBookability(true)}
+                        disabled={bulkToggleBookabilityMutation.isPending}
+                        data-testid="button-bulk-enable-bookability"
+                      >
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                        Enable Booking ({selectedSpots.size})
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleBulkToggleBookability(false)}
+                        disabled={bulkToggleBookabilityMutation.isPending}
+                        data-testid="button-bulk-disable-bookability"
+                      >
+                        <AlertTriangle className="h-4 w-4 mr-2" />
+                        Disable Booking ({selectedSpots.size})
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+              {unallocatedSpots.length > 0 && (
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="select-all-spots"
+                      checked={isSelectAllChecked}
+                      onCheckedChange={handleSelectAll}
+                      data-testid="checkbox-select-all-spots"
+                    />
+                    <label htmlFor="select-all-spots" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                      Select All ({unallocatedSpots.length} spots)
+                    </label>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {selectedSpots.size} of {unallocatedSpots.length} selected
+                  </div>
+                </div>
+              )}
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -488,8 +668,20 @@ export default function Admin() {
                   .map((spot) => (
                   <Card key={spot.id} className="p-4" data-testid={`card-spot-${spot.id}`}>
                     <div className="flex items-center justify-between mb-2">
-                      <div className="font-semibold">{spot.spotNumber}</div>
-                      <Badge variant="outline">Available</Badge>
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          checked={selectedSpots.has(spot.id)}
+                          onCheckedChange={(checked) => handleSpotSelection(spot.id, checked as boolean)}
+                          data-testid={`checkbox-spot-${spot.id}`}
+                        />
+                        <div className="font-semibold">{spot.spotNumber}</div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Badge variant="outline">Available</Badge>
+                        <Badge variant={spot.isBookable ? "default" : "secondary"} className="text-xs">
+                          {spot.isBookable ? "Bookable" : "Not Bookable"}
+                        </Badge>
+                      </div>
                     </div>
                     <div className="space-y-1 text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">
@@ -506,10 +698,22 @@ export default function Admin() {
                         {spot.ownerId ? `Assigned` : "Unallocated"}
                       </div>
                       <div className="text-xs font-medium">
-Available for Assignment
+                        Available for Assignment
                       </div>
                     </div>
-                    <div className="mt-3 pt-3 border-t">
+                    <div className="mt-3 pt-3 border-t space-y-2">
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => handleToggleSpotBookability(spot.id, spot.isBookable)}
+                          disabled={toggleBookabilityMutation.isPending}
+                          data-testid={`button-toggle-bookability-${spot.id}`}
+                        >
+                          {spot.isBookable ? "Disable Booking" : "Enable Booking"}
+                        </Button>
+                      </div>
                       <Button
                         size="sm"
                         className="w-full"
@@ -640,6 +844,88 @@ Available for Assignment
                   }
                 </TableBody>
               </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="recent-assignments" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Assignments (Last 7 Days)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoadingRecentAssignments ? (
+                <div className="space-y-3">
+                  {[...Array(3)].map((_, i) => (
+                    <Skeleton key={i} className="h-16 w-full" />
+                  ))}
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Assignment Date</TableHead>
+                      <TableHead>User</TableHead>
+                      <TableHead>Department</TableHead>
+                      <TableHead>Spot</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Spot Type</TableHead>
+                      <TableHead>Assignment Method</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {recentAssignments && recentAssignments.length > 0 ? recentAssignments.map((assignment: any) => (
+                      <TableRow key={assignment.id} data-testid={`row-assignment-${assignment.id}`}>
+                        <TableCell className="font-medium">
+                          <div className="flex flex-col">
+                            <div>{assignment.assignedDate ? new Date(assignment.assignedDate).toLocaleDateString() : 'N/A'}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {assignment.assignedDate ? new Date(assignment.assignedDate).toLocaleTimeString() : ''}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <div className="font-medium">{assignment.userName}</div>
+                            <div className="text-xs text-muted-foreground">{assignment.userEmail}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{assignment.userDepartment}</TableCell>
+                        <TableCell>
+                          <div className="font-medium">
+                            {assignment.spotDetails?.spotNumber || 'N/A'}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Building className="h-3 w-3" />
+                            {assignment.spotDetails?.location || 'N/A'}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            {assignment.spotDetails?.spotType === "electric" && <Zap className="h-3 w-3 text-yellow-500" />}
+                            {assignment.spotDetails?.spotType === "accessible" && <Accessibility className="h-3 w-3 text-blue-500" />}
+                            {assignment.spotDetails?.spotType === "regular" && <Car className="h-3 w-3 text-gray-500" />}
+                            <span className="capitalize">{assignment.spotDetails?.spotType || 'N/A'}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={assignment.enrolledBy === 'admin' ? 'default' : 'secondary'}>
+                            {assignment.enrolledBy === 'admin' ? 'Admin Assignment' : 'Waiting List'}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    )) : (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                          No recent assignments in the last 7 days
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

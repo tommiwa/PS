@@ -72,6 +72,7 @@ export const parkingSpots = pgTable("parking_spots", {
   ownerId: varchar("owner_id"), // References users.id - nullable for unallocated spots
   description: text("description"),
   isActive: boolean("is_active").notNull().default(true),
+  isBookable: boolean("is_bookable").notNull().default(true), // Whether spot can be booked by renters
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

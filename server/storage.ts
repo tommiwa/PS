@@ -75,6 +75,13 @@ export interface IStorage {
   updateWaitingListEntry(id: string, updates: Partial<InsertWaitingList>): Promise<WaitingList | undefined>;
   deleteWaitingListEntry(id: string): Promise<boolean>;
   assignWaitingListUser(waitingListId: string, spotId: string): Promise<WaitingList | undefined>;
+
+  // Bookability control operations
+  toggleSpotBookability(spotId: string, isBookable: boolean): Promise<ParkingSpot | undefined>;
+  bulkToggleSpotBookability(spotIds: string[], isBookable: boolean): Promise<ParkingSpot[]>;
+  
+  // Recent assignments tracking
+  getRecentAssignments(daysBack?: number): Promise<WaitingList[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -157,6 +164,7 @@ export class MemStorage implements IStorage {
       description: "Electric charging spot",
       isIndoor: true,
       isActive: true,
+      isBookable: true,
       ownerId: defaultUserId,
       createdAt: new Date()
     };
@@ -169,6 +177,7 @@ export class MemStorage implements IStorage {
       description: "Regular outdoor spot",
       isIndoor: false,
       isActive: true,
+      isBookable: true,
       ownerId: defaultUserId,
       createdAt: new Date()
     };
@@ -185,6 +194,7 @@ export class MemStorage implements IStorage {
       description: "Standard parking spot",
       isIndoor: true,
       isActive: true,
+      isBookable: true,
       ownerId: null, // Unallocated
       createdAt: new Date()
     };
@@ -197,6 +207,7 @@ export class MemStorage implements IStorage {
       description: "Electric vehicle charging station",
       isIndoor: false,
       isActive: true,
+      isBookable: false, // Set one as not bookable for testing
       ownerId: null, // Unallocated
       createdAt: new Date()
     };
@@ -209,6 +220,7 @@ export class MemStorage implements IStorage {
       description: "Accessible parking with ramp access",
       isIndoor: true,
       isActive: true,
+      isBookable: true,
       ownerId: null, // Unallocated
       createdAt: new Date()
     };
@@ -860,6 +872,50 @@ export class MemStorage implements IStorage {
     };
     this.waitingList.set(waitingListId, updatedEntry);
     return updatedEntry;
+  }
+
+  // Bookability control operations
+  async toggleSpotBookability(spotId: string, isBookable: boolean): Promise<ParkingSpot | undefined> {
+    const spot = this.parkingSpots.get(spotId);
+    if (!spot) return undefined;
+
+    const updatedSpot: ParkingSpot = {
+      ...spot,
+      isBookable
+    };
+    this.parkingSpots.set(spotId, updatedSpot);
+    return updatedSpot;
+  }
+
+  async bulkToggleSpotBookability(spotIds: string[], isBookable: boolean): Promise<ParkingSpot[]> {
+    const updatedSpots: ParkingSpot[] = [];
+    
+    for (const spotId of spotIds) {
+      const spot = this.parkingSpots.get(spotId);
+      if (spot) {
+        const updatedSpot: ParkingSpot = {
+          ...spot,
+          isBookable
+        };
+        this.parkingSpots.set(spotId, updatedSpot);
+        updatedSpots.push(updatedSpot);
+      }
+    }
+    
+    return updatedSpots;
+  }
+
+  // Recent assignments tracking
+  async getRecentAssignments(daysBack: number = 7): Promise<WaitingList[]> {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysBack);
+    
+    return Array.from(this.waitingList.values())
+      .filter(entry => entry.status === 'assigned' && entry.assignedDate && new Date(entry.assignedDate) >= cutoffDate)
+      .sort((a, b) => {
+        if (!a.assignedDate || !b.assignedDate) return 0;
+        return new Date(b.assignedDate).getTime() - new Date(a.assignedDate).getTime();
+      });
   }
 }
 
