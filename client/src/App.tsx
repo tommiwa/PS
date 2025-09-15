@@ -26,6 +26,7 @@ import MyBookings from "@/pages/my-bookings";
 import MySpots from "@/pages/my-spots";
 import AdminUserManagement from "@/pages/admin-user-management";
 import AdminAnalytics from "@/pages/admin-analytics";
+import AdminSpotBookingManagement from "@/pages/admin-spot-booking-management";
 import Login from "@/pages/login";
 import NotFound from "@/pages/not-found";
 
@@ -199,6 +200,7 @@ function AuthenticatedApp() {
               {/* Admin-only pages */}
               <Route path="/admin" component={Admin} />
               <Route path="/admin/users" component={AdminUserManagement} />
+              <Route path="/admin/bookings" component={AdminSpotBookingManagement} />
               <Route path="/admin/analytics" component={AdminAnalytics} />
               
               {/* Fallback to 404 */}

@@ -10,7 +10,8 @@ import {
   Shield,
   Search,
   ParkingCircle,
-  Bell
+  Bell,
+  CalendarCheck
 } from "lucide-react"
 import { Link, useLocation } from "wouter"
 import {
@@ -67,6 +68,12 @@ const adminMenuItems = [
     title: "Parking Management",
     url: "/admin",
     icon: Shield,
+    roles: ["admin"]
+  },
+  {
+    title: "Spot Booking Management",
+    url: "/admin/bookings",
+    icon: CalendarCheck,
     roles: ["admin"]
   },
   {
