@@ -290,8 +290,12 @@ export default function Admin() {
       </div>
 
       {/* Parking Management */}
-      <Tabs defaultValue="waiting-list" className="space-y-4">
+      <Tabs defaultValue="all-spots" className="space-y-4">
         <TabsList>
+          <TabsTrigger value="all-spots" data-testid="tab-all-spots">
+            <Building className="h-4 w-4 mr-2" />
+            All Spots ({allSpots.length})
+          </TabsTrigger>
           <TabsTrigger value="waiting-list" data-testid="tab-waiting-list">
             <ListOrdered className="h-4 w-4 mr-2" />
             Waiting List ({waitingListMetrics.active})
@@ -299,10 +303,6 @@ export default function Admin() {
           <TabsTrigger value="spots" data-testid="tab-spots">
             <Car className="h-4 w-4 mr-2" />
             Available Spots ({allSpots.filter(spot => spot.status === "available").length})
-          </TabsTrigger>
-          <TabsTrigger value="all-spots" data-testid="tab-all-spots">
-            <Building className="h-4 w-4 mr-2" />
-            All Spots ({allSpots.length})
           </TabsTrigger>
         </TabsList>
 
