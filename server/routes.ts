@@ -15,7 +15,9 @@ import {
   insertParkingSpotSchema,
   insertSpotListingSchema,
   insertBookingSchema,
-  insertWaitingListSchema
+  insertWaitingListSchema,
+  type WaitingList,
+  type SpotType
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -322,6 +324,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all parking spots (allocated + unallocated) for admin overview (Admin only)
+  app.get("/api/admin/all-spots", requireAdmin, async (req, res) => {
+    try {
+      const allSpots = await storage.getAllParkingSpots();
+      res.json(allSpots);
+    } catch (error) {
+      console.error("Error fetching all spots:", error);
+      res.status(500).json({ error: "Failed to fetch all spots" });
+    }
+  });
+
   // Assign a parking spot to a user (Admin only)
   app.post("/api/admin/assign-spot", requireAdmin, async (req, res) => {
     try {
@@ -380,6 +393,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create parking spot (Admin only) - allows null ownerId for unallocated spots
+  app.post("/api/admin/spots", requireAdmin, async (req, res) => {
+    try {
+      // Validate request body - allow null ownerId for unallocated spots
+      const adminSpotSchema = insertParkingSpotSchema.extend({
+        ownerId: insertParkingSpotSchema.shape.ownerId.nullable()
+      });
+      
+      const validatedData = adminSpotSchema.parse(req.body);
+      
+      const newSpot = await storage.createParkingSpot(validatedData);
+      res.json(newSpot);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input data", details: error.errors });
+      }
+      console.error("Error creating admin parking spot:", error);
+      res.status(500).json({ error: "Failed to create parking spot" });
+    }
+  });
+
   // Get all users for assignment dropdown (Admin only)
   app.get("/api/admin/users", requireAdmin, async (req, res) => {
     try {
@@ -398,6 +432,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching users:", error);
       res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
+  // Update any parking spot (Admin only)
+  app.put("/api/admin/spots/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Check if spot exists
+      const existingSpot = await storage.getParkingSpot(id);
+      if (!existingSpot) {
+        return res.status(404).json({ error: "Parking spot not found" });
+      }
+      
+      // Validate request body
+      const validatedData = insertParkingSpotSchema.partial().parse(req.body);
+      
+      const updatedSpot = await storage.updateParkingSpot(id, validatedData);
+      if (!updatedSpot) {
+        return res.status(404).json({ error: "Parking spot not found" });
+      }
+      
+      res.json(updatedSpot);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input data", details: error.errors });
+      }
+      console.error("Error updating parking spot:", error);
+      res.status(500).json({ error: "Failed to update parking spot" });
+    }
+  });
+
+  // Delete any parking spot (Admin only)
+  app.delete("/api/admin/spots/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Check if spot exists
+      const existingSpot = await storage.getParkingSpot(id);
+      if (!existingSpot) {
+        return res.status(404).json({ error: "Parking spot not found" });
+      }
+      
+      const deleted = await storage.deleteParkingSpot(id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Parking spot not found" });
+      }
+      
+      res.json({ success: true, message: "Parking spot deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting parking spot:", error);
+      res.status(500).json({ error: "Failed to delete parking spot" });
     }
   });
 
@@ -732,7 +818,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = { id: userId, name: userName, email: userEmail };
       const userPreferences = preferences || { emailNotifications: true, pushNotifications: true };
       
-      const result = await sendWelcomeNotification(user, waitingListEntry, userPreferences);
+      // Create a mock WaitingList entry for the notification
+      const mockWaitingListEntry: WaitingList = {
+        id: `temp-${Date.now()}`,
+        userId,
+        userName,
+        userEmail,
+        userDepartment: "Unknown",
+        preferredSpotType: (waitingListEntry.spotPreferences?.spotType as SpotType) || null,
+        preferredBuilding: waitingListEntry.spotPreferences?.building || null,
+        priority: waitingListEntry.position,
+        status: "active",
+        reason: `Position ${waitingListEntry.position} on waiting list`,
+        enrolledDate: new Date(),
+        assignedDate: null,
+        assignedSpotId: null,
+        enrolledBy: "admin",
+        adminNotes: null,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      const result = await sendWelcomeNotification(user, mockWaitingListEntry, userPreferences);
       
       res.json({ 
         success: true, 

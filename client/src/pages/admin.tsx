@@ -18,24 +18,9 @@ import {
   Timer, Target, CheckCircle2, Search, Filter,
   Zap, Accessibility, Building, MoreHorizontal
 } from "lucide-react"
-import type { WaitingList } from "@shared/schema"
+import type { WaitingList, ParkingSpot, SpotType } from "@shared/schema"
 
-type ParkingSpace = {
-  id: string
-  spotNumber: string
-  building: string
-  type: "standard" | "electric" | "accessible"
-  status: "available" | "occupied" | "maintenance"
-  owner?: { name: string; email: string; department: string }
-  floor?: number
-  zone?: string
-  isIndoor?: boolean
-  currentRate?: number
-  features?: string[]
-  notes?: string
-  dateAdded?: string
-  isActive?: boolean
-}
+// Use ParkingSpot from schema directly
 
 export default function Admin() {
   const { toast } = useToast()
@@ -48,11 +33,22 @@ export default function Admin() {
   const [showEditSpotDialog, setShowEditSpotDialog] = useState(false)
   const [showAddToWaitingDialog, setShowAddToWaitingDialog] = useState(false)
   const [showDirectAssignDialog, setShowDirectAssignDialog] = useState(false)
-  const [selectedSpot, setSelectedSpot] = useState<ParkingSpace | null>(null)
-  const [selectedSpotForAssign, setSelectedSpotForAssign] = useState<ParkingSpace | null>(null)
+  const [selectedSpot, setSelectedSpot] = useState<ParkingSpot | null>(null)
+  const [selectedSpotForAssign, setSelectedSpotForAssign] = useState<ParkingSpot | null>(null)
   const [selectedUserForWaiting, setSelectedUserForWaiting] = useState("")
   const [selectedUserForAssign, setSelectedUserForAssign] = useState("")
   const [activeSpotTab, setActiveSpotTab] = useState("all")
+  
+  // Form state for edit dialog
+  const [editFormData, setEditFormData] = useState({
+    spotNumber: "",
+    location: "",
+    spotType: "regular" as SpotType,
+    isIndoor: false,
+    isActive: true,
+    description: "",
+    ownerId: null as string | null
+  })
   
   // Fetch waiting list data for metrics
   const { data: allWaitingList, isLoading: isLoadingWaitingList } = useQuery<WaitingList[]>({
@@ -64,8 +60,13 @@ export default function Admin() {
   });
 
   // Fetch unallocated spots
-  const { data: unallocatedSpots = [] } = useQuery<ParkingSpace[]>({
+  const { data: unallocatedSpots = [] } = useQuery<ParkingSpot[]>({
     queryKey: ["/api/admin/unallocated-spots"],
+  });
+
+  // Fetch all spots (allocated + unallocated) for comprehensive admin view
+  const { data: allSpots = [] } = useQuery<ParkingSpot[]>({
+    queryKey: ["/api/admin/all-spots"],
   });
 
   // Fetch all users for dropdown selection
@@ -73,56 +74,7 @@ export default function Admin() {
     queryKey: ["/api/admin/users"],
   });
 
-  // Mock all spots data for demonstration
-  const allSpots: ParkingSpace[] = [
-    ...unallocatedSpots,
-    {
-      id: "spot-1",
-      spotNumber: "A-101",
-      building: "A",
-      type: "electric",
-      status: "occupied",
-      owner: { name: "Sarah Chen", email: "sarah.chen@bci.ca", department: "Engineering" },
-      floor: 1,
-      zone: "North",
-      isIndoor: true,
-      currentRate: 25,
-      features: ["EV Charging", "Covered"],
-      notes: "Level 2 charger",
-      dateAdded: "2023-01-15",
-      isActive: true
-    },
-    {
-      id: "spot-2",
-      spotNumber: "A-102",
-      building: "A",
-      type: "standard",
-      status: "available",
-      floor: 1,
-      zone: "North",
-      isIndoor: true,
-      currentRate: 15,
-      features: ["Covered"],
-      notes: "",
-      dateAdded: "2023-01-15",
-      isActive: true
-    },
-    {
-      id: "spot-3",
-      spotNumber: "B-201",
-      building: "B",
-      type: "accessible",
-      status: "maintenance",
-      floor: 2,
-      zone: "South",
-      isIndoor: true,
-      currentRate: 20,
-      features: ["Accessible", "Near Elevator"],
-      notes: "Under maintenance",
-      dateAdded: "2023-02-01",
-      isActive: true
-    }
-  ];
+  // Remove all mock data - use server data only
 
   // Calculate waiting list metrics
   const waitingListMetrics = {
@@ -198,22 +150,44 @@ export default function Admin() {
       spotId,
       spotDetails: {
         spotNumber: spot.spotNumber,
-        location: `Building ${spot.building}`,
-        building: spot.building
+        location: spot.location,
+        building: spot.location
       }
     });
   }
 
-  const handleDeleteSpot = async (spotId: string) => {
-    const spot = allSpots.find(s => s.id === spotId);
-    const confirmed = await confirm(confirmations.deleteSpot(spot?.spotNumber || 'Unknown'));
-    if (confirmed) {
-      console.log('Delete spot:', spotId);
+  // Admin spot deletion mutation
+  const deleteSpotMutation = useMutation({
+    mutationFn: async (spotId: string) => {
+      const response = await apiRequest("DELETE", `/api/admin/spots/${spotId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      // Invalidate all relevant queries for real-time updates
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/active"] });
+      
       toast({
         title: "Spot Deleted",
         description: "Parking spot has been removed from the system.",
         variant: "default"
       });
+    },
+    onError: (error) => {
+      toast({
+        title: "Deletion Failed",
+        description: error instanceof Error ? error.message : "Failed to delete parking spot. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleDeleteSpot = async (spotId: string) => {
+    const spot = allSpots.find(s => s.id === spotId);
+    const confirmed = await confirm(confirmations.deleteSpot(spot?.spotNumber || 'Unknown'));
+    if (confirmed) {
+      deleteSpotMutation.mutate(spotId);
     }
   }
 
@@ -227,15 +201,59 @@ export default function Admin() {
     });
   }
 
+  // Admin spot edit mutation
+  const editSpotMutation = useMutation({
+    mutationFn: async ({ spotId, data }: { spotId: string; data: any }) => {
+      const response = await apiRequest("PUT", `/api/admin/spots/${spotId}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      // Invalidate all relevant queries for real-time updates
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/all-spots"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/active"] });
+      
+      setShowEditSpotDialog(false);
+      setSelectedSpot(null);
+      toast({
+        title: "Spot Updated",
+        description: "Parking spot details have been updated.",
+        variant: "default"
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Update Failed",
+        description: error instanceof Error ? error.message : "Failed to update parking spot. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
   const handleEditSpot = () => {
-    console.log('Edit spot:', selectedSpot);
-    setShowEditSpotDialog(false);
-    setSelectedSpot(null);
-    toast({
-      title: "Spot Updated",
-      description: "Parking spot details have been updated.",
-      variant: "default"
+    if (!selectedSpot) return;
+    
+    // Use the actual form data from the edit dialog
+    editSpotMutation.mutate({ 
+      spotId: selectedSpot.id, 
+      data: editFormData 
     });
+  }
+  
+  // Initialize form data when spot is selected for editing
+  const handleOpenEditDialog = (spot: ParkingSpot) => {
+    setSelectedSpot(spot);
+    setEditFormData({
+      spotNumber: spot.spotNumber,
+      location: spot.location,
+      spotType: spot.spotType,
+      isIndoor: spot.isIndoor,
+      isActive: spot.isActive,
+      description: spot.description || "",
+      ownerId: spot.ownerId
+    });
+    setShowEditSpotDialog(true);
   }
 
   const handleAddToWaitingList = () => {
@@ -298,7 +316,7 @@ export default function Admin() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card data-testid="card-total-spots">
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-blue-600">{allSpots.filter(spot => spot.status === "available").length}</div>
+            <div className="text-2xl font-bold text-blue-600">{unallocatedSpots.length}</div>
             <div className="text-sm text-muted-foreground">Available Spots</div>
           </CardContent>
         </Card>
@@ -335,7 +353,7 @@ export default function Admin() {
           </TabsTrigger>
           <TabsTrigger value="spots" data-testid="tab-spots">
             <Car className="h-4 w-4 mr-2" />
-            Available Spots ({allSpots.filter(spot => spot.status === "available").length})
+            Available Spots ({unallocatedSpots.length})
           </TabsTrigger>
         </TabsList>
 
@@ -464,8 +482,7 @@ export default function Admin() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {allSpots
-                  .filter(spot => spot.status === "available")
+                {unallocatedSpots
                   .map((spot) => (
                   <Card key={spot.id} className="p-4" data-testid={`card-spot-${spot.id}`}>
                     <div className="flex items-center justify-between mb-2">
@@ -475,19 +492,19 @@ export default function Admin() {
                     <div className="space-y-1 text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">
                         <Building className="h-3 w-3" />
-                        Building {spot.building}
+                        {spot.location}
                       </div>
                       <div className="flex items-center gap-1">
-                        {spot.type === "electric" && <Zap className="h-3 w-3" />}
-                        {spot.type === "accessible" && <Accessibility className="h-3 w-3" />}
-                        {spot.type === "standard" && <Car className="h-3 w-3" />}
-                        <span className="capitalize">{spot.type}</span>
+                        {spot.spotType === "electric" && <Zap className="h-3 w-3" />}
+                        {spot.spotType === "accessible" && <Accessibility className="h-3 w-3" />}
+                        {spot.spotType === "regular" && <Car className="h-3 w-3" />}
+                        <span className="capitalize">{spot.spotType}</span>
                       </div>
                       <div className="text-xs">
-                        {spot.owner ? `Owner: ${spot.owner.name}` : "Unallocated"}
+                        {spot.ownerId ? `Assigned` : "Unallocated"}
                       </div>
                       <div className="text-xs font-medium">
-                        ${spot.currentRate || 0}/day
+Available for Assignment
                       </div>
                     </div>
                     <div className="mt-3 pt-3 border-t">
@@ -505,7 +522,7 @@ export default function Admin() {
                     </div>
                   </Card>
                 ))}
-                {allSpots.filter(spot => spot.status === "available").length === 0 && (
+                {unallocatedSpots.length === 0 && (
                   <div className="col-span-full text-center text-muted-foreground py-8">
                     No available parking spots at the moment
                   </div>
@@ -551,56 +568,57 @@ export default function Admin() {
                     <TableHead>Type</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Owner</TableHead>
-                    <TableHead>Rate</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {allSpots
-                    .filter(spot => activeSpotTab === "all" || spot.status === activeSpotTab)
+                    .filter(spot => {
+                      if (activeSpotTab === "all") return true;
+                      if (activeSpotTab === "available") return !spot.ownerId;
+                      if (activeSpotTab === "occupied") return !!spot.ownerId;
+                      return spot.isActive; // for maintenance, show active spots
+                    })
                     .map((spot) => (
                       <TableRow key={spot.id} data-testid={`row-spot-${spot.id}`}>
                         <TableCell className="font-medium">{spot.spotNumber}</TableCell>
-                        <TableCell>Building {spot.building}</TableCell>
+                        <TableCell>{spot.location}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
-                            {spot.type === "electric" && <Zap className="h-4 w-4 text-yellow-500" />}
-                            {spot.type === "accessible" && <Accessibility className="h-4 w-4 text-blue-500" />}
-                            {spot.type === "standard" && <Car className="h-4 w-4 text-gray-500" />}
-                            <span className="capitalize">{spot.type}</span>
+                            {spot.spotType === "electric" && <Zap className="h-4 w-4 text-yellow-500" />}
+                            {spot.spotType === "accessible" && <Accessibility className="h-4 w-4 text-blue-500" />}
+                            {spot.spotType === "regular" && <Car className="h-4 w-4 text-gray-500" />}
+                            <span className="capitalize">{spot.spotType}</span>
                           </div>
                         </TableCell>
                         <TableCell>
                           <Badge 
                             variant={
-                              spot.status === "available" ? "default" : 
-                              spot.status === "occupied" ? "secondary" : "destructive"
+                              !spot.ownerId ? "default" : 
+                              spot.ownerId ? "secondary" : "destructive"
                             }
-                            data-testid={`badge-status-${spot.status}`}
+                            data-testid={`badge-status-${spot.ownerId ? 'occupied' : 'available'}`}
                           >
-                            {spot.status}
+                            {!spot.ownerId ? "Available" : "Occupied"}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {spot.owner ? (
+                          {spot.ownerId ? (
                             <div>
-                              <div className="font-medium">{spot.owner.name}</div>
-                              <div className="text-xs text-muted-foreground">{spot.owner.department}</div>
+                              <div className="font-medium">Assigned</div>
+                              <div className="text-xs text-muted-foreground">ID: {spot.ownerId.substring(0, 8)}...</div>
                             </div>
                           ) : (
                             <span className="text-muted-foreground">Unallocated</span>
                           )}
                         </TableCell>
-                        <TableCell>${spot.currentRate || 0}</TableCell>
+                        <TableCell>{spot.isActive ? "Active" : "Inactive"}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => {
-                                setSelectedSpot(spot);
-                                setShowEditSpotDialog(true);
-                              }}
+                              onClick={() => handleOpenEditDialog(spot)}
                               data-testid={`button-edit-${spot.id}`}
                             >
                               Edit
@@ -652,7 +670,7 @@ export default function Admin() {
                     <span>{spot.spotNumber}</span>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    Building {spot.building}
+                    {spot.location}
                   </div>
                 </Button>
               ))}
@@ -725,51 +743,94 @@ export default function Admin() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Spot Number</label>
-                <Input defaultValue={selectedSpot.spotNumber} data-testid="input-edit-spot-number" />
+                <Input 
+                  value={editFormData.spotNumber} 
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, spotNumber: e.target.value }))} 
+                  data-testid="input-edit-spot-number" 
+                />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Building</label>
-                <Select defaultValue={selectedSpot.building}>
-                  <SelectTrigger data-testid="select-edit-building">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="A">Building A</SelectItem>
-                    <SelectItem value="B">Building B</SelectItem>
-                    <SelectItem value="C">Building C</SelectItem>
-                    <SelectItem value="D">Building D</SelectItem>
-                  </SelectContent>
-                </Select>
+                <label className="text-sm font-medium">Location</label>
+                <Input 
+                  value={editFormData.location} 
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, location: e.target.value }))} 
+                  data-testid="input-edit-location" 
+                />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Type</label>
-                <Select defaultValue={selectedSpot.type}>
+                <label className="text-sm font-medium">Spot Type</label>
+                <Select 
+                  value={editFormData.spotType} 
+                  onValueChange={(value) => setEditFormData(prev => ({ ...prev, spotType: value as SpotType }))}
+                >
                   <SelectTrigger data-testid="select-edit-spot-type">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="standard">Standard</SelectItem>
+                    <SelectItem value="regular">Regular</SelectItem>
                     <SelectItem value="electric">Electric</SelectItem>
                     <SelectItem value="accessible">Accessible</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Status</label>
-                <Select defaultValue={selectedSpot.status}>
-                  <SelectTrigger data-testid="select-edit-status">
+                <label className="text-sm font-medium">Indoor Spot</label>
+                <Select 
+                  value={editFormData.isIndoor ? "true" : "false"} 
+                  onValueChange={(value) => setEditFormData(prev => ({ ...prev, isIndoor: value === "true" }))}
+                >
+                  <SelectTrigger data-testid="select-edit-indoor">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="available">Available</SelectItem>
-                    <SelectItem value="occupied">Occupied</SelectItem>
-                    <SelectItem value="maintenance">Maintenance</SelectItem>
+                    <SelectItem value="true">Indoor</SelectItem>
+                    <SelectItem value="false">Outdoor</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Rate ($)</label>
-                <Input type="number" defaultValue={selectedSpot.currentRate} data-testid="input-edit-rate" />
+                <label className="text-sm font-medium">Active Status</label>
+                <Select 
+                  value={editFormData.isActive ? "true" : "false"} 
+                  onValueChange={(value) => setEditFormData(prev => ({ ...prev, isActive: value === "true" }))}
+                >
+                  <SelectTrigger data-testid="select-edit-active">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="true">Active</SelectItem>
+                    <SelectItem value="false">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Description</label>
+                <Input 
+                  value={editFormData.description} 
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, description: e.target.value }))} 
+                  data-testid="input-edit-description" 
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Owner Assignment</label>
+                <div className="flex items-center gap-2">
+                  <Badge variant={editFormData.ownerId ? "secondary" : "default"}>
+                    {editFormData.ownerId ? "Assigned" : "Unallocated"}
+                  </Badge>
+                  {editFormData.ownerId && (
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => setEditFormData(prev => ({ ...prev, ownerId: null }))}
+                      data-testid="button-mark-unallocated"
+                    >
+                      Mark as Unallocated
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {editFormData.ownerId ? "This spot is assigned to a user. Click 'Mark as Unallocated' to make it available for waiting list assignment." : "This spot is unallocated and will appear in the Available Spots tab."}
+                </p>
               </div>
               <div className="flex gap-2 pt-4">
                 <Button onClick={handleEditSpot} className="flex-1" data-testid="button-save-edit-spot">

@@ -12,9 +12,24 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  // Add demo authentication header for API requests
+  const headers: Record<string, string> = {
+    ...(data ? { "Content-Type": "application/json" } : {}),
+  };
+  
+  // Check if user is authenticated with demo auth
+  const authUser = localStorage.getItem("bci_parking_user");
+  if (authUser) {
+    try {
+      headers["x-demo-auth"] = authUser;
+    } catch (error) {
+      console.error("Error adding demo auth header:", error);
+    }
+  }
+
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers,
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
@@ -29,8 +44,22 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
+    // Add demo authentication header for queries
+    const headers: Record<string, string> = {};
+    
+    // Check if user is authenticated with demo auth
+    const authUser = localStorage.getItem("bci_parking_user");
+    if (authUser) {
+      try {
+        headers["x-demo-auth"] = authUser;
+      } catch (error) {
+        console.error("Error adding demo auth header:", error);
+      }
+    }
+
     const res = await fetch(queryKey.join("/") as string, {
       credentials: "include",
+      headers,
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {

@@ -129,7 +129,32 @@ export async function setupAuth(app: Express) {
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   const user = req.user as any;
+  
+  // Check for demo authentication from frontend
+  const demoAuth = req.headers['x-demo-auth'];
+  if (demoAuth) {
+    try {
+      const demoUser = JSON.parse(demoAuth as string);
+      if (demoUser && demoUser.id) {
+        // For demo mode, ensure user exists in database
+        await storage.upsertUser({
+          id: demoUser.id,
+          email: demoUser.email,
+          firstName: demoUser.firstName,
+          lastName: demoUser.lastName,
+          profileImageUrl: demoUser.profileImageUrl || null
+        });
+        
+        // Set demo user on request for other middleware
+        req.user = { claims: { sub: demoUser.id } };
+        return next();
+      }
+    } catch (error) {
+      console.error("Error parsing demo auth:", error);
+    }
+  }
 
+  // Fallback to real Replit auth
   if (!req.isAuthenticated() || !user.expires_at) {
     return res.status(401).json({ message: "Unauthorized" });
   }
@@ -160,6 +185,31 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
 export const requireAdmin: RequestHandler = async (req, res, next) => {
   const user = req.user as any;
   
+  // Check for demo authentication from frontend
+  const demoAuth = req.headers['x-demo-auth'];
+  if (demoAuth) {
+    try {
+      const demoUser = JSON.parse(demoAuth as string);
+      if (demoUser && demoUser.role === "admin") {
+        // For demo mode, create/ensure admin user exists in database
+        await storage.upsertUser({
+          id: demoUser.id,
+          email: demoUser.email,
+          firstName: demoUser.firstName,
+          lastName: demoUser.lastName,
+          profileImageUrl: demoUser.profileImageUrl || null
+        });
+        
+        // Set demo user on request for other middleware
+        req.user = { claims: { sub: demoUser.id } };
+        return next();
+      }
+    } catch (error) {
+      console.error("Error parsing demo auth:", error);
+    }
+  }
+  
+  // Fallback to real Replit auth
   if (!req.isAuthenticated() || !user?.claims?.sub) {
     return res.status(401).json({ message: "Unauthorized" });
   }

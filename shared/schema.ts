@@ -69,7 +69,7 @@ export const parkingSpots = pgTable("parking_spots", {
   location: text("location").notNull(), // Building/Floor/Section
   spotType: text("spot_type").notNull().$type<SpotType>(),
   isIndoor: boolean("is_indoor").notNull().default(false),
-  ownerId: varchar("owner_id").notNull(), // References users.id
+  ownerId: varchar("owner_id"), // References users.id - nullable for unallocated spots
   description: text("description"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
