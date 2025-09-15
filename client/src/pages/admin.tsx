@@ -655,10 +655,10 @@ Available for Assignment
             <p className="text-sm text-muted-foreground">
               Select an available parking spot to assign to the selected user.
             </p>
-            <Alert data-testid="alert-payroll-notification">
-              <Info className="h-4 w-4" />
-              <AlertDescription>
-                <strong>Important:</strong> Please ensure that HR/Payroll is notified to set up automatic payroll deduction for parking fees from the assigned employee's salary.
+            <Alert variant="destructive" data-testid="alert-payroll-notification">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription className="font-semibold">
+                🚨 <strong>IMPORTANT:</strong> Please ensure that HR/Payroll is notified to set up automatic payroll deduction for parking fees from the assigned employee's salary.
               </AlertDescription>
             </Alert>
             <div className="space-y-2 max-h-60 overflow-y-auto">
@@ -942,10 +942,10 @@ Available for Assignment
                   Building {selectedSpotForAssign.building} • {selectedSpotForAssign.type} • ${selectedSpotForAssign.currentRate}/day
                 </div>
               </div>
-              <Alert data-testid="alert-payroll-notification-direct">
-                <Info className="h-4 w-4" />
-                <AlertDescription>
-                  <strong>Important:</strong> Please ensure that HR/Payroll is notified to set up automatic payroll deduction for parking fees from the assigned employee's salary.
+              <Alert variant="destructive" data-testid="alert-payroll-notification-direct">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="font-semibold">
+                  🚨 <strong>IMPORTANT:</strong> Please ensure that HR/Payroll is notified to set up automatic payroll deduction for parking fees from the assigned employee's salary.
                 </AlertDescription>
               </Alert>
               <div className="space-y-2">
