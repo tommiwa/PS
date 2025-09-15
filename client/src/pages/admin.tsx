@@ -237,9 +237,9 @@ export default function Admin() {
     <div className="p-6 space-y-6" data-testid="page-admin">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Administration</h1>
+          <h1 className="text-3xl font-bold">Parking Management</h1>
           <p className="text-muted-foreground">
-            Manage users, parking spots, waiting list, and system settings.
+            Manage parking spots, waiting list, and spot assignments.
           </p>
         </div>
         <Button data-testid="button-add-user">
