@@ -236,6 +236,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== WAITING LIST ENDPOINTS =====
+
+  // Get all waiting list entries (admin)
+  app.get("/api/waiting-list", async (req, res) => {
+    try {
+      const entries = await storage.getAllWaitingList();
+      res.json(entries);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch waiting list" });
+    }
+  });
+
+  // Get active waiting list entries (admin)
+  app.get("/api/waiting-list/active", async (req, res) => {
+    try {
+      const entries = await storage.getActiveWaitingList();
+      res.json(entries);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch active waiting list" });
+    }
+  });
+
+  // Get user's waiting list entry
+  app.get("/api/waiting-list/user/:userId", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const entry = await storage.getWaitingListByUser(userId);
+      res.json(entry);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch user waiting list entry" });
+    }
+  });
+
+  // Create waiting list entry
+  app.post("/api/waiting-list", async (req, res) => {
+    try {
+      const entry = await storage.createWaitingListEntry(req.body);
+      res.json(entry);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create waiting list entry" });
+    }
+  });
+
+  // Update waiting list entry (admin)
+  app.put("/api/waiting-list/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updatedEntry = await storage.updateWaitingListEntry(id, req.body);
+      if (!updatedEntry) {
+        return res.status(404).json({ error: "Waiting list entry not found" });
+      }
+      res.json(updatedEntry);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update waiting list entry" });
+    }
+  });
+
+  // Assign waiting list user to a spot (admin)
+  app.post("/api/waiting-list/:id/assign", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { spotId } = req.body;
+      
+      if (!spotId) {
+        return res.status(400).json({ error: "Spot ID is required" });
+      }
+
+      const assignedEntry = await storage.assignWaitingListUser(id, spotId);
+      if (!assignedEntry) {
+        return res.status(404).json({ error: "Waiting list entry not found" });
+      }
+      res.json(assignedEntry);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to assign waiting list user" });
+    }
+  });
+
+  // Cancel/remove waiting list entry
+  app.delete("/api/waiting-list/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteWaitingListEntry(id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Waiting list entry not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete waiting list entry" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
