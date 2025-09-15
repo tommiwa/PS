@@ -941,10 +941,10 @@ export default function Admin() {
             <p className="text-sm text-muted-foreground">
               Select an available parking spot to assign to the selected user.
             </p>
-            <Alert variant="destructive" data-testid="alert-payroll-notification">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription className="font-semibold">
-                🚨 <strong>IMPORTANT:</strong> Please ensure that HR/Payroll is notified to set up automatic payroll deduction for parking fees from the assigned employee's salary.
+            <Alert className="bg-orange-50 border-orange-200 dark:bg-orange-950 dark:border-orange-800" data-testid="alert-payroll-notification">
+              <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+              <AlertDescription>
+                <strong>IMPORTANT:</strong> Please ensure that HR/Payroll is notified to set up automatic payroll deduction for parking fees from the assigned employee's salary.
               </AlertDescription>
             </Alert>
             <div className="space-y-2 max-h-60 overflow-y-auto">
@@ -1228,10 +1228,10 @@ export default function Admin() {
                   Building {selectedSpotForAssign.building} • {selectedSpotForAssign.type} • ${selectedSpotForAssign.currentRate}/day
                 </div>
               </div>
-              <Alert variant="destructive" data-testid="alert-payroll-notification-direct">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription className="font-semibold">
-                  🚨 <strong>IMPORTANT:</strong> Please ensure that HR/Payroll is notified to set up automatic payroll deduction for parking fees from the assigned employee's salary.
+              <Alert className="bg-orange-50 border-orange-200 dark:bg-orange-950 dark:border-orange-800" data-testid="alert-payroll-notification-direct">
+                <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                <AlertDescription>
+                  <strong>IMPORTANT:</strong> Please ensure that HR/Payroll is notified to set up automatic payroll deduction for parking fees from the assigned employee's salary.
                 </AlertDescription>
               </Alert>
               <div className="space-y-2">
