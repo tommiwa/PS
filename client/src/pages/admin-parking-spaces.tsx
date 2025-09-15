@@ -39,7 +39,9 @@ import {
   BarChart3,
   Users,
   Calendar,
-  Map
+  Map,
+  UserPlus,
+  UsersIcon
 } from "lucide-react"
 
 type SpotType = "standard" | "electric" | "accessible"
@@ -87,6 +89,10 @@ export default function AdminParkingSpaces() {
   const [showBulkActions, setShowBulkActions] = useState(false)
   const [showLocationMap, setShowLocationMap] = useState(false)
   const [showMaintenanceDialog, setShowMaintenanceDialog] = useState(false)
+  const [showAssignDialog, setShowAssignDialog] = useState(false)
+  const [showBulkAssignDialog, setShowBulkAssignDialog] = useState(false)
+  const [selectedAssignSpace, setSelectedAssignSpace] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<"all" | "unallocated">("all")
   const [viewMode, setViewMode] = useState<"table" | "grid">("table")
 
   // Comprehensive mock data for parking spaces
@@ -276,10 +282,111 @@ export default function AdminParkingSpaces() {
       notes: "Fast charging capable - 150kW",
       dateAdded: "2023-06-01",
       isActive: true
+    },
+    // Unallocated spots (no owners assigned yet)
+    {
+      id: "space-009",
+      spotNumber: "B-301",
+      building: "B",
+      floor: 3,
+      zone: "North",
+      type: "standard",
+      status: "available",
+      isIndoor: true,
+      currentRate: 15.00,
+      dimensions: { length: 18, width: 8.5 },
+      features: ["Covered"],
+      lastMaintenance: "2024-01-01",
+      nextMaintenance: "2024-04-01",
+      totalRevenue: 0,
+      occupancyRate: 0,
+      averageBookingDuration: 0,
+      notes: "Unallocated - awaiting assignment",
+      dateAdded: "2024-01-01",
+      isActive: true
+    },
+    {
+      id: "space-010",
+      spotNumber: "C-202",
+      building: "C",
+      floor: 2,
+      zone: "East",
+      type: "electric",
+      status: "available",
+      isIndoor: true,
+      currentRate: 22.00,
+      dimensions: { length: 18, width: 8.5 },
+      features: ["EV Charging", "Covered"],
+      lastMaintenance: "2024-01-01",
+      nextMaintenance: "2024-04-01",
+      totalRevenue: 0,
+      occupancyRate: 0,
+      averageBookingDuration: 0,
+      notes: "Unallocated electric spot",
+      dateAdded: "2024-01-01",
+      isActive: true
+    },
+    {
+      id: "space-011",
+      spotNumber: "D-101",
+      building: "D",
+      floor: 1,
+      zone: "West",
+      type: "accessible",
+      status: "available",
+      isIndoor: true,
+      currentRate: 20.00,
+      dimensions: { length: 20, width: 12 },
+      features: ["Accessible", "Covered", "Near Elevator"],
+      lastMaintenance: "2024-01-01",
+      nextMaintenance: "2024-04-01",
+      totalRevenue: 0,
+      occupancyRate: 0,
+      averageBookingDuration: 0,
+      notes: "Unallocated accessible spot",
+      dateAdded: "2024-01-01",
+      isActive: true
+    },
+    {
+      id: "space-012",
+      spotNumber: "A-301",
+      building: "A",
+      floor: 3,
+      zone: "South",
+      type: "standard",
+      status: "available",
+      isIndoor: true,
+      currentRate: 18.00,
+      dimensions: { length: 18, width: 8.5 },
+      features: ["Covered", "Premium Level"],
+      lastMaintenance: "2024-01-01",
+      nextMaintenance: "2024-04-01",
+      totalRevenue: 0,
+      occupancyRate: 0,
+      averageBookingDuration: 0,
+      notes: "Unallocated premium spot",
+      dateAdded: "2024-01-01",
+      isActive: true
     }
   ]
 
+  // Mock users for assignment
+  const mockUsers = [
+    { id: "user-001", name: "Sarah Chen", email: "sarah.chen@bci.ca", department: "Engineering" },
+    { id: "user-002", name: "Michael Rodriguez", email: "m.rodriguez@bci.ca", department: "Marketing" },
+    { id: "user-003", name: "Jennifer Kim", email: "j.kim@bci.ca", department: "Finance" },
+    { id: "user-004", name: "David Thompson", email: "d.thompson@bci.ca", department: "IT" },
+    { id: "user-005", name: "Emma Wilson", email: "e.wilson@bci.ca", department: "HR" },
+    { id: "user-006", name: "John Park", email: "j.park@bci.ca", department: "Operations" },
+    { id: "user-007", name: "Lisa Anderson", email: "l.anderson@bci.ca", department: "Legal" },
+    { id: "user-008", name: "Robert Johnson", email: "r.johnson@bci.ca", department: "Sales" }
+  ]
+
   const filteredSpaces = mockParkingSpaces.filter(space => {
+    // Filter by tab
+    if (activeTab === "unallocated" && space.owner) return false
+    if (activeTab === "all" && !space.owner && activeTab !== "unallocated") return true
+    
     const matchesSearch = space.spotNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          space.building.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          space.zone.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -292,6 +399,10 @@ export default function AdminParkingSpaces() {
     
     return matchesSearch && matchesBuilding && matchesType && matchesStatus
   })
+
+  // Get unallocated spots
+  const unallocatedSpaces = mockParkingSpaces.filter(space => !space.owner)
+  const allocatedSpaces = mockParkingSpaces.filter(space => space.owner)
 
   // Statistics calculations
   const totalSpaces = mockParkingSpaces.length
@@ -337,6 +448,25 @@ export default function AdminParkingSpaces() {
   const handleBulkAction = (action: string) => {
     console.log('Bulk action:', action, 'on spaces:', selectedSpaces)
     setSelectedSpaces([])
+  }
+
+  const handleAssignSpace = (spaceId: string, userId: string) => {
+    console.log('Assign space:', spaceId, 'to user:', userId)
+    // In real app, would call API endpoint to assign space
+    setShowAssignDialog(false)
+    setSelectedAssignSpace(null)
+  }
+
+  const handleBulkAssignSpaces = (userId: string) => {
+    console.log('Bulk assign spaces:', selectedSpaces, 'to user:', userId)
+    // In real app, would call API endpoint to bulk assign spaces
+    setShowBulkAssignDialog(false)
+    setSelectedSpaces([])
+  }
+
+  const handleOpenAssignDialog = (spaceId: string) => {
+    setSelectedAssignSpace(spaceId)
+    setShowAssignDialog(true)
   }
 
   const handleSelectSpace = (spaceId: string) => {
@@ -525,7 +655,19 @@ export default function AdminParkingSpaces() {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <UsersIcon className="h-4 w-4" />
+              Unallocated
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600" data-testid="stat-unallocated-spaces">{unallocatedSpaces.length}</div>
+            <div className="text-xs text-muted-foreground">Need assignment</div>
+          </CardContent>
+        </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
@@ -582,7 +724,7 @@ export default function AdminParkingSpaces() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600" data-testid="stat-total-revenue">${totalRevenue.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-green-600" data-testid="stat-total-revenue">{totalRevenue.toLocaleString()}</div>
             <div className="text-xs text-muted-foreground">This year</div>
           </CardContent>
         </Card>
@@ -773,39 +915,51 @@ export default function AdminParkingSpaces() {
         </CardContent>
       </Card>
 
-      {/* Parking Spaces Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>Parking Spaces</span>
-            <span className="text-sm font-normal text-muted-foreground">
-              Showing {filteredSpaces.length} of {totalSpaces} spaces
-            </span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">
-                    <Checkbox
-                      checked={selectedSpaces.length === filteredSpaces.length && filteredSpaces.length > 0}
-                      onCheckedChange={handleSelectAll}
-                      data-testid="checkbox-select-all-spaces"
-                    />
-                  </TableHead>
-                  <TableHead>Spot</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Owner</TableHead>
-                  <TableHead>Rate</TableHead>
-                  <TableHead>Occupancy</TableHead>
-                  <TableHead>Revenue</TableHead>
-                  <TableHead className="w-20">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
+      {/* Tabs for All/Unallocated */}
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "all" | "unallocated")} className="space-y-4">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="all" data-testid="tab-all-spaces">
+            All Spaces ({mockParkingSpaces.length})
+          </TabsTrigger>
+          <TabsTrigger value="unallocated" data-testid="tab-unallocated-spaces">
+            Unallocated ({unallocatedSpaces.length})
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="all" className="space-y-4">
+          {/* All Spaces Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>All Parking Spaces</span>
+                <span className="text-sm font-normal text-muted-foreground">
+                  Showing {filteredSpaces.length} of {totalSpaces} spaces
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={selectedSpaces.length === filteredSpaces.length && filteredSpaces.length > 0}
+                          onCheckedChange={handleSelectAll}
+                          data-testid="checkbox-select-all-spaces"
+                        />
+                      </TableHead>
+                      <TableHead>Spot</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Owner</TableHead>
+                      <TableHead>Rate</TableHead>
+                      <TableHead>Occupancy</TableHead>
+                      <TableHead>Revenue</TableHead>
+                      <TableHead className="w-20">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
               <TableBody>
                 {filteredSpaces.map((space) => (
                   <TableRow key={space.id} data-testid={`row-space-${space.id}`}>
@@ -865,7 +1019,7 @@ export default function AdminParkingSpaces() {
                     </TableCell>
                     <TableCell>
                       <span className="font-medium" data-testid={`text-rate-${space.id}`}>
-                        ${space.currentRate}/day
+                        {space.currentRate}/day
                       </span>
                     </TableCell>
                     <TableCell>
@@ -883,7 +1037,7 @@ export default function AdminParkingSpaces() {
                     </TableCell>
                     <TableCell>
                       <span className="font-medium text-green-600" data-testid={`text-revenue-${space.id}`}>
-                        ${space.totalRevenue.toLocaleString()}
+                        {space.totalRevenue.toLocaleString()}
                       </span>
                     </TableCell>
                     <TableCell>
@@ -922,11 +1076,208 @@ export default function AdminParkingSpaces() {
                     </TableCell>
                   </TableRow>
                 ))}
-              </TableBody>
-            </Table>
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="unallocated" className="space-y-4">
+          {/* Unallocated Spaces Management */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <UsersIcon className="h-5 w-5" />
+                  Unallocated Spaces ({unallocatedSpaces.length})
+                </span>
+                <div className="flex gap-2">
+                  {selectedSpaces.length > 0 && (
+                    <Button
+                      onClick={() => setShowBulkAssignDialog(true)}
+                      className="flex items-center gap-2"
+                      data-testid="button-bulk-assign"
+                    >
+                      <UserPlus className="h-4 w-4" />
+                      Bulk Assign ({selectedSpaces.length})
+                    </Button>
+                  )}
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {unallocatedSpaces.length === 0 ? (
+                <div className="text-center py-8">
+                  <UsersIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium">All spaces allocated</h3>
+                  <p className="text-muted-foreground">All parking spaces have been assigned to owners.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12">
+                          <Checkbox
+                            checked={selectedSpaces.length === unallocatedSpaces.length && unallocatedSpaces.length > 0}
+                            onCheckedChange={handleSelectAll}
+                            data-testid="checkbox-select-all-unallocated"
+                          />
+                        </TableHead>
+                        <TableHead>Spot</TableHead>
+                        <TableHead>Location</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Suggested Rate</TableHead>
+                        <TableHead>Features</TableHead>
+                        <TableHead className="w-32">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {unallocatedSpaces.map((space) => (
+                        <TableRow key={space.id} data-testid={`row-unallocated-${space.id}`}>
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedSpaces.includes(space.id)}
+                              onCheckedChange={() => handleSelectSpace(space.id)}
+                              data-testid={`checkbox-select-unallocated-${space.id}`}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span className="font-medium" data-testid={`text-unallocated-spot-${space.id}`}>
+                                {space.spotNumber}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                Floor {space.floor}, {space.zone}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Building className="h-4 w-4 text-muted-foreground" />
+                              <span>Building {space.building}</span>
+                              {space.isIndoor && (
+                                <Badge variant="outline" className="text-xs">Indoor</Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {getTypeIcon(space.type)}
+                              {getTypeBadge(space.type)}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-medium text-green-600">
+                              {space.currentRate}/day
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {space.features.slice(0, 2).map((feature, index) => (
+                                <Badge key={index} variant="outline" className="text-xs">
+                                  {feature}
+                                </Badge>
+                              ))}
+                              {space.features.length > 2 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{space.features.length - 2}
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              size="sm"
+                              onClick={() => handleOpenAssignDialog(space.id)}
+                              className="flex items-center gap-2"
+                              data-testid={`button-assign-${space.id}`}
+                            >
+                              <UserPlus className="h-4 w-4" />
+                              Assign
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Assignment Dialogs */}
+      <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Parking Space</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="assign-user">Select User</Label>
+              <Select data-testid="select-assign-user">
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose user to assign space to..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {mockUsers.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.name} - {user.department}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowAssignDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => handleAssignSpace(selectedAssignSpace || '', 'user-001')}>
+                Assign Space
+              </Button>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showBulkAssignDialog} onOpenChange={setShowBulkAssignDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bulk Assign Parking Spaces</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <p className="text-sm text-muted-foreground mb-4">
+                Assign {selectedSpaces.length} selected spaces to a user
+              </p>
+              <Label htmlFor="bulk-assign-user">Select User</Label>
+              <Select data-testid="select-bulk-assign-user">
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose user to assign spaces to..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {mockUsers.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.name} - {user.department}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowBulkAssignDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => handleBulkAssignSpaces('user-001')}>
+                Assign All Spaces
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Location Map Dialog */}
       <Dialog open={showLocationMap} onOpenChange={setShowLocationMap}>
@@ -1043,7 +1394,7 @@ export default function AdminParkingSpaces() {
                             <div key={building} className="flex items-center justify-between">
                               <span className="font-medium">Building {building}</span>
                               <span className="text-sm font-medium text-green-600">
-                                ${buildingRevenue.toLocaleString()}
+                                {buildingRevenue.toLocaleString()}
                               </span>
                             </div>
                           )

@@ -156,6 +156,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all unallocated parking spots (Admin only)
+  app.get("/api/admin/unallocated-spots", async (req, res) => {
+    try {
+      const allSpots = await storage.getAllParkingSpots();
+      const unallocatedSpots = allSpots.filter(spot => !spot.ownerId);
+      res.json(unallocatedSpots);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch unallocated spots" });
+    }
+  });
+
+  // Assign a parking spot to a user (Admin only)
+  app.post("/api/admin/assign-spot", async (req, res) => {
+    try {
+      const { spotId, userId } = req.body;
+      
+      if (!spotId || !userId) {
+        return res.status(400).json({ error: "spotId and userId are required" });
+      }
+
+      const updatedSpot = await storage.updateParkingSpot(spotId, { ownerId: userId });
+      if (!updatedSpot) {
+        return res.status(404).json({ error: "Parking spot not found" });
+      }
+      
+      res.json(updatedSpot);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to assign parking spot" });
+    }
+  });
+
+  // Bulk assign parking spots to a user (Admin only)
+  app.post("/api/admin/bulk-assign-spots", async (req, res) => {
+    try {
+      const { spotIds, userId } = req.body;
+      
+      if (!spotIds || !Array.isArray(spotIds) || !userId) {
+        return res.status(400).json({ error: "spotIds (array) and userId are required" });
+      }
+
+      const updatedSpots = [];
+      for (const spotId of spotIds) {
+        const updatedSpot = await storage.updateParkingSpot(spotId, { ownerId: userId });
+        if (updatedSpot) {
+          updatedSpots.push(updatedSpot);
+        }
+      }
+      
+      res.json({ 
+        success: true, 
+        assignedSpots: updatedSpots.length,
+        totalRequested: spotIds.length,
+        spots: updatedSpots 
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to bulk assign parking spots" });
+    }
+  });
+
+  // Get all users for assignment dropdown (Admin only)
+  app.get("/api/admin/users", async (req, res) => {
+    try {
+      // In a real app, this would get all users from the database
+      // For now, return mock users
+      const mockUsers = [
+        { id: "user-001", name: "Sarah Chen", email: "sarah.chen@bci.ca", department: "Engineering" },
+        { id: "user-002", name: "Michael Rodriguez", email: "m.rodriguez@bci.ca", department: "Marketing" },
+        { id: "user-003", name: "Jennifer Kim", email: "j.kim@bci.ca", department: "Finance" },
+        { id: "user-004", name: "David Thompson", email: "d.thompson@bci.ca", department: "IT" },
+        { id: "user-005", name: "Emma Wilson", email: "e.wilson@bci.ca", department: "HR" },
+        { id: "user-006", name: "John Park", email: "j.park@bci.ca", department: "Operations" },
+        { id: "user-007", name: "Lisa Anderson", email: "l.anderson@bci.ca", department: "Legal" },
+        { id: "user-008", name: "Robert Johnson", email: "r.johnson@bci.ca", department: "Sales" }
+      ];
+      res.json(mockUsers);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
