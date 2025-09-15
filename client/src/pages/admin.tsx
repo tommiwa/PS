@@ -134,8 +134,8 @@ export default function Admin() {
     }).length || 0
   };
 
-  // Filter waiting list
-  const filteredWaitingList = activeWaitingList?.filter(item => {
+  // Filter waiting list - show all waiting list entries, not just active
+  const filteredWaitingList = allWaitingList?.filter(item => {
     const matchesSearch = item.userName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.userEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.reason?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -252,7 +252,7 @@ export default function Admin() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card data-testid="card-total-spots">
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-blue-600">{unallocatedSpots.length}</div>
+            <div className="text-2xl font-bold text-blue-600">{allSpots.filter(spot => spot.status === "available").length}</div>
             <div className="text-sm text-muted-foreground">Available Spots</div>
           </CardContent>
         </Card>
@@ -285,7 +285,7 @@ export default function Admin() {
           </TabsTrigger>
           <TabsTrigger value="spots" data-testid="tab-spots">
             <Car className="h-4 w-4 mr-2" />
-            Available Spots ({unallocatedSpots.length})
+            Available Spots ({allSpots.filter(spot => spot.status === "available").length})
           </TabsTrigger>
           <TabsTrigger value="all-spots" data-testid="tab-all-spots">
             <Building className="h-4 w-4 mr-2" />
@@ -336,6 +336,7 @@ export default function Admin() {
                       <TableHead>Preferred Type</TableHead>
                       <TableHead>Priority</TableHead>
                       <TableHead>Wait Time</TableHead>
+                      <TableHead>Enrolled By</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -369,6 +370,11 @@ export default function Admin() {
                           </TableCell>
                           <TableCell>{waitDays} days</TableCell>
                           <TableCell>
+                            <Badge variant="outline" className="text-xs">
+                              {item.enrolledBy === "self" ? "Profile" : item.enrolledBy}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
                             <Button
                               size="sm"
                               onClick={() => {
@@ -384,7 +390,7 @@ export default function Admin() {
                       );
                     }) : (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                           No users in waiting list
                         </TableCell>
                       </TableRow>
@@ -403,7 +409,9 @@ export default function Admin() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {unallocatedSpots.map((spot) => (
+                {allSpots
+                  .filter(spot => spot.status === "available")
+                  .map((spot) => (
                   <Card key={spot.id} className="p-4" data-testid={`card-spot-${spot.id}`}>
                     <div className="flex items-center justify-between mb-2">
                       <div className="font-semibold">{spot.spotNumber}</div>
@@ -420,9 +428,20 @@ export default function Admin() {
                         {spot.type === "standard" && <Car className="h-3 w-3" />}
                         <span className="capitalize">{spot.type}</span>
                       </div>
+                      <div className="text-xs">
+                        {spot.owner ? `Owner: ${spot.owner.name}` : "Unallocated"}
+                      </div>
+                      <div className="text-xs font-medium">
+                        ${spot.currentRate || 0}/day
+                      </div>
                     </div>
                   </Card>
                 ))}
+                {allSpots.filter(spot => spot.status === "available").length === 0 && (
+                  <div className="col-span-full text-center text-muted-foreground py-8">
+                    No available parking spots at the moment
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
