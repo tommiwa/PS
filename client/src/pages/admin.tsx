@@ -12,11 +12,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { 
   Users, Car, Clock, AlertTriangle, TrendingUp, Plus, 
   ListOrdered, CalendarDays, UserPlus, ArrowRight,
   Timer, Target, CheckCircle2, Search, Filter,
-  Zap, Accessibility, Building, MoreHorizontal
+  Zap, Accessibility, Building, MoreHorizontal, Info
 } from "lucide-react"
 import type { WaitingList, ParkingSpot, SpotType } from "@shared/schema"
 
@@ -126,7 +127,7 @@ export default function Admin() {
       
       toast({
         title: "Assignment Successful",
-        description: `User has been assigned to the parking spot. ${data.notificationsSent?.emailSent ? 'Email notification sent.' : ''}`,
+        description: `User has been assigned to the parking spot. ${data.notificationsSent?.emailSent ? 'Email notification sent.' : ''} Please remember to notify HR/Payroll to set up automatic salary deduction for parking fees.`,
         variant: "default"
       });
       
@@ -293,7 +294,7 @@ export default function Admin() {
     setSelectedUserForAssign("");
     toast({
       title: "Spot Assigned",
-      description: "Parking spot has been assigned to the user.",
+      description: "Parking spot has been assigned to the user. Please remember to notify HR/Payroll to set up automatic salary deduction for parking fees.",
       variant: "default"
     });
   }
@@ -654,6 +655,12 @@ Available for Assignment
             <p className="text-sm text-muted-foreground">
               Select an available parking spot to assign to the selected user.
             </p>
+            <Alert data-testid="alert-payroll-notification">
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Important:</strong> Please ensure that HR/Payroll is notified to set up automatic payroll deduction for parking fees from the assigned employee's salary.
+              </AlertDescription>
+            </Alert>
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {unallocatedSpots.map((spot) => (
                 <Button
@@ -935,6 +942,12 @@ Available for Assignment
                   Building {selectedSpotForAssign.building} • {selectedSpotForAssign.type} • ${selectedSpotForAssign.currentRate}/day
                 </div>
               </div>
+              <Alert data-testid="alert-payroll-notification-direct">
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Important:</strong> Please ensure that HR/Payroll is notified to set up automatic payroll deduction for parking fees from the assigned employee's salary.
+                </AlertDescription>
+              </Alert>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Select User</label>
                 <Select value={selectedUserForAssign} onValueChange={setSelectedUserForAssign}>
