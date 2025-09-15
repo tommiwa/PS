@@ -221,8 +221,8 @@ function App() {
             <AuthProvider>
               <ConfirmProvider>
                 <ProtectedRouter />
-                <Toaster />
               </ConfirmProvider>
+              <Toaster />
             </AuthProvider>
           </ThemeProvider>
         </TooltipProvider>
