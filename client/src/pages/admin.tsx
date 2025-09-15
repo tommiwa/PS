@@ -45,7 +45,9 @@ export default function Admin() {
   const [showAddSpotDialog, setShowAddSpotDialog] = useState(false)
   const [showEditSpotDialog, setShowEditSpotDialog] = useState(false)
   const [showAddToWaitingDialog, setShowAddToWaitingDialog] = useState(false)
+  const [showDirectAssignDialog, setShowDirectAssignDialog] = useState(false)
   const [selectedSpot, setSelectedSpot] = useState<ParkingSpace | null>(null)
+  const [selectedSpotForAssign, setSelectedSpotForAssign] = useState<ParkingSpace | null>(null)
   const [activeSpotTab, setActiveSpotTab] = useState("all")
   
   // Fetch waiting list data for metrics
@@ -233,6 +235,17 @@ export default function Admin() {
     });
   }
 
+  const handleDirectAssign = () => {
+    console.log('Direct assign spot:', selectedSpotForAssign);
+    setShowDirectAssignDialog(false);
+    setSelectedSpotForAssign(null);
+    toast({
+      title: "Spot Assigned",
+      description: "Parking spot has been assigned to the user.",
+      variant: "default"
+    });
+  }
+
   return (
     <div className="p-6 space-y-6" data-testid="page-admin">
       <div className="flex items-center justify-between">
@@ -296,7 +309,16 @@ export default function Admin() {
         <TabsContent value="waiting-list" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Waiting List Management</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>Waiting List Management</CardTitle>
+                <Button
+                  onClick={() => setShowAddToWaitingDialog(true)}
+                  data-testid="button-add-to-waiting"
+                >
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Add to Waiting List
+                </Button>
+              </div>
               <div className="flex gap-4">
                 <div className="flex-1">
                   <Input
@@ -435,6 +457,19 @@ export default function Admin() {
                         ${spot.currentRate || 0}/day
                       </div>
                     </div>
+                    <div className="mt-3 pt-3 border-t">
+                      <Button
+                        size="sm"
+                        className="w-full"
+                        onClick={() => {
+                          setSelectedSpotForAssign(spot);
+                          setShowDirectAssignDialog(true);
+                        }}
+                        data-testid={`button-assign-spot-${spot.id}`}
+                      >
+                        Assign to User
+                      </Button>
+                    </div>
                   </Card>
                 ))}
                 {allSpots.filter(spot => spot.status === "available").length === 0 && (
@@ -452,23 +487,13 @@ export default function Admin() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>All Parking Spots Management</CardTitle>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => setShowAddSpotDialog(true)}
-                    data-testid="button-add-spot"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Spot
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowAddToWaitingDialog(true)}
-                    data-testid="button-add-to-waiting"
-                  >
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Add to Waiting List
-                  </Button>
-                </div>
+                <Button
+                  onClick={() => setShowAddSpotDialog(true)}
+                  data-testid="button-add-spot"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Spot
+                </Button>
               </div>
               <div className="flex gap-4">
                 <Select value={activeSpotTab} onValueChange={setActiveSpotTab}>
@@ -776,6 +801,54 @@ export default function Admin() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Direct Assign Spot Dialog */}
+      <Dialog open={showDirectAssignDialog} onOpenChange={setShowDirectAssignDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Assign Spot to User</DialogTitle>
+          </DialogHeader>
+          {selectedSpotForAssign && (
+            <div className="space-y-4">
+              <div className="p-3 bg-muted rounded-lg">
+                <div className="font-medium">Spot: {selectedSpotForAssign.spotNumber}</div>
+                <div className="text-sm text-muted-foreground">
+                  Building {selectedSpotForAssign.building} • {selectedSpotForAssign.type} • ${selectedSpotForAssign.currentRate}/day
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">User Email</label>
+                <Input placeholder="user@bci.ca" data-testid="input-assign-user-email" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Assignment Duration</label>
+                <Select>
+                  <SelectTrigger data-testid="select-duration">
+                    <SelectValue placeholder="Select duration" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="permanent">Permanent Assignment</SelectItem>
+                    <SelectItem value="temporary">Temporary (30 days)</SelectItem>
+                    <SelectItem value="trial">Trial Period (7 days)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Notes (Optional)</label>
+                <Input placeholder="Assignment notes" data-testid="input-assign-notes" />
+              </div>
+              <div className="flex gap-2 pt-4">
+                <Button onClick={handleDirectAssign} className="flex-1" data-testid="button-confirm-assign">
+                  Assign Spot
+                </Button>
+                <Button variant="outline" onClick={() => setShowDirectAssignDialog(false)} className="flex-1">
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
