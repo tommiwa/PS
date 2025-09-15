@@ -26,6 +26,14 @@ type ParkingSpace = {
   type: "standard" | "electric" | "accessible"
   status: "available" | "occupied" | "maintenance"
   owner?: { name: string; email: string; department: string }
+  floor?: number
+  zone?: string
+  isIndoor?: boolean
+  currentRate?: number
+  features?: string[]
+  notes?: string
+  dateAdded?: string
+  isActive?: boolean
 }
 
 export default function Admin() {
@@ -34,6 +42,11 @@ export default function Admin() {
   const [filterType, setFilterType] = useState("all")
   const [selectedWaitingListItem, setSelectedWaitingListItem] = useState<string | null>(null)
   const [showAssignDialog, setShowAssignDialog] = useState(false)
+  const [showAddSpotDialog, setShowAddSpotDialog] = useState(false)
+  const [showEditSpotDialog, setShowEditSpotDialog] = useState(false)
+  const [showAddToWaitingDialog, setShowAddToWaitingDialog] = useState(false)
+  const [selectedSpot, setSelectedSpot] = useState<ParkingSpace | null>(null)
+  const [activeSpotTab, setActiveSpotTab] = useState("all")
   
   // Fetch waiting list data for metrics
   const { data: allWaitingList, isLoading: isLoadingWaitingList } = useQuery<WaitingList[]>({
@@ -49,6 +62,57 @@ export default function Admin() {
     queryKey: ["/api/admin/unallocated-spots"],
   });
 
+  // Mock all spots data for demonstration
+  const allSpots: ParkingSpace[] = [
+    ...unallocatedSpots,
+    {
+      id: "spot-1",
+      spotNumber: "A-101",
+      building: "A",
+      type: "electric",
+      status: "occupied",
+      owner: { name: "Sarah Chen", email: "sarah.chen@bci.ca", department: "Engineering" },
+      floor: 1,
+      zone: "North",
+      isIndoor: true,
+      currentRate: 25,
+      features: ["EV Charging", "Covered"],
+      notes: "Level 2 charger",
+      dateAdded: "2023-01-15",
+      isActive: true
+    },
+    {
+      id: "spot-2",
+      spotNumber: "A-102",
+      building: "A",
+      type: "standard",
+      status: "available",
+      floor: 1,
+      zone: "North",
+      isIndoor: true,
+      currentRate: 15,
+      features: ["Covered"],
+      notes: "",
+      dateAdded: "2023-01-15",
+      isActive: true
+    },
+    {
+      id: "spot-3",
+      spotNumber: "B-201",
+      building: "B",
+      type: "accessible",
+      status: "maintenance",
+      floor: 2,
+      zone: "South",
+      isIndoor: true,
+      currentRate: 20,
+      features: ["Accessible", "Near Elevator"],
+      notes: "Under maintenance",
+      dateAdded: "2023-02-01",
+      isActive: true
+    }
+  ];
+
   // Calculate waiting list metrics
   const waitingListMetrics = {
     total: allWaitingList?.length || 0,
@@ -57,7 +121,7 @@ export default function Admin() {
     highPriority: activeWaitingList?.filter(entry => entry.priority === "high").length || 0,
     mediumPriority: activeWaitingList?.filter(entry => entry.priority === "medium").length || 0,
     lowPriority: activeWaitingList?.filter(entry => entry.priority === "low").length || 0,
-    averageWaitTime: activeWaitingList?.length > 0 
+    averageWaitTime: activeWaitingList && activeWaitingList.length > 0 
       ? Math.round(activeWaitingList.reduce((sum, entry) => {
           const daysSinceEnrollment = Math.floor((Date.now() - new Date(entry.enrolledDate).getTime()) / (1000 * 60 * 60 * 24));
           return sum + daysSinceEnrollment;
@@ -129,6 +193,46 @@ export default function Admin() {
     });
   }
 
+  const handleDeleteSpot = (spotId: string) => {
+    console.log('Delete spot:', spotId);
+    toast({
+      title: "Spot Deleted",
+      description: "Parking spot has been removed from the system.",
+      variant: "default"
+    });
+  }
+
+  const handleAddSpot = () => {
+    console.log('Add new spot');
+    setShowAddSpotDialog(false);
+    toast({
+      title: "Spot Added",
+      description: "New parking spot has been added to the system.",
+      variant: "default"
+    });
+  }
+
+  const handleEditSpot = () => {
+    console.log('Edit spot:', selectedSpot);
+    setShowEditSpotDialog(false);
+    setSelectedSpot(null);
+    toast({
+      title: "Spot Updated",
+      description: "Parking spot details have been updated.",
+      variant: "default"
+    });
+  }
+
+  const handleAddToWaitingList = () => {
+    console.log('Add user to waiting list');
+    setShowAddToWaitingDialog(false);
+    toast({
+      title: "User Added to Waiting List",
+      description: "User has been successfully added to the waiting list.",
+      variant: "default"
+    });
+  }
+
   return (
     <div className="p-6 space-y-6" data-testid="page-admin">
       <div className="flex items-center justify-between">
@@ -182,6 +286,10 @@ export default function Admin() {
           <TabsTrigger value="spots" data-testid="tab-spots">
             <Car className="h-4 w-4 mr-2" />
             Available Spots ({unallocatedSpots.length})
+          </TabsTrigger>
+          <TabsTrigger value="all-spots" data-testid="tab-all-spots">
+            <Building className="h-4 w-4 mr-2" />
+            All Spots ({allSpots.length})
           </TabsTrigger>
         </TabsList>
 
@@ -319,6 +427,125 @@ export default function Admin() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="all-spots" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>All Parking Spots Management</CardTitle>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => setShowAddSpotDialog(true)}
+                    data-testid="button-add-spot"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Spot
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowAddToWaitingDialog(true)}
+                    data-testid="button-add-to-waiting"
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Add to Waiting List
+                  </Button>
+                </div>
+              </div>
+              <div className="flex gap-4">
+                <Select value={activeSpotTab} onValueChange={setActiveSpotTab}>
+                  <SelectTrigger className="w-40" data-testid="select-spot-filter">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Spots</SelectItem>
+                    <SelectItem value="available">Available</SelectItem>
+                    <SelectItem value="occupied">Occupied</SelectItem>
+                    <SelectItem value="maintenance">Maintenance</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Spot Number</TableHead>
+                    <TableHead>Building</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Owner</TableHead>
+                    <TableHead>Rate</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {allSpots
+                    .filter(spot => activeSpotTab === "all" || spot.status === activeSpotTab)
+                    .map((spot) => (
+                      <TableRow key={spot.id} data-testid={`row-spot-${spot.id}`}>
+                        <TableCell className="font-medium">{spot.spotNumber}</TableCell>
+                        <TableCell>Building {spot.building}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            {spot.type === "electric" && <Zap className="h-4 w-4 text-yellow-500" />}
+                            {spot.type === "accessible" && <Accessibility className="h-4 w-4 text-blue-500" />}
+                            {spot.type === "standard" && <Car className="h-4 w-4 text-gray-500" />}
+                            <span className="capitalize">{spot.type}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={
+                              spot.status === "available" ? "default" : 
+                              spot.status === "occupied" ? "secondary" : "destructive"
+                            }
+                            data-testid={`badge-status-${spot.status}`}
+                          >
+                            {spot.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {spot.owner ? (
+                            <div>
+                              <div className="font-medium">{spot.owner.name}</div>
+                              <div className="text-xs text-muted-foreground">{spot.owner.department}</div>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">Unallocated</span>
+                          )}
+                        </TableCell>
+                        <TableCell>${spot.currentRate || 0}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedSpot(spot);
+                                setShowEditSpotDialog(true);
+                              }}
+                              data-testid={`button-edit-${spot.id}`}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleDeleteSpot(spot.id)}
+                              data-testid={`button-delete-${spot.id}`}
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  }
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       {/* Assignment Dialog */}
@@ -352,6 +579,182 @@ export default function Admin() {
                   </div>
                 </Button>
               ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Spot Dialog */}
+      <Dialog open={showAddSpotDialog} onOpenChange={setShowAddSpotDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add New Parking Spot</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Spot Number</label>
+              <Input placeholder="e.g., A-301" data-testid="input-spot-number" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Building</label>
+              <Select>
+                <SelectTrigger data-testid="select-building">
+                  <SelectValue placeholder="Select building" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="A">Building A</SelectItem>
+                  <SelectItem value="B">Building B</SelectItem>
+                  <SelectItem value="C">Building C</SelectItem>
+                  <SelectItem value="D">Building D</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Type</label>
+              <Select>
+                <SelectTrigger data-testid="select-spot-type">
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="standard">Standard</SelectItem>
+                  <SelectItem value="electric">Electric</SelectItem>
+                  <SelectItem value="accessible">Accessible</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Rate ($)</label>
+              <Input type="number" placeholder="25.00" data-testid="input-rate" />
+            </div>
+            <div className="flex gap-2 pt-4">
+              <Button onClick={handleAddSpot} className="flex-1" data-testid="button-save-spot">
+                Add Spot
+              </Button>
+              <Button variant="outline" onClick={() => setShowAddSpotDialog(false)} className="flex-1">
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Spot Dialog */}
+      <Dialog open={showEditSpotDialog} onOpenChange={setShowEditSpotDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Parking Spot</DialogTitle>
+          </DialogHeader>
+          {selectedSpot && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Spot Number</label>
+                <Input defaultValue={selectedSpot.spotNumber} data-testid="input-edit-spot-number" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Building</label>
+                <Select defaultValue={selectedSpot.building}>
+                  <SelectTrigger data-testid="select-edit-building">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="A">Building A</SelectItem>
+                    <SelectItem value="B">Building B</SelectItem>
+                    <SelectItem value="C">Building C</SelectItem>
+                    <SelectItem value="D">Building D</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Type</label>
+                <Select defaultValue={selectedSpot.type}>
+                  <SelectTrigger data-testid="select-edit-spot-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="standard">Standard</SelectItem>
+                    <SelectItem value="electric">Electric</SelectItem>
+                    <SelectItem value="accessible">Accessible</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Status</label>
+                <Select defaultValue={selectedSpot.status}>
+                  <SelectTrigger data-testid="select-edit-status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="available">Available</SelectItem>
+                    <SelectItem value="occupied">Occupied</SelectItem>
+                    <SelectItem value="maintenance">Maintenance</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Rate ($)</label>
+                <Input type="number" defaultValue={selectedSpot.currentRate} data-testid="input-edit-rate" />
+              </div>
+              <div className="flex gap-2 pt-4">
+                <Button onClick={handleEditSpot} className="flex-1" data-testid="button-save-edit-spot">
+                  Save Changes
+                </Button>
+                <Button variant="outline" onClick={() => setShowEditSpotDialog(false)} className="flex-1">
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add to Waiting List Dialog */}
+      <Dialog open={showAddToWaitingDialog} onOpenChange={setShowAddToWaitingDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add User to Waiting List</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">User Email</label>
+              <Input placeholder="user@bci.ca" data-testid="input-user-email" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Preferred Spot Type</label>
+              <Select>
+                <SelectTrigger data-testid="select-preferred-type">
+                  <SelectValue placeholder="Select preferred type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="standard">Standard</SelectItem>
+                  <SelectItem value="electric">Electric</SelectItem>
+                  <SelectItem value="accessible">Accessible</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Priority</label>
+              <Select>
+                <SelectTrigger data-testid="select-priority">
+                  <SelectValue placeholder="Select priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="low">Low</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Reason</label>
+              <Input placeholder="Reason for waiting list request" data-testid="input-reason" />
+            </div>
+            <div className="flex gap-2 pt-4">
+              <Button onClick={handleAddToWaitingList} className="flex-1" data-testid="button-add-to-waiting">
+                Add to List
+              </Button>
+              <Button variant="outline" onClick={() => setShowAddToWaitingDialog(false)} className="flex-1">
+                Cancel
+              </Button>
             </div>
           </div>
         </DialogContent>
