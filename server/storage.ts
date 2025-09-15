@@ -1,6 +1,7 @@
 import { 
   type User, 
   type InsertUser, 
+  type UpsertUser,
   type ParkingSpot,
   type InsertParkingSpot,
   type SpotListing,
@@ -20,8 +21,11 @@ import { randomUUID } from "crypto";
 // Storage interface with comprehensive CRUD methods
 export interface IStorage {
   // User operations
+  // (IMPORTANT) these user operations are mandatory for Replit Auth.
   getUser(id: string): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
   getUserByEmail(email: string): Promise<User | undefined>;
+  getAllUsers(): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
 
   // Parking Spot operations
@@ -92,20 +96,57 @@ export class MemStorage implements IStorage {
   }
 
   private seedTestData() {
-    // Create mock user (the user we're testing with)
-    const mockUserId = "mock-user-id";
-    const user: User = {
-      id: mockUserId,
-      email: "test@example.com",
-      name: "Test User",
-      password: "hashedpassword",
+    // Create sample users for testing - using Replit Auth format
+    const adminUser: User = {
+      id: "user-admin-001",
+      email: "admin@example.com",
+      firstName: "Admin",
+      lastName: "User",
+      profileImageUrl: null,
       phone: "(555) 123-4567",
+      department: "IT",
+      role: "admin",
+      memberSince: "January 2022",
+      lastLogin: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.users.set(adminUser.id, adminUser);
+
+    const ownerUser: User = {
+      id: "user-owner-001",
+      email: "owner@example.com",
+      firstName: "Owner",
+      lastName: "User",
+      profileImageUrl: null,
+      phone: "(555) 234-5678",
       department: "Engineering",
       role: "owner",
-      memberSince: "2024-01-01",
-      lastLogin: new Date()
+      memberSince: "January 2023",
+      lastLogin: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
-    this.users.set(mockUserId, user);
+    this.users.set(ownerUser.id, ownerUser);
+
+    const renterUser: User = {
+      id: "user-renter-001",
+      email: "renter@example.com",
+      firstName: "Renter",
+      lastName: "User",
+      profileImageUrl: null,
+      phone: "(555) 345-6789",
+      department: "Marketing",
+      role: "renter",
+      memberSince: "February 2023",
+      lastLogin: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.users.set(renterUser.id, renterUser);
+    
+    // Use owner user as default for parking spots
+    const defaultUserId = ownerUser.id;
 
     // Create sample parking spots owned by this user
     const spot1: ParkingSpot = {
@@ -116,7 +157,7 @@ export class MemStorage implements IStorage {
       description: "Electric charging spot",
       isIndoor: true,
       isActive: true,
-      ownerId: mockUserId,
+      ownerId: defaultUserId,
       createdAt: new Date()
     };
 
@@ -128,7 +169,7 @@ export class MemStorage implements IStorage {
       description: "Regular outdoor spot",
       isIndoor: false,
       isActive: true,
-      ownerId: mockUserId,
+      ownerId: defaultUserId,
       createdAt: new Date()
     };
 
@@ -144,7 +185,7 @@ export class MemStorage implements IStorage {
     const listing1: SpotListing = {
       id: "listing-1",
       spotId: spot1.id,
-      ownerId: mockUserId,
+      ownerId: defaultUserId,
       listingType: "single",
       status: "active",
       singleDate: tomorrow,
@@ -163,7 +204,7 @@ export class MemStorage implements IStorage {
     const listing2: SpotListing = {
       id: "listing-2",
       spotId: spot2.id,
-      ownerId: mockUserId,
+      ownerId: defaultUserId,
       listingType: "single", 
       status: "active",
       singleDate: today,
@@ -182,7 +223,7 @@ export class MemStorage implements IStorage {
     const listing3: SpotListing = {
       id: "listing-3",
       spotId: spot1.id,
-      ownerId: mockUserId,
+      ownerId: defaultUserId,
       listingType: "single",
       status: "expired",
       singleDate: yesterday,
@@ -201,7 +242,7 @@ export class MemStorage implements IStorage {
     const listing4: SpotListing = {
       id: "listing-4",
       spotId: spot2.id,
-      ownerId: mockUserId,
+      ownerId: defaultUserId,
       listingType: "single",
       status: "expired",
       singleDate: yesterday,
@@ -220,7 +261,7 @@ export class MemStorage implements IStorage {
     const listing5: SpotListing = {
       id: "listing-5",
       spotId: spot1.id,
-      ownerId: mockUserId,
+      ownerId: defaultUserId,
       listingType: "single",
       status: "expired",
       singleDate: yesterday,
@@ -241,28 +282,15 @@ export class MemStorage implements IStorage {
     this.spotListings.set(listing4.id, listing4);
     this.spotListings.set(listing5.id, listing5);
 
-    // Create sample bookings for renter testing
-    const renterUserId = "renter-user-id";
-    const renterUser: User = {
-      id: renterUserId,
-      email: "renter@example.com",
-      name: "Renter User",
-      password: "hashedpassword",
-      phone: "(555) 987-6543",
-      department: "Marketing",
-      role: "renter",
-      memberSince: "2024-02-01",
-      lastLogin: new Date()
-    };
-    this.users.set(renterUserId, renterUser);
+    // Create sample bookings using the renter user
 
     // Active booking (confirmed for future)
     const booking1: Booking = {
       id: "booking-1",
       listingId: listing1.id,
       spotId: spot1.id,
-      renterId: renterUserId,
-      ownerId: mockUserId,
+      renterId: renterUser.id,
+      ownerId: defaultUserId,
       bookingDate: tomorrow,
       status: "confirmed",
       paymentReceived: false,
@@ -278,8 +306,8 @@ export class MemStorage implements IStorage {
       id: "booking-2",
       listingId: listing2.id,
       spotId: spot2.id,
-      renterId: renterUserId,
-      ownerId: mockUserId,
+      renterId: renterUser.id,
+      ownerId: defaultUserId,
       bookingDate: today,
       status: "pending",
       paymentReceived: false,
@@ -295,8 +323,8 @@ export class MemStorage implements IStorage {
       id: "booking-3",
       listingId: listing4.id,
       spotId: spot2.id,
-      renterId: renterUserId,
-      ownerId: mockUserId,
+      renterId: renterUser.id,
+      ownerId: defaultUserId,
       bookingDate: yesterday,
       status: "confirmed",
       paymentReceived: true,
@@ -312,8 +340,8 @@ export class MemStorage implements IStorage {
       id: "booking-4",
       listingId: listing3.id,
       spotId: spot1.id,
-      renterId: renterUserId,
-      ownerId: mockUserId,
+      renterId: renterUser.id,
+      ownerId: defaultUserId,
       bookingDate: tomorrow,
       status: "confirmed",
       paymentReceived: false,
@@ -448,16 +476,47 @@ export class MemStorage implements IStorage {
     );
   }
 
+  // (IMPORTANT) Required for Replit Auth
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const existingUser = this.users.get(userData.id);
+    const now = new Date();
+    
+    const user: User = {
+      ...existingUser,
+      ...userData,
+      role: existingUser?.role || "renter", // Keep existing role or default to renter
+      phone: existingUser?.phone || null,
+      department: existingUser?.department || null,
+      memberSince: existingUser?.memberSince || null,
+      lastLogin: now,
+      updatedAt: now,
+      createdAt: existingUser?.createdAt || now,
+    };
+    
+    this.users.set(userData.id, user);
+    return user;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return Array.from(this.users.values());
+  }
+
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
+    const now = new Date();
     const user: User = { 
       ...insertUser,
       role: insertUser.role as UserRole,
       phone: insertUser.phone ?? null,
       department: insertUser.department ?? null,
       memberSince: insertUser.memberSince ?? null,
+      firstName: null,
+      lastName: null,
+      profileImageUrl: null,
       id, 
-      lastLogin: null
+      lastLogin: null,
+      createdAt: now,
+      updatedAt: now
     };
     this.users.set(id, user);
     return user;
@@ -741,6 +800,10 @@ export class MemStorage implements IStorage {
 
   async deleteWaitingListEntry(id: string): Promise<boolean> {
     return this.waitingList.delete(id);
+  }
+
+  async getWaitingListById(id: string): Promise<WaitingList | undefined> {
+    return this.waitingList.get(id);
   }
 
   async assignWaitingListUser(waitingListId: string, spotId: string): Promise<WaitingList | undefined> {

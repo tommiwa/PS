@@ -1,4 +1,7 @@
 import { useState } from "react"
+import { useQuery, useMutation } from "@tanstack/react-query"
+import { queryClient, apiRequest } from "@/lib/queryClient"
+import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -101,6 +104,8 @@ interface WaitingList {
 }
 
 export default function AdminParkingSpaces() {
+  const { toast } = useToast()
+  
   const [searchTerm, setSearchTerm] = useState("")
   const [filterBuilding, setFilterBuilding] = useState("all")
   const [filterType, setFilterType] = useState("all")
@@ -121,6 +126,16 @@ export default function AdminParkingSpaces() {
   const [selectedWaitingListItems, setSelectedWaitingListItems] = useState<string[]>([])
   const [activeTab, setActiveTab] = useState<"all" | "unallocated" | "waiting-list">("all")
   const [viewMode, setViewMode] = useState<"table" | "grid">("table")
+
+  // Query waiting list data
+  const { data: waitingListData = [], refetch: refetchWaitingList } = useQuery<WaitingList[]>({
+    queryKey: ["/api/waiting-list"],
+  });
+
+  // Query unallocated parking spots
+  const { data: unallocatedSpotsData = [], refetch: refetchUnallocatedSpots } = useQuery<ParkingSpace[]>({
+    queryKey: ["/api/admin/unallocated-spots"],
+  });
 
   // Comprehensive mock data for parking spaces
   const mockParkingSpaces: ParkingSpace[] = [
@@ -620,12 +635,61 @@ export default function AdminParkingSpaces() {
     setSelectedSpaces([])
   }
 
+  // Mutation for assigning waiting list user to parking spot
+  const assignFromWaitingListMutation = useMutation({
+    mutationFn: async ({ waitingListId, spotId, spotDetails }: { 
+      waitingListId: string; 
+      spotId: string; 
+      spotDetails: { spotNumber: string; location: string; building: string }
+    }) => {
+      const response = await apiRequest("POST", `/api/waiting-list/${waitingListId}/assign`, {
+        spotId,
+        spotDetails
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      // Refresh data queries
+      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] });
+      
+      // Show success message
+      toast({
+        title: "🎉 Assignment Successful!",
+        description: `User has been assigned to the parking spot. ${
+          data.notificationsSent?.emailSent ? 'Email notification sent.' : ''
+        } ${data.notificationsSent?.inAppSent ? 'In-app notification sent.' : ''}`,
+        variant: "default"
+      });
+      
+      // Close dialog
+      setShowAssignFromWaitingDialog(false);
+      setSelectedWaitingListItem(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Assignment Failed",
+        description: error instanceof Error ? error.message : "Failed to assign waiting list user. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
   // Waiting list handlers
   const handleAssignFromWaitingList = (waitingListId: string, spaceId: string) => {
-    console.log('Assign from waiting list:', waitingListId, 'to space:', spaceId)
-    // In real app, would call API endpoint to assign waiting list user to space
-    setShowAssignFromWaitingDialog(false)
-    setSelectedWaitingListItem(null)
+    // Find the selected spot details for notifications
+    const selectedSpot = unallocatedSpotsData.find(spot => spot.id === spaceId);
+    const spotDetails = {
+      spotNumber: selectedSpot?.spotNumber || `Spot-${spaceId.slice(-3)}`,
+      location: selectedSpot?.location || `Building A, Floor 1`, 
+      building: selectedSpot?.building ? `Building ${selectedSpot.building}` : 'Building A'
+    };
+
+    assignFromWaitingListMutation.mutate({
+      waitingListId,
+      spotId: spaceId,
+      spotDetails
+    });
   }
 
   const handleOpenAssignFromWaitingDialog = (waitingListId: string) => {

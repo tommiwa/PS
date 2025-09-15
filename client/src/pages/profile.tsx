@@ -139,12 +139,30 @@ export default function Profile() {
       const response = await apiRequest("POST", "/api/waiting-list", waitingListData);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (newEntry) => {
       queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/user", user?.id] });
       setIsEnrolledInWaitingList(true);
       waitingListForm.reset();
+
+      // Send welcome notification (in background, don't block UI)
+      if (user && emailNotifications) {
+        apiRequest("POST", "/api/notifications/welcome", {
+          userId: user.id,
+          userName: user.name,
+          userEmail: user.email,
+          waitingListEntry: newEntry,
+          preferences: {
+            emailNotifications,
+            pushNotifications
+          }
+        }).catch((error) => {
+          console.warn('Failed to send welcome notification:', error);
+          // Don't show error to user since enrollment was successful
+        });
+      }
+      
       toast({
-        title: "✅ Successfully Enrolled!",
+        title: "🎉 Successfully Enrolled!",
         description: "You've been added to the waiting list. You'll be notified when a spot becomes available.",
         variant: "default"
       });

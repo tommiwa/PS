@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { AuthProvider, useAuth } from "@/contexts/auth-context";
 import { ThemeProvider } from "@/contexts/theme-context";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { NotificationCenter } from "@/components/notification-center";
 import { LogOut, Loader2 } from "lucide-react";
 import { useEffect } from "react";
 
@@ -160,6 +161,7 @@ function AuthenticatedApp() {
                 </Avatar>
               </div>
               <RoleSwitcher />
+              <NotificationCenter />
               <Button
                 variant="ghost"
                 size="icon"
