@@ -41,7 +41,10 @@ import {
   Calendar,
   Map,
   UserPlus,
-  UsersIcon
+  UsersIcon,
+  ListOrdered,
+  Bell,
+  CheckCircle2
 } from "lucide-react"
 
 type SpotType = "standard" | "electric" | "accessible"
@@ -79,6 +82,24 @@ interface ParkingSpace {
   isActive: boolean
 }
 
+interface WaitingList {
+  id: string
+  userId: string
+  userName: string
+  userEmail: string
+  userDepartment: string
+  preferredSpotType: SpotType
+  preferredBuilding?: Building
+  priority: "high" | "medium" | "low"
+  status: "waiting" | "assigned" | "declined" | "expired"
+  reason: string
+  enrolledDate: string
+  assignedDate?: string
+  assignedSpotId?: string
+  enrolledBy: string
+  adminNotes: string
+}
+
 export default function AdminParkingSpaces() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filterBuilding, setFilterBuilding] = useState("all")
@@ -92,7 +113,13 @@ export default function AdminParkingSpaces() {
   const [showAssignDialog, setShowAssignDialog] = useState(false)
   const [showBulkAssignDialog, setShowBulkAssignDialog] = useState(false)
   const [selectedAssignSpace, setSelectedAssignSpace] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<"all" | "unallocated">("all")
+  const [selectedWaitingListItem, setSelectedWaitingListItem] = useState<string | null>(null)
+  const [showAssignFromWaitingDialog, setShowAssignFromWaitingDialog] = useState(false)
+  const [waitingListSearchTerm, setWaitingListSearchTerm] = useState("")
+  const [waitingListFilterStatus, setWaitingListFilterStatus] = useState("all")
+  const [waitingListFilterPriority, setWaitingListFilterPriority] = useState("all")
+  const [selectedWaitingListItems, setSelectedWaitingListItems] = useState<string[]>([])
+  const [activeTab, setActiveTab] = useState<"all" | "unallocated" | "waiting-list">("all")
   const [viewMode, setViewMode] = useState<"table" | "grid">("table")
 
   // Comprehensive mock data for parking spaces
@@ -382,6 +409,114 @@ export default function AdminParkingSpaces() {
     { id: "user-008", name: "Robert Johnson", email: "r.johnson@bci.ca", department: "Sales" }
   ]
 
+  // Mock waiting list data
+  const mockWaitingList: WaitingList[] = [
+    {
+      id: "wait-001",
+      userId: "user-009",
+      userName: "Alex Turner",
+      userEmail: "a.turner@bci.ca",
+      userDepartment: "Engineering",
+      preferredSpotType: "electric",
+      preferredBuilding: "A",
+      priority: "high",
+      status: "waiting",
+      reason: "New hire - requires EV charging",
+      enrolledDate: "2024-01-15",
+      enrolledBy: "admin",
+      adminNotes: "Priority due to role requirements"
+    },
+    {
+      id: "wait-002",
+      userId: "user-010",
+      userName: "Maria Gonzalez",
+      userEmail: "m.gonzalez@bci.ca",
+      userDepartment: "Finance",
+      preferredSpotType: "accessible",
+      priority: "high",
+      status: "waiting",
+      reason: "Accessibility accommodation required",
+      enrolledDate: "2024-01-12",
+      enrolledBy: "hr",
+      adminNotes: "ADA compliance requirement"
+    },
+    {
+      id: "wait-003",
+      userId: "user-011",
+      userName: "Brian Williams",
+      userEmail: "b.williams@bci.ca",
+      userDepartment: "IT",
+      preferredSpotType: "standard",
+      preferredBuilding: "B",
+      priority: "medium",
+      status: "waiting",
+      reason: "Office relocation to Building B",
+      enrolledDate: "2024-01-10",
+      enrolledBy: "admin",
+      adminNotes: "Can wait until Building B spot available"
+    },
+    {
+      id: "wait-004",
+      userId: "user-012",
+      userName: "Rachel Brown",
+      userEmail: "r.brown@bci.ca",
+      userDepartment: "Marketing",
+      preferredSpotType: "electric",
+      priority: "medium",
+      status: "waiting",
+      reason: "Purchased electric vehicle",
+      enrolledDate: "2024-01-08",
+      enrolledBy: "self",
+      adminNotes: "Can use standard spot temporarily"
+    },
+    {
+      id: "wait-005",
+      userId: "user-013",
+      userName: "Steve Miller",
+      userEmail: "s.miller@bci.ca",
+      userDepartment: "Operations",
+      preferredSpotType: "standard",
+      preferredBuilding: "C",
+      priority: "low",
+      status: "waiting",
+      reason: "Convenience - closer to department",
+      enrolledDate: "2024-01-05",
+      enrolledBy: "self",
+      adminNotes: "Non-urgent request"
+    },
+    {
+      id: "wait-006",
+      userId: "user-014",
+      userName: "Amanda Davis",
+      userEmail: "a.davis@bci.ca",
+      userDepartment: "Legal",
+      preferredSpotType: "standard",
+      preferredBuilding: "D",
+      priority: "low",
+      status: "waiting",
+      reason: "Prefer premium level parking",
+      enrolledDate: "2024-01-03",
+      enrolledBy: "self",
+      adminNotes: "Low priority - aesthetic preference"
+    },
+    {
+      id: "wait-007",
+      userId: "user-015",
+      userName: "Kevin Lee",
+      userEmail: "k.lee@bci.ca",
+      userDepartment: "Sales",
+      preferredSpotType: "electric",
+      priority: "medium",
+      status: "assigned",
+      reason: "Company vehicle upgrade to electric",
+      enrolledDate: "2023-12-20",
+      assignedDate: "2024-01-14",
+      assignedSpotId: "space-008",
+      enrolledBy: "admin",
+      adminNotes: "Assigned to A-205 for company EV"
+    }
+  ]
+
   const filteredSpaces = mockParkingSpaces.filter(space => {
     // Filter by tab
     if (activeTab === "unallocated" && space.owner) return false
@@ -400,9 +535,30 @@ export default function AdminParkingSpaces() {
     return matchesSearch && matchesBuilding && matchesType && matchesStatus
   })
 
+  // Filtered waiting list
+  const filteredWaitingList = mockWaitingList.filter(item => {
+    const matchesSearch = item.userName.toLowerCase().includes(waitingListSearchTerm.toLowerCase()) ||
+                         item.userEmail.toLowerCase().includes(waitingListSearchTerm.toLowerCase()) ||
+                         item.userDepartment.toLowerCase().includes(waitingListSearchTerm.toLowerCase()) ||
+                         item.reason.toLowerCase().includes(waitingListSearchTerm.toLowerCase())
+    
+    const matchesStatus = waitingListFilterStatus === "all" || item.status === waitingListFilterStatus
+    const matchesPriority = waitingListFilterPriority === "all" || item.priority === waitingListFilterPriority
+    
+    return matchesSearch && matchesStatus && matchesPriority
+  })
+
   // Get unallocated spots
   const unallocatedSpaces = mockParkingSpaces.filter(space => !space.owner)
   const allocatedSpaces = mockParkingSpaces.filter(space => space.owner)
+
+  // Waiting list stats
+  const activeWaitingList = mockWaitingList.filter(item => item.status === "waiting")
+  const waitingListByPriority = {
+    high: mockWaitingList.filter(item => item.priority === "high" && item.status === "waiting").length,
+    medium: mockWaitingList.filter(item => item.priority === "medium" && item.status === "waiting").length,
+    low: mockWaitingList.filter(item => item.priority === "low" && item.status === "waiting").length
+  }
 
   // Statistics calculations
   const totalSpaces = mockParkingSpaces.length
@@ -462,6 +618,48 @@ export default function AdminParkingSpaces() {
     // In real app, would call API endpoint to bulk assign spaces
     setShowBulkAssignDialog(false)
     setSelectedSpaces([])
+  }
+
+  // Waiting list handlers
+  const handleAssignFromWaitingList = (waitingListId: string, spaceId: string) => {
+    console.log('Assign from waiting list:', waitingListId, 'to space:', spaceId)
+    // In real app, would call API endpoint to assign waiting list user to space
+    setShowAssignFromWaitingDialog(false)
+    setSelectedWaitingListItem(null)
+  }
+
+  const handleOpenAssignFromWaitingDialog = (waitingListId: string) => {
+    setSelectedWaitingListItem(waitingListId)
+    setShowAssignFromWaitingDialog(true)
+  }
+
+  const handleSelectWaitingListItem = (itemId: string) => {
+    setSelectedWaitingListItems(prev => 
+      prev.includes(itemId) 
+        ? prev.filter(id => id !== itemId)
+        : [...prev, itemId]
+    )
+  }
+
+  const handleSelectAllWaitingList = () => {
+    if (selectedWaitingListItems.length === filteredWaitingList.length) {
+      setSelectedWaitingListItems([])
+    } else {
+      setSelectedWaitingListItems(filteredWaitingList.map(item => item.id))
+    }
+  }
+
+  const handleBulkWaitingListAction = (action: string) => {
+    console.log('Bulk waiting list action:', action, 'on items:', selectedWaitingListItems)
+    setSelectedWaitingListItems([])
+  }
+
+  const handleRemoveFromWaitingList = (itemId: string) => {
+    console.log('Remove from waiting list:', itemId)
+  }
+
+  const handleUpdateWaitingListPriority = (itemId: string, priority: string) => {
+    console.log('Update waiting list priority:', itemId, 'to', priority)
   }
 
   const handleOpenAssignDialog = (spaceId: string) => {
@@ -916,13 +1114,18 @@ export default function AdminParkingSpaces() {
       </Card>
 
       {/* Tabs for All/Unallocated */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "all" | "unallocated")} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "all" | "unallocated" | "waiting-list")} className="space-y-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="all" data-testid="tab-all-spaces">
             All Spaces ({mockParkingSpaces.length})
           </TabsTrigger>
           <TabsTrigger value="unallocated" data-testid="tab-unallocated-spaces">
+            <UsersIcon className="h-4 w-4 mr-2" />
             Unallocated ({unallocatedSpaces.length})
+          </TabsTrigger>
+          <TabsTrigger value="waiting-list" data-testid="tab-waiting-list">
+            <ListOrdered className="h-4 w-4 mr-2" />
+            Waiting List ({activeWaitingList.length})
           </TabsTrigger>
         </TabsList>
 
@@ -1207,6 +1410,246 @@ export default function AdminParkingSpaces() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="waiting-list" className="space-y-4">
+          {/* Waiting List Management */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <ListOrdered className="h-5 w-5" />
+                  Waiting List ({activeWaitingList.length})
+                </span>
+                <div className="flex gap-2">
+                  {selectedWaitingListItems.length > 0 && (
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleBulkWaitingListAction('priority_high')}
+                        data-testid="button-bulk-priority-high"
+                      >
+                        Set High Priority
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleBulkWaitingListAction('remove')}
+                        data-testid="button-bulk-remove"
+                      >
+                        Remove ({selectedWaitingListItems.length})
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {/* Search and Filters for Waiting List */}
+              <div className="flex flex-col md:flex-row gap-4 mb-4 items-start md:items-center justify-between">
+                <div className="flex flex-col md:flex-row gap-4 flex-1">
+                  <div className="relative flex-1 max-w-sm">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search name, email, department..."
+                      value={waitingListSearchTerm}
+                      onChange={(e) => setWaitingListSearchTerm(e.target.value)}
+                      className="pl-10"
+                      data-testid="input-search-waiting-list"
+                    />
+                  </div>
+                  <Select value={waitingListFilterStatus} onValueChange={setWaitingListFilterStatus} data-testid="select-filter-status">
+                    <SelectTrigger className="w-36">
+                      <SelectValue placeholder="All Statuses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Statuses</SelectItem>
+                      <SelectItem value="waiting">Waiting</SelectItem>
+                      <SelectItem value="assigned">Assigned</SelectItem>
+                      <SelectItem value="declined">Declined</SelectItem>
+                      <SelectItem value="expired">Expired</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={waitingListFilterPriority} onValueChange={setWaitingListFilterPriority} data-testid="select-filter-priority">
+                    <SelectTrigger className="w-36">
+                      <SelectValue placeholder="All Priorities" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Priorities</SelectItem>
+                      <SelectItem value="high">High Priority</SelectItem>
+                      <SelectItem value="medium">Medium Priority</SelectItem>
+                      <SelectItem value="low">Low Priority</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {filteredWaitingList.length === 0 ? (
+                <div className="text-center py-8">
+                  <ListOrdered className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium">No waiting list entries</h3>
+                  <p className="text-muted-foreground">No users are currently waiting for parking spaces.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12">
+                          <Checkbox
+                            checked={selectedWaitingListItems.length === filteredWaitingList.length && filteredWaitingList.length > 0}
+                            onCheckedChange={handleSelectAllWaitingList}
+                            data-testid="checkbox-select-all-waiting-list"
+                          />
+                        </TableHead>
+                        <TableHead>User</TableHead>
+                        <TableHead>Preferred Type</TableHead>
+                        <TableHead>Building</TableHead>
+                        <TableHead>Priority</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Enrolled</TableHead>
+                        <TableHead>Reason</TableHead>
+                        <TableHead className="w-32">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredWaitingList.map((item) => (
+                        <TableRow key={item.id} data-testid={`row-waiting-list-${item.id}`}>
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedWaitingListItems.includes(item.id)}
+                              onCheckedChange={() => handleSelectWaitingListItem(item.id)}
+                              data-testid={`checkbox-select-waiting-${item.id}`}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span className="font-medium text-sm" data-testid={`text-user-name-${item.id}`}>
+                                {item.userName}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {item.userEmail}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {item.userDepartment}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {getTypeIcon(item.preferredSpotType)}
+                              {getTypeBadge(item.preferredSpotType)}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {item.preferredBuilding ? (
+                              <div className="flex items-center gap-2">
+                                <Building className="h-4 w-4 text-muted-foreground" />
+                                <span>Building {item.preferredBuilding}</span>
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">Any</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge 
+                              variant={item.priority === 'high' ? 'destructive' : item.priority === 'medium' ? 'default' : 'outline'}
+                              className="text-xs"
+                            >
+                              {item.priority.charAt(0).toUpperCase() + item.priority.slice(1)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge 
+                              variant={item.status === 'waiting' ? 'outline' : item.status === 'assigned' ? 'default' : 'destructive'}
+                              className="text-xs"
+                            >
+                              {item.status === 'waiting' && <Clock className="h-3 w-3 mr-1" />}
+                              {item.status === 'assigned' && <CheckCircle2 className="h-3 w-3 mr-1" />}
+                              {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm" data-testid={`text-enrolled-date-${item.id}`}>
+                              {new Date(item.enrolledDate).toLocaleDateString()}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm text-muted-foreground" title={item.reason}>
+                              {item.reason.length > 30 ? item.reason.substring(0, 30) + '...' : item.reason}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" data-testid={`button-actions-waiting-${item.id}`}>
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                {item.status === 'waiting' && (
+                                  <>
+                                    <DropdownMenuItem 
+                                      onClick={() => handleOpenAssignFromWaitingDialog(item.id)} 
+                                      data-testid={`action-assign-waiting-${item.id}`}
+                                    >
+                                      <UserPlus className="h-4 w-4 mr-2" />
+                                      Assign Space
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem 
+                                      onClick={() => handleUpdateWaitingListPriority(item.id, 'high')} 
+                                      data-testid={`action-priority-high-${item.id}`}
+                                    >
+                                      <AlertTriangle className="h-4 w-4 mr-2" />
+                                      Set High Priority
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                      onClick={() => handleUpdateWaitingListPriority(item.id, 'medium')} 
+                                      data-testid={`action-priority-medium-${item.id}`}
+                                    >
+                                      <Bell className="h-4 w-4 mr-2" />
+                                      Set Medium Priority
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                      onClick={() => handleUpdateWaitingListPriority(item.id, 'low')} 
+                                      data-testid={`action-priority-low-${item.id}`}
+                                    >
+                                      <Clock className="h-4 w-4 mr-2" />
+                                      Set Low Priority
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                  </>
+                                )}
+                                <DropdownMenuItem 
+                                  onClick={() => handleViewDetails(item.id)} 
+                                  data-testid={`action-view-waiting-${item.id}`}
+                                >
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  View Details
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                  onClick={() => handleRemoveFromWaitingList(item.id)} 
+                                  className="text-red-600" 
+                                  data-testid={`action-remove-waiting-${item.id}`}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Remove from List
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       {/* Assignment Dialogs */}
@@ -1405,6 +1848,62 @@ export default function AdminParkingSpaces() {
                 </div>
               </TabsContent>
             </Tabs>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign from Waiting List Dialog */}
+      <Dialog open={showAssignFromWaitingDialog} onOpenChange={setShowAssignFromWaitingDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Parking Space to Waiting List User</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {selectedWaitingListItem && (
+              <div className="p-3 bg-muted rounded-lg">
+                <div className="text-sm">
+                  <strong>Assigning to:</strong> {mockWaitingList.find(item => item.id === selectedWaitingListItem)?.userName}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Preferred: {mockWaitingList.find(item => item.id === selectedWaitingListItem)?.preferredSpotType} 
+                  {mockWaitingList.find(item => item.id === selectedWaitingListItem)?.preferredBuilding && 
+                    ` in Building ${mockWaitingList.find(item => item.id === selectedWaitingListItem)?.preferredBuilding}`
+                  }
+                </div>
+              </div>
+            )}
+            <div>
+              <Label htmlFor="assign-space">Select Available Space</Label>
+              <Select data-testid="select-assign-space-from-waiting">
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose available space..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {unallocatedSpaces.map((space) => (
+                    <SelectItem key={space.id} value={space.id}>
+                      {space.spotNumber} - Building {space.building} ({space.type} - ${space.currentRate}/day)
+                    </SelectItem>
+                  ))}
+                  {unallocatedSpaces.length === 0 && (
+                    <SelectItem value="none" disabled>
+                      No unallocated spaces available
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowAssignFromWaitingDialog(false)} data-testid="button-cancel-assign-waiting">
+                Cancel
+              </Button>
+              <Button 
+                onClick={() => handleAssignFromWaitingList(selectedWaitingListItem || '', 'space-001')}
+                disabled={unallocatedSpaces.length === 0}
+                data-testid="button-confirm-assign-waiting"
+              >
+                Assign Space
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
