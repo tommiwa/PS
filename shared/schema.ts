@@ -157,7 +157,7 @@ export interface LoginCredentials {
 export const sampleUsers: Record<UserRole, AuthUser> = {
   renter: {
     id: "user-renter-001",
-    email: "michael.rodriguez@bci.com",
+    email: "michael.rodriguez@bci.ca",
     name: "Michael Rodriguez",
     phone: "(555) 123-4567",
     department: "Marketing",
@@ -172,7 +172,7 @@ export const sampleUsers: Record<UserRole, AuthUser> = {
   },
   owner: {
     id: "user-owner-001", 
-    email: "sarah.chen@bci.com",
+    email: "sarah.chen@bci.ca",
     name: "Sarah Chen",
     phone: "(555) 234-5678",
     department: "Engineering", 
@@ -187,7 +187,7 @@ export const sampleUsers: Record<UserRole, AuthUser> = {
   },
   admin: {
     id: "user-admin-001",
-    email: "david.thompson@bci.com", 
+    email: "david.thompson@bci.ca", 
     name: "David Thompson",
     phone: "(555) 456-7890",
     department: "IT",

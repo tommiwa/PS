@@ -104,7 +104,7 @@ export default function AdminParkingSpaces() {
         id: "user-001",
         name: "Sarah Chen",
         department: "Engineering",
-        email: "sarah.chen@bci.com"
+        email: "sarah.chen@bci.ca"
       },
       currentRate: 25.00,
       dimensions: { length: 18, width: 8.5 },
@@ -152,7 +152,7 @@ export default function AdminParkingSpaces() {
         id: "user-002",
         name: "Michael Rodriguez",
         department: "Marketing",
-        email: "m.rodriguez@bci.com"
+        email: "m.rodriguez@bci.ca"
       },
       currentRate: 20.00,
       dimensions: { length: 20, width: 12 },
@@ -200,7 +200,7 @@ export default function AdminParkingSpaces() {
         id: "user-003",
         name: "Jennifer Kim",
         department: "Finance",
-        email: "j.kim@bci.com"
+        email: "j.kim@bci.ca"
       },
       currentRate: 22.00,
       dimensions: { length: 18, width: 8.5 },

@@ -4,7 +4,7 @@ export default function UserProfileCardExample() {
   const mockUser = {
     id: "user-001",
     name: "Sarah Chen",
-    email: "sarah.chen@bci.com",
+    email: "sarah.chen@bci.ca",
     phone: "(555) 123-4567",
     department: "Engineering",
     role: "owner" as const,

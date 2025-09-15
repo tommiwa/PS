@@ -11,7 +11,7 @@ export default function Admin() {
     {
       id: "user-001",
       name: "Sarah Chen",
-      email: "sarah.chen@bci.com",
+      email: "sarah.chen@bci.ca",
       department: "Engineering",
       role: "owner" as const,
       spotsOwned: 2,
@@ -23,7 +23,7 @@ export default function Admin() {
     {
       id: "user-002", 
       name: "Michael Rodriguez",
-      email: "m.rodriguez@bci.com",
+      email: "m.rodriguez@bci.ca",
       department: "Marketing",
       role: "renter" as const,
       spotsOwned: 0,
@@ -35,7 +35,7 @@ export default function Admin() {
     {
       id: "user-003",
       name: "Jennifer Kim",
-      email: "j.kim@bci.com", 
+      email: "j.kim@bci.ca", 
       department: "Finance",
       role: "renter" as const,
       spotsOwned: 0,
@@ -47,7 +47,7 @@ export default function Admin() {
     {
       id: "user-004",
       name: "David Thompson",
-      email: "d.thompson@bci.com",
+      email: "d.thompson@bci.ca",
       department: "IT",
       role: "admin" as const,
       spotsOwned: 0,
@@ -59,7 +59,7 @@ export default function Admin() {
     {
       id: "user-005",
       name: "Emma Wilson",
-      email: "e.wilson@bci.com",
+      email: "e.wilson@bci.ca",
       department: "HR",
       role: "renter" as const,
       spotsOwned: 0,

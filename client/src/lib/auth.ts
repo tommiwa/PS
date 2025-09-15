@@ -141,15 +141,15 @@ export const userTypeDescriptions: Record<UserRole, { title: string; description
 // Default demo credentials for easy login
 export const demoCredentials: Record<UserRole, { email: string; password: string }> = {
   renter: {
-    email: "michael.rodriguez@bci.com",
+    email: "michael.rodriguez@bci.ca",
     password: "demo123"
   },
   owner: {
-    email: "sarah.chen@bci.com", 
+    email: "sarah.chen@bci.ca", 
     password: "demo123"
   },
   admin: {
-    email: "david.thompson@bci.com",
+    email: "david.thompson@bci.ca",
     password: "admin123"
   }
 };

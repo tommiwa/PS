@@ -329,7 +329,7 @@ export default function Login() {
                       <Input
                         id="email"
                         type="email"
-                        placeholder="your.name@bci.com"
+                        placeholder="your.name@bci.ca"
                         className="h-11 text-base"
                         {...form.register("email")}
                         data-testid="input-email"
