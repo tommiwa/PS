@@ -81,9 +81,10 @@ export default function Admin() {
     total: allWaitingList?.length || 0,
     active: activeWaitingList?.length || 0,
     assigned: allWaitingList?.filter(entry => entry.status === "assigned").length || 0,
-    highPriority: activeWaitingList?.filter(entry => entry.priority === "high").length || 0,
-    mediumPriority: activeWaitingList?.filter(entry => entry.priority === "medium").length || 0,
-    lowPriority: activeWaitingList?.filter(entry => entry.priority === "low").length || 0,
+    // Priority is numeric: 1=high, 2=medium, 3=low
+    highPriority: activeWaitingList?.filter(entry => entry.priority === 1).length || 0,
+    mediumPriority: activeWaitingList?.filter(entry => entry.priority === 2).length || 0,
+    lowPriority: activeWaitingList?.filter(entry => entry.priority === 3).length || 0,
     averageWaitTime: activeWaitingList && activeWaitingList.length > 0 
       ? Math.round(activeWaitingList.reduce((sum, entry) => {
           const daysSinceEnrollment = Math.floor((Date.now() - new Date(entry.enrolledDate).getTime()) / (1000 * 60 * 60 * 24));
@@ -386,7 +387,7 @@ export default function Admin() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="standard">Standard</SelectItem>
+                    <SelectItem value="regular">Regular</SelectItem>
                     <SelectItem value="electric">Electric</SelectItem>
                     <SelectItem value="accessible">Accessible</SelectItem>
                   </SelectContent>
@@ -429,16 +430,16 @@ export default function Admin() {
                             <div className="flex items-center gap-1">
                               {item.preferredSpotType === "electric" && <Zap className="h-4 w-4" />}
                               {item.preferredSpotType === "accessible" && <Accessibility className="h-4 w-4" />}
-                              {item.preferredSpotType === "standard" && <Car className="h-4 w-4" />}
+                              {item.preferredSpotType === "regular" && <Car className="h-4 w-4" />}
                               <span className="capitalize">{item.preferredSpotType}</span>
                             </div>
                           </TableCell>
                           <TableCell>
                             <Badge 
-                              variant={item.priority === "high" ? "destructive" : item.priority === "medium" ? "secondary" : "outline"}
-                              data-testid={`badge-priority-${item.priority}`}
+                              variant={item.priority === 1 ? "destructive" : item.priority === 2 ? "secondary" : "outline"}
+                              data-testid={`badge-priority-${item.priority === 1 ? 'high' : item.priority === 2 ? 'medium' : 'low'}`}
                             >
-                              {item.priority}
+                              {item.priority === 1 ? 'High' : item.priority === 2 ? 'Medium' : 'Low'}
                             </Badge>
                           </TableCell>
                           <TableCell>{waitDays} days</TableCell>

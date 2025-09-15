@@ -176,6 +176,47 @@ export class MemStorage implements IStorage {
     this.parkingSpots.set(spot1.id, spot1);
     this.parkingSpots.set(spot2.id, spot2);
 
+    // Add unallocated spots for admin testing
+    const unallocatedSpot1: ParkingSpot = {
+      id: "spot-unallocated-1",
+      spotNumber: "C-101",
+      location: "East Parking Garage - Level 1",
+      spotType: "regular",
+      description: "Standard parking spot",
+      isIndoor: true,
+      isActive: true,
+      ownerId: null, // Unallocated
+      createdAt: new Date()
+    };
+    
+    const unallocatedSpot2: ParkingSpot = {
+      id: "spot-unallocated-2",
+      spotNumber: "D-205",
+      location: "West Parking Lot - Outdoor",
+      spotType: "electric",
+      description: "Electric vehicle charging station",
+      isIndoor: false,
+      isActive: true,
+      ownerId: null, // Unallocated
+      createdAt: new Date()
+    };
+    
+    const unallocatedSpot3: ParkingSpot = {
+      id: "spot-unallocated-3",
+      spotNumber: "A-301",
+      location: "Main Building - Level 3",
+      spotType: "accessible",
+      description: "Accessible parking with ramp access",
+      isIndoor: true,
+      isActive: true,
+      ownerId: null, // Unallocated
+      createdAt: new Date()
+    };
+    
+    this.parkingSpots.set(unallocatedSpot1.id, unallocatedSpot1);
+    this.parkingSpots.set(unallocatedSpot2.id, unallocatedSpot2);
+    this.parkingSpots.set(unallocatedSpot3.id, unallocatedSpot3);
+
     // Create sample listings with different statuses for testing 6-tab system
     const today = new Date().toISOString().split('T')[0];
     const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
