@@ -328,6 +328,113 @@ export class MemStorage implements IStorage {
     this.bookings.set(booking2.id, booking2);
     this.bookings.set(booking3.id, booking3);
     this.bookings.set(booking4.id, booking4);
+
+    // Create sample waiting list entries for admin dashboard testing
+    const waitingEntry1: WaitingList = {
+      id: "waiting-1",
+      userId: "user-waiting-001",
+      userName: "Jennifer Wilson",
+      userEmail: "j.wilson@bci.ca",
+      userDepartment: "Marketing",
+      preferredSpotType: "regular",
+      preferredBuilding: "Building A",
+      priority: 1,
+      status: "active",
+      reason: "Pregnant employee requiring closer parking access",
+      enrolledDate: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000), // 15 days ago
+      assignedDate: null,
+      assignedSpotId: null,
+      enrolledBy: "user",
+      adminNotes: null,
+      createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
+      updatedAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000)
+    };
+
+    const waitingEntry2: WaitingList = {
+      id: "waiting-2",
+      userId: "user-waiting-002",
+      userName: "Robert Chen",
+      userEmail: "r.chen@bci.ca",
+      userDepartment: "Engineering",
+      preferredSpotType: "electric",
+      preferredBuilding: "Building B",
+      priority: 2,
+      status: "active",
+      reason: "Daily commuter, purchased electric vehicle",
+      enrolledDate: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000), // 8 days ago
+      assignedDate: null,
+      assignedSpotId: null,
+      enrolledBy: "user",
+      adminNotes: null,
+      createdAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
+      updatedAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000)
+    };
+
+    const waitingEntry3: WaitingList = {
+      id: "waiting-3",
+      userId: "user-waiting-003",
+      userName: "Maria Santos",
+      userEmail: "m.santos@bci.ca",
+      userDepartment: "Finance",
+      preferredSpotType: "accessible",
+      preferredBuilding: "Building A",
+      priority: 1,
+      status: "active",
+      reason: "Accessibility needs due to mobility restrictions",
+      enrolledDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
+      assignedDate: null,
+      assignedSpotId: null,
+      enrolledBy: "admin",
+      adminNotes: "Priority assignment required",
+      createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+      updatedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
+    };
+
+    const waitingEntry4: WaitingList = {
+      id: "waiting-4",
+      userId: "user-waiting-004",
+      userName: "Alex Johnson",
+      userEmail: "a.johnson@bci.ca",
+      userDepartment: "IT",
+      preferredSpotType: "regular",
+      preferredBuilding: "Building C",
+      priority: 3,
+      status: "active",
+      reason: "Occasional parking needs for client meetings",
+      enrolledDate: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000), // 12 days ago
+      assignedDate: null,
+      assignedSpotId: null,
+      enrolledBy: "user",
+      adminNotes: null,
+      createdAt: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000),
+      updatedAt: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000)
+    };
+
+    const waitingEntry5: WaitingList = {
+      id: "waiting-5",
+      userId: "user-waiting-005",
+      userName: "David Park",
+      userEmail: "d.park@bci.ca",
+      userDepartment: "Operations",
+      preferredSpotType: "regular",
+      preferredBuilding: "Building B",
+      priority: 2,
+      status: "assigned",
+      reason: "Regular commuter with early shift",
+      enrolledDate: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000), // 20 days ago
+      assignedDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
+      assignedSpotId: "spot-1",
+      enrolledBy: "user",
+      adminNotes: "Assigned to spot A-15",
+      createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000),
+      updatedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)
+    };
+
+    this.waitingList.set(waitingEntry1.id, waitingEntry1);
+    this.waitingList.set(waitingEntry2.id, waitingEntry2);
+    this.waitingList.set(waitingEntry3.id, waitingEntry3);
+    this.waitingList.set(waitingEntry4.id, waitingEntry4);
+    this.waitingList.set(waitingEntry5.id, waitingEntry5);
   }
 
   // User operations
