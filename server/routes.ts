@@ -816,6 +816,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Export audit logs as CSV (Admin only)
+  app.get("/api/admin/audits/export", requireAdmin, async (req, res) => {
+    try {
+      // Validate and parse query parameters
+      const validatedQuery = auditQuerySchema.parse(req.query);
+      const {
+        from,
+        to,
+        actorId,
+        action,
+        entityType,
+        entityId,
+        success,
+        q
+      } = validatedQuery;
+
+      // Build audit query filters
+      const filters: AuditQueryFilters = {};
+      
+      if (from) filters.startDate = new Date(from);
+      if (to) filters.endDate = new Date(to);
+      if (actorId) filters.actorId = actorId;
+      if (action) filters.action = action as AuditAction;
+      if (entityType) filters.entityType = entityType as EntityType;
+      if (entityId) filters.entityId = entityId;
+      if (success !== undefined) filters.success = success === "true";
+      if (q) filters.searchTerm = q;
+
+      // Get all matching audit logs (no pagination for export)
+      const pagination: AuditPagination = {
+        page: 1,
+        limit: 10000, // Large limit for export
+        sortBy: 'occurredAt',
+        sortOrder: 'desc'
+      };
+
+      const result = await auditStorage.queryAuditLogs(filters, pagination);
+      
+      // Generate CSV content
+      const csvHeaders = [
+        'Date/Time',
+        'Actor ID',
+        'Actor Email',
+        'Actor Role',
+        'Action',
+        'Entity Type',
+        'Entity ID',
+        'Success',
+        'Details',
+        'IP Address',
+        'User Agent'
+      ];
+
+      const csvRows = result.logs.map(log => [
+        log.occurredAt.toISOString(),
+        log.actorId || '',
+        log.actorEmail || '',
+        log.actorRole || '',
+        log.action,
+        log.entityType || '',
+        log.entityId || '',
+        log.success ? 'Yes' : 'No',
+        log.details || '',
+        log.metadata?.ipAddress || '',
+        log.metadata?.userAgent || ''
+      ]);
+
+      // Combine headers and rows
+      const csvContent = [csvHeaders, ...csvRows]
+        .map(row => row.map(field => `"${String(field).replace(/"/g, '""')}"`).join(','))
+        .join('\n');
+
+      // Set CSV response headers
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = `audit-logs-${timestamp}.csv`;
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(csvContent);
+      
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          error: "Invalid query parameters", 
+          details: error.errors 
+        });
+      }
+      console.error("Error exporting audit logs:", error);
+      res.status(500).json({ error: "Failed to export audit logs" });
+    }
+  });
+
   // ===== WAITING LIST ENDPOINTS =====
 
   // Get all waiting list entries (admin)

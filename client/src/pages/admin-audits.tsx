@@ -80,7 +80,9 @@ export default function AdminAudits() {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["/api/admin/audits", queryParams.toString()],
     queryFn: async () => {
-      const response = await fetch(`/api/admin/audits?${queryParams}`);
+      const response = await fetch(`/api/admin/audits?${queryParams}`, {
+        credentials: 'include'
+      });
       if (!response.ok) {
         throw new Error("Failed to fetch audit logs");
       }
@@ -122,7 +124,9 @@ export default function AdminAudits() {
       exportParams.delete("pageSize");
       exportParams.set("format", "csv");
       
-      const response = await fetch(`/api/admin/audits/export?${exportParams}`);
+      const response = await fetch(`/api/admin/audits/export?${exportParams}`, {
+        credentials: 'include'
+      });
       if (!response.ok) throw new Error("Export failed");
       
       const blob = await response.blob();
