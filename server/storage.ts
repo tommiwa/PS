@@ -173,130 +173,95 @@ export class MemStorage implements IStorage {
     // Use owner user as default for parking spots
     const defaultUserId = ownerUser.id;
 
-    // Create all 121 BCI parking stalls for new facility at 750 Pandora Ave, Victoria BC
-    // Underground parking with Level 1 and Level 2
+    // Create all 121 BCI parking stalls for Victoria BC facility at 750 Pandora Ave
+    // Underground parking with P1 (Level 1) and P2 (Level 2)
     const parkingSpots: ParkingSpot[] = [];
 
-    // First create the 4 test stalls as requested
-    // Test stall #41 (Tesla EV)
-    parkingSpots.push({
-      id: `spot-${41}`,
-      spotNumber: "41",
-      location: "Level 1",
-      spotType: "tesla_ev",
-      description: "Tesla EV charging station (Test stall)",
-      isIndoor: true,
-      isActive: true,
-      isBookable: true,
-      ownerId: null,
-      createdAt: new Date()
-    });
+    // Define exact spot numbers for Victoria BCI location
+    const level1Spots = [32, 33, 34, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102]; // 48 spots
+    const level2Spots = [134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209]; // 73 spots
 
-    // Test stalls #136, #139, #207 (general use)
-    [136, 139, 207].forEach(spotNum => {
-      parkingSpots.push({
-        id: `spot-${spotNum}`,
-        spotNumber: spotNum.toString(),
-        location: spotNum <= 80 ? "Level 1" : "Level 2",
-        spotType: "regular",
-        description: `General parking stall (Test stall #${spotNum})`,
-        isIndoor: true,
-        isActive: true,
-        isBookable: true,
-        ownerId: null,
-        createdAt: new Date()
-      });
-    });
-
-    // Create taxable benefit stalls #1-13 (Level 1, not bookable)
-    for (let i = 1; i <= 13; i++) {
-      parkingSpots.push({
-        id: `spot-${i}`,
-        spotNumber: i.toString(),
-        location: "Level 1",
-        spotType: "taxable_benefit",
-        description: `Taxable benefit parking stall assigned by position`,
-        isIndoor: true,
-        isActive: true,
-        isBookable: false, // Not bookable by others
-        ownerId: null,
-        createdAt: new Date()
-      });
-    }
-
-    // Create accessible stall #14 (Level 1)
-    parkingSpots.push({
-      id: "spot-14",
-      spotNumber: "14",
-      location: "Level 1",
-      spotType: "accessible",
-      description: "Accessible parking with wheelchair access",
-      isIndoor: true,
-      isActive: true,
-      isBookable: true,
-      ownerId: null,
-      createdAt: new Date()
-    });
-
-    // Create Tesla EV chargers #15, #16 (Level 1) - #41 already created above
-    [15, 16].forEach(spotNum => {
-      parkingSpots.push({
-        id: `spot-${spotNum}`,
-        spotNumber: spotNum.toString(),
-        location: "Level 1",
-        spotType: "tesla_ev",
-        description: "Tesla EV charging station",
-        isIndoor: true,
-        isActive: true,
-        isBookable: true,
-        ownerId: null,
-        createdAt: new Date()
-      });
-    });
-
-    // Create regular EV chargers #17-31 (15 stalls across Level 1 and 2)
-    for (let i = 17; i <= 31; i++) {
-      parkingSpots.push({
-        id: `spot-${i}`,
-        spotNumber: i.toString(),
-        location: i <= 23 ? "Level 1" : "Level 2", // Split across levels
-        spotType: "electric",
-        description: "Electric vehicle charging station",
-        isIndoor: true,
-        isActive: true,
-        isBookable: true,
-        ownerId: null,
-        createdAt: new Date()
-      });
-    }
-
-    // Create remaining regular stalls to reach 121 total
-    // We already have: 13 taxable + 1 accessible + 3 tesla_ev + 15 electric = 32 special stalls
-    // We need: 121 - 32 = 89 regular stalls
-    // We already created 3 test regular stalls (#136, #139, #207)
-    // So we need 86 more regular stalls
+    // Define spot type assignments
+    const taxableBenefitSpots = [32, 33, 34, 37, 38, 39, 40, 42, 43, 44, 45, 46, 47]; // First 13 Level 1 spots (excluding P41)
+    const accessibleSpots = [48]; // 1 accessible spot
+    const teslaEvSpots = [41, 49, 50]; // 3 Tesla EV spots (P41 required as test stall)
+    const regularEvSpots = [51, 52, 53, 54, 55, 56, 57, // Level 1 EV spots
+                           134, 135, 137, 138, 140, 141, 142, 143]; // Level 2 EV spots (15 total)
     
-    const regularStallNumbers = [];
-    
-    // Fill in gaps and continue sequence
-    for (let i = 32; i <= 121; i++) {
-      // Skip the test stalls we already created
-      if (i !== 41 && i !== 136 && i !== 139 && i !== 207) {
-        regularStallNumbers.push(i);
+    // All remaining spots are regular stalls (89 total, including test stalls P136, P139, P207)
+
+    // Create Level 1 spots (P1)
+    level1Spots.forEach(spotNum => {
+      let spotType: SpotType;
+      let description: string;
+      let isBookable: boolean;
+
+      if (taxableBenefitSpots.includes(spotNum)) {
+        spotType = "taxable_benefit";
+        description = "Taxable benefit parking stall assigned by position";
+        isBookable = false;
+      } else if (accessibleSpots.includes(spotNum)) {
+        spotType = "accessible";
+        description = "Accessible parking with wheelchair access";
+        isBookable = true;
+      } else if (teslaEvSpots.includes(spotNum)) {
+        spotType = "tesla_ev";
+        description = spotNum === 41 ? "Tesla EV charging station (Test stall)" : "Tesla EV charging station";
+        isBookable = true;
+      } else if (regularEvSpots.includes(spotNum)) {
+        spotType = "electric";
+        description = "Electric vehicle charging station";
+        isBookable = true;
+      } else {
+        spotType = "regular";
+        description = "General parking stall";
+        isBookable = true;
       }
-    }
 
-    // Take only the first 86 numbers to reach exactly 89 regular stalls total (including the 3 test stalls)
-    regularStallNumbers.slice(0, 86).forEach(spotNum => {
       parkingSpots.push({
         id: `spot-${spotNum}`,
         spotNumber: spotNum.toString(),
-        location: spotNum <= 80 ? "Level 1" : "Level 2", // Distribute across levels
-        spotType: "regular",
-        description: "General parking stall",
+        location: "Level 1",
+        spotType,
+        description,
         isIndoor: true,
         isActive: true,
-        isBookable: true,
+        isBookable,
+        ownerId: null,
+        createdAt: new Date()
+      });
+    });
+
+    // Create Level 2 spots (P2)
+    level2Spots.forEach(spotNum => {
+      let spotType: SpotType;
+      let description: string;
+      let isBookable: boolean;
+
+      if (regularEvSpots.includes(spotNum)) {
+        spotType = "electric";
+        description = "Electric vehicle charging station";
+        isBookable = true;
+      } else {
+        spotType = "regular";
+        // Mark test stalls
+        if ([136, 139, 207].includes(spotNum)) {
+          description = `General parking stall (Test stall #${spotNum})`;
+        } else {
+          description = "General parking stall";
+        }
+        isBookable = true;
+      }
+
+      parkingSpots.push({
+        id: `spot-${spotNum}`,
+        spotNumber: spotNum.toString(),
+        location: "Level 2",
+        spotType,
+        description,
+        isIndoor: true,
+        isActive: true,
+        isBookable,
         ownerId: null,
         createdAt: new Date()
       });
