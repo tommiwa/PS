@@ -67,7 +67,7 @@ const adminMenuItems = [
   },
   {
     title: "Parking Management",
-    url: "/admin",
+    url: "/admin/parking",
     icon: Shield,
     roles: ["admin"]
   },

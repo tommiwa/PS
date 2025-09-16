@@ -28,6 +28,7 @@ import AdminUserManagement from "@/pages/admin-user-management";
 import AdminAnalytics from "@/pages/admin-analytics";
 import AdminSpotBookingManagement from "@/pages/admin-spot-booking-management";
 import AdminAudits from "@/pages/admin-audits";
+import AdminParkingManagement from "@/pages/admin-parking-management";
 import Login from "@/pages/login";
 import NotFound from "@/pages/not-found";
 
@@ -158,7 +159,7 @@ function AuthenticatedApp() {
                 </div>
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="text-sm">
-                    {getInitials(user.name)}
+                    {getInitials(user.name || 'User')}
                   </AvatarFallback>
                 </Avatar>
               </div>
@@ -200,6 +201,7 @@ function AuthenticatedApp() {
               
               {/* Admin-only pages */}
               <Route path="/admin" component={Admin} />
+              <Route path="/admin/parking" component={AdminParkingManagement} />
               <Route path="/admin/users" component={AdminUserManagement} />
               <Route path="/admin/bookings" component={AdminSpotBookingManagement} />
               <Route path="/admin/analytics" component={AdminAnalytics} />
