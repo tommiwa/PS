@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -13,11 +14,18 @@ import {
   Download,
   Filter,
   AlertCircle,
-  Clock
+  Clock,
+  RefreshCw
 } from "lucide-react"
 
 export default function AdminAnalytics() {
   //todo: remove mock functionality
+  const [refreshKey, setRefreshKey] = useState(0);
+  
+  const handleRefresh = () => {
+    setRefreshKey(prev => prev + 1);
+    // When switching to real API data, add queryClient.invalidateQueries here
+  };
   const analyticsData = {
     overview: {
       totalRevenue: 45780,
@@ -108,6 +116,14 @@ export default function AdminAnalytics() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleRefresh}
+            data-testid="button-refresh-analytics"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
           <Select defaultValue="last-30-days">
             <SelectTrigger className="w-[180px]">
               <SelectValue />

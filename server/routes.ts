@@ -91,6 +91,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create new user (Admin only)
+  app.post("/api/users", requireAdmin, async (req: any, res) => {
+    try {
+      // Validate request body
+      const validatedData = insertUserSchema.parse(req.body);
+      
+      const newUser = await storage.createUser(validatedData);
+      
+      // Audit the user creation
+      await auditService.logAction("CREATE", "user", {
+        entityId: newUser.id,
+        message: `Created user ${newUser.firstName} ${newUser.lastName} (${newUser.email}) with role ${newUser.role}`,
+        after: newUser
+      });
+      
+      res.json(newUser);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input data", details: error.errors });
+      }
+      console.error("Error creating user:", error);
+      res.status(500).json({ error: "Failed to create user" });
+    }
+  });
+
   // Add explicit handler for /api to stop excessive HEAD requests
   app.all("/api", (req, res) => {
     if (req.method === "HEAD") {

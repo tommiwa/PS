@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { Link } from "wouter"
 import { useAuth } from "@/contexts/auth-context"
+import { queryClient } from "@/lib/queryClient"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -10,7 +11,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { 
   Users, Car, CalendarCheck, BarChart3, FileText, Shield,
   TrendingUp, Clock, MapPin, AlertTriangle, ArrowRight,
-  Building, CheckCircle2, UserPlus, Settings, Bell
+  Building, CheckCircle2, UserPlus, Settings, Bell, RefreshCw
 } from "lucide-react"
 import type { WaitingList, ParkingSpot, User, Booking } from "@shared/schema"
 
@@ -18,29 +19,41 @@ export default function Admin() {
   const { user } = useAuth()
 
   // Fetch system metrics data
-  const { data: allUsers = [], isLoading: isLoadingUsers } = useQuery<User[]>({
+  const { data: allUsers = [], isLoading: isLoadingUsers, refetch: refetchUsers } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
   })
 
-  const { data: allWaitingList = [], isLoading: isLoadingWaitingList } = useQuery<WaitingList[]>({
+  const { data: allWaitingList = [], isLoading: isLoadingWaitingList, refetch: refetchWaitingList } = useQuery<WaitingList[]>({
     queryKey: ["/api/waiting-list"],
   })
 
-  const { data: activeWaitingList = [], isLoading: isLoadingActiveWaitingList } = useQuery<WaitingList[]>({
+  const { data: activeWaitingList = [], isLoading: isLoadingActiveWaitingList, refetch: refetchActiveWaitingList } = useQuery<WaitingList[]>({
     queryKey: ["/api/waiting-list/active"],
   })
 
-  const { data: allSpots = [], isLoading: isLoadingSpots } = useQuery<ParkingSpot[]>({
+  const { data: allSpots = [], isLoading: isLoadingSpots, refetch: refetchSpots } = useQuery<ParkingSpot[]>({
     queryKey: ["/api/admin/all-spots"],
   })
 
-  const { data: unallocatedSpots = [], isLoading: isLoadingUnallocatedSpots } = useQuery<ParkingSpot[]>({
+  const { data: unallocatedSpots = [], isLoading: isLoadingUnallocatedSpots, refetch: refetchUnallocatedSpots } = useQuery<ParkingSpot[]>({
     queryKey: ["/api/admin/unallocated-spots"],
   })
 
-  const { data: recentBookings = [], isLoading: isLoadingRecentBookings } = useQuery<Booking[]>({
+  const { data: recentBookings = [], isLoading: isLoadingRecentBookings, refetch: refetchRecentBookings } = useQuery<Booking[]>({
     queryKey: ["/api/admin/recent-bookings"],
   })
+
+  // Handle refresh all admin data
+  const handleRefreshAll = async () => {
+    await Promise.all([
+      refetchUsers(),
+      refetchWaitingList(),
+      refetchActiveWaitingList(),
+      refetchSpots(),
+      refetchUnallocatedSpots(),
+      refetchRecentBookings()
+    ]);
+  };
 
   // Calculate system metrics
   const systemMetrics = {
@@ -123,19 +136,30 @@ export default function Admin() {
               System overview and administrative controls
             </p>
           </div>
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-            <Avatar className="h-10 w-10">
-              <AvatarFallback className="text-sm bg-primary text-primary-foreground">
-                {getInitials(user?.name || 'Admin')}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <p className="font-medium text-sm" data-testid="text-admin-welcome">
-                Welcome, {user?.firstName || 'Admin'}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                System Administrator
-              </p>
+          <div className="flex items-center gap-3">
+            <Button 
+              variant="outline" 
+              onClick={handleRefreshAll}
+              disabled={isLoading}
+              data-testid="button-refresh-admin-dashboard"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+              Refresh All
+            </Button>
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+              <Avatar className="h-10 w-10">
+                <AvatarFallback className="text-sm bg-primary text-primary-foreground">
+                  {getInitials(user?.name || 'Admin')}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="font-medium text-sm" data-testid="text-admin-welcome">
+                  Welcome, {user?.firstName || 'Admin'}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  System Administrator
+                </p>
+              </div>
             </div>
           </div>
         </div>

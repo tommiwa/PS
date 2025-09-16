@@ -1,5 +1,7 @@
 import { useState } from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useMutation } from "@tanstack/react-query"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
 import { AdminUsersTable } from "@/components/admin-users-table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -11,6 +13,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { useConfirm, confirmations } from "@/hooks/use-confirm"
+import { useToast } from "@/hooks/use-toast"
+import { apiRequest, queryClient } from "@/lib/queryClient"
+import { insertUserSchema, type InsertUser, type User } from "@shared/schema"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { z } from "zod"
 import { 
   Users, 
   UserPlus, 
@@ -22,37 +29,91 @@ import {
   AlertTriangle,
   CheckCircle,
   XCircle,
-  Clock
+  Clock,
+  RefreshCw
 } from "lucide-react"
+
+// Extend shared schema with UI validation refinements
+const createUserFormSchema = insertUserSchema.extend({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  email: z.string().min(1, "Email is required").email("Please enter a valid email address"),
+  department: z.string().min(1, "Department is required"),
+});
+
+type CreateUserFormData = InsertUser;
 
 export default function AdminUserManagement() {
   const { confirm } = useConfirm()
+  const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
   const [filterRole, setFilterRole] = useState("all")
   const [filterStatus, setFilterStatus] = useState("all")
   const [showAddUser, setShowAddUser] = useState(false)
   const [showBulkActions, setShowBulkActions] = useState(false)
 
+  // Form setup
+  const form = useForm<CreateUserFormData>({
+    resolver: zodResolver(createUserFormSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      department: "",
+      role: "renter",
+      memberSince: new Date().toISOString().split('T')[0]
+    }
+  })
+
   // Fetch all users for admin management
-  const { data: allUsers = [], isLoading: isLoadingUsers, error: usersError } = useQuery({
+  const { data: allUsers = [], isLoading: isLoadingUsers, error: usersError, refetch: refetchUsers } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
   });
 
-  // Convert API user data to match expected format with additional fields for display
-  const mockUsers = allUsers.map((user: any) => ({
+  // Create user mutation
+  const createUserMutation = useMutation({
+    mutationFn: async (userData: CreateUserFormData) => {
+      return await apiRequest('/api/users', {
+        method: 'POST',
+        body: userData,
+      });
+    },
+    onSuccess: (newUser) => {
+      // Invalidate and refetch user data
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      setShowAddUser(false);
+      form.reset();
+      toast({
+        title: "User Created",
+        description: `Successfully created user ${newUser.firstName || ''} ${newUser.lastName || ''}`,
+      });
+    },
+    onError: (error: any) => {
+      console.error('Error creating user:', error);
+      toast({
+        variant: "destructive",
+        title: "Error Creating User",
+        description: error.message || "Failed to create user. Please try again.",
+      });
+    }
+  });
+
+  // Convert API user data to display format with computed name
+  const displayUsers = allUsers.map((user: User) => ({
     id: user.id,
-    name: user.name,
-    email: user.email,
+    name: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.firstName || user.lastName || user.email || 'Unknown User',
+    email: user.email || 'No email',
     department: user.department || "Unknown",
-    role: "renter" as const, // Default role, could be enhanced to come from API
-    spotsOwned: 0, // Could be calculated from actual data
-    bookingsCount: 0, // Could be calculated from actual data
-    status: "active" as const, // Default status
-    lastLogin: "2024-01-15", // Placeholder
-    memberSince: "Jan 2023", // Placeholder
-    totalSpent: 0, // Placeholder
-    phoneNumber: "(555) 000-0000", // Placeholder
-    vehicleInfo: "Vehicle info not available" // Placeholder
+    role: user.role || "renter",
+    spotsOwned: 0, // TODO: Calculate from actual data when needed
+    bookingsCount: 0, // TODO: Calculate from actual data when needed
+    status: "active" as const, // TODO: Add status field to schema if needed
+    lastLogin: user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : "Never",
+    memberSince: user.memberSince || (user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "Unknown"),
+    totalSpent: 0, // TODO: Calculate from bookings when needed
+    phoneNumber: user.phone || "No phone",
+    vehicleInfo: "Not configured" // TODO: Add vehicle info to schema if needed
   }));
 
   // Keep the original mock data for reference (commented out)
@@ -132,7 +193,7 @@ export default function AdminUserManagement() {
     }
   ];
 
-  const filteredUsers = (isLoadingUsers ? [] : mockUsers).filter(user => {
+  const filteredUsers = (isLoadingUsers ? [] : displayUsers).filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.department.toLowerCase().includes(searchTerm.toLowerCase())
@@ -151,7 +212,7 @@ export default function AdminUserManagement() {
   }
 
   const handleDeleteUser = async (userId: string) => {
-    const user = mockUsers.find(u => u.id === userId)
+    const user = displayUsers.find(u => u.id === userId)
     if (!user) return
 
     const confirmed = await confirm(confirmations.deleteUser(user.name))
@@ -162,7 +223,7 @@ export default function AdminUserManagement() {
   }
 
   const handleSuspendUser = async (userId: string) => {
-    const user = mockUsers.find(u => u.id === userId)
+    const user = displayUsers.find(u => u.id === userId)
     if (!user) return
 
     const confirmed = await confirm({
@@ -188,7 +249,7 @@ export default function AdminUserManagement() {
   }
 
   const handleSendNotification = async (userId: string) => {
-    const user = mockUsers.find(u => u.id === userId)
+    const user = displayUsers.find(u => u.id === userId)
     if (!user) return
 
     const confirmed = await confirm({
@@ -223,10 +284,15 @@ export default function AdminUserManagement() {
     }
   }
 
+  // Handle form submission
+  const onSubmit = (data: CreateUserFormData) => {
+    createUserMutation.mutate(data);
+  };
+
   const roleStats = {
-    admin: allUsers.filter((u: any) => u.role === "admin").length || 1, // At least the current admin
-    owner: allUsers.filter((u: any) => u.role === "owner").length,
-    renter: allUsers.filter((u: any) => u.role === "renter").length || allUsers.length, // Default to showing total users
+    admin: allUsers.filter((u: User) => u.role === "admin").length || 1, // At least the current admin
+    owner: allUsers.filter((u: User) => u.role === "owner").length,
+    renter: allUsers.filter((u: User) => u.role === "renter").length || allUsers.length, // Default to showing total users
   }
 
   return (
@@ -239,6 +305,15 @@ export default function AdminUserManagement() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => refetchUsers()}
+            disabled={isLoadingUsers}
+            data-testid="button-refresh-users"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingUsers ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
           <Button variant="outline">
             <Upload className="h-4 w-4 mr-2" />
             Import Users
@@ -254,49 +329,124 @@ export default function AdminUserManagement() {
               <DialogHeader>
                 <DialogTitle>Add New User</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="user-name">Full Name</Label>
-                    <Input id="user-name" placeholder="John Doe" />
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="firstName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>First Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="John" {...field} value={field.value || ''} data-testid="input-first-name" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="lastName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Last Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Doe" {...field} value={field.value || ''} data-testid="input-last-name" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
-                  <div>
-                    <Label htmlFor="user-email">Email Address</Label>
-                    <Input id="user-email" placeholder="john.doe@bci.ca" />
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email Address</FormLabel>
+                          <FormControl>
+                            <Input placeholder="john.doe@bci.ca" {...field} value={field.value || ''} data-testid="input-email" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="department"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Department</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Engineering" {...field} value={field.value || ''} data-testid="input-department" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="user-department">Department</Label>
-                    <Input id="user-department" placeholder="Engineering" />
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="role"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Role</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value || 'renter'}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-role">
+                                <SelectValue placeholder="Select role" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="renter">Renter</SelectItem>
+                              <SelectItem value="owner">Spot Owner</SelectItem>
+                              <SelectItem value="admin">Administrator</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Phone Number</FormLabel>
+                          <FormControl>
+                            <Input placeholder="(555) 123-4567" {...field} value={field.value || ''} data-testid="input-phone" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
-                  <div>
-                    <Label htmlFor="user-role">Role</Label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="renter">Renter</SelectItem>
-                        <SelectItem value="owner">Spot Owner</SelectItem>
-                        <SelectItem value="admin">Administrator</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="flex justify-end gap-2 pt-4">
+                    <Button 
+                      type="button"
+                      variant="outline" 
+                      onClick={() => {
+                        setShowAddUser(false);
+                        form.reset();
+                      }}
+                      disabled={createUserMutation.isPending}
+                      data-testid="button-cancel-add-user"
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      type="submit"
+                      disabled={createUserMutation.isPending}
+                      data-testid="button-submit-add-user"
+                    >
+                      {createUserMutation.isPending ? "Creating..." : "Add User"}
+                    </Button>
                   </div>
-                </div>
-                <div>
-                  <Label htmlFor="user-phone">Phone Number</Label>
-                  <Input id="user-phone" placeholder="(555) 123-4567" />
-                </div>
-                <div className="flex justify-end gap-2 pt-4">
-                  <Button variant="outline" onClick={() => setShowAddUser(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={() => setShowAddUser(false)}>
-                    Add User
-                  </Button>
-                </div>
-              </div>
+                </form>
+              </Form>
             </DialogContent>
           </Dialog>
         </div>
@@ -465,7 +615,7 @@ export default function AdminUserManagement() {
                     </td>
                     <td className="p-4">
                       <div className="text-sm">
-                        {user.totalEarnings && <div>Earned: ${user.totalEarnings}</div>}
+                        {user.role === 'owner' && <div>Earnings: $0</div>}
                         {user.totalSpent && <div>Spent: ${user.totalSpent}</div>}
                       </div>
                     </td>
