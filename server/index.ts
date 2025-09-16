@@ -1,6 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { auditService } from "./audit-service";
+import { auditStorage } from "./audit-storage";
 
 const app = express();
 app.use(express.json());
@@ -14,6 +16,9 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+// Note: Audit middleware will be installed AFTER authentication setup
+// to ensure req.user is available for proper actor attribution
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -46,6 +51,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Initialize audit service with storage
+  auditService.setStorage(auditStorage);
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

@@ -7,6 +7,7 @@ import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
+import { auditService } from "./audit-service";
 
 if (!process.env.REPLIT_DOMAINS) {
   throw new Error("Environment variable REPLIT_DOMAINS not provided");
@@ -102,6 +103,36 @@ export async function setupAuth(app: Express) {
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   app.get("/api/login", (req, res, next) => {
+    // Log login attempt
+    const loginAttemptTime = Date.now();
+    const originalEnd = res.end;
+    
+    res.end = function(chunk?: any, encoding?: any) {
+      const success = res.statusCode >= 200 && res.statusCode < 400;
+      
+      // Extract user info if available
+      let actorId: string | undefined;
+      let actorEmail: string | undefined;
+      
+      if (req.user && (req.user as any).claims) {
+        actorId = (req.user as any).claims.sub;
+        actorEmail = (req.user as any).claims.email;
+      }
+      
+      // Log authentication event
+      auditService.auditAuth(
+        "LOGIN",
+        actorId || "unknown",
+        actorEmail || "unknown",
+        success,
+        success ? "Login initiated successfully" : `Login failed with status ${res.statusCode}`
+      ).catch(error => {
+        console.error("Failed to log login event:", error);
+      });
+      
+      return originalEnd.call(this, chunk, encoding);
+    };
+    
     passport.authenticate(`replitauth:${req.hostname}`, {
       prompt: "login consent",
       scope: ["openid", "email", "profile", "offline_access"],
@@ -109,6 +140,35 @@ export async function setupAuth(app: Express) {
   });
 
   app.get("/api/callback", (req, res, next) => {
+    const originalRedirect = res.redirect;
+    
+    res.redirect = function(...args: any[]) {
+      const url = typeof args[0] === 'string' ? args[0] : args[1];
+      const success = !url.includes("/api/login");
+      
+      // Extract user info if available
+      let actorId: string | undefined;
+      let actorEmail: string | undefined;
+      
+      if (req.user && (req.user as any).claims) {
+        actorId = (req.user as any).claims.sub;
+        actorEmail = (req.user as any).claims.email;
+      }
+      
+      // Log authentication callback result
+      auditService.auditAuth(
+        "LOGIN",
+        actorId || "unknown",
+        actorEmail || "unknown",
+        success,
+        success ? "Authentication callback successful" : "Authentication callback failed - redirected to login"
+      ).catch(error => {
+        console.error("Failed to log authentication callback:", error);
+      });
+      
+      return (originalRedirect as any).apply(this, args);
+    } as any;
+    
     passport.authenticate(`replitauth:${req.hostname}`, {
       successReturnToOrRedirect: "/",
       failureRedirect: "/api/login",
@@ -116,7 +176,27 @@ export async function setupAuth(app: Express) {
   });
 
   app.get("/api/logout", (req, res) => {
-    req.logout(() => {
+    // Extract user info before logout
+    let actorId: string | undefined;
+    let actorEmail: string | undefined;
+    
+    if (req.user && (req.user as any).claims) {
+      actorId = (req.user as any).claims.sub;
+      actorEmail = (req.user as any).claims.email;
+    }
+    
+    req.logout((err) => {
+      // Log logout event
+      auditService.auditAuth(
+        "LOGOUT",
+        actorId || "unknown",
+        actorEmail || "unknown",
+        !err,
+        err ? `Logout failed: ${err.message}` : "User logged out successfully"
+      ).catch(error => {
+        console.error("Failed to log logout event:", error);
+      });
+      
       res.redirect(
         client.buildEndSessionUrl(config, {
           client_id: process.env.REPL_ID!,

@@ -11,7 +11,8 @@ import {
   Search,
   ParkingCircle,
   Bell,
-  CalendarCheck
+  CalendarCheck,
+  FileText
 } from "lucide-react"
 import { Link, useLocation } from "wouter"
 import {
@@ -80,6 +81,12 @@ const adminMenuItems = [
     title: "Analytics & Reports",
     url: "/admin/analytics",
     icon: BarChart3,
+    roles: ["admin"]
+  },
+  {
+    title: "Audits",
+    url: "/admin/audits",
+    icon: FileText,
     roles: ["admin"]
   },
 ]

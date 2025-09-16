@@ -17,8 +17,21 @@ import {
   insertBookingSchema,
   insertWaitingListSchema,
   type WaitingList,
-  type SpotType
+  type SpotType,
+  type AuditAction,
+  type EntityType,
+  type UserRole,
+  auditActions,
+  entityTypes,
+  userRoles
 } from "@shared/schema";
+import { auditStorage, type AuditQueryFilters, type AuditPagination } from "./audit-storage";
+import { auditService } from "./audit-service";
+import { 
+  auditContextMiddleware, 
+  auditResponseMiddleware, 
+  auditErrorMiddleware 
+} from "./audit-middleware";
 
 // Zod schemas for admin endpoints
 const toggleBookabilitySchema = z.object({
@@ -31,9 +44,30 @@ const bulkToggleBookabilitySchema = z.object({
   isBookable: z.boolean()
 });
 
+// Zod schemas for audit endpoints
+const auditQuerySchema = z.object({
+  from: z.string().optional().refine(val => !val || !isNaN(Date.parse(val)), "Invalid from date"),
+  to: z.string().optional().refine(val => !val || !isNaN(Date.parse(val)), "Invalid to date"),
+  actorId: z.string().optional(),
+  action: z.enum(auditActions.options).optional(),
+  entityType: z.enum(entityTypes.options).optional(),
+  entityId: z.string().optional(),
+  success: z.string().optional().refine(val => !val || val === "true" || val === "false", "Success must be true or false"),
+  q: z.string().optional(), // Search term
+  page: z.string().optional().refine(val => !val || !isNaN(Number(val)) && Number(val) > 0, "Page must be positive number"),
+  pageSize: z.string().optional().refine(val => !val || (!isNaN(Number(val)) && Number(val) > 0 && Number(val) <= 100), "Page size must be 1-100"),
+});
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication middleware
   await setupAuth(app);
+
+  // CRITICAL: Install audit middleware AFTER authentication setup but BEFORE route registration
+  // This ensures req.user is available for proper actor attribution and middleware executes in correct order
+  // Order: Response interceptor → Context middleware → Error middleware
+  app.use(auditResponseMiddleware);
+  app.use(auditContextMiddleware);
+  app.use(auditErrorMiddleware);
 
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
@@ -97,6 +131,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const newSpot = await storage.createParkingSpot(validatedData);
+      
+      // Audit the parking spot creation
+      await auditService.logAction("CREATE", "parking_spot", {
+        entityId: newSpot.id,
+        message: `Created parking spot ${newSpot.spotNumber} at ${newSpot.location}`,
+        after: newSpot
+      });
+      
       res.json(newSpot);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -130,6 +172,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertParkingSpotSchema.partial().parse(req.body);
       
       const updatedSpot = await storage.updateParkingSpot(id, validatedData);
+      
+      // Audit the parking spot update
+      await auditService.logAction("UPDATE", "parking_spot", {
+        entityId: updatedSpot.id,
+        message: `Updated parking spot ${updatedSpot.spotNumber} at ${updatedSpot.location}`,
+        before: existingSpot,
+        after: updatedSpot
+      });
+      
       res.json(updatedSpot);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -163,6 +214,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!deleted) {
         return res.status(404).json({ error: "Parking spot not found" });
       }
+      
+      // Audit the parking spot deletion
+      await auditService.logAction("DELETE", "parking_spot", {
+        entityId: id,
+        message: `Deleted parking spot ${existingSpot.spotNumber} at ${existingSpot.location}`,
+        before: existingSpot
+      });
+      
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting parking spot:", error);
@@ -185,6 +244,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const newListing = await storage.createSpotListing(validatedData);
+      
+      // Audit the spot listing creation
+      await auditService.logAction("CREATE", "spot_listing", {
+        entityId: newListing.id,
+        message: `Created spot listing for ${newListing.spotId} from ${newListing.startDate} to ${newListing.endDate}`,
+        after: newListing
+      });
+      
       res.json(newListing);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -218,6 +285,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertSpotListingSchema.partial().parse(req.body);
       
       const updatedListing = await storage.updateListing(id, validatedData);
+      
+      // Audit the spot listing update
+      await auditService.logAction("UPDATE", "spot_listing", {
+        entityId: updatedListing.id,
+        message: `Updated spot listing for ${updatedListing.spotId} from ${updatedListing.startDate} to ${updatedListing.endDate}`,
+        before: existingListing,
+        after: updatedListing
+      });
+      
       res.json(updatedListing);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -251,6 +327,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!deleted) {
         return res.status(404).json({ error: "Listing not found" });
       }
+      
+      // Audit the spot listing deletion
+      await auditService.logAction("DELETE", "spot_listing", {
+        entityId: id,
+        message: `Deleted spot listing for ${existingListing.spotId} from ${existingListing.startDate} to ${existingListing.endDate}`,
+        before: existingListing
+      });
+      
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting listing:", error);
@@ -284,6 +368,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const updatedBooking = await storage.markPaymentReceived(id, paymentReceived);
+      
+      // Audit the payment status update
+      await auditService.logAction("UPDATE", "booking", {
+        entityId: updatedBooking.id,
+        message: `${paymentReceived ? 'Marked payment as received' : 'Unmarked payment'} for booking ${updatedBooking.id}`,
+        before: { ...booking, paymentReceived: booking.paymentReceived },
+        after: { ...updatedBooking, paymentReceived: updatedBooking.paymentReceived }
+      });
+      
       res.json(updatedBooking);
     } catch (error) {
       console.error("Error updating payment status:", error);
@@ -356,10 +449,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const { spotId, userId } = assignSpotSchema.parse(req.body);
 
+      // Get spot info before assignment for audit logging
+      const existingSpot = await storage.getParkingSpot(spotId);
+      const user = await storage.getUser(userId);
+      
       const updatedSpot = await storage.updateParkingSpot(spotId, { ownerId: userId });
       if (!updatedSpot) {
         return res.status(404).json({ error: "Parking spot not found" });
       }
+      
+      // Audit the spot assignment
+      await auditService.logAction("ASSIGN", "parking_spot", {
+        entityId: spotId,
+        message: `Assigned parking spot ${updatedSpot.spotNumber} to ${user?.firstName} ${user?.lastName} (${user?.email})`,
+        before: existingSpot,
+        after: updatedSpot
+      });
       
       res.json(updatedSpot);
     } catch (error) {
@@ -381,6 +486,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const { spotIds, userId } = bulkAssignSchema.parse(req.body);
 
+      // Get user info for audit logging
+      const user = await storage.getUser(userId);
+      
       const updatedSpots = [];
       for (const spotId of spotIds) {
         const updatedSpot = await storage.updateParkingSpot(spotId, { ownerId: userId });
@@ -388,6 +496,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           updatedSpots.push(updatedSpot);
         }
       }
+      
+      // Audit the bulk assignment
+      await auditService.logAction("BULK_ASSIGN", "parking_spot", {
+        entityId: spotIds.join(","),
+        message: `Bulk assigned ${updatedSpots.length} parking spots to ${user?.firstName} ${user?.lastName} (${user?.email})`,
+        after: {
+          spotIds,
+          userId,
+          assignedCount: updatedSpots.length,
+          totalRequested: spotIds.length,
+          assignedSpots: updatedSpots.map(s => ({ id: s.id, spotNumber: s.spotNumber, location: s.location }))
+        }
+      });
       
       res.json({ 
         success: true, 
@@ -415,6 +536,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = adminSpotSchema.parse(req.body);
       
       const newSpot = await storage.createParkingSpot(validatedData);
+      
+      // Audit the admin spot creation
+      await auditService.logAction("CREATE", "parking_spot", {
+        entityId: newSpot.id,
+        message: `Admin created parking spot ${newSpot.spotNumber} at ${newSpot.location}${newSpot.ownerId ? ` (assigned to ${newSpot.ownerId})` : ' (unallocated)'}`,
+        after: newSpot
+      });
+      
       res.json(newSpot);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -465,6 +594,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Parking spot not found" });
       }
       
+      // Audit the admin spot update
+      await auditService.logAction("UPDATE", "parking_spot", {
+        entityId: updatedSpot.id,
+        message: `Admin updated parking spot ${updatedSpot.spotNumber} at ${updatedSpot.location}`,
+        before: existingSpot,
+        after: updatedSpot
+      });
+      
       res.json(updatedSpot);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -491,6 +628,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Parking spot not found" });
       }
       
+      // Audit the admin spot deletion
+      await auditService.logAction("DELETE", "parking_spot", {
+        entityId: id,
+        message: `Admin deleted parking spot ${existingSpot.spotNumber} at ${existingSpot.location}`,
+        before: existingSpot
+      });
+      
       res.json({ success: true, message: "Parking spot deleted successfully" });
     } catch (error) {
       console.error("Error deleting parking spot:", error);
@@ -505,10 +649,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = toggleBookabilitySchema.parse(req.body);
       const { spotId, isBookable } = validatedData;
       
+      // Get spot info before update for audit logging
+      const existingSpot = await storage.getParkingSpot(spotId);
+      
       const updatedSpot = await storage.toggleSpotBookability(spotId, isBookable);
       if (!updatedSpot) {
         return res.status(404).json({ error: "Parking spot not found" });
       }
+      
+      // Audit the bookability toggle
+      await auditService.logAction("UPDATE", "parking_spot", {
+        entityId: spotId,
+        message: `${isBookable ? 'Enabled' : 'Disabled'} bookability for spot ${updatedSpot.spotNumber}`,
+        before: existingSpot,
+        after: updatedSpot
+      });
       
       res.json({ 
         success: true, 
@@ -532,6 +687,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { spotIds, isBookable } = validatedData;
       
       const updatedSpots = await storage.bulkToggleSpotBookability(spotIds, isBookable);
+      
+      // Audit the bulk bookability toggle
+      await auditService.logAction("BULK_UPDATE", "parking_spot", {
+        entityId: spotIds.join(","),
+        message: `Bulk ${isBookable ? 'enabled' : 'disabled'} bookability for ${updatedSpots.length} spots`,
+        after: { 
+          spotIds, 
+          isBookable, 
+          count: updatedSpots.length,
+          updatedSpots: updatedSpots.map(s => ({ id: s.id, spotNumber: s.spotNumber, isBookable: s.isBookable }))
+        }
+      });
       
       res.json({ 
         success: true, 
@@ -583,6 +750,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching recent assignments:", error);
       res.status(500).json({ error: "Failed to fetch recent assignments" });
+    }
+  });
+
+  // ===== AUDIT ENDPOINTS =====
+
+  // Get audit logs (Admin only)
+  app.get("/api/admin/audits", requireAdmin, async (req, res) => {
+    try {
+      // Validate and parse query parameters
+      const validatedQuery = auditQuerySchema.parse(req.query);
+      const {
+        from,
+        to,
+        actorId,
+        action,
+        entityType,
+        entityId,
+        success,
+        q,
+        page = "1",
+        pageSize = "50"
+      } = validatedQuery;
+
+      // Build audit query filters
+      const filters: AuditQueryFilters = {};
+      
+      if (from) filters.startDate = new Date(from);
+      if (to) filters.endDate = new Date(to);
+      if (actorId) filters.actorId = actorId;
+      if (action) filters.action = action as AuditAction;
+      if (entityType) filters.entityType = entityType as EntityType;
+      if (entityId) filters.entityId = entityId;
+      if (success !== undefined) filters.success = success === "true";
+      if (q) filters.searchTerm = q;
+
+      // Build pagination parameters
+      const pagination: AuditPagination = {
+        page: parseInt(page),
+        limit: parseInt(pageSize),
+        sortBy: 'occurredAt',
+        sortOrder: 'desc'
+      };
+
+      // Query audit logs
+      const result = await auditStorage.queryAuditLogs(filters, pagination);
+      
+      // Return data in expected format
+      res.json({
+        items: result.logs,
+        total: result.totalCount,
+        page: result.page,
+        pageSize: result.limit,
+        totalPages: result.totalPages
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          error: "Invalid query parameters", 
+          details: error.errors 
+        });
+      }
+      console.error("Error fetching audit logs:", error);
+      res.status(500).json({ error: "Failed to fetch audit logs" });
     }
   });
 
@@ -658,6 +888,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const entry = await storage.createWaitingListEntry(waitingListData);
+      
+      // Audit the waiting list entry creation
+      await auditService.logAction("CREATE", "waiting_list", {
+        entityId: entry.id,
+        message: `Created waiting list entry for ${entry.userName} (${entry.userEmail}) - ${entry.spotType} preference`,
+        after: entry
+      });
+      
       res.json(entry);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -673,6 +911,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       
+      // Get existing entry for audit logging
+      const existingEntry = await storage.getWaitingListById(id);
+      if (!existingEntry) {
+        return res.status(404).json({ error: "Waiting list entry not found" });
+      }
+      
       // Validate request body
       const validatedData = insertWaitingListSchema.partial().parse(req.body);
       
@@ -680,6 +924,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!updatedEntry) {
         return res.status(404).json({ error: "Waiting list entry not found" });
       }
+      
+      // Audit the waiting list entry update
+      await auditService.logAction("UPDATE", "waiting_list", {
+        entityId: updatedEntry.id,
+        message: `Updated waiting list entry for ${updatedEntry.userName} (${updatedEntry.userEmail})`,
+        before: existingEntry,
+        after: updatedEntry
+      });
+      
       res.json(updatedEntry);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -711,6 +964,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!assignedEntry) {
         return res.status(404).json({ error: "Failed to assign waiting list user" });
       }
+
+      // Audit the waiting list assignment
+      await auditService.logAction("ASSIGN", "waiting_list", {
+        entityId: id,
+        message: `Assigned waiting list user ${waitingListEntry.userName} to spot ${spotId}`,
+        before: waitingListEntry,
+        after: assignedEntry
+      });
 
       // Send notifications (don't block the assignment if notifications fail)
       try {
@@ -756,10 +1017,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/waiting-list/:id", requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
+      
+      // Get existing entry for audit logging
+      const existingEntry = await storage.getWaitingListById(id);
+      if (!existingEntry) {
+        return res.status(404).json({ error: "Waiting list entry not found" });
+      }
+      
       const deleted = await storage.deleteWaitingListEntry(id);
       if (!deleted) {
         return res.status(404).json({ error: "Waiting list entry not found" });
       }
+      
+      // Audit the waiting list entry deletion
+      await auditService.logAction("DELETE", "waiting_list", {
+        entityId: id,
+        message: `Deleted waiting list entry for ${existingEntry.userName} (${existingEntry.userEmail})`,
+        before: existingEntry
+      });
+      
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting waiting list entry:", error);

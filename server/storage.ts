@@ -14,9 +14,13 @@ import {
   type SpotType,
   type ListingType,
   type ListingStatus,
-  type BookingStatus
+  type BookingStatus,
+  type AuditLog,
+  type InsertAuditLog
 } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { auditDecorator } from "./audit-service";
+import { type IAuditStorage } from "./audit-storage";
 
 // Storage interface with comprehensive CRUD methods
 export interface IStorage {
@@ -82,6 +86,11 @@ export interface IStorage {
   
   // Recent assignments tracking
   getRecentAssignments(daysBack?: number): Promise<WaitingList[]>;
+  
+  // Audit storage operations (delegated to audit storage)
+  createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
+  getAuditLog(id: string): Promise<AuditLog | undefined>;
+  queryAuditLogs(filters: any, pagination: any): Promise<any>;
 }
 
 export class MemStorage implements IStorage {
@@ -90,16 +99,25 @@ export class MemStorage implements IStorage {
   private spotListings: Map<string, SpotListing>;
   private bookings: Map<string, Booking>;
   private waitingList: Map<string, WaitingList>;
+  private auditStorage: IAuditStorage;
 
-  constructor() {
+  constructor(auditStorage?: IAuditStorage) {
     this.users = new Map();
     this.parkingSpots = new Map();
     this.spotListings = new Map();
     this.bookings = new Map();
     this.waitingList = new Map();
     
+    // Inject audit storage (will be set externally)
+    this.auditStorage = auditStorage as IAuditStorage;
+    
     // Add sample data for testing
     this.seedTestData();
+  }
+  
+  // Set audit storage after construction (dependency injection)
+  setAuditStorage(auditStorage: IAuditStorage) {
+    this.auditStorage = auditStorage;
   }
 
   private seedTestData() {
@@ -531,12 +549,22 @@ export class MemStorage implements IStorage {
 
   // (IMPORTANT) Required for Replit Auth
   async upsertUser(userData: UpsertUser): Promise<User> {
+    // Ensure id is provided (required for User type)
+    if (!userData.id) {
+      throw new Error('User ID is required for upsert operation');
+    }
+    
     const existingUser = this.users.get(userData.id);
     const now = new Date();
     
     const user: User = {
       ...existingUser,
       ...userData,
+      id: userData.id, // Ensure id is properly typed as string
+      email: userData.email ?? null, // Convert undefined to null for schema compatibility
+      firstName: userData.firstName ?? null, // Convert undefined to null for schema compatibility
+      lastName: userData.lastName ?? null, // Convert undefined to null for schema compatibility
+      profileImageUrl: userData.profileImageUrl ?? null, // Convert undefined to null for schema compatibility
       role: existingUser?.role || "renter", // Keep existing role or default to renter
       phone: existingUser?.phone || null,
       department: existingUser?.department || null,
@@ -559,6 +587,7 @@ export class MemStorage implements IStorage {
     const now = new Date();
     const user: User = { 
       ...insertUser,
+      email: insertUser.email ?? null, // Convert undefined to null for schema compatibility
       role: insertUser.role as UserRole,
       phone: insertUser.phone ?? null,
       department: insertUser.department ?? null,
@@ -594,6 +623,8 @@ export class MemStorage implements IStorage {
     const id = randomUUID();
     const spot: ParkingSpot = { 
       ...insertSpot,
+      ownerId: insertSpot.ownerId ?? null, // Convert undefined to null for schema compatibility
+      isBookable: insertSpot.isBookable ?? true, // Convert undefined to default true for schema compatibility
       spotType: insertSpot.spotType as SpotType,
       description: insertSpot.description ?? null,
       isIndoor: insertSpot.isIndoor ?? false,
@@ -829,7 +860,7 @@ export class MemStorage implements IStorage {
       assignedSpotId: insertEntry.assignedSpotId || null,
       adminNotes: insertEntry.adminNotes || null,
       reason: insertEntry.reason || null,
-      preferredSpotType: insertEntry.preferredSpotType || null,
+      preferredSpotType: (insertEntry.preferredSpotType as SpotType) || null,
       preferredBuilding: insertEntry.preferredBuilding || null,
       createdAt: new Date(),
       updatedAt: new Date()
@@ -845,6 +876,7 @@ export class MemStorage implements IStorage {
     const updatedEntry: WaitingList = {
       ...existingEntry,
       ...updates,
+      preferredSpotType: updates.preferredSpotType ? (updates.preferredSpotType as SpotType) : existingEntry.preferredSpotType,
       updatedAt: new Date()
     };
     this.waitingList.set(id, updatedEntry);
@@ -917,6 +949,29 @@ export class MemStorage implements IStorage {
         return new Date(b.assignedDate).getTime() - new Date(a.assignedDate).getTime();
       });
   }
+
+  // Audit storage delegation methods
+  async createAuditLog(log: InsertAuditLog): Promise<AuditLog> {
+    return this.auditStorage.createAuditLog(log);
+  }
+
+  async getAuditLog(id: string): Promise<AuditLog | undefined> {
+    return this.auditStorage.getAuditLog(id);
+  }
+
+  async queryAuditLogs(filters: any, pagination: any): Promise<any> {
+    return this.auditStorage.queryAuditLogs(filters, pagination);
+  }
+
+  // Audit decorators will be applied via server initialization
 }
 
-export const storage = new MemStorage();
+// Initialize storage and audit system 
+import { auditStorage } from "./audit-storage";
+import { auditService } from "./audit-service";
+
+const storage = new MemStorage();
+storage.setAuditStorage(auditStorage);
+auditService.setStorage(storage);
+
+export { storage };

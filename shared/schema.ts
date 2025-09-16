@@ -264,3 +264,94 @@ export const sampleUsers: Record<UserRole, AuthUser> = {
     }
   }
 };
+
+// Audit Logs System
+export const auditActions = z.enum([
+  "CREATE",
+  "UPDATE", 
+  "DELETE",
+  "LOGIN",
+  "LOGOUT",
+  "ASSIGN",
+  "UNASSIGN",
+  "APPROVE", 
+  "REJECT",
+  "ACTIVATE",
+  "DEACTIVATE",
+  "SEARCH",
+  "VIEW",
+  "EXPORT",
+  "IMPORT",
+  "TOGGLE_BOOKABILITY",
+  "BULK_UPDATE",
+  "CANCEL",
+  "COMPLETE"
+]);
+
+export type AuditAction = z.infer<typeof auditActions>;
+
+export const entityTypes = z.enum([
+  "user",
+  "parking_spot", 
+  "spot_listing",
+  "booking",
+  "waiting_list",
+  "notification",
+  "system"
+]);
+
+export type EntityType = z.infer<typeof entityTypes>;
+
+// Comprehensive audit logs table for enterprise compliance
+export const auditLogs = pgTable("audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  occurredAt: timestamp("occurred_at").notNull().defaultNow(),
+  correlationId: varchar("correlation_id").notNull(), // For tracing related operations
+  
+  // Actor information (who performed the action)
+  actorId: varchar("actor_id"), // May be null for system actions
+  actorEmail: varchar("actor_email"),
+  actorRole: text("actor_role").$type<UserRole>(),
+  
+  // Action details
+  action: text("action").notNull().$type<AuditAction>(),
+  entityType: text("entity_type").notNull().$type<EntityType>(),
+  entityId: varchar("entity_id"), // May be null for system-wide actions
+  success: boolean("success").notNull().default(true),
+  message: text("message"), // Human readable description
+  
+  // Request metadata for forensics
+  requestMeta: jsonb("request_meta"), // { ip, method, path, userAgent, etc. }
+  
+  // Entity state tracking (for CRUD operations)
+  before: jsonb("before"), // State before operation
+  after: jsonb("after"), // State after operation
+  
+  // Optional hash chaining for tamper evidence
+  prevHash: varchar("prev_hash"), // Hash of previous audit log
+  hash: varchar("hash"), // Hash of this audit log
+}, (table) => [
+  index("IDX_audit_occurred_at").on(table.occurredAt),
+  index("IDX_audit_actor_id").on(table.actorId),
+  index("IDX_audit_entity").on(table.entityType, table.entityId),
+  index("IDX_audit_correlation_id").on(table.correlationId),
+  index("IDX_audit_action").on(table.action),
+]);
+
+export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
+  id: true,
+  occurredAt: true,
+});
+
+export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
+export type AuditLog = typeof auditLogs.$inferSelect;
+
+// Request metadata type for audit logging
+export interface RequestMetadata {
+  ip?: string;
+  method?: string;
+  path?: string;
+  userAgent?: string;
+  contentType?: string;
+  contentLength?: number;
+}
