@@ -1,13 +1,13 @@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { MapPin, Car, Zap, Accessibility, Calendar, DollarSign } from "lucide-react"
+import { MapPin, Car, Zap, Accessibility, Calendar, DollarSign, Building, Ban } from "lucide-react"
 
 export interface ParkingSpot {
   id: string
   spotNumber: string
   location: string
-  type: "regular" | "accessible" | "electric"
+  type: "regular" | "accessible" | "electric" | "tesla_ev" | "taxable_benefit"
   isInside: boolean
   price: number
   availability?: {
@@ -15,6 +15,7 @@ export interface ParkingSpot {
   }
   owner: string
   isAvailable: boolean
+  isBookable?: boolean // Whether the spot can be booked (false for taxable_benefit)
 }
 
 interface ParkingSpotCardProps {
@@ -34,8 +35,12 @@ export function ParkingSpotCard({
     switch (spot.type) {
       case "electric":
         return <Zap className="h-4 w-4" />
+      case "tesla_ev":
+        return <Zap className="h-4 w-4 text-red-600" />
       case "accessible":
         return <Accessibility className="h-4 w-4" />
+      case "taxable_benefit":
+        return <Building className="h-4 w-4" />
       default:
         return <Car className="h-4 w-4" />
     }
@@ -45,14 +50,23 @@ export function ParkingSpotCard({
     const variants = {
       regular: "secondary" as const,
       accessible: "default" as const,
-      electric: "default" as const
+      electric: "default" as const,
+      tesla_ev: "default" as const,
+      taxable_benefit: "outline" as const
+    }
+    
+    const labels = {
+      regular: "Regular",
+      accessible: "Accessible", 
+      electric: "EV Charger",
+      tesla_ev: "Tesla EV Charger",
+      taxable_benefit: "Taxable Benefit"
     }
     
     return (
       <Badge variant={variants[spot.type]} className="gap-1">
         {getSpotTypeIcon()}
-        {spot.type === "electric" ? "EV Charging" : 
-         spot.type === "accessible" ? "Accessible" : "Regular"}
+        {labels[spot.type]}
       </Badge>
     )
   }
@@ -117,11 +131,12 @@ export function ParkingSpotCard({
           <Button 
             size="sm" 
             onClick={handleBook}
-            disabled={!spot.isAvailable}
+            disabled={!spot.isAvailable || spot.isBookable === false}
             className="flex-1"
             data-testid={`button-book-${spot.id}`}
           >
-            {spot.isAvailable ? "Book" : "Unavailable"}
+            {spot.isBookable === false ? "Not Bookable" : 
+             spot.isAvailable ? "Book" : "Unavailable"}
           </Button>
         </CardFooter>
       )}

@@ -173,79 +173,139 @@ export class MemStorage implements IStorage {
     // Use owner user as default for parking spots
     const defaultUserId = ownerUser.id;
 
-    // Create sample parking spots owned by this user
-    const spot1: ParkingSpot = {
-      id: "spot-1",
-      spotNumber: "A-15",
-      location: "Main Building - Level 2",
-      spotType: "electric",
-      description: "Electric charging spot",
+    // Create all 121 BCI parking stalls for new facility at 750 Pandora Ave, Victoria BC
+    // Underground parking with Level 1 and Level 2
+    const parkingSpots: ParkingSpot[] = [];
+
+    // First create the 4 test stalls as requested
+    // Test stall #41 (Tesla EV)
+    parkingSpots.push({
+      id: `spot-${41}`,
+      spotNumber: "41",
+      location: "Level 1",
+      spotType: "tesla_ev",
+      description: "Tesla EV charging station (Test stall)",
       isIndoor: true,
       isActive: true,
       isBookable: true,
-      ownerId: defaultUserId,
+      ownerId: null,
       createdAt: new Date()
-    };
+    });
 
-    const spot2: ParkingSpot = {
-      id: "spot-2", 
-      spotNumber: "B-08",
-      location: "North Parking Lot",
-      spotType: "regular",
-      description: "Regular outdoor spot",
-      isIndoor: false,
-      isActive: true,
-      isBookable: true,
-      ownerId: defaultUserId,
-      createdAt: new Date()
-    };
+    // Test stalls #136, #139, #207 (general use)
+    [136, 139, 207].forEach(spotNum => {
+      parkingSpots.push({
+        id: `spot-${spotNum}`,
+        spotNumber: spotNum.toString(),
+        location: spotNum <= 80 ? "Level 1" : "Level 2",
+        spotType: "regular",
+        description: `General parking stall (Test stall #${spotNum})`,
+        isIndoor: true,
+        isActive: true,
+        isBookable: true,
+        ownerId: null,
+        createdAt: new Date()
+      });
+    });
 
-    this.parkingSpots.set(spot1.id, spot1);
-    this.parkingSpots.set(spot2.id, spot2);
+    // Create taxable benefit stalls #1-13 (Level 1, not bookable)
+    for (let i = 1; i <= 13; i++) {
+      parkingSpots.push({
+        id: `spot-${i}`,
+        spotNumber: i.toString(),
+        location: "Level 1",
+        spotType: "taxable_benefit",
+        description: `Taxable benefit parking stall assigned by position`,
+        isIndoor: true,
+        isActive: true,
+        isBookable: false, // Not bookable by others
+        ownerId: null,
+        createdAt: new Date()
+      });
+    }
 
-    // Add unallocated spots for admin testing
-    const unallocatedSpot1: ParkingSpot = {
-      id: "spot-unallocated-1",
-      spotNumber: "C-101",
-      location: "East Parking Garage - Level 1",
-      spotType: "regular",
-      description: "Standard parking spot",
-      isIndoor: true,
-      isActive: true,
-      isBookable: true,
-      ownerId: null, // Unallocated
-      createdAt: new Date()
-    };
-    
-    const unallocatedSpot2: ParkingSpot = {
-      id: "spot-unallocated-2",
-      spotNumber: "D-205",
-      location: "West Parking Lot - Outdoor",
-      spotType: "electric",
-      description: "Electric vehicle charging station",
-      isIndoor: false,
-      isActive: true,
-      isBookable: false, // Set one as not bookable for testing
-      ownerId: null, // Unallocated
-      createdAt: new Date()
-    };
-    
-    const unallocatedSpot3: ParkingSpot = {
-      id: "spot-unallocated-3",
-      spotNumber: "A-301",
-      location: "Main Building - Level 3",
+    // Create accessible stall #14 (Level 1)
+    parkingSpots.push({
+      id: "spot-14",
+      spotNumber: "14",
+      location: "Level 1",
       spotType: "accessible",
-      description: "Accessible parking with ramp access",
+      description: "Accessible parking with wheelchair access",
       isIndoor: true,
       isActive: true,
       isBookable: true,
-      ownerId: null, // Unallocated
+      ownerId: null,
       createdAt: new Date()
-    };
+    });
+
+    // Create Tesla EV chargers #15, #16 (Level 1) - #41 already created above
+    [15, 16].forEach(spotNum => {
+      parkingSpots.push({
+        id: `spot-${spotNum}`,
+        spotNumber: spotNum.toString(),
+        location: "Level 1",
+        spotType: "tesla_ev",
+        description: "Tesla EV charging station",
+        isIndoor: true,
+        isActive: true,
+        isBookable: true,
+        ownerId: null,
+        createdAt: new Date()
+      });
+    });
+
+    // Create regular EV chargers #17-31 (15 stalls across Level 1 and 2)
+    for (let i = 17; i <= 31; i++) {
+      parkingSpots.push({
+        id: `spot-${i}`,
+        spotNumber: i.toString(),
+        location: i <= 23 ? "Level 1" : "Level 2", // Split across levels
+        spotType: "electric",
+        description: "Electric vehicle charging station",
+        isIndoor: true,
+        isActive: true,
+        isBookable: true,
+        ownerId: null,
+        createdAt: new Date()
+      });
+    }
+
+    // Create remaining regular stalls to reach 121 total
+    // We already have: 13 taxable + 1 accessible + 3 tesla_ev + 15 electric = 32 special stalls
+    // We need: 121 - 32 = 89 regular stalls
+    // We already created 3 test regular stalls (#136, #139, #207)
+    // So we need 86 more regular stalls
     
-    this.parkingSpots.set(unallocatedSpot1.id, unallocatedSpot1);
-    this.parkingSpots.set(unallocatedSpot2.id, unallocatedSpot2);
-    this.parkingSpots.set(unallocatedSpot3.id, unallocatedSpot3);
+    const regularStallNumbers = [];
+    
+    // Fill in gaps and continue sequence
+    for (let i = 32; i <= 121; i++) {
+      // Skip the test stalls we already created
+      if (i !== 41 && i !== 136 && i !== 139 && i !== 207) {
+        regularStallNumbers.push(i);
+      }
+    }
+
+    // Take only the first 86 numbers to reach exactly 89 regular stalls total (including the 3 test stalls)
+    regularStallNumbers.slice(0, 86).forEach(spotNum => {
+      parkingSpots.push({
+        id: `spot-${spotNum}`,
+        spotNumber: spotNum.toString(),
+        location: spotNum <= 80 ? "Level 1" : "Level 2", // Distribute across levels
+        spotType: "regular",
+        description: "General parking stall",
+        isIndoor: true,
+        isActive: true,
+        isBookable: true,
+        ownerId: null,
+        createdAt: new Date()
+      });
+    });
+
+    // Add all parking spots to the storage
+    parkingSpots.forEach(spot => {
+      this.parkingSpots.set(spot.id, spot);
+    });
 
     // Create sample listings with different statuses for testing 6-tab system
     const today = new Date().toISOString().split('T')[0];
@@ -255,7 +315,7 @@ export class MemStorage implements IStorage {
     // Active listing (available)
     const listing1: SpotListing = {
       id: "listing-1",
-      spotId: spot1.id,
+      spotId: "spot-15", // Tesla EV stall
       ownerId: defaultUserId,
       listingType: "single",
       status: "active",
@@ -274,7 +334,7 @@ export class MemStorage implements IStorage {
     // Booked listing (also active)
     const listing2: SpotListing = {
       id: "listing-2",
-      spotId: spot2.id,
+      spotId: "spot-32", // Regular stall
       ownerId: defaultUserId,
       listingType: "single", 
       status: "active",
@@ -293,7 +353,7 @@ export class MemStorage implements IStorage {
     // Used listing without payment (payment pending)
     const listing3: SpotListing = {
       id: "listing-3",
-      spotId: spot1.id,
+      spotId: "spot-15", // Tesla EV stall
       ownerId: defaultUserId,
       listingType: "single",
       status: "expired",
@@ -312,7 +372,7 @@ export class MemStorage implements IStorage {
     // Used listing with payment (completed)
     const listing4: SpotListing = {
       id: "listing-4",
-      spotId: spot2.id,
+      spotId: "spot-32", // Regular stall
       ownerId: defaultUserId,
       listingType: "single",
       status: "expired",
@@ -331,7 +391,7 @@ export class MemStorage implements IStorage {
     // Unused listing (past date, not booked)
     const listing5: SpotListing = {
       id: "listing-5",
-      spotId: spot1.id,
+      spotId: "spot-15", // Tesla EV stall
       ownerId: defaultUserId,
       listingType: "single",
       status: "expired",
@@ -359,7 +419,7 @@ export class MemStorage implements IStorage {
     const booking1: Booking = {
       id: "booking-1",
       listingId: listing1.id,
-      spotId: spot1.id,
+      spotId: "spot-15", // Tesla EV stall
       renterId: renterUser.id,
       ownerId: defaultUserId,
       bookingDate: tomorrow,
@@ -376,7 +436,7 @@ export class MemStorage implements IStorage {
     const booking2: Booking = {
       id: "booking-2",
       listingId: listing2.id,
-      spotId: spot2.id,
+      spotId: "spot-32", // Regular stall
       renterId: renterUser.id,
       ownerId: defaultUserId,
       bookingDate: today,
@@ -393,7 +453,7 @@ export class MemStorage implements IStorage {
     const booking3: Booking = {
       id: "booking-3",
       listingId: listing4.id,
-      spotId: spot2.id,
+      spotId: "spot-32", // Regular stall
       renterId: renterUser.id,
       ownerId: defaultUserId,
       bookingDate: yesterday,
@@ -410,7 +470,7 @@ export class MemStorage implements IStorage {
     const booking4: Booking = {
       id: "booking-4",
       listingId: listing3.id,
-      spotId: spot1.id,
+      spotId: "spot-15", // Tesla EV stall
       renterId: renterUser.id,
       ownerId: defaultUserId,
       bookingDate: tomorrow,

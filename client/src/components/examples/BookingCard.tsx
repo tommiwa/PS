@@ -4,7 +4,7 @@ export default function BookingCardExample() {
   const mockBooking = {
     id: "B-001",
     spotNumber: "A-15",
-    location: "Main Building - Level 2",
+    location: "750 Pandora Ave, Victoria BC - Level 2",
     date: "2024-01-15",
     startTime: "8:00 AM",
     endTime: "6:00 PM",

@@ -4,7 +4,7 @@ export default function ParkingSpotCardExample() {
   const mockSpot = {
     id: "P-001",
     spotNumber: "A-15",
-    location: "Main Building - Level 2",
+    location: "750 Pandora Ave, Victoria BC - Level 2",
     type: "electric" as const,
     isInside: true,
     price: 25,

@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle, User } from "lucide-react"
+import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle, User, Zap, Accessibility, Building } from "lucide-react"
 import { ParkingSpot } from "./parking-spot-card"
 import { isPastDate, getTodayString } from "@/utils/date-utils"
 import { AuthService } from "@/lib/auth"
@@ -139,9 +139,13 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
   const getSpotTypeIcon = () => {
     switch (spot.type) {
       case "electric":
-        return <Car className="h-4 w-4 text-blue-600" />
+        return <Zap className="h-4 w-4 text-green-600" />
+      case "tesla_ev":
+        return <Zap className="h-4 w-4 text-red-600" />
       case "accessible":
-        return <Car className="h-4 w-4 text-green-600" />
+        return <Accessibility className="h-4 w-4 text-blue-600" />
+      case "taxable_benefit":
+        return <Building className="h-4 w-4 text-orange-600" />
       default:
         return <Car className="h-4 w-4 text-gray-600" />
     }
@@ -165,8 +169,10 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
               Spot {spot.spotNumber}
             </h3>
             <Badge variant="secondary">
-              {spot.type === "electric" ? "EV Charging" : 
-               spot.type === "accessible" ? "Accessible" : "Regular"}
+              {spot.type === "electric" ? "EV Charger" : 
+               spot.type === "tesla_ev" ? "Tesla EV Charger" : 
+               spot.type === "accessible" ? "Accessible" : 
+               spot.type === "taxable_benefit" ? "Taxable Benefit" : "Regular"}
             </Badge>
           </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">

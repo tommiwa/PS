@@ -441,6 +441,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get available parking spots for search (Authenticated users)
+  app.get("/api/available-spots", isAuthenticated, async (req: any, res) => {
+    try {
+      const allSpots = await storage.getAllParkingSpots();
+      
+      // Filter to only show spots that can be searched/booked by renters
+      const availableSpots = allSpots.filter(spot => {
+        // Only show spots that are:
+        // 1. Active (not deactivated)
+        // 2. Have an owner (assigned spots)
+        // 3. Are bookable (not taxable_benefit or disabled)
+        return spot.isActive && 
+               spot.ownerId && 
+               spot.isBookable && 
+               spot.spotType !== 'taxable_benefit';
+      });
+      
+      res.json(availableSpots);
+    } catch (error) {
+      console.error("Error fetching available spots:", error);
+      res.status(500).json({ error: "Failed to fetch available spots" });
+    }
+  });
+
+  // CRITICAL: Create booking with security validation (Authenticated users only)
+  app.post("/api/bookings", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      // Validate request body
+      const validatedData = insertBookingSchema.parse(req.body);
+      
+      // SECURITY: Get the parking spot to validate bookability
+      const spot = await storage.getParkingSpot(validatedData.spotId);
+      if (!spot) {
+        return res.status(404).json({ error: "Parking spot not found" });
+      }
+
+      // CRITICAL SECURITY CHECKS: Prevent booking non-bookable stalls
+      if (!spot.isBookable) {
+        return res.status(403).json({ 
+          error: "This parking spot is not available for booking", 
+          reason: "Spot is marked as non-bookable" 
+        });
+      }
+
+      if (spot.spotType === "taxable_benefit") {
+        return res.status(403).json({ 
+          error: "Taxable benefit parking spots cannot be booked by renters", 
+          reason: "This is an executive/taxable benefit spot" 
+        });
+      }
+
+      // Additional validation: Ensure user is not booking their own spot
+      if (spot.ownerId === userId) {
+        return res.status(400).json({ 
+          error: "You cannot book your own parking spot" 
+        });
+      }
+
+      // Create the booking with the authenticated user as renter
+      const newBooking = await storage.createBooking({
+        ...validatedData,
+        renterId: userId,
+        // Ensure ownerId matches the spot owner
+        ownerId: spot.ownerId || "unassigned"
+      });
+
+      // Audit the booking creation
+      await auditService.logAction("CREATE", "booking", {
+        entityId: newBooking.id,
+        message: `Created booking for spot ${spot.spotNumber} on ${newBooking.bookingDate}`,
+        after: newBooking
+      });
+
+      res.json(newBooking);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid booking data", details: error.errors });
+      }
+      console.error("Error creating booking:", error);
+      res.status(500).json({ error: "Failed to create booking" });
+    }
+  });
+
   // Get all unallocated parking spots (Admin only)
   app.get("/api/admin/unallocated-spots", requireAdmin, async (req, res) => {
     try {

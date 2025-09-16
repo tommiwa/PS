@@ -5,12 +5,12 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Search, X, MapPin, Car, Zap, Accessibility, DollarSign, Calendar, Clock, Filter } from "lucide-react"
+import { Search, X, MapPin, Car, Zap, Accessibility, DollarSign, Calendar, Clock, Filter, Building } from "lucide-react"
 
 export interface ParsedSearch {
   query: string
   location?: string
-  spotType?: "regular" | "accessible" | "electric" | "all"
+  spotType?: "regular" | "accessible" | "electric" | "tesla_ev" | "taxable_benefit" | "all"
   priceMin?: number
   priceMax?: number
   date?: string
@@ -24,24 +24,26 @@ interface EnhancedSearchProps {
 }
 
 const SEARCH_SUGGESTIONS = [
-  "main building electric",
+  "750 pandora ave electric",
+  "tesla charging spots",
   "accessible spots under $25", 
-  "north lot today",
   "inside spots",
   "electric charging",
-  "level 2",
-  "south parking $15-20",
+  "level 1",
+  "level 2 parking",
   "accessible tomorrow",
-  "regular spots main building",
-  "outside parking cheap"
+  "regular spots 750 pandora ave",
+  "tesla ev charger",
+  "taxable benefit spots"
 ]
 
 const QUICK_FILTERS = [
   { label: "Electric Charging", value: "electric", icon: Zap, type: "spotType" },
+  { label: "Tesla EV", value: "tesla_ev", icon: Zap, type: "spotType" },
   { label: "Accessible", value: "accessible", icon: Accessibility, type: "spotType" },
   { label: "Inside Building", value: "inside", icon: MapPin, type: "location" },
   { label: "Under $25", value: "cheap", icon: DollarSign, type: "price" },
-  { label: "Main Building", value: "main building", icon: MapPin, type: "location" },
+  { label: "Main Building", value: "750 pandora ave", icon: MapPin, type: "location" },
   { label: "Today", value: "today", icon: Calendar, type: "date" }
 ]
 
@@ -67,20 +69,22 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
         parsed.date = new Date().toISOString().split('T')[0]
       } else if (filterValue === "electric") {
         parsed.spotType = "electric"
+      } else if (filterValue === "tesla_ev") {
+        parsed.spotType = "tesla_ev"
       } else if (filterValue === "accessible") {
         parsed.spotType = "accessible"
       } else if (filterValue === "inside") {
         parsed.isInside = true
       } else if (filterValue === "cheap") {
         parsed.priceMax = 25
-      } else if (filterValue === "main building") {
-        parsed.location = "main building"
+      } else if (filterValue === "750 pandora ave") {
+        parsed.location = "750 pandora ave"
       }
     })
 
     // Location parsing from query text
     if (terms.some(t => ["main", "building"].every(w => searchQuery.toLowerCase().includes(w)))) {
-      parsed.location = "main building"
+      parsed.location = "750 pandora ave"
     } else if (terms.includes("north")) {
       parsed.location = "north lot"
     } else if (terms.includes("south")) {
@@ -90,10 +94,14 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
     }
 
     // Spot type parsing from query text
-    if (terms.includes("electric") || terms.includes("ev") || terms.includes("charging")) {
+    if (terms.includes("tesla") && (terms.includes("ev") || terms.includes("electric") || terms.includes("charging"))) {
+      parsed.spotType = "tesla_ev"
+    } else if (terms.includes("electric") || terms.includes("ev") || terms.includes("charging")) {
       parsed.spotType = "electric"
     } else if (terms.includes("accessible") || terms.includes("handicap") || terms.includes("disabled")) {
       parsed.spotType = "accessible"
+    } else if (terms.includes("taxable") || terms.includes("benefit")) {
+      parsed.spotType = "taxable_benefit"
     } else if (terms.includes("regular") || terms.includes("normal")) {
       parsed.spotType = "regular"
     }
@@ -247,7 +255,7 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
               <Input
                 ref={inputRef}
                 type="text"
-                placeholder="Search parking spots... (e.g., 'main building electric $20-30', 'accessible north lot today')"
+                placeholder="Search parking spots... (e.g., '750 pandora ave electric $20-30', 'accessible north lot today')"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -311,7 +319,7 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
 
       {/* Search Examples */}
       <div className="text-sm text-muted-foreground">
-        <span className="font-medium">Try searching:</span> "main building electric", "accessible under $25", "north lot today", or "inside spots"
+        <span className="font-medium">Try searching:</span> "tesla ev charger", "accessible under $25", "level 1 inside", or "electric charging"
       </div>
     </div>
   )

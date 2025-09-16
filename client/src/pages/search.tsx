@@ -1,4 +1,6 @@
 import { useState } from "react"
+import { useQuery, useMutation } from "@tanstack/react-query"
+import { queryClient } from "@/lib/queryClient"
 import { EnhancedSearch, ParsedSearch } from "@/components/enhanced-search"
 import { ParkingSpotCard } from "@/components/parking-spot-card"
 import { ParkingCalendar } from "@/components/parking-calendar"
@@ -8,8 +10,27 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Skeleton } from "@/components/ui/skeleton"
 import { MapPin, Filter, SortAsc, Calendar, Grid, Sparkles } from "lucide-react"
 import { isPastDate } from "@/utils/date-utils"
+import { apiRequest } from "@/lib/queryClient"
+import { type ParkingSpot as DBParkingSpot } from "@shared/schema"
+import { useToast } from "@/hooks/use-toast"
+
+// Convert database spot to display format
+interface DisplaySpot extends Omit<DBParkingSpot, 'spotType'> {
+  spotNumber: string
+  location: string
+  type: "regular" | "accessible" | "electric" | "tesla_ev" | "taxable_benefit"
+  isInside: boolean
+  price: number
+  owner: string
+  isAvailable: boolean
+  isBookable: boolean
+  availability?: {
+    date: string
+  }
+}
 
 export default function Search() {
   const [searchCriteria, setSearchCriteria] = useState<ParsedSearch>({
@@ -17,90 +38,127 @@ export default function Search() {
     quickFilters: []
   })
   
-  const [selectedSpot, setSelectedSpot] = useState<any>(null)
+  const [selectedSpot, setSelectedSpot] = useState<DisplaySpot | null>(null)
   const [showBookingForm, setShowBookingForm] = useState(false)
   const [sortBy, setSortBy] = useState("price")
   const [activeTab, setActiveTab] = useState("calendar")
+  const { toast } = useToast()
 
-  //todo: remove mock functionality
-  const mockSpots = [
-    {
-      id: "P-001",
-      spotNumber: "A-15",
-      location: "Main Building - Level 2",
-      type: "electric" as const,
-      isInside: true,
-      price: 25,
-      // Available spots don't have specific dates - they're available every day
-      owner: "Sarah Chen",
-      isAvailable: true
-    },
-    {
-      id: "P-002",
-      spotNumber: "B-08",
-      location: "North Parking Lot",
-      type: "regular" as const,
-      isInside: false,
-      price: 20,
-      // Available spots don't have specific dates - they're available every day
-      owner: "Mike Johnson",
-      isAvailable: true
-    },
-    {
-      id: "P-003",
-      spotNumber: "C-12",
-      location: "South Parking Lot",
-      type: "accessible" as const,
-      isInside: false,
-      price: 15,
-      // Available spots don't have specific dates - they're available every day
-      owner: "Lisa Anderson",
-      isAvailable: true
-    },
-    {
-      id: "P-004",
-      spotNumber: "A-22",
-      location: "Main Building - Level 1",
-      type: "regular" as const,
-      isInside: true,
-      price: 30,
-      availability: {
-        date: new Date().toISOString().split('T')[0] // Today's date for booked spot
-      },
-      owner: "David Park",
-      isAvailable: false
-    },
-    // Past spots - these should NOT appear in renter views but can appear in owner history
-    {
-      id: "P-005",
-      spotNumber: "B-15",
-      location: "Main Building - Level 3",
-      type: "regular" as const,
-      isInside: true,
-      price: 22,
-      availability: {
-        date: "2024-12-01" // Past date
-      },
-      owner: "Jennifer Clark",
-      isAvailable: false
-    },
-    {
-      id: "P-006", 
-      spotNumber: "C-20",
-      location: "South Parking Lot",
-      type: "electric" as const,
-      isInside: false,
-      price: 18,
-      availability: {
-        date: "2024-11-25" // Past date
-      },
-      owner: "Robert Wilson",
-      isAvailable: false
+  // Fetch available parking spots from API
+  const { data: dbSpots = [], isLoading, error } = useQuery<DBParkingSpot[]>({
+    queryKey: ['/api/available-spots']
+  })
+
+  // Convert database spots to display format with mock owners
+  const getSpotOwner = (ownerId: string | null) => {
+    const ownerMap: Record<string, string> = {
+      'user-admin-001': 'David Thompson',
+      'user-owner-001': 'Sarah Chen', 
+      'user-renter-001': 'Michael Rodriguez'
     }
-  ]
+    return ownerId ? ownerMap[ownerId] || 'Unknown Owner' : 'Unassigned'
+  }
+
+  const spots: DisplaySpot[] = dbSpots.map(spot => ({
+    ...spot,
+    spotNumber: spot.spotNumber,
+    location: spot.location,
+    type: spot.spotType as DisplaySpot['type'],
+    isInside: spot.isIndoor,
+    price: 25, // Default price since MemStorage doesn't have spot pricing
+    owner: getSpotOwner(spot.ownerId),
+    isAvailable: spot.isActive,
+    isBookable: spot.isBookable
+  }))
+
+  // Create booking mutation
+  const createBookingMutation = useMutation({
+    mutationFn: async (bookingData: any) => {
+      return apiRequest('POST', '/api/bookings', bookingData)
+    },
+    onSuccess: () => {
+      toast({
+        title: "Booking Created",
+        description: "Your parking spot has been successfully booked!"
+      })
+      setShowBookingForm(false)
+      setSelectedSpot(null)
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Booking Failed",
+        description: error.message || "Failed to create booking. Please try again.",
+        variant: "destructive"
+      })
+    }
+  })
+
+  // Handle booking form submission
+  const handleBookSpot = (spotId: string) => {
+    const spot = spots.find(s => s.id === spotId)
+    if (spot) {
+      setSelectedSpot(spot)
+      setShowBookingForm(true)
+    }
+  }
+
+  // Handle actual booking submission from form
+  const handleBookingFormSubmit = (bookingData: any) => {
+    if (!selectedSpot) return
+    
+    createBookingMutation.mutate({
+      spotId: selectedSpot.id,
+      listingId: selectedSpot.id, // Using spot ID as listing ID for now
+      bookingDate: bookingData.date,
+      dailyRate: selectedSpot.price,
+      totalAmount: selectedSpot.price,
+      notes: bookingData.specialInstructions
+    })
+  }
+
+  // Show loading state while fetching data
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-4">Find Parking Spots</h1>
+          <div className="grid gap-4">
+            <Skeleton className="h-12 w-full" />
+            <div className="flex gap-2">
+              <Skeleton className="h-8 w-24" />
+              <Skeleton className="h-8 w-24" />
+              <Skeleton className="h-8 w-24" />
+            </div>
+          </div>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <Skeleton key={i} className="h-64 w-full" />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Error Loading Parking Spots</h1>
+          <p className="text-muted-foreground mb-4">
+            Unable to load available parking spots. Please try again.
+          </p>
+          <Button onClick={() => window.location.reload()}>
+            Reload Page
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   // Base filtering without date constraints (for calendar view)
-  const baseFilteredSpots = mockSpots.filter(spot => {
+  const baseFilteredSpots = spots.filter(spot => {
     const { location, spotType, priceMin, priceMax, isInside, query } = searchCriteria
     
     // Filter out spots with past availability dates
@@ -111,6 +169,11 @@ export default function Search() {
     // Basic availability filtering - only show generally available spots for calendar
     if (!spot.isAvailable) {
       return false // Don't show unavailable spots in calendar view
+    }
+    
+    // Filter out non-bookable spots (taxable benefit) from search results
+    if (spot.isBookable === false) {
+      return false // Don't show non-bookable spots to renters
     }
     
     // Text-based search across multiple fields
@@ -202,19 +265,9 @@ export default function Search() {
     }
   })
 
-  const handleBookSpot = (spotId: string) => {
-    const spot = mockSpots.find(s => s.id === spotId)
-    if (spot) {
-      setSelectedSpot(spot)
-      setShowBookingForm(true)
-    }
-  }
-
   const handleBookingSubmit = (bookingData: any) => {
     console.log('Booking submitted:', bookingData)
-    setShowBookingForm(false)
-    setSelectedSpot(null)
-    // Show success message, redirect, etc.
+    handleBookingFormSubmit(bookingData)
   }
 
   const handleSearch = (parsed: ParsedSearch) => {

@@ -12,7 +12,9 @@ import {
   MapPin,
   DollarSign,
   Zap,
-  Car
+  Car,
+  Accessibility,
+  Building
 } from "lucide-react"
 import { format, startOfWeek, addDays, addWeeks, addMonths, subWeeks, subMonths, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, getDay } from "date-fns"
 import { isPastDate } from "@/utils/date-utils"
@@ -23,7 +25,7 @@ interface ParkingSpot {
   id: string
   spotNumber: string
   location: string
-  type: "regular" | "electric" | "accessible"
+  type: "regular" | "electric" | "accessible" | "tesla_ev" | "taxable_benefit"
   isInside: boolean
   price: number
   isAvailable: boolean
@@ -32,6 +34,7 @@ interface ParkingSpot {
   }
   owner: string
   isOwned?: boolean // Flag to indicate if this is user's own listing
+  isBookable?: boolean // Whether the spot can be booked (false for taxable_benefit)
 }
 
 interface ParkingCalendarProps {
@@ -101,6 +104,11 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
         return false;
       }
 
+      // Filter out non-bookable spots (taxable benefit) unless in owner view
+      if (!isOwnerView && spot.isBookable === false) {
+        return false;
+      }
+
       // Show available spots on all dates
       if (spot.isAvailable) {
         // If spot has availability date, check if it matches
@@ -132,8 +140,12 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
     switch (type) {
       case "electric":
         return <Zap className="h-3 w-3 text-green-600" />
+      case "tesla_ev":
+        return <Zap className="h-3 w-3 text-red-600" />
       case "accessible":
-        return <Car className="h-3 w-3 text-blue-600" />
+        return <Accessibility className="h-3 w-3 text-blue-600" />
+      case "taxable_benefit":
+        return <Building className="h-3 w-3 text-orange-600" />
       default:
         return <Car className="h-3 w-3 text-gray-600" />
     }
@@ -154,8 +166,12 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
     switch (type) {
       case "electric":
         return "bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-200"
+      case "tesla_ev":
+        return "bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-200"
       case "accessible":
         return "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900 dark:text-blue-200"
+      case "taxable_benefit":
+        return "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900 dark:text-orange-200"
       default:
         return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900 dark:text-gray-200"
     }
@@ -184,6 +200,11 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
     // Prevent booking spots with past availability dates
     if (spot.availability?.date && isPastDate(spot.availability.date)) {
       return; // Don't allow booking past spots
+    }
+    
+    // Prevent booking non-bookable spots (taxable benefit)
+    if (spot.isBookable === false && !isOwnerView) {
+      return; // Don't allow booking non-bookable spots
     }
     
     setSelectedSpot(spot)
