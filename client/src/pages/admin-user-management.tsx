@@ -73,20 +73,19 @@ export default function AdminUserManagement() {
 
   // Create user mutation
   const createUserMutation = useMutation({
-    mutationFn: async (userData: CreateUserFormData) => {
-      return await apiRequest('/api/users', {
-        method: 'POST',
-        body: userData,
-      });
+    mutationFn: async (userData: CreateUserFormData): Promise<User> => {
+      const response = await apiRequest('/api/users', { method: 'POST', body: userData });
+      return await response.json();
     },
-    onSuccess: (newUser) => {
+    onSuccess: (newUser: User) => {
       // Invalidate and refetch user data
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       setShowAddUser(false);
       form.reset();
+      const userName = [newUser?.firstName, newUser?.lastName].filter(Boolean).join(' ') || newUser?.email || 'Unknown User';
       toast({
         title: "User Created",
-        description: `Successfully created user ${newUser.firstName || ''} ${newUser.lastName || ''}`,
+        description: `Successfully created user ${userName}`,
       });
     },
     onError: (error: any) => {
@@ -541,7 +540,7 @@ export default function AdminUserManagement() {
 
       {/* Bulk Actions */}
       {showBulkActions && (
-        <Card className="border-yellow-200 bg-yellow-50 dark:bg-yellow-900/20">
+        <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
           <CardContent className="p-4">
             <div className="flex items-center gap-4">
               <span className="text-sm font-medium">Bulk Actions:</span>

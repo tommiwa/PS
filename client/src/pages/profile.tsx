@@ -138,7 +138,7 @@ export default function Profile() {
         enrolledBy: "user"
       };
       
-      const response = await apiRequest("POST", "/api/waiting-list", waitingListData);
+      const response = await apiRequest("/api/waiting-list", { method: 'POST', body: waitingListData });
       return response.json();
     },
     onSuccess: (newEntry) => {
@@ -148,7 +148,7 @@ export default function Profile() {
 
       // Send welcome notification (in background, don't block UI)
       if (user && emailNotifications) {
-        apiRequest("POST", "/api/notifications/welcome", {
+        apiRequest("/api/notifications/welcome", { method: 'POST', body: {
           userId: user.id,
           userName: user.name,
           userEmail: user.email,
@@ -157,7 +157,7 @@ export default function Profile() {
             emailNotifications,
             pushNotifications
           }
-        }).catch((error) => {
+        }}).catch((error) => {
           console.warn('Failed to send welcome notification:', error);
           // Don't show error to user since enrollment was successful
         });
@@ -190,7 +190,7 @@ export default function Profile() {
         reason: data.reason
       };
       
-      const response = await apiRequest("PUT", `/api/waiting-list/${waitingListEntry.id}`, updateData);
+      const response = await apiRequest(`/api/waiting-list/${waitingListEntry.id}`, { method: 'PUT', body: updateData });
       return response.json();
     },
     onSuccess: () => {
@@ -216,7 +216,7 @@ export default function Profile() {
     mutationFn: async () => {
       if (!waitingListEntry?.id) throw new Error("Waiting list entry not found");
       
-      const response = await apiRequest("DELETE", `/api/waiting-list/${waitingListEntry.id}`);
+      const response = await apiRequest(`/api/waiting-list/${waitingListEntry.id}`, { method: 'DELETE' });
       return response.json();
     },
     onSuccess: () => {

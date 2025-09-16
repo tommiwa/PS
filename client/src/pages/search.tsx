@@ -74,7 +74,7 @@ export default function Search() {
   // Create booking mutation
   const createBookingMutation = useMutation({
     mutationFn: async (bookingData: any) => {
-      return apiRequest('POST', '/api/bookings', bookingData)
+      return apiRequest('/api/bookings', { method: 'POST', body: bookingData })
     },
     onSuccess: () => {
       toast({

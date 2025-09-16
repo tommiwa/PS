@@ -70,7 +70,7 @@ export function NotificationCenter() {
   // Mark notification as read mutation
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: string) => {
-      const response = await apiRequest("PATCH", `/api/notifications/${notificationId}/read`);
+      const response = await apiRequest(`/api/notifications/${notificationId}/read`, { method: 'PATCH' });
       return response.json();
     },
     onSuccess: () => {
@@ -81,7 +81,7 @@ export function NotificationCenter() {
   // Mark all as read mutation
   const markAllAsReadMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("PATCH", `/api/notifications/mark-all-read`);
+      const response = await apiRequest('/api/notifications/mark-all-read', { method: 'PATCH' });
       return response.json();
     },
     onSuccess: () => {
@@ -92,7 +92,7 @@ export function NotificationCenter() {
   // Delete notification mutation
   const deleteNotificationMutation = useMutation({
     mutationFn: async (notificationId: string) => {
-      const response = await apiRequest("DELETE", `/api/notifications/${notificationId}`);
+      const response = await apiRequest(`/api/notifications/${notificationId}`, { method: 'DELETE' });
       return response.json();
     },
     onSuccess: () => {

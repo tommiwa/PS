@@ -1,4 +1,4 @@
-import { useState } from "react"
+import React, { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { apiRequest } from "@/lib/queryClient"
 import { format } from "date-fns"
@@ -60,6 +60,15 @@ interface ExpandedRow {
   [key: string]: boolean;
 }
 
+// Define the API response structure for audit logs
+interface AuditLogsResponse {
+  items: AuditLog[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
 export default function AdminAudits() {
   const [filters, setFilters] = useState<AuditFilters>({});
   const [page, setPage] = useState(1);
@@ -79,8 +88,10 @@ export default function AdminAudits() {
 
   // Fetch audit logs using standard authenticated fetcher
   const auditUrl = `/api/admin/audits?${queryParams.toString()}`;
-  const { data, isLoading, error, refetch } = useQuery({
-    queryKey: [auditUrl]
+  const { data, isLoading, error, refetch } = useQuery<AuditLogsResponse>({
+    queryKey: [auditUrl],
+    // Fallback for when data is still loading or undefined
+    select: (data) => data || { items: [], total: 0, page: 1, pageSize: 50, totalPages: 1 }
   });
 
   // Handle search
@@ -139,15 +150,15 @@ export default function AdminAudits() {
   // Get action badge color
   const getActionBadgeColor = (action: AuditAction): string => {
     const actionColors: Record<string, string> = {
-      "CREATE": "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
-      "UPDATE": "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
-      "DELETE": "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
-      "LOGIN": "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
-      "LOGOUT": "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300",
-      "VIEW": "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300",
-      "ASSIGN": "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300",
+      "CREATE": "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400",
+      "UPDATE": "bg-sky-50 text-sky-600 dark:bg-sky-950/20 dark:text-sky-400",
+      "DELETE": "bg-rose-50 text-rose-600 dark:bg-rose-950/20 dark:text-rose-400",
+      "LOGIN": "bg-violet-50 text-violet-600 dark:bg-violet-950/20 dark:text-violet-400",
+      "LOGOUT": "bg-slate-50 text-slate-600 dark:bg-slate-950/20 dark:text-slate-400",
+      "VIEW": "bg-teal-50 text-teal-600 dark:bg-teal-950/20 dark:text-teal-400",
+      "ASSIGN": "bg-amber-50 text-amber-600 dark:bg-amber-950/20 dark:text-amber-400",
     };
-    return actionColors[action] || "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300";
+    return actionColors[action] || "bg-slate-50 text-slate-600 dark:bg-slate-950/20 dark:text-slate-400";
   };
 
   // Get entity type icon
@@ -315,7 +326,7 @@ export default function AdminAudits() {
           <div className="flex items-center justify-between">
             <CardTitle>
               Audit Results
-              {data && (
+              {data && data.total > 0 && (
                 <span className="text-muted-foreground font-normal ml-2">
                   ({data.total.toLocaleString()} total entries)
                 </span>
@@ -347,7 +358,7 @@ export default function AdminAudits() {
                 <Skeleton key={i} className="h-16 w-full" />
               ))}
             </div>
-          ) : data && data.items.length > 0 ? (
+          ) : data && data.items && data.items.length > 0 ? (
             <div className="space-y-4">
               <Table>
                 <TableHeader>
@@ -363,14 +374,13 @@ export default function AdminAudits() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {data.items.map((log) => {
+                  {data.items.map((log: AuditLog) => {
                     const EntityIcon = getEntityIcon(log.entityType);
                     const isExpanded = expandedRows[log.id];
                     
                     return (
-                      <>
-                        <TableRow 
-                          key={log.id}
+                      <React.Fragment key={log.id}>
+                        <TableRow
                           className="hover:bg-muted/50 cursor-pointer"
                           onClick={() => toggleRowExpansion(log.id)}
                           data-testid={`row-audit-${log.id}`}
@@ -435,15 +445,15 @@ export default function AdminAudits() {
                         
                         {/* Expanded Row Details */}
                         {isExpanded && (
-                          <TableRow>
+                          <TableRow key={`${log.id}-expanded`}>
                             <TableCell colSpan={8} className="p-0">
                               <div className="p-4 bg-muted/20">
                                 <Tabs defaultValue="details" className="w-full">
                                   <TabsList>
                                     <TabsTrigger value="details">Details</TabsTrigger>
-                                    {log.before && <TabsTrigger value="before">Before</TabsTrigger>}
-                                    {log.after && <TabsTrigger value="after">After</TabsTrigger>}
-                                    {log.requestMeta && <TabsTrigger value="request">Request</TabsTrigger>}
+                                    {log.before !== null && <TabsTrigger value="before">Before</TabsTrigger>}
+                                    {log.after !== null && <TabsTrigger value="after">After</TabsTrigger>}
+                                    {log.requestMeta !== null && <TabsTrigger value="request">Request</TabsTrigger>}
                                   </TabsList>
                                   
                                   <TabsContent value="details" className="mt-4">
@@ -473,7 +483,7 @@ export default function AdminAudits() {
                                     </div>
                                   </TabsContent>
                                   
-                                  {log.before && (
+                                  {log.before !== null && (
                                     <TabsContent value="before" className="mt-4">
                                       <ScrollArea className="h-64 w-full border rounded p-2">
                                         <pre className="text-xs">
@@ -483,7 +493,7 @@ export default function AdminAudits() {
                                     </TabsContent>
                                   )}
                                   
-                                  {log.after && (
+                                  {log.after !== null && (
                                     <TabsContent value="after" className="mt-4">
                                       <ScrollArea className="h-64 w-full border rounded p-2">
                                         <pre className="text-xs">
@@ -493,7 +503,7 @@ export default function AdminAudits() {
                                     </TabsContent>
                                   )}
                                   
-                                  {log.requestMeta && (
+                                  {log.requestMeta !== null && (
                                     <TabsContent value="request" className="mt-4">
                                       <ScrollArea className="h-64 w-full border rounded p-2">
                                         <pre className="text-xs">
@@ -507,7 +517,7 @@ export default function AdminAudits() {
                             </TableCell>
                           </TableRow>
                         )}
-                      </>
+                      </React.Fragment>
                     );
                   })}
                 </TableBody>
@@ -517,7 +527,7 @@ export default function AdminAudits() {
               <div className="flex items-center justify-between">
                 <div className="text-sm text-muted-foreground">
                   Showing {(page - 1) * pageSize + 1} to{" "}
-                  {Math.min(page * pageSize, data.total)} of {data.total} entries
+                  {Math.min(page * pageSize, data?.total || 0)} of {data?.total || 0} entries
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
@@ -530,13 +540,13 @@ export default function AdminAudits() {
                     Previous
                   </Button>
                   <span className="text-sm font-medium">
-                    Page {page} of {data.totalPages}
+                    Page {page} of {data?.totalPages || 1}
                   </span>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setPage(page + 1)}
-                    disabled={page >= data.totalPages}
+                    disabled={page >= (data?.totalPages || 1)}
                     data-testid="button-next-page"
                   >
                     Next

@@ -17,17 +17,17 @@ const roleConfig = {
   admin: {
     label: "Admin",
     icon: Shield,
-    color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+    color: "bg-sky-50 text-sky-600 dark:bg-sky-950/20 dark:text-sky-400"
   },
   owner: {
     label: "Spot Owner", 
     icon: Car,
-    color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+    color: "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400"
   },
   renter: {
     label: "Renter",
     icon: User,
-    color: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
+    color: "bg-violet-50 text-violet-600 dark:bg-violet-950/20 dark:text-violet-400"
   }
 };
 

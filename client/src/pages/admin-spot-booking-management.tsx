@@ -338,11 +338,11 @@ export default function AdminSpotBookingManagement() {
   // Cancel booking mutation
   const cancelBookingMutation = useMutation({
     mutationFn: async ({ bookingId, reason }: { bookingId: string; reason: string }) => {
-      const response = await apiRequest("POST", "/api/admin/cancel-booking", {
+      const response = await apiRequest("/api/admin/cancel-booking", { method: 'POST', body: {
         bookingId,
         reason,
         cancelledBy: "admin"
-      });
+      }});
       return response.json();
     },
     onSuccess: () => {
@@ -371,11 +371,11 @@ export default function AdminSpotBookingManagement() {
   // Resolve dispute mutation
   const resolveDisputeMutation = useMutation({
     mutationFn: async ({ requestId, resolution }: { requestId: string; resolution: string }) => {
-      const response = await apiRequest("POST", "/api/admin/resolve-dispute", {
+      const response = await apiRequest("/api/admin/resolve-dispute", { method: 'POST', body: {
         requestId,
         resolution,
         resolvedBy: "admin"
-      });
+      }});
       return response.json();
     },
     onSuccess: () => {

@@ -8,13 +8,12 @@ async function throwIfResNotOk(res: Response) {
 }
 
 export async function apiRequest(
-  method: string,
   url: string,
-  data?: unknown | undefined,
+  options: { method: string; body?: unknown } = { method: 'GET' },
 ): Promise<Response> {
   // Add demo authentication header for API requests
   const headers: Record<string, string> = {
-    ...(data ? { "Content-Type": "application/json" } : {}),
+    ...(options.body ? { "Content-Type": "application/json" } : {}),
   };
   
   // Check if user is authenticated with demo auth
@@ -28,9 +27,9 @@ export async function apiRequest(
   }
 
   const res = await fetch(url, {
-    method,
+    method: options.method,
     headers,
-    body: data ? JSON.stringify(data) : undefined,
+    body: options.body ? JSON.stringify(options.body) : undefined,
     credentials: "include",
   });
 

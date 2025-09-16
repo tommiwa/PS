@@ -104,13 +104,18 @@ export default function MyBookings() {
     const booking = mockBookings.find(b => b.id === bookingId)
     
     const confirmed = await confirm(confirmations.cancelBooking(
-      booking ? `Spot ${booking.spotNumber || 'Unknown'}` : undefined,
+      booking ? `Spot ${booking.spotId?.slice(-8) || 'Unknown'}` : undefined,
       booking?.bookingDate
     ))
     
     if (confirmed) {
       console.log('Cancel booking:', bookingId)
       // TODO: Implement actual booking cancellation logic
+      toast({
+        title: "Booking Cancelled",
+        description: `Successfully cancelled booking for ${booking?.bookingDate || 'selected date'}`,
+        variant: "warning",
+      })
     }
   }
 
@@ -164,7 +169,7 @@ export default function MyBookings() {
   // Mutations for listing management
   const updateListingMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string, data: any }) => {
-      return apiRequest('PATCH', `/api/listings/${id}`, data)
+      return apiRequest(`/api/listings/${id}`, { method: 'PATCH', body: data })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/my-listings'] })
@@ -174,7 +179,7 @@ export default function MyBookings() {
 
   const deleteListingMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest('DELETE', `/api/listings/${id}`)
+      return apiRequest(`/api/listings/${id}`, { method: 'DELETE' })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/my-listings'] })
@@ -183,7 +188,7 @@ export default function MyBookings() {
 
   const markPaymentMutation = useMutation({
     mutationFn: async ({ id, paid }: { id: string, paid: boolean }) => {
-      return apiRequest('PATCH', `/api/bookings/${id}/payment`, { paymentReceived: paid })
+      return apiRequest(`/api/bookings/${id}/payment`, { method: 'PATCH', body: { paymentReceived: paid } })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/my-listings'] })
@@ -367,7 +372,7 @@ export default function MyBookings() {
       </div>
       
       {listing.status === "unused" && (
-        <div className="p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+        <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
           <div className="flex items-center gap-2 text-sm text-orange-700 dark:text-orange-300">
             <AlertTriangle className="h-4 w-4" />
             This spot was listed for {listing.date} but was not booked by anyone.
@@ -589,37 +594,37 @@ export default function MyBookings() {
       {/* Enhanced Status-Based Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="calendar" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900 dark:data-[state=active]:bg-blue-900 dark:data-[state=active]:text-blue-100">
+          <TabsTrigger value="calendar" className="data-[state=active]:bg-sky-50 data-[state=active]:text-sky-600 dark:data-[state=active]:bg-sky-950/30 dark:data-[state=active]:text-sky-400">
             <div className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
               Calendar
             </div>
           </TabsTrigger>
-          <TabsTrigger value="active" className="data-[state=active]:bg-green-100 data-[state=active]:text-green-900 dark:data-[state=active]:bg-green-900 dark:data-[state=active]:text-green-100">
+          <TabsTrigger value="active" className="data-[state=active]:bg-emerald-50 data-[state=active]:text-emerald-600 dark:data-[state=active]:bg-emerald-950/30 dark:data-[state=active]:text-emerald-400">
             <div className="flex items-center gap-1">
               <CheckCircle className="h-3 w-3" />
               Active ({activeItems.length})
             </div>
           </TabsTrigger>
-          <TabsTrigger value="pending" className="data-[state=active]:bg-amber-100 data-[state=active]:text-amber-900 dark:data-[state=active]:bg-amber-900 dark:data-[state=active]:text-amber-100">
+          <TabsTrigger value="pending" className="data-[state=active]:bg-amber-50 data-[state=active]:text-amber-600 dark:data-[state=active]:bg-amber-950/30 dark:data-[state=active]:text-amber-400">
             <div className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
               Pending ({pendingItems.length})
             </div>
           </TabsTrigger>
-          <TabsTrigger value="payment-pending" className="data-[state=active]:bg-orange-100 data-[state=active]:text-orange-900 dark:data-[state=active]:bg-orange-900 dark:data-[state=active]:text-orange-100">
+          <TabsTrigger value="payment-pending" className="data-[state=active]:bg-orange-50 data-[state=active]:text-orange-600 dark:data-[state=active]:bg-orange-950/30 dark:data-[state=active]:text-orange-400">
             <div className="flex items-center gap-1">
               <CreditCard className="h-3 w-3" />
               Payment ({paymentPendingItems.length})
             </div>
           </TabsTrigger>
-          <TabsTrigger value="completed" className="data-[state=active]:bg-purple-100 data-[state=active]:text-purple-900 dark:data-[state=active]:bg-purple-900 dark:data-[state=active]:text-purple-100">
+          <TabsTrigger value="completed" className="data-[state=active]:bg-violet-50 data-[state=active]:text-violet-600 dark:data-[state=active]:bg-violet-950/30 dark:data-[state=active]:text-violet-400">
             <div className="flex items-center gap-1">
               <CheckCircle className="h-3 w-3" />
               Completed ({completedItems.length})
             </div>
           </TabsTrigger>
-          <TabsTrigger value="all" className="data-[state=active]:bg-gray-100 data-[state=active]:text-gray-900 dark:data-[state=active]:bg-gray-900 dark:data-[state=active]:text-gray-100">
+          <TabsTrigger value="all" className="data-[state=active]:bg-slate-50 data-[state=active]:text-slate-600 dark:data-[state=active]:bg-slate-950/30 dark:data-[state=active]:text-slate-400">
             All ({sortedItems.length})
           </TabsTrigger>
         </TabsList>

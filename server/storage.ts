@@ -169,10 +169,141 @@ export class MemStorage implements IStorage {
       updatedAt: new Date()
     };
     this.users.set(renterUser.id, renterUser);
-    
-    // Use owner user as default for parking spots
-    const defaultUserId = ownerUser.id;
 
+    // Create additional test users for realistic parking spot assignments
+    const additionalUsers: User[] = [
+      {
+        id: "user-emp-001", email: "j.smith@bci.ca", firstName: "John", lastName: "Smith",
+        profileImageUrl: null, phone: "(250) 555-0101", department: "Engineering", role: "owner",
+        memberSince: "March 2022", lastLogin: new Date(), createdAt: new Date(), updatedAt: new Date()
+      },
+      {
+        id: "user-emp-002", email: "s.jones@bci.ca", firstName: "Sarah", lastName: "Jones", 
+        profileImageUrl: null, phone: "(250) 555-0102", department: "Finance", role: "owner",
+        memberSince: "June 2022", lastLogin: new Date(), createdAt: new Date(), updatedAt: new Date()
+      },
+      {
+        id: "user-emp-003", email: "m.brown@bci.ca", firstName: "Michael", lastName: "Brown",
+        profileImageUrl: null, phone: "(250) 555-0103", department: "Operations", role: "owner", 
+        memberSince: "August 2022", lastLogin: new Date(), createdAt: new Date(), updatedAt: new Date()
+      },
+      {
+        id: "user-emp-004", email: "l.wilson@bci.ca", firstName: "Lisa", lastName: "Wilson",
+        profileImageUrl: null, phone: "(250) 555-0104", department: "HR", role: "owner",
+        memberSince: "September 2022", lastLogin: new Date(), createdAt: new Date(), updatedAt: new Date()
+      },
+      {
+        id: "user-emp-005", email: "d.taylor@bci.ca", firstName: "David", lastName: "Taylor",
+        profileImageUrl: null, phone: "(250) 555-0105", department: "IT", role: "owner",
+        memberSince: "October 2022", lastLogin: new Date(), createdAt: new Date(), updatedAt: new Date()
+      },
+      {
+        id: "user-emp-006", email: "a.davis@bci.ca", firstName: "Amanda", lastName: "Davis",
+        profileImageUrl: null, phone: "(250) 555-0106", department: "Marketing", role: "owner",
+        memberSince: "November 2022", lastLogin: new Date(), createdAt: new Date(), updatedAt: new Date()
+      },
+      {
+        id: "user-emp-007", email: "r.miller@bci.ca", firstName: "Robert", lastName: "Miller",
+        profileImageUrl: null, phone: "(250) 555-0107", department: "Legal", role: "owner",
+        memberSince: "December 2022", lastLogin: new Date(), createdAt: new Date(), updatedAt: new Date()
+      },
+      {
+        id: "user-emp-008", email: "k.anderson@bci.ca", firstName: "Karen", lastName: "Anderson",
+        profileImageUrl: null, phone: "(250) 555-0108", department: "Claims", role: "owner",
+        memberSince: "January 2023", lastLogin: new Date(), createdAt: new Date(), updatedAt: new Date()
+      },
+      {
+        id: "user-emp-009", email: "t.thomas@bci.ca", firstName: "Thomas", lastName: "Thomas",
+        profileImageUrl: null, phone: "(250) 555-0109", department: "Underwriting", role: "owner",
+        memberSince: "February 2023", lastLogin: new Date(), createdAt: new Date(), updatedAt: new Date()
+      },
+      {
+        id: "user-emp-010", email: "n.jackson@bci.ca", firstName: "Nancy", lastName: "Jackson",
+        profileImageUrl: null, phone: "(250) 555-0110", department: "Customer Service", role: "owner",
+        memberSince: "March 2023", lastLogin: new Date(), createdAt: new Date(), updatedAt: new Date()
+      },
+      {
+        id: "user-emp-011", email: "p.white@bci.ca", firstName: "Paul", lastName: "White",
+        profileImageUrl: null, phone: "(250) 555-0111", department: "Engineering", role: "owner",
+        memberSince: "April 2023", lastLogin: new Date(), createdAt: new Date(), updatedAt: new Date()
+      },
+      {
+        id: "user-emp-012", email: "j.harris@bci.ca", firstName: "Jennifer", lastName: "Harris",
+        profileImageUrl: null, phone: "(250) 555-0112", department: "Finance", role: "owner",
+        memberSince: "May 2023", lastLogin: new Date(), createdAt: new Date(), updatedAt: new Date()
+      },
+      {
+        id: "user-emp-013", email: "c.martin@bci.ca", firstName: "Christopher", lastName: "Martin", 
+        profileImageUrl: null, phone: "(250) 555-0113", department: "Operations", role: "owner",
+        memberSince: "June 2023", lastLogin: new Date(), createdAt: new Date(), updatedAt: new Date()
+      },
+      {
+        id: "user-emp-014", email: "b.thompson@bci.ca", firstName: "Barbara", lastName: "Thompson",
+        profileImageUrl: null, phone: "(250) 555-0114", department: "HR", role: "owner",
+        memberSince: "July 2023", lastLogin: new Date(), createdAt: new Date(), updatedAt: new Date()
+      },
+      {
+        id: "user-emp-015", email: "s.garcia@bci.ca", firstName: "Steven", lastName: "Garcia",
+        profileImageUrl: null, phone: "(250) 555-0115", department: "IT", role: "owner",
+        memberSince: "August 2023", lastLogin: new Date(), createdAt: new Date(), updatedAt: new Date()
+      },
+      {
+        id: "user-emp-016", email: "h.martinez@bci.ca", firstName: "Helen", lastName: "Martinez",
+        profileImageUrl: null, phone: "(250) 555-0116", department: "Marketing", role: "owner",
+        memberSince: "September 2023", lastLogin: new Date(), createdAt: new Date(), updatedAt: new Date()
+      },
+      {
+        id: "user-emp-017", email: "j.robinson@bci.ca", firstName: "James", lastName: "Robinson",
+        profileImageUrl: null, phone: "(250) 555-0117", department: "Legal", role: "owner",
+        memberSince: "October 2023", lastLogin: new Date(), createdAt: new Date(), updatedAt: new Date()
+      },
+      {
+        id: "user-emp-018", email: "m.clark@bci.ca", firstName: "Michelle", lastName: "Clark",
+        profileImageUrl: null, phone: "(250) 555-0118", department: "Claims", role: "owner",
+        memberSince: "November 2023", lastLogin: new Date(), createdAt: new Date(), updatedAt: new Date()
+      },
+      {
+        id: "user-emp-019", email: "d.rodriguez@bci.ca", firstName: "Daniel", lastName: "Rodriguez",
+        profileImageUrl: null, phone: "(250) 555-0119", department: "Underwriting", role: "owner",
+        memberSince: "December 2023", lastLogin: new Date(), createdAt: new Date(), updatedAt: new Date()
+      },
+      {
+        id: "user-emp-020", email: "l.lewis@bci.ca", firstName: "Linda", lastName: "Lewis",
+        profileImageUrl: null, phone: "(250) 555-0120", department: "Customer Service", role: "owner",
+        memberSince: "January 2024", lastLogin: new Date(), createdAt: new Date(), updatedAt: new Date()
+      },
+      {
+        id: "user-emp-021", email: "k.lee@bci.ca", firstName: "Kevin", lastName: "Lee",
+        profileImageUrl: null, phone: "(250) 555-0121", department: "Engineering", role: "owner",
+        memberSince: "February 2024", lastLogin: new Date(), createdAt: new Date(), updatedAt: new Date()
+      },
+      {
+        id: "user-emp-022", email: "r.walker@bci.ca", firstName: "Rachel", lastName: "Walker",
+        profileImageUrl: null, phone: "(250) 555-0122", department: "Finance", role: "owner",
+        memberSince: "March 2024", lastLogin: new Date(), createdAt: new Date(), updatedAt: new Date()
+      },
+      {
+        id: "user-emp-023", email: "g.hall@bci.ca", firstName: "Gregory", lastName: "Hall",
+        profileImageUrl: null, phone: "(250) 555-0123", department: "Operations", role: "owner",
+        memberSince: "April 2024", lastLogin: new Date(), createdAt: new Date(), updatedAt: new Date()
+      },
+      {
+        id: "user-emp-024", email: "c.allen@bci.ca", firstName: "Carol", lastName: "Allen",
+        profileImageUrl: null, phone: "(250) 555-0124", department: "HR", role: "owner",
+        memberSince: "May 2024", lastLogin: new Date(), createdAt: new Date(), updatedAt: new Date()
+      },
+      {
+        id: "user-emp-025", email: "b.young@bci.ca", firstName: "Brian", lastName: "Young",
+        profileImageUrl: null, phone: "(250) 555-0125", department: "IT", role: "owner",
+        memberSince: "June 2024", lastLogin: new Date(), createdAt: new Date(), updatedAt: new Date()
+      }
+    ];
+
+    // Add all additional users to storage
+    additionalUsers.forEach(user => {
+      this.users.set(user.id, user);
+    });
+    
     // Create all 121 BCI parking stalls for Victoria BC facility at 750 Pandora Ave
     // Underground parking with P1 (Level 1) and P2 (Level 2)
     const parkingSpots: ParkingSpot[] = [];
@@ -180,6 +311,46 @@ export class MemStorage implements IStorage {
     // Define exact spot numbers for Victoria BCI location
     const level1Spots = [32, 33, 34, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102]; // 48 spots
     const level2Spots = [134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209]; // 73 spots
+    
+    // Get all user IDs for spot assignments
+    const allUserIds = [
+      adminUser.id, ownerUser.id, renterUser.id,
+      ...additionalUsers.map(u => u.id)
+    ];
+    
+    // Strategy: Assign 100 spots to users, keep 21 unassigned
+    // Create assignment pool - randomly select 100 spots from 121 total
+    const allSpotNumbers = [
+      ...level1Spots, // 48 spots from Level 1
+      ...level2Spots  // 73 spots from Level 2
+    ];
+    
+    // Deterministically select 100 spots to assign, keeping 21 unassigned
+    // Use a consistent pattern to ensure the same 100/21 split every time
+    const shuffledSpots = [...allSpotNumbers].sort((a, b) => a - b); // Sort by spot number for consistency
+    const assignedSpotNumbers = shuffledSpots.slice(0, 100); // First 100 spots (deterministic)
+    const unassignedSpotNumbers = shuffledSpots.slice(100); // Last 21 spots (deterministic)
+    
+    // Function to get assigned owner for a spot
+    const getAssignedOwner = (spotNum: number): string | null => {
+      if (assignedSpotNumbers.includes(spotNum)) {
+        // Ensure test spots are assigned to specific users
+        if (spotNum === 41) return additionalUsers[0].id; // Tesla EV test spot
+        if (spotNum === 136) return additionalUsers[1].id; // Test stall
+        if (spotNum === 139) return additionalUsers[2].id; // Test stall  
+        if (spotNum === 207) return additionalUsers[3].id; // Test stall
+        
+        // Reserved spots should be assigned to senior staff
+        if (reservedSpots.includes(spotNum)) {
+          const seniorStaff = [adminUser.id, ownerUser.id, ...additionalUsers.slice(0, 11)];
+          return seniorStaff[spotNum % seniorStaff.length];
+        }
+        
+        // Regular assignment - distribute among all users
+        return allUserIds[spotNum % allUserIds.length];
+      }
+      return null; // Unassigned
+    };
 
     // Define spot type assignments
     const reservedSpots = [32, 33, 34, 37, 38, 39, 40, 42, 43, 44, 45, 46, 47]; // First 13 Level 1 spots (excluding P41)
@@ -227,7 +398,7 @@ export class MemStorage implements IStorage {
         isIndoor: true,
         isActive: true,
         isBookable,
-        ownerId: null,
+        ownerId: getAssignedOwner(spotNum),
         createdAt: new Date()
       });
     });
@@ -262,7 +433,7 @@ export class MemStorage implements IStorage {
         isIndoor: true,
         isActive: true,
         isBookable,
-        ownerId: null,
+        ownerId: getAssignedOwner(spotNum),
         createdAt: new Date()
       });
     });
@@ -281,7 +452,7 @@ export class MemStorage implements IStorage {
     const listing1: SpotListing = {
       id: "listing-1",
       spotId: "spot-15", // Tesla EV stall
-      ownerId: defaultUserId,
+      ownerId: ownerUser.id,
       listingType: "single",
       status: "active",
       singleDate: tomorrow,
@@ -300,7 +471,7 @@ export class MemStorage implements IStorage {
     const listing2: SpotListing = {
       id: "listing-2",
       spotId: "spot-32", // Regular stall
-      ownerId: defaultUserId,
+      ownerId: ownerUser.id,
       listingType: "single", 
       status: "active",
       singleDate: today,
@@ -319,7 +490,7 @@ export class MemStorage implements IStorage {
     const listing3: SpotListing = {
       id: "listing-3",
       spotId: "spot-15", // Tesla EV stall
-      ownerId: defaultUserId,
+      ownerId: ownerUser.id,
       listingType: "single",
       status: "expired",
       singleDate: yesterday,
@@ -338,7 +509,7 @@ export class MemStorage implements IStorage {
     const listing4: SpotListing = {
       id: "listing-4",
       spotId: "spot-32", // Regular stall
-      ownerId: defaultUserId,
+      ownerId: ownerUser.id,
       listingType: "single",
       status: "expired",
       singleDate: yesterday,
@@ -357,7 +528,7 @@ export class MemStorage implements IStorage {
     const listing5: SpotListing = {
       id: "listing-5",
       spotId: "spot-15", // Tesla EV stall
-      ownerId: defaultUserId,
+      ownerId: ownerUser.id,
       listingType: "single",
       status: "expired",
       singleDate: yesterday,
@@ -386,7 +557,7 @@ export class MemStorage implements IStorage {
       listingId: listing1.id,
       spotId: "spot-15", // Tesla EV stall
       renterId: renterUser.id,
-      ownerId: defaultUserId,
+      ownerId: ownerUser.id,
       bookingDate: tomorrow,
       status: "confirmed",
       paymentReceived: false,
@@ -403,7 +574,7 @@ export class MemStorage implements IStorage {
       listingId: listing2.id,
       spotId: "spot-32", // Regular stall
       renterId: renterUser.id,
-      ownerId: defaultUserId,
+      ownerId: ownerUser.id,
       bookingDate: today,
       status: "pending",
       paymentReceived: false,
@@ -420,7 +591,7 @@ export class MemStorage implements IStorage {
       listingId: listing4.id,
       spotId: "spot-32", // Regular stall
       renterId: renterUser.id,
-      ownerId: defaultUserId,
+      ownerId: ownerUser.id,
       bookingDate: yesterday,
       status: "confirmed",
       paymentReceived: true,
@@ -437,7 +608,7 @@ export class MemStorage implements IStorage {
       listingId: listing3.id,
       spotId: "spot-15", // Tesla EV stall
       renterId: renterUser.id,
-      ownerId: defaultUserId,
+      ownerId: ownerUser.id,
       bookingDate: tomorrow,
       status: "confirmed",
       paymentReceived: false,

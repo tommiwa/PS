@@ -10,6 +10,7 @@ import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle, User, Zap, Acc
 import { ParkingSpot } from "./parking-spot-card"
 import { isPastDate, getTodayString } from "@/utils/date-utils"
 import { AuthService } from "@/lib/auth"
+import { useToast } from "@/hooks/use-toast"
 
 interface BookingData {
   date: string
@@ -31,6 +32,7 @@ interface BookingFormProps {
 export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLocked = false }: BookingFormProps) {
   // Get authenticated user for auto-population
   const authUser = AuthService.getAuthUser();
+  const { toast } = useToast();
   
   // Ensure we don't default to a past date
   const getValidDate = () => {
@@ -109,6 +111,11 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
     setValidationErrors({})
 
     if (!validateForm()) {
+      toast({
+        title: "Validation Error",
+        description: "Please fix the form errors before submitting.",
+        variant: "error",
+      })
       return
     }
     
@@ -129,8 +136,19 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
       })
       
       onSubmit({ ...formData, spotId: spot.id })
+      toast({
+        title: "Booking Created",
+        description: `Successfully booked Spot ${spot.spotNumber} for ${formData.date}`,
+        variant: "success",
+      })
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : "An unexpected error occurred")
+      const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred"
+      setSubmitError(errorMessage)
+      toast({
+        title: "Booking Failed",
+        description: errorMessage,
+        variant: "error",
+      })
     } finally {
       setIsSubmitting(false)
     }

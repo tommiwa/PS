@@ -213,11 +213,11 @@ export default function MySpots() {
   const getSpotTypeColor = (type: string) => {
     switch (type) {
       case "electric":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+        return "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400"
       case "accessible":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+        return "bg-sky-50 text-sky-600 dark:bg-sky-950/20 dark:text-sky-400"
       default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200"
+        return "bg-slate-50 text-slate-600 dark:bg-slate-950/20 dark:text-slate-400"
     }
   }
 
@@ -523,7 +523,7 @@ export default function MySpots() {
                   </Select>
                 </div>
                 <div>
-                  <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+                  <div className="bg-sky-50 dark:bg-sky-950/20 p-3 rounded-lg">
                     <p className="text-sm text-blue-800 dark:text-blue-200">
                       💡 <strong>Note:</strong> Price is set when you create a listing for this spot, not at the spot level.
                     </p>

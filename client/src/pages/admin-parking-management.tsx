@@ -146,6 +146,7 @@ export default function AdminParkingManagement() {
       toast({
         title: "Success",
         description: "Spot assigned successfully from waiting list.",
+        variant: "success",
       });
       setShowAssignDialog(false);
       setSelectedWaitingListItem(null);
@@ -155,7 +156,7 @@ export default function AdminParkingManagement() {
       toast({
         title: "Error",
         description: error.message || "Failed to assign spot.",
-        variant: "destructive",
+        variant: "error",
       });
     },
   });
@@ -172,8 +173,9 @@ export default function AdminParkingManagement() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/all-spots"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] });
       toast({
-        title: "Success",
-        description: `${variables.spotIds.length} spot(s) ${variables.isBookable ? 'enabled' : 'disabled'} successfully.`,
+        title: "Info",
+        description: `${variables.spotIds.length} spot(s) ${variables.isBookable ? 'enabled' : 'disabled'} for booking.`,
+        variant: "info",
       });
       setSelectedSpots(new Set());
       setIsSelectAllChecked(false);
@@ -182,7 +184,7 @@ export default function AdminParkingManagement() {
       toast({
         title: "Error",
         description: error.message || "Failed to update spot bookability.",
-        variant: "destructive",
+        variant: "error",
       });
     },
   });
@@ -201,6 +203,7 @@ export default function AdminParkingManagement() {
       toast({
         title: "Success",
         description: "Parking spot added successfully.",
+        variant: "success",
       });
       setShowAddSpotDialog(false);
       setAddSpotFormData({
@@ -215,7 +218,7 @@ export default function AdminParkingManagement() {
       toast({
         title: "Error",
         description: error.message || "Failed to add parking spot.",
-        variant: "destructive",
+        variant: "error",
       });
     },
   });
@@ -234,6 +237,7 @@ export default function AdminParkingManagement() {
       toast({
         title: "Success",
         description: "Parking spot updated successfully.",
+        variant: "success",
       });
       setShowEditSpotDialog(false);
       setSelectedSpot(null);
@@ -242,7 +246,7 @@ export default function AdminParkingManagement() {
       toast({
         title: "Error",
         description: error.message || "Failed to update parking spot.",
-        variant: "destructive",
+        variant: "error",
       });
     },
   });
@@ -285,6 +289,7 @@ export default function AdminParkingManagement() {
       toast({
         title: "Success",
         description: "User added to waiting list successfully.",
+        variant: "success",
       });
       setShowAddToWaitingDialog(false);
       setWaitingListFormData({
@@ -298,7 +303,7 @@ export default function AdminParkingManagement() {
       toast({
         title: "Error",
         description: error.message || "Failed to add user to waiting list.",
-        variant: "destructive",
+        variant: "error",
       });
     },
   });
@@ -317,6 +322,7 @@ export default function AdminParkingManagement() {
       toast({
         title: "Success",
         description: "Spot assigned directly to user successfully.",
+        variant: "success",
       });
       setShowDirectAssignDialog(false);
       setSelectedSpotForAssign(null);
@@ -330,7 +336,7 @@ export default function AdminParkingManagement() {
       toast({
         title: "Error",
         description: error.message || "Failed to assign spot directly.",
-        variant: "destructive",
+        variant: "error",
       });
     },
   });
@@ -450,7 +456,7 @@ export default function AdminParkingManagement() {
         <Card data-testid="card-total-spots" className="hover-elevate">
           <CardContent className="p-6">
             <div className="flex items-center space-x-3">
-              <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-lg">
+              <div className="p-3 bg-sky-50 dark:bg-sky-950/20 rounded-lg">
                 <Car className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
@@ -463,7 +469,7 @@ export default function AdminParkingManagement() {
         <Card data-testid="card-waiting-users" className="hover-elevate">
           <CardContent className="p-6">
             <div className="flex items-center space-x-3">
-              <div className="p-3 bg-orange-100 dark:bg-orange-900 rounded-lg">
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg">
                 <Users className="h-6 w-6 text-orange-600 dark:text-orange-400" />
               </div>
               <div>
@@ -476,7 +482,7 @@ export default function AdminParkingManagement() {
         <Card data-testid="card-avg-wait" className="hover-elevate">
           <CardContent className="p-6">
             <div className="flex items-center space-x-3">
-              <div className="p-3 bg-purple-100 dark:bg-purple-900 rounded-lg">
+              <div className="p-3 bg-violet-50 dark:bg-violet-950/20 rounded-lg">
                 <Timer className="h-6 w-6 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
@@ -489,7 +495,7 @@ export default function AdminParkingManagement() {
         <Card data-testid="card-assignments" className="hover-elevate">
           <CardContent className="p-6">
             <div className="flex items-center space-x-3">
-              <div className="p-3 bg-green-100 dark:bg-green-900 rounded-lg">
+              <div className="p-3 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg">
                 <Target className="h-6 w-6 text-green-600 dark:text-green-400" />
               </div>
               <div>
