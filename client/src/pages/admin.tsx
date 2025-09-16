@@ -18,7 +18,7 @@ import {
   Users, Car, Clock, AlertTriangle, TrendingUp, Plus, 
   ListOrdered, CalendarDays, UserPlus, ArrowRight,
   Timer, Target, CheckCircle2, Search, Filter,
-  Zap, Accessibility, Building, MoreHorizontal, Info
+  Zap, Accessibility, Building, MoreHorizontal, Info, RefreshCw
 } from "lucide-react"
 import type { WaitingList, ParkingSpot, SpotType } from "@shared/schema"
 
@@ -41,6 +41,21 @@ export default function Admin() {
   const [selectedUserForAssign, setSelectedUserForAssign] = useState("")
   const [activeSpotTab, setActiveSpotTab] = useState("all")
   
+  // Form state for add to waiting list dialog
+  const [waitingListFormData, setWaitingListFormData] = useState({
+    userId: "",
+    preferredSpotType: "regular" as SpotType,
+    priority: 2, // 1=high, 2=medium, 3=low
+    reason: ""
+  })
+  
+  // Form state for direct assignment dialog
+  const [directAssignFormData, setDirectAssignFormData] = useState({
+    userId: "",
+    duration: "permanent",
+    notes: ""
+  })
+  
   // Bookability control state
   const [selectedSpots, setSelectedSpots] = useState<Set<string>>(new Set())
   const [isSelectAllChecked, setIsSelectAllChecked] = useState(false)
@@ -55,6 +70,15 @@ export default function Admin() {
     isBookable: true,
     description: "",
     ownerId: null as string | null
+  })
+  
+  // Form state for add spot dialog
+  const [addSpotFormData, setAddSpotFormData] = useState({
+    spotNumber: "",
+    location: "",
+    spotType: "regular" as SpotType,
+    isIndoor: false,
+    description: ""
   })
   
   // Fetch waiting list data for metrics
@@ -204,14 +228,70 @@ export default function Admin() {
     }
   }
 
+  // Admin spot creation mutation
+  const addSpotMutation = useMutation({
+    mutationFn: async (data: typeof addSpotFormData) => {
+      const response = await apiRequest("POST", "/api/admin/spots", {
+        ...data,
+        isActive: true,
+        isBookable: true,
+        ownerId: null // Admin creates unallocated spots
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      // Invalidate all relevant queries for real-time updates
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/all-spots"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/active"] });
+      
+      setShowAddSpotDialog(false);
+      // Reset form
+      setAddSpotFormData({
+        spotNumber: "",
+        location: "",
+        spotType: "regular" as SpotType,
+        isIndoor: false,
+        description: ""
+      });
+      
+      toast({
+        title: "Spot Created",
+        description: `Parking spot ${data.spotNumber} has been successfully added to the system.`,
+        variant: "default"
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Creation Failed",
+        description: error instanceof Error ? error.message : "Failed to create parking spot. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
   const handleAddSpot = () => {
-    console.log('Add new spot');
-    setShowAddSpotDialog(false);
-    toast({
-      title: "Spot Added",
-      description: "New parking spot has been added to the system.",
-      variant: "default"
-    });
+    // Validate form
+    if (!addSpotFormData.spotNumber.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Spot number is required.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!addSpotFormData.location.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Building/location is required.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    addSpotMutation.mutate(addSpotFormData);
   }
 
   // Admin spot edit mutation
@@ -382,14 +462,54 @@ export default function Admin() {
       spotType: spot.spotType,
       isIndoor: spot.isIndoor,
       isActive: spot.isActive,
+      isBookable: spot.isBookable,
       description: spot.description || "",
       ownerId: spot.ownerId
     });
     setShowEditSpotDialog(true);
   }
 
+  // Add to waiting list mutation
+  const addToWaitingListMutation = useMutation({
+    mutationFn: async (data: typeof waitingListFormData) => {
+      const response = await apiRequest("POST", "/api/waiting-list", {
+        userId: data.userId,
+        preferredSpotType: data.preferredSpotType,
+        priority: data.priority,
+        reason: data.reason,
+        enrolledBy: "admin"
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/active"] });
+      
+      setShowAddToWaitingDialog(false);
+      setWaitingListFormData({
+        userId: "",
+        preferredSpotType: "regular" as SpotType,
+        priority: 2,
+        reason: ""
+      });
+      
+      toast({
+        title: "User Added to Waiting List",
+        description: "User has been successfully added to the waiting list.",
+        variant: "default"
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to Add User",
+        description: error instanceof Error ? error.message : "Failed to add user to waiting list.",
+        variant: "destructive"
+      });
+    }
+  });
+
   const handleAddToWaitingList = () => {
-    if (!selectedUserForWaiting) {
+    if (!waitingListFormData.userId) {
       toast({
         title: "No User Selected",
         description: "Please select a user from the dropdown.",
@@ -398,14 +518,16 @@ export default function Admin() {
       return;
     }
     
-    console.log('Add user to waiting list:', selectedUserForWaiting);
-    setShowAddToWaitingDialog(false);
-    setSelectedUserForWaiting("");
-    toast({
-      title: "User Added to Waiting List",
-      description: "User has been successfully added to the waiting list.",
-      variant: "default"
-    });
+    if (!waitingListFormData.reason.trim()) {
+      toast({
+        title: "Reason Required",
+        description: "Please provide a reason for the waiting list request.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    addToWaitingListMutation.mutate(waitingListFormData);
   }
 
   const handleDirectAssign = () => {
@@ -492,13 +614,28 @@ export default function Admin() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Waiting List Management</CardTitle>
-                <Button
-                  onClick={() => setShowAddToWaitingDialog(true)}
-                  data-testid="button-add-to-waiting"
-                >
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Add to Waiting List
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list"] });
+                      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/active"] });
+                      toast({ title: "Refreshed", description: "Waiting list data updated." });
+                    }}
+                    data-testid="button-refresh-waiting-list"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Refresh
+                  </Button>
+                  <Button
+                    onClick={() => setShowAddToWaitingDialog(true)}
+                    data-testid="button-add-to-waiting"
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Add to Waiting List
+                  </Button>
+                </div>
               </div>
               <div className="flex gap-4">
                 <div className="flex-1">
@@ -611,6 +748,18 @@ export default function Admin() {
               <div className="flex items-center justify-between">
                 <CardTitle>Available Parking Spots</CardTitle>
                 <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] });
+                      toast({ title: "Refreshed", description: "Available spots updated." });
+                    }}
+                    data-testid="button-refresh-available-spots"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Refresh
+                  </Button>
                   {selectedSpots.size > 0 && (
                     <>
                       <Button
@@ -743,13 +892,28 @@ export default function Admin() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>All Parking Spots Management</CardTitle>
-                <Button
-                  onClick={() => setShowAddSpotDialog(true)}
-                  data-testid="button-add-spot"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Spot
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      queryClient.invalidateQueries({ queryKey: ["/api/admin/all-spots"] });
+                      queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] });
+                      toast({ title: "Refreshed", description: "All spots data updated." });
+                    }}
+                    data-testid="button-refresh-all-spots"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Refresh
+                  </Button>
+                  <Button
+                    onClick={() => setShowAddSpotDialog(true)}
+                    data-testid="button-add-spot"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Spot
+                  </Button>
+                </div>
               </div>
               <div className="flex gap-4">
                 <Select value={activeSpotTab} onValueChange={setActiveSpotTab}>
@@ -851,7 +1015,21 @@ export default function Admin() {
         <TabsContent value="recent-assignments" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Recent Assignments (Last 7 Days)</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>Recent Assignments (Last 7 Days)</CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    queryClient.invalidateQueries({ queryKey: ["/api/admin/recent-assignments"] });
+                    toast({ title: "Refreshed", description: "Recent assignments updated." });
+                  }}
+                  data-testid="button-refresh-recent-assignments"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {isLoadingRecentAssignments ? (
@@ -874,7 +1052,7 @@ export default function Admin() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {recentAssignments && recentAssignments.length > 0 ? recentAssignments.map((assignment: any) => (
+                    {Array.isArray(recentAssignments) && recentAssignments.length > 0 ? recentAssignments.map((assignment: any) => (
                       <TableRow key={assignment.id} data-testid={`row-assignment-${assignment.id}`}>
                         <TableCell className="font-medium">
                           <div className="flex flex-col">
@@ -958,9 +1136,9 @@ export default function Admin() {
                   data-testid={`button-select-spot-${spot.id}`}
                 >
                   <div className="flex items-center gap-2">
-                    {spot.type === "electric" && <Zap className="h-4 w-4" />}
-                    {spot.type === "accessible" && <Accessibility className="h-4 w-4" />}
-                    {spot.type === "standard" && <Car className="h-4 w-4" />}
+                    {spot.spotType === "electric" && <Zap className="h-4 w-4" />}
+                    {spot.spotType === "accessible" && <Accessibility className="h-4 w-4" />}
+                    {spot.spotType === "regular" && <Car className="h-4 w-4" />}
                     <span>{spot.spotNumber}</span>
                   </div>
                   <div className="text-sm text-muted-foreground">
@@ -981,43 +1159,71 @@ export default function Admin() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Spot Number</label>
-              <Input placeholder="e.g., A-301" data-testid="input-spot-number" />
+              <label className="text-sm font-medium">Spot Number *</label>
+              <Input 
+                placeholder="e.g., A-301" 
+                value={addSpotFormData.spotNumber}
+                onChange={(e) => setAddSpotFormData(prev => ({ ...prev, spotNumber: e.target.value }))}
+                data-testid="input-spot-number" 
+              />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Building</label>
-              <Select>
-                <SelectTrigger data-testid="select-building">
-                  <SelectValue placeholder="Select building" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="A">Building A</SelectItem>
-                  <SelectItem value="B">Building B</SelectItem>
-                  <SelectItem value="C">Building C</SelectItem>
-                  <SelectItem value="D">Building D</SelectItem>
-                </SelectContent>
-              </Select>
+              <label className="text-sm font-medium">Building/Location *</label>
+              <Input 
+                placeholder="e.g., Building A, Floor 3" 
+                value={addSpotFormData.location}
+                onChange={(e) => setAddSpotFormData(prev => ({ ...prev, location: e.target.value }))}
+                data-testid="input-location" 
+              />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Type</label>
-              <Select>
+              <label className="text-sm font-medium">Spot Type</label>
+              <Select 
+                value={addSpotFormData.spotType}
+                onValueChange={(value) => setAddSpotFormData(prev => ({ ...prev, spotType: value as SpotType }))}
+              >
                 <SelectTrigger data-testid="select-spot-type">
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="standard">Standard</SelectItem>
+                  <SelectItem value="regular">Regular</SelectItem>
                   <SelectItem value="electric">Electric</SelectItem>
                   <SelectItem value="accessible">Accessible</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Rate ($)</label>
-              <Input type="number" placeholder="25.00" data-testid="input-rate" />
+              <label className="text-sm font-medium">Indoor/Outdoor</label>
+              <Select 
+                value={addSpotFormData.isIndoor ? "true" : "false"}
+                onValueChange={(value) => setAddSpotFormData(prev => ({ ...prev, isIndoor: value === "true" }))}
+              >
+                <SelectTrigger data-testid="select-indoor">
+                  <SelectValue placeholder="Select location type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="false">Outdoor</SelectItem>
+                  <SelectItem value="true">Indoor</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Description (Optional)</label>
+              <Input 
+                placeholder="Additional details about the spot" 
+                value={addSpotFormData.description}
+                onChange={(e) => setAddSpotFormData(prev => ({ ...prev, description: e.target.value }))}
+                data-testid="input-description" 
+              />
             </div>
             <div className="flex gap-2 pt-4">
-              <Button onClick={handleAddSpot} className="flex-1" data-testid="button-save-spot">
-                Add Spot
+              <Button 
+                onClick={handleAddSpot} 
+                className="flex-1" 
+                disabled={addSpotMutation.isPending}
+                data-testid="button-save-spot"
+              >
+                {addSpotMutation.isPending ? "Creating..." : "Add Spot"}
               </Button>
               <Button variant="outline" onClick={() => setShowAddSpotDialog(false)} className="flex-1">
                 Cancel
@@ -1148,7 +1354,10 @@ export default function Admin() {
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Select User</label>
-              <Select value={selectedUserForWaiting} onValueChange={setSelectedUserForWaiting}>
+              <Select 
+                value={waitingListFormData.userId} 
+                onValueChange={(value) => setWaitingListFormData(prev => ({ ...prev, userId: value }))}
+              >
                 <SelectTrigger data-testid="select-user-waiting">
                   <SelectValue placeholder="Search and select user..." />
                 </SelectTrigger>
@@ -1174,12 +1383,15 @@ export default function Admin() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Preferred Spot Type</label>
-              <Select>
+              <Select 
+                value={waitingListFormData.preferredSpotType}
+                onValueChange={(value) => setWaitingListFormData(prev => ({ ...prev, preferredSpotType: value as SpotType }))}
+              >
                 <SelectTrigger data-testid="select-preferred-type">
                   <SelectValue placeholder="Select preferred type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="standard">Standard</SelectItem>
+                  <SelectItem value="regular">Regular</SelectItem>
                   <SelectItem value="electric">Electric</SelectItem>
                   <SelectItem value="accessible">Accessible</SelectItem>
                 </SelectContent>
@@ -1187,24 +1399,37 @@ export default function Admin() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Priority</label>
-              <Select>
+              <Select 
+                value={waitingListFormData.priority.toString()}
+                onValueChange={(value) => setWaitingListFormData(prev => ({ ...prev, priority: parseInt(value) }))}
+              >
                 <SelectTrigger data-testid="select-priority">
                   <SelectValue placeholder="Select priority" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="1">High</SelectItem>
+                  <SelectItem value="2">Medium</SelectItem>
+                  <SelectItem value="3">Low</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Reason</label>
-              <Input placeholder="Reason for waiting list request" data-testid="input-reason" />
+              <label className="text-sm font-medium">Reason *</label>
+              <Input 
+                placeholder="Reason for waiting list request" 
+                value={waitingListFormData.reason}
+                onChange={(e) => setWaitingListFormData(prev => ({ ...prev, reason: e.target.value }))}
+                data-testid="input-reason" 
+              />
             </div>
             <div className="flex gap-2 pt-4">
-              <Button onClick={handleAddToWaitingList} className="flex-1" data-testid="button-add-to-waiting">
-                Add to List
+              <Button 
+                onClick={handleAddToWaitingList} 
+                className="flex-1" 
+                disabled={addToWaitingListMutation.isPending}
+                data-testid="button-add-to-waiting"
+              >
+                {addToWaitingListMutation.isPending ? "Adding..." : "Add to List"}
               </Button>
               <Button variant="outline" onClick={() => setShowAddToWaitingDialog(false)} className="flex-1">
                 Cancel
@@ -1225,7 +1450,7 @@ export default function Admin() {
               <div className="p-3 bg-muted rounded-lg">
                 <div className="font-medium">Spot: {selectedSpotForAssign.spotNumber}</div>
                 <div className="text-sm text-muted-foreground">
-                  Building {selectedSpotForAssign.building} • {selectedSpotForAssign.type} • ${selectedSpotForAssign.currentRate}/day
+                  {selectedSpotForAssign.location} • {selectedSpotForAssign.spotType} • {selectedSpotForAssign.isIndoor ? 'Indoor' : 'Outdoor'}
                 </div>
               </div>
               <Alert className="bg-orange-50 border-orange-200 dark:bg-orange-950 dark:border-orange-800" data-testid="alert-payroll-notification-direct">
