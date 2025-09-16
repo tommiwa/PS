@@ -84,7 +84,7 @@ const adminMenuItems = [
     roles: ["admin"]
   },
   {
-    title: "Audits",
+    title: "Audit Logs",
     url: "/admin/audits",
     icon: FileText,
     roles: ["admin"]
