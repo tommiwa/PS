@@ -135,7 +135,7 @@ export default function AdminParkingManagement() {
     mutationFn: async ({ waitingListId, spotId }: { waitingListId: string; spotId: string }) => {
       return await apiRequest(`/api/admin/assign-spot`, {
         method: "POST",
-        body: JSON.stringify({ waitingListId, spotId }),
+        body: { waitingListId, spotId },
       });
     },
     onSuccess: () => {
@@ -166,7 +166,7 @@ export default function AdminParkingManagement() {
     mutationFn: async ({ spotIds, isBookable }: { spotIds: string[]; isBookable: boolean }) => {
       return await apiRequest(`/api/admin/toggle-spot-bookability`, {
         method: "PATCH",
-        body: JSON.stringify({ spotIds, isBookable }),
+        body: { spotIds, isBookable },
       });
     },
     onSuccess: (data, variables) => {
@@ -194,7 +194,7 @@ export default function AdminParkingManagement() {
     mutationFn: async (spotData: typeof addSpotFormData) => {
       return await apiRequest(`/api/admin/spots`, {
         method: "POST",
-        body: JSON.stringify(spotData),
+        body: spotData,
       });
     },
     onSuccess: () => {
@@ -228,7 +228,7 @@ export default function AdminParkingManagement() {
     mutationFn: async ({ spotId, spotData }: { spotId: string; spotData: typeof editFormData }) => {
       return await apiRequest(`/api/admin/spots/${spotId}`, {
         method: "PATCH",
-        body: JSON.stringify(spotData),
+        body: spotData,
       });
     },
     onSuccess: () => {
@@ -280,7 +280,7 @@ export default function AdminParkingManagement() {
     mutationFn: async (waitingData: typeof waitingListFormData) => {
       return await apiRequest(`/api/admin/waiting-list`, {
         method: "POST",
-        body: JSON.stringify(waitingData),
+        body: waitingData,
       });
     },
     onSuccess: () => {
@@ -313,7 +313,7 @@ export default function AdminParkingManagement() {
     mutationFn: async ({ spotId, assignmentData }: { spotId: string; assignmentData: typeof directAssignFormData }) => {
       return await apiRequest(`/api/admin/direct-assign`, {
         method: "POST",
-        body: JSON.stringify({ spotId, ...assignmentData }),
+        body: { spotId, ...assignmentData },
       });
     },
     onSuccess: () => {
@@ -358,7 +358,8 @@ export default function AdminParkingManagement() {
   };
 
   const handleDeleteSpot = async (spotId: string) => {
-    const confirmed = await confirm(confirmations.deleteSpot);
+    const spot = allSpots.find(s => s.id === spotId);
+    const confirmed = await confirm(confirmations.deleteSpot(spot?.spotNumber || 'Unknown Spot'));
     if (confirmed) {
       deleteSpotMutation.mutate(spotId);
     }
@@ -443,12 +444,31 @@ export default function AdminParkingManagement() {
   };
 
   return (
-    <div className="p-8 space-y-8" data-testid="page-admin-parking-management">
-      <div className="space-y-2">
-        <h1 className="text-4xl font-bold tracking-tight">Parking Management</h1>
-        <p className="text-lg text-muted-foreground">
-          Comprehensive management of parking spots and waiting list assignments.
-        </p>
+    <div className="p-6 space-y-6" data-testid="page-admin-parking-management">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Parking Management</h1>
+          <p className="text-muted-foreground">
+            Comprehensive management of parking spots and waiting list assignments.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button 
+            onClick={() => setShowAddSpotDialog(true)}
+            data-testid="button-add-spot"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Spot
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setShowAddToWaitingDialog(true)}
+            data-testid="button-add-to-waiting"
+          >
+            <UserPlus className="w-4 h-4 mr-2" />
+            Add to Waiting
+          </Button>
+        </div>
       </div>
 
       {/* Enhanced Quick Stats */}
@@ -507,123 +527,96 @@ export default function AdminParkingManagement() {
         </Card>
       </div>
 
-      <Alert>
-        <Info className="h-4 w-4" />
-        <AlertDescription>
-          This is a detailed parking management interface. For the main admin overview, visit the admin dashboard.
-        </AlertDescription>
-      </Alert>
-
-      {/* Main Management Tabs */}
-      <Tabs defaultValue="parking-spots" className="space-y-4" data-testid="tabs-parking-management">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="parking-spots" data-testid="tab-trigger-parking-spots" className="flex items-center gap-2 px-6 py-3">
-            <Car className="w-4 h-4" />
-            Parking Spots
-          </TabsTrigger>
-          <TabsTrigger value="waiting-list" data-testid="tab-trigger-waiting-list" className="flex items-center gap-2 px-6 py-3">
-            <Users className="w-4 h-4" />
-            Waiting List
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Parking Spots Tab */}
-        <TabsContent value="parking-spots" className="space-y-4">
-          <Card data-testid="card-parking-spots">
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Parking Spots Management</span>
-                <div className="flex gap-2">
-                  <Button 
-                    onClick={() => setShowAddSpotDialog(true)}
-                    data-testid="button-add-spot"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Spot
-                  </Button>
-                  {selectedSpots.size > 0 && (
-                    <>
-                      <Button
-                        variant="secondary"
-                        onClick={() => toggleSpotBookabilityMutation.mutate({ 
-                          spotIds: Array.from(selectedSpots), 
-                          isBookable: true 
-                        })}
-                        disabled={toggleSpotBookabilityMutation.isPending}
-                        data-testid="button-enable-spots"
-                      >
-                        <CheckCircle2 className="w-4 h-4 mr-2" />
-                        Enable ({selectedSpots.size})
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => toggleSpotBookabilityMutation.mutate({ 
-                          spotIds: Array.from(selectedSpots), 
-                          isBookable: false 
-                        })}
-                        disabled={toggleSpotBookabilityMutation.isPending}
-                        data-testid="button-disable-spots"
-                      >
-                        <AlertTriangle className="w-4 h-4 mr-2" />
-                        Disable ({selectedSpots.size})
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Search and Filter Controls */}
-              <div className="flex gap-4 items-center flex-wrap">
-                <div className="flex items-center gap-2">
-                  <Search className="w-4 h-4" />
-                  <Input
-                    placeholder="Search spots..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-64"
-                    data-testid="input-search-spots"
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Filter className="w-4 h-4" />
-                  <Select value={filterType} onValueChange={setFilterType}>
-                    <SelectTrigger className="w-40" data-testid="select-filter-type">
-                      <SelectValue placeholder="Filter by type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Types</SelectItem>
-                      <SelectItem value="regular">Regular</SelectItem>
-                      <SelectItem value="ev">EV</SelectItem>
-                      <SelectItem value="tesla_ev">Tesla EV</SelectItem>
-                      <SelectItem value="accessible">Accessible</SelectItem>
-                      <SelectItem value="reserved">Reserved</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+      {/* Search and Filters */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-wrap gap-4 items-center">
+            <div className="flex-1 min-w-[250px]">
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search spots by number, location, or type..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-8"
+                  data-testid="input-search-spots"
+                />
               </div>
+            </div>
+            <Select value={filterType} onValueChange={setFilterType}>
+              <SelectTrigger className="w-[150px]" data-testid="select-filter-type">
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="regular">Regular</SelectItem>
+                <SelectItem value="electric">EV</SelectItem>
+                <SelectItem value="tesla_ev">Tesla EV</SelectItem>
+                <SelectItem value="accessible">Accessible</SelectItem>
+                <SelectItem value="reserved">Reserved</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={activeSpotTab} onValueChange={setActiveSpotTab}>
+              <SelectTrigger className="w-[150px]" data-testid="select-filter-status">
+                <SelectValue placeholder="All Spots" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Spots</SelectItem>
+                <SelectItem value="unallocated">Unallocated</SelectItem>
+                <SelectItem value="allocated">Allocated</SelectItem>
+              </SelectContent>
+            </Select>
+            {selectedSpots.size > 0 && (
+              <>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => toggleSpotBookabilityMutation.mutate({ 
+                    spotIds: Array.from(selectedSpots), 
+                    isBookable: true 
+                  })}
+                  disabled={toggleSpotBookabilityMutation.isPending}
+                  data-testid="button-enable-spots"
+                >
+                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                  Enable ({selectedSpots.size})
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => toggleSpotBookabilityMutation.mutate({ 
+                    spotIds: Array.from(selectedSpots), 
+                    isBookable: false 
+                  })}
+                  disabled={toggleSpotBookabilityMutation.isPending}
+                  data-testid="button-disable-spots"
+                >
+                  <AlertTriangle className="w-4 h-4 mr-2" />
+                  Disable ({selectedSpots.size})
+                </Button>
+              </>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
-              {/* Spot Sub-tabs */}
-              <Tabs value={activeSpotTab} onValueChange={setActiveSpotTab}>
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="all" data-testid="tab-trigger-all-spots">
-                    All Spots ({allSpots.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="unallocated" data-testid="tab-trigger-unallocated-spots">
-                    Unallocated ({allSpots.filter(s => !s.ownerId).length})
-                  </TabsTrigger>
-                  <TabsTrigger value="allocated" data-testid="tab-trigger-allocated-spots">
-                    Allocated ({allSpots.filter(s => s.ownerId).length})
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value={activeSpotTab} className="mt-4">
-                  {filteredSpots.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground" data-testid="text-no-spots">
-                      No parking spots found matching your criteria.
-                    </div>
-                  ) : (
-                    <Table data-testid="table-parking-spots">
+      {/* Parking Spots */}
+      <Card data-testid="card-parking-spots">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Car className="h-5 w-5" />
+            Parking Spots ({filteredSpots.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {filteredSpots.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground" data-testid="text-no-spots">
+              <Car className="h-12 w-12 mx-auto mb-4 opacity-30" />
+              <p>No parking spots found matching your criteria.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table data-testid="table-parking-spots">
                       <TableHeader>
                         <TableRow>
                           <TableHead>
@@ -715,95 +708,34 @@ export default function AdminParkingManagement() {
                         ))}
                       </TableBody>
                     </Table>
-                  )}
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-        {/* Waiting List Tab */}
-        <TabsContent value="waiting-list" className="space-y-4">
-          <Card data-testid="card-waiting-list">
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Waiting List Management</span>
-                <Button 
-                  onClick={() => setShowAddToWaitingDialog(true)}
-                  data-testid="button-add-to-waiting"
-                >
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Add to Waiting List
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Search and Filter Controls */}
-              <div className="flex gap-4 items-center flex-wrap">
-                <div className="flex items-center gap-2">
-                  <Search className="w-4 h-4" />
-                  <Input
-                    placeholder="Search waiting list..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-64"
-                    data-testid="input-search-waiting"
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Filter className="w-4 h-4" />
-                  <Select value={filterType} onValueChange={setFilterType}>
-                    <SelectTrigger className="w-40" data-testid="select-filter-waiting-type">
-                      <SelectValue placeholder="Filter by type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Types</SelectItem>
-                      <SelectItem value="regular">Regular</SelectItem>
-                      <SelectItem value="ev">EV</SelectItem>
-                      <SelectItem value="tesla_ev">Tesla EV</SelectItem>
-                      <SelectItem value="accessible">Accessible</SelectItem>
-                      <SelectItem value="reserved">Reserved</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Waiting List Metrics */}
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 p-4 bg-muted rounded-lg">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">{waitingListMetrics.highPriority}</div>
-                  <div className="text-sm text-muted-foreground">High Priority</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-yellow-600">{waitingListMetrics.mediumPriority}</div>
-                  <div className="text-sm text-muted-foreground">Medium Priority</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">{waitingListMetrics.lowPriority}</div>
-                  <div className="text-sm text-muted-foreground">Low Priority</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-purple-600">{waitingListMetrics.averageWaitTime}</div>
-                  <div className="text-sm text-muted-foreground">Avg Days</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-600">{waitingListMetrics.assigned}</div>
-                  <div className="text-sm text-muted-foreground">Assigned</div>
-                </div>
-              </div>
-
-              {isLoadingWaitingList ? (
-                <div className="space-y-2">
-                  {[...Array(5)].map((_, i) => (
-                    <Skeleton key={i} className="h-12 w-full" />
-                  ))}
-                </div>
-              ) : filteredWaitingList.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground" data-testid="text-no-waiting">
-                  No waiting list entries found.
-                </div>
-              ) : (
-                <Table data-testid="table-waiting-list">
+      {/* Waiting List */}
+      <Card data-testid="card-waiting-list">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Waiting List ({filteredWaitingList.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {isLoadingWaitingList ? (
+            <div className="space-y-3 p-4">
+              {[...Array(5)].map((_, i) => (
+                <Skeleton key={i} className="h-16 w-full" />
+              ))}
+            </div>
+          ) : filteredWaitingList.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground" data-testid="text-no-waiting">
+              <Users className="h-12 w-12 mx-auto mb-4 opacity-30" />
+              <p>No waiting list entries found.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table data-testid="table-waiting-list">
                   <TableHeader>
                     <TableRow>
                       <TableHead>User</TableHead>
@@ -830,7 +762,7 @@ export default function AdminParkingManagement() {
                             {getPriorityBadge(item.priority)}
                           </TableCell>
                           <TableCell data-testid={`text-waiting-type-${item.id}`}>
-                            {getSpotTypeBadge(item.preferredSpotType)}
+                            {item.preferredSpotType ? getSpotTypeBadge(item.preferredSpotType) : <Badge variant="outline">Any</Badge>}
                           </TableCell>
                           <TableCell data-testid={`text-waiting-status-${item.id}`}>
                             <Badge 
@@ -863,12 +795,10 @@ export default function AdminParkingManagement() {
                     })}
                   </TableBody>
                 </Table>
-              )}
-            </CardContent>
+              </div>
+            )}
+        </CardContent>
           </Card>
-        </TabsContent>
-
-      </Tabs>
 
       {/* Add Spot Dialog */}
       <Dialog open={showAddSpotDialog} onOpenChange={setShowAddSpotDialog}>
@@ -1145,9 +1075,9 @@ export default function AdminParkingManagement() {
                     <SelectValue placeholder="Choose a user..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {allUsers.map((user: any) => (
+                    {(allUsers as any[]).map((user: any) => (
                       <SelectItem key={user.id} value={user.id}>
-                        {user.name} ({user.email})
+                        {user.name || user.firstName || user.email} ({user.email})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1251,9 +1181,9 @@ export default function AdminParkingManagement() {
                     <SelectValue placeholder="Choose a user..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {allUsers.map((user: any) => (
+                    {(allUsers as any[]).map((user: any) => (
                       <SelectItem key={user.id} value={user.id}>
-                        {user.name} ({user.email})
+                        {user.name || user.firstName || user.email} ({user.email})
                       </SelectItem>
                     ))}
                   </SelectContent>
