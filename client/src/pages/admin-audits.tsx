@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
+import { apiRequest } from "@/lib/queryClient"
 import { format } from "date-fns"
 import { 
   Calendar,
@@ -76,24 +77,10 @@ export default function AdminAudits() {
   queryParams.set("page", String(page));
   queryParams.set("pageSize", String(pageSize));
 
-  // Fetch audit logs
+  // Fetch audit logs using standard authenticated fetcher
+  const auditUrl = `/api/admin/audits?${queryParams.toString()}`;
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["/api/admin/audits", queryParams.toString()],
-    queryFn: async () => {
-      const response = await fetch(`/api/admin/audits?${queryParams}`, {
-        credentials: 'include'
-      });
-      if (!response.ok) {
-        throw new Error("Failed to fetch audit logs");
-      }
-      return response.json() as Promise<{
-        items: AuditLog[];
-        total: number;
-        page: number;
-        pageSize: number;
-        totalPages: number;
-      }>;
-    },
+    queryKey: [auditUrl]
   });
 
   // Handle search
@@ -116,7 +103,7 @@ export default function AdminAudits() {
     }));
   };
 
-  // Export audit logs
+  // Export audit logs using authenticated request
   const handleExport = async () => {
     try {
       const exportParams = new URLSearchParams(queryParams);
@@ -124,9 +111,15 @@ export default function AdminAudits() {
       exportParams.delete("pageSize");
       exportParams.set("format", "csv");
       
+      // Use apiRequest for authenticated request and handle blob response
       const response = await fetch(`/api/admin/audits/export?${exportParams}`, {
-        credentials: 'include'
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'x-demo-auth': 'admin'  // Include demo auth header like other admin requests
+        }
       });
+      
       if (!response.ok) throw new Error("Export failed");
       
       const blob = await response.blob();

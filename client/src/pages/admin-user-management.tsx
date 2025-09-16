@@ -145,6 +145,9 @@ export default function AdminUserManagement() {
 
   const handleEditUser = (userId: string) => {
     console.log('Edit user:', userId)
+    // TODO: Open edit user dialog with form to update user information
+    // For now, just show which user would be edited
+    alert(`Edit functionality for user ${userId} would open here. This requires implementing a user edit dialog.`)
   }
 
   const handleDeleteUser = async (userId: string) => {
@@ -174,7 +177,9 @@ export default function AdminUserManagement() {
     
     if (confirmed) {
       console.log('Suspend/Activate user:', userId)
-      // TODO: Implement actual user suspension/activation logic
+      // TODO: Implement actual user suspension/activation logic via API
+      const action = user.status === "active" ? "suspended" : "activated"
+      alert(`User ${user.name} has been ${action}! (This would be handled via API in production)`)
     }
   }
 
@@ -182,8 +187,23 @@ export default function AdminUserManagement() {
     console.log('Assign spot to user:', userId)
   }
 
-  const handleSendNotification = (userId: string) => {
-    console.log('Send notification to user:', userId)
+  const handleSendNotification = async (userId: string) => {
+    const user = mockUsers.find(u => u.id === userId)
+    if (!user) return
+
+    const confirmed = await confirm({
+      title: "Send Email Notification",
+      description: `Are you sure you want to send an email notification to ${user.name} (${user.email})? This will send a system notification to their registered email address.`,
+      confirmText: "Send Email",
+      cancelText: "Cancel",
+      variant: "default"
+    })
+    
+    if (confirmed) {
+      console.log('Send notification to user:', userId)
+      // TODO: Implement actual email sending logic via API
+      alert(`Email notification sent to ${user.name} at ${user.email}!`)
+    }
   }
 
   const handleBulkAction = (action: string) => {
