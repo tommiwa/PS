@@ -103,10 +103,6 @@ export default function AdminParkingManagement() {
     queryKey: ["/api/admin/users"],
   });
 
-  // Fetch recent assignments for the new tab
-  const { data: recentAssignments = [], isLoading: isLoadingRecentAssignments } = useQuery({
-    queryKey: ["/api/admin/recent-assignments"],
-  });
 
   // Calculate waiting list metrics
   const waitingListMetrics = {
@@ -122,12 +118,7 @@ export default function AdminParkingManagement() {
           const daysSinceEnrollment = Math.floor((Date.now() - new Date(entry.enrolledDate).getTime()) / (1000 * 60 * 60 * 24));
           return sum + daysSinceEnrollment;
         }, 0) / activeWaitingList.length)
-      : 0,
-    recentAssignments: allWaitingList?.filter(entry => {
-      if (!entry.assignedDate) return false;
-      const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
-      return new Date(entry.assignedDate).getTime() > thirtyDaysAgo;
-    }).length || 0
+      : 0
   };
 
   // Filter waiting list - show all waiting list entries, not just active
@@ -152,7 +143,6 @@ export default function AdminParkingManagement() {
       queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/active"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/all-spots"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/recent-assignments"] });
       toast({
         title: "Success",
         description: "Spot assigned successfully from waiting list.",
@@ -324,7 +314,6 @@ export default function AdminParkingManagement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/all-spots"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/recent-assignments"] });
       toast({
         title: "Success",
         description: "Spot assigned directly to user successfully.",
@@ -426,18 +415,18 @@ export default function AdminParkingManagement() {
   const getSpotTypeBadge = (spotType: SpotType) => {
     const variants: Record<SpotType, string> = {
       regular: "outline",
-      ev: "secondary",
+      electric: "secondary",
       tesla_ev: "secondary",
-      accessible: "destructive",
-      taxable_benefit: "default"
+      accessible: "default",
+      reserved: "destructive"
     };
     
     const labels: Record<SpotType, string> = {
       regular: "Regular",
-      ev: "EV",
+      electric: "EV",
       tesla_ev: "Tesla EV",
       accessible: "Accessible",
-      taxable_benefit: "Taxable Benefit"
+      reserved: "Reserved"
     };
     
     return (
@@ -448,38 +437,66 @@ export default function AdminParkingManagement() {
   };
 
   return (
-    <div className="p-6 space-y-6" data-testid="page-admin-parking-management">
-      <div>
-        <h1 className="text-3xl font-bold">Parking Management</h1>
-        <p className="text-muted-foreground">
-          Manage parking spots, waiting list, and system settings.
+    <div className="p-8 space-y-8" data-testid="page-admin-parking-management">
+      <div className="space-y-2">
+        <h1 className="text-4xl font-bold tracking-tight">Parking Management</h1>
+        <p className="text-lg text-muted-foreground">
+          Comprehensive management of parking spots and waiting list assignments.
         </p>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card data-testid="card-total-spots">
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-blue-600">{unallocatedSpots.length}</div>
-            <div className="text-sm text-muted-foreground">Available Spots</div>
+      {/* Enhanced Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <Card data-testid="card-total-spots" className="hover-elevate">
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-3">
+              <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                <Car className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{unallocatedSpots.length}</div>
+                <div className="text-sm text-muted-foreground">Available Spots</div>
+              </div>
+            </div>
           </CardContent>
         </Card>
-        <Card data-testid="card-waiting-users">
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-orange-600">{waitingListMetrics.active}</div>
-            <div className="text-sm text-muted-foreground">Users Waiting</div>
+        <Card data-testid="card-waiting-users" className="hover-elevate">
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-3">
+              <div className="p-3 bg-orange-100 dark:bg-orange-900 rounded-lg">
+                <Users className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+              </div>
+              <div>
+                <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">{waitingListMetrics.active}</div>
+                <div className="text-sm text-muted-foreground">Users Waiting</div>
+              </div>
+            </div>
           </CardContent>
         </Card>
-        <Card data-testid="card-avg-wait">
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-purple-600">{waitingListMetrics.averageWaitTime}</div>
-            <div className="text-sm text-muted-foreground">Avg Wait Days</div>
+        <Card data-testid="card-avg-wait" className="hover-elevate">
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-3">
+              <div className="p-3 bg-purple-100 dark:bg-purple-900 rounded-lg">
+                <Timer className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div>
+                <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">{waitingListMetrics.averageWaitTime}</div>
+                <div className="text-sm text-muted-foreground">Avg Wait Days</div>
+              </div>
+            </div>
           </CardContent>
         </Card>
-        <Card data-testid="card-assignments">
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-green-600">{waitingListMetrics.recentAssignments}</div>
-            <div className="text-sm text-muted-foreground">Recent Assignments</div>
+        <Card data-testid="card-assignments" className="hover-elevate">
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-3">
+              <div className="p-3 bg-green-100 dark:bg-green-900 rounded-lg">
+                <Target className="h-6 w-6 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <div className="text-3xl font-bold text-green-600 dark:text-green-400">{waitingListMetrics.assigned}</div>
+                <div className="text-sm text-muted-foreground">Total Assigned</div>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -493,18 +510,14 @@ export default function AdminParkingManagement() {
 
       {/* Main Management Tabs */}
       <Tabs defaultValue="parking-spots" className="space-y-4" data-testid="tabs-parking-management">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="parking-spots" data-testid="tab-trigger-parking-spots">
-            <Car className="w-4 h-4 mr-2" />
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="parking-spots" data-testid="tab-trigger-parking-spots" className="flex items-center gap-2 px-6 py-3">
+            <Car className="w-4 h-4" />
             Parking Spots
           </TabsTrigger>
-          <TabsTrigger value="waiting-list" data-testid="tab-trigger-waiting-list">
-            <Users className="w-4 h-4 mr-2" />
+          <TabsTrigger value="waiting-list" data-testid="tab-trigger-waiting-list" className="flex items-center gap-2 px-6 py-3">
+            <Users className="w-4 h-4" />
             Waiting List
-          </TabsTrigger>
-          <TabsTrigger value="recent-assignments" data-testid="tab-trigger-recent-assignments">
-            <Clock className="w-4 h-4 mr-2" />
-            Recent Assignments
           </TabsTrigger>
         </TabsList>
 
@@ -578,7 +591,7 @@ export default function AdminParkingManagement() {
                       <SelectItem value="ev">EV</SelectItem>
                       <SelectItem value="tesla_ev">Tesla EV</SelectItem>
                       <SelectItem value="accessible">Accessible</SelectItem>
-                      <SelectItem value="taxable_benefit">Taxable Benefit</SelectItem>
+                      <SelectItem value="reserved">Reserved</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -743,7 +756,7 @@ export default function AdminParkingManagement() {
                       <SelectItem value="ev">EV</SelectItem>
                       <SelectItem value="tesla_ev">Tesla EV</SelectItem>
                       <SelectItem value="accessible">Accessible</SelectItem>
-                      <SelectItem value="taxable_benefit">Taxable Benefit</SelectItem>
+                      <SelectItem value="reserved">Reserved</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -849,84 +862,6 @@ export default function AdminParkingManagement() {
           </Card>
         </TabsContent>
 
-        {/* Recent Assignments Tab */}
-        <TabsContent value="recent-assignments" className="space-y-4">
-          <Card data-testid="card-recent-assignments">
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Recent Assignments</span>
-                <Button
-                  variant="outline"
-                  onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/admin/recent-assignments"] })}
-                  data-testid="button-refresh-assignments"
-                >
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Refresh
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoadingRecentAssignments ? (
-                <div className="space-y-2">
-                  {[...Array(5)].map((_, i) => (
-                    <Skeleton key={i} className="h-12 w-full" />
-                  ))}
-                </div>
-              ) : recentAssignments.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground" data-testid="text-no-assignments">
-                  No recent assignments found.
-                </div>
-              ) : (
-                <Table data-testid="table-recent-assignments">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>User</TableHead>
-                      <TableHead>Spot</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Source</TableHead>
-                      <TableHead>Duration</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {recentAssignments.map((assignment: any) => (
-                      <TableRow key={assignment.id} data-testid={`row-assignment-${assignment.id}`}>
-                        <TableCell data-testid={`text-assignment-date-${assignment.id}`}>
-                          {new Date(assignment.assignedDate).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell data-testid={`text-assignment-user-${assignment.id}`}>
-                          <div>
-                            <div className="font-medium">{assignment.userName}</div>
-                            <div className="text-sm text-muted-foreground">{assignment.userEmail}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell data-testid={`text-assignment-spot-${assignment.id}`}>
-                          <div>
-                            <div className="font-medium">{assignment.spotNumber}</div>
-                            <div className="text-sm text-muted-foreground">{assignment.spotLocation}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell data-testid={`text-assignment-type-${assignment.id}`}>
-                          {getSpotTypeBadge(assignment.spotType)}
-                        </TableCell>
-                        <TableCell data-testid={`text-assignment-source-${assignment.id}`}>
-                          <Badge variant={assignment.source === "waiting_list" ? "secondary" : "default"}>
-                            {assignment.source === "waiting_list" ? "Waiting List" : "Direct Assignment"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell data-testid={`text-assignment-duration-${assignment.id}`}>
-                          <Badge variant="outline">
-                            {assignment.duration || "Permanent"}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
 
       {/* Add Spot Dialog */}
@@ -968,7 +903,7 @@ export default function AdminParkingManagement() {
                   <SelectItem value="ev">EV</SelectItem>
                   <SelectItem value="tesla_ev">Tesla EV</SelectItem>
                   <SelectItem value="accessible">Accessible</SelectItem>
-                  <SelectItem value="taxable_benefit">Taxable Benefit</SelectItem>
+                  <SelectItem value="reserved">Reserved</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1049,7 +984,7 @@ export default function AdminParkingManagement() {
                   <SelectItem value="ev">EV</SelectItem>
                   <SelectItem value="tesla_ev">Tesla EV</SelectItem>
                   <SelectItem value="accessible">Accessible</SelectItem>
-                  <SelectItem value="taxable_benefit">Taxable Benefit</SelectItem>
+                  <SelectItem value="reserved">Reserved</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1227,7 +1162,7 @@ export default function AdminParkingManagement() {
                   <SelectItem value="ev">EV</SelectItem>
                   <SelectItem value="tesla_ev">Tesla EV</SelectItem>
                   <SelectItem value="accessible">Accessible</SelectItem>
-                  <SelectItem value="taxable_benefit">Taxable Benefit</SelectItem>
+                  <SelectItem value="reserved">Reserved</SelectItem>
                 </SelectContent>
               </Select>
             </div>

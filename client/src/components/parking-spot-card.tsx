@@ -7,7 +7,7 @@ export interface ParkingSpot {
   id: string
   spotNumber: string
   location: string
-  type: "regular" | "accessible" | "electric" | "tesla_ev" | "taxable_benefit"
+  type: "regular" | "accessible" | "electric" | "tesla_ev" | "reserved"
   isInside: boolean
   price: number
   availability?: {
@@ -15,7 +15,7 @@ export interface ParkingSpot {
   }
   owner: string
   isAvailable: boolean
-  isBookable?: boolean // Whether the spot can be booked (false for taxable_benefit)
+  isBookable?: boolean // Whether the spot can be booked (false for reserved)
 }
 
 interface ParkingSpotCardProps {
@@ -39,7 +39,7 @@ export function ParkingSpotCard({
         return <Zap className="h-4 w-4 text-red-600" />
       case "accessible":
         return <Accessibility className="h-4 w-4" />
-      case "taxable_benefit":
+      case "reserved":
         return <Building className="h-4 w-4" />
       default:
         return <Car className="h-4 w-4" />
@@ -52,7 +52,7 @@ export function ParkingSpotCard({
       accessible: "default" as const,
       electric: "default" as const,
       tesla_ev: "default" as const,
-      taxable_benefit: "outline" as const
+      reserved: "outline" as const
     }
     
     const labels = {
@@ -60,7 +60,7 @@ export function ParkingSpotCard({
       accessible: "Accessible", 
       electric: "EV Charger",
       tesla_ev: "Tesla EV Charger",
-      taxable_benefit: "Taxable Benefit"
+      reserved: "Reserved"
     }
     
     return (

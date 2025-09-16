@@ -60,7 +60,7 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
 // Parking Spots Table
-export const spotTypes = z.enum(["regular", "electric", "tesla_ev", "accessible", "taxable_benefit"]);
+export const spotTypes = z.enum(["regular", "electric", "tesla_ev", "accessible", "reserved"]);
 export type SpotType = z.infer<typeof spotTypes>;
 
 export const parkingSpots = pgTable("parking_spots", {

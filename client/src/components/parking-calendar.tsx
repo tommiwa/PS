@@ -25,7 +25,7 @@ interface ParkingSpot {
   id: string
   spotNumber: string
   location: string
-  type: "regular" | "electric" | "accessible" | "tesla_ev" | "taxable_benefit"
+  type: "regular" | "electric" | "accessible" | "tesla_ev" | "reserved"
   isInside: boolean
   price: number
   isAvailable: boolean
@@ -34,7 +34,7 @@ interface ParkingSpot {
   }
   owner: string
   isOwned?: boolean // Flag to indicate if this is user's own listing
-  isBookable?: boolean // Whether the spot can be booked (false for taxable_benefit)
+  isBookable?: boolean // Whether the spot can be booked (false for reserved)
 }
 
 interface ParkingCalendarProps {
@@ -104,7 +104,7 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
         return false;
       }
 
-      // Filter out non-bookable spots (taxable benefit) unless in owner view
+      // Filter out non-bookable spots (reserved) unless in owner view
       if (!isOwnerView && spot.isBookable === false) {
         return false;
       }
@@ -144,7 +144,7 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
         return <Zap className="h-3 w-3 text-red-600" />
       case "accessible":
         return <Accessibility className="h-3 w-3 text-blue-600" />
-      case "taxable_benefit":
+      case "reserved":
         return <Building className="h-3 w-3 text-orange-600" />
       default:
         return <Car className="h-3 w-3 text-gray-600" />
@@ -170,7 +170,7 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
         return "bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-200"
       case "accessible":
         return "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900 dark:text-blue-200"
-      case "taxable_benefit":
+      case "reserved":
         return "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900 dark:text-orange-200"
       default:
         return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900 dark:text-gray-200"
@@ -202,7 +202,7 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
       return; // Don't allow booking past spots
     }
     
-    // Prevent booking non-bookable spots (taxable benefit)
+    // Prevent booking non-bookable spots (reserved)
     if (spot.isBookable === false && !isOwnerView) {
       return; // Don't allow booking non-bookable spots
     }

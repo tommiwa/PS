@@ -10,7 +10,7 @@ import { Search, X, MapPin, Car, Zap, Accessibility, DollarSign, Calendar, Clock
 export interface ParsedSearch {
   query: string
   location?: string
-  spotType?: "regular" | "accessible" | "electric" | "tesla_ev" | "taxable_benefit" | "all"
+  spotType?: "regular" | "accessible" | "electric" | "tesla_ev" | "reserved" | "all"
   priceMin?: number
   priceMax?: number
   date?: string
@@ -34,7 +34,7 @@ const SEARCH_SUGGESTIONS = [
   "accessible tomorrow",
   "regular spots 750 pandora ave",
   "tesla ev charger",
-  "taxable benefit spots"
+  "reserved spots"
 ]
 
 const QUICK_FILTERS = [
@@ -100,8 +100,8 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
       parsed.spotType = "electric"
     } else if (terms.includes("accessible") || terms.includes("handicap") || terms.includes("disabled")) {
       parsed.spotType = "accessible"
-    } else if (terms.includes("taxable") || terms.includes("benefit")) {
-      parsed.spotType = "taxable_benefit"
+    } else if (terms.includes("reserved") || terms.includes("executive")) {
+      parsed.spotType = "reserved"
     } else if (terms.includes("regular") || terms.includes("normal")) {
       parsed.spotType = "regular"
     }
