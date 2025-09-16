@@ -69,7 +69,7 @@ export default function AdminAudits() {
   // Build query parameters
   const queryParams = new URLSearchParams();
   Object.entries(filters).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== "") {
+    if (value !== undefined && value !== null && value !== "" && value !== "all") {
       queryParams.set(key, String(value));
     }
   });
@@ -236,14 +236,14 @@ export default function AdminAudits() {
             <div className="space-y-2">
               <label className="text-sm font-medium">Action</label>
               <Select
-                value={filters.action || ""}
-                onValueChange={(value) => handleFilterChange("action", value)}
+                value={filters.action || "all"}
+                onValueChange={(value) => handleFilterChange("action", value === "all" ? undefined : value)}
               >
                 <SelectTrigger data-testid="select-filter-action">
                   <SelectValue placeholder="All actions" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All actions</SelectItem>
+                  <SelectItem value="all">All actions</SelectItem>
                   {AUDIT_ACTIONS.map(action => (
                     <SelectItem key={action} value={action}>
                       {action}
@@ -255,14 +255,14 @@ export default function AdminAudits() {
             <div className="space-y-2">
               <label className="text-sm font-medium">Entity Type</label>
               <Select
-                value={filters.entityType || ""}
-                onValueChange={(value) => handleFilterChange("entityType", value)}
+                value={filters.entityType || "all"}
+                onValueChange={(value) => handleFilterChange("entityType", value === "all" ? undefined : value)}
               >
                 <SelectTrigger data-testid="select-filter-entity-type">
                   <SelectValue placeholder="All entities" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All entities</SelectItem>
+                  <SelectItem value="all">All entities</SelectItem>
                   {ENTITY_TYPES.map(type => (
                     <SelectItem key={type} value={type}>
                       {type.replace("_", " ")}
@@ -295,14 +295,14 @@ export default function AdminAudits() {
             <div className="space-y-2">
               <label className="text-sm font-medium">Success</label>
               <Select
-                value={filters.success === undefined ? "" : String(filters.success)}
-                onValueChange={(value) => handleFilterChange("success", value === "" ? undefined : value === "true")}
+                value={filters.success === undefined ? "all" : String(filters.success)}
+                onValueChange={(value) => handleFilterChange("success", value === "all" ? undefined : value === "true")}
               >
                 <SelectTrigger data-testid="select-filter-success">
                   <SelectValue placeholder="All results" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All results</SelectItem>
+                  <SelectItem value="all">All results</SelectItem>
                   <SelectItem value="true">Success only</SelectItem>
                   <SelectItem value="false">Failures only</SelectItem>
                 </SelectContent>
