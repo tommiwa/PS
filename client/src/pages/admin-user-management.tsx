@@ -453,7 +453,13 @@ export default function AdminUserManagement() {
 
       {/* User Role Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
+        <Card 
+          className={`cursor-pointer hover-elevate ${
+            filterRole === 'admin' ? 'ring-2 ring-primary' : ''
+          }`}
+          onClick={() => setFilterRole(filterRole === 'admin' ? 'all' : 'admin')}
+          data-testid="card-filter-admin"
+        >
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Administrators</CardTitle>
           </CardHeader>
@@ -464,7 +470,13 @@ export default function AdminUserManagement() {
             <Badge variant="secondary" className="text-xs">System access</Badge>
           </CardContent>
         </Card>
-        <Card>
+        <Card 
+          className={`cursor-pointer hover-elevate ${
+            filterRole === 'owner' ? 'ring-2 ring-primary' : ''
+          }`}
+          onClick={() => setFilterRole(filterRole === 'owner' ? 'all' : 'owner')}
+          data-testid="card-filter-owner"
+        >
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Spot Owners</CardTitle>
           </CardHeader>
@@ -475,7 +487,30 @@ export default function AdminUserManagement() {
             <Badge variant="default" className="text-xs">Revenue generators</Badge>
           </CardContent>
         </Card>
-        <Card>
+        <Card 
+          className={`cursor-pointer hover-elevate ${
+            filterRole === 'renter' ? 'ring-2 ring-primary' : ''
+          }`}
+          onClick={() => setFilterRole(filterRole === 'renter' ? 'all' : 'renter')}
+          data-testid="card-filter-renter"
+        >
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Renters</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {isLoadingUsers ? "..." : roleStats.renter}
+            </div>
+            <Badge variant="outline" className="text-xs">Regular users</Badge>
+          </CardContent>
+        </Card>
+        <Card 
+          className={`cursor-pointer hover-elevate ${
+            filterRole === 'all' ? 'ring-2 ring-primary' : ''
+          }`}
+          onClick={() => setFilterRole('all')}
+          data-testid="card-filter-all"
+        >
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Users</CardTitle>
           </CardHeader>
