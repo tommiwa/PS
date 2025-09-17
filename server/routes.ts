@@ -16,6 +16,7 @@ import {
   insertSpotListingSchema,
   insertBookingSchema,
   insertWaitingListSchema,
+  insertUserSchema,
   type WaitingList,
   type SpotType,
   type AuditAction,
