@@ -18,6 +18,13 @@ interface DashboardStatsProps {
 }
 
 export function DashboardStats({ userRole }: DashboardStatsProps) {
+  // Helper function to create colorful icons with backgrounds
+  const createColorfulIcon = (IconComponent: React.ComponentType<any>, bgColor: string, iconColor: string = "text-white") => (
+    <div className={`${bgColor} ${iconColor} rounded-lg p-2 w-10 h-10 flex items-center justify-center`}>
+      <IconComponent className="h-5 w-5" />
+    </div>
+  )
+
   // Mock data - in real app this would come from API
   const getStatsForRole = () => {
     switch (userRole) {
@@ -26,28 +33,28 @@ export function DashboardStats({ userRole }: DashboardStatsProps) {
           {
             title: "Total Spots",
             value: 150,
-            icon: <Car className="h-4 w-4" />,
+            icon: createColorfulIcon(Car, "bg-blue-500"),
             description: "Across 4 locations",
             trend: { value: 0, isPositive: true }
           },
           {
             title: "Active Users",
             value: 1000,
-            icon: <Users className="h-4 w-4" />,
+            icon: createColorfulIcon(Users, "bg-green-500"),
             description: "Registered employees",
             trend: { value: 5, isPositive: true }
           },
           {
             title: "Today's Bookings",
             value: 89,
-            icon: <Calendar className="h-4 w-4" />,
+            icon: createColorfulIcon(Calendar, "bg-purple-500"),
             description: "59% occupancy",
             trend: { value: 12, isPositive: true }
           },
           {
             title: "Revenue This Month",
             value: "$12,340",
-            icon: <TrendingUp className="h-4 w-4" />,
+            icon: createColorfulIcon(TrendingUp, "bg-orange-500"),
             description: "From spot rentals",
             trend: { value: 18, isPositive: true }
           }
@@ -57,26 +64,26 @@ export function DashboardStats({ userRole }: DashboardStatsProps) {
           {
             title: "My Spots",
             value: 2,
-            icon: <Car className="h-4 w-4" />,
+            icon: createColorfulIcon(Car, "bg-blue-500"),
             description: "Owned parking spots"
           },
           {
             title: "This Month's Earnings",
             value: "$450",
-            icon: <TrendingUp className="h-4 w-4" />,
+            icon: createColorfulIcon(TrendingUp, "bg-orange-500"),
             description: "18 bookings",
             trend: { value: 15, isPositive: true }
           },
           {
             title: "Upcoming Bookings",
             value: 6,
-            icon: <Calendar className="h-4 w-4" />,
+            icon: createColorfulIcon(Calendar, "bg-purple-500"),
             description: "Next 7 days"
           },
           {
             title: "Availability Listed",
             value: "85%",
-            icon: <Clock className="h-4 w-4" />,
+            icon: createColorfulIcon(Clock, "bg-yellow-500"),
             description: "This month"
           }
         ]
@@ -85,25 +92,25 @@ export function DashboardStats({ userRole }: DashboardStatsProps) {
           {
             title: "Active Bookings",
             value: 3,
-            icon: <Calendar className="h-4 w-4" />,
+            icon: createColorfulIcon(Calendar, "bg-purple-500"),
             description: "Confirmed reservations"
           },
           {
             title: "This Month Spent",
             value: "$75",
-            icon: <TrendingUp className="h-4 w-4" />,
+            icon: createColorfulIcon(TrendingUp, "bg-orange-500"),
             description: "3 bookings"
           },
           {
             title: "Favorite Locations",
             value: 2,
-            icon: <MapPin className="h-4 w-4" />,
+            icon: createColorfulIcon(MapPin, "bg-red-500"),
             description: "Saved preferences"
           },
           {
             title: "Booking History",
             value: 23,
-            icon: <Clock className="h-4 w-4" />,
+            icon: createColorfulIcon(Clock, "bg-yellow-500"),
             description: "Total bookings"
           }
         ]
@@ -122,7 +129,7 @@ export function DashboardStats({ userRole }: DashboardStatsProps) {
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {stat.title}
             </CardTitle>
-            <div className="text-muted-foreground">
+            <div>
               {stat.icon}
             </div>
           </CardHeader>
