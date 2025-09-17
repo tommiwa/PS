@@ -108,6 +108,7 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
         return (
           <div className="space-y-6">
             {/* Simplified Spending Overview */}
+            {(!activeFilter || activeFilter === "month-spent") && (
             <div>
               <h2 className="text-xl font-semibold mb-4">Spending Overview</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -141,8 +142,10 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
                 </Card>
               </div>
             </div>
+            )}
 
             {/* Location & Usage Patterns */}
+            {(!activeFilter || activeFilter === "favorite-locations") && (
             <div>
               <h2 className="text-xl font-semibold mb-4">Usage Patterns</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -215,8 +218,10 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
                 </Card>
               </div>
             </div>
+            )}
 
             {/* Simple Performance Summary */}
+            {(!activeFilter || activeFilter === "active-bookings" || activeFilter === "booking-history") && (
             <div>
               <h2 className="text-xl font-semibold mb-4">Booking Summary</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -255,6 +260,7 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
                 </Card>
               </div>
             </div>
+            )}
           </div>
         )
         
@@ -262,6 +268,7 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
         return (
           <div className="space-y-6">
             {/* Owner's Rental Business Section */}
+            {(!activeFilter || activeFilter === "my-spots" || activeFilter === "month-earnings") && (
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold">Your Spots - Recent Bookings</h2>
@@ -280,8 +287,10 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
                 ))}
               </div>
             </div>
+            )}
             
             {/* Owner Quick Actions */}
+            {(!activeFilter || activeFilter === "availability-listed") && (
             <div>
               <h2 className="text-xl font-semibold mb-4">Spot Management</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -308,8 +317,10 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
                 </Card>
               </div>
             </div>
+            )}
 
             {/* Renter Functionality for Owners */}
+            {(!activeFilter || activeFilter === "upcoming-bookings") && (
             <div className="border-t pt-6">
               <div className="flex items-center gap-2 mb-6">
                 <Car className="h-5 w-5 text-primary" />
@@ -348,12 +359,15 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
                 </div>
               </div>
             </div>
+            )}
           </div>
         )
         
       case "admin":
         return (
           <div className="space-y-6">
+            {/* Admin Stats Grid */}
+            {(!activeFilter || activeFilter === "total-spots" || activeFilter === "active-users" || activeFilter === "todays-bookings" || activeFilter === "revenue-month") && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card>
                 <CardHeader className="pb-2">
@@ -403,7 +417,10 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
                 </CardContent>
               </Card>
             </div>
+            )}
             
+            {/* Admin Quick Actions */}
+            {(!activeFilter || activeFilter === "total-spots" || activeFilter === "active-users") && (
             <div>
               <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -425,6 +442,7 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
                 </Button>
               </div>
             </div>
+            )}
           </div>
         )
         
