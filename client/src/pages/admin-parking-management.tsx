@@ -409,45 +409,48 @@ export default function AdminParkingManagement() {
   const getPriorityBadge = (priority: number) => {
     switch (priority) {
       case 1:
-        return <Badge variant="destructive" data-testid={`badge-priority-high`}>High</Badge>;
+        return <Badge variant="secondary" className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100" data-testid={`badge-priority-high`}>High Priority</Badge>;
       case 2:
-        return <Badge variant="secondary" data-testid={`badge-priority-medium`}>Medium</Badge>;
+        return <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100" data-testid={`badge-priority-medium`}>Medium Priority</Badge>;
       case 3:
-        return <Badge variant="outline" data-testid={`badge-priority-low`}>Low</Badge>;
+        return <Badge variant="outline" data-testid={`badge-priority-low`}>Low Priority</Badge>;
       default:
         return <Badge variant="outline" data-testid={`badge-priority-unknown`}>Unknown</Badge>;
     }
   };
 
   const getSpotTypeBadge = (spotType: SpotType) => {
-    const variants: Record<SpotType, string> = {
-      regular: "outline",
-      electric: "secondary",
-      tesla_ev: "secondary",
-      accessible: "default",
-      reserved: "destructive"
+    const badgeConfigs: Record<SpotType, { className: string; label: string }> = {
+      regular: { 
+        className: "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100", 
+        label: "Regular" 
+      },
+      electric: { 
+        className: "bg-green-50 text-green-700 border-green-200 hover:bg-green-100", 
+        label: "EV Charging" 
+      },
+      tesla_ev: { 
+        className: "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100", 
+        label: "Tesla Supercharger" 
+      },
+      accessible: { 
+        className: "bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100", 
+        label: "Accessible" 
+      },
+      reserved: { 
+        className: "bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100", 
+        label: "Reserved" 
+      }
     };
     
-    const labels: Record<SpotType, string> = {
-      regular: "Regular",
-      electric: "EV",
-      tesla_ev: "Tesla EV",
-      accessible: "Accessible",
-      reserved: "Reserved"
-    };
-    
-    // Special handling for reserved badges to use custom background color
-    if (spotType === "reserved") {
-      return (
-        <Badge variant="destructive" className="bg-[#fc9ca2] hover:bg-[#fc9ca2]/80" data-testid={`badge-spot-type-${spotType}`}>
-          {labels[spotType]}
-        </Badge>
-      );
-    }
-    
+    const config = badgeConfigs[spotType] || badgeConfigs.regular;
     return (
-      <Badge variant={variants[spotType] as any} data-testid={`badge-spot-type-${spotType}`}>
-        {labels[spotType]}
+      <Badge 
+        variant="secondary" 
+        className={config.className} 
+        data-testid={`badge-spot-type-${spotType}`}
+      >
+        {config.label}
       </Badge>
     );
   };
@@ -480,144 +483,141 @@ export default function AdminParkingManagement() {
         </div>
       </div>
 
-      {/* Enhanced Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card data-testid="card-total-spots" className="hover-elevate">
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-3">
-              <div className="p-3 bg-sky-50 dark:bg-sky-950/20 rounded-lg">
-                <Car className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{unallocatedSpots.length}</div>
-                <div className="text-sm text-muted-foreground">Available Spots</div>
-              </div>
+      {/* Quick Analytics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card data-testid="card-total-spots">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Available Spots</CardTitle>
+            <Car className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold" data-testid="stat-available-spots">
+              {unallocatedSpots.length}
             </div>
+            <p className="text-xs text-muted-foreground">
+              Ready for assignment
+            </p>
           </CardContent>
         </Card>
-        <Card data-testid="card-waiting-users" className="hover-elevate">
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-3">
-              <div className="p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg">
-                <Users className="h-6 w-6 text-orange-600 dark:text-orange-400" />
-              </div>
-              <div>
-                <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">{waitingListMetrics.active}</div>
-                <div className="text-sm text-muted-foreground">Users Waiting</div>
-              </div>
+
+        <Card data-testid="card-waiting-users">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Users Waiting</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold" data-testid="stat-waiting-users">
+              {waitingListMetrics.active}
             </div>
+            <p className="text-xs text-muted-foreground">
+              Active waiting list entries
+            </p>
           </CardContent>
         </Card>
-        <Card data-testid="card-avg-wait" className="hover-elevate">
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-3">
-              <div className="p-3 bg-violet-50 dark:bg-violet-950/20 rounded-lg">
-                <Timer className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div>
-                <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">{waitingListMetrics.averageWaitTime}</div>
-                <div className="text-sm text-muted-foreground">Avg Wait Days</div>
-              </div>
+
+        <Card data-testid="card-avg-wait">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg Wait Time</CardTitle>
+            <Timer className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold" data-testid="stat-avg-wait-time">
+              {waitingListMetrics.averageWaitTime}
             </div>
+            <p className="text-xs text-muted-foreground">
+              Days on waiting list
+            </p>
           </CardContent>
         </Card>
-        <Card data-testid="card-assignments" className="hover-elevate">
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-3">
-              <div className="p-3 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg">
-                <Target className="h-6 w-6 text-green-600 dark:text-green-400" />
-              </div>
-              <div>
-                <div className="text-3xl font-bold text-green-600 dark:text-green-400">{waitingListMetrics.assigned}</div>
-                <div className="text-sm text-muted-foreground">Total Assigned</div>
-              </div>
+
+        <Card data-testid="card-assignments">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Assigned</CardTitle>
+            <Target className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold" data-testid="stat-total-assigned">
+              {waitingListMetrics.assigned}
             </div>
+            <p className="text-xs text-muted-foreground">
+              Spots successfully assigned
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Search and Filters */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-wrap gap-4 items-center">
-            <div className="flex-1 min-w-[250px]">
-              <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search spots by number, location, or type..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8"
-                  data-testid="input-search-spots"
-                />
-              </div>
-            </div>
-            <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-[150px]" data-testid="select-filter-type">
-                <SelectValue placeholder="All Types" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="regular">Regular</SelectItem>
-                <SelectItem value="electric">EV</SelectItem>
-                <SelectItem value="tesla_ev">Tesla EV</SelectItem>
-                <SelectItem value="accessible">Accessible</SelectItem>
-                <SelectItem value="reserved">Reserved</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={activeSpotTab} onValueChange={setActiveSpotTab}>
-              <SelectTrigger className="w-[150px]" data-testid="select-filter-status">
-                <SelectValue placeholder="All Spots" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Spots</SelectItem>
-                <SelectItem value="unallocated">Unallocated</SelectItem>
-                <SelectItem value="allocated">Allocated</SelectItem>
-              </SelectContent>
-            </Select>
-            {selectedSpots.size > 0 && (
-              <>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => toggleSpotBookabilityMutation.mutate({ 
-                    spotIds: Array.from(selectedSpots), 
-                    isBookable: true 
-                  })}
-                  disabled={toggleSpotBookabilityMutation.isPending}
-                  data-testid="button-enable-spots"
-                >
-                  <CheckCircle2 className="w-4 h-4 mr-2" />
-                  Enable ({selectedSpots.size})
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => toggleSpotBookabilityMutation.mutate({ 
-                    spotIds: Array.from(selectedSpots), 
-                    isBookable: false 
-                  })}
-                  disabled={toggleSpotBookabilityMutation.isPending}
-                  data-testid="button-disable-spots"
-                >
-                  <AlertTriangle className="w-4 h-4 mr-2" />
-                  Disable ({selectedSpots.size})
-                </Button>
-              </>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Main Content Tabs */}
+      <Tabs value={activeSpotTab} onValueChange={setActiveSpotTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="all" data-testid="tab-all-spots">All Spots</TabsTrigger>
+          <TabsTrigger value="unallocated" data-testid="tab-available-spots">Available ({unallocatedSpots.length})</TabsTrigger>
+          <TabsTrigger value="waiting" data-testid="tab-waiting-list">Waiting List ({waitingListMetrics.active})</TabsTrigger>
+        </TabsList>
 
-      {/* Parking Spots */}
-      <Card data-testid="card-parking-spots">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Car className="h-5 w-5" />
-            Parking Spots ({filteredSpots.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
+        {/* All Spots and Unallocated Spots Tab */}
+        <TabsContent value="all" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Parking Spots ({filteredSpots.length})</CardTitle>
+                <div className="flex gap-2">
+                  <div className="relative">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search spots..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-8 w-64"
+                      data-testid="input-search-spots"
+                    />
+                  </div>
+                  <Select value={filterType} onValueChange={setFilterType}>
+                    <SelectTrigger className="w-32" data-testid="select-filter-type">
+                      <SelectValue placeholder="Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Types</SelectItem>
+                      <SelectItem value="regular">Regular</SelectItem>
+                      <SelectItem value="electric">EV</SelectItem>
+                      <SelectItem value="tesla_ev">Tesla EV</SelectItem>
+                      <SelectItem value="accessible">Accessible</SelectItem>
+                      <SelectItem value="reserved">Reserved</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {selectedSpots.size > 0 && (
+                    <>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => toggleSpotBookabilityMutation.mutate({ 
+                          spotIds: Array.from(selectedSpots), 
+                          isBookable: true 
+                        })}
+                        disabled={toggleSpotBookabilityMutation.isPending}
+                        data-testid="button-enable-spots"
+                      >
+                        <CheckCircle2 className="w-4 h-4 mr-2" />
+                        Enable ({selectedSpots.size})
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => toggleSpotBookabilityMutation.mutate({ 
+                          spotIds: Array.from(selectedSpots), 
+                          isBookable: false 
+                        })}
+                        disabled={toggleSpotBookabilityMutation.isPending}
+                        data-testid="button-disable-spots"
+                      >
+                        <AlertTriangle className="w-4 h-4 mr-2" />
+                        Disable ({selectedSpots.size})
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
           {filteredSpots.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground" data-testid="text-no-spots">
               <Car className="h-12 w-12 mx-auto mb-4 opacity-30" />
@@ -666,20 +666,20 @@ export default function AdminParkingManagement() {
                             <TableCell data-testid={`text-spot-status-${spot.id}`}>
                               <div className="flex gap-2">
                                 {spot.isActive !== false ? (
-                                  <Badge variant="secondary">Active</Badge>
+                                  <Badge variant="secondary" className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100">Active</Badge>
                                 ) : (
-                                  <Badge variant="destructive">Inactive</Badge>
+                                  <Badge variant="secondary" className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100">Inactive</Badge>
                                 )}
                                 {spot.isBookable !== false ? (
                                   <Badge variant="outline">Bookable</Badge>
                                 ) : (
-                                  <Badge variant="destructive">Disabled</Badge>
+                                  <Badge variant="secondary" className="bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100">Disabled</Badge>
                                 )}
                               </div>
                             </TableCell>
                             <TableCell data-testid={`text-spot-owner-${spot.id}`}>
                               {spot.ownerId ? (
-                                <Badge variant="default">Assigned</Badge>
+                                <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100">Assigned</Badge>
                               ) : (
                                 <Badge variant="outline">Available</Badge>
                               )}
@@ -721,8 +721,136 @@ export default function AdminParkingManagement() {
                 )}
               </CardContent>
             </Card>
+        </TabsContent>
 
-      {/* Waiting List */}
+        {/* Unallocated Spots Tab */}
+        <TabsContent value="unallocated" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Available Spots ({unallocatedSpots.length})</CardTitle>
+                <div className="flex gap-2">
+                  <div className="relative">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search spots..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-8 w-64"
+                      data-testid="input-search-unallocated-spots"
+                    />
+                  </div>
+                  <Select value={filterType} onValueChange={setFilterType}>
+                    <SelectTrigger className="w-32" data-testid="select-filter-unallocated-type">
+                      <SelectValue placeholder="Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Types</SelectItem>
+                      <SelectItem value="regular">Regular</SelectItem>
+                      <SelectItem value="electric">EV</SelectItem>
+                      <SelectItem value="tesla_ev">Tesla EV</SelectItem>
+                      <SelectItem value="accessible">Accessible</SelectItem>
+                      <SelectItem value="reserved">Reserved</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {unallocatedSpots.filter(spot => {
+                const matchesSearch = spot.spotNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                     spot.location.toLowerCase().includes(searchTerm.toLowerCase());
+                const matchesType = filterType === "all" || spot.spotType === filterType;
+                return matchesSearch && matchesType;
+              }).length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground" data-testid="text-no-unallocated-spots">
+                  <Car className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                  <p>No available spots found matching your criteria.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table data-testid="table-unallocated-spots">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Spot Number</TableHead>
+                        <TableHead>Location</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {unallocatedSpots.filter(spot => {
+                        const matchesSearch = spot.spotNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                             spot.location.toLowerCase().includes(searchTerm.toLowerCase());
+                        const matchesType = filterType === "all" || spot.spotType === filterType;
+                        return matchesSearch && matchesType;
+                      }).map((spot) => (
+                        <TableRow key={spot.id} data-testid={`row-unallocated-spot-${spot.id}`}>
+                          <TableCell className="font-medium" data-testid={`text-unallocated-spot-number-${spot.id}`}>
+                            {spot.spotNumber}
+                          </TableCell>
+                          <TableCell data-testid={`text-unallocated-spot-location-${spot.id}`}>
+                            {spot.location}
+                            {spot.isIndoor && <Badge variant="outline" className="ml-2">Indoor</Badge>}
+                          </TableCell>
+                          <TableCell data-testid={`text-unallocated-spot-type-${spot.id}`}>
+                            {getSpotTypeBadge(spot.spotType)}
+                          </TableCell>
+                          <TableCell data-testid={`text-unallocated-spot-status-${spot.id}`}>
+                            <div className="flex gap-2">
+                              {spot.isActive !== false ? (
+                                <Badge variant="secondary" className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100">Active</Badge>
+                              ) : (
+                                <Badge variant="secondary" className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100">Inactive</Badge>
+                              )}
+                              {spot.isBookable !== false ? (
+                                <Badge variant="outline">Bookable</Badge>
+                              ) : (
+                                <Badge variant="secondary" className="bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100">Disabled</Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleEditSpot(spot)}
+                                data-testid={`button-edit-unallocated-spot-${spot.id}`}
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() => handleDirectAssign(spot)}
+                                data-testid={`button-assign-unallocated-spot-${spot.id}`}
+                              >
+                                Assign
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleDeleteSpot(spot.id)}
+                                data-testid={`button-delete-unallocated-spot-${spot.id}`}
+                              >
+                                Delete
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Waiting List Tab */}
+        <TabsContent value="waiting" className="space-y-4">
+          {/* Waiting List */}
       <Card data-testid="card-waiting-list">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -775,8 +903,12 @@ export default function AdminParkingManagement() {
                           </TableCell>
                           <TableCell data-testid={`text-waiting-status-${item.id}`}>
                             <Badge 
-                              variant={item.status === "waiting" ? "secondary" : 
-                                     item.status === "assigned" ? "default" : "destructive"}
+                              variant="secondary"
+                              className={
+                                item.status === "waiting" ? "bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100" :
+                                item.status === "assigned" ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100" :
+                                "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                              }
                             >
                               {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
                             </Badge>
@@ -808,6 +940,8 @@ export default function AdminParkingManagement() {
             )}
         </CardContent>
           </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Add Spot Dialog */}
       <Dialog open={showAddSpotDialog} onOpenChange={setShowAddSpotDialog}>
