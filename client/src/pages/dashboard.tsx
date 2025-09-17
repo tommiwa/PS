@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Calendar, MapPin, Clock, Plus, Users, Car, TrendingUp, BarChart3, PieChart, Target, DollarSign, AlertTriangle } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
+import { useState, useEffect } from "react"
 
 interface DashboardProps {
   userRole?: "admin" | "owner" | "renter"
@@ -17,6 +18,24 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
   
   // Use current view role for admins, otherwise use the actual user role
   const effectiveRole = getCurrentViewRole() || userRole;
+  
+  // State for managing active filter from stat card clicks
+  const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  
+  // Handle stat card clicks for filtering
+  const handleStatCardClick = (statId: string) => {
+    // Toggle filter - if same card clicked, clear filter; otherwise set new filter
+    if (activeFilter === statId) {
+      setActiveFilter(null);
+    } else {
+      setActiveFilter(statId);
+    }
+  };
+
+  // Reset active filter when role changes
+  useEffect(() => {
+    setActiveFilter(null);
+  }, [effectiveRole]);
   //todo: remove mock functionality
   const mockUpcomingBookings = [
     {
@@ -427,7 +446,7 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
         </div>
       </div>
       
-      <DashboardStats userRole={userRole} />
+      <DashboardStats userRole={effectiveRole} onCardClick={handleStatCardClick} />
       
       {renderRoleSpecificContent()}
     </div>
