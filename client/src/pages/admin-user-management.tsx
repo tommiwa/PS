@@ -289,9 +289,9 @@ export default function AdminUserManagement() {
   };
 
   const roleStats = {
-    admin: allUsers.filter((u: User) => u.role === "admin").length || 1, // At least the current admin
+    admin: allUsers.filter((u: User) => u.role === "admin").length,
     owner: allUsers.filter((u: User) => u.role === "owner").length,
-    renter: allUsers.filter((u: User) => u.role === "renter").length || allUsers.length, // Default to showing total users
+    renter: allUsers.filter((u: User) => u.role === "renter").length,
   }
 
   return (

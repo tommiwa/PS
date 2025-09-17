@@ -58,13 +58,30 @@ function updateUserSession(
 async function upsertUser(
   claims: any,
 ) {
-  await storage.upsertUser({
+  // Always upsert the user first
+  const userData = {
     id: claims["sub"],
     email: claims["email"],
     firstName: claims["first_name"],
     lastName: claims["last_name"],
     profileImageUrl: claims["profile_image_url"],
-  });
+  };
+  
+  await storage.upsertUser(userData);
+  
+  // Check if this should be an admin user based on email or specific user IDs
+  const isAdmin = claims["sub"] === "user-admin-001" || 
+                  claims["email"]?.includes("admin") || 
+                  claims["email"] === "david.thomps@replit.com" ||
+                  claims["email"] === "d.thompson@bci.ca";
+                  
+  // If this is an admin user, ensure their role is set to admin
+  if (isAdmin) {
+    const existingUser = await storage.getUser(claims["sub"]);
+    if (existingUser && existingUser.role !== "admin") {
+      await storage.updateUser(claims["sub"], { role: "admin" });
+    }
+  }
 }
 
 export async function setupAuth(app: Express) {

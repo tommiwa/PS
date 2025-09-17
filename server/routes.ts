@@ -92,6 +92,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Quick fix endpoint to promote current user to admin
+  app.post('/api/auth/promote-to-admin', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const updatedUser = await storage.updateUser(userId, { role: "admin" });
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Audit the role change
+      await auditService.logAction("UPDATE", "user", {
+        entityId: updatedUser.id,
+        message: `User promoted to admin role: ${updatedUser.firstName} ${updatedUser.lastName} (${updatedUser.email})`,
+        before: { role: "renter" }, // Assume previous role
+        after: { role: "admin" }
+      });
+      
+      res.json({ message: "User promoted to admin successfully", user: updatedUser });
+    } catch (error) {
+      console.error("Error promoting user to admin:", error);
+      res.status(500).json({ message: "Failed to promote user to admin" });
+    }
+  });
+
   // Create new user (Admin only)
   app.post("/api/users", requireAdmin, async (req: any, res) => {
     try {

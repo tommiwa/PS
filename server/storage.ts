@@ -31,6 +31,7 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
 
   // Parking Spot operations
   getParkingSpot(id: string): Promise<ParkingSpot | undefined>;
@@ -798,6 +799,24 @@ export class MemStorage implements IStorage {
     };
     this.users.set(id, user);
     return user;
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
+    const existingUser = this.users.get(id);
+    if (!existingUser) {
+      return undefined;
+    }
+    
+    const now = new Date();
+    const updatedUser: User = {
+      ...existingUser,
+      ...updates,
+      id, // Keep original ID
+      updatedAt: now
+    };
+    
+    this.users.set(id, updatedUser);
+    return updatedUser;
   }
 
   // Parking Spot operations

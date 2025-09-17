@@ -436,6 +436,15 @@ export default function AdminParkingManagement() {
       reserved: "Reserved"
     };
     
+    // Special handling for reserved badges to use custom background color
+    if (spotType === "reserved") {
+      return (
+        <Badge variant="destructive" className="bg-[#fc9ca2] hover:bg-[#fc9ca2]/80" data-testid={`badge-spot-type-${spotType}`}>
+          {labels[spotType]}
+        </Badge>
+      );
+    }
+    
     return (
       <Badge variant={variants[spotType] as any} data-testid={`badge-spot-type-${spotType}`}>
         {labels[spotType]}
