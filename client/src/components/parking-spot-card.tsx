@@ -52,7 +52,7 @@ export function ParkingSpotCard({
       accessible: "default" as const,
       electric: "default" as const,
       tesla_ev: "default" as const,
-      reserved: "outline" as const
+      reserved: "secondary" as const
     }
     
     const labels = {

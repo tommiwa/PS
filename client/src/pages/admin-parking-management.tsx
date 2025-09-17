@@ -438,7 +438,7 @@ export default function AdminParkingManagement() {
         label: "Accessible" 
       },
       reserved: { 
-        className: "bg-[#fc9ca2] text-destructive-foreground border-transparent", 
+        className: "bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100", 
         label: "Reserved" 
       }
     };
