@@ -12,6 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Skeleton } from "@/components/ui/skeleton"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { useConfirm, confirmations } from "@/hooks/use-confirm"
 import { useToast } from "@/hooks/use-toast"
 import { apiRequest, queryClient } from "@/lib/queryClient"
@@ -30,7 +33,16 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  RefreshCw
+  RefreshCw,
+  Shield,
+  Car,
+  Activity,
+  TrendingUp,
+  UserCheck,
+  UserX,
+  Building,
+  Phone,
+  Calendar
 } from "lucide-react"
 
 // Extend shared schema with UI validation refinements
@@ -43,6 +55,29 @@ const createUserFormSchema = insertUserSchema.extend({
 
 type CreateUserFormData = InsertUser;
 
+// Admin-specific interfaces for extended user data
+interface UserActivity {
+  id: string;
+  type: 'user_created' | 'user_suspended' | 'user_activated' | 'role_changed' | 'login_failed' | 'booking_created';
+  user: string;
+  action: string;
+  timestamp: string;
+  details: string;
+}
+
+interface UserAnalytics {
+  totalUsers: number;
+  activeUsers: number;
+  newUsersThisWeek: number;
+  suspendedUsers: number;
+  adminUsers: number;
+  ownerUsers: number;
+  renterUsers: number;
+  averageBookingsPerUser: number;
+  mostActiveDepartment: string;
+  recentSignups: number;
+}
+
 export default function AdminUserManagement() {
   const { confirm } = useConfirm()
   const { toast } = useToast()
@@ -51,6 +86,7 @@ export default function AdminUserManagement() {
   const [filterStatus, setFilterStatus] = useState("all")
   const [showAddUser, setShowAddUser] = useState(false)
   const [showBulkActions, setShowBulkActions] = useState(false)
+  const [activeTab, setActiveTab] = useState("users")
 
   // Form setup
   const form = useForm<CreateUserFormData>({
@@ -114,83 +150,6 @@ export default function AdminUserManagement() {
     phoneNumber: user.phone || "No phone",
     vehicleInfo: "Not configured" // TODO: Add vehicle info to schema if needed
   }));
-
-  // Keep the original mock data for reference (commented out)
-  const originalMockUsers = [
-    {
-      id: "user-001",
-      name: "Sarah Chen",
-      email: "sarah.chen@bci.ca",
-      department: "Engineering",
-      role: "owner" as const,
-      spotsOwned: 2,
-      bookingsCount: 15,
-      status: "active" as const,
-      lastLogin: "2024-01-15",
-      memberSince: "Jan 2023",
-      totalEarnings: 450,
-      phoneNumber: "(555) 123-4567",
-      vehicleInfo: "Tesla Model 3 (ABC-123)"
-    },
-    {
-      id: "user-002", 
-      name: "Michael Rodriguez",
-      email: "m.rodriguez@bci.ca",
-      department: "Marketing",
-      role: "renter" as const,
-      spotsOwned: 0,
-      bookingsCount: 8,
-      status: "active" as const,
-      lastLogin: "2024-01-14",
-      memberSince: "Mar 2023",
-      totalSpent: 180,
-      phoneNumber: "(555) 234-5678",
-      vehicleInfo: "Honda Civic (XYZ-789)"
-    },
-    {
-      id: "user-003",
-      name: "Jennifer Kim",
-      email: "j.kim@bci.ca", 
-      department: "Finance",
-      role: "renter" as const,
-      spotsOwned: 0,
-      bookingsCount: 3,
-      status: "active" as const,
-      lastLogin: "2024-01-12",
-      memberSince: "Dec 2023",
-      totalSpent: 45,
-      phoneNumber: "(555) 345-6789",
-      vehicleInfo: "Toyota Camry (JKL-012)"
-    },
-    {
-      id: "user-004",
-      name: "David Thompson",
-      email: "d.thompson@bci.ca",
-      department: "IT",
-      role: "admin" as const,
-      spotsOwned: 0,
-      bookingsCount: 0,
-      status: "active" as const,
-      lastLogin: "2024-01-15",
-      memberSince: "Jan 2022",
-      phoneNumber: "(555) 456-7890"
-    },
-    {
-      id: "user-005",
-      name: "Emma Wilson",
-      email: "e.wilson@bci.ca",
-      department: "HR",
-      role: "renter" as const,
-      spotsOwned: 0,
-      bookingsCount: 12,
-      status: "suspended" as const,
-      lastLogin: "2024-01-10",
-      memberSince: "Jun 2023",
-      totalSpent: 240,
-      phoneNumber: "(555) 567-8901",
-      vehicleInfo: "BMW X3 (DEF-456)"
-    }
-  ];
 
   const filteredUsers = (isLoadingUsers ? [] : displayUsers).filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -294,6 +253,84 @@ export default function AdminUserManagement() {
     renter: allUsers.filter((u: User) => u.role === "renter").length,
   }
 
+  // Mock data for Activity and Reports tabs (would come from API in production)
+  const mockUserActivity: UserActivity[] = [
+    {
+      id: "activity-001",
+      type: "user_created",
+      user: "System Admin",
+      action: "Created new user Michael Rodriguez",
+      timestamp: "2024-01-15T08:30:00Z",
+      details: "Role: Renter, Department: Marketing"
+    },
+    {
+      id: "activity-002",
+      type: "role_changed",
+      user: "David Thompson",
+      action: "Changed role for Sarah Chen from Renter to Owner",
+      timestamp: "2024-01-15T07:45:00Z",
+      details: "Previous role: Renter, New role: Owner"
+    },
+    {
+      id: "activity-003",
+      type: "user_suspended",
+      user: "System Admin",
+      action: "Suspended user Emma Wilson",
+      timestamp: "2024-01-15T06:15:00Z",
+      details: "Reason: Policy violation"
+    },
+    {
+      id: "activity-004",
+      type: "booking_created",
+      user: "Jennifer Kim",
+      action: "Created first parking booking",
+      timestamp: "2024-01-14T16:30:00Z",
+      details: "Spot: B-08, Date: 2024-01-15"
+    },
+    {
+      id: "activity-005",
+      type: "user_activated",
+      user: "System Admin",
+      action: "Activated user Alex Thompson",
+      timestamp: "2024-01-14T14:20:00Z",
+      details: "Account verification completed"
+    }
+  ];
+
+  const mockUserAnalytics: UserAnalytics = {
+    totalUsers: allUsers.length,
+    activeUsers: allUsers.filter((u: User) => u.lastLogin).length,
+    newUsersThisWeek: 5,
+    suspendedUsers: 1,
+    adminUsers: roleStats.admin,
+    ownerUsers: roleStats.owner,
+    renterUsers: roleStats.renter,
+    averageBookingsPerUser: 2.4,
+    mostActiveDepartment: "Engineering",
+    recentSignups: 3
+  };
+
+  const getActivityIcon = (type: string) => {
+    const iconMap = {
+      user_created: <UserPlus className="h-4 w-4 text-green-600" />,
+      user_suspended: <UserX className="h-4 w-4 text-red-600" />,
+      user_activated: <UserCheck className="h-4 w-4 text-green-600" />,
+      role_changed: <Shield className="h-4 w-4 text-blue-600" />,
+      login_failed: <AlertTriangle className="h-4 w-4 text-yellow-600" />,
+      booking_created: <Car className="h-4 w-4 text-purple-600" />
+    };
+    
+    return iconMap[type as keyof typeof iconMap] || <Activity className="h-4 w-4 text-gray-600" />;
+  };
+
+  const formatTime = (timestamp: string) => {
+    return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const formatDate = (timestamp: string) => {
+    return new Date(timestamp).toLocaleDateString();
+  };
+
   return (
     <div className="p-6 space-y-6" data-testid="page-admin-users">
       <div className="flex items-center justify-between">
@@ -319,7 +356,7 @@ export default function AdminUserManagement() {
           </Button>
           <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
             <DialogTrigger asChild>
-              <Button>
+              <Button data-testid="button-add-user">
                 <UserPlus className="h-4 w-4 mr-2" />
                 Add User
               </Button>
@@ -451,234 +488,375 @@ export default function AdminUserManagement() {
         </div>
       </div>
 
-      {/* User Role Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card 
-          className={`cursor-pointer hover-elevate ${
-            filterRole === 'admin' ? 'ring-2 ring-primary' : ''
-          }`}
-          onClick={() => setFilterRole(filterRole === 'admin' ? 'all' : 'admin')}
-          data-testid="card-filter-admin"
-        >
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Administrators</CardTitle>
+      {/* Quick Analytics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {isLoadingUsers ? "..." : roleStats.admin}
-            </div>
-            <Badge variant="secondary" className="text-xs">System access</Badge>
-          </CardContent>
-        </Card>
-        <Card 
-          className={`cursor-pointer hover-elevate ${
-            filterRole === 'owner' ? 'ring-2 ring-primary' : ''
-          }`}
-          onClick={() => setFilterRole(filterRole === 'owner' ? 'all' : 'owner')}
-          data-testid="card-filter-owner"
-        >
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Spot Owners</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {isLoadingUsers ? "..." : roleStats.owner}
-            </div>
-            <Badge variant="default" className="text-xs">Revenue generators</Badge>
-          </CardContent>
-        </Card>
-        <Card 
-          className={`cursor-pointer hover-elevate ${
-            filterRole === 'renter' ? 'ring-2 ring-primary' : ''
-          }`}
-          onClick={() => setFilterRole(filterRole === 'renter' ? 'all' : 'renter')}
-          data-testid="card-filter-renter"
-        >
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Renters</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {isLoadingUsers ? "..." : roleStats.renter}
-            </div>
-            <Badge variant="outline" className="text-xs">Regular users</Badge>
-          </CardContent>
-        </Card>
-        <Card 
-          className={`cursor-pointer hover-elevate ${
-            filterRole === 'all' ? 'ring-2 ring-primary' : ''
-          }`}
-          onClick={() => setFilterRole('all')}
-          data-testid="card-filter-all"
-        >
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Users</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold" data-testid="stat-total-users">
               {isLoadingUsers ? "..." : allUsers.length}
             </div>
-            <Badge variant="outline" className="text-xs">System users</Badge>
+            <p className="text-xs text-muted-foreground">
+              Registered accounts
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+            <UserCheck className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold" data-testid="stat-active-users">
+              {isLoadingUsers ? "..." : mockUserAnalytics.activeUsers}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Recently logged in
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">New This Week</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold" data-testid="stat-new-users">
+              {isLoadingUsers ? "..." : mockUserAnalytics.newUsersThisWeek}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Recent signups
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Most Active Dept</CardTitle>
+            <Building className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold" data-testid="stat-active-department">
+              {isLoadingUsers ? "..." : mockUserAnalytics.mostActiveDepartment}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Department activity
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Search and Filters */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-wrap gap-4 items-center">
-            <div className="flex-1 min-w-[250px]">
-              <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search users by name, email, or department..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8"
-                  data-testid="input-search-users"
-                />
-              </div>
-            </div>
-            <Select value={filterRole} onValueChange={setFilterRole}>
-              <SelectTrigger className="w-[150px]" data-testid="select-filter-role">
-                <SelectValue placeholder="All Roles" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="owner">Owner</SelectItem>
-                <SelectItem value="renter">Renter</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-[150px]" data-testid="select-filter-status">
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="suspended">Suspended</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="outline" onClick={() => setShowBulkActions(!showBulkActions)}>
-              <Filter className="h-4 w-4 mr-2" />
-              Bulk Actions
-            </Button>
-            <Button variant="outline">
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </Button>
+      {/* Main Content Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="users" data-testid="tab-users">Users</TabsTrigger>
+          <TabsTrigger value="activity" data-testid="tab-activity">Activity</TabsTrigger>
+          <TabsTrigger value="reports" data-testid="tab-reports">Reports</TabsTrigger>
+        </TabsList>
+
+        {/* Users Tab */}
+        <TabsContent value="users" className="space-y-4">
+          {/* Role Filter Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card 
+              className={`cursor-pointer hover-elevate ${
+                filterRole === 'admin' ? 'ring-2 ring-primary' : ''
+              }`}
+              onClick={() => setFilterRole(filterRole === 'admin' ? 'all' : 'admin')}
+              data-testid="card-filter-admin"
+            >
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Administrators</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {isLoadingUsers ? "..." : roleStats.admin}
+                </div>
+                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">System access</Badge>
+              </CardContent>
+            </Card>
+            <Card 
+              className={`cursor-pointer hover-elevate ${
+                filterRole === 'owner' ? 'ring-2 ring-primary' : ''
+              }`}
+              onClick={() => setFilterRole(filterRole === 'owner' ? 'all' : 'owner')}
+              data-testid="card-filter-owner"
+            >
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Spot Owners</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {isLoadingUsers ? "..." : roleStats.owner}
+                </div>
+                <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">Revenue generators</Badge>
+              </CardContent>
+            </Card>
+            <Card 
+              className={`cursor-pointer hover-elevate ${
+                filterRole === 'renter' ? 'ring-2 ring-primary' : ''
+              }`}
+              onClick={() => setFilterRole(filterRole === 'renter' ? 'all' : 'renter')}
+              data-testid="card-filter-renter"
+            >
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Renters</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {isLoadingUsers ? "..." : roleStats.renter}
+                </div>
+                <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">Regular users</Badge>
+              </CardContent>
+            </Card>
+            <Card 
+              className={`cursor-pointer hover-elevate ${
+                filterRole === 'all' ? 'ring-2 ring-primary' : ''
+              }`}
+              onClick={() => setFilterRole('all')}
+              data-testid="card-filter-all"
+            >
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">All Users</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {isLoadingUsers ? "..." : allUsers.length}
+                </div>
+                <Badge variant="outline" className="text-xs bg-gray-50 text-gray-700 border-gray-200">Total count</Badge>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Bulk Actions */}
-      {showBulkActions && (
-        <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-4">
-              <span className="text-sm font-medium">Bulk Actions:</span>
-              <Button size="sm" variant="outline" onClick={() => handleBulkAction('send-notification')}>
-                <Mail className="h-4 w-4 mr-1" />
-                Send Notification
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => handleBulkAction('export-selected')}>
-                <Download className="h-4 w-4 mr-1" />
-                Export Selected
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => handleBulkAction('suspend')}>
-                <AlertTriangle className="h-4 w-4 mr-1" />
-                Suspend Users
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>All Users ({filteredUsers.length})</CardTitle>
+                <div className="flex gap-2">
+                  <div className="relative">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search users..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-8 w-64"
+                      data-testid="input-search-users"
+                    />
+                  </div>
+                  <Select value={filterRole} onValueChange={setFilterRole}>
+                    <SelectTrigger className="w-32" data-testid="select-filter-role">
+                      <SelectValue placeholder="Role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Roles</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="owner">Owner</SelectItem>
+                      <SelectItem value="renter">Renter</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={filterStatus} onValueChange={setFilterStatus}>
+                    <SelectTrigger className="w-32" data-testid="select-filter-status">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="suspended">Suspended</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button variant="outline" onClick={() => setShowBulkActions(!showBulkActions)}>
+                    <Filter className="h-4 w-4 mr-2" />
+                    Bulk Actions
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoadingUsers ? (
+                <div className="space-y-4">
+                  {[...Array(5)].map((_, i) => (
+                    <Skeleton key={i} className="h-16 w-full" />
+                  ))}
+                </div>
+              ) : (
+                <AdminUsersTable 
+                  users={filteredUsers} 
+                  isLoading={isLoadingUsers}
+                  onEditUser={handleEditUser}
+                  onDeleteUser={handleDeleteUser}
+                  onSuspendUser={handleSuspendUser}
+                  onAssignSpot={handleAssignSpot}
+                  onSendNotification={handleSendNotification}
+                />
+              )}
+            </CardContent>
+          </Card>
 
-      {/* Detailed Users Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Users ({filteredUsers.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="border-b">
-                <tr className="text-left">
-                  <th className="p-4 font-medium">User</th>
-                  <th className="p-4 font-medium">Role</th>
-                  <th className="p-4 font-medium">Status</th>
-                  <th className="p-4 font-medium">Activity</th>
-                  <th className="p-4 font-medium">Financial</th>
-                  <th className="p-4 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredUsers.map((user) => (
-                  <tr key={user.id} className="border-b hover:bg-muted/50">
-                    <td className="p-4">
-                      <div>
-                        <div className="font-medium">{user.name}</div>
-                        <div className="text-sm text-muted-foreground">{user.email}</div>
-                        <div className="text-xs text-muted-foreground">{user.department}</div>
+          {/* Bulk Actions */}
+          {showBulkActions && (
+            <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-medium">Bulk Actions:</span>
+                  <Button size="sm" variant="outline" onClick={() => handleBulkAction('send-notification')}>
+                    <Mail className="h-4 w-4 mr-1" />
+                    Send Notification
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => handleBulkAction('suspend-users')}>
+                    <XCircle className="h-4 w-4 mr-1" />
+                    Suspend Selected
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => handleBulkAction('activate-users')}>
+                    <CheckCircle className="h-4 w-4 mr-1" />
+                    Activate Selected
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => handleBulkAction('export-data')}>
+                    <Download className="h-4 w-4 mr-1" />
+                    Export Data
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setShowBulkActions(false)}>
+                    <XCircle className="h-4 w-4 mr-1" />
+                    Close
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Activity Tab */}
+        <TabsContent value="activity" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent User Activity</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[400px]">
+                <div className="space-y-4">
+                  {mockUserActivity.map((activity) => (
+                    <div key={activity.id} className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
+                      <div className="flex-shrink-0 mt-1">
+                        {getActivityIcon(activity.type)}
                       </div>
-                    </td>
-                    <td className="p-4">
-                      <Badge variant={user.role === "admin" ? "default" : "outline"}>
-                        {user.role}
-                      </Badge>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-2">
-                        {getStatusIcon(user.status)}
-                        <span className="text-sm">{user.status}</span>
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        Last login: {user.lastLogin}
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="text-sm">
-                        <div>Bookings: {user.bookingsCount}</div>
-                        {user.spotsOwned > 0 && <div>Spots: {user.spotsOwned}</div>}
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="text-sm">
-                        {user.role === 'owner' && <div>Earnings: $0</div>}
-                        {user.totalSpent && <div>Spent: ${user.totalSpent}</div>}
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex gap-1">
-                        <Button size="sm" variant="outline" onClick={() => handleEditUser(user.id)} data-testid={`button-edit-${user.id}`}>
-                          Edit
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => handleSendNotification(user.id)} data-testid={`button-notify-${user.id}`}>
-                          <Mail className="h-3 w-3" />
-                        </Button>
-                        {user.status === "active" ? (
-                          <Button size="sm" variant="outline" onClick={() => handleSuspendUser(user.id)} data-testid={`button-suspend-${user.id}`}>
-                            Suspend
-                          </Button>
-                        ) : (
-                          <Button size="sm" variant="outline" onClick={() => handleSuspendUser(user.id)} data-testid={`button-activate-${user.id}`}>
-                            Activate
-                          </Button>
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium">{activity.action}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatDate(activity.timestamp)} at {formatTime(activity.timestamp)}
+                          </p>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          By: {activity.user}
+                        </p>
+                        {activity.details && (
+                          <p className="text-xs text-muted-foreground bg-background/50 rounded px-2 py-1">
+                            {activity.details}
+                          </p>
                         )}
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Reports Tab */}
+        <TabsContent value="reports" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">User Distribution</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Admins</span>
+                    <span className="font-medium">{mockUserAnalytics.adminUsers}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Owners</span>
+                    <span className="font-medium">{mockUserAnalytics.ownerUsers}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Renters</span>
+                    <span className="font-medium">{mockUserAnalytics.renterUsers}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Engagement</CardTitle>
+                <Activity className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{mockUserAnalytics.averageBookingsPerUser}</div>
+                <p className="text-xs text-muted-foreground">
+                  Average bookings per user
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Growth</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{mockUserAnalytics.recentSignups}</div>
+                <p className="text-xs text-muted-foreground">
+                  New signups this week
+                </p>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Department Analysis</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-3">
+                    <Building className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Most Active Department</span>
+                  </div>
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                    {mockUserAnalytics.mostActiveDepartment}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-3">
+                    <UserCheck className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Active Users</span>
+                  </div>
+                  <span className="font-medium">{mockUserAnalytics.activeUsers} / {mockUserAnalytics.totalUsers}</span>
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-3">
+                    <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Suspended Users</span>
+                  </div>
+                  <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                    {mockUserAnalytics.suspendedUsers}
+                  </Badge>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
