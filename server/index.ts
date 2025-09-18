@@ -54,6 +54,37 @@ app.use((req, res, next) => {
   // Initialize audit service with storage
   auditService.setStorage(auditStorage);
   
+  // Add some sample booking activity audit logs for testing (development only)
+  // Only seed if not already done to prevent repeated seeding on server restarts
+  if (app.get("env") === "development" && !auditStorage.hasBeenSeeded()) {
+    await auditService.logAction("CREATE", "booking", {
+      entityId: "booking-test-1",
+      message: "Test booking created for spot 101 by John Doe",
+      success: true
+    });
+    
+    await auditService.logAction("CREATE", "spot_listing", {
+      entityId: "listing-test-1", 
+      message: "Parking spot listing created for spot 102",
+      success: true
+    });
+    
+    await auditService.logAction("UPDATE", "booking", {
+      entityId: "booking-test-2",
+      message: "Payment received for booking",
+      success: true
+    });
+    
+    await auditService.logAction("CANCEL", "booking", {
+      entityId: "booking-test-3", 
+      message: "Booking cancelled by user request",
+      success: true
+    });
+
+    // Mark as seeded to prevent future seeding
+    auditStorage.markAsSeeded();
+  }
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

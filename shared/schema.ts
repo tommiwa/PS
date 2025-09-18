@@ -486,3 +486,47 @@ export interface AnalyticsUsageResponse {
   }[];
   generatedAt: string;
 }
+
+// Activity API Response Types for Admin Pages
+export interface UserActivityItem {
+  id: string;
+  type: 'user_created' | 'user_updated' | 'role_changed' | 'login' | 'logout' | 'account_activated' | 'account_deactivated';
+  user: string;
+  userEmail: string;
+  action: string;
+  timestamp: string;
+  details: string;
+  success: boolean;
+}
+
+export interface UserActivityResponse {
+  items: UserActivityItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface BookingActivityItem {
+  id: string;
+  type: 'booking_created' | 'booking_cancelled' | 'booking_completed' | 'payment_received' | 'payment_updated' | 'spot_assigned' | 'listing_created' | 'listing_updated';
+  user: string;
+  userEmail: string;
+  action: string;
+  timestamp: string;
+  details: string;
+  success: boolean;
+  relatedEntity?: {
+    type: 'booking' | 'spot_listing' | 'parking_spot';
+    id: string;
+    description: string;
+  };
+}
+
+export interface BookingActivityResponse {
+  items: BookingActivityItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}

@@ -121,12 +121,14 @@ export class MemAuditStorage implements IAuditStorage {
   private chronologicalOrder: string[]; // For maintaining insertion order
   private hashChainOptions: HashChainOptions;
   private lastHash: string | null;
+  private isSeeded: boolean; // Flag to prevent repeated seeding
 
   constructor(hashChainOptions: HashChainOptions = { enabled: false, algorithm: 'sha256' }) {
     this.logs = new Map();
     this.chronologicalOrder = [];
     this.hashChainOptions = hashChainOptions;
     this.lastHash = null;
+    this.isSeeded = false;
   }
 
   // Create a new audit log entry
@@ -436,6 +438,17 @@ export class MemAuditStorage implements IAuditStorage {
     this.logs.clear();
     this.chronologicalOrder = [];
     this.lastHash = null;
+    this.isSeeded = false; // Reset seeding flag when clearing
+  }
+
+  // Check if development seeding has been done
+  hasBeenSeeded(): boolean {
+    return this.isSeeded;
+  }
+
+  // Mark as seeded to prevent repeated seeding
+  markAsSeeded(): void {
+    this.isSeeded = true;
   }
 
   // Private helper to calculate hash for hash chaining

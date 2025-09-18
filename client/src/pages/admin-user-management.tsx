@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { AdminUsersTable } from "@/components/admin-users-table"
+import { UserActivityList } from "@/components/user-activity-list"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -732,40 +733,14 @@ export default function AdminUserManagement() {
 
         {/* Activity Tab */}
         <TabsContent value="activity" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent User Activity</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-[400px]">
-                <div className="space-y-4">
-                  {mockUserActivity.map((activity) => (
-                    <div key={activity.id} className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
-                      <div className="flex-shrink-0 mt-1">
-                        {getActivityIcon(activity.type)}
-                      </div>
-                      <div className="flex-1 space-y-1">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium">{activity.action}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatDate(activity.timestamp)} at {formatTime(activity.timestamp)}
-                          </p>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          By: {activity.user}
-                        </p>
-                        {activity.details && (
-                          <p className="text-xs text-muted-foreground bg-background/50 rounded px-2 py-1">
-                            {activity.details}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
+          <UserActivityList 
+            title="Recent User Activity"
+            showTitle={true}
+            maxHeight="500px"
+            queryParams={{
+              pageSize: 25
+            }}
+          />
         </TabsContent>
 
         {/* Reports Tab */}

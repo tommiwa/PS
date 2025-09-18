@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query"
 import { queryClient, apiRequest } from "@/lib/queryClient"
 import { useToast } from "@/hooks/use-toast"
 import { useConfirm, confirmations } from "@/hooks/use-confirm"
+import { BookingActivityList } from "@/components/booking-activity-list"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -140,10 +141,6 @@ export default function AdminSpotBookingManagement() {
     queryKey: ["/api/admin/booking-requests"],
   });
 
-  // Fetch recent booking activity
-  const { data: recentActivity = [], isLoading: isLoadingActivity } = useQuery<BookingActivity[]>({
-    queryKey: ["/api/admin/booking-activity"],
-  });
 
   // Fetch booking analytics
   const { data: bookingAnalytics, isLoading: isLoadingAnalytics } = useQuery<BookingAnalytics>({
@@ -157,7 +154,6 @@ export default function AdminSpotBookingManagement() {
   // Use API data directly - show real data or empty states
   const displayActiveBookings = activeBookings || [];
   const displayBookingRequests = bookingRequests || [];
-  const displayRecentActivity = recentActivity || [];
   
   // Default empty analytics when no data is available
   const defaultAnalytics: BookingAnalytics = {
@@ -630,44 +626,14 @@ export default function AdminSpotBookingManagement() {
 
         {/* Recent Activity Tab */}
         <TabsContent value="activity" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-96">
-                {isLoadingActivity ? (
-                  <div className="space-y-4">
-                    {[...Array(5)].map((_, i) => (
-                      <Skeleton key={i} className="h-16 w-full" />
-                    ))}
-                  </div>
-                ) : displayRecentActivity.length > 0 ? (
-                  <div className="space-y-4">
-                    {displayRecentActivity.map((activity) => (
-                      <div key={activity.id} className="flex items-start gap-3 p-3 rounded-lg border" data-testid={`activity-${activity.id}`}>
-                        {getActivityIcon(activity.type)}
-                        <div className="flex-1">
-                          <p className="font-medium">{activity.action}</p>
-                          <p className="text-sm text-muted-foreground">{activity.user}</p>
-                          <p className="text-xs text-muted-foreground">{activity.details}</p>
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {formatTime(activity.timestamp)}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground" data-testid="empty-recent-activity">
-                    <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No recent activity</p>
-                    <p className="text-sm">System activity will appear here as users interact with the platform.</p>
-                  </div>
-                )}
-              </ScrollArea>
-            </CardContent>
-          </Card>
+          <BookingActivityList 
+            title="Recent Booking Activity"
+            showTitle={true}
+            maxHeight="500px"
+            queryParams={{
+              pageSize: 25
+            }}
+          />
         </TabsContent>
 
         {/* Analytics Tab */}

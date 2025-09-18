@@ -37,6 +37,70 @@ export async function apiRequest(
   return res;
 }
 
+/**
+ * Robust URL builder for TanStack Query keys
+ * Supports:
+ * - Variable-length path segments: ["/api/users", id, "roles"] → /api/users/123/roles
+ * - Query params as objects: ["/api/users", { page: 1, pageSize: 25 }] → /api/users?page=1&pageSize=25
+ * - Query params as strings: ["/api/users", "name=john&age=25"] → /api/users?name=john&age=25
+ * - Mixed patterns: ["/api/users", id, { page: 1 }] → /api/users/123?page=1
+ */
+function buildUrlFromQueryKey(queryKey: readonly unknown[]): string {
+  if (queryKey.length === 0) {
+    throw new Error("QueryKey cannot be empty");
+  }
+
+  const basePath = String(queryKey[0]);
+  
+  if (queryKey.length === 1) {
+    return basePath;
+  }
+
+  const elements = queryKey.slice(1);
+  const pathSegments: string[] = [];
+  let queryParams: string = "";
+
+  // Process each element after the base path
+  for (let i = 0; i < elements.length; i++) {
+    const element = elements[i];
+
+    if (element == null) {
+      // Skip null/undefined elements
+      continue;
+    }
+
+    if (typeof element === "object" && !Array.isArray(element)) {
+      // It's an object - treat as query parameters
+      const searchParams = new URLSearchParams();
+      Object.entries(element as Record<string, unknown>).forEach(([key, value]) => {
+        if (value != null) {
+          searchParams.set(key, String(value));
+        }
+      });
+      queryParams = searchParams.toString();
+      break; // Query params should be last
+    } else if (typeof element === "string" && (element.includes("=") || element.includes("&"))) {
+      // It's a string that looks like query parameters
+      queryParams = element;
+      break; // Query params should be last
+    } else {
+      // It's a path segment
+      pathSegments.push(String(element));
+    }
+  }
+
+  // Build the final URL
+  let url = basePath;
+  if (pathSegments.length > 0) {
+    url += "/" + pathSegments.join("/");
+  }
+  if (queryParams) {
+    url += "?" + queryParams;
+  }
+
+  return url;
+}
+
 type UnauthorizedBehavior = "returnNull" | "throw";
 export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;
@@ -56,7 +120,10 @@ export const getQueryFn: <T>(options: {
       }
     }
 
-    const res = await fetch(queryKey.join("/") as string, {
+    // Build URL using the robust URL builder
+    const url = buildUrlFromQueryKey(queryKey);
+
+    const res = await fetch(url, {
       credentials: "include",
       headers,
     });

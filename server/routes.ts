@@ -1284,6 +1284,178 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get recent user activity (Admin only)
+  app.get("/api/admin/user-activity", requireAdmin, async (req, res) => {
+    try {
+      // Validate and parse query parameters using same schema as audits
+      const validatedQuery = auditQuerySchema.parse(req.query);
+      const {
+        from,
+        to,
+        actorId,
+        q,
+        page = "1",
+        pageSize = "25"
+      } = validatedQuery;
+
+      // Build audit query filters for user-related activities
+      const filters: AuditQueryFilters = {
+        actions: ["CREATE", "UPDATE", "LOGIN", "LOGOUT", "ACTIVATE", "DEACTIVATE"], 
+        entityType: "user"
+      };
+      
+      if (from) filters.startDate = new Date(from);
+      if (to) filters.endDate = new Date(to);
+      if (actorId) filters.actorId = actorId;
+      if (q) filters.searchTerm = q;
+
+      // Build pagination parameters
+      const pagination: AuditPagination = {
+        page: parseInt(page),
+        limit: parseInt(pageSize),
+        sortBy: 'occurredAt',
+        sortOrder: 'desc'
+      };
+
+      // Query audit logs for user activities
+      const result = await auditStorage.queryAuditLogs(filters, pagination);
+      
+      // Transform audit logs to user activity format
+      const activityItems = result.logs.map(log => ({
+        id: log.id,
+        type: log.action === "CREATE" ? "user_created" as const :
+              log.action === "UPDATE" ? "user_updated" as const :
+              log.action === "LOGIN" ? "login" as const :
+              log.action === "LOGOUT" ? "logout" as const :
+              log.action === "ACTIVATE" ? "account_activated" as const :
+              log.action === "DEACTIVATE" ? "account_deactivated" as const :
+              "user_updated" as const,
+        user: log.actorEmail || "System User",
+        userEmail: log.actorEmail || "",
+        action: log.action,
+        timestamp: log.occurredAt.toISOString(),
+        details: log.message || `${log.action} action on ${log.entityType}`,
+        success: log.success
+      }));
+      
+      // Return data in expected format
+      res.json({
+        items: activityItems,
+        total: result.totalCount,
+        page: result.page,
+        pageSize: result.limit,
+        totalPages: result.totalPages
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          error: "Invalid query parameters", 
+          details: error.errors 
+        });
+      }
+      console.error("Error fetching user activity:", error);
+      res.status(500).json({ error: "Failed to fetch user activity" });
+    }
+  });
+
+  // Get recent booking activity (Admin only)
+  app.get("/api/admin/booking-activity", requireAdmin, async (req, res) => {
+    try {
+      // Validate and parse query parameters
+      const validatedQuery = auditQuerySchema.parse(req.query);
+      const {
+        from,
+        to,
+        actorId,
+        q,
+        page = "1",
+        pageSize = "25"
+      } = validatedQuery;
+
+      // Build audit query filters for booking-related activities
+      const filters: AuditQueryFilters = {
+        actions: ["CREATE", "UPDATE", "CANCEL", "COMPLETE"],
+        entityType: undefined // Will search across booking, spot_listing, and parking_spot
+      };
+      
+      if (from) filters.startDate = new Date(from);
+      if (to) filters.endDate = new Date(to);
+      if (actorId) filters.actorId = actorId;
+      if (q) filters.searchTerm = q;
+
+      // Build pagination parameters
+      const pagination: AuditPagination = {
+        page: parseInt(page),
+        limit: parseInt(pageSize),
+        sortBy: 'occurredAt',
+        sortOrder: 'desc'
+      };
+
+      // Query audit logs for booking activities
+      const result = await auditStorage.queryAuditLogs(filters, pagination);
+      
+      // Filter and transform audit logs to booking activity format
+      const activityItems = result.logs
+        .filter(log => ["booking", "spot_listing", "parking_spot"].includes(log.entityType))
+        .map(log => {
+          let activityType: 'booking_created' | 'booking_cancelled' | 'booking_completed' | 'payment_received' | 'payment_updated' | 'spot_assigned' | 'listing_created' | 'listing_updated';
+          
+          if (log.entityType === "booking") {
+            if (log.action === "CREATE") activityType = "booking_created";
+            else if (log.action === "CANCEL") activityType = "booking_cancelled";
+            else if (log.action === "COMPLETE") activityType = "booking_completed";
+            else if (log.action === "UPDATE") {
+              // Check if it's a payment update based on message content
+              if (log.message?.toLowerCase().includes("payment")) {
+                activityType = "payment_received";
+              } else {
+                activityType = "payment_updated";
+              }
+            } else activityType = "booking_created";
+          } else if (log.entityType === "spot_listing") {
+            if (log.action === "CREATE") activityType = "listing_created";
+            else activityType = "listing_updated";
+          } else { // parking_spot
+            activityType = "spot_assigned";
+          }
+
+          return {
+            id: log.id,
+            type: activityType,
+            user: log.actorEmail || "System User", 
+            userEmail: log.actorEmail || "",
+            action: log.action,
+            timestamp: log.occurredAt.toISOString(),
+            details: log.message || `${log.action} action on ${log.entityType}`,
+            success: log.success,
+            relatedEntity: log.entityId ? {
+              type: log.entityType as 'booking' | 'spot_listing' | 'parking_spot',
+              id: log.entityId,
+              description: log.message?.split(' ')[0] || log.entityType
+            } : undefined
+          };
+        });
+      
+      // Return data in expected format
+      res.json({
+        items: activityItems,
+        total: activityItems.length, // Use filtered count
+        page: result.page,
+        pageSize: result.limit,
+        totalPages: Math.ceil(activityItems.length / result.limit)
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          error: "Invalid query parameters", 
+          details: error.errors 
+        });
+      }
+      console.error("Error fetching booking activity:", error);
+      res.status(500).json({ error: "Failed to fetch booking activity" });
+    }
+  });
+
   // ===== WAITING LIST ENDPOINTS =====
 
   // Get all waiting list entries (admin)
