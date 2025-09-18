@@ -162,7 +162,7 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
         return <Zap className="h-4 w-4 text-red-600" />
       case "accessible":
         return <Accessibility className="h-4 w-4 text-blue-600" />
-      case "taxable_benefit":
+      case "reserved":
         return <Building className="h-4 w-4 text-orange-600" />
       default:
         return <Car className="h-4 w-4 text-gray-600" />
@@ -190,7 +190,7 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
               {spot.type === "electric" ? "EV Charger" : 
                spot.type === "tesla_ev" ? "Tesla Charger" : 
                spot.type === "accessible" ? "Accessible" : 
-               spot.type === "taxable_benefit" ? "Taxable Benefit" : "Regular"}
+               spot.type === "reserved" ? "Reserved" : "Regular"}
             </Badge>
           </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">

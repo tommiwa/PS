@@ -19,7 +19,7 @@ import {
   ListOrdered, CalendarDays, UserPlus, ArrowRight,
   Timer, Target, CheckCircle2, Search, Filter,
   Zap, Accessibility, Building, MoreHorizontal, Info, RefreshCw,
-  Trash2, Edit
+  Trash2, Edit, UserMinus, UserCheck
 } from "lucide-react"
 import type { WaitingList, ParkingSpot, SpotType } from "@shared/schema"
 
@@ -34,10 +34,15 @@ export default function AdminParkingManagement() {
   const [showEditSpotDialog, setShowEditSpotDialog] = useState(false)
   const [showAddToWaitingDialog, setShowAddToWaitingDialog] = useState(false)
   const [showDirectAssignDialog, setShowDirectAssignDialog] = useState(false)
+  const [showReleaseSpotDialog, setShowReleaseSpotDialog] = useState(false)
+  const [showAssignAvailableSpotDialog, setShowAssignAvailableSpotDialog] = useState(false)
   const [selectedSpot, setSelectedSpot] = useState<ParkingSpot | null>(null)
   const [selectedSpotForAssign, setSelectedSpotForAssign] = useState<ParkingSpot | null>(null)
+  const [selectedSpotForRelease, setSelectedSpotForRelease] = useState<ParkingSpot | null>(null)
+  const [selectedAvailableSpot, setSelectedAvailableSpot] = useState<ParkingSpot | null>(null)
   const [selectedUserForWaiting, setSelectedUserForWaiting] = useState("")
   const [selectedUserForAssign, setSelectedUserForAssign] = useState("")
+  const [selectedUserForAvailableSpot, setSelectedUserForAvailableSpot] = useState("")
   const [activeSpotTab, setActiveSpotTab] = useState("all")
   
   // Form state for add to waiting list dialog
@@ -100,7 +105,7 @@ export default function AdminParkingManagement() {
   });
 
   // Fetch all users for dropdown selection
-  const { data: allUsers = [], isLoading: isLoadingUsers, error: usersError } = useQuery({
+  const { data: allUsers = [], isLoading: isLoadingUsers, error: usersError } = useQuery<any[]>({
     queryKey: ["/api/admin/users"],
   });
 
@@ -367,6 +372,64 @@ export default function AdminParkingManagement() {
     },
   });
 
+  // Mutation to release spot (make available)
+  const releaseSpotMutation = useMutation({
+    mutationFn: async (spotId: string) => {
+      return await apiRequest(`/api/admin/spots/${spotId}`, {
+        method: "PUT",
+        body: { ownerId: null },
+      });
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/all-spots"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] });
+      toast({
+        title: "Success",
+        description: `Spot ${data.spotNumber} has been released and is now available.`,
+        variant: "success",
+      });
+      setShowReleaseSpotDialog(false);
+      setSelectedSpotForRelease(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to release parking spot.",
+        variant: "error",
+      });
+    },
+  });
+
+  // Mutation to assign available spot to user
+  const assignAvailableSpotMutation = useMutation({
+    mutationFn: async ({ spotId, userId }: { spotId: string; userId: string }) => {
+      return await apiRequest(`/api/admin/assign-spot`, {
+        method: "POST",
+        body: { spotId, userId },
+      });
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/all-spots"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] });
+      const userName = allUsers.find(user => user.id === selectedUserForAvailableSpot)?.name || "user";
+      toast({
+        title: "Success",
+        description: `Spot ${data.spotNumber} has been assigned to ${userName}.`,
+        variant: "success",
+      });
+      setShowAssignAvailableSpotDialog(false);
+      setSelectedAvailableSpot(null);
+      setSelectedUserForAvailableSpot("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to assign parking spot.",
+        variant: "error",
+      });
+    },
+  });
+
   // Helper functions
   const handleEditSpot = (spot: ParkingSpot) => {
     setSelectedSpot(spot);
@@ -413,6 +476,16 @@ export default function AdminParkingManagement() {
   const handleDirectAssign = (spot: ParkingSpot) => {
     setSelectedSpotForAssign(spot);
     setShowDirectAssignDialog(true);
+  };
+
+  const handleReleaseSpot = (spot: ParkingSpot) => {
+    setSelectedSpotForRelease(spot);
+    setShowReleaseSpotDialog(true);
+  };
+
+  const handleAssignAvailableSpot = (spot: ParkingSpot) => {
+    setSelectedAvailableSpot(spot);
+    setShowAssignAvailableSpotDialog(true);
   };
 
   const handleToggleSpotSelection = (spotId: string) => {
@@ -736,7 +809,7 @@ export default function AdminParkingManagement() {
                                 >
                                   <Edit className="h-4 w-4" />
                                 </Button>
-                                {!spot.ownerId && (
+                                {!spot.ownerId ? (
                                   <Button
                                     variant="ghost"
                                     size="sm"
@@ -745,6 +818,16 @@ export default function AdminParkingManagement() {
                                     title="Assign Spot"
                                   >
                                     <Target className="h-4 w-4" />
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleReleaseSpot(spot)}
+                                    data-testid={`button-release-spot-${spot.id}`}
+                                    title="Release Spot"
+                                  >
+                                    <UserMinus className="h-4 w-4" />
                                   </Button>
                                 )}
                                 <Button
@@ -870,11 +953,11 @@ export default function AdminParkingManagement() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleDirectAssign(spot)}
+                                onClick={() => handleAssignAvailableSpot(spot)}
                                 data-testid={`button-assign-unallocated-spot-${spot.id}`}
-                                title="Assign Spot"
+                                title="Assign to User"
                               >
-                                <Target className="h-4 w-4" />
+                                <UserCheck className="h-4 w-4" />
                               </Button>
                               <Button
                                 variant="ghost"
@@ -1446,6 +1529,107 @@ export default function AdminParkingManagement() {
                 Cancel
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Release Spot Confirmation Dialog */}
+      <Dialog open={showReleaseSpotDialog} onOpenChange={setShowReleaseSpotDialog}>
+        <DialogContent className="max-w-md" data-testid="dialog-release-spot">
+          <DialogHeader>
+            <DialogTitle>Release Parking Spot</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {selectedSpotForRelease && (
+              <>
+                <p>Are you sure you want to release parking spot <strong>{selectedSpotForRelease.spotNumber}</strong>?</p>
+                <p className="text-sm text-muted-foreground">
+                  This will make the spot available for assignment to other users. The current owner will lose access to this spot.
+                </p>
+                <div className="flex gap-2 pt-4">
+                  <Button
+                    onClick={() => {
+                      if (selectedSpotForRelease) {
+                        releaseSpotMutation.mutate(selectedSpotForRelease.id);
+                      }
+                    }}
+                    disabled={releaseSpotMutation.isPending}
+                    variant="destructive"
+                    className="flex-1"
+                    data-testid="button-confirm-release-spot"
+                  >
+                    {releaseSpotMutation.isPending ? "Releasing..." : "Release Spot"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowReleaseSpotDialog(false)}
+                    className="flex-1"
+                    data-testid="button-cancel-release-spot"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Available Spot to User Dialog */}
+      <Dialog open={showAssignAvailableSpotDialog} onOpenChange={setShowAssignAvailableSpotDialog}>
+        <DialogContent className="max-w-md" data-testid="dialog-assign-available-spot">
+          <DialogHeader>
+            <DialogTitle>Assign Available Spot</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {selectedAvailableSpot && (
+              <>
+                <p>Assigning parking spot <strong>{selectedAvailableSpot.spotNumber}</strong> at {selectedAvailableSpot.location}</p>
+                <div>
+                  <label className="text-sm font-medium">Select User</label>
+                  <Select 
+                    value={selectedUserForAvailableSpot} 
+                    onValueChange={setSelectedUserForAvailableSpot}
+                  >
+                    <SelectTrigger data-testid="select-user-for-available-spot">
+                      <SelectValue placeholder="Choose user to assign spot to..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allUsers.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.name} ({user.email}) - {user.department}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex gap-2 pt-4">
+                  <Button
+                    onClick={() => {
+                      if (selectedAvailableSpot && selectedUserForAvailableSpot) {
+                        assignAvailableSpotMutation.mutate({
+                          spotId: selectedAvailableSpot.id,
+                          userId: selectedUserForAvailableSpot
+                        });
+                      }
+                    }}
+                    disabled={assignAvailableSpotMutation.isPending || !selectedUserForAvailableSpot}
+                    className="flex-1"
+                    data-testid="button-confirm-assign-available-spot"
+                  >
+                    {assignAvailableSpotMutation.isPending ? "Assigning..." : "Assign Spot"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowAssignAvailableSpotDialog(false)}
+                    className="flex-1"
+                    data-testid="button-cancel-assign-available-spot"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>

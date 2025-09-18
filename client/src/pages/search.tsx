@@ -21,7 +21,7 @@ import { useToast } from "@/hooks/use-toast"
 interface DisplaySpot extends Omit<DBParkingSpot, 'spotType'> {
   spotNumber: string
   location: string
-  type: "regular" | "accessible" | "electric" | "tesla_ev" | "taxable_benefit"
+  type: "regular" | "accessible" | "electric" | "tesla_ev" | "reserved"
   isInside: boolean
   price: number
   owner: string
