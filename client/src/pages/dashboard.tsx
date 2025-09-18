@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress"
 import { Calendar, MapPin, Clock, Plus, Users, Car, TrendingUp, BarChart3, PieChart, Target, DollarSign, AlertTriangle } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useState, useEffect } from "react"
+import { Link } from "wouter"
 
 interface DashboardProps {
   userRole?: "admin" | "owner" | "renter"
@@ -424,21 +425,29 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
             <div>
               <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <Button variant="outline" className="h-20 flex-col gap-2">
-                  <Users className="h-6 w-6" />
-                  Manage Users
+                <Button variant="outline" className="h-20 flex-col gap-2" asChild>
+                  <Link href="/admin/users" data-testid="button-manage-users">
+                    <Users className="h-6 w-6" />
+                    Manage Users
+                  </Link>
                 </Button>
-                <Button variant="outline" className="h-20 flex-col gap-2">
-                  <Car className="h-6 w-6" />
-                  Assign Spots
+                <Button variant="outline" className="h-20 flex-col gap-2" asChild>
+                  <Link href="/admin/parking" data-testid="button-assign-spots">
+                    <Car className="h-6 w-6" />
+                    Assign Spots
+                  </Link>
                 </Button>
-                <Button variant="outline" className="h-20 flex-col gap-2">
-                  <Clock className="h-6 w-6" />
-                  View Reports
+                <Button variant="outline" className="h-20 flex-col gap-2" asChild>
+                  <Link href="/admin/analytics" data-testid="button-view-reports">
+                    <Clock className="h-6 w-6" />
+                    View Reports
+                  </Link>
                 </Button>
-                <Button variant="outline" className="h-20 flex-col gap-2">
-                  <MapPin className="h-6 w-6" />
-                  Generate Report
+                <Button variant="outline" className="h-20 flex-col gap-2" asChild>
+                  <Link href="/admin/analytics" data-testid="button-generate-report">
+                    <MapPin className="h-6 w-6" />
+                    Generate Report
+                  </Link>
                 </Button>
               </div>
             </div>
