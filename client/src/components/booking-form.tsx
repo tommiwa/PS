@@ -188,7 +188,7 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
             </h3>
             <Badge variant="secondary">
               {spot.type === "electric" ? "EV Charger" : 
-               spot.type === "tesla_ev" ? "Tesla EV Charger" : 
+               spot.type === "tesla_ev" ? "Tesla Charger" : 
                spot.type === "accessible" ? "Accessible" : 
                spot.type === "taxable_benefit" ? "Taxable Benefit" : "Regular"}
             </Badge>

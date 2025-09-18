@@ -471,7 +471,7 @@ export default function AdminParkingManagement() {
       },
       tesla_ev: { 
         className: "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100", 
-        label: "Tesla Supercharger" 
+        label: "Tesla Charger" 
       },
       accessible: { 
         className: "bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100", 
@@ -620,7 +620,7 @@ export default function AdminParkingManagement() {
                       <SelectItem value="all">All Types</SelectItem>
                       <SelectItem value="regular">Regular</SelectItem>
                       <SelectItem value="electric">EV</SelectItem>
-                      <SelectItem value="tesla_ev">Tesla EV</SelectItem>
+                      <SelectItem value="tesla_ev">Tesla Charger</SelectItem>
                       <SelectItem value="accessible">Accessible</SelectItem>
                       <SelectItem value="reserved">Reserved</SelectItem>
                     </SelectContent>
@@ -793,7 +793,7 @@ export default function AdminParkingManagement() {
                       <SelectItem value="all">All Types</SelectItem>
                       <SelectItem value="regular">Regular</SelectItem>
                       <SelectItem value="electric">EV</SelectItem>
-                      <SelectItem value="tesla_ev">Tesla EV</SelectItem>
+                      <SelectItem value="tesla_ev">Tesla Charger</SelectItem>
                       <SelectItem value="accessible">Accessible</SelectItem>
                       <SelectItem value="reserved">Reserved</SelectItem>
                     </SelectContent>

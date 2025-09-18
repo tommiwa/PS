@@ -39,7 +39,7 @@ const SEARCH_SUGGESTIONS = [
 
 const QUICK_FILTERS = [
   { label: "Electric Charging", value: "electric", icon: Zap, type: "spotType" },
-  { label: "Tesla EV", value: "tesla_ev", icon: Zap, type: "spotType" },
+  { label: "Tesla Charger", value: "tesla_ev", icon: Zap, type: "spotType" },
   { label: "Accessible", value: "accessible", icon: Accessibility, type: "spotType" },
   { label: "Inside Building", value: "inside", icon: MapPin, type: "location" },
   { label: "Under $25", value: "cheap", icon: DollarSign, type: "price" },

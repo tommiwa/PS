@@ -59,7 +59,7 @@ export function ParkingSpotCard({
       regular: "Regular",
       accessible: "Accessible", 
       electric: "EV Charger",
-      tesla_ev: "Tesla EV Charger",
+      tesla_ev: "Tesla Charger",
       reserved: "Reserved"
     }
     
