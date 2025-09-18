@@ -458,15 +458,8 @@ export class MemStorage implements IStorage {
         isBookable = true;
       }
 
-      // Assign different buildings to different spot ranges for realistic distribution
-      let buildingLocation: string;
-      if (spotNum <= 45) {
-        buildingLocation = "BCI Tower North, 123 Business Ave - Level 1";
-      } else if (spotNum <= 57) {
-        buildingLocation = "BCI Corporate Center, 456 Commerce St - Level 1";
-      } else {
-        buildingLocation = "BCI Innovation Hub, 789 Tech Drive - Level 1";
-      }
+      // All spots are at the same BCI location
+      const buildingLocation = "750 Pandora Ave, Victoria, BC - Level 1";
 
       parkingSpots.push({
         id: `spot-${spotNum}`,
@@ -503,15 +496,8 @@ export class MemStorage implements IStorage {
         isBookable = true;
       }
 
-      // Assign different buildings to different spot ranges for realistic distribution
-      let buildingLocation: string;
-      if (spotNum <= 155) {
-        buildingLocation = "BCI Tower North, 123 Business Ave - Level 2";
-      } else if (spotNum <= 180) {
-        buildingLocation = "BCI Corporate Center, 456 Commerce St - Level 2";
-      } else {
-        buildingLocation = "BCI Innovation Hub, 789 Tech Drive - Level 2";
-      }
+      // All spots are at the same BCI location
+      const buildingLocation = "750 Pandora Ave, Victoria, BC - Level 2";
 
       parkingSpots.push({
         id: `spot-${spotNum}`,
