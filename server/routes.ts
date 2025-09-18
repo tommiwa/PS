@@ -156,7 +156,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const parseResult = insertUserSchema.partial().parse(req.body);
       
       // Type cast role to ensure it's one of the valid UserRole values
-      const updateData = {
+      const updateData: Partial<User> = {
         ...parseResult,
         ...(parseResult.role && { role: parseResult.role as UserRole })
       };

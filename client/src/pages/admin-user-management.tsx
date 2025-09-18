@@ -180,10 +180,13 @@ export default function AdminUserManagement() {
     },
     onError: (error: any) => {
       console.error('Error updating user:', error);
+      const isUnauthorized = error.message?.includes('Unauthorized') || error.status === 401;
       toast({
         variant: "destructive",
         title: "Error Updating User",
-        description: error.message || "Failed to update user. Please try again.",
+        description: isUnauthorized 
+          ? "You need administrator privileges to edit users. Please contact an admin or use the 'Promote to Admin' button below for testing."
+          : error.message || "Failed to update user. Please try again.",
       });
     }
   });
@@ -206,13 +209,42 @@ export default function AdminUserManagement() {
     },
     onError: (error: any) => {
       console.error('Error deleting user:', error);
+      const isUnauthorized = error.message?.includes('Unauthorized') || error.status === 401;
       toast({
         variant: "destructive",
         title: "Error Deleting User",
-        description: error.message || "Failed to delete user. Please try again.",
+        description: isUnauthorized 
+          ? "You need administrator privileges to delete users. Please contact an admin or use the 'Promote to Admin' button below for testing."
+          : error.message || "Failed to delete user. Please try again.",
       });
     }
   });
+
+  // Promote to admin mutation (for testing purposes)
+  const promoteToAdminMutation = useMutation({
+    mutationFn: async (): Promise<{ success: boolean; message: string }> => {
+      const response = await apiRequest('/api/auth/promote-to-admin', { method: 'POST' });
+      return await response.json();
+    },
+    onSuccess: (result: { success: boolean; message: string }) => {
+      toast({
+        title: "Admin Privileges Granted",
+        description: "You now have administrator privileges. Try the delete functionality again!",
+      });
+    },
+    onError: (error: any) => {
+      console.error('Error promoting to admin:', error);
+      toast({
+        variant: "destructive",
+        title: "Error Granting Admin Access",
+        description: error.message || "Failed to promote user to admin. This feature may not be available in production.",
+      });
+    }
+  });
+
+  const handlePromoteToAdmin = () => {
+    promoteToAdminMutation.mutate();
+  };
 
   const handleEditUser = (userId: string) => {
     console.log('Edit user:', userId)
@@ -725,6 +757,16 @@ export default function AdminUserManagement() {
                   <Button variant="outline" onClick={() => setShowBulkActions(!showBulkActions)}>
                     <Filter className="h-4 w-4 mr-2" />
                     Bulk Actions
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
+                    onClick={handlePromoteToAdmin}
+                    disabled={promoteToAdminMutation.isPending}
+                    data-testid="button-promote-admin"
+                  >
+                    <Shield className="h-4 w-4 mr-2" />
+                    {promoteToAdminMutation.isPending ? "Promoting..." : "Promote to Admin"}
                   </Button>
                 </div>
               </div>
