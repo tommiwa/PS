@@ -20,6 +20,22 @@ import {
   RefreshCw,
   Loader2
 } from "lucide-react"
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
+} from "recharts"
+import { ChartContainer, type ChartConfig } from "@/components/ui/chart"
 import type { 
   AnalyticsOverviewResponse,
   AnalyticsRevenueResponse, 
@@ -32,6 +48,17 @@ export default function AdminAnalytics() {
   const queryClient = useQueryClient();
   const [dateRange, setDateRange] = useState("last-30-days");
   
+  // Helper function to convert dateRange to monthsBack for revenue API
+  const getMonthsBack = (range: string): number => {
+    switch (range) {
+      case 'last-7-days': return 1;
+      case 'last-30-days': return 1;
+      case 'last-3-months': return 3;
+      case 'last-year': return 12;
+      default: return 1;
+    }
+  };
+
   // React Query hooks for fetching real analytics data
   const overviewQuery = useQuery<AnalyticsOverviewResponse>({
     queryKey: ['/api/admin/analytics-overview'],
@@ -39,7 +66,7 @@ export default function AdminAnalytics() {
   });
 
   const revenueQuery = useQuery<AnalyticsRevenueResponse>({
-    queryKey: ['/api/admin/analytics-revenue'],
+    queryKey: ['/api/admin/analytics-revenue', { monthsBack: getMonthsBack(dateRange) }],
     staleTime: 5 * 60 * 1000,
   });
 
@@ -100,6 +127,46 @@ export default function AdminAnalytics() {
     }
   }
 
+  // Chart configuration for theming
+  const chartConfig = {
+    revenue: {
+      label: "Revenue",
+      color: "hsl(var(--chart-1))",
+    },
+    bookings: {
+      label: "Bookings",
+      color: "hsl(var(--chart-2))",
+    },
+    ownerEarnings: {
+      label: "Owner Earnings",
+      color: "hsl(var(--chart-1))",
+    },
+    platformFees: {
+      label: "Platform Fees",
+      color: "hsl(var(--chart-2))",
+    },
+    processingFees: {
+      label: "Processing Fees",
+      color: "hsl(var(--chart-3))",
+    },
+    otherRevenue: {
+      label: "Other Revenue",
+      color: "hsl(var(--chart-4))",
+    },
+    usage: {
+      label: "Usage",
+      color: "hsl(var(--chart-1))",
+    },
+    utilization: {
+      label: "Utilization",
+      color: "hsl(var(--chart-3))",
+    },
+    rating: {
+      label: "Rating",
+      color: "hsl(var(--chart-4))",
+    },
+  } satisfies ChartConfig;
+
   return (
     <div className="p-6 space-y-6" data-testid="page-admin-analytics">
       <div className="flex items-center justify-between">
@@ -124,7 +191,7 @@ export default function AdminAnalytics() {
             Refresh
           </Button>
           <Select value={dateRange} onValueChange={setDateRange}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[180px]" data-testid="select-date-range">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -309,57 +376,66 @@ export default function AdminAnalytics() {
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="revenue">Revenue Analysis</TabsTrigger>
           <TabsTrigger value="usage">Usage Patterns</TabsTrigger>
-          <TabsTrigger value="performance">Top Performers</TabsTrigger>
+          <TabsTrigger value="performers">Top Performers</TabsTrigger>
           <TabsTrigger value="issues">Issues & Alerts</TabsTrigger>
         </TabsList>
 
-        {/* Revenue Analysis */}
-        <TabsContent value="revenue" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Revenue Analysis Tab */}
+        <TabsContent value="revenue" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
             <Card>
               <CardHeader>
                 <CardTitle>Monthly Revenue Trend</CardTitle>
               </CardHeader>
               <CardContent>
                 {revenueQuery.isLoading ? (
-                  <div className="space-y-4">
-                    {Array.from({ length: 6 }).map((_, index) => (
-                      <div key={index} className="flex items-center justify-between">
-                        <div className="flex items-center gap-3 flex-1">
-                          <Skeleton className="h-4 w-12" />
-                          <Skeleton className="h-2 flex-1" />
-                        </div>
-                        <Skeleton className="h-4 w-16" />
-                      </div>
-                    ))}
+                  <div className="h-[300px] flex items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin" />
                   </div>
                 ) : revenueQuery.error ? (
-                  <SectionError title="Revenue Trend" onRetry={() => queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-revenue'] })} />
-                ) : revenueQuery.data ? (
-                  <div className="space-y-4">
-                    {revenueQuery.data.monthlyData.slice(-6).map((month, index) => {
-                      const maxRevenue = Math.max(...revenueQuery.data!.monthlyData.map(m => m.revenue));
-                      const percentage = maxRevenue > 0 ? (month.revenue / maxRevenue) * 100 : 0;
-                      return (
-                        <div key={`${month.month}-${month.year}`} className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 text-sm font-medium">{month.month}</div>
-                            <div className="flex-1 bg-muted h-2 rounded-full overflow-hidden">
-                              <div 
-                                className="h-full bg-primary"
-                                style={{ width: `${percentage}%` }}
-                              />
-                            </div>
-                          </div>
-                          <div className="text-sm font-medium">${month.revenue.toLocaleString()}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  <SectionError title="Monthly Revenue" onRetry={() => queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-revenue'] })} />
                 ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No revenue data available
-                  </div>
+                  <ChartContainer config={chartConfig} className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={revenueQuery.data?.monthlyData || []}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          dataKey="month" 
+                          tick={{ fontSize: 12 }}
+                        />
+                        <YAxis 
+                          tick={{ fontSize: 12 }}
+                          tickFormatter={(value) => `$${value}`}
+                        />
+                        <Tooltip 
+                          formatter={(value: number, name: string) => [
+                            `$${value.toLocaleString()}`, 
+                            name === 'revenue' ? 'Revenue' : name
+                          ]}
+                          labelFormatter={(label) => `Month: ${label}`}
+                        />
+                        <Legend />
+                        <Line 
+                          type="monotone" 
+                          dataKey="revenue" 
+                          stroke="var(--color-revenue)"
+                          strokeWidth={3}
+                          dot={{ fill: "var(--color-revenue)", strokeWidth: 2, r: 4 }}
+                          activeDot={{ r: 6 }}
+                          name="Revenue"
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="bookings" 
+                          stroke="var(--color-bookings)"
+                          strokeWidth={2}
+                          dot={{ fill: "var(--color-bookings)", strokeWidth: 2, r: 3 }}
+                          activeDot={{ r: 5 }}
+                          name="Bookings"
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
                 )}
               </CardContent>
             </Card>
@@ -368,50 +444,45 @@ export default function AdminAnalytics() {
               <CardHeader>
                 <CardTitle>Revenue Breakdown</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent>
                 {revenueQuery.isLoading ? (
-                  Array.from({ length: 4 }).map((_, index) => (
-                    <div key={index} className="flex justify-between">
-                      <Skeleton className="h-4 w-32" />
-                      <Skeleton className="h-4 w-24" />
-                    </div>
-                  ))
+                  <div className="h-[300px] flex items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                  </div>
                 ) : revenueQuery.error ? (
                   <SectionError title="Revenue Breakdown" onRetry={() => queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-revenue'] })} />
-                ) : revenueQuery.data ? (
-                  <>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Spot Owner Earnings</span>
-                      <span className="font-medium">
-                        ${revenueQuery.data.revenueBreakdown.ownerEarnings.toLocaleString()} 
-                        ({revenueQuery.data.revenueBreakdown.ownerEarningsPercentage}%)
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Platform Fees</span>
-                      <span className="font-medium">
-                        ${revenueQuery.data.revenueBreakdown.platformFees.toLocaleString()} 
-                        ({revenueQuery.data.revenueBreakdown.platformFeesPercentage}%)
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Processing Fees</span>
-                      <span className="font-medium">
-                        ${revenueQuery.data.revenueBreakdown.processingFees.toLocaleString()} 
-                        ({revenueQuery.data.revenueBreakdown.processingFeesPercentage}%)
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Other Revenue</span>
-                      <span className="font-medium">
-                        ${revenueQuery.data.revenueBreakdown.otherRevenue.toLocaleString()} 
-                        ({revenueQuery.data.revenueBreakdown.otherRevenuePercentage}%)
-                      </span>
-                    </div>
-                  </>
                 ) : (
-                  <div className="text-center py-4 text-muted-foreground">
-                    No breakdown data available
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={[
+                            { name: 'Owner Earnings', value: revenueQuery.data?.revenueBreakdown.ownerEarnings || 0, color: 'hsl(var(--chart-1))' },
+                            { name: 'Platform Fees', value: revenueQuery.data?.revenueBreakdown.platformFees || 0, color: 'hsl(var(--chart-2))' },
+                            { name: 'Processing Fees', value: revenueQuery.data?.revenueBreakdown.processingFees || 0, color: 'hsl(var(--chart-3))' },
+                            { name: 'Other Revenue', value: revenueQuery.data?.revenueBreakdown.otherRevenue || 0, color: 'hsl(var(--chart-4))' }
+                          ]}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {[
+                            { name: 'Owner Earnings', value: revenueQuery.data?.revenueBreakdown.ownerEarnings || 0, color: 'hsl(var(--chart-1))' },
+                            { name: 'Platform Fees', value: revenueQuery.data?.revenueBreakdown.platformFees || 0, color: 'hsl(var(--chart-2))' },
+                            { name: 'Processing Fees', value: revenueQuery.data?.revenueBreakdown.processingFees || 0, color: 'hsl(var(--chart-3))' },
+                            { name: 'Other Revenue', value: revenueQuery.data?.revenueBreakdown.otherRevenue || 0, color: 'hsl(var(--chart-4))' }
+                          ].map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value: number) => [`$${value.toLocaleString()}`, 'Amount']} />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
                   </div>
                 )}
               </CardContent>
@@ -419,54 +490,46 @@ export default function AdminAnalytics() {
           </div>
         </TabsContent>
 
-        {/* Usage Patterns */}
-        <TabsContent value="usage" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Usage Patterns Tab */}
+        <TabsContent value="usage" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle>Peak Hours</CardTitle>
+                <CardTitle>Peak Hours Usage</CardTitle>
               </CardHeader>
               <CardContent>
                 {usageQuery.isLoading ? (
-                  <div className="space-y-3">
-                    {Array.from({ length: 4 }).map((_, index) => (
-                      <div key={index} className="flex items-center justify-between">
-                        <div>
-                          <Skeleton className="h-4 w-20 mb-1" />
-                          <Skeleton className="h-3 w-16" />
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Skeleton className="h-2 w-20" />
-                          <Skeleton className="h-3 w-8" />
-                        </div>
-                      </div>
-                    ))}
+                  <div className="h-[300px] flex items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin" />
                   </div>
                 ) : usageQuery.error ? (
                   <SectionError title="Peak Hours" onRetry={() => queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-usage'] })} />
-                ) : usageQuery.data ? (
-                  <div className="space-y-3">
-                    {usageQuery.data.peakHours.map((period) => (
-                      <div key={period.time} className="flex items-center justify-between">
-                        <div>
-                          <div className="font-medium">{period.time}</div>
-                          <div className="text-sm text-muted-foreground">{period.label}</div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="w-20 bg-muted h-2 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-blue-500"
-                              style={{ width: `${period.usage}%` }}
-                            />
-                          </div>
-                          <span className="text-sm font-medium w-8">{period.usage}%</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
                 ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No peak hours data available
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={usageQuery.data?.peakHours || []}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          dataKey="time" 
+                          tick={{ fontSize: 12 }}
+                        />
+                        <YAxis 
+                          tick={{ fontSize: 12 }}
+                          tickFormatter={(value) => `${value}%`}
+                        />
+                        <Tooltip 
+                          formatter={(value: number) => [`${value}%`, 'Usage']}
+                          labelFormatter={(label) => `Time: ${label}`}
+                        />
+                        <Legend />
+                        <Bar 
+                          dataKey="usage" 
+                          fill={'hsl(var(--chart-1))'}
+                          radius={[4, 4, 0, 0]}
+                          name="Usage Percentage"
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
                 )}
               </CardContent>
@@ -478,101 +541,157 @@ export default function AdminAnalytics() {
               </CardHeader>
               <CardContent>
                 {usageQuery.isLoading ? (
-                  <div className="space-y-3">
-                    {Array.from({ length: 4 }).map((_, index) => (
-                      <div key={index} className="flex items-center justify-between">
-                        <div>
-                          <Skeleton className="h-4 w-32 mb-1" />
-                          <Skeleton className="h-3 w-16" />
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Skeleton className="h-2 w-20" />
-                          <Skeleton className="h-3 w-8" />
-                        </div>
-                      </div>
-                    ))}
+                  <div className="h-[300px] flex items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin" />
                   </div>
                 ) : usageQuery.error ? (
                   <SectionError title="Location Performance" onRetry={() => queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-usage'] })} />
-                ) : usageQuery.data ? (
-                  <div className="space-y-3">
-                    {usageQuery.data.locationPerformance.map((loc) => (
-                      <div key={loc.location} className="flex items-center justify-between">
-                        <div>
-                          <div className="font-medium">{loc.location}</div>
-                          <div className="text-sm text-muted-foreground">{loc.spotsCount} spots</div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="w-20 bg-muted h-2 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-green-500"
-                              style={{ width: `${loc.utilization}%` }}
-                            />
-                          </div>
-                          <span className="text-sm font-medium w-8">{loc.utilization}%</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
                 ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No location performance data available
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart 
+                        data={usageQuery.data?.locationPerformance || []}
+                        layout="horizontal"
+                        margin={{ left: 20, right: 20, top: 20, bottom: 20 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          type="number" 
+                          tick={{ fontSize: 12 }}
+                          tickFormatter={(value) => `${value}%`}
+                        />
+                        <YAxis 
+                          type="category" 
+                          dataKey="location" 
+                          tick={{ fontSize: 12 }}
+                          width={60}
+                        />
+                        <Tooltip 
+                          formatter={(value: number, name: string) => [
+                            name === 'utilization' ? `${value}%` : `$${value.toLocaleString()}`,
+                            name === 'utilization' ? 'Utilization' : name === 'earnings' ? 'Earnings' : name
+                          ]}
+                          labelFormatter={(label) => `Location: ${label}`}
+                        />
+                        <Legend />
+                        <Bar 
+                          dataKey="utilization" 
+                          fill={'hsl(var(--chart-1))'} 
+                          name="Utilization %"
+                          radius={[0, 4, 4, 0]}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
                 )}
               </CardContent>
             </Card>
           </div>
+          
+          {/* Weekly Trends Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Weekly Usage Trends</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {usageQuery.isLoading ? (
+                <div className="h-[300px] flex items-center justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+              ) : usageQuery.error ? (
+                <SectionError title="Weekly Trends" onRetry={() => queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-usage'] })} />
+              ) : (
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={usageQuery.data?.weeklyTrends || []}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        dataKey="dayOfWeek" 
+                        tick={{ fontSize: 12 }}
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 12 }}
+                      />
+                      <Tooltip 
+                        formatter={(value: number, name: string) => [
+                          name === 'utilization' ? `${value}%` : value,
+                          name === 'utilization' ? 'Utilization' : 'Bookings'
+                        ]}
+                        labelFormatter={(label) => `Day: ${label}`}
+                      />
+                      <Legend />
+                      <Bar 
+                        dataKey="bookings" 
+                        fill={'hsl(var(--chart-1))'} 
+                        name="Bookings"
+                        radius={[4, 4, 0, 0]}
+                      />
+                      <Bar 
+                        dataKey="utilization" 
+                        fill={'hsl(var(--chart-2))'} 
+                        name="Utilization %"
+                        radius={[4, 4, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
-        {/* Top Performers */}
-        <TabsContent value="performance" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Top Performers Tab */}
+        <TabsContent value="performers" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
             <Card>
               <CardHeader>
                 <CardTitle>Top Performing Spots</CardTitle>
               </CardHeader>
               <CardContent>
                 {topPerformersQuery.isLoading ? (
-                  <div className="space-y-4">
-                    {Array.from({ length: 5 }).map((_, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <Skeleton className="h-6 w-8" />
-                          <div>
-                            <Skeleton className="h-4 w-20 mb-1" />
-                            <Skeleton className="h-3 w-32" />
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <Skeleton className="h-4 w-16 mb-1" />
-                          <Skeleton className="h-3 w-20" />
-                        </div>
-                      </div>
-                    ))}
+                  <div className="h-[300px] flex items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin" />
                   </div>
                 ) : topPerformersQuery.error ? (
-                  <SectionError title="Top Performing Spots" onRetry={() => queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-top-performers'] })} />
-                ) : topPerformersQuery.data ? (
-                  <div className="space-y-4">
-                    {topPerformersQuery.data.topSpots.map((spot, index) => (
-                      <div key={spot.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <Badge variant="outline">#{index + 1}</Badge>
-                          <div>
-                            <div className="font-medium">Spot {spot.spotNumber}</div>
-                            <div className="text-sm text-muted-foreground">{spot.location}</div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-medium">${spot.earnings}</div>
-                          <div className="text-sm text-muted-foreground">{spot.utilization}% utilized</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <SectionError title="Top Spots" onRetry={() => queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-top-performers'] })} />
                 ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No top performing spots data available
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart 
+                        data={topPerformersQuery.data?.topSpots || []}
+                        layout="horizontal"
+                        margin={{ left: 60, right: 20, top: 20, bottom: 20 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          type="number" 
+                          tick={{ fontSize: 12 }}
+                          tickFormatter={(value) => `$${value}`}
+                        />
+                        <YAxis 
+                          type="category" 
+                          dataKey="spotNumber" 
+                          tick={{ fontSize: 10 }}
+                          width={50}
+                        />
+                        <Tooltip 
+                          formatter={(value: number, name: string) => [
+                            name === 'earnings' ? `$${value.toLocaleString()}` : 
+                            name === 'utilization' ? `${value}%` : value,
+                            name === 'earnings' ? 'Earnings' : 
+                            name === 'utilization' ? 'Utilization' : 'Bookings'
+                          ]}
+                          labelFormatter={(label) => `Spot #${label}`}
+                        />
+                        <Legend />
+                        <Bar 
+                          dataKey="earnings" 
+                          fill={'hsl(var(--chart-1))'} 
+                          name="Earnings"
+                          radius={[0, 4, 4, 0]}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
                 )}
               </CardContent>
@@ -584,48 +703,175 @@ export default function AdminAnalytics() {
               </CardHeader>
               <CardContent>
                 {topPerformersQuery.isLoading ? (
-                  <div className="space-y-4">
-                    {Array.from({ length: 5 }).map((_, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <Skeleton className="h-6 w-8" />
-                          <div>
-                            <Skeleton className="h-4 w-24 mb-1" />
-                            <Skeleton className="h-3 w-32" />
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <Skeleton className="h-4 w-16 mb-1" />
-                          <Skeleton className="h-3 w-16" />
-                        </div>
-                      </div>
-                    ))}
+                  <div className="h-[300px] flex items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin" />
                   </div>
                 ) : topPerformersQuery.error ? (
-                  <SectionError title="Top Earning Owners" onRetry={() => queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-top-performers'] })} />
-                ) : topPerformersQuery.data ? (
-                  <div className="space-y-4">
-                    {topPerformersQuery.data.topOwners.map((owner, index) => (
-                      <div key={owner.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <Badge variant="outline">#{index + 1}</Badge>
-                          <div>
-                            <div className="font-medium">{owner.name}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {owner.spotsCount} spots • {owner.averageRating} rating
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-medium">${owner.earnings}</div>
-                          <div className="text-sm text-muted-foreground">This year</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <SectionError title="Top Owners" onRetry={() => queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-top-performers'] })} />
                 ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No top earning owners data available
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart 
+                        data={topPerformersQuery.data?.topOwners || []}
+                        layout="horizontal"
+                        margin={{ left: 80, right: 20, top: 20, bottom: 20 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          type="number" 
+                          tick={{ fontSize: 12 }}
+                          tickFormatter={(value) => `$${value}`}
+                        />
+                        <YAxis 
+                          type="category" 
+                          dataKey="name" 
+                          tick={{ fontSize: 10 }}
+                          width={70}
+                        />
+                        <Tooltip 
+                          formatter={(value: number, name: string) => [
+                            name === 'earnings' ? `$${value.toLocaleString()}` : 
+                            name === 'averageRating' ? `${value}⭐` : value,
+                            name === 'earnings' ? 'Earnings' : 
+                            name === 'spotsCount' ? 'Spots' : 
+                            name === 'bookingsCount' ? 'Bookings' : 'Rating'
+                          ]}
+                          labelFormatter={(label) => `Owner: ${label}`}
+                        />
+                        <Legend />
+                        <Bar 
+                          dataKey="earnings" 
+                          fill={'hsl(var(--chart-2))'} 
+                          name="Earnings"
+                          radius={[0, 4, 4, 0]}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+          
+          {/* Additional Performance Metrics */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader>
+                <CardTitle>Spot Utilization Distribution</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {topPerformersQuery.isLoading ? (
+                  <div className="h-[200px] flex items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                  </div>
+                ) : topPerformersQuery.error ? (
+                  <SectionError title="Utilization" onRetry={() => queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-top-performers'] })} />
+                ) : (
+                  <div className="h-[200px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={topPerformersQuery.data?.topSpots?.map(spot => ({ 
+                        spot: spot.spotNumber, 
+                        utilization: spot.utilization 
+                      })) || []}>
+                        <XAxis 
+                          dataKey="spot" 
+                          tick={{ fontSize: 10 }}
+                        />
+                        <YAxis 
+                          tick={{ fontSize: 10 }}
+                          tickFormatter={(value) => `${value}%`}
+                        />
+                        <Tooltip 
+                          formatter={(value: number) => [`${value}%`, 'Utilization']}
+                        />
+                        <Bar 
+                          dataKey="utilization" 
+                          fill={'hsl(var(--chart-3))'} 
+                          radius={[4, 4, 0, 0]}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Owner Performance Ratings</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {topPerformersQuery.isLoading ? (
+                  <div className="h-[200px] flex items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                  </div>
+                ) : topPerformersQuery.error ? (
+                  <SectionError title="Ratings" onRetry={() => queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-top-performers'] })} />
+                ) : (
+                  <div className="h-[200px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={topPerformersQuery.data?.topOwners?.map(owner => ({ 
+                        name: owner.name.split(' ')[0], 
+                        rating: owner.averageRating 
+                      })) || []}>
+                        <XAxis 
+                          dataKey="name" 
+                          tick={{ fontSize: 10 }}
+                        />
+                        <YAxis 
+                          tick={{ fontSize: 10 }}
+                          domain={[0, 5]}
+                        />
+                        <Tooltip 
+                          formatter={(value: number) => [`${value}⭐`, 'Rating']}
+                        />
+                        <Bar 
+                          dataKey="rating" 
+                          fill={'hsl(var(--chart-4))'} 
+                          radius={[4, 4, 0, 0]}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Booking Activity</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {topPerformersQuery.isLoading ? (
+                  <div className="h-[200px] flex items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                  </div>
+                ) : topPerformersQuery.error ? (
+                  <SectionError title="Bookings" onRetry={() => queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-top-performers'] })} />
+                ) : (
+                  <div className="h-[200px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={topPerformersQuery.data?.topOwners?.map(owner => ({ 
+                        name: owner.name.split(' ')[0], 
+                        bookings: owner.bookingsCount 
+                      })) || []}>
+                        <XAxis 
+                          dataKey="name" 
+                          tick={{ fontSize: 10 }}
+                        />
+                        <YAxis 
+                          tick={{ fontSize: 10 }}
+                        />
+                        <Tooltip 
+                          formatter={(value: number) => [value, 'Bookings']}
+                        />
+                        <Bar 
+                          dataKey="bookings" 
+                          fill={'hsl(var(--chart-5))'} 
+                          radius={[4, 4, 0, 0]}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
                 )}
               </CardContent>
@@ -633,133 +879,100 @@ export default function AdminAnalytics() {
           </div>
         </TabsContent>
 
-        {/* Issues & Alerts */}
-        <TabsContent value="issues" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <AlertCircle className="h-5 w-5" />
-                Active Issues
-                {issuesQuery.data && (
-                  <Badge variant="outline" className="ml-auto">
-                    {issuesQuery.data.issuesSummary.total} total
-                  </Badge>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {issuesQuery.isLoading ? (
-                <div className="space-y-4">
-                  {Array.from({ length: 3 }).map((_, index) => (
-                    <div key={index} className="border rounded-lg p-4">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-3">
-                          <Skeleton className="h-6 w-16" />
-                          <div>
-                            <Skeleton className="h-4 w-24 mb-1" />
-                            <Skeleton className="h-3 w-16" />
+        {/* Issues & Alerts Tab */}
+        <TabsContent value="issues" className="space-y-4">
+          <div className="grid gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>System Issues & Alerts</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {issuesQuery.isLoading ? (
+                  <div className="space-y-3">
+                    {Array.from({ length: 5 }).map((_, index) => (
+                      <div key={index} className="p-4 border rounded-lg">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-2">
+                            <Skeleton className="h-4 w-48" />
+                            <Skeleton className="h-3 w-32" />
                           </div>
-                        </div>
-                        <div className="text-right">
-                          <Skeleton className="h-3 w-20 mb-1" />
-                          <Skeleton className="h-3 w-24" />
+                          <Skeleton className="h-6 w-20" />
                         </div>
                       </div>
-                      <Skeleton className="h-4 w-full mb-3" />
-                      <div className="flex gap-2">
-                        <Skeleton className="h-8 w-20" />
-                        <Skeleton className="h-8 w-16" />
-                        <Skeleton className="h-8 w-16" />
+                    ))}
+                  </div>
+                ) : issuesQuery.error ? (
+                  <SectionError title="Issues" onRetry={() => queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-issues'] })} />
+                ) : issuesQuery.data ? (
+                  <div className="space-y-4">
+                    {/* Issues Summary */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                      <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                        <div className="text-2xl font-bold text-red-600">
+                          {issuesQuery.data.issuesSummary.critical}
+                        </div>
+                        <div className="text-sm text-red-600">Critical</div>
+                      </div>
+                      <div className="text-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                        <div className="text-2xl font-bold text-orange-600">
+                          {issuesQuery.data.issuesSummary.high}
+                        </div>
+                        <div className="text-sm text-orange-600">High</div>
+                      </div>
+                      <div className="text-center p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                        <div className="text-2xl font-bold text-yellow-600">
+                          {issuesQuery.data.issuesSummary.medium}
+                        </div>
+                        <div className="text-sm text-yellow-600">Medium</div>
+                      </div>
+                      <div className="text-center p-4 bg-gray-50 dark:bg-gray-900/20 rounded-lg">
+                        <div className="text-2xl font-bold text-gray-600">
+                          {issuesQuery.data.issuesSummary.low}
+                        </div>
+                        <div className="text-sm text-gray-600">Low</div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              ) : issuesQuery.error ? (
-                <SectionError title="Issues & Alerts" onRetry={() => queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-issues'] })} />
-              ) : issuesQuery.data ? (
-                <div className="space-y-4">
-                  {issuesQuery.data.activeIssues.length > 0 ? (
-                    issuesQuery.data.activeIssues.map((issue) => (
-                      <div key={issue.id} className="border rounded-lg p-4">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-3">
-                            <Badge className={getIssueColor(issue.priority)}>
-                              {issue.priority}
-                            </Badge>
-                            <div>
-                              <div className="font-medium">{issue.type}</div>
-                              <div className="text-sm text-muted-foreground">#{issue.id}</div>
+                    
+                    {/* Individual Issues */}
+                    <div className="space-y-3">
+                      {issuesQuery.data.activeIssues.map((issue) => (
+                        <div key={issue.id} className="p-4 border rounded-lg">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Badge className={getIssueColor(issue.priority)}>
+                                  {issue.priority.toUpperCase()}
+                                </Badge>
+                                <Badge variant="outline">{issue.type}</Badge>
+                                <Badge variant="secondary">{issue.status}</Badge>
+                              </div>
+                              <h4 className="font-medium mb-1">{issue.description}</h4>
+                              <div className="text-sm text-muted-foreground">
+                                Created: {issue.created} • Assignee: {issue.assignee}
+                                {issue.entityId && issue.entityType && (
+                                  <span> • Related {issue.entityType}: {issue.entityId.slice(-8)}</span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 ml-4">
+                              <Clock className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm text-muted-foreground">
+                                {new Date(issue.created).toLocaleDateString()}
+                              </span>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <div className="text-sm text-muted-foreground">Created {issue.created}</div>
-                            <div className="text-sm">Assigned to: {issue.assignee}</div>
-                          </div>
                         </div>
-                        <p className="text-sm">{issue.description}</p>
-                        <div className="flex gap-2 mt-3">
-                          <Button size="sm" variant="outline" disabled>
-                            View Details
-                          </Button>
-                          <Button size="sm" variant="outline" disabled>
-                            Assign
-                          </Button>
-                          <Button size="sm" variant="outline" disabled>
-                            Resolve
-                          </Button>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-8">
-                      <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <h3 className="text-lg font-semibold mb-2">No Active Issues</h3>
-                      <p className="text-muted-foreground">
-                        All systems are operating normally. No issues or alerts to display.
-                      </p>
+                      ))}
                     </div>
-                  )}
-                  
-                  {/* Issues Summary */}
-                  {issuesQuery.data.issuesSummary.total > 0 && (
-                    <div className="border-t pt-4 mt-6">
-                      <h4 className="font-medium mb-3">Issues Summary</h4>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-red-600">
-                            {issuesQuery.data.issuesSummary.critical}
-                          </div>
-                          <div className="text-sm text-muted-foreground">Critical</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-orange-600">
-                            {issuesQuery.data.issuesSummary.high}
-                          </div>
-                          <div className="text-sm text-muted-foreground">High</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-yellow-600">
-                            {issuesQuery.data.issuesSummary.medium}
-                          </div>
-                          <div className="text-sm text-muted-foreground">Medium</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-blue-600">
-                            {issuesQuery.data.issuesSummary.low}
-                          </div>
-                          <div className="text-sm text-muted-foreground">Low</div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  Unable to load issues data
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No active issues found
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
