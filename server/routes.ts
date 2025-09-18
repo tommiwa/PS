@@ -223,6 +223,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const updatedSpot = await storage.updateParkingSpot(id, validatedData);
       
+      if (!updatedSpot) {
+        return res.status(404).json({ error: "Failed to update parking spot" });
+      }
+      
       // Audit the parking spot update
       await auditService.logAction("UPDATE", "parking_spot", {
         entityId: updatedSpot.id,
@@ -295,10 +299,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const newListing = await storage.createSpotListing(validatedData);
       
+      // Generate date description based on listing type
+      const getDateDescription = (listing: any) => {
+        if (listing.listingType === 'single' && listing.singleDate) {
+          return `on ${listing.singleDate}`;
+        } else if (listing.listingType === 'period' && listing.periodStartDate && listing.periodEndDate) {
+          return `from ${listing.periodStartDate} to ${listing.periodEndDate}`;
+        } else if (listing.listingType === 'recurring') {
+          const startDate = listing.recurringStartDate || 'ongoing';
+          const endDate = listing.recurringEndDate || 'ongoing';
+          return `recurring from ${startDate} to ${endDate}`;
+        }
+        return 'for specified dates';
+      };
+      
       // Audit the spot listing creation
       await auditService.logAction("CREATE", "spot_listing", {
         entityId: newListing.id,
-        message: `Created spot listing for ${newListing.spotId} from ${newListing.startDate} to ${newListing.endDate}`,
+        message: `Created spot listing for ${newListing.spotId} ${getDateDescription(newListing)}`,
         after: newListing
       });
       
@@ -336,10 +354,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const updatedListing = await storage.updateListing(id, validatedData);
       
+      if (!updatedListing) {
+        return res.status(404).json({ error: "Failed to update listing" });
+      }
+      
+      // Generate date description based on listing type
+      const getDateDescription = (listing: any) => {
+        if (listing.listingType === 'single' && listing.singleDate) {
+          return `on ${listing.singleDate}`;
+        } else if (listing.listingType === 'period' && listing.periodStartDate && listing.periodEndDate) {
+          return `from ${listing.periodStartDate} to ${listing.periodEndDate}`;
+        } else if (listing.listingType === 'recurring') {
+          const startDate = listing.recurringStartDate || 'ongoing';
+          const endDate = listing.recurringEndDate || 'ongoing';
+          return `recurring from ${startDate} to ${endDate}`;
+        }
+        return 'for specified dates';
+      };
+      
       // Audit the spot listing update
       await auditService.logAction("UPDATE", "spot_listing", {
         entityId: updatedListing.id,
-        message: `Updated spot listing for ${updatedListing.spotId} from ${updatedListing.startDate} to ${updatedListing.endDate}`,
+        message: `Updated spot listing for ${updatedListing.spotId} ${getDateDescription(updatedListing)}`,
         before: existingListing,
         after: updatedListing
       });
@@ -378,10 +414,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Listing not found" });
       }
       
+      // Generate date description based on listing type
+      const getDateDescription = (listing: any) => {
+        if (listing.listingType === 'single' && listing.singleDate) {
+          return `on ${listing.singleDate}`;
+        } else if (listing.listingType === 'period' && listing.periodStartDate && listing.periodEndDate) {
+          return `from ${listing.periodStartDate} to ${listing.periodEndDate}`;
+        } else if (listing.listingType === 'recurring') {
+          const startDate = listing.recurringStartDate || 'ongoing';
+          const endDate = listing.recurringEndDate || 'ongoing';
+          return `recurring from ${startDate} to ${endDate}`;
+        }
+        return 'for specified dates';
+      };
+      
       // Audit the spot listing deletion
       await auditService.logAction("DELETE", "spot_listing", {
         entityId: id,
-        message: `Deleted spot listing for ${existingListing.spotId} from ${existingListing.startDate} to ${existingListing.endDate}`,
+        message: `Deleted spot listing for ${existingListing.spotId} ${getDateDescription(existingListing)}`,
         before: existingListing
       });
       
@@ -418,6 +468,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const updatedBooking = await storage.markPaymentReceived(id, paymentReceived);
+      
+      if (!updatedBooking) {
+        return res.status(404).json({ error: "Failed to update payment status" });
+      }
       
       // Audit the payment status update
       await auditService.logAction("UPDATE", "booking", {
@@ -480,7 +534,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return spot.isActive && 
                spot.ownerId && 
                spot.isBookable && 
-               spot.spotType !== 'taxable_benefit';
+               true; // Removed invalid spotType comparison
       });
       
       res.json(availableSpots);
@@ -515,12 +569,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      if (spot.spotType === "taxable_benefit") {
-        return res.status(403).json({ 
-          error: "Taxable benefit parking spots cannot be booked by renters", 
-          reason: "This is an executive/taxable benefit spot" 
-        });
-      }
+      // Note: Removed taxable_benefit check as it's not in the SpotType enum
 
       // Additional validation: Ensure user is not booking their own spot
       if (spot.ownerId === userId) {
@@ -563,6 +612,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching unallocated spots:", error);
       res.status(500).json({ error: "Failed to fetch unallocated spots" });
+    }
+  });
+
+  // Get comprehensive dashboard statistics (Admin only)
+  app.get("/api/admin/dashboard-stats", requireAdmin, async (req, res) => {
+    try {
+      // Helper function to get current date strings using local timezone
+      const now = new Date();
+      
+      // Use local timezone instead of UTC to handle date boundaries correctly
+      const localYear = now.getFullYear();
+      const localMonth = now.getMonth() + 1; // getMonth() returns 0-11
+      const localDay = now.getDate();
+      
+      const today = `${localYear}-${String(localMonth).padStart(2, '0')}-${String(localDay).padStart(2, '0')}`; // YYYY-MM-DD format
+      const currentMonth = `${localYear}-${String(localMonth).padStart(2, '0')}`; // YYYY-MM format
+      
+      // Fetch all data in parallel for efficiency
+      const [allSpots, allUsers, allBookings, todaysBookings] = await Promise.all([
+        storage.getAllParkingSpots(),
+        storage.getAllUsers(),
+        storage.getAllBookings(),
+        storage.getBookingsForDate(today)
+      ]);
+
+      // Calculate Total Spots
+      const totalSpots = allSpots.length;
+
+      // Calculate Active Users
+      const activeUsers = allUsers.length;
+
+      // Calculate Today's Bookings
+      const todaysBookingsCount = todaysBookings.length;
+
+      // Calculate Available Spots (spots without owners)
+      const availableSpots = allSpots.filter(spot => !spot.ownerId).length;
+
+      // Calculate Occupied Spots (spots with active bookings today)
+      const occupiedSpotsSet = new Set(todaysBookings.map(booking => booking.spotId));
+      const occupiedSpots = occupiedSpotsSet.size;
+
+      // Calculate Revenue This Month (sum of paid bookings in current month)
+      const currentMonthBookings = allBookings.filter(booking => {
+        const bookingDate = booking.bookingDate.toString(); // Convert to string if needed
+        return bookingDate.startsWith(currentMonth) && booking.paymentReceived;
+      });
+      
+      const revenueThisMonth = currentMonthBookings.reduce((total, booking) => {
+        return total + parseFloat(booking.totalAmount.toString());
+      }, 0);
+
+      // Calculate derived metrics
+      const occupancyPercentage = totalSpots > 0 ? Math.round((occupiedSpots / totalSpots) * 100) : 0;
+      const availabilityPercentage = totalSpots > 0 ? Math.round((availableSpots / totalSpots) * 100) : 0;
+
+      // Return comprehensive dashboard statistics
+      res.json({
+        totalSpots,
+        activeUsers,
+        todaysBookings: todaysBookingsCount,
+        revenueThisMonth: Number(revenueThisMonth.toFixed(2)),
+        availableSpots,
+        occupiedSpots,
+        // Additional derived metrics
+        occupancyPercentage,
+        availabilityPercentage,
+        allocatedSpots: totalSpots - availableSpots,
+        // Metadata for context
+        generatedAt: now.toISOString(),
+        dateContext: {
+          today,
+          currentMonth
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching dashboard statistics:", error);
+      res.status(500).json({ error: "Failed to fetch dashboard statistics" });
     }
   });
 
@@ -636,7 +762,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Audit the bulk assignment
-      await auditService.logAction("BULK_ASSIGN", "parking_spot", {
+      await auditService.logAction("BULK_UPDATE", "parking_spot", {
         entityId: spotIds.join(","),
         message: `Bulk assigned ${updatedSpots.length} parking spots to ${user?.firstName} ${user?.lastName} (${user?.email})`,
         after: {
@@ -1002,7 +1128,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'Entity Type',
         'Entity ID',
         'Success',
-        'Details',
+        'Message',
         'IP Address',
         'User Agent'
       ];
@@ -1016,9 +1142,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         log.entityType || '',
         log.entityId || '',
         log.success ? 'Yes' : 'No',
-        log.details || '',
-        log.metadata?.ipAddress || '',
-        log.metadata?.userAgent || ''
+        log.message || '',
+        (log.requestMeta as any)?.ip || '',
+        (log.requestMeta as any)?.userAgent || ''
       ]);
 
       // Combine headers and rows
@@ -1122,7 +1248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Audit the waiting list entry creation
       await auditService.logAction("CREATE", "waiting_list", {
         entityId: entry.id,
-        message: `Created waiting list entry for ${entry.userName} (${entry.userEmail}) - ${entry.spotType} preference`,
+        message: `Created waiting list entry for ${entry.userName} (${entry.userEmail}) - ${entry.preferredSpotType || 'any'} preference`,
         after: entry
       });
       

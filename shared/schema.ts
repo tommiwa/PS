@@ -355,3 +355,21 @@ export interface RequestMetadata {
   contentType?: string;
   contentLength?: number;
 }
+
+// Dashboard Stats API Response Types
+export interface DashboardStatsResponse {
+  totalSpots: number;
+  activeUsers: number;
+  todaysBookings: number;
+  revenueThisMonth: number;
+  availableSpots: number;
+  occupiedSpots: number;
+  occupancyPercentage: number;
+  availabilityPercentage: number;
+  allocatedSpots: number;
+  generatedAt: string;
+  dateContext: {
+    today: string;
+    currentMonth: string;
+  };
+}

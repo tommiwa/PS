@@ -343,7 +343,7 @@ export class MemStorage implements IStorage {
         
         // Reserved spots should be assigned to senior staff
         if (reservedSpots.includes(spotNum)) {
-          const seniorStaff = [adminUser.id, ownerUser.id, ...additionalUsers.slice(0, 11)];
+          const seniorStaff = [adminUser.id, ownerUser.id, ...additionalUsers.slice(0, 11).map(u => u.id)];
           return seniorStaff[spotNum % seniorStaff.length];
         }
         
