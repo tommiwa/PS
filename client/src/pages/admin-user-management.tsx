@@ -209,13 +209,21 @@ export default function AdminUserManagement() {
     },
     onError: (error: any) => {
       console.error('Error deleting user:', error);
-      const isUnauthorized = error.message?.includes('Unauthorized') || error.status === 401;
+      let errorMessage = "Failed to delete user. Please try again.";
+      
+      if (error.status === 401 || error.message?.includes('Unauthorized')) {
+        errorMessage = "You need administrator privileges to delete users. Please contact an admin or use the 'Promote to Admin' button below for testing.";
+      } else if (error.status === 400) {
+        // Handle business logic errors from backend
+        errorMessage = error.details || error.message || "Cannot delete user due to business constraints.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         variant: "destructive",
-        title: "Error Deleting User",
-        description: isUnauthorized 
-          ? "You need administrator privileges to delete users. Please contact an admin or use the 'Promote to Admin' button below for testing."
-          : error.message || "Failed to delete user. Please try again.",
+        title: "Cannot Delete User",
+        description: errorMessage,
       });
     }
   });
@@ -246,11 +254,27 @@ export default function AdminUserManagement() {
     promoteToAdminMutation.mutate();
   };
 
-  const handleEditUser = (userId: string) => {
+  const handleEditUser = async (userId: string) => {
     console.log('Edit user:', userId)
-    // TODO: Open edit user dialog with form to update user information
-    // For now, just show which user would be edited
-    alert(`Edit functionality for user ${userId} would open here. This requires implementing a user edit dialog.`)
+    const user = displayUsers.find(u => u.id === userId)
+    if (!user) return
+
+    // Use proper dialog confirmation instead of browser alert
+    const shouldEdit = await confirm({
+      title: "Edit User",
+      description: `Edit user functionality for ${user.name} is not yet implemented. Would you like to continue to the edit form?`,
+      confirmText: "Continue to Edit",
+      cancelText: "Cancel",
+      variant: "default"
+    })
+    
+    if (shouldEdit) {
+      // TODO: Open edit user dialog with form to update user information
+      toast({
+        title: "Edit User",
+        description: `Edit functionality for ${user.name} is coming soon!`,
+      });
+    }
   }
 
   const handleDeleteUser = async (userId: string) => {
