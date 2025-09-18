@@ -18,7 +18,8 @@ import {
   Users, Car, Clock, AlertTriangle, TrendingUp, Plus, 
   ListOrdered, CalendarDays, UserPlus, ArrowRight,
   Timer, Target, CheckCircle2, Search, Filter,
-  Zap, Accessibility, Building, MoreHorizontal, Info, RefreshCw
+  Zap, Accessibility, Building, MoreHorizontal, Info, RefreshCw,
+  Trash2, Edit
 } from "lucide-react"
 import type { WaitingList, ParkingSpot, SpotType } from "@shared/schema"
 
@@ -156,6 +157,31 @@ export default function AdminParkingManagement() {
       toast({
         title: "Error",
         description: error.message || "Failed to assign spot.",
+        variant: "error",
+      });
+    },
+  });
+
+  // Mutation to remove from waiting list
+  const removeFromWaitingListMutation = useMutation({
+    mutationFn: async (waitingListId: string) => {
+      return await apiRequest(`/api/admin/waiting-list/${waitingListId}`, {
+        method: "DELETE",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/active"] });
+      toast({
+        title: "Success",
+        description: "User removed from waiting list successfully.",
+        variant: "success",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove user from waiting list.",
         variant: "error",
       });
     },
@@ -368,6 +394,20 @@ export default function AdminParkingManagement() {
   const handleAssignFromWaitingList = (waitingListItem: WaitingList) => {
     setSelectedWaitingListItem(waitingListItem.id);
     setShowAssignDialog(true);
+  };
+
+  const handleRemoveFromWaitingList = async (waitingListItem: WaitingList) => {
+    const confirmed = await confirm({
+      title: "Remove from Waiting List",
+      description: `Are you sure you want to remove ${waitingListItem.userName} from the waiting list? This action cannot be undone.`,
+      confirmText: "Remove",
+      cancelText: "Cancel",
+      variant: "destructive"
+    });
+    
+    if (confirmed) {
+      removeFromWaitingListMutation.mutate(waitingListItem.id);
+    }
   };
 
   const handleDirectAssign = (spot: ParkingSpot) => {
@@ -920,16 +960,28 @@ export default function AdminParkingManagement() {
                             <Badge variant="outline">{waitingDays} days</Badge>
                           </TableCell>
                           <TableCell>
-                            {item.status === "waiting" && (
+                            <div className="flex items-center justify-end gap-1">
+                              {item.status === "waiting" && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleAssignFromWaitingList(item)}
+                                  data-testid={`button-assign-waiting-${item.id}`}
+                                  title="Assign Spot"
+                                >
+                                  <ArrowRight className="h-4 w-4" />
+                                </Button>
+                              )}
                               <Button
+                                variant="ghost"
                                 size="sm"
-                                onClick={() => handleAssignFromWaitingList(item)}
-                                data-testid={`button-assign-waiting-${item.id}`}
+                                onClick={() => handleRemoveFromWaitingList(item)}
+                                data-testid={`button-remove-waiting-${item.id}`}
+                                title="Remove from Waiting List"
                               >
-                                <ArrowRight className="w-4 h-4 mr-2" />
-                                Assign Spot
+                                <Trash2 className="h-4 w-4" />
                               </Button>
-                            )}
+                            </div>
                           </TableCell>
                         </TableRow>
                       );
