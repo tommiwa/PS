@@ -141,6 +141,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update user (Admin only)
+  app.put("/api/users/:id", requireAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Get existing user for audit trail
+      const existingUser = await storage.getUser(id);
+      if (!existingUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Validate request body - allow partial updates
+      const parseResult = insertUserSchema.partial().parse(req.body);
+      
+      // Type cast role to ensure it's one of the valid UserRole values
+      const updateData = {
+        ...parseResult,
+        ...(parseResult.role && { role: parseResult.role as UserRole })
+      };
+      
+      const updatedUser = await storage.updateUser(id, updateData);
+      if (!updatedUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Audit the user update
+      await auditService.logAction("UPDATE", "user", {
+        entityId: updatedUser.id,
+        message: `Updated user ${updatedUser.firstName} ${updatedUser.lastName} (${updatedUser.email})`,
+        before: existingUser,
+        after: updatedUser
+      });
+      
+      res.json(updatedUser);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input data", details: error.errors });
+      }
+      console.error("Error updating user:", error);
+      res.status(500).json({ error: "Failed to update user" });
+    }
+  });
+
+  // Delete user (Admin only)
+  app.delete("/api/users/:id", requireAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Get existing user for audit trail
+      const existingUser = await storage.getUser(id);
+      if (!existingUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Check if user has any active bookings or owns spots
+      const userSpots = await storage.getParkingSpotsByOwner?.(id) || [];
+      const userBookings = await storage.getBookingsByUser?.(id) || [];
+      
+      if (userSpots.length > 0) {
+        return res.status(400).json({ 
+          error: "Cannot delete user with active parking spots",
+          details: `User owns ${userSpots.length} parking spot(s)` 
+        });
+      }
+
+      const activeBookings = userBookings.filter(booking => 
+        ['confirmed', 'active'].includes(booking.status)
+      );
+      
+      if (activeBookings.length > 0) {
+        return res.status(400).json({ 
+          error: "Cannot delete user with active bookings",
+          details: `User has ${activeBookings.length} active booking(s)` 
+        });
+      }
+
+      // Delete the user
+      const deleted = await storage.deleteUser?.(id);
+      if (!deleted) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Audit the user deletion
+      await auditService.logAction("DELETE", "user", {
+        entityId: id,
+        message: `Deleted user ${existingUser.firstName} ${existingUser.lastName} (${existingUser.email})`,
+        before: existingUser
+      });
+      
+      res.json({ success: true, message: "User deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ error: "Failed to delete user" });
+    }
+  });
+
   // Add explicit handler for /api to stop excessive HEAD requests
   app.all("/api", (req, res) => {
     if (req.method === "HEAD") {

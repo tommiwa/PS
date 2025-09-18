@@ -32,6 +32,7 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
+  deleteUser(id: string): Promise<boolean>;
 
   // Parking Spot operations
   getParkingSpot(id: string): Promise<ParkingSpot | undefined>;
@@ -57,6 +58,7 @@ export interface IStorage {
   // Booking operations
   getBooking(id: string): Promise<Booking | undefined>;
   getBookingsByRenter(renterId: string): Promise<Booking[]>;
+  getBookingsByUser(userId: string): Promise<Booking[]>; // Alias for getBookingsByRenter
   getBookingsByOwner(ownerId: string): Promise<Booking[]>;
   getBookingsBySpot(spotId: string): Promise<Booking[]>;
   getBookingsByListing(listingId: string): Promise<Booking[]>;
@@ -893,6 +895,10 @@ export class MemStorage implements IStorage {
     return updatedUser;
   }
 
+  async deleteUser(id: string): Promise<boolean> {
+    return this.users.delete(id);
+  }
+
   // Parking Spot operations
   async getParkingSpot(id: string): Promise<ParkingSpot | undefined> {
     return this.parkingSpots.get(id);
@@ -1021,6 +1027,11 @@ export class MemStorage implements IStorage {
     return Array.from(this.bookings.values()).filter(
       (booking) => booking.renterId === renterId
     );
+  }
+
+  async getBookingsByUser(userId: string): Promise<Booking[]> {
+    // Alias for getBookingsByRenter
+    return this.getBookingsByRenter(userId);
   }
 
   async getBookingsByOwner(ownerId: string): Promise<Booking[]> {

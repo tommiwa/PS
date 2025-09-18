@@ -163,6 +163,57 @@ export default function AdminUserManagement() {
     return matchesSearch && matchesRole && matchesStatus
   })
 
+  // Edit user mutation
+  const editUserMutation = useMutation({
+    mutationFn: async ({ userId, userData }: { userId: string, userData: Partial<InsertUser> }): Promise<User> => {
+      const response = await apiRequest(`/api/users/${userId}`, { method: 'PUT', body: userData });
+      return await response.json();
+    },
+    onSuccess: (updatedUser: User) => {
+      // Invalidate and refetch user data
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      const userName = [updatedUser?.firstName, updatedUser?.lastName].filter(Boolean).join(' ') || updatedUser?.email || 'Unknown User';
+      toast({
+        title: "User Updated",
+        description: `Successfully updated user ${userName}`,
+      });
+    },
+    onError: (error: any) => {
+      console.error('Error updating user:', error);
+      toast({
+        variant: "destructive",
+        title: "Error Updating User",
+        description: error.message || "Failed to update user. Please try again.",
+      });
+    }
+  });
+
+  // Delete user mutation
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string): Promise<{ success: boolean; message: string }> => {
+      const response = await apiRequest(`/api/users/${userId}`, { method: 'DELETE' });
+      return await response.json();
+    },
+    onSuccess: (result: { success: boolean; message: string }, userId: string) => {
+      // Invalidate and refetch user data
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      const user = displayUsers.find(u => u.id === userId);
+      const userName = user?.name || 'Unknown User';
+      toast({
+        title: "User Deleted",
+        description: `Successfully deleted user ${userName}`,
+      });
+    },
+    onError: (error: any) => {
+      console.error('Error deleting user:', error);
+      toast({
+        variant: "destructive",
+        title: "Error Deleting User",
+        description: error.message || "Failed to delete user. Please try again.",
+      });
+    }
+  });
+
   const handleEditUser = (userId: string) => {
     console.log('Edit user:', userId)
     // TODO: Open edit user dialog with form to update user information
@@ -177,7 +228,7 @@ export default function AdminUserManagement() {
     const confirmed = await confirm(confirmations.deleteUser(user.name))
     if (confirmed) {
       console.log('Delete user:', userId)
-      // TODO: Implement actual user deletion logic
+      deleteUserMutation.mutate(userId);
     }
   }
 
