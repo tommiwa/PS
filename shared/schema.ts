@@ -373,3 +373,116 @@ export interface DashboardStatsResponse {
     currentMonth: string;
   };
 }
+
+// Analytics API Response Types
+export interface AnalyticsOverviewResponse {
+  totalRevenue: number;
+  totalBookings: number;
+  activeUsers: number;
+  utilizationRate: number;
+  averageBookingValue: number;
+  monthlyGrowth: number;
+  generatedAt: string;
+  dateContext: {
+    today: string;
+    currentMonth: string;
+  };
+}
+
+export interface MonthlyRevenueData {
+  month: string;
+  revenue: number;
+  bookings: number;
+  year: number;
+}
+
+export interface AnalyticsRevenueResponse {
+  monthlyData: MonthlyRevenueData[];
+  revenueBreakdown: {
+    ownerEarnings: number;
+    platformFees: number;
+    processingFees: number;
+    otherRevenue: number;
+    ownerEarningsPercentage: number;
+    platformFeesPercentage: number;
+    processingFeesPercentage: number;
+    otherRevenuePercentage: number;
+  };
+  generatedAt: string;
+}
+
+export interface TopPerformingSpot {
+  id: string;
+  spotNumber: string;
+  location: string;
+  earnings: number;
+  utilization: number;
+  bookingsCount: number;
+  ownerName: string;
+}
+
+export interface TopEarningOwner {
+  id: string;
+  name: string;
+  earnings: number;
+  spotsCount: number;
+  bookingsCount: number;
+  averageRating: number;
+  email: string;
+}
+
+export interface AnalyticsTopPerformersResponse {
+  topSpots: TopPerformingSpot[];
+  topOwners: TopEarningOwner[];
+  generatedAt: string;
+}
+
+export interface AnalyticsIssue {
+  id: string;
+  type: "Payment Dispute" | "Spot Conflict" | "Technical Issue" | "User Complaint" | "System Alert";
+  priority: "critical" | "high" | "medium" | "low";
+  description: string;
+  created: string;
+  assignee: string;
+  status: "open" | "in_progress" | "resolved" | "closed";
+  entityId?: string; // Related booking, spot, or user ID
+  entityType?: string; // "booking", "spot", "user"
+}
+
+export interface AnalyticsIssuesResponse {
+  activeIssues: AnalyticsIssue[];
+  issuesSummary: {
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
+    total: number;
+  };
+  generatedAt: string;
+}
+
+export interface PeakHourData {
+  hour: number;
+  time: string;
+  usage: number;
+  label: string;
+}
+
+export interface LocationPerformanceData {
+  location: string;
+  spotsCount: number;
+  utilization: number;
+  earnings: number;
+  averageRate: number;
+}
+
+export interface AnalyticsUsageResponse {
+  peakHours: PeakHourData[];
+  locationPerformance: LocationPerformanceData[];
+  weeklyTrends: {
+    dayOfWeek: string;
+    bookings: number;
+    utilization: number;
+  }[];
+  generatedAt: string;
+}

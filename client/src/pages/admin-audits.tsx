@@ -113,22 +113,17 @@ export default function AdminAudits() {
     queryKey: ["/api/admin/audit-analytics"],
   });
 
-  // Mock analytics data for demonstration
-  const mockAnalytics = {
-    totalLogsToday: 1247,
-    failedActions: 23,
-    activeUsers: 89,
-    systemHealth: 98,
-    topActions: [
-      { action: "VIEW", count: 342 },
-      { action: "UPDATE", count: 156 },
-      { action: "CREATE", count: 98 }
-    ],
-    recentActivity: { count: 45, timeframe: "last hour" }
-  };
 
-  // Use mock data as fallback when API data is not available
-  const displayAnalytics = auditAnalytics || mockAnalytics;
+  // Default empty analytics when no real data is available
+  const defaultAnalytics: AuditAnalytics = {
+    totalLogsToday: 0,
+    failedActions: 0,
+    activeUsers: 0,
+    systemHealth: 0,
+    topActions: [],
+    recentActivity: { count: 0, timeframe: "today" }
+  };
+  const displayAnalytics = auditAnalytics || defaultAnalytics;
 
   // Handle search
   const handleSearch = () => {

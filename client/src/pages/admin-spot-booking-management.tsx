@@ -150,178 +150,33 @@ export default function AdminSpotBookingManagement() {
     queryKey: ["/api/admin/booking-analytics"],
   });
 
-  // Mock data for demonstration (remove when backend is ready)
-  const mockActiveBookings = [
-    {
-      id: "booking-001",
-      spotNumber: "A-15",
-      spotLocation: "Building A, Level 2",
-      renterName: "Michael Rodriguez",
-      renterEmail: "m.rodriguez@bci.ca",
-      renterDepartment: "Marketing",
-      ownerName: "Sarah Chen",
-      ownerEmail: "s.chen@bci.ca",
-      ownerDepartment: "Engineering",
-      bookingDate: "2024-01-15",
-      dailyRate: 25.00,
-      status: "confirmed" as BookingStatus,
-      paymentReceived: true,
-      startTime: "08:00",
-      endTime: "17:00",
-      notes: "Regular daily booking",
-      createdAt: "2024-01-14T10:30:00Z",
-      lastActivity: "2024-01-15T08:15:00Z"
-    },
-    {
-      id: "booking-002",
-      spotNumber: "B-08",
-      spotLocation: "Building B, Level 1",
-      renterName: "Jennifer Kim",
-      renterEmail: "j.kim@bci.ca",
-      renterDepartment: "Finance",
-      ownerName: "David Wilson",
-      ownerEmail: "d.wilson@bci.ca",
-      ownerDepartment: "IT",
-      bookingDate: "2024-01-15",
-      dailyRate: 20.00,
-      status: "confirmed" as BookingStatus,
-      paymentReceived: false,
-      startTime: "09:00",
-      endTime: "16:00",
-      notes: "Half-day booking",
-      createdAt: "2024-01-14T15:45:00Z",
-      lastActivity: "2024-01-15T09:00:00Z"
-    },
-    {
-      id: "booking-003",
-      spotNumber: "C-22",
-      spotLocation: "Building C, Level 3",
-      renterName: "Alex Thompson",
-      renterEmail: "a.thompson@bci.ca",
-      renterDepartment: "Sales",
-      ownerName: "Lisa Park",
-      ownerEmail: "l.park@bci.ca",
-      ownerDepartment: "HR",
-      bookingDate: "2024-01-15",
-      dailyRate: 30.00,
-      status: "pending" as BookingStatus,
-      paymentReceived: false,
-      startTime: "07:30",
-      endTime: "18:30",
-      notes: "Electric vehicle charging spot",
-      createdAt: "2024-01-15T07:00:00Z",
-      lastActivity: "2024-01-15T07:15:00Z"
-    }
-  ];
 
-  const mockBookingRequests: BookingRequest[] = [
-    {
-      id: "request-001",
-      type: "cancellation" as const,
-      submittedBy: "Michael Rodriguez",
-      email: "m.rodriguez@bci.ca",
-      bookingId: "booking-001",
-      spotNumber: "A-15",
-      reason: "Emergency - need to travel for work",
-      requestDate: "2024-01-15T14:30:00Z",
-      urgency: "high" as const,
-      status: "pending" as const
-    },
-    {
-      id: "request-002", 
-      type: "dispute" as const,
-      submittedBy: "Jennifer Kim",
-      email: "j.kim@bci.ca",
-      bookingId: "booking-002",
-      spotNumber: "B-08",
-      reason: "Spot was occupied by someone else's vehicle",
-      requestDate: "2024-01-15T09:15:00Z",
-      urgency: "medium" as const,
-      status: "pending" as const
-    },
-    {
-      id: "request-003",
-      type: "modification" as const,
-      submittedBy: "Alex Thompson", 
-      email: "a.thompson@bci.ca",
-      bookingId: "booking-003",
-      spotNumber: "C-22",
-      reason: "Need to extend booking until 8 PM",
-      requestDate: "2024-01-15T16:00:00Z",
-      urgency: "low" as const,
-      status: "pending" as const
-    }
-  ];
 
-  const mockRecentActivity = [
-    {
-      id: "activity-001",
-      type: "booking_created",
-      user: "Michael Rodriguez",
-      action: "Created new booking for spot A-15",
-      timestamp: "2024-01-15T07:30:00Z",
-      details: "Daily rate: $25.00"
-    },
-    {
-      id: "activity-002",
-      type: "payment_received",
-      user: "Sarah Chen",
-      action: "Received payment for spot A-15 booking",
-      timestamp: "2024-01-15T08:00:00Z",
-      details: "Amount: $25.00"
-    },
-    {
-      id: "activity-003",
-      type: "booking_cancelled",
-      user: "Emma Wilson",
-      action: "Cancelled booking for spot D-12",
-      timestamp: "2024-01-15T06:45:00Z",
-      details: "Reason: Vehicle breakdown"
-    },
-    {
-      id: "activity-004",
-      type: "dispute_raised",
-      user: "Jennifer Kim",
-      action: "Raised dispute for spot B-08",
-      timestamp: "2024-01-15T09:15:00Z", 
-      details: "Issue: Spot occupied by unauthorized vehicle"
-    },
-    {
-      id: "activity-005",
-      type: "booking_completed",
-      user: "Tom Miller",
-      action: "Completed booking for spot F-05",
-      timestamp: "2024-01-14T17:00:00Z",
-      details: "Duration: Full day"
-    }
-  ];
 
-  const mockAnalytics = {
-    totalActiveBookings: 12,
-    totalDailyRevenue: 340.00,
-    pendingRequests: 3,
-    resolvedDisputes: 8,
-    averageBookingValue: 28.33,
-    occupancyRate: 78,
-    todayBookings: 15,
-    thisWeekBookings: 89,
-    popularSpots: [
-      { spotNumber: "A-15", bookings: 8 },
-      { spotNumber: "B-08", bookings: 6 },
-      { spotNumber: "C-22", bookings: 5 }
-    ],
+
+  // Use API data directly - show real data or empty states
+  const displayActiveBookings = activeBookings || [];
+  const displayBookingRequests = bookingRequests || [];
+  const displayRecentActivity = recentActivity || [];
+  
+  // Default empty analytics when no data is available
+  const defaultAnalytics: BookingAnalytics = {
+    totalActiveBookings: 0,
+    totalDailyRevenue: 0,
+    pendingRequests: 0,
+    resolvedDisputes: 0,
+    averageBookingValue: 0,
+    occupancyRate: 0,
+    todayBookings: 0,
+    thisWeekBookings: 0,
+    popularSpots: [],
     userActivity: {
-      activeRenters: 45,
-      activeOwners: 28,
-      newSignups: 3
+      activeRenters: 0,
+      activeOwners: 0,
+      newSignups: 0
     }
   };
-
-  // Use mock data as fallback when API data is not available
-  const displayActiveBookings = activeBookings.length > 0 ? activeBookings : mockActiveBookings;
-  const displayBookingRequests = bookingRequests.length > 0 ? bookingRequests : mockBookingRequests;
-  const displayRecentActivity = recentActivity.length > 0 ? recentActivity : mockRecentActivity;
-  const displayAnalytics = bookingAnalytics || mockAnalytics;
+  const displayAnalytics = bookingAnalytics || defaultAnalytics;
 
   // Filter active bookings
   const filteredActiveBookings = displayActiveBookings.filter(booking => {
@@ -716,7 +571,7 @@ export default function AdminSpotBookingManagement() {
                     <Skeleton key={i} className="h-24 w-full" />
                   ))}
                 </div>
-              ) : (
+              ) : displayBookingRequests.length > 0 ? (
                 <div className="space-y-4">
                   {displayBookingRequests.map((request) => (
                     <Card key={request.id} className="p-4" data-testid={`request-card-${request.id}`}>
@@ -762,6 +617,12 @@ export default function AdminSpotBookingManagement() {
                     </Card>
                   ))}
                 </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground" data-testid="empty-booking-requests">
+                  <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No pending requests</p>
+                  <p className="text-sm">User requests for bookings will appear here when submitted.</p>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -781,7 +642,7 @@ export default function AdminSpotBookingManagement() {
                       <Skeleton key={i} className="h-16 w-full" />
                     ))}
                   </div>
-                ) : (
+                ) : displayRecentActivity.length > 0 ? (
                   <div className="space-y-4">
                     {displayRecentActivity.map((activity) => (
                       <div key={activity.id} className="flex items-start gap-3 p-3 rounded-lg border" data-testid={`activity-${activity.id}`}>
@@ -797,6 +658,12 @@ export default function AdminSpotBookingManagement() {
                       </div>
                     ))}
                   </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground" data-testid="empty-recent-activity">
+                    <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No recent activity</p>
+                    <p className="text-sm">System activity will appear here as users interact with the platform.</p>
+                  </div>
                 )}
               </ScrollArea>
             </CardContent>
@@ -811,14 +678,22 @@ export default function AdminSpotBookingManagement() {
                 <CardTitle>Popular Spots</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {displayAnalytics.popularSpots.map((spot, index) => (
-                    <div key={spot.spotNumber} className="flex items-center justify-between" data-testid={`popular-spot-${index}`}>
-                      <span className="font-medium">{spot.spotNumber}</span>
-                      <Badge variant="secondary">{spot.bookings} bookings</Badge>
-                    </div>
-                  ))}
-                </div>
+                {displayAnalytics.popularSpots.length > 0 ? (
+                  <div className="space-y-3">
+                    {displayAnalytics.popularSpots.map((spot, index) => (
+                      <div key={spot.spotNumber} className="flex items-center justify-between" data-testid={`popular-spot-${index}`}>
+                        <span className="font-medium">{spot.spotNumber}</span>
+                        <Badge variant="secondary">{spot.bookings} bookings</Badge>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground" data-testid="empty-popular-spots">
+                    <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No popular spots data available</p>
+                    <p className="text-sm">Booking data will appear here once users start making bookings.</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

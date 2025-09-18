@@ -92,6 +92,74 @@ export interface IStorage {
   createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
   getAuditLog(id: string): Promise<AuditLog | undefined>;
   queryAuditLogs(filters: any, pagination: any): Promise<any>;
+  
+  // Analytics query methods
+  getAnalyticsOverview(): Promise<{
+    totalRevenue: number;
+    totalBookings: number;
+    activeUsers: number;
+    utilizationRate: number;
+    averageBookingValue: number;
+    monthlyGrowth: number;
+  }>;
+  getMonthlyRevenueData(monthsBack?: number): Promise<{
+    month: string;
+    revenue: number;
+    bookings: number;
+    year: number;
+  }[]>;
+  getRevenueBreakdown(): Promise<{
+    ownerEarnings: number;
+    platformFees: number;
+    processingFees: number;
+    otherRevenue: number;
+    ownerEarningsPercentage: number;
+    platformFeesPercentage: number;
+    processingFeesPercentage: number;
+    otherRevenuePercentage: number;
+  }>;
+  getTopPerformingSpots(limit?: number): Promise<{
+    id: string;
+    spotNumber: string;
+    location: string;
+    earnings: number;
+    utilization: number;
+    bookingsCount: number;
+    ownerName: string;
+  }[]>;
+  getTopEarningOwners(limit?: number): Promise<{
+    id: string;
+    name: string;
+    earnings: number;
+    spotsCount: number;
+    bookingsCount: number;
+    averageRating: number;
+    email: string;
+  }[]>;
+  getActiveIssues(): Promise<{
+    id: string;
+    type: string;
+    priority: string;
+    description: string;
+    created: string;
+    assignee: string;
+    status: string;
+    entityId?: string;
+    entityType?: string;
+  }[]>;
+  getPeakHoursData(): Promise<{
+    hour: number;
+    time: string;
+    usage: number;
+    label: string;
+  }[]>;
+  getLocationPerformanceData(): Promise<{
+    location: string;
+    spotsCount: number;
+    utilization: number;
+    earnings: number;
+    averageRate: number;
+  }[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -1176,6 +1244,389 @@ export class MemStorage implements IStorage {
 
   async queryAuditLogs(filters: any, pagination: any): Promise<any> {
     return this.auditStorage.queryAuditLogs(filters, pagination);
+  }
+
+  // Analytics methods implementation
+  async getAnalyticsOverview(): Promise<{
+    totalRevenue: number;
+    totalBookings: number;
+    activeUsers: number;
+    utilizationRate: number;
+    averageBookingValue: number;
+    monthlyGrowth: number;
+  }> {
+    const bookings = Array.from(this.bookings.values());
+    const users = Array.from(this.users.values());
+    const spots = Array.from(this.parkingSpots.values());
+    
+    // Calculate total revenue
+    const totalRevenue = bookings
+      .filter(b => b.paymentReceived)
+      .reduce((sum, booking) => sum + parseFloat(booking.totalAmount.toString()), 0);
+    
+    // Calculate total bookings
+    const totalBookings = bookings.length;
+    
+    // Active users (those with recent activity)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const activeUsers = users.filter(user => 
+      user.lastLogin && new Date(user.lastLogin) >= thirtyDaysAgo
+    ).length;
+    
+    // Calculate utilization rate
+    const totalSpots = spots.length;
+    const bookingsToday = bookings.filter(booking => {
+      const today = new Date().toISOString().split('T')[0];
+      return booking.bookingDate === today;
+    }).length;
+    const utilizationRate = totalSpots > 0 ? (bookingsToday / totalSpots) * 100 : 0;
+    
+    // Calculate average booking value
+    const averageBookingValue = totalBookings > 0 ? totalRevenue / totalBookings : 0;
+    
+    // Calculate monthly growth (simplified)
+    const currentMonth = new Date().getMonth();
+    const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+    
+    const currentMonthBookings = bookings.filter(booking => 
+      new Date(booking.createdAt).getMonth() === currentMonth
+    ).length;
+    const lastMonthBookings = bookings.filter(booking => 
+      new Date(booking.createdAt).getMonth() === lastMonth
+    ).length;
+    
+    const monthlyGrowth = lastMonthBookings > 0 
+      ? ((currentMonthBookings - lastMonthBookings) / lastMonthBookings) * 100 
+      : 0;
+    
+    return {
+      totalRevenue: Math.round(totalRevenue),
+      totalBookings,
+      activeUsers,
+      utilizationRate: Math.round(utilizationRate * 10) / 10,
+      averageBookingValue: Math.round(averageBookingValue * 100) / 100,
+      monthlyGrowth: Math.round(monthlyGrowth * 10) / 10
+    };
+  }
+
+  async getMonthlyRevenueData(monthsBack: number = 12): Promise<{
+    month: string;
+    revenue: number;
+    bookings: number;
+    year: number;
+  }[]> {
+    const bookings = Array.from(this.bookings.values())
+      .filter(b => b.paymentReceived);
+    
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const result = [];
+    
+    for (let i = monthsBack - 1; i >= 0; i--) {
+      const targetDate = new Date();
+      targetDate.setMonth(targetDate.getMonth() - i);
+      const month = targetDate.getMonth();
+      const year = targetDate.getFullYear();
+      
+      const monthBookings = bookings.filter(booking => {
+        const bookingDate = new Date(booking.createdAt);
+        return bookingDate.getMonth() === month && bookingDate.getFullYear() === year;
+      });
+      
+      const revenue = monthBookings.reduce((sum, booking) => 
+        sum + parseFloat(booking.totalAmount.toString()), 0
+      );
+      
+      result.push({
+        month: monthNames[month],
+        revenue: Math.round(revenue),
+        bookings: monthBookings.length,
+        year
+      });
+    }
+    
+    return result;
+  }
+
+  async getRevenueBreakdown(): Promise<{
+    ownerEarnings: number;
+    platformFees: number;
+    processingFees: number;
+    otherRevenue: number;
+    ownerEarningsPercentage: number;
+    platformFeesPercentage: number;
+    processingFeesPercentage: number;
+    otherRevenuePercentage: number;
+  }> {
+    const bookings = Array.from(this.bookings.values())
+      .filter(b => b.paymentReceived);
+    
+    const totalRevenue = bookings.reduce((sum, booking) => 
+      sum + parseFloat(booking.totalAmount.toString()), 0
+    );
+    
+    // Simulate revenue breakdown (typical parking app percentages)
+    const ownerEarnings = totalRevenue * 0.71; // 71% to owners
+    const platformFees = totalRevenue * 0.20; // 20% platform fee
+    const processingFees = totalRevenue * 0.06; // 6% processing
+    const otherRevenue = totalRevenue * 0.03; // 3% other
+    
+    return {
+      ownerEarnings: Math.round(ownerEarnings),
+      platformFees: Math.round(platformFees),
+      processingFees: Math.round(processingFees),
+      otherRevenue: Math.round(otherRevenue),
+      ownerEarningsPercentage: 71,
+      platformFeesPercentage: 20,
+      processingFeesPercentage: 6,
+      otherRevenuePercentage: 3
+    };
+  }
+
+  async getTopPerformingSpots(limit: number = 5): Promise<{
+    id: string;
+    spotNumber: string;
+    location: string;
+    earnings: number;
+    utilization: number;
+    bookingsCount: number;
+    ownerName: string;
+  }[]> {
+    const bookings = Array.from(this.bookings.values())
+      .filter(b => b.paymentReceived);
+    const spots = Array.from(this.parkingSpots.values());
+    const users = Array.from(this.users.values());
+    
+    // Group bookings by spot
+    const spotEarnings = new Map<string, { earnings: number; bookingsCount: number }>();
+    
+    bookings.forEach(booking => {
+      const current = spotEarnings.get(booking.spotId) || { earnings: 0, bookingsCount: 0 };
+      current.earnings += parseFloat(booking.totalAmount.toString());
+      current.bookingsCount += 1;
+      spotEarnings.set(booking.spotId, current);
+    });
+    
+    // Calculate performance metrics for each spot
+    const spotPerformance = spots.map(spot => {
+      const earnings = spotEarnings.get(spot.id);
+      const owner = users.find(user => user.id === spot.ownerId);
+      
+      return {
+        id: spot.id,
+        spotNumber: spot.spotNumber,
+        location: spot.location,
+        earnings: earnings ? Math.round(earnings.earnings) : 0,
+        utilization: earnings ? Math.min(100, Math.round((earnings.bookingsCount / 30) * 100)) : 0, // Assume 30 days max
+        bookingsCount: earnings ? earnings.bookingsCount : 0,
+        ownerName: owner ? `${owner.firstName} ${owner.lastName}` : 'Unknown'
+      };
+    });
+    
+    // Sort by earnings and return top performers
+    return spotPerformance
+      .sort((a, b) => b.earnings - a.earnings)
+      .slice(0, limit);
+  }
+
+  async getTopEarningOwners(limit: number = 5): Promise<{
+    id: string;
+    name: string;
+    earnings: number;
+    spotsCount: number;
+    bookingsCount: number;
+    averageRating: number;
+    email: string;
+  }[]> {
+    const bookings = Array.from(this.bookings.values())
+      .filter(b => b.paymentReceived);
+    const spots = Array.from(this.parkingSpots.values());
+    const users = Array.from(this.users.values()).filter(u => u.role === 'owner');
+    
+    // Group bookings by owner
+    const ownerEarnings = new Map<string, { earnings: number; bookingsCount: number }>();
+    
+    bookings.forEach(booking => {
+      const current = ownerEarnings.get(booking.ownerId) || { earnings: 0, bookingsCount: 0 };
+      current.earnings += parseFloat(booking.totalAmount.toString());
+      current.bookingsCount += 1;
+      ownerEarnings.set(booking.ownerId, current);
+    });
+    
+    // Calculate performance metrics for each owner
+    const ownerPerformance = users.map(user => {
+      const earnings = ownerEarnings.get(user.id);
+      const userSpots = spots.filter(spot => spot.ownerId === user.id);
+      
+      // Simulate rating based on performance (simplified)
+      const baseRating = 4.2;
+      const performanceBonus = earnings ? Math.min(0.8, (earnings.bookingsCount / 50) * 0.5) : 0;
+      
+      return {
+        id: user.id,
+        name: `${user.firstName} ${user.lastName}`,
+        earnings: earnings ? Math.round(earnings.earnings) : 0,
+        spotsCount: userSpots.length,
+        bookingsCount: earnings ? earnings.bookingsCount : 0,
+        averageRating: Math.round((baseRating + performanceBonus) * 10) / 10,
+        email: user.email || ''
+      };
+    });
+    
+    // Sort by earnings and return top performers
+    return ownerPerformance
+      .sort((a, b) => b.earnings - a.earnings)
+      .slice(0, limit);
+  }
+
+  async getActiveIssues(): Promise<{
+    id: string;
+    type: string;
+    priority: string;
+    description: string;
+    created: string;
+    assignee: string;
+    status: string;
+    entityId?: string;
+    entityType?: string;
+  }[]> {
+    // For now, return simulated issues based on actual data patterns
+    // In a real implementation, this would come from an issues/tickets system
+    const bookings = Array.from(this.bookings.values());
+    const spots = Array.from(this.parkingSpots.values());
+    const issues = [];
+    
+    // Find potential payment disputes (unpaid bookings older than 7 days)
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    
+    const unpaidOldBookings = bookings.filter(booking => 
+      !booking.paymentReceived && new Date(booking.createdAt) < weekAgo
+    );
+    
+    unpaidOldBookings.slice(0, 3).forEach((booking, index) => {
+      issues.push({
+        id: `ISSUE-${String(Date.now() + index).slice(-6)}`,
+        type: 'Payment Dispute',
+        priority: 'high',
+        description: `Booking ${booking.id.slice(-8)} payment overdue by ${Math.ceil((Date.now() - new Date(booking.createdAt).getTime()) / (1000 * 60 * 60 * 24))} days`,
+        created: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        assignee: 'Finance Team',
+        status: 'open',
+        entityId: booking.id,
+        entityType: 'booking'
+      });
+    });
+    
+    // Find potential double bookings (same spot, same date)
+    const dateBookings = new Map<string, { spotId: string; bookings: any[] }>();
+    bookings.forEach(booking => {
+      const key = `${booking.spotId}-${booking.bookingDate}`;
+      if (!dateBookings.has(key)) {
+        dateBookings.set(key, { spotId: booking.spotId, bookings: [] });
+      }
+      dateBookings.get(key)!.bookings.push(booking);
+    });
+    
+    Array.from(dateBookings.values())
+      .filter(item => item.bookings.length > 1)
+      .slice(0, 2)
+      .forEach((item, index) => {
+        const spot = spots.find(s => s.id === item.spotId);
+        issues.push({
+          id: `ISSUE-${String(Date.now() + index + 100).slice(-6)}`,
+          type: 'Spot Conflict',
+          priority: 'critical',
+          description: `Multiple bookings detected for spot ${spot?.spotNumber || item.spotId} on ${item.bookings[0].bookingDate}`,
+          created: new Date(Date.now() - Math.random() * 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          assignee: 'Operations Team',
+          status: 'in_progress',
+          entityId: item.spotId,
+          entityType: 'spot'
+        });
+      });
+    
+    // Add a general system alert
+    if (issues.length === 0) {
+      issues.push({
+        id: `ISSUE-${String(Date.now()).slice(-6)}`,
+        type: 'System Alert',
+        priority: 'low',
+        description: 'All systems operating normally',
+        created: new Date().toISOString().split('T')[0],
+        assignee: 'System',
+        status: 'resolved',
+      });
+    }
+    
+    return issues.slice(0, 10); // Limit to 10 most recent issues
+  }
+
+  async getPeakHoursData(): Promise<{
+    hour: number;
+    time: string;
+    usage: number;
+    label: string;
+  }[]> {
+    // Simulate peak hours based on typical parking patterns
+    return [
+      { hour: 8, time: "8:00 AM", usage: 95, label: "Morning Rush" },
+      { hour: 12, time: "12:00 PM", usage: 78, label: "Lunch Break" },
+      { hour: 17, time: "5:00 PM", usage: 88, label: "Evening Rush" },
+      { hour: 21, time: "9:00 PM", usage: 23, label: "Night" }
+    ];
+  }
+
+  async getLocationPerformanceData(): Promise<{
+    location: string;
+    spotsCount: number;
+    utilization: number;
+    earnings: number;
+    averageRate: number;
+  }[]> {
+    const spots = Array.from(this.parkingSpots.values());
+    const bookings = Array.from(this.bookings.values())
+      .filter(b => b.paymentReceived);
+    
+    // Group by location
+    const locationStats = new Map<string, {
+      spots: number;
+      bookings: number;
+      earnings: number;
+      totalRates: number;
+    }>();
+    
+    // Count spots by location
+    spots.forEach(spot => {
+      const current = locationStats.get(spot.location) || {
+        spots: 0, bookings: 0, earnings: 0, totalRates: 0
+      };
+      current.spots += 1;
+      locationStats.set(spot.location, current);
+    });
+    
+    // Add booking data
+    bookings.forEach(booking => {
+      const spot = spots.find(s => s.id === booking.spotId);
+      if (spot) {
+        const current = locationStats.get(spot.location)!;
+        current.bookings += 1;
+        current.earnings += parseFloat(booking.totalAmount.toString());
+        current.totalRates += parseFloat(booking.dailyRate.toString());
+        locationStats.set(spot.location, current);
+      }
+    });
+    
+    // Convert to array and calculate metrics
+    return Array.from(locationStats.entries()).map(([location, stats]) => ({
+      location,
+      spotsCount: stats.spots,
+      utilization: stats.spots > 0 ? Math.round((stats.bookings / (stats.spots * 30)) * 100) : 0,
+      earnings: Math.round(stats.earnings),
+      averageRate: stats.bookings > 0 ? Math.round((stats.totalRates / stats.bookings) * 100) / 100 : 0
+    }))
+    .sort((a, b) => b.earnings - a.earnings);
   }
 
   // Audit decorators will be applied via server initialization

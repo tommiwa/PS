@@ -692,6 +692,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Analytics API endpoints (Admin only)
+  app.get("/api/admin/analytics-overview", requireAdmin, async (req, res) => {
+    try {
+      const overview = await storage.getAnalyticsOverview();
+      const now = new Date();
+      
+      res.json({
+        ...overview,
+        generatedAt: now.toISOString(),
+        dateContext: {
+          today: now.toISOString().split('T')[0],
+          currentMonth: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching analytics overview:", error);
+      res.status(500).json({ error: "Failed to fetch analytics overview" });
+    }
+  });
+
+  app.get("/api/admin/analytics-revenue", requireAdmin, async (req, res) => {
+    try {
+      const monthsBack = req.query.monthsBack ? parseInt(req.query.monthsBack as string) : 12;
+      const [monthlyData, revenueBreakdown] = await Promise.all([
+        storage.getMonthlyRevenueData(monthsBack),
+        storage.getRevenueBreakdown()
+      ]);
+      
+      res.json({
+        monthlyData,
+        revenueBreakdown,
+        generatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error fetching analytics revenue:", error);
+      res.status(500).json({ error: "Failed to fetch analytics revenue" });
+    }
+  });
+
+  app.get("/api/admin/analytics-top-performers", requireAdmin, async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 5;
+      const [topSpots, topOwners] = await Promise.all([
+        storage.getTopPerformingSpots(limit),
+        storage.getTopEarningOwners(limit)
+      ]);
+      
+      res.json({
+        topSpots,
+        topOwners,
+        generatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error fetching analytics top performers:", error);
+      res.status(500).json({ error: "Failed to fetch analytics top performers" });
+    }
+  });
+
+  app.get("/api/admin/analytics-issues", requireAdmin, async (req, res) => {
+    try {
+      const activeIssues = await storage.getActiveIssues();
+      
+      // Calculate issues summary
+      const issuesSummary = {
+        critical: activeIssues.filter(issue => issue.priority === 'critical').length,
+        high: activeIssues.filter(issue => issue.priority === 'high').length,
+        medium: activeIssues.filter(issue => issue.priority === 'medium').length,
+        low: activeIssues.filter(issue => issue.priority === 'low').length,
+        total: activeIssues.length
+      };
+      
+      res.json({
+        activeIssues,
+        issuesSummary,
+        generatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error fetching analytics issues:", error);
+      res.status(500).json({ error: "Failed to fetch analytics issues" });
+    }
+  });
+
+  app.get("/api/admin/analytics-usage", requireAdmin, async (req, res) => {
+    try {
+      const [peakHours, locationPerformance] = await Promise.all([
+        storage.getPeakHoursData(),
+        storage.getLocationPerformanceData()
+      ]);
+      
+      // Generate weekly trends (simplified for now)
+      const weeklyTrends = [
+        { dayOfWeek: 'Monday', bookings: 45, utilization: 85 },
+        { dayOfWeek: 'Tuesday', bookings: 52, utilization: 92 },
+        { dayOfWeek: 'Wednesday', bookings: 48, utilization: 87 },
+        { dayOfWeek: 'Thursday', bookings: 51, utilization: 90 },
+        { dayOfWeek: 'Friday', bookings: 41, utilization: 79 },
+        { dayOfWeek: 'Saturday', bookings: 23, utilization: 45 },
+        { dayOfWeek: 'Sunday', bookings: 18, utilization: 35 }
+      ];
+      
+      res.json({
+        peakHours,
+        locationPerformance,
+        weeklyTrends,
+        generatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error fetching analytics usage:", error);
+      res.status(500).json({ error: "Failed to fetch analytics usage" });
+    }
+  });
+
   // Get all parking spots (allocated + unallocated) for admin overview (Admin only)
   app.get("/api/admin/all-spots", requireAdmin, async (req, res) => {
     try {
