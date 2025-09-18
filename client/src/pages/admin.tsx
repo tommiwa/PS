@@ -321,13 +321,13 @@ export default function Admin() {
         <h2 className="text-xl font-semibold">Administrative Functions</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {quickActions.map((action) => (
-            <Link 
-              key={action.url} 
-              href={action.url}
-              data-testid={`link-${action.title.toLowerCase().replace(/\s+/g, '-')}`}
-            >
-              <Card className="hover-elevate active-elevate-2 cursor-pointer transition-all duration-200 h-full">
-                <CardContent className="p-6">
+            <Card key={action.url} className="hover-elevate active-elevate-2 cursor-pointer transition-all duration-200 h-full">
+              <Link 
+                href={action.url}
+                data-testid={`link-${action.title.toLowerCase().replace(/\s+/g, '-')}`}
+                className="block h-full"
+              >
+                <CardContent className="p-6 h-full">
                   <div className="space-y-4">
                     <div className="flex items-start justify-between">
                       <div className={`p-3 rounded-lg ${action.bgColor}`}>
@@ -346,8 +346,8 @@ export default function Admin() {
                     </div>
                   </div>
                 </CardContent>
-              </Card>
-            </Link>
+              </Link>
+            </Card>
           ))}
         </div>
       </div>
