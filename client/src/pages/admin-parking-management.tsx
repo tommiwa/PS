@@ -411,6 +411,9 @@ export default function AdminParkingManagement() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/all-spots"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] });
+      // Also invalidate waiting list queries since user may have been removed from waiting list
+      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/active"] });
       const userName = allUsers.find(user => user.id === selectedUserForAvailableSpot)?.name || "user";
       toast({
         title: "Success",

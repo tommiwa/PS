@@ -1184,15 +1184,19 @@ export class MemStorage implements IStorage {
     const entry = this.waitingList.get(waitingListId);
     if (!entry) return undefined;
 
-    const updatedEntry: WaitingList = {
+    // Create the final entry record for audit purposes
+    const finalEntry: WaitingList = {
       ...entry,
       status: 'assigned',
       assignedDate: new Date(),
       assignedSpotId: spotId,
       updatedAt: new Date()
     };
-    this.waitingList.set(waitingListId, updatedEntry);
-    return updatedEntry;
+    
+    // Remove the user from waiting list since they now have a spot
+    this.waitingList.delete(waitingListId);
+    
+    return finalEntry;
   }
 
   // Bookability control operations

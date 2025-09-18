@@ -829,6 +829,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existingSpot = await storage.getParkingSpot(spotId);
       const user = await storage.getUser(userId);
       
+      // Check if user has an active waiting list entry and remove it
+      const waitingListEntry = await storage.getWaitingListByUser(userId);
+      if (waitingListEntry) {
+        await storage.deleteWaitingListEntry(waitingListEntry.id);
+        
+        // Audit the waiting list removal
+        await auditService.logAction("DELETE", "waiting_list", {
+          entityId: waitingListEntry.id,
+          message: `Removed ${user?.firstName} ${user?.lastName} (${user?.email}) from waiting list due to spot assignment`,
+          before: waitingListEntry
+        });
+      }
+      
       const updatedSpot = await storage.updateParkingSpot(spotId, { ownerId: userId });
       if (!updatedSpot) {
         return res.status(404).json({ error: "Parking spot not found" });
@@ -837,7 +850,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Audit the spot assignment
       await auditService.logAction("ASSIGN", "parking_spot", {
         entityId: spotId,
-        message: `Assigned parking spot ${updatedSpot.spotNumber} to ${user?.firstName} ${user?.lastName} (${user?.email})`,
+        message: `Assigned parking spot ${updatedSpot.spotNumber} to ${user?.firstName} ${user?.lastName} (${user?.email})${waitingListEntry ? ' (removed from waiting list)' : ''}`,
         before: existingSpot,
         after: updatedSpot
       });
@@ -864,6 +877,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get user info for audit logging
       const user = await storage.getUser(userId);
+      
+      // Check if user has an active waiting list entry and remove it (only once for bulk assignment)
+      const waitingListEntry = await storage.getWaitingListByUser(userId);
+      if (waitingListEntry) {
+        await storage.deleteWaitingListEntry(waitingListEntry.id);
+        
+        // Audit the waiting list removal
+        await auditService.logAction("DELETE", "waiting_list", {
+          entityId: waitingListEntry.id,
+          message: `Removed ${user?.firstName} ${user?.lastName} (${user?.email}) from waiting list due to bulk spot assignment`,
+          before: waitingListEntry
+        });
+      }
       
       const updatedSpots = [];
       for (const spotId of spotIds) {
