@@ -23,16 +23,22 @@ export interface AdminUser {
 
 interface AdminUsersTableProps {
   users: AdminUser[]
+  isLoading?: boolean
   onEditUser?: (userId: string) => void
   onDeleteUser?: (userId: string) => void
+  onSuspendUser?: (userId: string) => void
   onAssignSpot?: (userId: string) => void
+  onSendNotification?: (userId: string) => void
 }
 
 export function AdminUsersTable({ 
   users, 
+  isLoading,
   onEditUser, 
   onDeleteUser, 
-  onAssignSpot 
+  onSuspendUser,
+  onAssignSpot,
+  onSendNotification 
 }: AdminUsersTableProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [roleFilter, setRoleFilter] = useState<string>("all")

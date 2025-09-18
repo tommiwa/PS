@@ -506,6 +506,7 @@ export default function AdminParkingManagement() {
         </div>
         <div className="flex gap-2">
           <Button 
+            variant="outline"
             onClick={() => setShowAddSpotDialog(true)}
             data-testid="button-add-spot"
           >
@@ -627,7 +628,7 @@ export default function AdminParkingManagement() {
                   {selectedSpots.size > 0 && (
                     <>
                       <Button
-                        variant="secondary"
+                        variant="outline"
                         size="sm"
                         onClick={() => toggleSpotBookabilityMutation.mutate({ 
                           spotIds: Array.from(selectedSpots), 
@@ -725,31 +726,35 @@ export default function AdminParkingManagement() {
                               )}
                             </TableCell>
                             <TableCell>
-                              <div className="flex gap-2">
+                              <div className="flex items-center justify-end gap-1">
                                 <Button
+                                  variant="ghost"
                                   size="sm"
-                                  variant="outline"
                                   onClick={() => handleEditSpot(spot)}
                                   data-testid={`button-edit-spot-${spot.id}`}
+                                  title="Edit Spot"
                                 >
-                                  Edit
+                                  <Edit className="h-4 w-4" />
                                 </Button>
                                 {!spot.ownerId && (
                                   <Button
+                                    variant="ghost"
                                     size="sm"
                                     onClick={() => handleDirectAssign(spot)}
                                     data-testid={`button-assign-spot-${spot.id}`}
+                                    title="Assign Spot"
                                   >
-                                    Assign
+                                    <Target className="h-4 w-4" />
                                   </Button>
                                 )}
                                 <Button
+                                  variant="ghost"
                                   size="sm"
-                                  variant="destructive"
                                   onClick={() => handleDeleteSpot(spot.id)}
                                   data-testid={`button-delete-spot-${spot.id}`}
+                                  title="Delete Spot"
                                 >
-                                  Delete
+                                  <Trash2 className="h-4 w-4" />
                                 </Button>
                               </div>
                             </TableCell>
@@ -852,29 +857,33 @@ export default function AdminParkingManagement() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <div className="flex gap-2">
+                            <div className="flex items-center justify-end gap-1">
                               <Button
+                                variant="ghost"
                                 size="sm"
-                                variant="outline"
                                 onClick={() => handleEditSpot(spot)}
                                 data-testid={`button-edit-unallocated-spot-${spot.id}`}
+                                title="Edit Spot"
                               >
-                                Edit
+                                <Edit className="h-4 w-4" />
                               </Button>
                               <Button
+                                variant="ghost"
                                 size="sm"
                                 onClick={() => handleDirectAssign(spot)}
                                 data-testid={`button-assign-unallocated-spot-${spot.id}`}
+                                title="Assign Spot"
                               >
-                                Assign
+                                <Target className="h-4 w-4" />
                               </Button>
                               <Button
+                                variant="ghost"
                                 size="sm"
-                                variant="destructive"
                                 onClick={() => handleDeleteSpot(spot.id)}
                                 data-testid={`button-delete-unallocated-spot-${spot.id}`}
+                                title="Delete Spot"
                               >
-                                Delete
+                                <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
                           </TableCell>

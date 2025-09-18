@@ -456,7 +456,7 @@ export default function AdminAudits() {
               )}
             </CardTitle>
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={() => refetch()}
               data-testid="button-refresh-audits"
