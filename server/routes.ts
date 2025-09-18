@@ -1546,6 +1546,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create waiting list entry (admin) - allows admins to add any user
+  app.post("/api/admin/waiting-list", requireAdmin, async (req, res) => {
+    try {
+      const { userId, ...waitingListData } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ error: "User ID is required" });
+      }
+      
+      // Get user info for the waiting list entry
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      // Validate request body and add user information
+      const validatedData = insertWaitingListSchema.parse({
+        ...waitingListData,
+        userId: userId,
+        userName: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.firstName || user.lastName || user.email,
+        userEmail: user.email || '',
+        userDepartment: user.department || 'Unknown',
+        status: 'active'
+      });
+      
+      const entry = await storage.createWaitingListEntry(validatedData);
+      
+      // Audit the waiting list entry creation
+      await auditService.logAction("CREATE", "waiting_list", {
+        entityId: entry.id,
+        message: `Admin added ${entry.userName} (${entry.userEmail}) to waiting list - ${entry.preferredSpotType || 'any'} preference`,
+        after: entry
+      });
+      
+      res.json(entry);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input data", details: error.errors });
+      }
+      console.error("Error creating waiting list entry (admin):", error);
+      res.status(500).json({ error: "Failed to create waiting list entry" });
+    }
+  });
+
   // Update waiting list entry (admin)
   app.put("/api/waiting-list/:id", requireAdmin, async (req, res) => {
     try {
