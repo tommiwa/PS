@@ -77,6 +77,21 @@ export function AdminUsersTable({
     return name.split(' ').map(n => n[0]).join('').toUpperCase()
   }
 
+  const humanizeEmail = (email: string) => {
+    const localPart = email.split('@')[0]
+    return localPart
+      .split(/[._-]/)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ')
+  }
+
+  const getDisplayName = (user: any) => {
+    if (user.name && !user.name.includes('@')) {
+      return user.name
+    }
+    return humanizeEmail(user.email)
+  }
+
   const handleEdit = (userId: string) => {
     console.log('Edit user:', userId)
     onEditUser?.(userId)
@@ -167,11 +182,11 @@ export function AdminUsersTable({
                     <div className="flex items-center gap-3">
                       <Avatar className="h-8 w-8">
                         <AvatarFallback className="text-xs">
-                          {getInitials(user.name === user.email ? "No Name" : user.name)}
+                          {getInitials(getDisplayName(user))}
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <div className="font-medium">{user.name === user.email ? "No Name" : user.name}</div>
+                        <div className="font-medium">{getDisplayName(user)}</div>
                         <div className="text-sm text-muted-foreground">{user.email}</div>
                       </div>
                     </div>
