@@ -9,8 +9,8 @@ export interface UseCardsVisibilityReturn {
 export function useCardsVisibility(pageName: string): UseCardsVisibilityReturn {
   const storageKey = `admin-cards-visibility-${pageName}`
   
-  // Initialize state with default value (true = visible)
-  const [cardsVisible, setCardsVisible] = useState<boolean>(true)
+  // Initialize state with default value (false = hidden)
+  const [cardsVisible, setCardsVisible] = useState<boolean>(false)
 
   // Load initial state from localStorage on mount
   useEffect(() => {
@@ -22,8 +22,8 @@ export function useCardsVisibility(pageName: string): UseCardsVisibilityReturn {
       }
     } catch (error) {
       console.warn(`Failed to load cards visibility state for ${pageName}:`, error)
-      // Fallback to default value (true)
-      setCardsVisible(true)
+      // Fallback to default value (false)
+      setCardsVisible(false)
     }
   }, [storageKey])
 

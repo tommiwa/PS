@@ -595,52 +595,6 @@ export default function AdminUserManagement() {
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingUsers ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button 
-            variant="outline" 
-            disabled={filteredUsers.length === 0}
-            onClick={() => {
-              const success = quickExportUsersPDF(sortedUsers, 'User Management Report', (errorMessage) => {
-                toast({
-                  variant: "destructive",
-                  title: "Export Failed",
-                  description: errorMessage
-                })
-              })
-              if (success) {
-                toast({
-                  title: "Export Successful",
-                  description: "PDF report has been downloaded successfully"
-                })
-              }
-            }}
-            data-testid="button-export-users-pdf"
-          >
-            <FileText className="h-4 w-4 mr-2" />
-            Export PDF
-          </Button>
-          <Button 
-            variant="outline" 
-            disabled={filteredUsers.length === 0}
-            onClick={() => {
-              const success = quickExportUsersExcel(sortedUsers, 'User Management Report', (errorMessage) => {
-                toast({
-                  variant: "destructive",
-                  title: "Export Failed",
-                  description: errorMessage
-                })
-              })
-              if (success) {
-                toast({
-                  title: "Export Successful",
-                  description: "Excel report has been downloaded successfully"
-                })
-              }
-            }}
-            data-testid="button-export-users-excel"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Export Excel
-          </Button>
           <Button variant="outline">
             <Upload className="h-4 w-4 mr-2" />
             Import Users
@@ -1149,25 +1103,84 @@ export default function AdminUserManagement() {
           />
 
           {/* Users Table */}
-          {isLoadingUsers ? (
-            <div className="space-y-4">
-              {[...Array(5)].map((_, i) => (
-                <Skeleton key={i} className="h-16 w-full" />
-              ))}
-            </div>
-          ) : (
-            <AdminUsersTable 
-              users={sortedUsers} 
-              isLoading={isLoadingUsers}
-              sortState={sortState}
-              onSort={handleSort}
-              onEditUser={handleEditUser}
-              onDeleteUser={handleDeleteUser}
-              onSuspendUser={handleSuspendUser}
-              onAssignSpot={handleAssignSpot}
-              onSendNotification={handleSendNotification}
-            />
-          )}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Users ({filteredUsers.length})</CardTitle>
+                <div className="flex gap-2">
+                  <Button 
+                    size="sm"
+                    variant="outline" 
+                    disabled={filteredUsers.length === 0}
+                    onClick={() => {
+                      const success = quickExportUsersPDF(sortedUsers, 'User Management Report', (errorMessage) => {
+                        toast({
+                          variant: "destructive",
+                          title: "Export Failed",
+                          description: errorMessage
+                        })
+                      })
+                      if (success) {
+                        toast({
+                          title: "Export Successful",
+                          description: "PDF report has been downloaded successfully"
+                        })
+                      }
+                    }}
+                    data-testid="button-export-users-pdf"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    PDF
+                  </Button>
+                  <Button 
+                    size="sm"
+                    variant="outline" 
+                    disabled={filteredUsers.length === 0}
+                    onClick={() => {
+                      const success = quickExportUsersExcel(sortedUsers, 'User Management Report', (errorMessage) => {
+                        toast({
+                          variant: "destructive",
+                          title: "Export Failed",
+                          description: errorMessage
+                        })
+                      })
+                      if (success) {
+                        toast({
+                          title: "Export Successful",
+                          description: "Excel report has been downloaded successfully"
+                        })
+                      }
+                    }}
+                    data-testid="button-export-users-excel"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Excel
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoadingUsers ? (
+                <div className="space-y-4">
+                  {[...Array(5)].map((_, i) => (
+                    <Skeleton key={i} className="h-16 w-full" />
+                  ))}
+                </div>
+              ) : (
+                <AdminUsersTable 
+                  users={sortedUsers} 
+                  isLoading={isLoadingUsers}
+                  sortState={sortState}
+                  onSort={handleSort}
+                  onEditUser={handleEditUser}
+                  onDeleteUser={handleDeleteUser}
+                  onSuspendUser={handleSuspendUser}
+                  onAssignSpot={handleAssignSpot}
+                  onSendNotification={handleSendNotification}
+                />
+              )}
+            </CardContent>
+          </Card>
 
           {/* Bulk Actions */}
           {showBulkActions && (
