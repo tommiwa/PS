@@ -56,7 +56,7 @@ import {
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useTheme } from "@/contexts/theme-context"
-import { spotTypes, type SpotType, type WaitingList, type InsertWaitingList, type ParkingSpot } from "@shared/schema"
+import { spotTypes, type SpotType, type WaitingList, type InsertWaitingList, type ParkingSpot, type NotificationPreferences, type UpdateNotificationPreferences } from "@shared/schema"
 
 // Waiting list form validation schema
 const waitingListSchema = z.object({
@@ -107,14 +107,6 @@ export default function Profile() {
   
   // State for various settings
   const [darkMode, setDarkMode] = useState(false)
-  const [emailNotifications, setEmailNotifications] = useState(true)
-  
-  // Notification types state (all default to true)
-  const [bookingConfirmations, setBookingConfirmations] = useState(true)
-  const [paymentReminders, setPaymentReminders] = useState(true)
-  const [spotAvailability, setSpotAvailability] = useState(true)
-  const [weeklyReports, setWeeklyReports] = useState(true)
-  const [systemMaintenance, setSystemMaintenance] = useState(true)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [activeTab, setActiveTab] = useState("notifications")
   const [showAddVehicleDialog, setShowAddVehicleDialog] = useState(false)
@@ -165,6 +157,12 @@ export default function Profile() {
     enabled: !!user?.id
   });
 
+  // Query user's notification preferences
+  const { data: notificationPreferences, isLoading: isLoadingPreferences } = useQuery<NotificationPreferences>({
+    queryKey: ["/api/users", user?.id, "notification-preferences"],
+    enabled: !!user?.id
+  });
+
   // Mutation for creating waiting list entry
   const createWaitingListMutation = useMutation({
     mutationFn: async (data: WaitingListForm) => {
@@ -192,20 +190,13 @@ export default function Profile() {
       waitingListForm.reset();
 
       // Send welcome notification (in background, don't block UI)
-      if (user && emailNotifications) {
+      if (user && notificationPreferences?.emailNotifications) {
         apiRequest("/api/notifications/welcome", { method: 'POST', body: {
           userId: user.id,
           userName: user.name,
           userEmail: user.email,
           waitingListEntry: newEntry,
-          preferences: {
-            emailNotifications,
-            bookingConfirmations,
-            paymentReminders,
-            spotAvailability,
-            weeklyReports,
-            systemMaintenance
-          }
+          preferences: notificationPreferences
         }}).catch((error) => {
           console.warn('Failed to send welcome notification:', error);
           // Don't show error to user since enrollment was successful
@@ -368,6 +359,71 @@ export default function Profile() {
       });
     }
   });
+
+  // Mutation for updating notification preferences with optimistic updates
+  const updateNotificationPreferencesMutation = useMutation({
+    mutationFn: async (updates: UpdateNotificationPreferences) => {
+      if (!user?.id) throw new Error("User not found");
+      
+      const response = await apiRequest(`/api/users/${user.id}/notification-preferences`, {
+        method: 'PATCH',
+        body: updates
+      });
+      return response.json();
+    },
+    onMutate: async (updates) => {
+      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({ queryKey: ["/api/users", user?.id, "notification-preferences"] });
+
+      // Snapshot the previous value
+      const previousPreferences = queryClient.getQueryData(["/api/users", user?.id, "notification-preferences"]);
+
+      // Create default preferences if none exist
+      const defaultPreferences: NotificationPreferences = {
+        id: "temp",
+        userId: user?.id || "",
+        emailNotifications: true,
+        bookingConfirmations: true,
+        paymentReminders: true,
+        spotAvailability: true,
+        weeklyReports: true,
+        systemMaintenance: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      // Safely optimistically update to the new value
+      queryClient.setQueryData(["/api/users", user?.id, "notification-preferences"], (old: NotificationPreferences | undefined) => ({
+        ...(old ?? defaultPreferences),
+        ...updates,
+        updatedAt: new Date()
+      }));
+
+      // Return a context object with the snapshotted value
+      return { previousPreferences };
+    },
+    onError: (err, updates, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      queryClient.setQueryData(
+        ["/api/users", user?.id, "notification-preferences"],
+        context?.previousPreferences
+      );
+      toast({
+        title: "Failed to Update Preferences",
+        description: "Your notification preferences could not be saved. Please try again.",
+        variant: "destructive"
+      });
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure cache is in sync with server
+      queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "notification-preferences"] });
+    }
+  });
+
+  // Debounced auto-save handler for notification preferences
+  const handlePreferenceChange = (updates: UpdateNotificationPreferences) => {
+    updateNotificationPreferencesMutation.mutate(updates);
+  };
 
   if (!user) {
     return (
@@ -570,84 +626,99 @@ export default function Profile() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4" />
-                          <Label>Email Notifications</Label>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          Receive booking confirmations and updates via email
-                        </p>
-                      </div>
-                      <Switch 
-                        checked={emailNotifications}
-                        onCheckedChange={setEmailNotifications}
-                        data-testid="switch-email-notifications"
-                      />
+                  {isLoadingPreferences ? (
+                    <div className="flex items-center justify-center p-8">
+                      <div className="text-sm text-muted-foreground">Loading preferences...</div>
                     </div>
-                    
-                    {emailNotifications && (
-                      <>
-                        <Separator />
-                        <div className="space-y-4 pl-6">
-                          <h4 className="font-medium text-sm text-muted-foreground">Email Notification Types</h4>
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                              <Label htmlFor="booking-confirmations">Booking Confirmations</Label>
-                              <Switch 
-                                id="booking-confirmations" 
-                                checked={bookingConfirmations}
-                                onCheckedChange={setBookingConfirmations}
-                                data-testid="switch-booking-confirmations"
-                              />
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <Label htmlFor="payment-reminders">Payment Reminders</Label>
-                              <Switch 
-                                id="payment-reminders" 
-                                checked={paymentReminders}
-                                onCheckedChange={setPaymentReminders}
-                                data-testid="switch-payment-reminders"
-                              />
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <Label htmlFor="spot-availability">Spot Availability Updates</Label>
-                              <Switch 
-                                id="spot-availability" 
-                                checked={spotAvailability}
-                                onCheckedChange={setSpotAvailability}
-                                data-testid="switch-spot-availability"
-                              />
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <Label htmlFor="weekly-reports">Weekly Summary Reports</Label>
-                              <Switch 
-                                id="weekly-reports" 
-                                checked={weeklyReports}
-                                onCheckedChange={setWeeklyReports}
-                                data-testid="switch-weekly-reports"
-                              />
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <Label htmlFor="system-maintenance">System Maintenance Alerts</Label>
-                              <Switch 
-                                id="system-maintenance" 
-                                checked={systemMaintenance}
-                                onCheckedChange={setSystemMaintenance}
-                                data-testid="switch-system-maintenance"
-                              />
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-4 w-4" />
+                            <Label>Email Notifications</Label>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Receive booking confirmations and updates via email
+                          </p>
+                        </div>
+                        <Switch 
+                          checked={notificationPreferences?.emailNotifications ?? true}
+                          onCheckedChange={(checked) => handlePreferenceChange({ emailNotifications: checked })}
+                          data-testid="switch-email-notifications"
+                          disabled={updateNotificationPreferencesMutation.isPending}
+                        />
+                      </div>
+                      
+                      {(notificationPreferences?.emailNotifications ?? true) && (
+                        <>
+                          <Separator />
+                          <div className="space-y-4 pl-6">
+                            <h4 className="font-medium text-sm text-muted-foreground">Email Notification Types</h4>
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between">
+                                <Label htmlFor="booking-confirmations">Booking Confirmations</Label>
+                                <Switch 
+                                  id="booking-confirmations" 
+                                  checked={notificationPreferences?.bookingConfirmations ?? true}
+                                  onCheckedChange={(checked) => handlePreferenceChange({ bookingConfirmations: checked })}
+                                  data-testid="switch-booking-confirmations"
+                                  disabled={updateNotificationPreferencesMutation.isPending}
+                                />
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <Label htmlFor="payment-reminders">Payment Reminders</Label>
+                                <Switch 
+                                  id="payment-reminders" 
+                                  checked={notificationPreferences?.paymentReminders ?? true}
+                                  onCheckedChange={(checked) => handlePreferenceChange({ paymentReminders: checked })}
+                                  data-testid="switch-payment-reminders"
+                                  disabled={updateNotificationPreferencesMutation.isPending}
+                                />
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <Label htmlFor="spot-availability">Spot Availability Updates</Label>
+                                <Switch 
+                                  id="spot-availability" 
+                                  checked={notificationPreferences?.spotAvailability ?? true}
+                                  onCheckedChange={(checked) => handlePreferenceChange({ spotAvailability: checked })}
+                                  data-testid="switch-spot-availability"
+                                  disabled={updateNotificationPreferencesMutation.isPending}
+                                />
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <Label htmlFor="weekly-reports">Weekly Summary Reports</Label>
+                                <Switch 
+                                  id="weekly-reports" 
+                                  checked={notificationPreferences?.weeklyReports ?? true}
+                                  onCheckedChange={(checked) => handlePreferenceChange({ weeklyReports: checked })}
+                                  data-testid="switch-weekly-reports"
+                                  disabled={updateNotificationPreferencesMutation.isPending}
+                                />
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <Label htmlFor="system-maintenance">System Maintenance Alerts</Label>
+                                <Switch 
+                                  id="system-maintenance" 
+                                  checked={notificationPreferences?.systemMaintenance ?? true}
+                                  onCheckedChange={(checked) => handlePreferenceChange({ systemMaintenance: checked })}
+                                  data-testid="switch-system-maintenance"
+                                  disabled={updateNotificationPreferencesMutation.isPending}
+                                />
+                              </div>
                             </div>
                           </div>
+                        </>
+                      )}
+                      
+                      {updateNotificationPreferencesMutation.isPending && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary"></div>
+                          <span>Saving preferences...</span>
                         </div>
-                      </>
-                    )}
-                  </div>
-                  
-                  <Button className="w-full" data-testid="button-update-notification-preferences">
-                    Update Preferences
-                  </Button>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
