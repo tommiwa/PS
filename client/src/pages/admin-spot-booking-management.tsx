@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { queryClient, apiRequest } from "@/lib/queryClient"
 import { useToast } from "@/hooks/use-toast"
@@ -130,6 +130,25 @@ export default function AdminSpotBookingManagement() {
   const [disputeResolution, setDisputeResolution] = useState("")
   const [contactMessage, setContactMessage] = useState("")
   const [activeTab, setActiveTab] = useState("active")
+
+  // Refresh data when tab changes
+  useEffect(() => {
+    // Invalidate relevant queries based on the active tab
+    switch (activeTab) {
+      case "active":
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/active-bookings"] })
+        break
+      case "requests":
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-requests"] })
+        break
+      case "activity":
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-activity"] })
+        break
+      case "analytics":
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-analytics"] })
+        break
+    }
+  }, [activeTab])
 
   // Fetch active bookings
   const { data: activeBookings = [], isLoading: isLoadingActive } = useQuery<AdminBookingData[]>({
