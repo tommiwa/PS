@@ -92,7 +92,7 @@ export default function AdminAudits() {
   const [pageSize] = useState(50);
   const [expandedRows, setExpandedRows] = useState<ExpandedRow>({});
   const [searchTerm, setSearchTerm] = useState("");
-  const { cardsVisible, toggleCardsVisibility } = useCardsVisibility('audit-logs');
+  const { cardsVisible, toggleCards } = useCardsVisibility('audit-logs');
 
   // Build query parameters
   const queryParams = new URLSearchParams();
@@ -239,7 +239,7 @@ export default function AdminAudits() {
               <Button
                 variant="outline"
                 size="icon"
-                onClick={toggleCardsVisibility}
+                onClick={toggleCards}
                 data-testid="button-toggle-cards"
               >
                 {cardsVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}

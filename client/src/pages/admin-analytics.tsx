@@ -51,7 +51,7 @@ import { Tooltip as UITooltip, TooltipContent, TooltipTrigger } from "@/componen
 export default function AdminAnalytics() {
   const queryClient = useQueryClient();
   const [dateRange, setDateRange] = useState("last-30-days");
-  const { cardsVisible, toggleCardsVisibility } = useCardsVisibility('analytics');
+  const { cardsVisible, toggleCards } = useCardsVisibility('analytics');
   
   // Helper function to convert dateRange to monthsBack for revenue API
   const getMonthsBack = (range: string): number => {
@@ -187,7 +187,7 @@ export default function AdminAnalytics() {
               <Button
                 variant="outline"
                 size="icon"
-                onClick={toggleCardsVisibility}
+                onClick={toggleCards}
                 data-testid="button-toggle-cards"
               >
                 {cardsVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
