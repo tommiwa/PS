@@ -557,7 +557,7 @@ export const exportWaitingListData = (waitingList: any[], title: string = 'Waiti
     { header: 'Preferred Spot Type', dataKey: 'preferredSpotType', width: 20, formatter: (type) => type?.toUpperCase() || 'ANY' },
     { header: 'Status', dataKey: 'status', width: 12, formatter: (status) => status?.toUpperCase() || 'ACTIVE' },
     { header: 'Enrolled Date', dataKey: 'enrolledDate', width: 15, formatter: (date) => new Date(date).toLocaleDateString() },
-    { header: 'Waiting Days', dataKey: 'waitingDays', width: 12, formatter: (_, item) => {
+    { header: 'Waiting Days', dataKey: 'waitingDays', width: 12, formatter: (value: any, item: any) => {
       const waitingDays = Math.floor((Date.now() - new Date(item.enrolledDate).getTime()) / (1000 * 60 * 60 * 24));
       return waitingDays.toString();
     }},

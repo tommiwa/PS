@@ -35,6 +35,10 @@ export default function AdminParkingManagement() {
   const { confirm } = useConfirm()
   const [searchTerm, setSearchTerm] = useState("")
   const [filterValues, setFilterValues] = useState<FilterValues>({})
+  const [availableSpotsSearchTerm, setAvailableSpotsSearchTerm] = useState("")
+  const [availableSpotsFilterValues, setAvailableSpotsFilterValues] = useState<FilterValues>({})
+  const [waitingListSearchTerm, setWaitingListSearchTerm] = useState("")
+  const [waitingListFilterValues, setWaitingListFilterValues] = useState<FilterValues>({})
   const [selectedWaitingListItem, setSelectedWaitingListItem] = useState<string | null>(null)
   const [showAssignDialog, setShowAssignDialog] = useState(false)
   const [showAddSpotDialog, setShowAddSpotDialog] = useState(false)
@@ -147,7 +151,7 @@ export default function AdminParkingManagement() {
       : 0
   };
 
-  // Filter waiting list - show all waiting list entries, not just active
+  // Filter waiting list - show all waiting list entries, not just active (keeping this for backwards compatibility)
   const filteredWaitingList = allWaitingList?.filter(item => {
     const matchesSearch = item.userName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.userEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -583,6 +587,81 @@ export default function AdminParkingManagement() {
     "spotNumber", // Default sort by spot number
     "asc" // Ascending order
   )
+
+  // Enhanced filtering for available spots
+  const filteredAvailableSpots = unallocatedSpots.filter(spot => {
+    // Search filter
+    if (availableSpotsSearchTerm.trim()) {
+      const searchLower = availableSpotsSearchTerm.toLowerCase()
+      const matchesSearch = spot.spotNumber.toLowerCase().includes(searchLower) ||
+                           spot.location.toLowerCase().includes(searchLower)
+      if (!matchesSearch) return false
+    }
+    
+    // Spot type filter
+    if (availableSpotsFilterValues.spotType && availableSpotsFilterValues.spotType !== "all") {
+      if (spot.spotType !== availableSpotsFilterValues.spotType) return false
+    }
+    
+    // Location filter
+    if (availableSpotsFilterValues.location && availableSpotsFilterValues.location !== "all") {
+      if (!spot.location.toLowerCase().includes(availableSpotsFilterValues.location.toLowerCase())) {
+        return false
+      }
+    }
+    
+    // Enable/Disable status filter
+    if (availableSpotsFilterValues.enableStatus && availableSpotsFilterValues.enableStatus !== "all") {
+      const isEnabled = spot.isBookable !== false
+      if (availableSpotsFilterValues.enableStatus === "enabled" && !isEnabled) return false
+      if (availableSpotsFilterValues.enableStatus === "disabled" && isEnabled) return false
+    }
+    
+    return true
+  });
+
+  // Sorting functionality for available spots
+  const { sortState: availableSpotsSortState, sortedData: sortedAvailableSpots, handleSort: handleAvailableSpotsSort } = useTableSort(
+    filteredAvailableSpots,
+    "spotNumber", // Default sort by spot number
+    "asc" // Ascending order
+  )
+
+  // Enhanced filtering for waiting list
+  const filteredWaitingListEnhanced = allWaitingList?.filter(item => {
+    // Search filter
+    if (waitingListSearchTerm.trim()) {
+      const searchLower = waitingListSearchTerm.toLowerCase()
+      const matchesSearch = item.userName?.toLowerCase().includes(searchLower) ||
+                           item.userEmail?.toLowerCase().includes(searchLower) ||
+                           item.reason?.toLowerCase().includes(searchLower)
+      if (!matchesSearch) return false
+    }
+    
+    // Priority filter
+    if (waitingListFilterValues.priority && waitingListFilterValues.priority !== "all") {
+      if (item.priority?.toString() !== waitingListFilterValues.priority) return false
+    }
+    
+    // Preferred spot type filter
+    if (waitingListFilterValues.preferredSpotType && waitingListFilterValues.preferredSpotType !== "all") {
+      if (item.preferredSpotType !== waitingListFilterValues.preferredSpotType) return false
+    }
+    
+    // Status filter
+    if (waitingListFilterValues.status && waitingListFilterValues.status !== "all") {
+      if (item.status !== waitingListFilterValues.status) return false
+    }
+    
+    return true
+  }) || []
+
+  // Sorting functionality for waiting list
+  const { sortState: waitingListSortState, sortedData: sortedWaitingList, handleSort: handleWaitingListSort } = useTableSort(
+    filteredWaitingListEnhanced,
+    "enrolledDate", // Default sort by enrolled date
+    "desc" // Descending order (newest first)
+  )
   
   // Filter configuration for parking management
   const parkingFilterConfigs: FilterConfig[] = [
@@ -630,6 +709,79 @@ export default function AdminParkingManagement() {
       ]
     }
   ]
+
+  // Filter configuration for available spots
+  const availableSpotsFilterConfigs: FilterConfig[] = [
+    {
+      key: "spotType",
+      label: "Spot Type",
+      type: "select",
+      options: [
+        { value: "regular", label: "Regular" },
+        { value: "electric", label: "EV" },
+        { value: "tesla_ev", label: "Tesla Charger" },
+        { value: "accessible", label: "Accessible" },
+        { value: "reserved", label: "Reserved" }
+      ]
+    },
+    {
+      key: "location",
+      label: "Location",
+      type: "select",
+      options: [
+        { value: "building-a", label: "Building A" },
+        { value: "building-b", label: "Building B" },
+        { value: "parking-garage", label: "Parking Garage" },
+        { value: "outdoor-lot", label: "Outdoor Lot" },
+        { value: "underground", label: "Underground" }
+      ]
+    },
+    {
+      key: "enableStatus",
+      label: "Enable/Disable Status",
+      type: "select",
+      options: [
+        { value: "enabled", label: "Enabled" },
+        { value: "disabled", label: "Disabled" }
+      ]
+    }
+  ]
+
+  // Filter configuration for waiting list
+  const waitingListFilterConfigs: FilterConfig[] = [
+    {
+      key: "priority",
+      label: "Priority",
+      type: "select",
+      options: [
+        { value: "1", label: "High Priority" },
+        { value: "2", label: "Medium Priority" },
+        { value: "3", label: "Low Priority" }
+      ]
+    },
+    {
+      key: "preferredSpotType",
+      label: "Preferred Spot Type",
+      type: "select",
+      options: [
+        { value: "regular", label: "Regular" },
+        { value: "electric", label: "EV" },
+        { value: "tesla_ev", label: "Tesla Charger" },
+        { value: "accessible", label: "Accessible" },
+        { value: "reserved", label: "Reserved" }
+      ]
+    },
+    {
+      key: "status",
+      label: "Status",
+      type: "select",
+      options: [
+        { value: "active", label: "Active" },
+        { value: "assigned", label: "Assigned" },
+        { value: "cancelled", label: "Cancelled" }
+      ]
+    }
+  ]
   
   // Handle filter changes
   const handleFilterChange = (key: string, value: string | undefined) => {
@@ -643,6 +795,34 @@ export default function AdminParkingManagement() {
   const handleClearFilters = () => {
     setSearchTerm("")
     setFilterValues({})
+  }
+
+  // Handle available spots filter changes
+  const handleAvailableSpotsFilterChange = (key: string, value: string | undefined) => {
+    setAvailableSpotsFilterValues(prev => ({
+      ...prev,
+      [key]: value
+    }))
+  }
+  
+  // Clear available spots filters
+  const handleClearAvailableSpotsFilters = () => {
+    setAvailableSpotsSearchTerm("")
+    setAvailableSpotsFilterValues({})
+  }
+
+  // Handle waiting list filter changes
+  const handleWaitingListFilterChange = (key: string, value: string | undefined) => {
+    setWaitingListFilterValues(prev => ({
+      ...prev,
+      [key]: value
+    }))
+  }
+  
+  // Clear waiting list filters
+  const handleClearWaitingListFilters = () => {
+    setWaitingListSearchTerm("")
+    setWaitingListFilterValues({})
   }
 
   const getPriorityBadge = (priority: number) => {
@@ -1095,46 +1275,29 @@ export default function AdminParkingManagement() {
 
         {/* Unallocated Spots Tab */}
         <TabsContent value="unallocated" className="space-y-4">
+          {/* Enhanced Filters for Available Spots */}
+          <EnhancedFilters
+            searchValue={availableSpotsSearchTerm}
+            onSearchChange={setAvailableSpotsSearchTerm}
+            filterConfigs={availableSpotsFilterConfigs}
+            filterValues={availableSpotsFilterValues}
+            onFilterChange={handleAvailableSpotsFilterChange}
+            onClearFilters={handleClearAvailableSpotsFilters}
+            searchPlaceholder="Search available spots by number or location..."
+            className="hover-elevate"
+          />
+          
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Available Spots ({unallocatedSpots.length})</CardTitle>
+                <CardTitle>Available Spots ({sortedAvailableSpots.length})</CardTitle>
                 <div className="flex gap-2">
-                  <div className="relative">
-                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search spots..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-8 w-64"
-                      data-testid="input-search-unallocated-spots"
-                    />
-                  </div>
-                  <Select value={unallocatedFilterType} onValueChange={setUnallocatedFilterType}>
-                    <SelectTrigger className="w-32" data-testid="select-filter-unallocated-type">
-                      <SelectValue placeholder="Type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Types</SelectItem>
-                      <SelectItem value="regular">Regular</SelectItem>
-                      <SelectItem value="electric">EV</SelectItem>
-                      <SelectItem value="tesla_ev">Tesla Charger</SelectItem>
-                      <SelectItem value="accessible">Accessible</SelectItem>
-                      <SelectItem value="reserved">Reserved</SelectItem>
-                    </SelectContent>
-                  </Select>
                   <Button 
                     size="sm"
                     variant="outline" 
-                    disabled={unallocatedSpots.length === 0}
+                    disabled={sortedAvailableSpots.length === 0}
                     onClick={() => {
-                      const filteredSpots = unallocatedSpots.filter(spot => {
-                        const matchesSearch = spot.spotNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                             spot.location.toLowerCase().includes(searchTerm.toLowerCase());
-                        const matchesType = unallocatedFilterType === "all" || spot.spotType === unallocatedFilterType;
-                        return matchesSearch && matchesType;
-                      });
-                      const success = quickExportParkingSpotsPDF(filteredSpots, 'Available Spots Report', (errorMessage) => {
+                      const success = quickExportParkingSpotsPDF(sortedAvailableSpots, 'Available Spots Report', (errorMessage) => {
                         toast({
                           variant: "destructive",
                           title: "Export Failed",
@@ -1156,15 +1319,9 @@ export default function AdminParkingManagement() {
                   <Button 
                     size="sm"
                     variant="outline" 
-                    disabled={unallocatedSpots.length === 0}
+                    disabled={sortedAvailableSpots.length === 0}
                     onClick={() => {
-                      const filteredSpots = unallocatedSpots.filter(spot => {
-                        const matchesSearch = spot.spotNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                             spot.location.toLowerCase().includes(searchTerm.toLowerCase());
-                        const matchesType = unallocatedFilterType === "all" || spot.spotType === unallocatedFilterType;
-                        return matchesSearch && matchesType;
-                      });
-                      const success = quickExportParkingSpotsExcel(filteredSpots, 'Available Spots Report', (errorMessage) => {
+                      const success = quickExportParkingSpotsExcel(sortedAvailableSpots, 'Available Spots Report', (errorMessage) => {
                         toast({
                           variant: "destructive",
                           title: "Export Failed",
@@ -1187,12 +1344,7 @@ export default function AdminParkingManagement() {
               </div>
             </CardHeader>
             <CardContent>
-              {unallocatedSpots.filter(spot => {
-                const matchesSearch = spot.spotNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                     spot.location.toLowerCase().includes(searchTerm.toLowerCase());
-                const matchesType = unallocatedFilterType === "all" || spot.spotType === unallocatedFilterType;
-                return matchesSearch && matchesType;
-              }).length === 0 ? (
+              {sortedAvailableSpots.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground" data-testid="text-no-unallocated-spots">
                   <Car className="h-12 w-12 mx-auto mb-4 opacity-30" />
                   <p>No available spots found matching your criteria.</p>
@@ -1202,22 +1354,59 @@ export default function AdminParkingManagement() {
                   <Table data-testid="table-unallocated-spots">
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Spot Number</TableHead>
-                        <TableHead>Location</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Assigned To</TableHead>
-                        <TableHead>Assignment Status</TableHead>
+                        <SortableTableHeader
+                          column="spotNumber"
+                          currentSortColumn={availableSpotsSortState.column}
+                          currentSortDirection={availableSpotsSortState.direction}
+                          onSort={handleAvailableSpotsSort}
+                        >
+                          Spot Number
+                        </SortableTableHeader>
+                        <SortableTableHeader
+                          column="location"
+                          currentSortColumn={availableSpotsSortState.column}
+                          currentSortDirection={availableSpotsSortState.direction}
+                          onSort={handleAvailableSpotsSort}
+                        >
+                          Location
+                        </SortableTableHeader>
+                        <SortableTableHeader
+                          column="spotType"
+                          currentSortColumn={availableSpotsSortState.column}
+                          currentSortDirection={availableSpotsSortState.direction}
+                          onSort={handleAvailableSpotsSort}
+                        >
+                          Type
+                        </SortableTableHeader>
+                        <SortableTableHeader
+                          column="isActive"
+                          currentSortColumn={availableSpotsSortState.column}
+                          currentSortDirection={availableSpotsSortState.direction}
+                          onSort={handleAvailableSpotsSort}
+                        >
+                          Status
+                        </SortableTableHeader>
+                        <SortableTableHeader
+                          column="ownerId"
+                          currentSortColumn={availableSpotsSortState.column}
+                          currentSortDirection={availableSpotsSortState.direction}
+                          onSort={handleAvailableSpotsSort}
+                        >
+                          Assigned To
+                        </SortableTableHeader>
+                        <SortableTableHeader
+                          column="isBookable"
+                          currentSortColumn={availableSpotsSortState.column}
+                          currentSortDirection={availableSpotsSortState.direction}
+                          onSort={handleAvailableSpotsSort}
+                        >
+                          Assignment Status
+                        </SortableTableHeader>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {unallocatedSpots.filter(spot => {
-                        const matchesSearch = spot.spotNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                             spot.location.toLowerCase().includes(searchTerm.toLowerCase());
-                        const matchesType = unallocatedFilterType === "all" || spot.spotType === unallocatedFilterType;
-                        return matchesSearch && matchesType;
-                      }).map((spot) => (
+                      {sortedAvailableSpots.map((spot) => (
                         <TableRow key={spot.id} data-testid={`row-unallocated-spot-${spot.id}`}>
                           <TableCell className="font-medium" data-testid={`text-unallocated-spot-number-${spot.id}`}>
                             {spot.spotNumber}
@@ -1292,21 +1481,33 @@ export default function AdminParkingManagement() {
 
         {/* Waiting List Tab */}
         <TabsContent value="waiting" className="space-y-4">
+          {/* Enhanced Filters for Waiting List */}
+          <EnhancedFilters
+            searchValue={waitingListSearchTerm}
+            onSearchChange={setWaitingListSearchTerm}
+            filterConfigs={waitingListFilterConfigs}
+            filterValues={waitingListFilterValues}
+            onFilterChange={handleWaitingListFilterChange}
+            onClearFilters={handleClearWaitingListFilters}
+            searchPlaceholder="Search waiting list by name, email, or reason..."
+            className="hover-elevate"
+          />
+          
           {/* Waiting List */}
       <Card data-testid="card-waiting-list">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Waiting List ({filteredWaitingList.length})
+              Waiting List ({sortedWaitingList.length})
             </CardTitle>
             <div className="flex gap-2">
               <Button 
                 size="sm"
                 variant="outline" 
-                disabled={filteredWaitingList.length === 0}
+                disabled={sortedWaitingList.length === 0}
                 onClick={() => {
-                  const success = quickExportWaitingListPDF(filteredWaitingList, 'Waiting List Report', (errorMessage) => {
+                  const success = quickExportWaitingListPDF(sortedWaitingList, 'Waiting List Report', (errorMessage) => {
                     toast({
                       variant: "destructive",
                       title: "Export Failed",
@@ -1328,9 +1529,9 @@ export default function AdminParkingManagement() {
               <Button 
                 size="sm"
                 variant="outline" 
-                disabled={filteredWaitingList.length === 0}
+                disabled={sortedWaitingList.length === 0}
                 onClick={() => {
-                  const success = quickExportWaitingListExcel(filteredWaitingList, 'Waiting List Report', (errorMessage) => {
+                  const success = quickExportWaitingListExcel(sortedWaitingList, 'Waiting List Report', (errorMessage) => {
                     toast({
                       variant: "destructive",
                       title: "Export Failed",
@@ -1359,7 +1560,7 @@ export default function AdminParkingManagement() {
                 <Skeleton key={i} className="h-16 w-full" />
               ))}
             </div>
-          ) : filteredWaitingList.length === 0 ? (
+          ) : sortedWaitingList.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground" data-testid="text-no-waiting">
               <Users className="h-12 w-12 mx-auto mb-4 opacity-30" />
               <p>No waiting list entries found.</p>
@@ -1369,17 +1570,52 @@ export default function AdminParkingManagement() {
               <Table data-testid="table-waiting-list">
                   <TableHeader>
                     <TableRow>
-                      <TableHead>User</TableHead>
-                      <TableHead>Priority</TableHead>
-                      <TableHead>Preferred Type</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Enrolled Date</TableHead>
+                      <SortableTableHeader
+                        column="userName"
+                        currentSortColumn={waitingListSortState.column}
+                        currentSortDirection={waitingListSortState.direction}
+                        onSort={handleWaitingListSort}
+                      >
+                        User
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column="priority"
+                        currentSortColumn={waitingListSortState.column}
+                        currentSortDirection={waitingListSortState.direction}
+                        onSort={handleWaitingListSort}
+                      >
+                        Priority
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column="preferredSpotType"
+                        currentSortColumn={waitingListSortState.column}
+                        currentSortDirection={waitingListSortState.direction}
+                        onSort={handleWaitingListSort}
+                      >
+                        Preferred Type
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column="status"
+                        currentSortColumn={waitingListSortState.column}
+                        currentSortDirection={waitingListSortState.direction}
+                        onSort={handleWaitingListSort}
+                      >
+                        Status
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column="enrolledDate"
+                        currentSortColumn={waitingListSortState.column}
+                        currentSortDirection={waitingListSortState.direction}
+                        onSort={handleWaitingListSort}
+                      >
+                        Enrolled Date
+                      </SortableTableHeader>
                       <TableHead>Waiting Days</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredWaitingList.map((item) => {
+                    {sortedWaitingList.map((item) => {
                       const waitingDays = Math.floor((Date.now() - new Date(item.enrolledDate).getTime()) / (1000 * 60 * 60 * 24));
                       return (
                         <TableRow key={item.id} data-testid={`row-waiting-${item.id}`}>
