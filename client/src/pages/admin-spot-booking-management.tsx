@@ -131,6 +131,14 @@ export default function AdminSpotBookingManagement() {
   const [contactMessage, setContactMessage] = useState("")
   const [activeTab, setActiveTab] = useState("active")
 
+  // Refresh all data handler
+  const handleRefreshAll = () => {
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/active-bookings"] })
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-requests"] })
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-analytics"] })
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-activity"] })
+  }
+
   // Refresh data when tab changes
   useEffect(() => {
     // Invalidate relevant queries based on the active tab
@@ -352,7 +360,11 @@ export default function AdminSpotBookingManagement() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" data-testid="button-refresh-data">
+          <Button 
+            variant="outline" 
+            onClick={handleRefreshAll}
+            data-testid="button-refresh-data"
+          >
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh Data
           </Button>

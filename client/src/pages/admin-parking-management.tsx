@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { queryClient, apiRequest } from "@/lib/queryClient"
 import { useToast } from "@/hooks/use-toast"
@@ -64,6 +64,15 @@ export default function AdminParkingManagement() {
   const [selectedSpots, setSelectedSpots] = useState<Set<string>>(new Set())
   const [isSelectAllChecked, setIsSelectAllChecked] = useState(false)
   
+  // Refresh all data handler
+  const handleRefreshAll = () => {
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/all-spots"] })
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] })
+    queryClient.invalidateQueries({ queryKey: ["/api/waiting-list"] })
+    queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/active"] })
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] })
+  }
+
   // Form state for edit dialog
   const [editFormData, setEditFormData] = useState({
     spotNumber: "",
@@ -380,12 +389,13 @@ export default function AdminParkingManagement() {
         body: { ownerId: null },
       });
     },
-    onSuccess: (data) => {
+    onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/all-spots"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] });
+      const spotNumber = selectedSpotForRelease?.spotNumber || 'Unknown';
       toast({
         title: "Success",
-        description: `Spot ${data.spotNumber} has been released and is now available.`,
+        description: `Spot ${spotNumber} has been released and is now available.`,
         variant: "success",
       });
       setShowReleaseSpotDialog(false);
@@ -408,16 +418,17 @@ export default function AdminParkingManagement() {
         body: { spotId, userId },
       });
     },
-    onSuccess: (data) => {
+    onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/all-spots"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] });
       // Also invalidate waiting list queries since user may have been removed from waiting list
       queryClient.invalidateQueries({ queryKey: ["/api/waiting-list"] });
       queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/active"] });
       const userName = allUsers.find(user => user.id === selectedUserForAvailableSpot)?.name || "user";
+      const spotNumber = selectedAvailableSpot?.spotNumber || 'Unknown';
       toast({
         title: "Success",
-        description: `Spot ${data.spotNumber} has been assigned to ${userName}.`,
+        description: `Spot ${spotNumber} has been assigned to ${userName}.`,
         variant: "success",
       });
       setShowAssignAvailableSpotDialog(false);
@@ -581,6 +592,14 @@ export default function AdminParkingManagement() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button 
+            variant="outline"
+            onClick={handleRefreshAll}
+            data-testid="button-refresh-data"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh Data
+          </Button>
           <Button 
             variant="outline"
             onClick={() => setShowAddSpotDialog(true)}
