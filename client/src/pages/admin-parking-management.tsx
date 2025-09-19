@@ -193,14 +193,16 @@ export default function AdminParkingManagement() {
 
   // Mutation to remove from waiting list
   const removeFromWaitingListMutation = useMutation({
-    mutationFn: async (waitingListId: string) => {
-      return await apiRequest(`/api/admin/waiting-list/${waitingListId}`, {
+    mutationFn: async ({ waitingListId, userId }: { waitingListId: string; userId: string }) => {
+      return await apiRequest(`/api/waiting-list/${waitingListId}`, {
         method: "DELETE",
       });
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/waiting-list"] });
       queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/active"] });
+      // Also invalidate the user-specific waiting list query so their profile updates
+      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/user", variables.userId] });
       toast({
         title: "Success",
         description: "User removed from waiting list successfully.",
@@ -498,7 +500,10 @@ export default function AdminParkingManagement() {
     });
     
     if (confirmed) {
-      removeFromWaitingListMutation.mutate(waitingListItem.id);
+      removeFromWaitingListMutation.mutate({
+        waitingListId: waitingListItem.id,
+        userId: waitingListItem.userId
+      });
     }
   };
 
