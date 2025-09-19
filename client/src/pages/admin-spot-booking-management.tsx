@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { queryClient, apiRequest } from "@/lib/queryClient"
 import { useToast } from "@/hooks/use-toast"
 import { useConfirm, confirmations } from "@/hooks/use-confirm"
+import { useTableSort } from "@/hooks/use-table-sort"
 import { BookingActivityList } from "@/components/booking-activity-list"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -14,6 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { SortableTableHeader } from "@/components/ui/sortable-table-header"
+import { EnhancedFilters, type FilterConfig, type FilterValues } from "@/components/ui/enhanced-filters"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Textarea } from "@/components/ui/textarea"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -121,8 +124,7 @@ export default function AdminSpotBookingManagement() {
   const { toast } = useToast()
   const { confirm } = useConfirm()
   const [searchTerm, setSearchTerm] = useState("")
-  const [filterStatus, setFilterStatus] = useState("all")
-  const [filterTimeframe, setFilterTimeframe] = useState("today")
+  const [filterValues, setFilterValues] = useState<FilterValues>({})
   const [selectedBooking, setSelectedBooking] = useState<AdminBookingData | null>(null)
   const [selectedRequest, setSelectedRequest] = useState<BookingRequest | null>(null)
   const [showBookingDetails, setShowBookingDetails] = useState(false)
@@ -204,17 +206,135 @@ export default function AdminSpotBookingManagement() {
   };
   const displayAnalytics = bookingAnalytics || defaultAnalytics;
 
-  // Filter active bookings
-  const filteredActiveBookings = displayActiveBookings.filter(booking => {
-    const matchesSearch = booking.renterName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         booking.ownerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         booking.spotNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         booking.spotLocation?.toLowerCase().includes(searchTerm.toLowerCase())
+  // Enhanced filtering for bookings with memoization for performance
+  const filteredActiveBookings = useMemo(() => displayActiveBookings.filter(booking => {
+    // Search filter - role-aware search
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase()
+      let matchesSearch = false
+
+      // If role filter is applied, search only in relevant fields
+      if (filterValues.role === "owner") {
+        // When role filter is set to "owner", search only in owner-related fields
+        matchesSearch = booking.ownerName?.toLowerCase().includes(searchLower) ||
+                       booking.ownerEmail?.toLowerCase().includes(searchLower) ||
+                       booking.ownerDepartment?.toLowerCase().includes(searchLower) ||
+                       booking.spotNumber?.toLowerCase().includes(searchLower) ||
+                       booking.spotLocation?.toLowerCase().includes(searchLower)
+      } else if (filterValues.role === "renter") {
+        // When role filter is set to "renter", search only in renter-related fields  
+        matchesSearch = booking.renterName?.toLowerCase().includes(searchLower) ||
+                       booking.renterEmail?.toLowerCase().includes(searchLower) ||
+                       booking.renterDepartment?.toLowerCase().includes(searchLower) ||
+                       booking.spotNumber?.toLowerCase().includes(searchLower) ||
+                       booking.spotLocation?.toLowerCase().includes(searchLower)
+      } else {
+        // No role filter applied - search in all fields (default behavior)
+        matchesSearch = booking.renterName?.toLowerCase().includes(searchLower) ||
+                       booking.ownerName?.toLowerCase().includes(searchLower) ||
+                       booking.spotNumber?.toLowerCase().includes(searchLower) ||
+                       booking.spotLocation?.toLowerCase().includes(searchLower) ||
+                       booking.renterEmail?.toLowerCase().includes(searchLower) ||
+                       booking.ownerEmail?.toLowerCase().includes(searchLower)
+      }
+      
+      if (!matchesSearch) return false
+    }
     
-    const matchesStatus = filterStatus === "all" || booking.status === filterStatus
+    // Status filter
+    if (filterValues.status && filterValues.status !== "all") {
+      if (booking.status !== filterValues.status) return false
+    }
     
-    return matchesSearch && matchesStatus
-  });
+    // Role filter - implemented above in search logic
+    // When role="owner", search filters focus on owner fields
+    // When role="renter", search filters focus on renter fields
+    // This provides meaningful role-based filtering without removing valid bookings
+    
+    // Location filter
+    if (filterValues.location && filterValues.location !== "all") {
+      if (!booking.spotLocation?.toLowerCase().includes(filterValues.location.toLowerCase())) {
+        return false
+      }
+    }
+    
+    // Date range filters
+    if (filterValues.dateRangeFrom) {
+      const bookingDate = new Date(booking.bookingDate)
+      const fromDate = new Date(filterValues.dateRangeFrom)
+      if (bookingDate < fromDate) return false
+    }
+    
+    if (filterValues.dateRangeTo) {
+      const bookingDate = new Date(booking.bookingDate)
+      const toDate = new Date(filterValues.dateRangeTo)
+      if (bookingDate > toDate) return false
+    }
+    
+    return true
+  }), [displayActiveBookings, searchTerm, filterValues]);
+
+  // Sorting functionality for active bookings
+  const { sortState, sortedData: sortedActiveBookings, handleSort } = useTableSort(
+    filteredActiveBookings,
+    "bookingDate", // Default sort by booking date
+    "desc" // Most recent first
+  );
+
+  // Filter configuration for spot booking management
+  const bookingFilterConfigs: FilterConfig[] = [
+    {
+      key: "status",
+      label: "Status",
+      type: "select",
+      options: [
+        { value: "confirmed", label: "Confirmed" },
+        { value: "pending", label: "Pending" },
+        { value: "cancelled", label: "Cancelled" },
+        { value: "completed", label: "Completed" }
+      ]
+    },
+    {
+      key: "role",
+      label: "User Role",
+      type: "select",
+      options: [
+        { value: "owner", label: "Owner" },
+        { value: "renter", label: "Renter" }
+      ]
+    },
+    {
+      key: "location",
+      label: "Location",
+      type: "select",
+      options: [
+        // These would ideally come from the API
+        { value: "building-a", label: "Building A" },
+        { value: "building-b", label: "Building B" },
+        { value: "parking-garage", label: "Parking Garage" },
+        { value: "outdoor-lot", label: "Outdoor Lot" }
+      ]
+    },
+    {
+      key: "dateRange",
+      label: "Booking Date Range",
+      type: "dateRange"
+    }
+  ];
+
+  // Handle filter changes
+  const handleFilterChange = (key: string, value: string | undefined) => {
+    setFilterValues(prev => ({
+      ...prev,
+      [key]: value
+    }))
+  }
+
+  // Clear all filters
+  const handleClearFilters = () => {
+    setSearchTerm("")
+    setFilterValues({})
+  }
 
   // Cancel booking mutation
   const cancelBookingMutation = useMutation({
@@ -375,7 +495,7 @@ export default function AdminSpotBookingManagement() {
             variant="outline" 
             disabled={filteredActiveBookings.length === 0}
             onClick={() => {
-              const success = quickExportBookingsPDF(filteredActiveBookings, 'Active Bookings Report', (errorMessage) => {
+              const success = quickExportBookingsPDF(sortedActiveBookings, 'Active Bookings Report', (errorMessage) => {
                 toast({
                   variant: "destructive",
                   title: "Export Failed",
@@ -398,7 +518,7 @@ export default function AdminSpotBookingManagement() {
             variant="outline" 
             disabled={filteredActiveBookings.length === 0}
             onClick={() => {
-              const success = quickExportBookingsExcel(filteredActiveBookings, 'Active Bookings Report', (errorMessage) => {
+              const success = quickExportBookingsExcel(sortedActiveBookings, 'Active Bookings Report', (errorMessage) => {
                 toast({
                   variant: "destructive",
                   title: "Export Failed",
@@ -494,38 +614,29 @@ export default function AdminSpotBookingManagement() {
 
         {/* Active Bookings Tab */}
         <TabsContent value="active" className="space-y-4">
+          {/* Enhanced Filters */}
+          <EnhancedFilters
+            searchValue={searchTerm}
+            onSearchChange={setSearchTerm}
+            filterConfigs={bookingFilterConfigs}
+            filterValues={filterValues}
+            onFilterChange={handleFilterChange}
+            onClearFilters={handleClearFilters}
+            searchPlaceholder="Search bookings by renter, owner, spot number, or location..."
+            className="hover-elevate"
+          />
+          
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Active Bookings ({filteredActiveBookings.length})</CardTitle>
+                <CardTitle>Active Bookings ({sortedActiveBookings.length})</CardTitle>
                 <div className="flex gap-2">
-                  <div className="relative">
-                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search bookings..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-8 w-64"
-                      data-testid="input-search-bookings"
-                    />
-                  </div>
-                  <Select value={filterStatus} onValueChange={setFilterStatus}>
-                    <SelectTrigger className="w-32" data-testid="select-filter-status">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="confirmed">Confirmed</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="cancelled">Cancelled</SelectItem>
-                    </SelectContent>
-                  </Select>
                   <Button 
                     size="sm"
                     variant="outline" 
-                    disabled={filteredActiveBookings.length === 0}
+                    disabled={sortedActiveBookings.length === 0}
                     onClick={() => {
-                      const success = quickExportBookingsPDF(filteredActiveBookings, 'Active Bookings Report', (errorMessage) => {
+                      const success = quickExportBookingsPDF(sortedActiveBookings, 'Active Bookings Report', (errorMessage) => {
                         toast({
                           variant: "destructive",
                           title: "Export Failed",
@@ -547,9 +658,9 @@ export default function AdminSpotBookingManagement() {
                   <Button 
                     size="sm"
                     variant="outline" 
-                    disabled={filteredActiveBookings.length === 0}
+                    disabled={sortedActiveBookings.length === 0}
                     onClick={() => {
-                      const success = quickExportBookingsExcel(filteredActiveBookings, 'Active Bookings Report', (errorMessage) => {
+                      const success = quickExportBookingsExcel(sortedActiveBookings, 'Active Bookings Report', (errorMessage) => {
                         toast({
                           variant: "destructive",
                           title: "Export Failed",
@@ -582,18 +693,68 @@ export default function AdminSpotBookingManagement() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Spot</TableHead>
-                      <TableHead>Renter</TableHead>
-                      <TableHead>Owner</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Rate</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Payment</TableHead>
+                      <SortableTableHeader
+                        column="spotNumber"
+                        currentSortColumn={sortState.column}
+                        currentSortDirection={sortState.direction}
+                        onSort={handleSort}
+                      >
+                        Spot
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column="renterName"
+                        currentSortColumn={sortState.column}
+                        currentSortDirection={sortState.direction}
+                        onSort={handleSort}
+                      >
+                        Renter
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column="ownerName"
+                        currentSortColumn={sortState.column}
+                        currentSortDirection={sortState.direction}
+                        onSort={handleSort}
+                      >
+                        Owner
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column="bookingDate"
+                        currentSortColumn={sortState.column}
+                        currentSortDirection={sortState.direction}
+                        onSort={handleSort}
+                      >
+                        Date
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column="dailyRate"
+                        currentSortColumn={sortState.column}
+                        currentSortDirection={sortState.direction}
+                        onSort={handleSort}
+                        align="right"
+                      >
+                        Rate
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column="status"
+                        currentSortColumn={sortState.column}
+                        currentSortDirection={sortState.direction}
+                        onSort={handleSort}
+                      >
+                        Status
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column="paymentReceived"
+                        currentSortColumn={sortState.column}
+                        currentSortDirection={sortState.direction}
+                        onSort={handleSort}
+                      >
+                        Payment
+                      </SortableTableHeader>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredActiveBookings.map((booking) => (
+                    {sortedActiveBookings.map((booking) => (
                       <TableRow key={booking.id} data-testid={`booking-row-${booking.id}`}>
                         <TableCell>
                           <div>

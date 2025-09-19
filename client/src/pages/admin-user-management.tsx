@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useConfirm, confirmations } from "@/hooks/use-confirm"
 import { useToast } from "@/hooks/use-toast"
+import { useTableSort } from "@/hooks/use-table-sort"
 import { apiRequest, queryClient } from "@/lib/queryClient"
 import { insertUserSchema, type InsertUser, type User, type ParkingSpot } from "@shared/schema"
 import { quickExportUsersPDF, quickExportUsersExcel } from "@/utils/export-utils"
@@ -189,7 +190,8 @@ export default function AdminUserManagement() {
     vehicleInfo: "Not configured" // TODO: Add vehicle info to schema if needed
   }));
 
-  const filteredUsers = (isLoadingUsers ? [] : displayUsers).filter(user => {
+  // Memoized filtered users for performance
+  const filteredUsers = useMemo(() => (isLoadingUsers ? [] : displayUsers).filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.department.toLowerCase().includes(searchTerm.toLowerCase())
@@ -198,7 +200,14 @@ export default function AdminUserManagement() {
     const matchesStatus = filterStatus === "all" || user.status === filterStatus
     
     return matchesSearch && matchesRole && matchesStatus
-  })
+  }), [isLoadingUsers, displayUsers, searchTerm, filterRole, filterStatus])
+
+  // Sorting functionality for users - moved from AdminUsersTable to enable export access
+  const { sortState, sortedData: sortedUsers, handleSort } = useTableSort(
+    filteredUsers,
+    "name", // Default sort by name
+    "asc" // Alphabetical order
+  )
 
   // Fetch user's assigned spots when editing
   const { data: userAssignedSpots = [], isLoading: isLoadingSpots, refetch: refetchUserSpots } = useQuery<ParkingSpot[]>({
@@ -523,7 +532,7 @@ export default function AdminUserManagement() {
             variant="outline" 
             disabled={filteredUsers.length === 0}
             onClick={() => {
-              const success = quickExportUsersPDF(filteredUsers, 'User Management Report', (errorMessage) => {
+              const success = quickExportUsersPDF(sortedUsers, 'User Management Report', (errorMessage) => {
                 toast({
                   variant: "destructive",
                   title: "Export Failed",
@@ -546,7 +555,7 @@ export default function AdminUserManagement() {
             variant="outline" 
             disabled={filteredUsers.length === 0}
             onClick={() => {
-              const success = quickExportUsersExcel(filteredUsers, 'User Management Report', (errorMessage) => {
+              const success = quickExportUsersExcel(sortedUsers, 'User Management Report', (errorMessage) => {
                 toast({
                   variant: "destructive",
                   title: "Export Failed",
@@ -1109,8 +1118,10 @@ export default function AdminUserManagement() {
                 </div>
               ) : (
                 <AdminUsersTable 
-                  users={filteredUsers} 
+                  users={sortedUsers} 
                   isLoading={isLoadingUsers}
+                  sortState={sortState}
+                  onSort={handleSort}
                   onEditUser={handleEditUser}
                   onDeleteUser={handleDeleteUser}
                   onSuspendUser={handleSuspendUser}

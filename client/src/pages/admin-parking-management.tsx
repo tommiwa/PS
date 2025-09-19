@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { queryClient, apiRequest } from "@/lib/queryClient"
 import { useToast } from "@/hooks/use-toast"
 import { useConfirm, confirmations } from "@/hooks/use-confirm"
+import { useTableSort } from "@/hooks/use-table-sort"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -13,6 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { SortableTableHeader } from "@/components/ui/sortable-table-header"
+import { EnhancedFilters, type FilterConfig, type FilterValues } from "@/components/ui/enhanced-filters"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { 
   Users, Car, Clock, AlertTriangle, TrendingUp, Plus, 
@@ -28,7 +31,7 @@ export default function AdminParkingManagement() {
   const { toast } = useToast()
   const { confirm } = useConfirm()
   const [searchTerm, setSearchTerm] = useState("")
-  const [filterType, setFilterType] = useState("all")
+  const [filterValues, setFilterValues] = useState<FilterValues>({})
   const [selectedWaitingListItem, setSelectedWaitingListItem] = useState<string | null>(null)
   const [showAssignDialog, setShowAssignDialog] = useState(false)
   const [showAddSpotDialog, setShowAddSpotDialog] = useState(false)
@@ -45,6 +48,7 @@ export default function AdminParkingManagement() {
   const [selectedUserForAssign, setSelectedUserForAssign] = useState("")
   const [selectedUserForAvailableSpot, setSelectedUserForAvailableSpot] = useState("")
   const [activeSpotTab, setActiveSpotTab] = useState("all")
+  const [unallocatedFilterType, setUnallocatedFilterType] = useState("all")
   
   // Form state for add to waiting list dialog
   const [waitingListFormData, setWaitingListFormData] = useState({
@@ -142,7 +146,7 @@ export default function AdminParkingManagement() {
     const matchesSearch = item.userName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.userEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.reason?.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesType = filterType === "all" || item.preferredSpotType === filterType
+    const matchesType = unallocatedFilterType === "all" || item.preferredSpotType === unallocatedFilterType
     return matchesSearch && matchesType
   }) || []
 
@@ -524,15 +528,116 @@ export default function AdminParkingManagement() {
     }
   };
 
+  // Enhanced filtering for parking spots
   const filteredSpots = allSpots.filter(spot => {
     const matchesTab = activeSpotTab === "all" || 
                      (activeSpotTab === "unallocated" && !spot.ownerId) ||
                      (activeSpotTab === "allocated" && spot.ownerId);
-    const matchesSearch = spot.spotNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         spot.location.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = filterType === "all" || spot.spotType === filterType;
-    return matchesTab && matchesSearch && matchesType;
+    
+    // Search filter
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase()
+      const matchesSearch = spot.spotNumber.toLowerCase().includes(searchLower) ||
+                           spot.location.toLowerCase().includes(searchLower)
+      if (!matchesSearch) return false
+    }
+    
+    // Spot type filter
+    if (filterValues.spotType && filterValues.spotType !== "all") {
+      if (spot.spotType !== filterValues.spotType) return false
+    }
+    
+    // Location filter
+    if (filterValues.location && filterValues.location !== "all") {
+      if (!spot.location.toLowerCase().includes(filterValues.location.toLowerCase())) {
+        return false
+      }
+    }
+    
+    // Assignment status filter (assigned vs available)
+    if (filterValues.assignmentStatus && filterValues.assignmentStatus !== "all") {
+      const isAssigned = !!spot.ownerId
+      if (filterValues.assignmentStatus === "assigned" && !isAssigned) return false
+      if (filterValues.assignmentStatus === "available" && isAssigned) return false
+    }
+    
+    // Enable/Disable status filter
+    if (filterValues.enableStatus && filterValues.enableStatus !== "all") {
+      const isEnabled = spot.isBookable !== false
+      if (filterValues.enableStatus === "enabled" && !isEnabled) return false
+      if (filterValues.enableStatus === "disabled" && isEnabled) return false
+    }
+    
+    return matchesTab
   });
+  
+  // Sorting functionality for parking spots
+  const { sortState, sortedData: sortedSpots, handleSort } = useTableSort(
+    filteredSpots,
+    "spotNumber", // Default sort by spot number
+    "asc" // Ascending order
+  )
+  
+  // Filter configuration for parking management
+  const parkingFilterConfigs: FilterConfig[] = [
+    {
+      key: "spotType",
+      label: "Spot Type",
+      type: "select",
+      options: [
+        { value: "regular", label: "Regular" },
+        { value: "electric", label: "EV" },
+        { value: "tesla_ev", label: "Tesla Charger" },
+        { value: "accessible", label: "Accessible" },
+        { value: "reserved", label: "Reserved" }
+      ]
+    },
+    {
+      key: "location",
+      label: "Location",
+      type: "select",
+      options: [
+        // These would ideally come from the API
+        { value: "building-a", label: "Building A" },
+        { value: "building-b", label: "Building B" },
+        { value: "parking-garage", label: "Parking Garage" },
+        { value: "outdoor-lot", label: "Outdoor Lot" },
+        { value: "underground", label: "Underground" }
+      ]
+    },
+    {
+      key: "assignmentStatus",
+      label: "Assignment Status",
+      type: "select",
+      options: [
+        { value: "assigned", label: "Assigned" },
+        { value: "available", label: "Available" }
+      ]
+    },
+    {
+      key: "enableStatus",
+      label: "Enable/Disable Status",
+      type: "select",
+      options: [
+        { value: "enabled", label: "Enabled" },
+        { value: "disabled", label: "Disabled" }
+      ]
+    }
+  ]
+  
+  // Handle filter changes
+  const handleFilterChange = (key: string, value: string | undefined) => {
+    setFilterValues(prev => ({
+      ...prev,
+      [key]: value
+    }))
+  }
+  
+  // Clear all filters
+  const handleClearFilters = () => {
+    setSearchTerm("")
+    setFilterValues({})
+  }
 
   const getPriorityBadge = (priority: number) => {
     switch (priority) {
@@ -605,7 +710,7 @@ export default function AdminParkingManagement() {
             variant="outline" 
             disabled={allSpots.length === 0}
             onClick={() => {
-              const success = quickExportParkingSpotsPDF(allSpots, 'Parking Management Report', (errorMessage) => {
+              const success = quickExportParkingSpotsPDF(sortedSpots, 'Parking Management Report', (errorMessage) => {
                 toast({
                   variant: "destructive",
                   title: "Export Failed",
@@ -628,7 +733,7 @@ export default function AdminParkingManagement() {
             variant="outline" 
             disabled={allSpots.length === 0}
             onClick={() => {
-              const success = quickExportParkingSpotsExcel(allSpots, 'Parking Management Report', (errorMessage) => {
+              const success = quickExportParkingSpotsExcel(sortedSpots, 'Parking Management Report', (errorMessage) => {
                 toast({
                   variant: "destructive",
                   title: "Export Failed",
@@ -739,34 +844,23 @@ export default function AdminParkingManagement() {
 
         {/* All Spots and Unallocated Spots Tab */}
         <TabsContent value="all" className="space-y-4">
+          {/* Enhanced Filters */}
+          <EnhancedFilters
+            searchValue={searchTerm}
+            onSearchChange={setSearchTerm}
+            filterConfigs={parkingFilterConfigs}
+            filterValues={filterValues}
+            onFilterChange={handleFilterChange}
+            onClearFilters={handleClearFilters}
+            searchPlaceholder="Search spots by number or location..."
+            className="hover-elevate"
+          />
+          
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Parking Spots ({filteredSpots.length})</CardTitle>
+                <CardTitle>Parking Spots ({sortedSpots.length})</CardTitle>
                 <div className="flex gap-2">
-                  <div className="relative">
-                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search spots..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-8 w-64"
-                      data-testid="input-search-spots"
-                    />
-                  </div>
-                  <Select value={filterType} onValueChange={setFilterType}>
-                    <SelectTrigger className="w-32" data-testid="select-filter-type">
-                      <SelectValue placeholder="Type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Types</SelectItem>
-                      <SelectItem value="regular">Regular</SelectItem>
-                      <SelectItem value="electric">EV</SelectItem>
-                      <SelectItem value="tesla_ev">Tesla Charger</SelectItem>
-                      <SelectItem value="accessible">Accessible</SelectItem>
-                      <SelectItem value="reserved">Reserved</SelectItem>
-                    </SelectContent>
-                  </Select>
                   {selectedSpots.size > 0 && (
                     <>
                       <Button
@@ -797,11 +891,59 @@ export default function AdminParkingManagement() {
                       </Button>
                     </>
                   )}
+                  <Button 
+                    size="sm"
+                    variant="outline" 
+                    disabled={sortedSpots.length === 0}
+                    onClick={() => {
+                      const success = quickExportParkingSpotsPDF(sortedSpots, 'Parking Spots Report', (errorMessage) => {
+                        toast({
+                          variant: "destructive",
+                          title: "Export Failed",
+                          description: errorMessage
+                        })
+                      })
+                      if (success) {
+                        toast({
+                          title: "Export Successful",
+                          description: "PDF report has been downloaded successfully"
+                        })
+                      }
+                    }}
+                    data-testid="button-export-spots-pdf"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    PDF
+                  </Button>
+                  <Button 
+                    size="sm"
+                    variant="outline" 
+                    disabled={sortedSpots.length === 0}
+                    onClick={() => {
+                      const success = quickExportParkingSpotsExcel(sortedSpots, 'Parking Spots Report', (errorMessage) => {
+                        toast({
+                          variant: "destructive",
+                          title: "Export Failed",
+                          description: errorMessage
+                        })
+                      })
+                      if (success) {
+                        toast({
+                          title: "Export Successful",
+                          description: "Excel report has been downloaded successfully"
+                        })
+                      }
+                    }}
+                    data-testid="button-export-spots-excel"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Excel
+                  </Button>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-          {filteredSpots.length === 0 ? (
+          {sortedSpots.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground" data-testid="text-no-spots">
               <Car className="h-12 w-12 mx-auto mb-4 opacity-30" />
               <p>No parking spots found matching your criteria.</p>
@@ -818,17 +960,59 @@ export default function AdminParkingManagement() {
                               data-testid="checkbox-select-all-spots"
                             />
                           </TableHead>
-                          <TableHead>Spot Number</TableHead>
-                          <TableHead>Location</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Assigned To</TableHead>
-                          <TableHead>Assignment Status</TableHead>
+                          <SortableTableHeader
+                            column="spotNumber"
+                            currentSortColumn={sortState.column}
+                            currentSortDirection={sortState.direction}
+                            onSort={handleSort}
+                          >
+                            Spot Number
+                          </SortableTableHeader>
+                          <SortableTableHeader
+                            column="location"
+                            currentSortColumn={sortState.column}
+                            currentSortDirection={sortState.direction}
+                            onSort={handleSort}
+                          >
+                            Location
+                          </SortableTableHeader>
+                          <SortableTableHeader
+                            column="spotType"
+                            currentSortColumn={sortState.column}
+                            currentSortDirection={sortState.direction}
+                            onSort={handleSort}
+                          >
+                            Type
+                          </SortableTableHeader>
+                          <SortableTableHeader
+                            column="isActive"
+                            currentSortColumn={sortState.column}
+                            currentSortDirection={sortState.direction}
+                            onSort={handleSort}
+                          >
+                            Status
+                          </SortableTableHeader>
+                          <SortableTableHeader
+                            column="ownerId"
+                            currentSortColumn={sortState.column}
+                            currentSortDirection={sortState.direction}
+                            onSort={handleSort}
+                          >
+                            Assigned To
+                          </SortableTableHeader>
+                          <SortableTableHeader
+                            column="isBookable"
+                            currentSortColumn={sortState.column}
+                            currentSortDirection={sortState.direction}
+                            onSort={handleSort}
+                          >
+                            Assignment Status
+                          </SortableTableHeader>
                           <TableHead>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredSpots.map((spot) => (
+                        {sortedSpots.map((spot) => (
                           <TableRow key={spot.id} data-testid={`row-spot-${spot.id}`}>
                             <TableCell>
                               <Checkbox
@@ -949,7 +1133,7 @@ export default function AdminParkingManagement() {
                       data-testid="input-search-unallocated-spots"
                     />
                   </div>
-                  <Select value={filterType} onValueChange={setFilterType}>
+                  <Select value={unallocatedFilterType} onValueChange={setUnallocatedFilterType}>
                     <SelectTrigger className="w-32" data-testid="select-filter-unallocated-type">
                       <SelectValue placeholder="Type" />
                     </SelectTrigger>
@@ -969,7 +1153,7 @@ export default function AdminParkingManagement() {
               {unallocatedSpots.filter(spot => {
                 const matchesSearch = spot.spotNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                      spot.location.toLowerCase().includes(searchTerm.toLowerCase());
-                const matchesType = filterType === "all" || spot.spotType === filterType;
+                const matchesType = unallocatedFilterType === "all" || spot.spotType === unallocatedFilterType;
                 return matchesSearch && matchesType;
               }).length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground" data-testid="text-no-unallocated-spots">
@@ -994,7 +1178,7 @@ export default function AdminParkingManagement() {
                       {unallocatedSpots.filter(spot => {
                         const matchesSearch = spot.spotNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                              spot.location.toLowerCase().includes(searchTerm.toLowerCase());
-                        const matchesType = filterType === "all" || spot.spotType === filterType;
+                        const matchesType = unallocatedFilterType === "all" || spot.spotType === unallocatedFilterType;
                         return matchesSearch && matchesType;
                       }).map((spot) => (
                         <TableRow key={spot.id} data-testid={`row-unallocated-spot-${spot.id}`}>
