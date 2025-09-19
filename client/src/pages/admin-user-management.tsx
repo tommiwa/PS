@@ -1005,7 +1005,7 @@ export default function AdminUserManagement() {
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="users" data-testid="tab-users">Users</TabsTrigger>
+          <TabsTrigger value="users" data-testid="tab-users">User Directory</TabsTrigger>
           <TabsTrigger value="activity" data-testid="tab-activity">Activity</TabsTrigger>
           <TabsTrigger value="reports" data-testid="tab-reports">Reports</TabsTrigger>
         </TabsList>
@@ -1099,7 +1099,7 @@ export default function AdminUserManagement() {
           {/* Users Table */}
           <Card>
             <CardHeader>
-              <CardTitle>Users</CardTitle>
+              <CardTitle>User Directory</CardTitle>
             </CardHeader>
             <CardContent>
               {isLoadingUsers ? (
