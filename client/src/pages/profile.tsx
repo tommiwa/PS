@@ -77,7 +77,8 @@ const vehicleSchema = z.object({
   year: z.number().min(1990, "Year must be 1990 or later").max(new Date().getFullYear() + 1, "Year cannot be in the future"),
   licensePlate: z.string().min(1, "License plate is required"),
   color: z.string().optional(),
-  isElectric: z.boolean().default(false)
+  isElectric: z.boolean().default(false),
+  isDefault: z.boolean().default(false)
 });
 
 type WaitingListForm = z.infer<typeof waitingListSchema>;
@@ -135,7 +136,8 @@ export default function Profile() {
       year: new Date().getFullYear(),
       licensePlate: "",
       color: "",
-      isElectric: false
+      isElectric: false,
+      isDefault: false
     }
   });
 
@@ -1100,7 +1102,7 @@ export default function Profile() {
                             setEditWaitingListMode(true);
                             waitingListForm.reset({
                               preferredSpotType: waitingListEntry.preferredSpotType as any,
-                              preferredBuilding: waitingListEntry.preferredBuilding,
+                              preferredBuilding: waitingListEntry.preferredBuilding || "",
                               priority: waitingListEntry.priority.toString() as any,
                               reason: waitingListEntry.reason || ""
                             });

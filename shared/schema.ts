@@ -250,6 +250,7 @@ export const vehicles = pgTable("vehicles", {
 
 export const insertVehicleSchema = createInsertSchema(vehicles).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
