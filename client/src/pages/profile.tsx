@@ -385,10 +385,6 @@ export default function Profile() {
             user={userProfile} 
             onEditProfile={handleEditProfile}
             onAddVehicle={handleAddVehicle}
-            onManageBookings={handleManageBookings}
-            onNotificationSettings={handleNotificationSettings}
-            onViewReports={handleViewReports}
-            onManageSpots={handleManageSpots}
           />
           
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -1196,7 +1192,7 @@ export default function Profile() {
             <div className="flex items-center gap-6">
               <Avatar className="h-20 w-20">
                 <AvatarFallback className="text-lg">
-                  {getInitials(user.name)}
+                  {getInitials(user.name || 'User')}
                 </AvatarFallback>
               </Avatar>
               <div className="space-y-2">

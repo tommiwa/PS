@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Mail, Phone, Car, Settings, MapPin, Plus, Calendar, Bell, FileText, Users } from "lucide-react"
+import { Mail, Phone, Car, Settings, MapPin, Plus } from "lucide-react"
 
 export interface Vehicle {
   id: string
@@ -31,10 +31,6 @@ interface UserProfileCardProps {
   user: UserProfile
   onEditProfile?: () => void
   onAddVehicle?: () => void
-  onManageBookings?: () => void
-  onNotificationSettings?: () => void
-  onViewReports?: () => void
-  onManageSpots?: () => void
   showEditButton?: boolean
 }
 
@@ -42,10 +38,6 @@ export function UserProfileCard({
   user, 
   onEditProfile, 
   onAddVehicle,
-  onManageBookings,
-  onNotificationSettings,
-  onViewReports,
-  onManageSpots,
   showEditButton = true 
 }: UserProfileCardProps) {
   const getRoleBadge = () => {
@@ -181,57 +173,23 @@ export function UserProfileCard({
           )}
         </div>
 
-        {/* Quick Actions */}
-        <div className="space-y-3">
-          <h4 className="text-sm font-medium">Quick Actions</h4>
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-auto p-3 flex flex-col gap-1"
-              onClick={onManageBookings}
-              data-testid="button-manage-bookings"
-            >
-              <Calendar className="h-4 w-4" />
-              <span className="text-xs">Manage Bookings</span>
-            </Button>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-auto p-3 flex flex-col gap-1"
-              onClick={onNotificationSettings}
-              data-testid="button-notification-settings"
-            >
-              <Bell className="h-4 w-4" />
-              <span className="text-xs">Notifications</span>
-            </Button>
-            
-            {user.role === 'owner' && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-auto p-3 flex flex-col gap-1"
-                onClick={onManageSpots}
-                data-testid="button-manage-spots"
-              >
-                <MapPin className="h-4 w-4" />
-                <span className="text-xs">My Spots</span>
-              </Button>
-            )}
-            
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-auto p-3 flex flex-col gap-1"
-              onClick={onViewReports}
-              data-testid="button-view-reports"
-            >
-              <FileText className="h-4 w-4" />
-              <span className="text-xs">Reports</span>
-            </Button>
+        {/* Assigned Spots */}
+        {user.role === 'owner' && user.spotCount && user.spotCount > 0 && (
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium flex items-center gap-2">
+              <MapPin className="h-4 w-4" />
+              Assigned Spots
+            </h4>
+            <div className="p-3 bg-muted rounded-md">
+              <div className="text-sm font-medium">
+                {user.spotCount} parking spot{user.spotCount !== 1 ? 's' : ''} owned
+              </div>
+              <div className="text-sm text-muted-foreground">
+                View details in the My Spots section
+              </div>
+            </div>
           </div>
-        </div>
+        )}
         
         <div className="text-xs text-muted-foreground">
           Member since {user.memberSince}
