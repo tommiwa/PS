@@ -92,6 +92,23 @@ export default function AdminUserManagement() {
   const [editingUser, setEditingUser] = useState<any>(null)
   const [showBulkActions, setShowBulkActions] = useState(false)
   const [activeTab, setActiveTab] = useState("users")
+  
+  // Auto-refresh data when switching tabs
+  useEffect(() => {
+    const tabDataMap: Record<string, string[]> = {
+      'users': ['/api/admin/users'],
+      'activity': ['/api/admin/user-activity'], 
+      'reports': ['/api/admin/users', '/api/admin/analytics-overview']
+    };
+
+    const queriesToRefresh = tabDataMap[activeTab];
+    if (queriesToRefresh) {
+      // Invalidate queries for the active tab to get fresh data
+      queriesToRefresh.forEach(queryKey => {
+        queryClient.invalidateQueries({ queryKey: [queryKey] });
+      });
+    }
+  }, [activeTab])
 
   // Form setup for creating users
   const form = useForm<CreateUserFormData>({
