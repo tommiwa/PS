@@ -319,14 +319,9 @@ export default function AdminUserManagement() {
   }
 
   const handleDeleteUser = async (userId: string) => {
-    const user = displayUsers.find(u => u.id === userId)
-    if (!user) return
-
-    const confirmed = await confirm(confirmations.deleteUser(user.name))
-    if (confirmed) {
-      console.log('Delete user:', userId)
-      deleteUserMutation.mutate(userId);
-    }
+    // No need for confirmation here as AdminUsersTable already handles it
+    console.log('Delete user:', userId)
+    deleteUserMutation.mutate(userId);
   }
 
   const handleSuspendUser = async (userId: string) => {
