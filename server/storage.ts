@@ -3,6 +3,8 @@ import {
   type InsertUser, 
   type UpsertUser,
   type ParkingSpot,
+  type ParkingSpotWithUser,
+  type ParkingSpotWithSafeUserData,
   type InsertParkingSpot,
   type SpotListing,
   type InsertSpotListing,
@@ -41,6 +43,15 @@ export interface IStorage {
   createParkingSpot(spot: InsertParkingSpot): Promise<ParkingSpot>;
   updateParkingSpot(id: string, updates: Partial<InsertParkingSpot>): Promise<ParkingSpot | undefined>;
   deleteParkingSpot(id: string): Promise<boolean>;
+  
+  // Enriched parking spot operations (with user information)
+  getParkingSpotWithUser(id: string): Promise<ParkingSpotWithUser | undefined>;
+  getParkingSpotsByOwnerWithUser(ownerId: string): Promise<ParkingSpotWithUser[]>;
+  getAllParkingSpotsWithUser(): Promise<ParkingSpotWithUser[]>;
+
+  // Safe enriched parking spot operations (without sensitive user data)
+  getParkingSpotWithSafeUserData(id: string): Promise<ParkingSpotWithSafeUserData | undefined>;
+  getAllParkingSpotsWithSafeUserData(): Promise<ParkingSpotWithSafeUserData[]>;
 
   // Spot Listing operations
   getSpotListing(id: string): Promise<SpotListing | undefined>;
@@ -912,6 +923,76 @@ export class MemStorage implements IStorage {
 
   async getAllParkingSpots(): Promise<ParkingSpot[]> {
     return Array.from(this.parkingSpots.values());
+  }
+
+  // Enriched parking spot methods with user information
+  async getParkingSpotWithUser(id: string): Promise<ParkingSpotWithUser | undefined> {
+    const spot = this.parkingSpots.get(id);
+    if (!spot) return undefined;
+
+    return this.enrichSpotWithUserInfo(spot);
+  }
+
+  async getParkingSpotsByOwnerWithUser(ownerId: string): Promise<ParkingSpotWithUser[]> {
+    const spots = Array.from(this.parkingSpots.values()).filter(
+      (spot) => spot.ownerId === ownerId
+    );
+    
+    return Promise.all(spots.map(spot => this.enrichSpotWithUserInfo(spot)));
+  }
+
+  async getAllParkingSpotsWithUser(): Promise<ParkingSpotWithUser[]> {
+    const spots = Array.from(this.parkingSpots.values());
+    return Promise.all(spots.map(spot => this.enrichSpotWithUserInfo(spot)));
+  }
+
+  // Helper method to enrich parking spot with user information
+  private async enrichSpotWithUserInfo(spot: ParkingSpot): Promise<ParkingSpotWithUser> {
+    const enrichedSpot: ParkingSpotWithUser = { ...spot };
+    
+    if (spot.ownerId) {
+      const user = this.users.get(spot.ownerId);
+      if (user) {
+        enrichedSpot.assignedUserName = user.firstName && user.lastName 
+          ? `${user.firstName} ${user.lastName}` 
+          : user.firstName || user.lastName || user.email;
+        enrichedSpot.assignedUserEmail = user.email;
+        enrichedSpot.assignedUserDepartment = user.department || undefined;
+      }
+    }
+    
+    return enrichedSpot;
+  }
+
+  // Safe enriched parking spot methods (without sensitive user data)
+  async getParkingSpotWithSafeUserData(id: string): Promise<ParkingSpotWithSafeUserData | undefined> {
+    const spot = this.parkingSpots.get(id);
+    if (!spot) return undefined;
+
+    return this.enrichSpotWithSafeUserInfo(spot);
+  }
+
+  async getAllParkingSpotsWithSafeUserData(): Promise<ParkingSpotWithSafeUserData[]> {
+    const spots = Array.from(this.parkingSpots.values());
+    return Promise.all(spots.map(spot => this.enrichSpotWithSafeUserInfo(spot)));
+  }
+
+  // Helper method to safely enrich parking spot with minimal user information
+  private async enrichSpotWithSafeUserInfo(spot: ParkingSpot): Promise<ParkingSpotWithSafeUserData> {
+    const enrichedSpot: ParkingSpotWithSafeUserData = { ...spot };
+    
+    if (spot.ownerId) {
+      const user = this.users.get(spot.ownerId);
+      if (user) {
+        enrichedSpot.assignedUserName = user.firstName && user.lastName 
+          ? `${user.firstName} ${user.lastName}` 
+          : user.firstName || user.lastName || user.email;
+        enrichedSpot.assignedUserDepartment = user.department || undefined;
+        // Intentionally NOT including assignedUserEmail for data security
+      }
+    }
+    
+    return enrichedSpot;
   }
 
   async createParkingSpot(insertSpot: InsertParkingSpot): Promise<ParkingSpot> {

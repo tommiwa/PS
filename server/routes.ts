@@ -627,7 +627,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get available parking spots for search (Authenticated users)
   app.get("/api/available-spots", isAuthenticated, async (req: any, res) => {
     try {
-      const allSpots = await storage.getAllParkingSpots();
+      // Use safe method that excludes sensitive user data like email addresses
+      const allSpots = await storage.getAllParkingSpotsWithSafeUserData();
       
       // Filter to only show spots that can be searched/booked by renters
       const availableSpots = allSpots.filter(spot => {
@@ -710,7 +711,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all unallocated parking spots (Admin only)
   app.get("/api/admin/unallocated-spots", requireAdmin, async (req, res) => {
     try {
-      const allSpots = await storage.getAllParkingSpots();
+      const allSpots = await storage.getAllParkingSpotsWithUser();
       const unallocatedSpots = allSpots.filter(spot => !spot.ownerId);
       res.json(unallocatedSpots);
     } catch (error) {
@@ -911,7 +912,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all parking spots (allocated + unallocated) for admin overview (Admin only)
   app.get("/api/admin/all-spots", requireAdmin, async (req, res) => {
     try {
-      const allSpots = await storage.getAllParkingSpots();
+      const allSpots = await storage.getAllParkingSpotsWithUser();
       res.json(allSpots);
     } catch (error) {
       console.error("Error fetching all spots:", error);

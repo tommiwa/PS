@@ -21,7 +21,7 @@ import {
   Zap, Accessibility, Building, MoreHorizontal, Info, RefreshCw,
   Trash2, Edit, UserMinus, UserCheck
 } from "lucide-react"
-import type { WaitingList, ParkingSpot, SpotType } from "@shared/schema"
+import type { WaitingList, ParkingSpot, ParkingSpotWithUser, SpotType } from "@shared/schema"
 
 export default function AdminParkingManagement() {
   const { toast } = useToast()
@@ -36,10 +36,10 @@ export default function AdminParkingManagement() {
   const [showDirectAssignDialog, setShowDirectAssignDialog] = useState(false)
   const [showReleaseSpotDialog, setShowReleaseSpotDialog] = useState(false)
   const [showAssignAvailableSpotDialog, setShowAssignAvailableSpotDialog] = useState(false)
-  const [selectedSpot, setSelectedSpot] = useState<ParkingSpot | null>(null)
-  const [selectedSpotForAssign, setSelectedSpotForAssign] = useState<ParkingSpot | null>(null)
-  const [selectedSpotForRelease, setSelectedSpotForRelease] = useState<ParkingSpot | null>(null)
-  const [selectedAvailableSpot, setSelectedAvailableSpot] = useState<ParkingSpot | null>(null)
+  const [selectedSpot, setSelectedSpot] = useState<ParkingSpotWithUser | null>(null)
+  const [selectedSpotForAssign, setSelectedSpotForAssign] = useState<ParkingSpotWithUser | null>(null)
+  const [selectedSpotForRelease, setSelectedSpotForRelease] = useState<ParkingSpotWithUser | null>(null)
+  const [selectedAvailableSpot, setSelectedAvailableSpot] = useState<ParkingSpotWithUser | null>(null)
   const [selectedUserForWaiting, setSelectedUserForWaiting] = useState("")
   const [selectedUserForAssign, setSelectedUserForAssign] = useState("")
   const [selectedUserForAvailableSpot, setSelectedUserForAvailableSpot] = useState("")
@@ -95,12 +95,12 @@ export default function AdminParkingManagement() {
   });
 
   // Fetch unallocated spots
-  const { data: unallocatedSpots = [] } = useQuery<ParkingSpot[]>({
+  const { data: unallocatedSpots = [] } = useQuery<ParkingSpotWithUser[]>({
     queryKey: ["/api/admin/unallocated-spots"],
   });
 
   // Fetch all spots (allocated + unallocated) for comprehensive admin view
-  const { data: allSpots = [] } = useQuery<ParkingSpot[]>({
+  const { data: allSpots = [] } = useQuery<ParkingSpotWithUser[]>({
     queryKey: ["/api/admin/all-spots"],
   });
 

@@ -1,25 +1,11 @@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { MapPin, Car, Zap, Accessibility, Calendar, DollarSign, Building, Ban } from "lucide-react"
-
-export interface ParkingSpot {
-  id: string
-  spotNumber: string
-  location: string
-  type: "regular" | "accessible" | "electric" | "tesla_ev" | "reserved"
-  isInside: boolean
-  price: number
-  availability?: {
-    date: string
-  }
-  owner: string
-  isAvailable: boolean
-  isBookable?: boolean // Whether the spot can be booked (false for reserved)
-}
+import { MapPin, Car, Zap, Accessibility, Calendar, DollarSign, Building, Ban, User } from "lucide-react"
+import type { ParkingSpot, ParkingSpotWithUser } from "@shared/schema"
 
 interface ParkingSpotCardProps {
-  spot: ParkingSpot
+  spot: ParkingSpot | ParkingSpotWithUser
   onBook?: (spotId: string) => void
   onViewDetails?: (spotId: string) => void
   showBookButton?: boolean
@@ -31,8 +17,13 @@ export function ParkingSpotCard({
   onViewDetails,
   showBookButton = true 
 }: ParkingSpotCardProps) {
+  // Type guard to check if spot has enriched user data
+  const hasUserData = (spot: ParkingSpot | ParkingSpotWithUser): spot is ParkingSpotWithUser => {
+    return 'assignedUserName' in spot;
+  };
+
   const getSpotTypeIcon = () => {
-    switch (spot.type) {
+    switch (spot.spotType) {
       case "electric":
         return <Zap className="h-4 w-4" />
       case "tesla_ev":
@@ -47,6 +38,7 @@ export function ParkingSpotCard({
   }
 
   const getSpotTypeBadge = () => {
+    const spotType = spot.spotType;
     const variants = {
       regular: "secondary" as const,
       accessible: "default" as const,
@@ -64,9 +56,9 @@ export function ParkingSpotCard({
     }
     
     return (
-      <Badge variant={variants[spot.type]} className="gap-1">
+      <Badge variant={variants[spotType]} className="gap-1">
         {getSpotTypeIcon()}
-        {labels[spot.type]}
+        {labels[spotType]}
       </Badge>
     )
   }
@@ -95,25 +87,43 @@ export function ParkingSpotCard({
         </div>
         <div className="flex items-center gap-1 text-sm text-muted-foreground">
           <MapPin className="h-4 w-4" />
-          {spot.location} {spot.isInside && "(Inside)"}
+          {spot.location} {spot.isIndoor && "(Indoor)"}
         </div>
       </CardHeader>
       
       <CardContent className="pt-0 pb-4">
-        <div className="space-y-2">
+        <div className="space-y-3">
+          {/* Prominent Assigned User Display */}
+          <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-md">
+            <User className="h-4 w-4 text-muted-foreground" />
+            <div className="flex-1">
+              <div className="text-sm font-medium" data-testid={`text-assigned-user-${spot.id}`}>
+                {hasUserData(spot) && spot.assignedUserName 
+                  ? spot.assignedUserName 
+                  : spot.ownerId 
+                    ? "Assigned User" 
+                    : "Unassigned"}
+              </div>
+              {hasUserData(spot) && spot.assignedUserDepartment && (
+                <div className="text-xs text-muted-foreground">
+                  {spot.assignedUserDepartment}
+                </div>
+              )}
+            </div>
+          </div>
+
           {spot.availability?.date && (
             <div className="flex items-center gap-2 text-sm">
               <Calendar className="h-4 w-4" />
               {spot.availability.date} - Full Day
             </div>
           )}
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <DollarSign className="h-4 w-4" />
-            ${spot.price}/day
-          </div>
-          <div className="text-xs text-muted-foreground">
-            Owner: {spot.owner}
-          </div>
+          {spot.price && (
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <DollarSign className="h-4 w-4" />
+              ${spot.price}/day
+            </div>
+          )}
         </div>
       </CardContent>
       
@@ -131,12 +141,12 @@ export function ParkingSpotCard({
           <Button 
             size="sm" 
             onClick={handleBook}
-            disabled={!spot.isAvailable || spot.isBookable === false}
+            disabled={!(spot.isActive !== false) || spot.isBookable === false}
             className="flex-1"
             data-testid={`button-book-${spot.id}`}
           >
             {spot.isBookable === false ? "Not Bookable" : 
-             spot.isAvailable ? "Book" : "Unavailable"}
+             (spot.isActive !== false) ? "Book" : "Unavailable"}
           </Button>
         </CardFooter>
       )}

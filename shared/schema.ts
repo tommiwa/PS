@@ -84,6 +84,19 @@ export const insertParkingSpotSchema = createInsertSchema(parkingSpots).omit({
 export type InsertParkingSpot = z.infer<typeof insertParkingSpotSchema>;
 export type ParkingSpot = typeof parkingSpots.$inferSelect;
 
+// Enriched parking spot type that includes assigned user information (admin-only)
+export interface ParkingSpotWithUser extends ParkingSpot {
+  assignedUserName?: string;
+  assignedUserEmail?: string;
+  assignedUserDepartment?: string;
+}
+
+// Safe parking spot type for non-admin endpoints (excludes sensitive user data)
+export interface ParkingSpotWithSafeUserData extends ParkingSpot {
+  assignedUserName?: string;
+  assignedUserDepartment?: string;
+}
+
 // Spot Listings Table
 export const listingTypes = z.enum(["single", "period", "recurring"]);
 export type ListingType = z.infer<typeof listingTypes>;
