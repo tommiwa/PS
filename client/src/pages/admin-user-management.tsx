@@ -211,13 +211,29 @@ export default function AdminUserManagement() {
       console.error('Error deleting user:', error);
       let errorMessage = "Failed to delete user. Please try again.";
       
-      if (error.status === 401 || error.message?.includes('Unauthorized')) {
-        errorMessage = "You need administrator privileges to delete users. Please contact an admin or use the 'Promote to Admin' button below for testing.";
-      } else if (error.status === 400) {
-        // Handle business logic errors from backend
-        errorMessage = error.details || error.message || "Cannot delete user due to business constraints.";
-      } else if (error.message) {
-        errorMessage = error.message;
+      // Parse the error message to extract details
+      if (error.message) {
+        const message = error.message;
+        
+        if (message.includes('401') || message.includes('Unauthorized')) {
+          errorMessage = "You need administrator privileges to delete users.";
+        } else if (message.includes('400')) {
+          // Extract the JSON error details from the error message
+          try {
+            const jsonStart = message.indexOf('{');
+            if (jsonStart !== -1) {
+              const jsonStr = message.substring(jsonStart);
+              const errorData = JSON.parse(jsonStr);
+              errorMessage = errorData.details || errorData.error || message;
+            } else {
+              errorMessage = message;
+            }
+          } catch (e) {
+            errorMessage = message;
+          }
+        } else {
+          errorMessage = message;
+        }
       }
       
       toast({
@@ -228,53 +244,14 @@ export default function AdminUserManagement() {
     }
   });
 
-  // Promote to admin mutation (for testing purposes)
-  const promoteToAdminMutation = useMutation({
-    mutationFn: async (): Promise<{ success: boolean; message: string }> => {
-      const response = await apiRequest('/api/auth/promote-to-admin', { method: 'POST' });
-      return await response.json();
-    },
-    onSuccess: (result: { success: boolean; message: string }) => {
-      toast({
-        title: "Admin Privileges Granted",
-        description: "You now have administrator privileges. Try the delete functionality again!",
-      });
-    },
-    onError: (error: any) => {
-      console.error('Error promoting to admin:', error);
-      toast({
-        variant: "destructive",
-        title: "Error Granting Admin Access",
-        description: error.message || "Failed to promote user to admin. This feature may not be available in production.",
-      });
-    }
-  });
 
-  const handlePromoteToAdmin = () => {
-    promoteToAdminMutation.mutate();
-  };
-
-  const handleEditUser = async (userId: string) => {
+  const handleEditUser = (userId: string) => {
     console.log('Edit user:', userId)
     const user = displayUsers.find(u => u.id === userId)
     if (!user) return
 
-    // Use proper dialog confirmation instead of browser alert
-    const shouldEdit = await confirm({
-      title: "Edit User",
-      description: `Edit user functionality for ${user.name} is not yet implemented. Would you like to continue to the edit form?`,
-      confirmText: "Continue to Edit",
-      cancelText: "Cancel",
-      variant: "default"
-    })
-    
-    if (shouldEdit) {
-      // TODO: Open edit user dialog with form to update user information
-      toast({
-        title: "Edit User",
-        description: `Edit functionality for ${user.name} is coming soon!`,
-      });
-    }
+    // Use browser popup as requested by user
+    alert(`Edit functionality for user ${user.name} is not yet implemented. This would open an edit form in production.`)
   }
 
   const handleDeleteUser = async (userId: string) => {
@@ -781,16 +758,6 @@ export default function AdminUserManagement() {
                   <Button variant="outline" onClick={() => setShowBulkActions(!showBulkActions)}>
                     <Filter className="h-4 w-4 mr-2" />
                     Bulk Actions
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    className="bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
-                    onClick={handlePromoteToAdmin}
-                    disabled={promoteToAdminMutation.isPending}
-                    data-testid="button-promote-admin"
-                  >
-                    <Shield className="h-4 w-4 mr-2" />
-                    {promoteToAdminMutation.isPending ? "Promoting..." : "Promote to Admin"}
                   </Button>
                 </div>
               </div>
