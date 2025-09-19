@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { AuthProvider, useAuth } from "@/contexts/auth-context";
 import { ThemeProvider } from "@/contexts/theme-context";
+import { LanguageProvider } from "@/contexts/language-context";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ConfirmProvider } from "@/hooks/use-confirm";
 import { NotificationCenter } from "@/components/notification-center";
@@ -21,7 +22,7 @@ import { useEffect } from "react";
 import Dashboard from "@/pages/dashboard";
 import Search from "@/pages/search";
 import Admin from "@/pages/admin";
-import Profile from "@/pages/profile";
+import Profile from "@/pages/profile-working";
 import MyBookings from "@/pages/my-bookings";
 import MySpots from "@/pages/my-spots";
 import AdminUserManagement from "@/pages/admin-user-management";
@@ -261,12 +262,14 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <ThemeProvider>
-            <AuthProvider>
-              <ConfirmProvider>
-                <ProtectedRouter />
-              </ConfirmProvider>
-              <Toaster />
-            </AuthProvider>
+            <LanguageProvider>
+              <AuthProvider>
+                <ConfirmProvider>
+                  <ProtectedRouter />
+                </ConfirmProvider>
+                <Toaster />
+              </AuthProvider>
+            </LanguageProvider>
           </ThemeProvider>
         </TooltipProvider>
       </QueryClientProvider>
