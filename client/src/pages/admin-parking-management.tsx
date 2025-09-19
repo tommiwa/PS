@@ -28,7 +28,7 @@ import {
   Eye, EyeOff
 } from "lucide-react"
 import type { WaitingList, ParkingSpot, ParkingSpotWithUser, SpotType } from "@shared/schema"
-import { quickExportParkingSpotsPDF, quickExportParkingSpotsExcel } from "@/utils/export-utils"
+import { quickExportParkingSpotsPDF, quickExportParkingSpotsExcel, quickExportWaitingListPDF, quickExportWaitingListExcel } from "@/utils/export-utils"
 
 export default function AdminParkingManagement() {
   const { toast } = useToast()
@@ -1123,6 +1123,66 @@ export default function AdminParkingManagement() {
                       <SelectItem value="reserved">Reserved</SelectItem>
                     </SelectContent>
                   </Select>
+                  <Button 
+                    size="sm"
+                    variant="outline" 
+                    disabled={unallocatedSpots.length === 0}
+                    onClick={() => {
+                      const filteredSpots = unallocatedSpots.filter(spot => {
+                        const matchesSearch = spot.spotNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                             spot.location.toLowerCase().includes(searchTerm.toLowerCase());
+                        const matchesType = unallocatedFilterType === "all" || spot.spotType === unallocatedFilterType;
+                        return matchesSearch && matchesType;
+                      });
+                      const success = quickExportParkingSpotsPDF(filteredSpots, 'Available Spots Report', (errorMessage) => {
+                        toast({
+                          variant: "destructive",
+                          title: "Export Failed",
+                          description: errorMessage
+                        })
+                      })
+                      if (success) {
+                        toast({
+                          title: "Export Successful",
+                          description: "PDF report has been downloaded successfully"
+                        })
+                      }
+                    }}
+                    data-testid="button-export-available-spots-pdf"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    PDF
+                  </Button>
+                  <Button 
+                    size="sm"
+                    variant="outline" 
+                    disabled={unallocatedSpots.length === 0}
+                    onClick={() => {
+                      const filteredSpots = unallocatedSpots.filter(spot => {
+                        const matchesSearch = spot.spotNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                             spot.location.toLowerCase().includes(searchTerm.toLowerCase());
+                        const matchesType = unallocatedFilterType === "all" || spot.spotType === unallocatedFilterType;
+                        return matchesSearch && matchesType;
+                      });
+                      const success = quickExportParkingSpotsExcel(filteredSpots, 'Available Spots Report', (errorMessage) => {
+                        toast({
+                          variant: "destructive",
+                          title: "Export Failed",
+                          description: errorMessage
+                        })
+                      })
+                      if (success) {
+                        toast({
+                          title: "Export Successful",
+                          description: "Excel report has been downloaded successfully"
+                        })
+                      }
+                    }}
+                    data-testid="button-export-available-spots-excel"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Excel
+                  </Button>
                 </div>
               </div>
             </CardHeader>
@@ -1235,10 +1295,62 @@ export default function AdminParkingManagement() {
           {/* Waiting List */}
       <Card data-testid="card-waiting-list">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Waiting List ({filteredWaitingList.length})
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Waiting List ({filteredWaitingList.length})
+            </CardTitle>
+            <div className="flex gap-2">
+              <Button 
+                size="sm"
+                variant="outline" 
+                disabled={filteredWaitingList.length === 0}
+                onClick={() => {
+                  const success = quickExportWaitingListPDF(filteredWaitingList, 'Waiting List Report', (errorMessage) => {
+                    toast({
+                      variant: "destructive",
+                      title: "Export Failed",
+                      description: errorMessage
+                    })
+                  })
+                  if (success) {
+                    toast({
+                      title: "Export Successful",
+                      description: "PDF report has been downloaded successfully"
+                    })
+                  }
+                }}
+                data-testid="button-export-waiting-list-pdf"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                PDF
+              </Button>
+              <Button 
+                size="sm"
+                variant="outline" 
+                disabled={filteredWaitingList.length === 0}
+                onClick={() => {
+                  const success = quickExportWaitingListExcel(filteredWaitingList, 'Waiting List Report', (errorMessage) => {
+                    toast({
+                      variant: "destructive",
+                      title: "Export Failed",
+                      description: errorMessage
+                    })
+                  })
+                  if (success) {
+                    toast({
+                      title: "Export Successful",
+                      description: "Excel report has been downloaded successfully"
+                    })
+                  }
+                }}
+                data-testid="button-export-waiting-list-excel"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Excel
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           {isLoadingWaitingList ? (

@@ -542,3 +542,84 @@ export const quickExportParkingSpotsExcel = (spots: any[], title?: string, onErr
     return false
   }
 }
+
+export const exportWaitingListData = (waitingList: any[], title: string = 'Waiting List Report') => {
+  const columns: ExportColumn[] = [
+    { header: 'ID', dataKey: 'id', width: 15 },
+    { header: 'User Name', dataKey: 'userName', width: 20 },
+    { header: 'User Email', dataKey: 'userEmail', width: 30 },
+    { header: 'Priority', dataKey: 'priority', width: 12, formatter: (priority) => {
+      if (priority === 1) return 'HIGH'
+      if (priority === 2) return 'MEDIUM'
+      if (priority === 3) return 'LOW'
+      return 'MEDIUM'
+    }},
+    { header: 'Preferred Spot Type', dataKey: 'preferredSpotType', width: 20, formatter: (type) => type?.toUpperCase() || 'ANY' },
+    { header: 'Status', dataKey: 'status', width: 12, formatter: (status) => status?.toUpperCase() || 'ACTIVE' },
+    { header: 'Enrolled Date', dataKey: 'enrolledDate', width: 15, formatter: (date) => new Date(date).toLocaleDateString() },
+    { header: 'Waiting Days', dataKey: 'waitingDays', width: 12, formatter: (_, item) => {
+      const waitingDays = Math.floor((Date.now() - new Date(item.enrolledDate).getTime()) / (1000 * 60 * 60 * 24));
+      return waitingDays.toString();
+    }},
+    { header: 'Reason', dataKey: 'reason', width: 40 }
+  ]
+
+  const exportData: ExportData = {
+    title,
+    subtitle: 'Parking Waiting List Management Report',
+    data: waitingList,
+    columns,
+    filename: `waiting-list-report-${new Date().toISOString().split('T')[0]}`,
+    summary: {
+      totalRecords: waitingList.length,
+      additionalStats: [
+        { label: 'Active Requests', value: waitingList.filter(w => w.status === 'active').length },
+        { label: 'High Priority', value: waitingList.filter(w => w.priority === 1).length },
+        { label: 'Medium Priority', value: waitingList.filter(w => w.priority === 2).length },
+        { label: 'Low Priority', value: waitingList.filter(w => w.priority === 3).length },
+        { label: 'Average Wait Days', value: Math.round(waitingList.reduce((sum, w) => {
+          const waitingDays = Math.floor((Date.now() - new Date(w.enrolledDate).getTime()) / (1000 * 60 * 60 * 24));
+          return sum + waitingDays;
+        }, 0) / waitingList.length) || 0 }
+      ]
+    }
+  }
+
+  return exportData
+}
+
+export const quickExportWaitingListPDF = (waitingList: any[], title?: string, onError?: (message: string) => void) => {
+  try {
+    if (!waitingList || waitingList.length === 0) {
+      const message = 'No waiting list data available to export'
+      if (onError) onError(message)
+      return false
+    }
+    const exportData = exportWaitingListData(waitingList, title)
+    exportToPDF(exportData)
+    return true
+  } catch (error) {
+    console.error('Error exporting waiting list to PDF:', error)
+    const message = error instanceof Error ? error.message : 'Failed to export waiting list to PDF'
+    if (onError) onError(message)
+    return false
+  }
+}
+
+export const quickExportWaitingListExcel = (waitingList: any[], title?: string, onError?: (message: string) => void) => {
+  try {
+    if (!waitingList || waitingList.length === 0) {
+      const message = 'No waiting list data available to export'
+      if (onError) onError(message)
+      return false
+    }
+    const exportData = exportWaitingListData(waitingList, title)
+    exportToExcel(exportData)
+    return true
+  } catch (error) {
+    console.error('Error exporting waiting list to Excel:', error)
+    const message = error instanceof Error ? error.message : 'Failed to export waiting list to Excel'
+    if (onError) onError(message)
+    return false
+  }
+}
