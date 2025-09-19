@@ -202,6 +202,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update own profile (Authenticated users)
+  app.patch("/api/users/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Users can only edit their own profile (unless admin)
+      if (req.user?.id !== id && req.user?.role !== 'admin') {
+        return res.status(403).json({ error: "You can only edit your own profile" });
+      }
+      
+      // Get existing user
+      const existingUser = await storage.getUser(id);
+      if (!existingUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Create a schema for profile fields that users can edit
+      const profileUpdateSchema = z.object({
+        firstName: z.string().min(1).optional(),
+        lastName: z.string().min(1).optional(),
+        email: z.string().email().optional(),
+        phone: z.string().min(1).optional(),
+        department: z.string().min(1).optional()
+      });
+
+      // Validate request body
+      const parseResult = profileUpdateSchema.parse(req.body);
+      
+      // Create update data
+      const updateData: Partial<User> = {};
+      if (parseResult.firstName !== undefined) updateData.firstName = parseResult.firstName;
+      if (parseResult.lastName !== undefined) updateData.lastName = parseResult.lastName;
+      if (parseResult.email !== undefined) updateData.email = parseResult.email;
+      if (parseResult.phone !== undefined) updateData.phone = parseResult.phone;
+      if (parseResult.department !== undefined) updateData.department = parseResult.department;
+      
+      const updatedUser = await storage.updateUser(id, updateData);
+      if (!updatedUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      res.json(updatedUser);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input data", details: error.errors });
+      }
+      console.error("Error updating profile:", error);
+      res.status(500).json({ error: "Failed to update profile" });
+    }
+  });
+
   // Delete user (Admin only)
   app.delete("/api/users/:id", requireAdmin, async (req: any, res) => {
     try {

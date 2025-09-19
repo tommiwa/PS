@@ -64,8 +64,17 @@ const vehicleSchema = z.object({
 // Payment preferences form validation schema - use shared schema
 const paymentPreferencesSchema = insertPaymentPreferencesSchema;
 
+// Profile edit form validation schema
+const profileEditSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Valid email is required"),
+  phone: z.string().min(1, "Phone number is required"),
+  department: z.string().min(1, "Department is required")
+});
+
 type VehicleForm = z.infer<typeof vehicleSchema>;
 type PaymentPreferencesForm = z.infer<typeof paymentPreferencesSchema>;
+type ProfileEditForm = z.infer<typeof profileEditSchema>;
 
 export default function Profile() {
   const { user, isOwner, isRenter, isAdmin } = useAuth()
@@ -79,6 +88,7 @@ export default function Profile() {
   const [activeTab, setActiveTab] = useState("waiting-list")
   const [showAddVehicleDrawer, setShowAddVehicleDrawer] = useState(false)
   const [showPaymentPreferencesDrawer, setShowPaymentPreferencesDrawer] = useState(false)
+  const [showProfileEditDrawer, setShowProfileEditDrawer] = useState(false)
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null)
 
   // Vehicle form
@@ -101,6 +111,17 @@ export default function Profile() {
     defaultValues: {
       paymentType: "interac_transfer",
       paymentInstructions: ""
+    }
+  });
+
+  // Profile edit form
+  const profileForm = useForm<ProfileEditForm>({
+    resolver: zodResolver(profileEditSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      phone: "",
+      department: ""
     }
   });
 
@@ -311,6 +332,34 @@ export default function Profile() {
     }
   });
 
+  // Profile edit mutation
+  const updateProfileMutation = useMutation({
+    mutationFn: async (data: ProfileEditForm) => {
+      if (!user) throw new Error("User not found");
+      const response = await apiRequest(`/api/users/${user.id}`, {
+        method: "PATCH",
+        body: data
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id] });
+      setShowProfileEditDrawer(false);
+      profileForm.reset();
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been successfully updated."
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Update Failed",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
   const handleSubmitPaymentPreferences = (data: PaymentPreferencesForm) => {
     updatePaymentPreferencesMutation.mutate(data);
   };
@@ -347,6 +396,34 @@ export default function Profile() {
 
   const handleLeaveWaitingList = () => {
     cancelWaitingListMutation.mutate();
+  };
+
+  const handleEditProfile = () => {
+    // Set the form with current user data
+    profileForm.reset({
+      name: user?.name || "",
+      email: user?.email || "",
+      phone: user?.phone || "",
+      department: user?.department || ""
+    });
+    setShowProfileEditDrawer(true);
+  };
+
+  const handleSubmitProfile = (data: ProfileEditForm) => {
+    // Split name into firstName and lastName for backend
+    const nameParts = data.name.trim().split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+    
+    const backendData = {
+      firstName,
+      lastName,
+      email: data.email,
+      phone: data.phone,
+      department: data.department
+    };
+    
+    updateProfileMutation.mutate(backendData);
   };
 
   if (!user) {
@@ -400,6 +477,8 @@ export default function Profile() {
               assignedSpots: assignedSpots,
               memberSince: new Date().getFullYear().toString()
             }}
+            onEditProfile={handleEditProfile}
+            showEditButton={true}
           />
         </div>
 
@@ -1733,6 +1812,95 @@ export default function Profile() {
           </Tabs>
         </div>
       </div>
+
+      {/* Profile Edit Drawer */}
+      <Drawer open={showProfileEditDrawer} onOpenChange={setShowProfileEditDrawer}>
+        <DrawerContent className="max-h-[90vh]">
+          <DrawerHeader>
+            <DrawerTitle>Edit Profile</DrawerTitle>
+          </DrawerHeader>
+          <div className="px-4 pb-4 overflow-y-auto">
+            <Form {...profileForm}>
+              <form onSubmit={profileForm.handleSubmit(handleSubmitProfile)} className="space-y-6">
+                <FormField
+                  control={profileForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Full Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter your full name" {...field} data-testid="input-profile-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={profileForm.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input type="email" placeholder="Enter your email" {...field} data-testid="input-profile-email" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={profileForm.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter your phone number" {...field} data-testid="input-profile-phone" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={profileForm.control}
+                  name="department"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Department</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter your department" {...field} data-testid="input-profile-department" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </form>
+            </Form>
+          </div>
+          <DrawerFooter>
+            <Button 
+              onClick={profileForm.handleSubmit(handleSubmitProfile)}
+              disabled={updateProfileMutation.isPending}
+              data-testid="button-save-profile"
+            >
+              {updateProfileMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
+              )}
+            </Button>
+            <DrawerClose asChild>
+              <Button variant="outline" data-testid="button-cancel-profile">Cancel</Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </div>
   )
 }
