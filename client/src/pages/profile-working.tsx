@@ -17,6 +17,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger, DrawerFooter, DrawerClose } from "@/components/ui/drawer"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { useToast } from "@/hooks/use-toast"
 import { useConfirm } from "@/hooks/use-confirm"
@@ -509,6 +510,7 @@ export default function Profile() {
                 <p className="text-sm text-muted-foreground">
                   Set your preferred payment method for when others book your parking spots.
                 </p>
+{/* Mobile Payment Form - Always Drawer in accordion */}
                 <Drawer open={showPaymentPreferencesDrawer} onOpenChange={setShowPaymentPreferencesDrawer}>
                   <DrawerTrigger asChild>
                     <Button variant="outline" className="w-full h-12" data-testid="button-edit-payment-preferences">
@@ -1080,29 +1082,30 @@ export default function Profile() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <Drawer open={showPaymentPreferencesDrawer} onOpenChange={setShowPaymentPreferencesDrawer}>
-                        <DrawerTrigger asChild>
-                          <Button variant="outline" className="w-full h-12" data-testid="button-edit-payment-preferences">
+{/* Desktop Payment Form - Dialog */}
+                      <Dialog open={showPaymentPreferencesDrawer} onOpenChange={setShowPaymentPreferencesDrawer}>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" className="w-full h-12" data-testid="button-edit-payment-preferences-desktop">
                             <CreditCard className="h-4 w-4 mr-2" />
                             {paymentPreferences ? "Update Payment Preferences" : "Set Payment Preferences"}
                           </Button>
-                        </DrawerTrigger>
-                        <DrawerContent>
-                          <DrawerHeader>
-                            <DrawerTitle>Payment Preferences</DrawerTitle>
-                          </DrawerHeader>
-                          <div className="px-4 pb-4">
+                        </DialogTrigger>
+                        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+                          <DialogHeader>
+                            <DialogTitle className="text-xl">Payment Preferences</DialogTitle>
+                          </DialogHeader>
+                          <div className="py-4">
                             <Form {...paymentForm}>
-                              <form onSubmit={paymentForm.handleSubmit(handleSubmitPaymentPreferences)} className="space-y-4">
+                              <form onSubmit={paymentForm.handleSubmit(handleSubmitPaymentPreferences)} className="space-y-6">
                                 <FormField
                                   control={paymentForm.control}
                                   name="paymentType"
                                   render={({ field }) => (
                                     <FormItem>
-                                      <FormLabel>Payment Type</FormLabel>
+                                      <FormLabel className="text-sm font-medium">Payment Type</FormLabel>
                                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                                         <FormControl>
-                                          <SelectTrigger data-testid="select-payment-type">
+                                          <SelectTrigger className="h-11" data-testid="select-payment-type-desktop">
                                             <SelectValue placeholder="Select payment type" />
                                           </SelectTrigger>
                                         </FormControl>
@@ -1120,40 +1123,51 @@ export default function Profile() {
                                   name="paymentInstructions"
                                   render={({ field }) => (
                                     <FormItem>
-                                      <FormLabel>Payment Instructions</FormLabel>
+                                      <FormLabel className="text-sm font-medium">Payment Instructions</FormLabel>
                                       <FormControl>
                                         <Textarea 
                                           placeholder="Enter payment instructions (e.g., email for Interac transfer, meeting location for cash, etc.)"
-                                          className="resize-none"
-                                          rows={3}
+                                          className="resize-none min-h-24"
+                                          rows={4}
                                           {...field}
                                           value={field.value || ''}
-                                          data-testid="textarea-payment-instructions"
+                                          data-testid="textarea-payment-instructions-desktop"
                                         />
                                       </FormControl>
                                       <FormMessage />
+                                      <div className="text-xs text-muted-foreground mt-2">
+                                        <p>Examples:</p>
+                                        <ul className="list-disc list-inside mt-1 space-y-1">
+                                          <li>Interac: "Send to email@example.com"</li>
+                                          <li>Cash: "Meet at Building A lobby"</li>
+                                        </ul>
+                                      </div>
                                     </FormItem>
                                   )}
                                 />
                               </form>
                             </Form>
                           </div>
-                          <DrawerFooter>
+                          <DialogFooter className="gap-3">
+                            <Button 
+                              variant="outline" 
+                              onClick={() => setShowPaymentPreferencesDrawer(false)}
+                              className="h-11"
+                            >
+                              Cancel
+                            </Button>
                             <Button 
                               onClick={paymentForm.handleSubmit(handleSubmitPaymentPreferences)}
                               disabled={updatePaymentPreferencesMutation.isPending}
-                              className="w-full h-12"
-                              data-testid="button-save-payment-preferences"
+                              className="h-11"
+                              data-testid="button-save-payment-preferences-desktop"
                             >
                               {updatePaymentPreferencesMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                               Save Preferences
                             </Button>
-                            <DrawerClose asChild>
-                              <Button variant="outline" className="w-full h-12">Cancel</Button>
-                            </DrawerClose>
-                          </DrawerFooter>
-                        </DrawerContent>
-                      </Drawer>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
                       
                       {paymentPreferences && (
                         <div className="mt-4 p-4 bg-muted rounded-lg">
@@ -1188,152 +1202,336 @@ export default function Profile() {
                       <Car className="h-5 w-5" />
                       My Vehicles
                     </CardTitle>
-                    <Drawer open={showAddVehicleDrawer} onOpenChange={setShowAddVehicleDrawer}>
-                      <DrawerTrigger asChild>
-                        <Button data-testid="button-add-vehicle">
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add Vehicle
-                        </Button>
-                      </DrawerTrigger>
-                      <DrawerContent>
-                        <DrawerHeader>
-                          <DrawerTitle>{editingVehicle ? "Edit Vehicle" : "Add Vehicle"}</DrawerTitle>
-                        </DrawerHeader>
-                        <div className="px-4 pb-4">
-                          <Form {...vehicleForm}>
-                            <form onSubmit={vehicleForm.handleSubmit(handleSubmitVehicle)} className="space-y-4">
-                              <div className="grid grid-cols-2 gap-4">
+{/* Mobile Vehicle Form - Drawer */}
+                    <div className="md:hidden">
+                      <Drawer open={showAddVehicleDrawer} onOpenChange={setShowAddVehicleDrawer}>
+                        <DrawerTrigger asChild>
+                          <Button data-testid="button-add-vehicle">
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Vehicle
+                          </Button>
+                        </DrawerTrigger>
+                        <DrawerContent>
+                          <DrawerHeader>
+                            <DrawerTitle>{editingVehicle ? "Edit Vehicle" : "Add Vehicle"}</DrawerTitle>
+                          </DrawerHeader>
+                          <div className="px-4 pb-4">
+                            <Form {...vehicleForm}>
+                              <form onSubmit={vehicleForm.handleSubmit(handleSubmitVehicle)} className="space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                  <FormField
+                                    control={vehicleForm.control}
+                                    name="make"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Make</FormLabel>
+                                        <FormControl>
+                                          <Input placeholder="e.g., Toyota" {...field} data-testid="input-vehicle-make" />
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                  <FormField
+                                    control={vehicleForm.control}
+                                    name="model"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Model</FormLabel>
+                                        <FormControl>
+                                          <Input placeholder="e.g., Camry" {...field} data-testid="input-vehicle-model" />
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                  <FormField
+                                    control={vehicleForm.control}
+                                    name="year"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Year</FormLabel>
+                                        <FormControl>
+                                          <Input 
+                                            type="number" 
+                                            placeholder="2020" 
+                                            {...field}
+                                            onChange={(e) => field.onChange(parseInt(e.target.value) || "")}
+                                            data-testid="input-vehicle-year"
+                                          />
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                  <FormField
+                                    control={vehicleForm.control}
+                                    name="color"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Color (Optional)</FormLabel>
+                                        <FormControl>
+                                          <Input placeholder="e.g., Blue" {...field} data-testid="input-vehicle-color" />
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                </div>
                                 <FormField
                                   control={vehicleForm.control}
-                                  name="make"
+                                  name="licensePlate"
                                   render={({ field }) => (
                                     <FormItem>
-                                      <FormLabel>Make</FormLabel>
+                                      <FormLabel>License Plate</FormLabel>
                                       <FormControl>
-                                        <Input placeholder="e.g., Toyota" {...field} data-testid="input-vehicle-make" />
+                                        <Input placeholder="e.g., ABC-123" {...field} data-testid="input-vehicle-license" />
                                       </FormControl>
                                       <FormMessage />
                                     </FormItem>
                                   )}
                                 />
+                                <div className="flex items-center gap-4">
+                                  <FormField
+                                    control={vehicleForm.control}
+                                    name="isElectric"
+                                    render={({ field }) => (
+                                      <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                        <FormControl>
+                                          <Switch 
+                                            checked={field.value}
+                                            onCheckedChange={field.onChange}
+                                            data-testid="switch-vehicle-electric"
+                                          />
+                                        </FormControl>
+                                        <div className="space-y-1 leading-none">
+                                          <FormLabel>Electric Vehicle</FormLabel>
+                                        </div>
+                                      </FormItem>
+                                    )}
+                                  />
+                                  <FormField
+                                    control={vehicleForm.control}
+                                    name="isDefault"
+                                    render={({ field }) => (
+                                      <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                        <FormControl>
+                                          <Switch 
+                                            checked={field.value}
+                                            onCheckedChange={field.onChange}
+                                            data-testid="switch-vehicle-default"
+                                          />
+                                        </FormControl>
+                                        <div className="space-y-1 leading-none">
+                                          <FormLabel>Default Vehicle</FormLabel>
+                                        </div>
+                                      </FormItem>
+                                    )}
+                                  />
+                                </div>
+                              </form>
+                            </Form>
+                          </div>
+                          <DrawerFooter>
+                            <Button 
+                              onClick={vehicleForm.handleSubmit(handleSubmitVehicle)}
+                              disabled={addVehicleMutation.isPending}
+                              className="w-full h-12"
+                              data-testid="button-save-vehicle"
+                            >
+                              {addVehicleMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                              {editingVehicle ? "Update Vehicle" : "Add Vehicle"}
+                            </Button>
+                            <DrawerClose asChild>
+                              <Button variant="outline" className="w-full h-12">Cancel</Button>
+                            </DrawerClose>
+                          </DrawerFooter>
+                        </DrawerContent>
+                      </Drawer>
+                    </div>
+
+                    {/* Desktop Vehicle Form - Dialog */}
+                    <div className="hidden md:block">
+                      <Dialog open={showAddVehicleDrawer} onOpenChange={setShowAddVehicleDrawer}>
+                        <DialogTrigger asChild>
+                          <Button data-testid="button-add-vehicle-desktop">
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Vehicle
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                          <DialogHeader>
+                            <DialogTitle className="text-xl">{editingVehicle ? "Edit Vehicle" : "Add Vehicle"}</DialogTitle>
+                          </DialogHeader>
+                          <div className="py-4">
+                            <Form {...vehicleForm}>
+                              <form onSubmit={vehicleForm.handleSubmit(handleSubmitVehicle)} className="space-y-6">
+                                <div className="grid grid-cols-2 gap-6">
+                                  <FormField
+                                    control={vehicleForm.control}
+                                    name="make"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel className="text-sm font-medium">Make</FormLabel>
+                                        <FormControl>
+                                          <Input 
+                                            placeholder="e.g., Toyota" 
+                                            {...field} 
+                                            className="h-11"
+                                            data-testid="input-vehicle-make-desktop" 
+                                          />
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                  <FormField
+                                    control={vehicleForm.control}
+                                    name="model"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel className="text-sm font-medium">Model</FormLabel>
+                                        <FormControl>
+                                          <Input 
+                                            placeholder="e.g., Camry" 
+                                            {...field} 
+                                            className="h-11"
+                                            data-testid="input-vehicle-model-desktop" 
+                                          />
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                </div>
+                                <div className="grid grid-cols-2 gap-6">
+                                  <FormField
+                                    control={vehicleForm.control}
+                                    name="year"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel className="text-sm font-medium">Year</FormLabel>
+                                        <FormControl>
+                                          <Input 
+                                            type="number" 
+                                            placeholder="2020" 
+                                            {...field}
+                                            className="h-11"
+                                            onChange={(e) => field.onChange(parseInt(e.target.value) || "")}
+                                            data-testid="input-vehicle-year-desktop"
+                                          />
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                  <FormField
+                                    control={vehicleForm.control}
+                                    name="color"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel className="text-sm font-medium">Color (Optional)</FormLabel>
+                                        <FormControl>
+                                          <Input 
+                                            placeholder="e.g., Blue" 
+                                            {...field} 
+                                            className="h-11"
+                                            data-testid="input-vehicle-color-desktop" 
+                                          />
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                </div>
                                 <FormField
                                   control={vehicleForm.control}
-                                  name="model"
+                                  name="licensePlate"
                                   render={({ field }) => (
                                     <FormItem>
-                                      <FormLabel>Model</FormLabel>
-                                      <FormControl>
-                                        <Input placeholder="e.g., Camry" {...field} data-testid="input-vehicle-model" />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
-                              </div>
-                              <div className="grid grid-cols-2 gap-4">
-                                <FormField
-                                  control={vehicleForm.control}
-                                  name="year"
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Year</FormLabel>
+                                      <FormLabel className="text-sm font-medium">License Plate</FormLabel>
                                       <FormControl>
                                         <Input 
-                                          type="number" 
-                                          placeholder="2020" 
-                                          {...field}
-                                          onChange={(e) => field.onChange(parseInt(e.target.value) || "")}
-                                          data-testid="input-vehicle-year"
+                                          placeholder="e.g., ABC-123" 
+                                          {...field} 
+                                          className="h-11"
+                                          data-testid="input-vehicle-license-desktop" 
                                         />
                                       </FormControl>
                                       <FormMessage />
                                     </FormItem>
                                   )}
                                 />
-                                <FormField
-                                  control={vehicleForm.control}
-                                  name="color"
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Color (Optional)</FormLabel>
-                                      <FormControl>
-                                        <Input placeholder="e.g., Blue" {...field} data-testid="input-vehicle-color" />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
-                              </div>
-                              <FormField
-                                control={vehicleForm.control}
-                                name="licensePlate"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>License Plate</FormLabel>
-                                    <FormControl>
-                                      <Input placeholder="e.g., ABC-123" {...field} data-testid="input-vehicle-license" />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                              <div className="flex items-center gap-4">
-                                <FormField
-                                  control={vehicleForm.control}
-                                  name="isElectric"
-                                  render={({ field }) => (
-                                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                                      <FormControl>
-                                        <Switch 
-                                          checked={field.value}
-                                          onCheckedChange={field.onChange}
-                                          data-testid="switch-vehicle-electric"
-                                        />
-                                      </FormControl>
-                                      <div className="space-y-1 leading-none">
-                                        <FormLabel>Electric Vehicle</FormLabel>
-                                      </div>
-                                    </FormItem>
-                                  )}
-                                />
-                                <FormField
-                                  control={vehicleForm.control}
-                                  name="isDefault"
-                                  render={({ field }) => (
-                                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                                      <FormControl>
-                                        <Switch 
-                                          checked={field.value}
-                                          onCheckedChange={field.onChange}
-                                          data-testid="switch-vehicle-default"
-                                        />
-                                      </FormControl>
-                                      <div className="space-y-1 leading-none">
-                                        <FormLabel>Default Vehicle</FormLabel>
-                                      </div>
-                                    </FormItem>
-                                  )}
-                                />
-                              </div>
-                            </form>
-                          </Form>
-                        </div>
-                        <DrawerFooter>
-                          <Button 
-                            onClick={vehicleForm.handleSubmit(handleSubmitVehicle)}
-                            disabled={addVehicleMutation.isPending}
-                            className="w-full h-12"
-                            data-testid="button-save-vehicle"
-                          >
-                            {addVehicleMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                            {editingVehicle ? "Update Vehicle" : "Add Vehicle"}
-                          </Button>
-                          <DrawerClose asChild>
-                            <Button variant="outline" className="w-full h-12">Cancel</Button>
-                          </DrawerClose>
-                        </DrawerFooter>
-                      </DrawerContent>
-                    </Drawer>
+                                <div className="grid grid-cols-2 gap-6">
+                                  <FormField
+                                    control={vehicleForm.control}
+                                    name="isElectric"
+                                    render={({ field }) => (
+                                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                        <div className="space-y-0.5">
+                                          <FormLabel className="text-sm font-medium">Electric Vehicle</FormLabel>
+                                          <div className="text-sm text-muted-foreground">
+                                            This vehicle is electric or hybrid
+                                          </div>
+                                        </div>
+                                        <FormControl>
+                                          <Switch 
+                                            checked={field.value}
+                                            onCheckedChange={field.onChange}
+                                            data-testid="switch-vehicle-electric-desktop"
+                                          />
+                                        </FormControl>
+                                      </FormItem>
+                                    )}
+                                  />
+                                  <FormField
+                                    control={vehicleForm.control}
+                                    name="isDefault"
+                                    render={({ field }) => (
+                                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                        <div className="space-y-0.5">
+                                          <FormLabel className="text-sm font-medium">Default Vehicle</FormLabel>
+                                          <div className="text-sm text-muted-foreground">
+                                            Use as primary vehicle for bookings
+                                          </div>
+                                        </div>
+                                        <FormControl>
+                                          <Switch 
+                                            checked={field.value}
+                                            onCheckedChange={field.onChange}
+                                            data-testid="switch-vehicle-default-desktop"
+                                          />
+                                        </FormControl>
+                                      </FormItem>
+                                    )}
+                                  />
+                                </div>
+                              </form>
+                            </Form>
+                          </div>
+                          <DialogFooter className="gap-3">
+                            <Button 
+                              variant="outline" 
+                              onClick={() => setShowAddVehicleDrawer(false)}
+                              className="h-11"
+                            >
+                              Cancel
+                            </Button>
+                            <Button 
+                              onClick={vehicleForm.handleSubmit(handleSubmitVehicle)}
+                              disabled={addVehicleMutation.isPending}
+                              className="h-11"
+                              data-testid="button-save-vehicle-desktop"
+                            >
+                              {addVehicleMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                              {editingVehicle ? "Update Vehicle" : "Add Vehicle"}
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
