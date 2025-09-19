@@ -251,26 +251,14 @@ export function AdminUsersTable({
   }
 
   return (
-    <div className="space-y-4">
-      {/* Enhanced Filters */}
-      <EnhancedFilters
-        searchValue={currentSearchTerm}
-        onSearchChange={handleSearchChange}
-        filterConfigs={userFilterConfigs}
-        filterValues={currentFilterValues}
-        onFilterChange={handleFilterChange}
-        onClearFilters={handleClearFilters}
-        searchPlaceholder="Search users by name, email, or department..."
-        className="hover-elevate"
-      />
-      
+    <div className="space-y-4">      
       <Card data-testid="card-admin-users">
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5" />
-                User Management
+                User Directory
               </CardTitle>
               <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
                 <span>{stats.total} total users</span>

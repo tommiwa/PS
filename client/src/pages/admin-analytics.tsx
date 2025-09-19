@@ -634,7 +634,7 @@ export default function AdminAnalytics() {
                       <YAxis 
                         tick={{ fontSize: 12 }}
                       />
-                      <Tooltip 
+                      <RechartsTooltip 
                         formatter={(value: number, name: string) => [
                           name === 'utilization' ? `${value}%` : value,
                           name === 'utilization' ? 'Utilization' : 'Bookings'
