@@ -108,8 +108,13 @@ export default function Profile() {
   // State for various settings
   const [darkMode, setDarkMode] = useState(false)
   const [emailNotifications, setEmailNotifications] = useState(true)
-  const [smsNotifications, setSmsNotifications] = useState(true)
-  const [pushNotifications, setPushNotifications] = useState(true)
+  
+  // Notification types state (all default to true)
+  const [bookingConfirmations, setBookingConfirmations] = useState(true)
+  const [paymentReminders, setPaymentReminders] = useState(true)
+  const [spotAvailability, setSpotAvailability] = useState(true)
+  const [weeklyReports, setWeeklyReports] = useState(true)
+  const [systemMaintenance, setSystemMaintenance] = useState(true)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [activeTab, setActiveTab] = useState("notifications")
   const [showAddVehicleDialog, setShowAddVehicleDialog] = useState(false)
@@ -579,63 +584,61 @@ export default function Profile() {
                       />
                     </div>
                     
-                    <Separator />
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <Smartphone className="h-4 w-4" />
-                          <Label>SMS Notifications</Label>
+                    {emailNotifications && (
+                      <>
+                        <Separator />
+                        <div className="space-y-4 pl-6">
+                          <h4 className="font-medium text-sm text-muted-foreground">Email Notification Types</h4>
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <Label htmlFor="booking-confirmations">Booking Confirmations</Label>
+                              <Switch 
+                                id="booking-confirmations" 
+                                checked={bookingConfirmations}
+                                onCheckedChange={setBookingConfirmations}
+                                data-testid="switch-booking-confirmations"
+                              />
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <Label htmlFor="payment-reminders">Payment Reminders</Label>
+                              <Switch 
+                                id="payment-reminders" 
+                                checked={paymentReminders}
+                                onCheckedChange={setPaymentReminders}
+                                data-testid="switch-payment-reminders"
+                              />
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <Label htmlFor="spot-availability">Spot Availability Updates</Label>
+                              <Switch 
+                                id="spot-availability" 
+                                checked={spotAvailability}
+                                onCheckedChange={setSpotAvailability}
+                                data-testid="switch-spot-availability"
+                              />
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <Label htmlFor="weekly-reports">Weekly Summary Reports</Label>
+                              <Switch 
+                                id="weekly-reports" 
+                                checked={weeklyReports}
+                                onCheckedChange={setWeeklyReports}
+                                data-testid="switch-weekly-reports"
+                              />
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <Label htmlFor="system-maintenance">System Maintenance Alerts</Label>
+                              <Switch 
+                                id="system-maintenance" 
+                                checked={systemMaintenance}
+                                onCheckedChange={setSystemMaintenance}
+                                data-testid="switch-system-maintenance"
+                              />
+                            </div>
+                          </div>
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                          Get urgent updates and reminders via text message
-                        </p>
-                      </div>
-                      <Switch 
-                        checked={smsNotifications}
-                        onCheckedChange={setSmsNotifications}
-                        data-testid="switch-sms-notifications"
-                      />
-                    </div>
-                    
-                    <Separator />
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <Bell className="h-4 w-4" />
-                          <Label>Push Notifications</Label>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          Browser notifications for real-time updates
-                        </p>
-                      </div>
-                      <Switch 
-                        checked={pushNotifications}
-                        onCheckedChange={setPushNotifications}
-                        data-testid="switch-push-notifications"
-                      />
-                    </div>
-                  </div>
-                  
-                  <Separator />
-                  
-                  <div className="space-y-4">
-                    <h4 className="font-medium">Notification Types</h4>
-                    <div className="space-y-3">
-                      {[
-                        { id: "booking-confirmations", label: "Booking Confirmations", enabled: true },
-                        { id: "payment-reminders", label: "Payment Reminders", enabled: true },
-                        { id: "spot-availability", label: "Spot Availability Updates", enabled: false },
-                        { id: "weekly-summary", label: "Weekly Summary Reports", enabled: true },
-                        { id: "system-maintenance", label: "System Maintenance Alerts", enabled: true }
-                      ].map((item) => (
-                        <div key={item.id} className="flex items-center justify-between">
-                          <Label htmlFor={item.id}>{item.label}</Label>
-                          <Switch id={item.id} defaultChecked={item.enabled} />
-                        </div>
-                      ))}
-                    </div>
+                      </>
+                    )}
                   </div>
                   
                   <Button className="w-full" data-testid="button-update-notification-preferences">
