@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger, DrawerFooter, DrawerClose } from "@/components/ui/drawer"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
@@ -74,6 +75,7 @@ export default function Profile() {
   const { confirm } = useConfirm()
   
   // State for various settings and drawers
+  const [activeTab, setActiveTab] = useState("waiting-list")
   const [showAddVehicleDrawer, setShowAddVehicleDrawer] = useState(false)
   const [showPaymentPreferencesDrawer, setShowPaymentPreferencesDrawer] = useState(false)
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null)
@@ -387,11 +389,12 @@ export default function Profile() {
           />
         </div>
 
-        {/* Settings Accordion */}
-        <Accordion type="multiple" className="space-y-4" defaultValue={["waiting-list"]}>
-          
-          {/* Waiting List Section */}
-          <AccordionItem value="waiting-list" className="border rounded-lg px-4">
+        {/* Mobile Accordion Layout */}
+        <div className="md:hidden">
+          <Accordion type="multiple" className="space-y-4" defaultValue={["waiting-list"]}>
+            
+            {/* Waiting List Section */}
+            <AccordionItem value="waiting-list" className="border rounded-lg px-4">
             <AccordionTrigger className="hover:no-underline py-6">
               <div className="flex items-center justify-between w-full mr-4">
                 <div className="flex items-center gap-3">
@@ -956,7 +959,568 @@ export default function Profile() {
             </AccordionContent>
           </AccordionItem>
           
-        </Accordion>
+          </Accordion>
+        </div>
+
+        {/* Desktop Tabs Layout */}
+        <div className="hidden md:block">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-5 mb-6">
+              <TabsTrigger value="waiting-list" className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Waiting List
+              </TabsTrigger>
+              <TabsTrigger value="payment-preferences" className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4" />
+                Payment
+              </TabsTrigger>
+              <TabsTrigger value="vehicles" className="flex items-center gap-2">
+                <Car className="h-4 w-4" />
+                Vehicles
+              </TabsTrigger>
+              <TabsTrigger value="notifications" className="flex items-center gap-2">
+                <Bell className="h-4 w-4" />
+                Notifications
+              </TabsTrigger>
+              <TabsTrigger value="app-settings" className="flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                Settings
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Waiting List Tab */}
+            <TabsContent value="waiting-list" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5" />
+                    Parking Waiting List
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Join the waiting list to be notified when parking spots become available.
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {isLoadingWaitingList ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                    </div>
+                  ) : !waitingListEntry ? (
+                    <div className="text-center py-6">
+                      <p className="text-muted-foreground mb-4">Join the waiting list to be notified when parking spots become available.</p>
+                      <Button 
+                        className="w-full h-12" 
+                        onClick={handleJoinWaitingList}
+                        disabled={createWaitingListMutation.isPending}
+                        data-testid="button-join-waiting-list"
+                      >
+                        {createWaitingListMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                        Join Waiting List
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800/50 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-green-900 dark:text-green-100">
+                            Successfully Enrolled
+                          </h4>
+                          <p className="text-sm text-green-700 dark:text-green-300">
+                            Priority: {waitingListEntry.priority} • Enrolled: {waitingListEntry.enrolledDate ? new Date(waitingListEntry.enrolledDate).toLocaleDateString() : 'N/A'}
+                          </p>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={handleLeaveWaitingList}
+                            disabled={cancelWaitingListMutation.isPending}
+                            className="mt-3"
+                            data-testid="button-leave-waiting-list"
+                          >
+                            {cancelWaitingListMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                            Leave Waiting List
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Payment Preferences Tab */}
+            <TabsContent value="payment-preferences" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CreditCard className="h-5 w-5" />
+                    Payment Preferences
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Set your preferred payment method for when others book your parking spots.
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {isLoadingPaymentPreferences ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <Drawer open={showPaymentPreferencesDrawer} onOpenChange={setShowPaymentPreferencesDrawer}>
+                        <DrawerTrigger asChild>
+                          <Button variant="outline" className="w-full h-12" data-testid="button-edit-payment-preferences">
+                            <CreditCard className="h-4 w-4 mr-2" />
+                            {paymentPreferences ? "Update Payment Preferences" : "Set Payment Preferences"}
+                          </Button>
+                        </DrawerTrigger>
+                        <DrawerContent>
+                          <DrawerHeader>
+                            <DrawerTitle>Payment Preferences</DrawerTitle>
+                          </DrawerHeader>
+                          <div className="px-4 pb-4">
+                            <Form {...paymentForm}>
+                              <form onSubmit={paymentForm.handleSubmit(handleSubmitPaymentPreferences)} className="space-y-4">
+                                <FormField
+                                  control={paymentForm.control}
+                                  name="paymentType"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Payment Type</FormLabel>
+                                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl>
+                                          <SelectTrigger data-testid="select-payment-type">
+                                            <SelectValue placeholder="Select payment type" />
+                                          </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                          <SelectItem value="interac_transfer">Interac Transfer</SelectItem>
+                                          <SelectItem value="cash">Cash</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                <FormField
+                                  control={paymentForm.control}
+                                  name="paymentInstructions"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Payment Instructions</FormLabel>
+                                      <FormControl>
+                                        <Textarea 
+                                          placeholder="Enter payment instructions (e.g., email for Interac transfer, meeting location for cash, etc.)"
+                                          className="resize-none"
+                                          rows={3}
+                                          {...field}
+                                          value={field.value || ''}
+                                          data-testid="textarea-payment-instructions"
+                                        />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </form>
+                            </Form>
+                          </div>
+                          <DrawerFooter>
+                            <Button 
+                              onClick={paymentForm.handleSubmit(handleSubmitPaymentPreferences)}
+                              disabled={updatePaymentPreferencesMutation.isPending}
+                              className="w-full h-12"
+                              data-testid="button-save-payment-preferences"
+                            >
+                              {updatePaymentPreferencesMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                              Save Preferences
+                            </Button>
+                            <DrawerClose asChild>
+                              <Button variant="outline" className="w-full h-12">Cancel</Button>
+                            </DrawerClose>
+                          </DrawerFooter>
+                        </DrawerContent>
+                      </Drawer>
+                      
+                      {paymentPreferences && (
+                        <div className="mt-4 p-4 bg-muted rounded-lg">
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">Payment Type:</span>
+                              <Badge variant="outline">
+                                {paymentPreferences.paymentType === "interac_transfer" ? "Interac Transfer" : "Cash"}
+                              </Badge>
+                            </div>
+                            {paymentPreferences.paymentInstructions && (
+                              <div className="space-y-1">
+                                <span className="text-sm font-medium">Instructions:</span>
+                                <p className="text-sm text-muted-foreground">{paymentPreferences.paymentInstructions}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Vehicles Tab */}
+            <TabsContent value="vehicles" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      <Car className="h-5 w-5" />
+                      My Vehicles
+                    </CardTitle>
+                    <Drawer open={showAddVehicleDrawer} onOpenChange={setShowAddVehicleDrawer}>
+                      <DrawerTrigger asChild>
+                        <Button data-testid="button-add-vehicle">
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Vehicle
+                        </Button>
+                      </DrawerTrigger>
+                      <DrawerContent>
+                        <DrawerHeader>
+                          <DrawerTitle>{editingVehicle ? "Edit Vehicle" : "Add Vehicle"}</DrawerTitle>
+                        </DrawerHeader>
+                        <div className="px-4 pb-4">
+                          <Form {...vehicleForm}>
+                            <form onSubmit={vehicleForm.handleSubmit(handleSubmitVehicle)} className="space-y-4">
+                              <div className="grid grid-cols-2 gap-4">
+                                <FormField
+                                  control={vehicleForm.control}
+                                  name="make"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Make</FormLabel>
+                                      <FormControl>
+                                        <Input placeholder="e.g., Toyota" {...field} data-testid="input-vehicle-make" />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                <FormField
+                                  control={vehicleForm.control}
+                                  name="model"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Model</FormLabel>
+                                      <FormControl>
+                                        <Input placeholder="e.g., Camry" {...field} data-testid="input-vehicle-model" />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
+                              <div className="grid grid-cols-2 gap-4">
+                                <FormField
+                                  control={vehicleForm.control}
+                                  name="year"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Year</FormLabel>
+                                      <FormControl>
+                                        <Input 
+                                          type="number" 
+                                          placeholder="2020" 
+                                          {...field}
+                                          onChange={(e) => field.onChange(parseInt(e.target.value) || "")}
+                                          data-testid="input-vehicle-year"
+                                        />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                <FormField
+                                  control={vehicleForm.control}
+                                  name="color"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Color (Optional)</FormLabel>
+                                      <FormControl>
+                                        <Input placeholder="e.g., Blue" {...field} data-testid="input-vehicle-color" />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
+                              <FormField
+                                control={vehicleForm.control}
+                                name="licensePlate"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>License Plate</FormLabel>
+                                    <FormControl>
+                                      <Input placeholder="e.g., ABC-123" {...field} data-testid="input-vehicle-license" />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <div className="flex items-center gap-4">
+                                <FormField
+                                  control={vehicleForm.control}
+                                  name="isElectric"
+                                  render={({ field }) => (
+                                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                      <FormControl>
+                                        <Switch 
+                                          checked={field.value}
+                                          onCheckedChange={field.onChange}
+                                          data-testid="switch-vehicle-electric"
+                                        />
+                                      </FormControl>
+                                      <div className="space-y-1 leading-none">
+                                        <FormLabel>Electric Vehicle</FormLabel>
+                                      </div>
+                                    </FormItem>
+                                  )}
+                                />
+                                <FormField
+                                  control={vehicleForm.control}
+                                  name="isDefault"
+                                  render={({ field }) => (
+                                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                      <FormControl>
+                                        <Switch 
+                                          checked={field.value}
+                                          onCheckedChange={field.onChange}
+                                          data-testid="switch-vehicle-default"
+                                        />
+                                      </FormControl>
+                                      <div className="space-y-1 leading-none">
+                                        <FormLabel>Default Vehicle</FormLabel>
+                                      </div>
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
+                            </form>
+                          </Form>
+                        </div>
+                        <DrawerFooter>
+                          <Button 
+                            onClick={vehicleForm.handleSubmit(handleSubmitVehicle)}
+                            disabled={addVehicleMutation.isPending}
+                            className="w-full h-12"
+                            data-testid="button-save-vehicle"
+                          >
+                            {addVehicleMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                            {editingVehicle ? "Update Vehicle" : "Add Vehicle"}
+                          </Button>
+                          <DrawerClose asChild>
+                            <Button variant="outline" className="w-full h-12">Cancel</Button>
+                          </DrawerClose>
+                        </DrawerFooter>
+                      </DrawerContent>
+                    </Drawer>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingVehicles ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                    </div>
+                  ) : userVehicles?.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Car className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                      <h3 className="font-medium mb-2">No vehicles added</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Add your vehicle information to complete your parking profile.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {userVehicles?.map((vehicle: any) => (
+                        <Card key={vehicle.id} className="hover-elevate">
+                          <CardContent className="pt-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                                  {vehicle.isElectric ? (
+                                    <Zap className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                  ) : (
+                                    <CarIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                  )}
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <p className="font-medium">
+                                      {vehicle.year} {vehicle.make} {vehicle.model}
+                                    </p>
+                                    {vehicle.isDefault && (
+                                      <Badge variant="secondary" className="text-xs">Default</Badge>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-muted-foreground">
+                                    {vehicle.licensePlate} {vehicle.color && `• ${vehicle.color}`}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleEditVehicle(vehicle)}
+                                  data-testid={`button-edit-vehicle-${vehicle.id}`}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDeleteVehicle(vehicle)}
+                                  disabled={deleteVehicleMutation.isPending}
+                                  data-testid={`button-delete-vehicle-${vehicle.id}`}
+                                >
+                                  {deleteVehicleMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                                  {!deleteVehicleMutation.isPending && <Trash2 className="h-4 w-4" />}
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Notifications Tab */}
+            <TabsContent value="notifications" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Bell className="h-5 w-5" />
+                    Notifications
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {isLoadingPreferences ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-4 w-4" />
+                            <Label>Email Notifications</Label>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Receive email notifications for bookings and updates
+                          </p>
+                        </div>
+                        <Switch 
+                          checked={notificationPreferences?.emailNotifications ?? true}
+                          onCheckedChange={(checked) => handlePreferenceChange({ emailNotifications: checked })}
+                          data-testid="switch-email-notifications"
+                          disabled={updateNotificationPreferencesMutation.isPending}
+                        />
+                      </div>
+                      
+                      {(notificationPreferences?.emailNotifications ?? true) && (
+                        <div className="space-y-3">
+                          <Separator />
+                          <h4 className="font-medium text-sm text-muted-foreground">Email Types</h4>
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between p-3 border rounded-lg">
+                              <Label htmlFor="booking-confirmations">Booking Confirmations</Label>
+                              <Switch 
+                                id="booking-confirmations" 
+                                checked={notificationPreferences?.bookingConfirmations ?? true}
+                                onCheckedChange={(checked) => handlePreferenceChange({ bookingConfirmations: checked })}
+                                data-testid="switch-booking-confirmations"
+                                disabled={updateNotificationPreferencesMutation.isPending}
+                              />
+                            </div>
+                            <div className="flex items-center justify-between p-3 border rounded-lg">
+                              <Label htmlFor="payment-reminders">Payment Reminders</Label>
+                              <Switch 
+                                id="payment-reminders" 
+                                checked={notificationPreferences?.paymentReminders ?? true}
+                                onCheckedChange={(checked) => handlePreferenceChange({ paymentReminders: checked })}
+                                data-testid="switch-payment-reminders"
+                                disabled={updateNotificationPreferencesMutation.isPending}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* App Settings Tab */}
+            <TabsContent value="app-settings" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Settings className="h-5 w-5" />
+                    App Settings
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Palette className="h-4 w-4" />
+                          <Label>Theme</Label>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Choose your preferred theme
+                        </p>
+                      </div>
+                      <Select value={theme} onValueChange={setTheme}>
+                        <SelectTrigger className="w-32" data-testid="select-theme">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="light">Light</SelectItem>
+                          <SelectItem value="dark">Dark</SelectItem>
+                          <SelectItem value="system">System</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Globe className="h-4 w-4" />
+                          <Label>Language</Label>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Select your preferred language
+                        </p>
+                      </div>
+                      <Select value={language} onValueChange={setLanguage}>
+                        <SelectTrigger className="w-32" data-testid="select-language">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="en">English</SelectItem>
+                          <SelectItem value="fr">Français</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
     </div>
   )
