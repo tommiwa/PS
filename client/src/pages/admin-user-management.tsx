@@ -33,7 +33,7 @@ import {
   Search, 
   Filter, 
   Download, 
-  Upload, 
+ 
   Mail, 
   AlertTriangle,
   CheckCircle,
@@ -594,10 +594,6 @@ export default function AdminUserManagement() {
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingUsers ? 'animate-spin' : ''}`} />
             Refresh
-          </Button>
-          <Button variant="outline">
-            <Upload className="h-4 w-4 mr-2" />
-            Import Users
           </Button>
           <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
             <DialogTrigger asChild>
