@@ -153,6 +153,22 @@ export default function AdminUserManagement() {
     queryKey: ["/api/admin/users"],
   });
 
+  // Query for user analytics
+  const { 
+    data: userAnalytics, 
+    isLoading: isLoadingAnalytics 
+  } = useQuery<{
+    totalUsers: number;
+    activeUsers: number;
+    newUsersThisWeek: number;
+    mostActiveDepartment: string;
+    generatedAt: string;
+  }>({
+    queryKey: ['/api/admin/user-analytics'],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
+  });
+
   // Create user mutation
   const createUserMutation = useMutation({
     mutationFn: async (userData: CreateUserFormData): Promise<User> => {
@@ -162,6 +178,7 @@ export default function AdminUserManagement() {
     onSuccess: (newUser: User) => {
       // Invalidate and refetch user data
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/user-analytics"] });
       setShowAddUser(false);
       form.reset();
       const userName = [newUser?.firstName, newUser?.lastName].filter(Boolean).join(' ') || newUser?.email || 'Unknown User';
@@ -303,6 +320,7 @@ export default function AdminUserManagement() {
     onSuccess: (updatedUser: User) => {
       // Invalidate and refetch user data
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/user-analytics"] });
       setShowEditUser(false);
       setEditingUser(null);
       editForm.reset();
@@ -334,6 +352,7 @@ export default function AdminUserManagement() {
     onSuccess: (result: { success: boolean; message: string }, userId: string) => {
       // Invalidate and refetch user data
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/user-analytics"] });
       const user = displayUsers.find(u => u.id === userId);
       const userName = user?.name || 'Unknown User';
       toast({
@@ -527,17 +546,12 @@ export default function AdminUserManagement() {
     }
   ];
 
-  const mockUserAnalytics: UserAnalytics = {
+  // Use real analytics data or fallback to calculated values
+  const analytics = userAnalytics || {
     totalUsers: allUsers.length,
     activeUsers: allUsers.filter((u: User) => u.lastLogin).length,
-    newUsersThisWeek: 5,
-    suspendedUsers: 1,
-    adminUsers: roleStats.admin,
-    ownerUsers: roleStats.owner,
-    renterUsers: roleStats.renter,
-    averageBookingsPerUser: 2.4,
-    mostActiveDepartment: "Engineering",
-    recentSignups: 3
+    newUsersThisWeek: 0,
+    mostActiveDepartment: "N/A"
   };
 
   const getActivityIcon = (type: string) => {
@@ -947,7 +961,7 @@ export default function AdminUserManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold" data-testid="stat-total-users">
-              {isLoadingUsers ? "..." : allUsers.length}
+              {isLoadingUsers || isLoadingAnalytics ? "..." : analytics.totalUsers}
             </div>
             <p className="text-xs text-muted-foreground">
               Registered accounts
@@ -962,7 +976,7 @@ export default function AdminUserManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold" data-testid="stat-active-users">
-              {isLoadingUsers ? "..." : mockUserAnalytics.activeUsers}
+              {isLoadingUsers || isLoadingAnalytics ? "..." : analytics.activeUsers}
             </div>
             <p className="text-xs text-muted-foreground">
               Recently logged in
@@ -977,7 +991,7 @@ export default function AdminUserManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold" data-testid="stat-new-users">
-              {isLoadingUsers ? "..." : mockUserAnalytics.newUsersThisWeek}
+              {isLoadingUsers || isLoadingAnalytics ? "..." : analytics.newUsersThisWeek}
             </div>
             <p className="text-xs text-muted-foreground">
               Recent signups
@@ -992,7 +1006,7 @@ export default function AdminUserManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold" data-testid="stat-active-department">
-              {isLoadingUsers ? "..." : mockUserAnalytics.mostActiveDepartment}
+              {isLoadingUsers || isLoadingAnalytics ? "..." : analytics.mostActiveDepartment}
             </div>
             <p className="text-xs text-muted-foreground">
               Department activity

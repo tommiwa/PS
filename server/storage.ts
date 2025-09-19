@@ -173,6 +173,12 @@ export interface IStorage {
     earnings: number;
     averageRate: number;
   }[]>;
+  getUserAnalytics(): Promise<{
+    totalUsers: number;
+    activeUsers: number;
+    newUsersThisWeek: number;
+    mostActiveDepartment: string;
+  }>;
 }
 
 export class MemStorage implements IStorage {
@@ -1729,6 +1735,51 @@ export class MemStorage implements IStorage {
       averageRate: stats.bookings > 0 ? Math.round((stats.totalRates / stats.bookings) * 100) / 100 : 0
     }))
     .sort((a, b) => b.earnings - a.earnings);
+  }
+
+  async getUserAnalytics(): Promise<{
+    totalUsers: number;
+    activeUsers: number;
+    newUsersThisWeek: number;
+    mostActiveDepartment: string;
+  }> {
+    const users = Array.from(this.users.values());
+    
+    // Calculate total users
+    const totalUsers = users.length;
+    
+    // Calculate active users (those with recent login within 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const activeUsers = users.filter(user => 
+      user.lastLogin && new Date(user.lastLogin) >= thirtyDaysAgo
+    ).length;
+    
+    // Calculate new users this week
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    const newUsersThisWeek = users.filter(user => 
+      user.createdAt && new Date(user.createdAt) >= oneWeekAgo
+    ).length;
+    
+    // Calculate most active department
+    const departmentCounts = users.reduce((acc, user) => {
+      if (user.department) {
+        acc[user.department] = (acc[user.department] || 0) + 1;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+    
+    const mostActiveDepartment = Object.entries(departmentCounts)
+      .sort(([, a], [, b]) => b - a)
+      .map(([dept]) => dept)[0] || "N/A";
+    
+    return {
+      totalUsers,
+      activeUsers,
+      newUsersThisWeek,
+      mostActiveDepartment
+    };
   }
 
   // Audit decorators will be applied via server initialization

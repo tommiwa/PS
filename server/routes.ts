@@ -909,6 +909,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/admin/user-analytics", requireAdmin, async (req, res) => {
+    try {
+      const userAnalytics = await storage.getUserAnalytics();
+      
+      res.json({
+        ...userAnalytics,
+        generatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error fetching user analytics:", error);
+      res.status(500).json({ error: "Failed to fetch user analytics" });
+    }
+  });
+
   // Get all parking spots (allocated + unallocated) for admin overview (Admin only)
   app.get("/api/admin/all-spots", requireAdmin, async (req, res) => {
     try {
