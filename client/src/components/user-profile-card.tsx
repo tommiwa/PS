@@ -43,18 +43,12 @@ export interface UserProfile {
 interface UserProfileCardProps {
   user: UserProfile
   onEditProfile?: () => void
-  onAddVehicle?: () => void
-  onEditVehicle?: (vehicle: Vehicle) => void
-  onDeleteVehicle?: (vehicle: Vehicle) => void
   showEditButton?: boolean
 }
 
 export function UserProfileCard({ 
   user, 
   onEditProfile, 
-  onAddVehicle,
-  onEditVehicle,
-  onDeleteVehicle,
   showEditButton = true 
 }: UserProfileCardProps) {
   const getRoleBadge = () => {
@@ -140,92 +134,31 @@ export function UserProfileCard({
           </div>
         </div>
 
-        {/* Vehicle Information */}
+        {/* Assigned Parking Spots */}
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h4 className="text-sm font-medium flex items-center gap-2">
-              <Car className="h-4 w-4" />
-              Vehicle Information
-            </h4>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onAddVehicle}
-              data-testid="button-add-vehicle"
-            >
-              <Plus className="h-4 w-4" />
-              Add Vehicle
-            </Button>
-          </div>
+          <h4 className="text-sm font-medium flex items-center gap-2">
+            <MapPin className="h-4 w-4" />
+            My Assigned Parking Spots
+            {user.assignedSpots && user.assignedSpots.length > 0 && (
+              <Badge variant="secondary" className="ml-2">
+                {user.assignedSpots.length} Spot{user.assignedSpots.length !== 1 ? 's' : ''}
+              </Badge>
+            )}
+          </h4>
           
-          {user.vehicles && user.vehicles.length > 0 ? (
-            <div className="space-y-2">
-              {user.vehicles.map((vehicle, index) => (
-                <div 
-                  key={vehicle.id} 
-                  className="flex items-center justify-between p-3 bg-muted rounded-md hover-elevate"
-                  data-testid={`vehicle-${index}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-primary" style={{ backgroundColor: vehicle.color || '#6366f1' }} />
-                    <div>
-                      <div className="text-sm font-medium">
-                        {vehicle.year} {vehicle.make} {vehicle.model}
-                        {vehicle.isDefault && <Badge variant="secondary" className="ml-2">Default</Badge>}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {vehicle.licensePlate}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onEditVehicle?.(vehicle)}
-                      data-testid={`button-edit-vehicle-${index}`}
-                    >
-                      <Edit3 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onDeleteVehicle?.(vehicle)}
-                      data-testid={`button-delete-vehicle-${index}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-4 text-muted-foreground">
-              <Car className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">No vehicles registered</p>
-              <p className="text-xs">Add your vehicle information to complete your profile</p>
-            </div>
-          )}
-        </div>
-
-        {/* Assigned Spots */}
-        {user.assignedSpots && user.assignedSpots.length > 0 && (
-          <div className="space-y-3">
-            <h4 className="text-sm font-medium flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              Assigned Spots ({user.assignedSpots.length})
-            </h4>
+          {user.assignedSpots && user.assignedSpots.length > 0 ? (
             <div className="space-y-2">
               {user.assignedSpots.map((spot, index) => (
                 <div 
                   key={spot.id} 
-                  className="flex items-center justify-between p-3 bg-muted rounded-md"
+                  className="flex items-center justify-between p-4 bg-muted rounded-lg border border-muted-foreground/20"
                   data-testid={`assigned-spot-${index}`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full ${
+                    <div className={`w-3 h-3 rounded-full ${
                       spot.spotType === 'electric' || spot.spotType === 'tesla_ev' ? 'bg-green-500' :
-                      spot.spotType === 'accessible' ? 'bg-blue-500' : 'bg-gray-500'
+                      spot.spotType === 'accessible' ? 'bg-blue-500' : 
+                      spot.spotType === 'reserved' ? 'bg-purple-500' : 'bg-gray-500'
                     }`} />
                     <div>
                       <div className="text-sm font-medium">
@@ -233,20 +166,45 @@ export function UserProfileCard({
                         <Badge variant="outline" className="ml-2 capitalize">
                           {spot.spotType === 'tesla_ev' ? 'Tesla EV' : spot.spotType}
                         </Badge>
+                        {spot.isActive && (
+                          <Badge variant="default" className="ml-2 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                            Active
+                          </Badge>
+                        )}
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        {spot.location} {spot.isIndoor && '• Indoor'}
+                        {spot.location}
+                        {spot.isIndoor && ' • Indoor'}
+                        {spot.isBookable && ' • Available for Sharing'}
                       </div>
+                      {spot.description && (
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {spot.description}
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <div className="text-sm text-muted-foreground">
-                    {spot.isActive ? 'Active' : 'Inactive'}
+                  <div className="flex flex-col items-end gap-1">
+                    <div className={`text-sm font-medium ${spot.isActive ? 'text-green-600 dark:text-green-400' : 'text-gray-500'}`}>
+                      {spot.isActive ? 'Active' : 'Inactive'}
+                    </div>
+                    {spot.isBookable && spot.isActive && (
+                      <div className="text-xs text-muted-foreground">
+                        Can be shared
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="text-center py-6 text-muted-foreground">
+              <MapPin className="h-10 w-10 mx-auto mb-3 opacity-50" />
+              <p className="text-sm font-medium">No parking spots assigned</p>
+              <p className="text-xs">Contact your administrator to assign parking spots to your account</p>
+            </div>
+          )}
+        </div>
         
         <div className="text-xs text-muted-foreground">
           Member since {user.memberSince}

@@ -46,7 +46,7 @@ import {
 import { useAuth } from "@/contexts/auth-context"
 import { useTheme } from "@/contexts/theme-context"
 import { useLanguage } from "@/contexts/language-context"
-import type { Vehicle, WaitingList, NotificationPreferences, UpdateNotificationPreferences, PaymentPreferences, UpdatePaymentPreferences } from "@shared/schema"
+import type { Vehicle, WaitingList, NotificationPreferences, UpdateNotificationPreferences, PaymentPreferences, UpdatePaymentPreferences, ParkingSpot } from "@shared/schema"
 import { insertPaymentPreferencesSchema } from "@shared/schema"
 
 // Vehicle form validation schema
@@ -124,6 +124,12 @@ export default function Profile() {
   // Query payment preferences
   const { data: paymentPreferences, isLoading: isLoadingPaymentPreferences } = useQuery<PaymentPreferences | null>({
     queryKey: ["/api/users", user?.id, "payment-preferences"],
+    enabled: !!user?.id
+  });
+
+  // Query assigned spots
+  const { data: assignedSpots = [], isLoading: isLoadingAssignedSpots } = useQuery<ParkingSpot[]>({
+    queryKey: ["/api/users", user?.id, "assigned-spots"],
     enabled: !!user?.id
   });
 
@@ -325,7 +331,7 @@ export default function Profile() {
   const handleDeleteVehicle = async (vehicle: Vehicle) => {
     const confirmed = await confirm({
       title: "Delete Vehicle",
-      message: `Are you sure you want to delete ${vehicle.make} ${vehicle.model}?`,
+      description: `Are you sure you want to delete ${vehicle.make} ${vehicle.model}?`,
       variant: "destructive"
     });
     
@@ -383,9 +389,16 @@ export default function Profile() {
         {/* User Profile Summary */}
         <div className="py-6">
           <UserProfileCard 
-            user={user}
-            onEditVehicle={handleEditVehicle}
-            onDeleteVehicle={handleDeleteVehicle}
+            user={{
+              id: user?.id || "",
+              name: user?.name || "",
+              email: user?.email || "",
+              phone: user?.phone || "",
+              department: user?.department || "",
+              role: user?.role || "renter",
+              assignedSpots: assignedSpots,
+              memberSince: new Date().getFullYear().toString()
+            }}
           />
         </div>
 
