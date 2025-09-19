@@ -13,9 +13,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Separator } from "@/components/ui/separator"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger, DrawerFooter, DrawerClose } from "@/components/ui/drawer"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { useToast } from "@/hooks/use-toast"
 import { useConfirm } from "@/hooks/use-confirm"
@@ -36,7 +36,11 @@ import {
   Loader2,
   Plus,
   Calendar,
-  CreditCard
+  CreditCard,
+  ChevronRight,
+  User,
+  Palette,
+  Globe
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useTheme } from "@/contexts/theme-context"
@@ -69,9 +73,9 @@ export default function Profile() {
   const { language, setLanguage, t } = useLanguage()
   const { confirm } = useConfirm()
   
-  // State for various settings
-  const [activeTab, setActiveTab] = useState("notifications")
-  const [showAddVehicleDialog, setShowAddVehicleDialog] = useState(false)
+  // State for various settings and drawers
+  const [showAddVehicleDrawer, setShowAddVehicleDrawer] = useState(false)
+  const [showPaymentPreferencesDrawer, setShowPaymentPreferencesDrawer] = useState(false)
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null)
 
   // Vehicle form
@@ -169,7 +173,8 @@ export default function Profile() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "vehicles"] });
-      setShowAddVehicleDialog(false);
+      setShowAddVehicleDrawer(false);
+      setEditingVehicle(null);
       vehicleForm.reset();
       toast({
         title: "Vehicle Added",
@@ -180,6 +185,81 @@ export default function Profile() {
     onError: (error) => {
       toast({
         title: "Failed to Add Vehicle",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const deleteVehicleMutation = useMutation({
+    mutationFn: async (vehicleId: string) => {
+      if (!user) throw new Error("User not found");
+      const response = await apiRequest(`/api/users/${user.id}/vehicles/${vehicleId}`, { 
+        method: 'DELETE' 
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "vehicles"] });
+      toast({
+        title: "Vehicle Deleted",
+        description: "The vehicle has been removed from your profile.",
+        variant: "default"
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to Delete Vehicle",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const createWaitingListMutation = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("User not found");
+      const response = await apiRequest(`/api/users/${user.id}/waiting-list`, { 
+        method: 'POST' 
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "waiting-list"] });
+      toast({
+        title: "Joined Waiting List",
+        description: "You've been successfully added to the parking waiting list.",
+        variant: "default"
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to Join Waiting List",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const cancelWaitingListMutation = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("User not found");
+      const response = await apiRequest(`/api/users/${user.id}/waiting-list`, { 
+        method: 'DELETE' 
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "waiting-list"] });
+      toast({
+        title: "Left Waiting List",
+        description: "You've been removed from the parking waiting list.",
+        variant: "default"
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to Leave Waiting List",
         description: error instanceof Error ? error.message : "Please try again.",
         variant: "destructive"
       });
@@ -206,6 +286,7 @@ export default function Profile() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "payment-preferences"] });
+      setShowPaymentPreferencesDrawer(false);
       toast({
         title: "Payment Preferences Saved",
         description: "Your payment preferences have been updated.",
@@ -236,7 +317,7 @@ export default function Profile() {
       isElectric: vehicle.isElectric,
       isDefault: vehicle.isDefault
     });
-    setShowAddVehicleDialog(true);
+    setShowAddVehicleDrawer(true);
   };
 
   const handleDeleteVehicle = async (vehicle: Vehicle) => {
@@ -247,13 +328,16 @@ export default function Profile() {
     });
     
     if (confirmed) {
-      // Implement delete mutation here
-      toast({
-        title: "Vehicle Deleted",
-        description: "The vehicle has been removed from your profile.",
-        variant: "default"
-      });
+      deleteVehicleMutation.mutate(vehicle.id);
     }
+  };
+
+  const handleJoinWaitingList = () => {
+    createWaitingListMutation.mutate();
+  };
+
+  const handleLeaveWaitingList = () => {
+    cancelWaitingListMutation.mutate();
   };
 
   if (!user) {
@@ -268,70 +352,520 @@ export default function Profile() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-8">
-      <div className="space-y-1">
-        <h1 className="text-3xl font-bold tracking-tight">{t("profile.title")}</h1>
-        <p className="text-muted-foreground">
-          Manage your account settings and preferences.
-        </p>
+    <div className="min-h-screen bg-background">
+      {/* Header - Sticky for PWA */}
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">{t("profile.title")}</h1>
+              <p className="text-sm text-muted-foreground">Manage your account settings</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                className="h-9 w-9"
+                data-testid="button-theme-toggle"
+              >
+                <Palette className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
-      
-      <UserProfileCard 
-        user={user}
-        onEditVehicle={handleEditVehicle}
-        onDeleteVehicle={handleDeleteVehicle}
-      />
-      
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="notifications">{t("profile.tabs.notifications")}</TabsTrigger>
-          <TabsTrigger value="waitingList">{t("profile.tabs.waitingList")}</TabsTrigger>
-          <TabsTrigger value="vehicles">{t("profile.tabs.vehicles")}</TabsTrigger>
-          <TabsTrigger value="appSettings">{t("profile.tabs.appSettings")}</TabsTrigger>
-        </TabsList>
-        
-        {/* Notification Settings */}
-        <TabsContent value="notifications" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="h-5 w-5" />
-                {t("notifications.title")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {isLoadingPreferences ? (
-                <div className="flex items-center justify-center p-8">
-                  <div className="text-sm text-muted-foreground">{t("common.loading")}</div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-4 w-4" />
-                        <Label>{t("notifications.emailNotifications")}</Label>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {t("notifications.emailNotifications.description")}
-                      </p>
-                    </div>
-                    <Switch 
-                      checked={notificationPreferences?.emailNotifications ?? true}
-                      onCheckedChange={(checked) => handlePreferenceChange({ emailNotifications: checked })}
-                      data-testid="switch-email-notifications"
-                      disabled={updateNotificationPreferencesMutation.isPending}
-                    />
+
+      {/* Main Content - Mobile First */}
+      <div className="container mx-auto px-4 pb-8">
+        {/* User Profile Summary */}
+        <div className="py-6">
+          <UserProfileCard 
+            user={user}
+            onEditVehicle={handleEditVehicle}
+            onDeleteVehicle={handleDeleteVehicle}
+          />
+        </div>
+
+        {/* Settings Accordion */}
+        <Accordion type="multiple" className="space-y-4" defaultValue={["waiting-list"]}>
+          
+          {/* Waiting List Section */}
+          <AccordionItem value="waiting-list" className="border rounded-lg px-4">
+            <AccordionTrigger className="hover:no-underline py-6">
+              <div className="flex items-center justify-between w-full mr-4">
+                <div className="flex items-center gap-3">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  <div className="text-left">
+                    <h3 className="font-medium">Parking Waiting List</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {isLoadingWaitingList ? "Loading..." : 
+                       waitingListEntry ? `Enrolled • Priority ${waitingListEntry.priority}` : 
+                       "Not enrolled"}
+                    </p>
                   </div>
-                  
-                  {(notificationPreferences?.emailNotifications ?? true) && (
-                    <>
-                      <Separator />
-                      <div className="space-y-4 pl-6">
-                        <h4 className="font-medium text-sm text-muted-foreground">Email Notification Types</h4>
+                </div>
+                <div className="flex items-center gap-2">
+                  {waitingListEntry && (
+                    <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                      Active
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pb-6">
+              <div className="space-y-4">
+                {isLoadingWaitingList ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+                ) : !waitingListEntry ? (
+                  <div className="text-center py-6">
+                    <p className="text-muted-foreground mb-4">Join the waiting list to be notified when parking spots become available.</p>
+                    <Button 
+                      className="w-full h-12" 
+                      onClick={handleJoinWaitingList}
+                      disabled={createWaitingListMutation.isPending}
+                      data-testid="button-join-waiting-list"
+                    >
+                      {createWaitingListMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      Join Waiting List
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800/50 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-green-900 dark:text-green-100">
+                          Successfully Enrolled
+                        </h4>
+                        <p className="text-sm text-green-700 dark:text-green-300">
+                          Priority: {waitingListEntry.priority} • Enrolled: {waitingListEntry.enrolledDate ? new Date(waitingListEntry.enrolledDate).toLocaleDateString() : 'N/A'}
+                        </p>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={handleLeaveWaitingList}
+                          disabled={cancelWaitingListMutation.isPending}
+                          className="mt-3"
+                          data-testid="button-leave-waiting-list"
+                        >
+                          {cancelWaitingListMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                          Leave Waiting List
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* Payment Preferences Section */}
+          <AccordionItem value="payment-preferences" className="border rounded-lg px-4">
+            <AccordionTrigger className="hover:no-underline py-6">
+              <div className="flex items-center justify-between w-full mr-4">
+                <div className="flex items-center gap-3">
+                  <CreditCard className="h-5 w-5 text-primary" />
+                  <div className="text-left">
+                    <h3 className="font-medium">Payment Preferences</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {isLoadingPaymentPreferences ? "Loading..." : 
+                       paymentPreferences ? 
+                       `${paymentPreferences.paymentType === "interac_transfer" ? "Interac Transfer" : "Cash"}` : 
+                       "Not set"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {paymentPreferences && (
+                    <Badge variant="outline">
+                      {paymentPreferences.paymentType === "interac_transfer" ? "Interac" : "Cash"}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pb-6">
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Set your preferred payment method for when others book your parking spots.
+                </p>
+                <Drawer open={showPaymentPreferencesDrawer} onOpenChange={setShowPaymentPreferencesDrawer}>
+                  <DrawerTrigger asChild>
+                    <Button variant="outline" className="w-full h-12" data-testid="button-edit-payment-preferences">
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      {paymentPreferences ? "Update Payment Preferences" : "Set Payment Preferences"}
+                    </Button>
+                  </DrawerTrigger>
+                  <DrawerContent>
+                    <DrawerHeader>
+                      <DrawerTitle>Payment Preferences</DrawerTitle>
+                    </DrawerHeader>
+                    <div className="px-4 pb-4">
+                      <Form {...paymentForm}>
+                        <form onSubmit={paymentForm.handleSubmit(handleSubmitPaymentPreferences)} className="space-y-4">
+                          <FormField
+                            control={paymentForm.control}
+                            name="paymentType"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Payment Type</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger data-testid="select-payment-type">
+                                      <SelectValue placeholder="Select payment type" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="interac_transfer">Interac Transfer</SelectItem>
+                                    <SelectItem value="cash">Cash</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={paymentForm.control}
+                            name="paymentInstructions"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Payment Instructions</FormLabel>
+                                <FormControl>
+                                  <Textarea 
+                                    placeholder="Enter payment instructions (e.g., email for Interac transfer, meeting location for cash, etc.)"
+                                    className="resize-none"
+                                    rows={3}
+                                    {...field}
+                                    value={field.value || ''}
+                                    data-testid="textarea-payment-instructions"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </form>
+                      </Form>
+                    </div>
+                    <DrawerFooter>
+                      <Button 
+                        onClick={paymentForm.handleSubmit(handleSubmitPaymentPreferences)}
+                        disabled={updatePaymentPreferencesMutation.isPending}
+                        className="w-full h-12"
+                        data-testid="button-save-payment-preferences"
+                      >
+                        {updatePaymentPreferencesMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                        Save Preferences
+                      </Button>
+                      <DrawerClose asChild>
+                        <Button variant="outline" className="w-full h-12">Cancel</Button>
+                      </DrawerClose>
+                    </DrawerFooter>
+                  </DrawerContent>
+                </Drawer>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+          
+          {/* Vehicles Section */}
+          <AccordionItem value="vehicles" className="border rounded-lg px-4">
+            <AccordionTrigger className="hover:no-underline py-6">
+              <div className="flex items-center justify-between w-full mr-4">
+                <div className="flex items-center gap-3">
+                  <Car className="h-5 w-5 text-primary" />
+                  <div className="text-left">
+                    <h3 className="font-medium">My Vehicles</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {isLoadingVehicles ? "Loading..." : 
+                       userVehicles?.length ? `${userVehicles.length} vehicle${userVehicles.length > 1 ? 's' : ''} registered` : 
+                       "No vehicles added"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {userVehicles?.length && (
+                    <Badge variant="outline">{userVehicles.length}</Badge>
+                  )}
+                </div>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pb-6">
+              <div className="space-y-4">
+                {isLoadingVehicles ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+                ) : userVehicles?.length === 0 ? (
+                  <div className="text-center py-6">
+                    <Car className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="font-medium mb-2">No vehicles added</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Add your vehicle information to complete your parking profile.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {userVehicles?.map((vehicle: any) => (
+                      <div key={vehicle.id} className="border rounded-lg p-4 hover-elevate">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                              {vehicle.isElectric ? (
+                                <Zap className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                              ) : (
+                                <CarIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                              )}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium">
+                                  {vehicle.year} {vehicle.make} {vehicle.model}
+                                </p>
+                                {vehicle.isDefault && (
+                                  <Badge variant="secondary" className="text-xs">Default</Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                {vehicle.licensePlate} {vehicle.color && `• ${vehicle.color}`}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditVehicle(vehicle)}
+                              data-testid={`button-edit-vehicle-${vehicle.id}`}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeleteVehicle(vehicle)}
+                              disabled={deleteVehicleMutation.isPending}
+                              data-testid={`button-delete-vehicle-${vehicle.id}`}
+                            >
+                              {deleteVehicleMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                              {!deleteVehicleMutation.isPending && <Trash2 className="h-4 w-4" />}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <Drawer open={showAddVehicleDrawer} onOpenChange={setShowAddVehicleDrawer}>
+                  <DrawerTrigger asChild>
+                    <Button variant="outline" className="w-full h-12" data-testid="button-add-vehicle">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Vehicle
+                    </Button>
+                  </DrawerTrigger>
+                  <DrawerContent>
+                    <DrawerHeader>
+                      <DrawerTitle>{editingVehicle ? "Edit Vehicle" : "Add Vehicle"}</DrawerTitle>
+                    </DrawerHeader>
+                    <div className="px-4 pb-4">
+                      <Form {...vehicleForm}>
+                        <form onSubmit={vehicleForm.handleSubmit(handleSubmitVehicle)} className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                              control={vehicleForm.control}
+                              name="make"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Make</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="e.g., Toyota" {...field} data-testid="input-vehicle-make" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={vehicleForm.control}
+                              name="model"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Model</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="e.g., Camry" {...field} data-testid="input-vehicle-model" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                              control={vehicleForm.control}
+                              name="year"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Year</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                      type="number" 
+                                      placeholder="2020" 
+                                      {...field}
+                                      onChange={(e) => field.onChange(parseInt(e.target.value) || "")}
+                                      data-testid="input-vehicle-year"
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={vehicleForm.control}
+                              name="color"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Color (Optional)</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="e.g., Blue" {...field} data-testid="input-vehicle-color" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          <FormField
+                            control={vehicleForm.control}
+                            name="licensePlate"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>License Plate</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="e.g., ABC-123" {...field} data-testid="input-vehicle-license" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <div className="flex items-center gap-4">
+                            <FormField
+                              control={vehicleForm.control}
+                              name="isElectric"
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                  <FormControl>
+                                    <Switch 
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                      data-testid="switch-vehicle-electric"
+                                    />
+                                  </FormControl>
+                                  <div className="space-y-1 leading-none">
+                                    <FormLabel>Electric Vehicle</FormLabel>
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={vehicleForm.control}
+                              name="isDefault"
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                  <FormControl>
+                                    <Switch 
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                      data-testid="switch-vehicle-default"
+                                    />
+                                  </FormControl>
+                                  <div className="space-y-1 leading-none">
+                                    <FormLabel>Default Vehicle</FormLabel>
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </form>
+                      </Form>
+                    </div>
+                    <DrawerFooter>
+                      <Button 
+                        onClick={vehicleForm.handleSubmit(handleSubmitVehicle)}
+                        disabled={addVehicleMutation.isPending}
+                        className="w-full h-12"
+                        data-testid="button-save-vehicle"
+                      >
+                        {addVehicleMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                        {editingVehicle ? "Update Vehicle" : "Add Vehicle"}
+                      </Button>
+                      <DrawerClose asChild>
+                        <Button variant="outline" className="w-full h-12">Cancel</Button>
+                      </DrawerClose>
+                    </DrawerFooter>
+                  </DrawerContent>
+                </Drawer>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* Notifications Section */}
+          <AccordionItem value="notifications" className="border rounded-lg px-4">
+            <AccordionTrigger className="hover:no-underline py-6">
+              <div className="flex items-center justify-between w-full mr-4">
+                <div className="flex items-center gap-3">
+                  <Bell className="h-5 w-5 text-primary" />
+                  <div className="text-left">
+                    <h3 className="font-medium">Notifications</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {isLoadingPreferences ? "Loading..." : 
+                       notificationPreferences?.emailNotifications ? "Email notifications enabled" : 
+                       "Email notifications disabled"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {notificationPreferences?.emailNotifications && (
+                    <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                      On
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pb-6">
+              <div className="space-y-4">
+                {isLoadingPreferences ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4" />
+                          <Label>Email Notifications</Label>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Receive email notifications for bookings and updates
+                        </p>
+                      </div>
+                      <Switch 
+                        checked={notificationPreferences?.emailNotifications ?? true}
+                        onCheckedChange={(checked) => handlePreferenceChange({ emailNotifications: checked })}
+                        data-testid="switch-email-notifications"
+                        disabled={updateNotificationPreferencesMutation.isPending}
+                      />
+                    </div>
+                    
+                    {(notificationPreferences?.emailNotifications ?? true) && (
+                      <div className="space-y-3">
+                        <Separator />
+                        <h4 className="font-medium text-sm text-muted-foreground">Email Types</h4>
                         <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <Label htmlFor="booking-confirmations">{t("notifications.bookingConfirmations")}</Label>
+                          <div className="flex items-center justify-between p-3 border rounded-lg">
+                            <Label htmlFor="booking-confirmations">Booking Confirmations</Label>
                             <Switch 
                               id="booking-confirmations" 
                               checked={notificationPreferences?.bookingConfirmations ?? true}
@@ -340,8 +874,8 @@ export default function Profile() {
                               disabled={updateNotificationPreferencesMutation.isPending}
                             />
                           </div>
-                          <div className="flex items-center justify-between">
-                            <Label htmlFor="payment-reminders">{t("notifications.paymentReminders")}</Label>
+                          <div className="flex items-center justify-between p-3 border rounded-lg">
+                            <Label htmlFor="payment-reminders">Payment Reminders</Label>
                             <Switch 
                               id="payment-reminders" 
                               checked={notificationPreferences?.paymentReminders ?? true}
@@ -352,421 +886,78 @@ export default function Profile() {
                           </div>
                         </div>
                       </div>
-                    </>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Waiting List Tab */}
-        <TabsContent value="waitingList" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Waiting List Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
-                  {t("waitingList.title")}
-                </CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  {t("waitingList.description")}
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {isLoadingWaitingList ? (
-                  <div className="flex items-center justify-center p-8">
-                    <div className="text-sm text-muted-foreground">{t("common.loading")}</div>
-                  </div>
-                ) : !waitingListEntry ? (
-                  <Button 
-                    className="w-full"
-                    data-testid="button-join-waiting-list"
-                  >
-                    {t("waitingList.enrollButton")}
-                  </Button>
-                ) : (
-                  <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800/50 rounded-lg p-3">
-                    <div className="flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5" />
-                      <div className="space-y-1">
-                        <h4 className="text-sm font-medium text-green-900 dark:text-green-100">
-                          {t("waitingList.enrolled")}
-                        </h4>
-                        <p className="text-xs text-green-700 dark:text-green-300">
-                          Priority: {waitingListEntry.priority}
-                        </p>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 )}
-              </CardContent>
-            </Card>
-
-            {/* Payment Preferences Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CreditCard className="h-5 w-5" />
-                  Payment Preference
-                </CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Set your preferred payment method and instructions for spot bookings.
-                </p>
-              </CardHeader>
-              <CardContent>
-                <Form {...paymentForm}>
-                  <form onSubmit={paymentForm.handleSubmit(handleSubmitPaymentPreferences)} className="space-y-4">
-                    <FormField
-                      control={paymentForm.control}
-                      name="paymentType"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Payment Type</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-payment-type">
-                                <SelectValue placeholder="Select payment type" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="interac_transfer">Interac Transfer</SelectItem>
-                              <SelectItem value="cash">Cash</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={paymentForm.control}
-                      name="paymentInstructions"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Payment Instructions</FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              placeholder="Enter payment instructions (e.g., email for Interac transfer, meeting location for cash, etc.)"
-                              className="resize-none"
-                              rows={3}
-                              {...field}
-                              data-testid="textarea-payment-instructions"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <Button 
-                      type="submit" 
-                      className="w-full"
-                      data-testid="button-save-payment-preferences"
-                    >
-                      Save Payment Preferences
-                    </Button>
-                  </form>
-                </Form>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        {/* Vehicles Tab */}
-        <TabsContent value="vehicles" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <CarIcon className="h-5 w-5" />
-                  {t("vehicles.title")}
-                </CardTitle>
-                <Button
-                  onClick={() => {
-                    setEditingVehicle(null);
-                    vehicleForm.reset();
-                    setShowAddVehicleDialog(true);
-                  }}
-                  size="sm"
-                  data-testid="button-add-vehicle"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  {t("vehicles.addVehicle")}
-                </Button>
               </div>
-            </CardHeader>
-            <CardContent>
-              {isLoadingVehicles ? (
-                <div className="flex items-center justify-center p-8">
-                  <div className="text-sm text-muted-foreground">{t("common.loading")}</div>
-                </div>
-              ) : userVehicles && userVehicles.length > 0 ? (
-                <div className="space-y-3">
-                  {userVehicles.map((vehicle: any) => (
-                    <div 
-                      key={vehicle.id} 
-                      className="border rounded-lg p-4 hover-elevate"
-                      data-testid={`card-vehicle-${vehicle.id}`}
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-medium">{vehicle.make} {vehicle.model}</h4>
-                            {vehicle.isElectric && <Zap className="h-4 w-4 text-green-600" />}
-                            {vehicle.isDefault && <Badge variant="secondary">Primary</Badge>}
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {vehicle.year} • {vehicle.licensePlate}
-                            {vehicle.color && ` • ${vehicle.color}`}
-                          </p>
-                        </div>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditVehicle(vehicle)}
-                            data-testid={`button-edit-vehicle-${vehicle.id}`}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteVehicle(vehicle)}
-                            data-testid={`button-delete-vehicle-${vehicle.id}`}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <CarIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium mb-2">{t("vehicles.noVehicles")}</h3>
-                  <p className="text-muted-foreground mb-4">{t("vehicles.addFirst")}</p>
-                  <Button
-                    onClick={() => {
-                      setEditingVehicle(null);
-                      vehicleForm.reset();
-                      setShowAddVehicleDialog(true);
-                    }}
-                    data-testid="button-add-first-vehicle"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    {t("vehicles.addVehicle")}
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </AccordionContent>
+          </AccordionItem>
 
-        {/* App Settings Tab */}
-        <TabsContent value="appSettings" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="h-5 w-5" />
-                {t("profile.tabs.appSettings")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>{t("appSettings.language")}</Label>
+          {/* App Settings Section */}
+          <AccordionItem value="app-settings" className="border rounded-lg px-4">
+            <AccordionTrigger className="hover:no-underline py-6">
+              <div className="flex items-center justify-between w-full mr-4">
+                <div className="flex items-center gap-3">
+                  <Settings className="h-5 w-5 text-primary" />
+                  <div className="text-left">
+                    <h3 className="font-medium">App Settings</h3>
                     <p className="text-sm text-muted-foreground">
-                      {t("appSettings.language.description")}
+                      Theme: {theme} • Language: {language === 'en' ? 'English' : 'Français'}
                     </p>
                   </div>
-                  <Select value={language} onValueChange={setLanguage}>
-                    <SelectTrigger className="w-[150px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="en">{t("appSettings.language.english")}</SelectItem>
-                      <SelectItem value="fr">{t("appSettings.language.french")}</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
-                
-                <Separator />
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>{t("appSettings.theme")}</Label>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pb-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Palette className="h-4 w-4" />
+                      <Label>Theme</Label>
+                    </div>
                     <p className="text-sm text-muted-foreground">
-                      {t("appSettings.theme.description")}
+                      Choose your preferred theme
                     </p>
                   </div>
                   <Select value={theme} onValueChange={setTheme}>
-                    <SelectTrigger className="w-[150px]">
+                    <SelectTrigger className="w-32" data-testid="select-theme">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="light">{t("appSettings.theme.light")}</SelectItem>
-                      <SelectItem value="dark">{t("appSettings.theme.dark")}</SelectItem>
-                      <SelectItem value="system">{t("appSettings.theme.system")}</SelectItem>
+                      <SelectItem value="light">Light</SelectItem>
+                      <SelectItem value="dark">Dark</SelectItem>
+                      <SelectItem value="system">System</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Globe className="h-4 w-4" />
+                      <Label>Language</Label>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Select your preferred language
+                    </p>
+                  </div>
+                  <Select value={language} onValueChange={setLanguage}>
+                    <SelectTrigger className="w-32" data-testid="select-language">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="en">English</SelectItem>
+                      <SelectItem value="fr">Français</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      {/* Vehicle Dialog */}
-      <Dialog open={showAddVehicleDialog} onOpenChange={setShowAddVehicleDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {editingVehicle ? t("vehicles.editVehicle") : t("vehicles.addVehicle")}
-            </DialogTitle>
-          </DialogHeader>
-          <Form {...vehicleForm}>
-            <form onSubmit={vehicleForm.handleSubmit(handleSubmitVehicle)} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={vehicleForm.control}
-                  name="make"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("vehicles.make")}</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., Tesla" {...field} data-testid="input-vehicle-make" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={vehicleForm.control}
-                  name="model"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("vehicles.model")}</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., Model 3" {...field} data-testid="input-vehicle-model" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={vehicleForm.control}
-                  name="year"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("vehicles.year")}</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          {...field} 
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || new Date().getFullYear())}
-                          data-testid="input-vehicle-year" 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={vehicleForm.control}
-                  name="licensePlate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("vehicles.licensePlate")}</FormLabel>
-                      <FormControl>
-                        <Input {...field} data-testid="input-vehicle-license" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <FormField
-                control={vehicleForm.control}
-                name="color"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("vehicles.color")} (Optional)</FormLabel>
-                    <FormControl>
-                      <Input {...field} data-testid="input-vehicle-color" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="space-y-3">
-                <FormField
-                  control={vehicleForm.control}
-                  name="isElectric"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center justify-between">
-                      <div>
-                        <FormLabel>{t("vehicles.isElectric")}</FormLabel>
-                      </div>
-                      <FormControl>
-                        <Switch 
-                          checked={field.value} 
-                          onCheckedChange={field.onChange}
-                          data-testid="switch-vehicle-electric"
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={vehicleForm.control}
-                  name="isDefault"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center justify-between">
-                      <div>
-                        <FormLabel>{t("vehicles.isDefault")}</FormLabel>
-                      </div>
-                      <FormControl>
-                        <Switch 
-                          checked={field.value} 
-                          onCheckedChange={field.onChange}
-                          data-testid="switch-vehicle-default"
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => setShowAddVehicleDialog(false)}>
-                  {t("vehicles.cancel")}
-                </Button>
-                <Button 
-                  type="submit" 
-                  disabled={addVehicleMutation.isPending}
-                  data-testid="button-save-vehicle"
-                >
-                  {addVehicleMutation.isPending && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  {t("vehicles.save")}
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+            </AccordionContent>
+          </AccordionItem>
+          
+        </Accordion>
+      </div>
     </div>
   )
 }
