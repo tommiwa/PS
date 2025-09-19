@@ -86,11 +86,27 @@ export default function AdminUserManagement() {
   const [filterRole, setFilterRole] = useState("all")
   const [filterStatus, setFilterStatus] = useState("all")
   const [showAddUser, setShowAddUser] = useState(false)
+  const [showEditUser, setShowEditUser] = useState(false)
+  const [editingUser, setEditingUser] = useState<any>(null)
   const [showBulkActions, setShowBulkActions] = useState(false)
   const [activeTab, setActiveTab] = useState("users")
 
-  // Form setup
+  // Form setup for creating users
   const form = useForm<CreateUserFormData>({
+    resolver: zodResolver(createUserFormSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      department: "",
+      role: "renter",
+      memberSince: new Date().toISOString().split('T')[0]
+    }
+  })
+
+  // Form setup for editing users
+  const editForm = useForm<CreateUserFormData>({
     resolver: zodResolver(createUserFormSchema),
     defaultValues: {
       firstName: "",
@@ -172,10 +188,13 @@ export default function AdminUserManagement() {
     onSuccess: (updatedUser: User) => {
       // Invalidate and refetch user data
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
-      const userName = [updatedUser?.firstName, updatedUser?.lastName].filter(Boolean).join(' ') || updatedUser?.email || 'Unknown User';
+      setShowEditUser(false);
+      setEditingUser(null);
+      editForm.reset();
+      const updatedUserName = [updatedUser?.firstName, updatedUser?.lastName].filter(Boolean).join(' ') || updatedUser?.email || 'Unknown User';
       toast({
         title: "User Updated",
-        description: `Successfully updated user ${userName}`,
+        description: `Successfully updated user ${updatedUserName}`,
       });
     },
     onError: (error: any) => {
@@ -247,11 +266,21 @@ export default function AdminUserManagement() {
 
   const handleEditUser = (userId: string) => {
     console.log('Edit user:', userId)
-    const user = displayUsers.find(u => u.id === userId)
+    const user = allUsers.find(u => u.id === userId)
     if (!user) return
 
-    // Use browser popup as requested by user
-    alert(`Edit functionality for user ${user.name} is not yet implemented. This would open an edit form in production.`)
+    // Populate edit form with user data
+    setEditingUser(user)
+    editForm.reset({
+      firstName: user.firstName || "",
+      lastName: user.lastName || "",
+      email: user.email || "",
+      phone: user.phone || "",
+      department: user.department || "",
+      role: user.role || "renter",
+      memberSince: user.memberSince || new Date().toISOString().split('T')[0]
+    })
+    setShowEditUser(true)
   }
 
   const handleDeleteUser = async (userId: string) => {
@@ -327,7 +356,13 @@ export default function AdminUserManagement() {
     }
   }
 
-  // Handle form submission
+  // Handle edit form submission
+  const onEditSubmit = (data: CreateUserFormData) => {
+    if (!editingUser) return;
+    editUserMutation.mutate({ userId: editingUser.id, userData: data });
+  };
+
+  // Handle create form submission
   const onSubmit = (data: CreateUserFormData) => {
     createUserMutation.mutate(data);
   };
@@ -564,6 +599,144 @@ export default function AdminUserManagement() {
                       data-testid="button-submit-add-user"
                     >
                       {createUserMutation.isPending ? "Creating..." : "Add User"}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+
+          {/* Edit User Dialog */}
+          <Dialog open={showEditUser} onOpenChange={setShowEditUser}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Edit User</DialogTitle>
+              </DialogHeader>
+              <Form {...editForm}>
+                <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={editForm.control}
+                      name="firstName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>First Name</FormLabel>
+                          <FormControl>
+                            <Input data-testid="input-edit-first-name" placeholder="First name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={editForm.control}
+                      name="lastName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Last Name</FormLabel>
+                          <FormControl>
+                            <Input data-testid="input-edit-last-name" placeholder="Last name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={editForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input data-testid="input-edit-email" placeholder="email@company.com" type="email" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={editForm.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Phone</FormLabel>
+                          <FormControl>
+                            <Input data-testid="input-edit-phone" placeholder="+1 (555) 123-4567" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={editForm.control}
+                      name="department"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Department</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-edit-department">
+                                <SelectValue placeholder="Select department" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Engineering">Engineering</SelectItem>
+                              <SelectItem value="Marketing">Marketing</SelectItem>
+                              <SelectItem value="Sales">Sales</SelectItem>
+                              <SelectItem value="HR">HR</SelectItem>
+                              <SelectItem value="Finance">Finance</SelectItem>
+                              <SelectItem value="Operations">Operations</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={editForm.control}
+                      name="role"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Role</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-edit-role">
+                                <SelectValue placeholder="Select role" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="renter">Renter</SelectItem>
+                              <SelectItem value="owner">Owner</SelectItem>
+                              <SelectItem value="admin">Admin</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="flex justify-end space-x-2 pt-4">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => setShowEditUser(false)}
+                      data-testid="button-cancel-edit-user"
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      disabled={editUserMutation.isPending}
+                      data-testid="button-save-edit-user"
+                    >
+                      {editUserMutation.isPending ? 'Updating...' : 'Update User'}
                     </Button>
                   </div>
                 </form>
