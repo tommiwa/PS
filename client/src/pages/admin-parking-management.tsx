@@ -18,6 +18,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { SortableTableHeader } from "@/components/ui/sortable-table-header"
 import { EnhancedFilters, type FilterConfig, type FilterValues } from "@/components/ui/enhanced-filters"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { 
   Users, Car, Clock, AlertTriangle, TrendingUp, Plus, 
   ListOrdered, CalendarDays, UserPlus, ArrowRight,
@@ -703,15 +704,21 @@ export default function AdminParkingManagement() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button 
-            variant="outline"
-            onClick={toggleCards}
-            data-testid="button-toggle-cards"
-            title={cardsVisible ? "Hide dashboard cards" : "Show dashboard cards"}
-          >
-            {cardsVisible ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
-            {cardsVisible ? "Hide Cards" : "Show Cards"}
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline"
+                size="icon"
+                onClick={toggleCards}
+                data-testid="button-toggle-cards"
+              >
+                {cardsVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {cardsVisible ? "Hide dashboard cards" : "Show dashboard cards"}
+            </TooltipContent>
+          </Tooltip>
           <Button 
             variant="outline"
             onClick={handleRefreshAll}

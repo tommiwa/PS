@@ -493,15 +493,15 @@ export default function AdminSpotBookingManagement() {
             <TooltipTrigger asChild>
               <Button 
                 variant="outline" 
+                size="icon"
                 onClick={toggleCards}
                 data-testid="button-toggle-cards"
               >
-                {cardsVisible ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
-                {cardsVisible ? "Hide Cards" : "Show Cards"}
+                {cardsVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>{cardsVisible ? "Hide analytics cards" : "Show analytics cards"}</p>
+              {cardsVisible ? "Hide analytics cards" : "Show analytics cards"}
             </TooltipContent>
           </Tooltip>
           <Button 
