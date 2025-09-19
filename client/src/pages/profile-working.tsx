@@ -220,7 +220,7 @@ export default function Profile() {
       />
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="notifications">{t("profile.tabs.notifications")}</TabsTrigger>
           <TabsTrigger value="waitingList">{t("profile.tabs.waitingList")}</TabsTrigger>
           <TabsTrigger value="vehicles">{t("profile.tabs.vehicles")}</TabsTrigger>
