@@ -21,6 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { useToast } from "@/hooks/use-toast"
 import { useConfirm, confirmations } from "@/hooks/use-confirm"
+import type { Vehicle } from "@/components/user-profile-card"
 import { 
   Car, 
   Settings, 
@@ -99,6 +100,8 @@ export default function Profile() {
   const [pushNotifications, setPushNotifications] = useState(true)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [activeTab, setActiveTab] = useState("notifications")
+  const [showAddVehicleDialog, setShowAddVehicleDialog] = useState(false)
+  const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null)
   const [isEnrolledInWaitingList, setIsEnrolledInWaitingList] = useState(false)
   const [availabilityAlertsEnabled, setAvailabilityAlertsEnabled] = useState(false)
   const [editWaitingListMode, setEditWaitingListMode] = useState(false)
