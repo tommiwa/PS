@@ -153,10 +153,10 @@ export default function Profile() {
     enabled: !!user?.id
   });
 
-  // Query user's assigned spots (for owners)
+  // Query user's assigned spots (for owners and admins)
   const { data: assignedSpots = [], isLoading: isLoadingSpots } = useQuery<ParkingSpot[]>({
     queryKey: ["/api/users", user?.id, "assigned-spots"],
-    enabled: !!user?.id && isOwner()
+    enabled: !!user?.id && (isOwner() || isAdmin())
   });
 
   // Query user's vehicles
