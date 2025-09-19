@@ -10,6 +10,7 @@ import {
   ChevronDown,
   ChevronRight,
   Eye,
+  EyeOff,
   User,
   AlertCircle,
   CheckCircle,
@@ -35,6 +36,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import type { AuditLog, AuditAction, EntityType, UserRole } from "@shared/schema"
+import { useCardsVisibility } from "@/hooks/use-cards-visibility"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 
 // Available filter options
 const AUDIT_ACTIONS: AuditAction[] = [
@@ -89,6 +92,7 @@ export default function AdminAudits() {
   const [pageSize] = useState(50);
   const [expandedRows, setExpandedRows] = useState<ExpandedRow>({});
   const [searchTerm, setSearchTerm] = useState("");
+  const { cardsVisible, toggleCardsVisibility } = useCardsVisibility('audit-logs');
 
   // Build query parameters
   const queryParams = new URLSearchParams();
@@ -230,6 +234,21 @@ export default function AdminAudits() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={toggleCardsVisibility}
+                data-testid="button-toggle-cards"
+              >
+                {cardsVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {cardsVisible ? 'Hide analytics cards' : 'Show analytics cards'}
+            </TooltipContent>
+          </Tooltip>
           <Button 
             variant="outline" 
             onClick={() => refetch()}
@@ -250,7 +269,8 @@ export default function AdminAudits() {
       </div>
 
       {/* Quick Analytics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {cardsVisible && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" data-testid="analytics-cards">
         <Card className="hover-elevate">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Logs Today</CardTitle>
@@ -310,7 +330,8 @@ export default function AdminAudits() {
             </p>
           </CardContent>
         </Card>
-      </div>
+        </div>
+      )}
 
       {/* Search and Filters */}
       <Card className="hover-elevate">

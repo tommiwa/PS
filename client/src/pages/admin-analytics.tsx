@@ -18,7 +18,9 @@ import {
   AlertCircle,
   Clock,
   RefreshCw,
-  Loader2
+  Loader2,
+  Eye,
+  EyeOff
 } from "lucide-react"
 import {
   LineChart,
@@ -31,7 +33,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   Legend,
   ResponsiveContainer
 } from "recharts"
@@ -43,10 +45,13 @@ import type {
   AnalyticsIssuesResponse,
   AnalyticsUsageResponse
 } from "@shared/schema"
+import { useCardsVisibility } from "@/hooks/use-cards-visibility"
+import { Tooltip as UITooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 
 export default function AdminAnalytics() {
   const queryClient = useQueryClient();
   const [dateRange, setDateRange] = useState("last-30-days");
+  const { cardsVisible, toggleCardsVisibility } = useCardsVisibility('analytics');
   
   // Helper function to convert dateRange to monthsBack for revenue API
   const getMonthsBack = (range: string): number => {
@@ -177,6 +182,21 @@ export default function AdminAnalytics() {
           </p>
         </div>
         <div className="flex gap-2">
+          <UITooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={toggleCardsVisibility}
+                data-testid="button-toggle-cards"
+              >
+                {cardsVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {cardsVisible ? 'Hide analytics cards' : 'Show analytics cards'}
+            </TooltipContent>
+          </UITooltip>
           <Button 
             variant="outline" 
             onClick={handleRefresh}
@@ -209,7 +229,8 @@ export default function AdminAnalytics() {
       </div>
 
       {/* Key Metrics Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      {cardsVisible && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4" data-testid="analytics-cards">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
@@ -370,7 +391,8 @@ export default function AdminAnalytics() {
             )}
           </CardContent>
         </Card>
-      </div>
+        </div>
+      )}
 
       <Tabs defaultValue="revenue" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
@@ -407,7 +429,7 @@ export default function AdminAnalytics() {
                           tick={{ fontSize: 12 }}
                           tickFormatter={(value) => `$${value}`}
                         />
-                        <Tooltip 
+                        <RechartsTooltip 
                           formatter={(value: number, name: string) => [
                             `$${value.toLocaleString()}`, 
                             name === 'revenue' ? 'Revenue' : name
@@ -479,7 +501,7 @@ export default function AdminAnalytics() {
                             <Cell key={`cell-${index}`} fill={entry.color} />
                           ))}
                         </Pie>
-                        <Tooltip formatter={(value: number) => [`$${value.toLocaleString()}`, 'Amount']} />
+                        <RechartsTooltip formatter={(value: number) => [`$${value.toLocaleString()}`, 'Amount']} />
                         <Legend />
                       </PieChart>
                     </ResponsiveContainer>
@@ -517,7 +539,7 @@ export default function AdminAnalytics() {
                           tick={{ fontSize: 12 }}
                           tickFormatter={(value) => `${value}%`}
                         />
-                        <Tooltip 
+                        <RechartsTooltip 
                           formatter={(value: number) => [`${value}%`, 'Usage']}
                           labelFormatter={(label) => `Time: ${label}`}
                         />
@@ -566,7 +588,7 @@ export default function AdminAnalytics() {
                           tick={{ fontSize: 12 }}
                           width={60}
                         />
-                        <Tooltip 
+                        <RechartsTooltip 
                           formatter={(value: number, name: string) => [
                             name === 'utilization' ? `${value}%` : `$${value.toLocaleString()}`,
                             name === 'utilization' ? 'Utilization' : name === 'earnings' ? 'Earnings' : name
@@ -674,7 +696,7 @@ export default function AdminAnalytics() {
                           tick={{ fontSize: 10 }}
                           width={50}
                         />
-                        <Tooltip 
+                        <RechartsTooltip 
                           formatter={(value: number, name: string) => [
                             name === 'earnings' ? `$${value.toLocaleString()}` : 
                             name === 'utilization' ? `${value}%` : value,
@@ -728,7 +750,7 @@ export default function AdminAnalytics() {
                           tick={{ fontSize: 10 }}
                           width={70}
                         />
-                        <Tooltip 
+                        <RechartsTooltip 
                           formatter={(value: number, name: string) => [
                             name === 'earnings' ? `$${value.toLocaleString()}` : 
                             name === 'averageRating' ? `${value}⭐` : value,
@@ -781,7 +803,7 @@ export default function AdminAnalytics() {
                           tick={{ fontSize: 10 }}
                           tickFormatter={(value) => `${value}%`}
                         />
-                        <Tooltip 
+                        <RechartsTooltip 
                           formatter={(value: number) => [`${value}%`, 'Utilization']}
                         />
                         <Bar 
@@ -822,7 +844,7 @@ export default function AdminAnalytics() {
                           tick={{ fontSize: 10 }}
                           domain={[0, 5]}
                         />
-                        <Tooltip 
+                        <RechartsTooltip 
                           formatter={(value: number) => [`${value}⭐`, 'Rating']}
                         />
                         <Bar 
@@ -862,7 +884,7 @@ export default function AdminAnalytics() {
                         <YAxis 
                           tick={{ fontSize: 10 }}
                         />
-                        <Tooltip 
+                        <RechartsTooltip 
                           formatter={(value: number) => [value, 'Bookings']}
                         />
                         <Bar 
