@@ -1,8 +1,18 @@
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Mail, Phone, Car, Settings, MapPin } from "lucide-react"
+import { Mail, Phone, Car, Settings, MapPin, Plus, Calendar, Bell, FileText, Users } from "lucide-react"
+
+export interface Vehicle {
+  id: string
+  make: string
+  model: string
+  year: number
+  licensePlate: string
+  color?: string
+  isDefault?: boolean
+}
 
 export interface UserProfile {
   id: string
@@ -12,11 +22,7 @@ export interface UserProfile {
   department: string
   role: "admin" | "owner" | "renter"
   avatar?: string
-  vehicleInfo?: {
-    make: string
-    model: string
-    licensePlate: string
-  }
+  vehicles?: Vehicle[]
   spotCount?: number
   memberSince: string
 }
@@ -24,10 +30,24 @@ export interface UserProfile {
 interface UserProfileCardProps {
   user: UserProfile
   onEditProfile?: () => void
+  onAddVehicle?: () => void
+  onManageBookings?: () => void
+  onNotificationSettings?: () => void
+  onViewReports?: () => void
+  onManageSpots?: () => void
   showEditButton?: boolean
 }
 
-export function UserProfileCard({ user, onEditProfile, showEditButton = true }: UserProfileCardProps) {
+export function UserProfileCard({ 
+  user, 
+  onEditProfile, 
+  onAddVehicle,
+  onManageBookings,
+  onNotificationSettings,
+  onViewReports,
+  onManageSpots,
+  showEditButton = true 
+}: UserProfileCardProps) {
   const getRoleBadge = () => {
     const roleConfig = {
       admin: { variant: "default" as const, label: "Administrator" },
@@ -87,7 +107,8 @@ export function UserProfileCard({ user, onEditProfile, showEditButton = true }: 
         </div>
       </CardHeader>
       
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-6">
+        {/* Contact Information */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="flex items-center gap-3">
             <Mail className="h-4 w-4 text-muted-foreground" />
@@ -109,18 +130,108 @@ export function UserProfileCard({ user, onEditProfile, showEditButton = true }: 
             </div>
           </div>
         </div>
-        
-        {user.vehicleInfo && (
-          <div className="flex items-center gap-3 p-3 bg-muted rounded-md">
-            <Car className="h-4 w-4 text-muted-foreground" />
-            <div>
-              <div className="text-sm font-medium">Vehicle Information</div>
-              <div className="text-sm text-muted-foreground">
-                {user.vehicleInfo.make} {user.vehicleInfo.model} • {user.vehicleInfo.licensePlate}
-              </div>
-            </div>
+
+        {/* Vehicle Information */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-medium flex items-center gap-2">
+              <Car className="h-4 w-4" />
+              Vehicle Information
+            </h4>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onAddVehicle}
+              data-testid="button-add-vehicle"
+            >
+              <Plus className="h-4 w-4" />
+              Add Vehicle
+            </Button>
           </div>
-        )}
+          
+          {user.vehicles && user.vehicles.length > 0 ? (
+            <div className="space-y-2">
+              {user.vehicles.map((vehicle, index) => (
+                <div 
+                  key={vehicle.id} 
+                  className="flex items-center justify-between p-3 bg-muted rounded-md"
+                  data-testid={`vehicle-${index}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full bg-primary" style={{ backgroundColor: vehicle.color || '#6366f1' }} />
+                    <div>
+                      <div className="text-sm font-medium">
+                        {vehicle.year} {vehicle.make} {vehicle.model}
+                        {vehicle.isDefault && <Badge variant="secondary" className="ml-2">Default</Badge>}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {vehicle.licensePlate}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-4 text-muted-foreground">
+              <Car className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">No vehicles registered</p>
+              <p className="text-xs">Add your vehicle information to complete your profile</p>
+            </div>
+          )}
+        </div>
+
+        {/* Quick Actions */}
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium">Quick Actions</h4>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-auto p-3 flex flex-col gap-1"
+              onClick={onManageBookings}
+              data-testid="button-manage-bookings"
+            >
+              <Calendar className="h-4 w-4" />
+              <span className="text-xs">Manage Bookings</span>
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-auto p-3 flex flex-col gap-1"
+              onClick={onNotificationSettings}
+              data-testid="button-notification-settings"
+            >
+              <Bell className="h-4 w-4" />
+              <span className="text-xs">Notifications</span>
+            </Button>
+            
+            {user.role === 'owner' && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-auto p-3 flex flex-col gap-1"
+                onClick={onManageSpots}
+                data-testid="button-manage-spots"
+              >
+                <MapPin className="h-4 w-4" />
+                <span className="text-xs">My Spots</span>
+              </Button>
+            )}
+            
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-auto p-3 flex flex-col gap-1"
+              onClick={onViewReports}
+              data-testid="button-view-reports"
+            >
+              <FileText className="h-4 w-4" />
+              <span className="text-xs">Reports</span>
+            </Button>
+          </div>
+        </div>
         
         <div className="text-xs text-muted-foreground">
           Member since {user.memberSince}

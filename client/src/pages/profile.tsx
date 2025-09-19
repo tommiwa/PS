@@ -252,16 +252,12 @@ export default function Profile() {
   // Create user profile object compatible with UserProfileCard
   const userProfile = {
     id: user.id,
-    name: user.name,
+    name: user.name || "User",
     email: user.email,
     phone: user.phone || "(555) 000-0000",
     department: user.department || "Unknown",
     role: user.role,
-    vehicleInfo: {
-      make: "Tesla",
-      model: "Model 3", 
-      licensePlate: "ABC-123"
-    },
+    vehicles: (user as any).vehicles || [],
     spotCount: isOwner() ? 2 : undefined,
     memberSince: user.memberSince || "Recently"
   }
@@ -350,6 +346,28 @@ export default function Profile() {
     setLocation('/my-spots')
   }
 
+  const handleAddVehicle = () => {
+    setActiveTab("vehicle")
+    toast({
+      title: "Add Vehicle",
+      description: "Go to the Vehicle tab to add a new vehicle to your profile.",
+      variant: "default"
+    })
+  }
+
+  const handleManageBookings = () => {
+    setLocation('/my-bookings')
+  }
+
+  const handleViewReports = () => {
+    setLocation('/reports')
+    toast({
+      title: "Reports Available",
+      description: "View your booking history and parking analytics.",
+      variant: "default"
+    })
+  }
+
   return (
     <div className="p-6 space-y-6" data-testid="page-profile">
       <div className="flex items-center justify-between">
@@ -363,7 +381,15 @@ export default function Profile() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <UserProfileCard user={userProfile} onEditProfile={handleEditProfile} />
+          <UserProfileCard 
+            user={userProfile} 
+            onEditProfile={handleEditProfile}
+            onAddVehicle={handleAddVehicle}
+            onManageBookings={handleManageBookings}
+            onNotificationSettings={handleNotificationSettings}
+            onViewReports={handleViewReports}
+            onManageSpots={handleManageSpots}
+          />
           
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-5">
