@@ -801,8 +801,8 @@ export default function AdminSpotBookingManagement() {
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="active" data-testid="tab-active-bookings">Active Bookings</TabsTrigger>
           <TabsTrigger value="requests" data-testid="tab-booking-requests">Booking Requests</TabsTrigger>
+          <TabsTrigger value="analytics" data-testid="tab-past-bookings">Past Bookings</TabsTrigger>
           <TabsTrigger value="activity" data-testid="tab-recent-activity">Recent Activity</TabsTrigger>
-          <TabsTrigger value="analytics" data-testid="tab-analytics">Analytics</TabsTrigger>
         </TabsList>
 
         {/* Active Bookings Tab */}
@@ -1237,6 +1237,79 @@ export default function AdminSpotBookingManagement() {
           </Card>
         </TabsContent>
 
+        {/* Past Bookings Tab */}
+        <TabsContent value="analytics" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Popular Spots</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {displayAnalytics.popularSpots.length > 0 ? (
+                  <div className="space-y-3">
+                    {displayAnalytics.popularSpots.map((spot, index) => (
+                      <div key={spot.spotNumber} className="flex items-center justify-between" data-testid={`popular-spot-${index}`}>
+                        <span className="font-medium">{spot.spotNumber}</span>
+                        <Badge variant="secondary">{spot.bookings} bookings</Badge>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground" data-testid="empty-popular-spots">
+                    <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No popular spots data available</p>
+                    <p className="text-sm">Booking data will appear here once users start making bookings.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>User Activity</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between" data-testid="analytics-active-renters">
+                    <span>Active Renters</span>
+                    <span className="font-medium">{displayAnalytics.userActivity.activeRenters}</span>
+                  </div>
+                  <div className="flex items-center justify-between" data-testid="analytics-active-owners">
+                    <span>Active Owners</span>
+                    <span className="font-medium">{displayAnalytics.userActivity.activeOwners}</span>
+                  </div>
+                  <div className="flex items-center justify-between" data-testid="analytics-new-signups">
+                    <span>New Signups This Week</span>
+                    <span className="font-medium">{displayAnalytics.userActivity.newSignups}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Booking Metrics</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between" data-testid="analytics-average-booking">
+                    <span>Average Booking Value</span>
+                    <span className="font-medium">${displayAnalytics.averageBookingValue.toFixed(2)}</span>
+                  </div>
+                  <div className="flex items-center justify-between" data-testid="analytics-week-bookings">
+                    <span>This Week's Bookings</span>
+                    <span className="font-medium">{displayAnalytics.thisWeekBookings}</span>
+                  </div>
+                  <div className="flex items-center justify-between" data-testid="analytics-resolved-disputes">
+                    <span>Resolved Disputes</span>
+                    <span className="font-medium">{displayAnalytics.resolvedDisputes}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
         {/* Recent Activity Tab */}
         <TabsContent value="activity" className="space-y-4">
           {/* Enhanced Filters for Booking Activity */}
@@ -1410,78 +1483,6 @@ export default function AdminSpotBookingManagement() {
           </Card>
         </TabsContent>
 
-        {/* Analytics Tab */}
-        <TabsContent value="analytics" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Popular Spots</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {displayAnalytics.popularSpots.length > 0 ? (
-                  <div className="space-y-3">
-                    {displayAnalytics.popularSpots.map((spot, index) => (
-                      <div key={spot.spotNumber} className="flex items-center justify-between" data-testid={`popular-spot-${index}`}>
-                        <span className="font-medium">{spot.spotNumber}</span>
-                        <Badge variant="secondary">{spot.bookings} bookings</Badge>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground" data-testid="empty-popular-spots">
-                    <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No popular spots data available</p>
-                    <p className="text-sm">Booking data will appear here once users start making bookings.</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>User Activity</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between" data-testid="analytics-active-renters">
-                    <span>Active Renters</span>
-                    <span className="font-medium">{displayAnalytics.userActivity.activeRenters}</span>
-                  </div>
-                  <div className="flex items-center justify-between" data-testid="analytics-active-owners">
-                    <span>Active Owners</span>
-                    <span className="font-medium">{displayAnalytics.userActivity.activeOwners}</span>
-                  </div>
-                  <div className="flex items-center justify-between" data-testid="analytics-new-signups">
-                    <span>New Signups This Week</span>
-                    <span className="font-medium">{displayAnalytics.userActivity.newSignups}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Booking Metrics</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between" data-testid="analytics-average-booking">
-                    <span>Average Booking Value</span>
-                    <span className="font-medium">${displayAnalytics.averageBookingValue.toFixed(2)}</span>
-                  </div>
-                  <div className="flex items-center justify-between" data-testid="analytics-week-bookings">
-                    <span>This Week's Bookings</span>
-                    <span className="font-medium">{displayAnalytics.thisWeekBookings}</span>
-                  </div>
-                  <div className="flex items-center justify-between" data-testid="analytics-resolved-disputes">
-                    <span>Resolved Disputes</span>
-                    <span className="font-medium">{displayAnalytics.resolvedDisputes}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
       </Tabs>
 
       {/* Booking Details Dialog */}
