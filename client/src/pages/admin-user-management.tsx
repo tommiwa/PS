@@ -16,9 +16,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useConfirm, confirmations } from "@/hooks/use-confirm"
 import { useToast } from "@/hooks/use-toast"
 import { useTableSort } from "@/hooks/use-table-sort"
+import { useCardsVisibility } from "@/hooks/use-cards-visibility"
 import { apiRequest, queryClient } from "@/lib/queryClient"
 import { insertUserSchema, type InsertUser, type User, type ParkingSpot } from "@shared/schema"
 import { quickExportUsersPDF, quickExportUsersExcel } from "@/utils/export-utils"
@@ -35,6 +37,8 @@ import {
   AlertTriangle,
   CheckCircle,
   XCircle,
+  Eye,
+  EyeOff,
   Clock,
   RefreshCw,
   Shield,
@@ -95,6 +99,9 @@ export default function AdminUserManagement() {
   const [editingUser, setEditingUser] = useState<any>(null)
   const [showBulkActions, setShowBulkActions] = useState(false)
   const [activeTab, setActiveTab] = useState("users")
+  
+  // Cards visibility toggle hook
+  const { cardsVisible, toggleCards } = useCardsVisibility("user-management")
   
   // Auto-refresh data when switching tabs
   useEffect(() => {
@@ -519,6 +526,21 @@ export default function AdminUserManagement() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                onClick={toggleCards}
+                data-testid="button-toggle-cards"
+              >
+                {cardsVisible ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
+                {cardsVisible ? "Hide Cards" : "Show Cards"}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{cardsVisible ? "Hide analytics cards" : "Show analytics cards"}</p>
+            </TooltipContent>
+          </Tooltip>
           <Button 
             variant="outline" 
             onClick={() => refetchUsers()}
@@ -921,7 +943,8 @@ export default function AdminUserManagement() {
       </div>
 
       {/* Quick Analytics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {cardsVisible && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Users</CardTitle>
@@ -981,7 +1004,8 @@ export default function AdminUserManagement() {
             </p>
           </CardContent>
         </Card>
-      </div>
+        </div>
+      )}
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -994,7 +1018,8 @@ export default function AdminUserManagement() {
         {/* Users Tab */}
         <TabsContent value="users" className="space-y-4">
           {/* Role Filter Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {cardsVisible && (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card 
               className={`cursor-pointer hover-elevate ${
                 filterRole === 'admin' ? 'ring-2 ring-primary' : ''
@@ -1063,7 +1088,8 @@ export default function AdminUserManagement() {
                 <Badge variant="outline" className="text-xs bg-gray-50 text-gray-700 border-gray-200">Total count</Badge>
               </CardContent>
             </Card>
-          </div>
+            </div>
+          )}
 
           <Card>
             <CardHeader>
@@ -1178,7 +1204,9 @@ export default function AdminUserManagement() {
 
         {/* Reports Tab */}
         <TabsContent value="reports" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {cardsVisible && (
+            <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">User Distribution</CardTitle>
@@ -1263,6 +1291,8 @@ export default function AdminUserManagement() {
               </div>
             </CardContent>
           </Card>
+          </>
+          )}
         </TabsContent>
       </Tabs>
     </div>

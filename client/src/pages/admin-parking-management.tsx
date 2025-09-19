@@ -4,6 +4,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient"
 import { useToast } from "@/hooks/use-toast"
 import { useConfirm, confirmations } from "@/hooks/use-confirm"
 import { useTableSort } from "@/hooks/use-table-sort"
+import { useCardsVisibility } from "@/hooks/use-cards-visibility"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -22,7 +23,8 @@ import {
   ListOrdered, CalendarDays, UserPlus, ArrowRight,
   Timer, Target, CheckCircle2, Search, Filter,
   Zap, Accessibility, Building, MoreHorizontal, Info, RefreshCw,
-  Trash2, Edit, UserMinus, UserCheck, Download, FileText
+  Trash2, Edit, UserMinus, UserCheck, Download, FileText,
+  Eye, EyeOff
 } from "lucide-react"
 import type { WaitingList, ParkingSpot, ParkingSpotWithUser, SpotType } from "@shared/schema"
 import { quickExportParkingSpotsPDF, quickExportParkingSpotsExcel } from "@/utils/export-utils"
@@ -68,6 +70,9 @@ export default function AdminParkingManagement() {
   // Bookability control state
   const [selectedSpots, setSelectedSpots] = useState<Set<string>>(new Set())
   const [isSelectAllChecked, setIsSelectAllChecked] = useState(false)
+  
+  // Cards visibility hook
+  const { cardsVisible, toggleCards } = useCardsVisibility("parking-management")
   
   // Refresh all data handler
   const handleRefreshAll = () => {
@@ -700,6 +705,15 @@ export default function AdminParkingManagement() {
         <div className="flex gap-2">
           <Button 
             variant="outline"
+            onClick={toggleCards}
+            data-testid="button-toggle-cards"
+            title={cardsVisible ? "Hide dashboard cards" : "Show dashboard cards"}
+          >
+            {cardsVisible ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
+            {cardsVisible ? "Hide Cards" : "Show Cards"}
+          </Button>
+          <Button 
+            variant="outline"
             onClick={handleRefreshAll}
             data-testid="button-refresh-data"
           >
@@ -772,7 +786,8 @@ export default function AdminParkingManagement() {
       </div>
 
       {/* Quick Analytics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {cardsVisible && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card data-testid="card-total-spots">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Available Spots</CardTitle>
@@ -832,7 +847,8 @@ export default function AdminParkingManagement() {
             </p>
           </CardContent>
         </Card>
-      </div>
+        </div>
+      )}
 
       {/* Main Content Tabs */}
       <Tabs value={activeSpotTab} onValueChange={setActiveSpotTab} className="w-full">

@@ -4,6 +4,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient"
 import { useToast } from "@/hooks/use-toast"
 import { useConfirm, confirmations } from "@/hooks/use-confirm"
 import { useTableSort } from "@/hooks/use-table-sort"
+import { useCardsVisibility } from "@/hooks/use-cards-visibility"
 import { BookingActivityList } from "@/components/booking-activity-list"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -20,6 +21,7 @@ import { EnhancedFilters, type FilterConfig, type FilterValues } from "@/compone
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Textarea } from "@/components/ui/textarea"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { 
   CalendarCheck, 
   Clock, 
@@ -30,6 +32,7 @@ import {
   CheckCircle2, 
   XCircle, 
   Eye, 
+  EyeOff,
   MessageSquare,
   Phone, 
   Mail, 
@@ -135,6 +138,9 @@ export default function AdminSpotBookingManagement() {
   const [disputeResolution, setDisputeResolution] = useState("")
   const [contactMessage, setContactMessage] = useState("")
   const [activeTab, setActiveTab] = useState("active")
+  
+  // Cards visibility toggle hook
+  const { cardsVisible, toggleCards } = useCardsVisibility("spot-booking-management")
 
   // Refresh all data handler
   const handleRefreshAll = () => {
@@ -483,6 +489,21 @@ export default function AdminSpotBookingManagement() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                onClick={toggleCards}
+                data-testid="button-toggle-cards"
+              >
+                {cardsVisible ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
+                {cardsVisible ? "Hide Cards" : "Show Cards"}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{cardsVisible ? "Hide analytics cards" : "Show analytics cards"}</p>
+            </TooltipContent>
+          </Tooltip>
           <Button 
             variant="outline" 
             onClick={handleRefreshAll}
@@ -541,7 +562,8 @@ export default function AdminSpotBookingManagement() {
       </div>
 
       {/* Quick Analytics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {cardsVisible && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Bookings</CardTitle>
@@ -601,7 +623,8 @@ export default function AdminSpotBookingManagement() {
             </p>
           </CardContent>
         </Card>
-      </div>
+        </div>
+      )}
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
