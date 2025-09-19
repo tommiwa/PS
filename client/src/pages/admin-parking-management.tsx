@@ -815,9 +815,19 @@ export default function AdminParkingManagement() {
                             </TableCell>
                             <TableCell data-testid={`text-spot-owner-${spot.id}`}>
                               {spot.ownerId ? (
-                                <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100">Assigned</Badge>
+                                <div>
+                                  <p className="font-medium">
+                                    {allUsers.find(user => user.id === spot.ownerId)?.name || 
+                                     `${allUsers.find(user => user.id === spot.ownerId)?.firstName || ''} ${allUsers.find(user => user.id === spot.ownerId)?.lastName || ''}`.trim() || 
+                                     'Assigned User'}
+                                  </p>
+                                  <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 mt-1">Assigned</Badge>
+                                </div>
                               ) : (
-                                <Badge variant="outline">Available</Badge>
+                                <div>
+                                  <p className="font-medium text-muted-foreground">Workplace Services</p>
+                                  <Badge variant="outline" className="mt-1">Available</Badge>
+                                </div>
                               )}
                             </TableCell>
                             <TableCell>
@@ -926,6 +936,7 @@ export default function AdminParkingManagement() {
                         <TableHead>Location</TableHead>
                         <TableHead>Type</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead>Owner</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -959,6 +970,12 @@ export default function AdminParkingManagement() {
                               ) : (
                                 <Badge variant="secondary" className="bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100">Disabled</Badge>
                               )}
+                            </div>
+                          </TableCell>
+                          <TableCell data-testid={`text-unallocated-spot-owner-${spot.id}`}>
+                            <div>
+                              <p className="font-medium text-muted-foreground">Workplace Services</p>
+                              <Badge variant="outline" className="mt-1">Available</Badge>
                             </div>
                           </TableCell>
                           <TableCell>
