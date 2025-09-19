@@ -207,8 +207,8 @@ export class MemStorage implements IStorage {
     const adminUser: User = {
       id: "user-admin-001",
       email: "admin@example.com",
-      firstName: "Admin",
-      lastName: "User",
+      firstName: "David",
+      lastName: "Thompson",
       profileImageUrl: null,
       phone: "(555) 123-4567",
       department: "IT",
