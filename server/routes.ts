@@ -156,10 +156,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate request body - allow partial updates
       const parseResult = insertUserSchema.partial().parse(req.body);
       
-      // Type cast role to ensure it's one of the valid UserRole values
+      // Create update data with proper type handling
       const updateData: Partial<User> = {
-        ...parseResult,
-        ...(parseResult.role && { role: parseResult.role as UserRole })
+        firstName: parseResult.firstName,
+        lastName: parseResult.lastName,
+        email: parseResult.email,
+        phone: parseResult.phone,
+        department: parseResult.department,
+        memberSince: parseResult.memberSince,
+        ...(parseResult.role && userRoles.options.includes(parseResult.role as any) && { 
+          role: parseResult.role as UserRole 
+        })
       };
       
       const updatedUser = await storage.updateUser(id, updateData);
@@ -1086,6 +1093,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching users:", error);
       res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
+  // Get parking spots assigned to a specific user (Admin only)
+  app.get("/api/admin/users/:userId/spots", requireAdmin, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      
+      // Verify user exists
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      const spots = await storage.getParkingSpotsByOwner(userId);
+      
+      // Audit the spot access
+      await auditService.logAction("VIEW", "parking_spot", {
+        entityId: `user_spots_${userId}`,
+        message: `Admin retrieved ${spots.length} parking spots for user ${user.firstName} ${user.lastName} (${user.email})`
+      });
+      
+      res.json(spots);
+    } catch (error) {
+      console.error("Error fetching user parking spots:", error);
+      res.status(500).json({ error: "Failed to fetch user parking spots" });
+    }
+  });
+
+  // Unassign parking spot from user (Admin only)
+  app.put("/api/admin/spots/:spotId/unassign", requireAdmin, async (req, res) => {
+    try {
+      const { spotId } = req.params;
+      
+      // Check if spot exists
+      const existingSpot = await storage.getParkingSpot(spotId);
+      if (!existingSpot) {
+        return res.status(404).json({ error: "Parking spot not found" });
+      }
+      
+      // Get user info for audit logging if spot is currently assigned
+      let formerOwner = null;
+      if (existingSpot.ownerId) {
+        formerOwner = await storage.getUser(existingSpot.ownerId);
+      }
+      
+      // Unassign by setting ownerId to null
+      const updatedSpot = await storage.updateParkingSpot(spotId, { ownerId: null });
+      if (!updatedSpot) {
+        return res.status(404).json({ error: "Failed to unassign parking spot" });
+      }
+      
+      // Audit the spot unassignment
+      await auditService.logAction("UNASSIGN", "parking_spot", {
+        entityId: spotId,
+        message: `Admin unassigned parking spot ${updatedSpot.spotNumber} at ${updatedSpot.location}${formerOwner ? ` from ${formerOwner.firstName} ${formerOwner.lastName} (${formerOwner.email})` : ''}`,
+        before: existingSpot,
+        after: updatedSpot
+      });
+      
+      res.json(updatedSpot);
+    } catch (error) {
+      console.error("Error unassigning parking spot:", error);
+      res.status(500).json({ error: "Failed to unassign parking spot" });
     }
   });
 

@@ -19,7 +19,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { useConfirm, confirmations } from "@/hooks/use-confirm"
 import { useToast } from "@/hooks/use-toast"
 import { apiRequest, queryClient } from "@/lib/queryClient"
-import { insertUserSchema, type InsertUser, type User } from "@shared/schema"
+import { insertUserSchema, type InsertUser, type User, type ParkingSpot } from "@shared/schema"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { z } from "zod"
 import { 
@@ -43,7 +43,9 @@ import {
   UserX,
   Building,
   Phone,
-  Calendar
+  Calendar,
+  Trash2,
+  MapPin
 } from "lucide-react"
 
 // Extend shared schema with UI validation refinements
@@ -179,6 +181,39 @@ export default function AdminUserManagement() {
     return matchesSearch && matchesRole && matchesStatus
   })
 
+  // Fetch user's assigned spots when editing
+  const { data: userAssignedSpots = [], isLoading: isLoadingSpots, refetch: refetchUserSpots } = useQuery<ParkingSpot[]>({
+    queryKey: ["/api/admin/users", editingUser?.id, "spots"],
+    enabled: !!editingUser?.id && showEditUser,
+  });
+
+  // Unassign spot mutation
+  const unassignSpotMutation = useMutation({
+    mutationFn: async (spotId: string): Promise<ParkingSpot> => {
+      const response = await apiRequest(`/api/admin/spots/${spotId}/unassign`, { method: 'PUT' });
+      return await response.json();
+    },
+    onSuccess: (updatedSpot: ParkingSpot) => {
+      // Invalidate and refetch user spots
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users", editingUser?.id, "spots"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/all-spots"] });
+      
+      toast({
+        title: "Spot Unassigned",
+        description: `Successfully unassigned parking spot ${updatedSpot.spotNumber}`,
+      });
+    },
+    onError: (error: any) => {
+      console.error('Error unassigning spot:', error);
+      toast({
+        variant: "destructive",
+        title: "Error Unassigning Spot",
+        description: error.message || "Failed to unassign parking spot. Please try again.",
+      });
+    }
+  });
+
   // Edit user mutation
   const editUserMutation = useMutation({
     mutationFn: async ({ userId, userData }: { userId: string, userData: Partial<InsertUser> }): Promise<User> => {
@@ -272,13 +307,13 @@ export default function AdminUserManagement() {
     // Populate edit form with user data
     setEditingUser(user)
     editForm.reset({
-      firstName: user.firstName || "",
-      lastName: user.lastName || "",
-      email: user.email || "",
-      phone: user.phone || "",
-      department: user.department || "",
-      role: user.role || "renter",
-      memberSince: user.memberSince || new Date().toISOString().split('T')[0]
+      firstName: user.firstName ?? "",
+      lastName: user.lastName ?? "",
+      email: user.email ?? "",
+      phone: user.phone ?? "",
+      department: user.department ?? "",
+      role: user.role ?? "renter",
+      memberSince: user.memberSince ?? new Date().toISOString().split('T')[0]
     })
     setShowEditUser(true)
   }
@@ -622,7 +657,7 @@ export default function AdminUserManagement() {
                         <FormItem>
                           <FormLabel>First Name</FormLabel>
                           <FormControl>
-                            <Input data-testid="input-edit-first-name" placeholder="First name" {...field} />
+                            <Input data-testid="input-edit-first-name" placeholder="First name" {...field} value={field.value ?? ""} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -635,7 +670,7 @@ export default function AdminUserManagement() {
                         <FormItem>
                           <FormLabel>Last Name</FormLabel>
                           <FormControl>
-                            <Input data-testid="input-edit-last-name" placeholder="Last name" {...field} />
+                            <Input data-testid="input-edit-last-name" placeholder="Last name" {...field} value={field.value ?? ""} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -651,7 +686,7 @@ export default function AdminUserManagement() {
                         <FormItem>
                           <FormLabel>Email</FormLabel>
                           <FormControl>
-                            <Input data-testid="input-edit-email" placeholder="email@company.com" type="email" {...field} />
+                            <Input data-testid="input-edit-email" placeholder="email@company.com" type="email" {...field} value={field.value ?? ""} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -664,7 +699,7 @@ export default function AdminUserManagement() {
                         <FormItem>
                           <FormLabel>Phone</FormLabel>
                           <FormControl>
-                            <Input data-testid="input-edit-phone" placeholder="+1 (555) 123-4567" {...field} />
+                            <Input data-testid="input-edit-phone" placeholder="+1 (555) 123-4567" {...field} value={field.value ?? ""} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -679,7 +714,7 @@ export default function AdminUserManagement() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Department</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <Select onValueChange={field.onChange} defaultValue={field.value ?? ""} value={field.value ?? ""}>
                             <FormControl>
                               <SelectTrigger data-testid="select-edit-department">
                                 <SelectValue placeholder="Select department" />
@@ -704,7 +739,7 @@ export default function AdminUserManagement() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Role</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <Select onValueChange={field.onChange} defaultValue={field.value ?? ""} value={field.value ?? ""}>
                             <FormControl>
                               <SelectTrigger data-testid="select-edit-role">
                                 <SelectValue placeholder="Select role" />
@@ -721,6 +756,75 @@ export default function AdminUserManagement() {
                       )}
                     />
                   </div>
+
+                  {/* Assigned Parking Spots Section */}
+                  {editingUser && (
+                    <div className="border-t pt-6 mt-6">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Car className="h-5 w-5" />
+                        <h3 className="text-lg font-semibold">Assigned Parking Spots</h3>
+                        <Badge variant="secondary" data-testid="badge-spots-count">
+                          {isLoadingSpots ? "..." : userAssignedSpots.length}
+                        </Badge>
+                      </div>
+                      
+                      {isLoadingSpots ? (
+                        <div className="space-y-3">
+                          <Skeleton className="h-16 w-full" />
+                          <Skeleton className="h-16 w-full" />
+                        </div>
+                      ) : userAssignedSpots.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground" data-testid="text-no-spots">
+                          <Car className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                          <p>No parking spots currently assigned to this user.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3 max-h-60 overflow-y-auto">
+                          {userAssignedSpots.map((spot) => (
+                            <div
+                              key={spot.id}
+                              className="flex items-center justify-between p-4 border rounded-lg hover-elevate"
+                              data-testid={`spot-card-${spot.id}`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="flex items-center justify-center w-10 h-10 bg-primary/10 rounded-lg">
+                                  <MapPin className="h-5 w-5 text-primary" />
+                                </div>
+                                <div>
+                                  <div className="font-medium" data-testid={`spot-number-${spot.id}`}>
+                                    Spot {spot.spotNumber}
+                                  </div>
+                                  <div className="text-sm text-muted-foreground" data-testid={`spot-location-${spot.id}`}>
+                                    {spot.location}
+                                  </div>
+                                  {spot.spotType && (
+                                    <Badge variant="outline" className="text-xs mt-1">
+                                      {spot.spotType}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => {
+                                  unassignSpotMutation.mutate(spot.id);
+                                }}
+                                disabled={unassignSpotMutation.isPending}
+                                data-testid={`button-unassign-${spot.id}`}
+                              >
+                                {unassignSpotMutation.isPending ? (
+                                  <RefreshCw className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <><Trash2 className="h-4 w-4 mr-1" />Unassign</>
+                                )}
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   <div className="flex justify-end space-x-2 pt-4">
                     <Button 
