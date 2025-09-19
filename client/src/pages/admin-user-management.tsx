@@ -1002,16 +1002,8 @@ export default function AdminUserManagement() {
         </div>
       )}
 
-      {/* Main Content Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="users" data-testid="tab-users">User Directory</TabsTrigger>
-          <TabsTrigger value="activity" data-testid="tab-activity">Activity</TabsTrigger>
-          <TabsTrigger value="reports" data-testid="tab-reports">Reports</TabsTrigger>
-        </TabsList>
-
-        {/* Users Tab */}
-        <TabsContent value="users" className="space-y-4">
+      {/* Main Content */}
+      <div className="space-y-4">
           {/* Role Filter Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card 
@@ -1154,113 +1146,7 @@ export default function AdminUserManagement() {
               </CardContent>
             </Card>
           )}
-        </TabsContent>
-
-        {/* Activity Tab */}
-        <TabsContent value="activity" className="space-y-4">
-          <UserActivityList 
-            title="Recent User Activity"
-            showTitle={true}
-            maxHeight="500px"
-            queryParams={{
-              pageSize: 25
-            }}
-          />
-        </TabsContent>
-
-        {/* Reports Tab */}
-        <TabsContent value="reports" className="space-y-4">
-          {cardsVisible && (
-            <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">User Distribution</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Admins</span>
-                    <span className="font-medium">{mockUserAnalytics.adminUsers}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Owners</span>
-                    <span className="font-medium">{mockUserAnalytics.ownerUsers}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Renters</span>
-                    <span className="font-medium">{mockUserAnalytics.renterUsers}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Engagement</CardTitle>
-                <Activity className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{mockUserAnalytics.averageBookingsPerUser}</div>
-                <p className="text-xs text-muted-foreground">
-                  Average bookings per user
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Growth</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{mockUserAnalytics.recentSignups}</div>
-                <p className="text-xs text-muted-foreground">
-                  New signups this week
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Department Analysis</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                  <div className="flex items-center gap-3">
-                    <Building className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">Most Active Department</span>
-                  </div>
-                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                    {mockUserAnalytics.mostActiveDepartment}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                  <div className="flex items-center gap-3">
-                    <UserCheck className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">Active Users</span>
-                  </div>
-                  <span className="font-medium">{mockUserAnalytics.activeUsers} / {mockUserAnalytics.totalUsers}</span>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                  <div className="flex items-center gap-3">
-                    <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">Suspended Users</span>
-                  </div>
-                  <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-                    {mockUserAnalytics.suspendedUsers}
-                  </Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          </>
-          )}
-        </TabsContent>
-      </Tabs>
+      </div>
     </div>
   )
 }
