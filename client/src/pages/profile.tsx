@@ -51,7 +51,8 @@ import {
   Accessibility,
   Edit,
   Loader2,
-  Info
+  Info,
+  Plus
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useTheme } from "@/contexts/theme-context"
