@@ -271,6 +271,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get user's notification preferences
+  app.get("/api/users/:userId/notification-preferences", isAuthenticated, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const currentUserId = getAuthenticatedUserId(req);
+      
+      if (!currentUserId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      // Only allow users to access their own preferences or admin to access any user's preferences
+      const currentUser = await storage.getUser(currentUserId);
+      const isAdmin = currentUser?.role === 'admin';
+      
+      if (!isAdmin && currentUserId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
+      const preferences = await storage.getNotificationPreferences(userId);
+      res.json(preferences);
+    } catch (error) {
+      console.error("Error fetching notification preferences:", error);
+      res.status(500).json({ error: "Failed to fetch notification preferences" });
+    }
+  });
+
+  // Update user's notification preferences
+  app.patch("/api/users/:userId/notification-preferences", isAuthenticated, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const currentUserId = getAuthenticatedUserId(req);
+      
+      if (!currentUserId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      // Only allow users to update their own preferences or admin to update any user's preferences
+      const currentUser = await storage.getUser(currentUserId);
+      const isAdmin = currentUser?.role === 'admin';
+      
+      if (!isAdmin && currentUserId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      // Validate request body using the update schema
+      const { updateNotificationPreferencesSchema } = await import("@shared/schema");
+      const validatedUpdates = updateNotificationPreferencesSchema.parse(req.body);
+      
+      const updatedPreferences = await storage.updateNotificationPreferences(userId, validatedUpdates);
+      res.json(updatedPreferences);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input data", details: error.errors });
+      }
+      console.error("Error updating notification preferences:", error);
+      res.status(500).json({ error: "Failed to update notification preferences" });
+    }
+  });
+
   // Add explicit handler for /api to stop excessive HEAD requests
   app.all("/api", (req, res) => {
     if (req.method === "HEAD") {
