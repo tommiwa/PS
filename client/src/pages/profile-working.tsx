@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useLocation } from "wouter"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { useToast } from "@/hooks/use-toast"
 import { useConfirm } from "@/hooks/use-confirm"
+import { Textarea } from "@/components/ui/textarea"
 import { 
   Car, 
   Settings, 
@@ -34,12 +35,13 @@ import {
   Edit,
   Loader2,
   Plus,
-  Calendar
+  Calendar,
+  CreditCard
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useTheme } from "@/contexts/theme-context"
 import { useLanguage } from "@/contexts/language-context"
-import type { Vehicle, WaitingList, NotificationPreferences, UpdateNotificationPreferences } from "@shared/schema"
+import type { Vehicle, WaitingList, NotificationPreferences, UpdateNotificationPreferences, PaymentPreferences, UpdatePaymentPreferences } from "@shared/schema"
 
 // Vehicle form validation schema
 const vehicleSchema = z.object({
@@ -52,7 +54,16 @@ const vehicleSchema = z.object({
   isDefault: z.boolean().default(false)
 });
 
+// Payment preferences form validation schema
+const paymentPreferencesSchema = z.object({
+  paymentType: z.enum(["interac_transfer", "cash"], {
+    required_error: "Please select a payment type"
+  }),
+  paymentInstructions: z.string().optional()
+});
+
 type VehicleForm = z.infer<typeof vehicleSchema>;
+type PaymentPreferencesForm = z.infer<typeof paymentPreferencesSchema>;
 
 export default function Profile() {
   const { user, isOwner, isRenter, isAdmin } = useAuth()
@@ -81,6 +92,25 @@ export default function Profile() {
     }
   });
 
+  // Payment preferences form
+  const paymentForm = useForm<PaymentPreferencesForm>({
+    resolver: zodResolver(paymentPreferencesSchema),
+    defaultValues: {
+      paymentType: "interac_transfer",
+      paymentInstructions: ""
+    }
+  });
+
+  // Update payment form when payment preferences are loaded
+  useEffect(() => {
+    if (paymentPreferences) {
+      paymentForm.reset({
+        paymentType: paymentPreferences.paymentType,
+        paymentInstructions: paymentPreferences.paymentInstructions || ""
+      });
+    }
+  }, [paymentPreferences, paymentForm]);
+
   // Query user's waiting list status  
   const { data: waitingListEntry, isLoading: isLoadingWaitingList } = useQuery<WaitingList | null>({
     queryKey: ["/api/waiting-list/user", user?.id],
@@ -96,6 +126,12 @@ export default function Profile() {
   // Query notification preferences
   const { data: notificationPreferences, isLoading: isLoadingPreferences } = useQuery<NotificationPreferences>({
     queryKey: ["/api/users", user?.id, "notification-preferences"],
+    enabled: !!user?.id
+  });
+
+  // Query payment preferences
+  const { data: paymentPreferences, isLoading: isLoadingPaymentPreferences } = useQuery<PaymentPreferences | null>({
+    queryKey: ["/api/users", user?.id, "payment-preferences"],
     enabled: !!user?.id
   });
 
@@ -160,6 +196,37 @@ export default function Profile() {
 
   const handleSubmitVehicle = (data: VehicleForm) => {
     addVehicleMutation.mutate(data);
+  };
+
+  // Payment preferences mutation
+  const updatePaymentPreferencesMutation = useMutation({
+    mutationFn: async (preferences: PaymentPreferencesForm) => {
+      if (!user) throw new Error("User not found");
+      const response = await apiRequest(`/api/users/${user.id}/payment-preferences`, { 
+        method: 'PATCH', 
+        body: preferences 
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "payment-preferences"] });
+      toast({
+        title: "Payment Preferences Saved",
+        description: "Your payment preferences have been updated.",
+        variant: "default"
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to Save Payment Preferences",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleSubmitPaymentPreferences = (data: PaymentPreferencesForm) => {
+    updatePaymentPreferencesMutation.mutate(data);
   };
 
   const handleEditVehicle = (vehicle: Vehicle) => {
@@ -299,45 +366,116 @@ export default function Profile() {
 
         {/* Waiting List Tab */}
         <TabsContent value="waitingList" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                {t("waitingList.title")}
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">
-                {t("waitingList.description")}
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {isLoadingWaitingList ? (
-                <div className="flex items-center justify-center p-8">
-                  <div className="text-sm text-muted-foreground">{t("common.loading")}</div>
-                </div>
-              ) : !waitingListEntry ? (
-                <Button 
-                  className="w-full"
-                  data-testid="button-join-waiting-list"
-                >
-                  {t("waitingList.enrollButton")}
-                </Button>
-              ) : (
-                <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800/50 rounded-lg p-3">
-                  <div className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5" />
-                    <div className="space-y-1">
-                      <h4 className="text-sm font-medium text-green-900 dark:text-green-100">
-                        {t("waitingList.enrolled")}
-                      </h4>
-                      <p className="text-xs text-green-700 dark:text-green-300">
-                        Priority: {waitingListEntry.priority}
-                      </p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Waiting List Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  {t("waitingList.title")}
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  {t("waitingList.description")}
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {isLoadingWaitingList ? (
+                  <div className="flex items-center justify-center p-8">
+                    <div className="text-sm text-muted-foreground">{t("common.loading")}</div>
+                  </div>
+                ) : !waitingListEntry ? (
+                  <Button 
+                    className="w-full"
+                    data-testid="button-join-waiting-list"
+                  >
+                    {t("waitingList.enrollButton")}
+                  </Button>
+                ) : (
+                  <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800/50 rounded-lg p-3">
+                    <div className="flex items-start gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5" />
+                      <div className="space-y-1">
+                        <h4 className="text-sm font-medium text-green-900 dark:text-green-100">
+                          {t("waitingList.enrolled")}
+                        </h4>
+                        <p className="text-xs text-green-700 dark:text-green-300">
+                          Priority: {waitingListEntry.priority}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Payment Preferences Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5" />
+                  Payment Preference
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Set your preferred payment method and instructions for spot bookings.
+                </p>
+              </CardHeader>
+              <CardContent>
+                <Form {...paymentForm}>
+                  <form onSubmit={paymentForm.handleSubmit(handleSubmitPaymentPreferences)} className="space-y-4">
+                    <FormField
+                      control={paymentForm.control}
+                      name="paymentType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Payment Type</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-payment-type">
+                                <SelectValue placeholder="Select payment type" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="interac_transfer">Interac Transfer</SelectItem>
+                              <SelectItem value="cash">Cash</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={paymentForm.control}
+                      name="paymentInstructions"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Payment Instructions</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Enter payment instructions (e.g., email for Interac transfer, meeting location for cash, etc.)"
+                              className="resize-none"
+                              rows={3}
+                              {...field}
+                              data-testid="textarea-payment-instructions"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <Button 
+                      type="submit" 
+                      className="w-full"
+                      data-testid="button-save-payment-preferences"
+                    >
+                      Save Payment Preferences
+                    </Button>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* Vehicles Tab */}

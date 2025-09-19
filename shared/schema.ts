@@ -258,6 +258,37 @@ export const insertVehicleSchema = createInsertSchema(vehicles).omit({
 export type InsertVehicle = z.infer<typeof insertVehicleSchema>;
 export type Vehicle = typeof vehicles.$inferSelect;
 
+// Payment Preferences Table
+export const paymentTypes = z.enum(["interac_transfer", "cash"]);
+export type PaymentType = z.infer<typeof paymentTypes>;
+
+export const paymentPreferences = pgTable("payment_preferences", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().unique(), // References users.id - one preference per user
+  paymentType: text("payment_type").notNull().$type<PaymentType>().default("interac_transfer"),
+  paymentInstructions: text("payment_instructions"), // Custom instructions from user
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertPaymentPreferencesSchema = createInsertSchema(paymentPreferences).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updatePaymentPreferencesSchema = createInsertSchema(paymentPreferences).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+
+export type InsertPaymentPreferences = z.infer<typeof insertPaymentPreferencesSchema>;
+export type UpdatePaymentPreferences = z.infer<typeof updatePaymentPreferencesSchema>;
+export type PaymentPreferences = typeof paymentPreferences.$inferSelect;
+
 // Auth types for frontend
 export interface AuthUser {
   id: string;

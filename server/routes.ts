@@ -23,9 +23,12 @@ import {
   insertWaitingListSchema,
   insertVehicleSchema,
   insertUserSchema,
+  insertPaymentPreferencesSchema,
+  updatePaymentPreferencesSchema,
   type User,
   type WaitingList,
   type Vehicle,
+  type PaymentPreferences,
   type SpotType,
   type AuditAction,
   type EntityType,
@@ -337,6 +340,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Payment Preferences Routes
+  // Get user's payment preferences
+  app.get("/api/users/:userId/payment-preferences", isAuthenticated, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const currentUserId = getAuthenticatedUserId(req);
+      
+      if (!currentUserId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      // Only allow users to access their own preferences or admin to access any user's preferences
+      const currentUser = await storage.getUser(currentUserId);
+      const isAdmin = currentUser?.role === 'admin';
+      
+      if (!isAdmin && currentUserId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      const preferences = await storage.getPaymentPreferences(userId);
+      res.json(preferences);
+    } catch (error) {
+      console.error("Error fetching payment preferences:", error);
+      res.status(500).json({ error: "Failed to fetch payment preferences" });
+    }
+  });
+
+  // Update user's payment preferences
+  app.patch("/api/users/:userId/payment-preferences", isAuthenticated, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const currentUserId = getAuthenticatedUserId(req);
+      
+      if (!currentUserId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      // Only allow users to update their own preferences or admin to update any user's preferences
+      const currentUser = await storage.getUser(currentUserId);
+      const isAdmin = currentUser?.role === 'admin';
+      
+      if (!isAdmin && currentUserId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      // Validate request body using the update schema
+      const validatedUpdates = updatePaymentPreferencesSchema.parse(req.body);
+      
+      const updatedPreferences = await storage.updatePaymentPreferences(userId, validatedUpdates);
+      res.json(updatedPreferences);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input data", details: error.errors });
+      }
+      console.error("Error updating payment preferences:", error);
+      res.status(500).json({ error: "Failed to update payment preferences" });
+    }
+  });
+
   // Vehicle Routes
   // Get user's vehicles
   app.get("/api/users/:userId/vehicles", isAuthenticated, async (req: any, res) => {
@@ -389,13 +451,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate input
       const vehicleData = insertVehicleSchema.parse(req.body);
       
-      // Ensure userId is set correctly
-      const vehicleWithUserId = {
-        ...vehicleData,
-        userId
-      };
-
-      const newVehicle = await storage.createVehicle(vehicleWithUserId);
+      const newVehicle = await storage.createVehicle(userId, vehicleData);
       
       // Audit the vehicle creation
       await auditService.logAction("CREATE", "vehicle", {

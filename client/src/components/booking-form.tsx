@@ -6,11 +6,13 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle, User, Zap, Accessibility, Building } from "lucide-react"
+import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle, User, Zap, Accessibility, Building, CreditCard } from "lucide-react"
 import { ParkingSpot } from "./parking-spot-card"
 import { isPastDate, getTodayString } from "@/utils/date-utils"
 import { AuthService } from "@/lib/auth"
 import { useToast } from "@/hooks/use-toast"
+import { useQuery } from "@tanstack/react-query"
+import { type PaymentPreferences } from "@shared/schema"
 
 interface BookingData {
   date: string
@@ -33,6 +35,12 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
   // Get authenticated user for auto-population
   const authUser = AuthService.getAuthUser();
   const { toast } = useToast();
+
+  // Query spot owner's payment preferences
+  const { data: ownerPaymentPreferences, isLoading: isLoadingPaymentPreferences } = useQuery<PaymentPreferences | null>({
+    queryKey: ["/api/users", spot.ownerId, "payment-preferences"],
+    enabled: !!spot.ownerId
+  });
   
   // Ensure we don't default to a past date
   const getValidDate = () => {
@@ -48,6 +56,20 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
     contactPhone: authUser?.phone || "", // Auto-populate from user profile
     vehicleLicense: authUser?.vehicleInfo?.licensePlate || "" // Auto-populate from user profile
   })
+
+  // Auto-populate payment method from owner's preferences
+  useEffect(() => {
+    if (ownerPaymentPreferences && !formData.paymentMethod) {
+      const paymentMethodMap = {
+        "interac_transfer": "Interac Transfer",
+        "cash": "Cash"
+      };
+      setFormData(prev => ({
+        ...prev,
+        paymentMethod: paymentMethodMap[ownerPaymentPreferences.paymentType] || ""
+      }));
+    }
+  }, [ownerPaymentPreferences, formData.paymentMethod]);
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [dateError, setDateError] = useState("")
@@ -240,6 +262,38 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
             </div>
           </div>
 
+          {/* Owner's Payment Preferences */}
+          {ownerPaymentPreferences && (
+            <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg space-y-3">
+              <h4 className="font-medium flex items-center gap-2 text-green-800 dark:text-green-200">
+                <CreditCard className="h-4 w-4" />
+                Owner's Payment Preferences
+              </h4>
+              <div className="space-y-2 text-sm">
+                <div>
+                  <span className="font-medium text-green-700 dark:text-green-300">Preferred Payment Method: </span>
+                  <span className="text-green-600 dark:text-green-400">
+                    {ownerPaymentPreferences.paymentType === "interac_transfer" ? "Interac Transfer" : "Cash"}
+                  </span>
+                </div>
+                {ownerPaymentPreferences.paymentInstructions && (
+                  <div>
+                    <span className="font-medium text-green-700 dark:text-green-300">Payment Instructions: </span>
+                    <span className="text-green-600 dark:text-green-400">
+                      {ownerPaymentPreferences.paymentInstructions}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          
+          {isLoadingPaymentPreferences && (
+            <div className="p-4 bg-muted rounded-lg">
+              <div className="text-sm text-muted-foreground">Loading payment preferences...</div>
+            </div>
+          )}
+
           {/* Payment Method */}
           <div className="space-y-2">
             <Label htmlFor="paymentMethod">Payment Method</Label>
@@ -248,8 +302,8 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
                 <SelectValue placeholder="Select payment method" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="interac">Interac e-Transfer</SelectItem>
-                <SelectItem value="cash">Cash</SelectItem>
+                <SelectItem value="Interac Transfer">Interac e-Transfer</SelectItem>
+                <SelectItem value="Cash">Cash</SelectItem>
               </SelectContent>
             </Select>
             {validationErrors.paymentMethod && (

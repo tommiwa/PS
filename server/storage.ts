@@ -17,6 +17,9 @@ import {
   type NotificationPreferences,
   type InsertNotificationPreferences,
   type UpdateNotificationPreferences,
+  type PaymentPreferences,
+  type InsertPaymentPreferences,
+  type UpdatePaymentPreferences,
   type UserRole,
   type SpotType,
   type ListingType,
@@ -103,7 +106,7 @@ export interface IStorage {
   getVehicle(id: string): Promise<Vehicle | undefined>;
   getVehiclesByUser(userId: string): Promise<Vehicle[]>;
   getAllVehicles(): Promise<Vehicle[]>;
-  createVehicle(vehicle: InsertVehicle): Promise<Vehicle>;
+  createVehicle(userId: string, vehicle: InsertVehicle): Promise<Vehicle>;
   updateVehicle(id: string, updates: Partial<InsertVehicle>): Promise<Vehicle | undefined>;
   deleteVehicle(id: string): Promise<boolean>;
 
@@ -117,6 +120,12 @@ export interface IStorage {
   // Notification Preferences operations
   getNotificationPreferences(userId: string): Promise<NotificationPreferences | undefined>;
   updateNotificationPreferences(userId: string, updates: UpdateNotificationPreferences): Promise<NotificationPreferences>;
+  
+  // Payment Preferences operations
+  getPaymentPreferences(userId: string): Promise<PaymentPreferences | undefined>;
+  createPaymentPreferences(userId: string, preferences: InsertPaymentPreferences): Promise<PaymentPreferences>;
+  updatePaymentPreferences(userId: string, updates: UpdatePaymentPreferences): Promise<PaymentPreferences>;
+  deletePaymentPreferences(userId: string): Promise<boolean>;
   
   // Audit storage operations (delegated to audit storage)
   createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
@@ -206,6 +215,7 @@ export class MemStorage implements IStorage {
   private waitingList: Map<string, WaitingList>;
   private vehicles: Map<string, Vehicle>;
   private notificationPreferences: Map<string, NotificationPreferences>;
+  private paymentPreferences: Map<string, PaymentPreferences>;
   private auditStorage: IAuditStorage;
 
   constructor(auditStorage?: IAuditStorage) {
@@ -216,6 +226,7 @@ export class MemStorage implements IStorage {
     this.waitingList = new Map();
     this.vehicles = new Map();
     this.notificationPreferences = new Map();
+    this.paymentPreferences = new Map();
     
     // Inject audit storage (will be set externally)
     this.auditStorage = auditStorage as IAuditStorage;
@@ -1331,12 +1342,13 @@ export class MemStorage implements IStorage {
     return Array.from(this.vehicles.values());
   }
 
-  async createVehicle(vehicle: InsertVehicle): Promise<Vehicle> {
+  async createVehicle(userId: string, vehicle: InsertVehicle): Promise<Vehicle> {
     const id = randomUUID();
     const now = new Date();
     
     const newVehicle: Vehicle = {
       id,
+      userId,
       ...vehicle,
       createdAt: now,
       updatedAt: now,
@@ -1406,6 +1418,58 @@ export class MemStorage implements IStorage {
         if (!a.assignedDate || !b.assignedDate) return 0;
         return new Date(b.assignedDate).getTime() - new Date(a.assignedDate).getTime();
       });
+  }
+
+  // Payment Preferences operations
+  async getPaymentPreferences(userId: string): Promise<PaymentPreferences | undefined> {
+    const preferences = Array.from(this.paymentPreferences.values());
+    return preferences.find(pref => pref.userId === userId);
+  }
+
+  async createPaymentPreferences(userId: string, preferences: InsertPaymentPreferences): Promise<PaymentPreferences> {
+    const id = randomUUID();
+    const now = new Date();
+    
+    const newPreferences: PaymentPreferences = {
+      id,
+      userId,
+      ...preferences,
+      createdAt: now,
+      updatedAt: now,
+    };
+    
+    this.paymentPreferences.set(id, newPreferences);
+    return newPreferences;
+  }
+
+  async updatePaymentPreferences(userId: string, updates: UpdatePaymentPreferences): Promise<PaymentPreferences> {
+    const existing = await this.getPaymentPreferences(userId);
+    
+    if (!existing) {
+      // Create new preferences if none exist
+      const defaultPreferences: InsertPaymentPreferences = {
+        paymentType: "interac_transfer",
+        paymentInstructions: undefined,
+        ...updates
+      };
+      return this.createPaymentPreferences(userId, defaultPreferences);
+    }
+    
+    const updatedPreferences: PaymentPreferences = {
+      ...existing,
+      ...updates,
+      updatedAt: new Date(),
+    };
+    
+    this.paymentPreferences.set(existing.id, updatedPreferences);
+    return updatedPreferences;
+  }
+
+  async deletePaymentPreferences(userId: string): Promise<boolean> {
+    const existing = await this.getPaymentPreferences(userId);
+    if (!existing) return false;
+    
+    return this.paymentPreferences.delete(existing.id);
   }
 
   // Audit storage delegation methods
