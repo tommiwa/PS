@@ -805,6 +805,7 @@ export default function AdminUserManagement() {
                                 </div>
                               </div>
                               <Button
+                                type="button"
                                 variant="destructive"
                                 size="sm"
                                 onClick={() => {
