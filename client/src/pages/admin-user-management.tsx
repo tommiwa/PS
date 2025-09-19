@@ -1101,59 +1101,7 @@ export default function AdminUserManagement() {
           {/* Users Table */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Users ({filteredUsers.length})</CardTitle>
-                <div className="flex gap-2">
-                  <Button 
-                    size="sm"
-                    variant="outline" 
-                    disabled={filteredUsers.length === 0}
-                    onClick={() => {
-                      const success = quickExportUsersPDF(sortedUsers, 'User Management Report', (errorMessage) => {
-                        toast({
-                          variant: "destructive",
-                          title: "Export Failed",
-                          description: errorMessage
-                        })
-                      })
-                      if (success) {
-                        toast({
-                          title: "Export Successful",
-                          description: "PDF report has been downloaded successfully"
-                        })
-                      }
-                    }}
-                    data-testid="button-export-users-pdf"
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    PDF
-                  </Button>
-                  <Button 
-                    size="sm"
-                    variant="outline" 
-                    disabled={filteredUsers.length === 0}
-                    onClick={() => {
-                      const success = quickExportUsersExcel(sortedUsers, 'User Management Report', (errorMessage) => {
-                        toast({
-                          variant: "destructive",
-                          title: "Export Failed",
-                          description: errorMessage
-                        })
-                      })
-                      if (success) {
-                        toast({
-                          title: "Export Successful",
-                          description: "Excel report has been downloaded successfully"
-                        })
-                      }
-                    }}
-                    data-testid="button-export-users-excel"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Excel
-                  </Button>
-                </div>
-              </div>
+              <CardTitle>Users</CardTitle>
             </CardHeader>
             <CardContent>
               {isLoadingUsers ? (

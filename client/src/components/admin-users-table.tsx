@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Search, Edit, Trash2, Users, Car, Clock } from "lucide-react"
+import { Search, Edit, Trash2, Users, Car, Clock, FileText, Download } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { quickExportUsersPDF, quickExportUsersExcel } from "@/utils/export-utils"
 import { useConfirm, confirmations } from "@/hooks/use-confirm"
 import { useTableSort } from "@/hooks/use-table-sort"
 
@@ -56,6 +58,7 @@ export function AdminUsersTable({
   onSendNotification 
 }: AdminUsersTableProps) {
   const { confirm } = useConfirm()
+  const { toast } = useToast()
   
   // Internal state for backward compatibility if no external state provided
   const [internalSearchTerm, setInternalSearchTerm] = useState("")
@@ -266,6 +269,56 @@ export function AdminUsersTable({
                 <span>{stats.active} active</span>
                 <span>{stats.owners} spot owners</span>
               </div>
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                size="sm"
+                variant="outline" 
+                disabled={users.length === 0}
+                onClick={() => {
+                  const success = quickExportUsersPDF(users, 'User Directory Report', (errorMessage) => {
+                    toast({
+                      variant: "destructive",
+                      title: "Export Failed",
+                      description: errorMessage
+                    })
+                  })
+                  if (success) {
+                    toast({
+                      title: "Export Successful",
+                      description: "PDF report has been downloaded successfully"
+                    })
+                  }
+                }}
+                data-testid="button-export-users-pdf"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                PDF
+              </Button>
+              <Button 
+                size="sm"
+                variant="outline" 
+                disabled={users.length === 0}
+                onClick={() => {
+                  const success = quickExportUsersExcel(users, 'User Directory Report', (errorMessage) => {
+                    toast({
+                      variant: "destructive",
+                      title: "Export Failed",
+                      description: errorMessage
+                    })
+                  })
+                  if (success) {
+                    toast({
+                      title: "Export Successful",
+                      description: "Excel report has been downloaded successfully"
+                    })
+                  }
+                }}
+                data-testid="button-export-users-excel"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Excel
+              </Button>
             </div>
           </div>
         </CardHeader>
