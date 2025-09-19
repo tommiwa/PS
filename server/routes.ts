@@ -7,6 +7,10 @@ import {
   sendAssignmentNotification, 
   sendWelcomeNotification,
   sendBookingConfirmationNotification,
+  sendPaymentReminderNotification,
+  sendSpotAvailabilityNotification,
+  sendWeeklySummaryNotification,
+  sendSystemMaintenanceNotification,
   getUserNotifications,
   markNotificationAsRead,
   getUnreadNotificationCount,
@@ -508,6 +512,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
         entityId: newListing.id,
         message: `Created spot listing for ${newListing.spotId} ${getDateDescription(newListing)}`,
         after: newListing
+      });
+
+      // Send spot availability notifications (fire-and-forget to avoid blocking response)
+      setImmediate(async () => {
+        try {
+          // Get the parking spot details
+          const spot = await storage.getParkingSpot(newListing.spotId);
+          if (spot) {
+            // Get all users from waiting list who might be interested in this spot type/location
+            const waitingListEntries = await storage.getAllWaitingList();
+            const interestedUsers = waitingListEntries.filter(entry => {
+              // Match users who prefer this spot type or have no preference (null)
+              const matchesSpotType = !entry.preferredSpotType || entry.preferredSpotType === spot.spotType;
+              // Match users who prefer this building/location or have no preference (null)
+              const matchesLocation = !entry.preferredBuilding || 
+                                    spot.location.toLowerCase().includes(entry.preferredBuilding.toLowerCase());
+              return matchesSpotType && matchesLocation;
+            });
+
+            // Send notifications to interested users
+            for (const waitingEntry of interestedUsers) {
+              try {
+                // Get user details and notification preferences
+                const user = await storage.getUser(waitingEntry.userId);
+                if (user) {
+                  const notificationPreferences = await storage.getNotificationPreferences(user.id);
+                  
+                  // Construct display name
+                  const displayName = user.firstName && user.lastName 
+                    ? `${user.firstName} ${user.lastName}`
+                    : user.firstName || user.lastName || user.email || 'User';
+                  
+                  // Prepare spot details for email (single spot in array)
+                  const availableSpots = [{
+                    spotNumber: spot.spotNumber,
+                    location: spot.location || 'BCI Campus',
+                    building: spot.location || 'BCI Campus', // Use location as building
+                    type: spot.spotType || 'Standard',
+                    rate: Number(newListing.dailyRate) // Convert decimal to number
+                  }];
+
+                  // Send spot availability notification
+                  await sendSpotAvailabilityNotification(
+                    { name: displayName, email: user.email, id: user.id },
+                    availableSpots,
+                    notificationPreferences || {}
+                  );
+                }
+              } catch (userNotificationError) {
+                console.error(`Failed to send spot availability notification to user ${waitingEntry.userId}:`, userNotificationError);
+              }
+            }
+
+            console.log(`✓ Sent spot availability notifications for ${spot.spotNumber} to ${interestedUsers.length} interested users`);
+          }
+        } catch (availabilityError) {
+          console.error('Failed to send spot availability notifications:', availabilityError);
+        }
       });
       
       res.json(newListing);
@@ -2256,6 +2318,472 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('❌ Failed to send welcome notifications:', error);
       res.status(500).json({ error: "Failed to send welcome notifications" });
+    }
+  });
+
+  // Check and send payment reminders for due/overdue bookings (Admin only)
+  app.post("/api/notifications/payment-reminders", requireAdmin, async (req, res) => {
+    try {
+      // Get all bookings that haven't received payment
+      const allBookings = await storage.getAllBookings();
+      const unpaidBookings = allBookings.filter(booking => !booking.paymentReceived);
+      
+      const reminderResults = [];
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Reset time to start of day for accurate comparison
+      
+      for (const booking of unpaidBookings) {
+        try {
+          // Calculate due date (7 days after booking date)
+          const bookingDate = new Date(booking.bookingDate);
+          const dueDate = new Date(bookingDate);
+          dueDate.setDate(dueDate.getDate() + 7); // Payment due 7 days after booking
+          dueDate.setHours(0, 0, 0, 0);
+          
+          // Calculate days difference (positive = overdue, negative = not due yet)
+          const timeDiff = today.getTime() - dueDate.getTime();
+          const daysDiff = Math.floor(timeDiff / (1000 * 3600 * 24));
+          
+          // Send reminders for: due today (0), 1 day overdue, 3 days overdue, 7 days overdue
+          const shouldSendReminder = daysDiff === 0 || daysDiff === 1 || daysDiff === 3 || daysDiff === 7;
+          
+          if (shouldSendReminder) {
+            // Get user information
+            const user = await storage.getUser(booking.renterId);
+            if (user) {
+              // Get spot information for spot number
+              const spot = await storage.getParkingSpot(booking.spotId);
+              if (spot) {
+                // Get user's notification preferences
+                const notificationPreferences = await storage.getNotificationPreferences(user.id);
+                
+                // Construct display name
+                const displayName = user.firstName && user.lastName 
+                  ? `${user.firstName} ${user.lastName}`
+                  : user.firstName || user.lastName || user.email || 'User';
+                
+                // Prepare payment details
+                const paymentDetails = {
+                  bookingId: booking.id,
+                  spotNumber: spot.spotNumber,
+                  amount: Number(booking.totalAmount), // Convert decimal to number
+                  dueDate: dueDate,
+                  daysOverdue: daysDiff > 0 ? daysDiff : undefined
+                };
+                
+                // Send payment reminder asynchronously
+                setImmediate(async () => {
+                  try {
+                    const result = await sendPaymentReminderNotification(
+                      { name: displayName, email: user.email, id: user.id },
+                      paymentDetails,
+                      notificationPreferences || {}
+                    );
+                    
+                    console.log(`Payment reminder sent for booking ${booking.id}: ${result.emailSent ? 'email' : 'no email'}, ${result.inAppSent ? 'in-app' : 'no in-app'}`);
+                  } catch (emailError) {
+                    console.error(`Failed to send payment reminder for booking ${booking.id}:`, emailError);
+                  }
+                });
+                
+                reminderResults.push({
+                  bookingId: booking.id,
+                  userId: user.id,
+                  spotNumber: spot.spotNumber,
+                  dueDate: dueDate.toISOString(),
+                  daysOverdue: daysDiff > 0 ? daysDiff : 0,
+                  reminderSent: true
+                });
+              }
+            }
+          }
+        } catch (bookingError) {
+          console.error(`Error processing booking ${booking.id} for payment reminders:`, bookingError);
+          reminderResults.push({
+            bookingId: booking.id,
+            error: 'Processing failed',
+            reminderSent: false
+          });
+        }
+      }
+      
+      res.json({
+        success: true,
+        message: `Processed ${unpaidBookings.length} unpaid bookings, sent ${reminderResults.filter(r => r.reminderSent).length} reminders`,
+        totalUnpaidBookings: unpaidBookings.length,
+        remindersSent: reminderResults.filter(r => r.reminderSent).length,
+        results: reminderResults
+      });
+      
+    } catch (error) {
+      console.error('❌ Failed to send payment reminders:', error);
+      res.status(500).json({ error: "Failed to send payment reminders" });
+    }
+  });
+
+  // Check payment reminders for a specific user (Authenticated users)
+  app.post("/api/notifications/check-payment-reminders/:userId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const authenticatedUserId = getAuthenticatedUserId(req);
+      
+      if (!authenticatedUserId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+      
+      // Only allow users to check their own reminders, or admins to check any
+      const userRole = await getAuthenticatedUserRole(req);
+      if (userId !== authenticatedUserId && userRole !== "admin") {
+        return res.status(403).json({ error: "Not authorized to check payment reminders for this user" });
+      }
+      
+      // Get user's unpaid bookings
+      const userBookings = await storage.getBookingsByRenter(userId);
+      const unpaidBookings = userBookings.filter(booking => !booking.paymentReceived);
+      
+      const reminderResults = [];
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      for (const booking of unpaidBookings) {
+        // Calculate due date (7 days after booking date)
+        const bookingDate = new Date(booking.bookingDate);
+        const dueDate = new Date(bookingDate);
+        dueDate.setDate(dueDate.getDate() + 7);
+        dueDate.setHours(0, 0, 0, 0);
+        
+        // Calculate days difference
+        const timeDiff = today.getTime() - dueDate.getTime();
+        const daysDiff = Math.floor(timeDiff / (1000 * 3600 * 24));
+        
+        // Check if payment is due or overdue
+        if (daysDiff >= 0) {
+          const spot = await storage.getParkingSpot(booking.spotId);
+          if (spot) {
+            reminderResults.push({
+              bookingId: booking.id,
+              spotNumber: spot.spotNumber,
+              amount: Number(booking.totalAmount),
+              dueDate: dueDate.toISOString(),
+              daysOverdue: daysDiff,
+              status: daysDiff === 0 ? 'due_today' : 'overdue'
+            });
+          }
+        }
+      }
+      
+      res.json({
+        success: true,
+        userId,
+        unpaidBookingsCount: unpaidBookings.length,
+        duePaymentsCount: reminderResults.length,
+        duePayments: reminderResults
+      });
+      
+    } catch (error) {
+      console.error('❌ Failed to check payment reminders:', error);
+      res.status(500).json({ error: "Failed to check payment reminders" });
+    }
+  });
+
+  // Generate and send weekly summary reports (Admin only)
+  app.post("/api/notifications/weekly-summaries", requireAdmin, async (req, res) => {
+    try {
+      const weeklyNotificationSchema = z.object({
+        userId: z.string().optional(), // If provided, send only to this user; otherwise send to all users
+        weekStart: z.string().optional(), // ISO date string, defaults to last Monday
+        weekEnd: z.string().optional() // ISO date string, defaults to last Sunday
+      });
+      
+      const { userId, weekStart, weekEnd } = weeklyNotificationSchema.parse(req.body);
+      
+      // Calculate default week dates (previous Monday to Sunday)
+      const getLastWeekDates = () => {
+        const today = new Date();
+        const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+        
+        // Calculate days to subtract to get to last Monday
+        const daysToLastMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1 + 7; // If Sunday, go back 6 days; otherwise go back to previous Monday
+        
+        const lastMonday = new Date(today);
+        lastMonday.setDate(today.getDate() - daysToLastMonday);
+        lastMonday.setHours(0, 0, 0, 0);
+        
+        const lastSunday = new Date(lastMonday);
+        lastSunday.setDate(lastMonday.getDate() + 6);
+        lastSunday.setHours(23, 59, 59, 999);
+        
+        return { start: lastMonday, end: lastSunday };
+      };
+      
+      const weekDates = weekStart && weekEnd 
+        ? { start: new Date(weekStart), end: new Date(weekEnd) }
+        : getLastWeekDates();
+      
+      // Get target users
+      const targetUsers = userId 
+        ? [await storage.getUser(userId)].filter(Boolean)
+        : await storage.getAllUsers();
+      
+      const summaryResults = [];
+      
+      for (const user of targetUsers) {
+        try {
+          // Get user's notification preferences
+          const notificationPreferences = await storage.getNotificationPreferences(user.id);
+          
+          // Skip if user has weekly reports disabled
+          if (notificationPreferences && notificationPreferences.weeklyReports === false) {
+            summaryResults.push({
+              userId: user.id,
+              email: user.email,
+              skipped: true,
+              reason: 'Weekly reports disabled in preferences'
+            });
+            continue;
+          }
+          
+          // Get user's bookings for the week
+          const allBookings = await storage.getAllBookings();
+          const userBookings = allBookings.filter(booking => {
+            const bookingDate = new Date(booking.bookingDate);
+            return booking.renterId === user.id && 
+                   bookingDate >= weekDates.start && 
+                   bookingDate <= weekDates.end;
+          });
+          
+          // Get user's active spot listings for the week
+          const allListings = await storage.getAllSpotListings();
+          const userListings = allListings.filter(listing => {
+            return listing.ownerId === user.id && listing.status === 'active';
+          });
+          
+          // Calculate summary statistics
+          const totalBookings = userBookings.length;
+          const totalAmount = userBookings.reduce((sum, booking) => sum + Number(booking.totalAmount), 0);
+          const activeSpots = userListings.length;
+          
+          // Get upcoming bookings (next 7 days)
+          const nextWeekStart = new Date();
+          const nextWeekEnd = new Date();
+          nextWeekEnd.setDate(nextWeekStart.getDate() + 7);
+          
+          const upcomingBookings = allBookings.filter(booking => {
+            const bookingDate = new Date(booking.bookingDate);
+            return booking.renterId === user.id && 
+                   bookingDate >= nextWeekStart && 
+                   bookingDate <= nextWeekEnd;
+          }).length;
+          
+          // Get pending payments
+          const pendingPayments = userBookings.filter(booking => !booking.paymentReceived).length;
+          
+          // Only send summary if user has activity or pending items
+          if (totalBookings > 0 || activeSpots > 0 || upcomingBookings > 0 || pendingPayments > 0) {
+            // Construct display name
+            const displayName = user.firstName && user.lastName 
+              ? `${user.firstName} ${user.lastName}`
+              : user.firstName || user.lastName || user.email || 'User';
+            
+            // Prepare summary data
+            const summaryData = {
+              weekStart: weekDates.start,
+              weekEnd: weekDates.end,
+              totalBookings,
+              totalAmount,
+              activeSpots,
+              upcomingBookings,
+              pendingPayments
+            };
+            
+            // Send weekly summary notification asynchronously
+            setImmediate(async () => {
+              try {
+                const result = await sendWeeklySummaryNotification(
+                  { name: displayName, email: user.email, id: user.id },
+                  summaryData,
+                  notificationPreferences || {}
+                );
+                
+                console.log(`Weekly summary sent to ${user.email}: ${result.emailSent ? 'email' : 'no email'}, ${result.inAppSent ? 'in-app' : 'no in-app'}`);
+              } catch (emailError) {
+                console.error(`Failed to send weekly summary to ${user.email}:`, emailError);
+              }
+            });
+            
+            summaryResults.push({
+              userId: user.id,
+              email: user.email,
+              sent: true,
+              summary: summaryData
+            });
+          } else {
+            summaryResults.push({
+              userId: user.id,
+              email: user.email,
+              skipped: true,
+              reason: 'No activity to report'
+            });
+          }
+        } catch (userError) {
+          console.error(`Error processing weekly summary for user ${user.id}:`, userError);
+          summaryResults.push({
+            userId: user.id,
+            email: user.email,
+            error: 'Processing failed',
+            sent: false
+          });
+        }
+      }
+      
+      res.json({
+        success: true,
+        message: `Processed ${targetUsers.length} users for weekly summaries`,
+        weekPeriod: {
+          start: weekDates.start.toISOString(),
+          end: weekDates.end.toISOString()
+        },
+        totalUsers: targetUsers.length,
+        summariesSent: summaryResults.filter(r => r.sent).length,
+        skipped: summaryResults.filter(r => r.skipped).length,
+        results: summaryResults
+      });
+      
+    } catch (error) {
+      console.error('❌ Failed to send weekly summaries:', error);
+      res.status(500).json({ error: "Failed to send weekly summaries" });
+    }
+  });
+
+  // Send system maintenance notifications (Admin only)
+  app.post("/api/notifications/system-maintenance", requireAdmin, async (req, res) => {
+    try {
+      const maintenanceNotificationSchema = z.object({
+        title: z.string().min(1, "Title is required"),
+        description: z.string().min(1, "Description is required"),
+        startDate: z.string().refine(val => !isNaN(Date.parse(val)), "Invalid start date"),
+        endDate: z.string().refine(val => !isNaN(Date.parse(val)), "Invalid end date"),
+        affectedServices: z.array(z.string()).min(1, "At least one affected service is required"),
+        isUrgent: z.boolean().default(false),
+        targetUsers: z.array(z.string()).optional(), // If provided, send only to these user IDs; otherwise send to all users
+        skipUsersWithDisabledNotifications: z.boolean().default(true) // Whether to skip users who have disabled system maintenance notifications
+      });
+      
+      const {
+        title,
+        description,
+        startDate,
+        endDate,
+        affectedServices,
+        isUrgent,
+        targetUsers,
+        skipUsersWithDisabledNotifications
+      } = maintenanceNotificationSchema.parse(req.body);
+      
+      // Validate date range
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      if (start >= end) {
+        return res.status(400).json({ error: "Start date must be before end date" });
+      }
+      
+      // Get target users
+      const allUsers = await storage.getAllUsers();
+      const usersToNotify = targetUsers && targetUsers.length > 0
+        ? allUsers.filter(user => targetUsers.includes(user.id))
+        : allUsers;
+      
+      const maintenanceResults = [];
+      
+      for (const user of usersToNotify) {
+        try {
+          // Get user's notification preferences
+          const notificationPreferences = await storage.getNotificationPreferences(user.id);
+          
+          // Skip if user has system maintenance notifications disabled (unless urgent)
+          if (skipUsersWithDisabledNotifications && 
+              notificationPreferences && 
+              notificationPreferences.systemMaintenance === false && 
+              !isUrgent) {
+            maintenanceResults.push({
+              userId: user.id,
+              email: user.email,
+              skipped: true,
+              reason: 'System maintenance notifications disabled (non-urgent)'
+            });
+            continue;
+          }
+          
+          // Construct display name
+          const displayName = user.firstName && user.lastName 
+            ? `${user.firstName} ${user.lastName}`
+            : user.firstName || user.lastName || user.email || 'User';
+          
+          // Prepare maintenance details
+          const maintenanceDetails = {
+            title,
+            description,
+            startDate: start,
+            endDate: end,
+            affectedServices,
+            isUrgent
+          };
+          
+          // Send system maintenance notification asynchronously
+          setImmediate(async () => {
+            try {
+              const result = await sendSystemMaintenanceNotification(
+                { name: displayName, email: user.email, id: user.id },
+                maintenanceDetails,
+                notificationPreferences || {}
+              );
+              
+              console.log(`System maintenance notification sent to ${user.email}: ${result.emailSent ? 'email' : 'no email'}, ${result.inAppSent ? 'in-app' : 'no in-app'}`);
+            } catch (emailError) {
+              console.error(`Failed to send system maintenance notification to ${user.email}:`, emailError);
+            }
+          });
+          
+          maintenanceResults.push({
+            userId: user.id,
+            email: user.email,
+            sent: true,
+            maintenanceType: isUrgent ? 'urgent' : 'scheduled'
+          });
+          
+        } catch (userError) {
+          console.error(`Error processing system maintenance notification for user ${user.id}:`, userError);
+          maintenanceResults.push({
+            userId: user.id,
+            email: user.email,
+            error: 'Processing failed',
+            sent: false
+          });
+        }
+      }
+      
+      res.json({
+        success: true,
+        message: `Processed ${usersToNotify.length} users for system maintenance notifications`,
+        maintenanceWindow: {
+          title,
+          start: start.toISOString(),
+          end: end.toISOString(),
+          isUrgent,
+          affectedServices
+        },
+        totalUsers: usersToNotify.length,
+        notificationsSent: maintenanceResults.filter(r => r.sent).length,
+        skipped: maintenanceResults.filter(r => r.skipped).length,
+        results: maintenanceResults
+      });
+      
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input data", details: error.errors });
+      }
+      console.error('❌ Failed to send system maintenance notifications:', error);
+      res.status(500).json({ error: "Failed to send system maintenance notifications" });
     }
   });
 
