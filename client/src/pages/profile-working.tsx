@@ -249,7 +249,7 @@ export default function Profile() {
   const createWaitingListMutation = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error("User not found");
-      const response = await apiRequest(`/api/users/${user.id}/waiting-list`, { 
+      const response = await apiRequest(`/api/waiting-list`, { 
         method: 'POST' 
       });
       return response.json();
@@ -274,7 +274,7 @@ export default function Profile() {
   const cancelWaitingListMutation = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error("User not found");
-      const response = await apiRequest(`/api/users/${user.id}/waiting-list`, { 
+      const response = await apiRequest(`/api/waiting-list/user/${user.id}`, { 
         method: 'DELETE' 
       });
       return response.json();
@@ -343,6 +343,8 @@ export default function Profile() {
       return response.json();
     },
     onSuccess: () => {
+      // Invalidate user-related queries to refresh the profile data
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id] });
       setShowProfileEditDrawer(false);
       profileForm.reset();

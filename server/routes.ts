@@ -2398,6 +2398,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Remove own waiting list entry (user self-service)
+  app.delete("/api/waiting-list/user/:userId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const authenticatedUserId = getAuthenticatedUserId(req);
+      
+      if (!authenticatedUserId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+      
+      // Users can only remove their own entry (unless admin)
+      const userRole = await getAuthenticatedUserRole(req);
+      if (userId !== authenticatedUserId && userRole !== "admin") {
+        return res.status(403).json({ error: "You can only remove your own waiting list entry" });
+      }
+      
+      // Find the user's waiting list entry
+      const userEntry = await storage.getWaitingListByUserId(userId);
+      if (!userEntry) {
+        return res.status(404).json({ error: "No waiting list entry found for this user" });
+      }
+      
+      const deleted = await storage.deleteWaitingListEntry(userEntry.id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Failed to remove waiting list entry" });
+      }
+      
+      // Audit the waiting list entry removal
+      await auditService.logAction("DELETE", "waiting_list", {
+        entityId: userEntry.id,
+        message: `User ${userEntry.userName} (${userEntry.userEmail}) removed themselves from waiting list`,
+        before: userEntry
+      });
+      
+      res.json({ success: true, message: "Successfully removed from waiting list" });
+    } catch (error) {
+      console.error("Error removing user from waiting list:", error);
+      res.status(500).json({ error: "Failed to remove from waiting list" });
+    }
+  });
+
   // Cancel/remove waiting list entry (admin)
   app.delete("/api/waiting-list/:id", requireAdmin, async (req, res) => {
     try {
