@@ -233,7 +233,7 @@ export default function Profile() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "waiting-list"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/user", user?.id] });
       toast({
         title: "Joined Waiting List",
         description: "You've been successfully added to the parking waiting list.",
@@ -258,7 +258,7 @@ export default function Profile() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "waiting-list"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/user", user?.id] });
       toast({
         title: "Left Waiting List",
         description: "You've been removed from the parking waiting list.",
