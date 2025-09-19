@@ -99,7 +99,7 @@ const buildingOptions = [
 ];
 
 export default function Profile() {
-  const { user, isOwner, isRenter } = useAuth()
+  const { user, isOwner, isRenter, isAdmin } = useAuth()
   const [, setLocation] = useLocation()
   const { toast } = useToast()
   const { theme, setTheme } = useTheme()
