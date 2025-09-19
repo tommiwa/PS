@@ -12,6 +12,9 @@ import {
   type InsertBooking,
   type WaitingList,
   type InsertWaitingList,
+  type NotificationPreferences,
+  type InsertNotificationPreferences,
+  type UpdateNotificationPreferences,
   type UserRole,
   type SpotType,
   type ListingType,
@@ -101,6 +104,10 @@ export interface IStorage {
   // Recent assignments tracking
   getRecentAssignments(daysBack?: number): Promise<WaitingList[]>;
   
+  // Notification Preferences operations
+  getNotificationPreferences(userId: string): Promise<NotificationPreferences | undefined>;
+  updateNotificationPreferences(userId: string, updates: UpdateNotificationPreferences): Promise<NotificationPreferences>;
+  
   // Audit storage operations (delegated to audit storage)
   createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
   getAuditLog(id: string): Promise<AuditLog | undefined>;
@@ -187,6 +194,7 @@ export class MemStorage implements IStorage {
   private spotListings: Map<string, SpotListing>;
   private bookings: Map<string, Booking>;
   private waitingList: Map<string, WaitingList>;
+  private notificationPreferences: Map<string, NotificationPreferences>;
   private auditStorage: IAuditStorage;
 
   constructor(auditStorage?: IAuditStorage) {
@@ -195,6 +203,7 @@ export class MemStorage implements IStorage {
     this.spotListings = new Map();
     this.bookings = new Map();
     this.waitingList = new Map();
+    this.notificationPreferences = new Map();
     
     // Inject audit storage (will be set externally)
     this.auditStorage = auditStorage as IAuditStorage;
@@ -1780,6 +1789,65 @@ export class MemStorage implements IStorage {
       newUsersThisWeek,
       mostActiveDepartment
     };
+  }
+
+  // Notification Preferences operations
+  async getNotificationPreferences(userId: string): Promise<NotificationPreferences | undefined> {
+    // Return existing preferences or create default ones
+    let preferences = this.notificationPreferences.get(userId);
+    
+    if (!preferences) {
+      // Create default preferences for user
+      const defaultPreferences: NotificationPreferences = {
+        id: randomUUID(),
+        userId,
+        emailNotifications: true,
+        bookingConfirmations: true,
+        paymentReminders: true,
+        spotAvailability: true,
+        weeklyReports: true,
+        systemMaintenance: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      this.notificationPreferences.set(userId, defaultPreferences);
+      preferences = defaultPreferences;
+    }
+    
+    return preferences;
+  }
+
+  async updateNotificationPreferences(userId: string, updates: UpdateNotificationPreferences): Promise<NotificationPreferences> {
+    // Get existing preferences or create defaults
+    let existingPreferences = await this.getNotificationPreferences(userId);
+    
+    if (!existingPreferences) {
+      // This shouldn't happen due to getNotificationPreferences creating defaults,
+      // but handle it just in case
+      existingPreferences = {
+        id: randomUUID(),
+        userId,
+        emailNotifications: true,
+        bookingConfirmations: true,
+        paymentReminders: true,
+        spotAvailability: true,
+        weeklyReports: true,
+        systemMaintenance: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+    }
+    
+    // Update with provided changes
+    const updatedPreferences: NotificationPreferences = {
+      ...existingPreferences,
+      ...updates,
+      updatedAt: new Date()
+    };
+    
+    this.notificationPreferences.set(userId, updatedPreferences);
+    return updatedPreferences;
   }
 
   // Audit decorators will be applied via server initialization
