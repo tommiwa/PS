@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Mail, Phone, Car, Settings, MapPin, Plus } from "lucide-react"
+import { Mail, Phone, Car, Settings, MapPin, Plus, Edit3, Trash2 } from "lucide-react"
 
 export interface Vehicle {
   id: string
@@ -14,6 +14,18 @@ export interface Vehicle {
   isDefault?: boolean
 }
 
+export interface AssignedSpot {
+  id: string
+  spotNumber: string
+  location: string
+  spotType: 'regular' | 'electric' | 'accessible' | 'tesla_ev' | 'reserved'
+  isIndoor: boolean
+  ownerId: string | null
+  description: string | null
+  isActive: boolean
+  isBookable: boolean
+}
+
 export interface UserProfile {
   id: string
   name: string
@@ -23,6 +35,7 @@ export interface UserProfile {
   role: "admin" | "owner" | "renter"
   avatar?: string
   vehicles?: Vehicle[]
+  assignedSpots?: AssignedSpot[]
   spotCount?: number
   memberSince: string
 }
@@ -31,6 +44,8 @@ interface UserProfileCardProps {
   user: UserProfile
   onEditProfile?: () => void
   onAddVehicle?: () => void
+  onEditVehicle?: (vehicle: Vehicle) => void
+  onDeleteVehicle?: (vehicle: Vehicle) => void
   showEditButton?: boolean
 }
 
@@ -38,6 +53,8 @@ export function UserProfileCard({
   user, 
   onEditProfile, 
   onAddVehicle,
+  onEditVehicle,
+  onDeleteVehicle,
   showEditButton = true 
 }: UserProfileCardProps) {
   const getRoleBadge = () => {
@@ -146,7 +163,7 @@ export function UserProfileCard({
               {user.vehicles.map((vehicle, index) => (
                 <div 
                   key={vehicle.id} 
-                  className="flex items-center justify-between p-3 bg-muted rounded-md"
+                  className="flex items-center justify-between p-3 bg-muted rounded-md hover-elevate"
                   data-testid={`vehicle-${index}`}
                 >
                   <div className="flex items-center gap-3">
@@ -161,6 +178,24 @@ export function UserProfileCard({
                       </div>
                     </div>
                   </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onEditVehicle?.(vehicle)}
+                      data-testid={`button-edit-vehicle-${index}`}
+                    >
+                      <Edit3 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onDeleteVehicle?.(vehicle)}
+                      data-testid={`button-delete-vehicle-${index}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -174,19 +209,41 @@ export function UserProfileCard({
         </div>
 
         {/* Assigned Spots */}
-        {user.role === 'owner' && user.spotCount && user.spotCount > 0 && (
+        {user.assignedSpots && user.assignedSpots.length > 0 && (
           <div className="space-y-3">
             <h4 className="text-sm font-medium flex items-center gap-2">
               <MapPin className="h-4 w-4" />
-              Assigned Spots
+              Assigned Spots ({user.assignedSpots.length})
             </h4>
-            <div className="p-3 bg-muted rounded-md">
-              <div className="text-sm font-medium">
-                {user.spotCount} parking spot{user.spotCount !== 1 ? 's' : ''} owned
-              </div>
-              <div className="text-sm text-muted-foreground">
-                View details in the My Spots section
-              </div>
+            <div className="space-y-2">
+              {user.assignedSpots.map((spot, index) => (
+                <div 
+                  key={spot.id} 
+                  className="flex items-center justify-between p-3 bg-muted rounded-md"
+                  data-testid={`assigned-spot-${index}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-2 h-2 rounded-full ${
+                      spot.spotType === 'electric' || spot.spotType === 'tesla_ev' ? 'bg-green-500' :
+                      spot.spotType === 'accessible' ? 'bg-blue-500' : 'bg-gray-500'
+                    }`} />
+                    <div>
+                      <div className="text-sm font-medium">
+                        Spot {spot.spotNumber}
+                        <Badge variant="outline" className="ml-2 capitalize">
+                          {spot.spotType === 'tesla_ev' ? 'Tesla EV' : spot.spotType}
+                        </Badge>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {spot.location} {spot.isIndoor && '• Indoor'}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {spot.isActive ? 'Active' : 'Inactive'}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}

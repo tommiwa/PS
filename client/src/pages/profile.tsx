@@ -55,7 +55,7 @@ import {
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useTheme } from "@/contexts/theme-context"
-import { spotTypes, type SpotType, type WaitingList, type InsertWaitingList } from "@shared/schema"
+import { spotTypes, type SpotType, type WaitingList, type InsertWaitingList, type ParkingSpot } from "@shared/schema"
 
 // Waiting list form validation schema
 const waitingListSchema = z.object({
@@ -69,7 +69,18 @@ const waitingListSchema = z.object({
   reason: z.string().min(10, "Please provide a reason (at least 10 characters)")
 });
 
+// Vehicle form validation schema
+const vehicleSchema = z.object({
+  make: z.string().min(1, "Vehicle make is required"),
+  model: z.string().min(1, "Vehicle model is required"),
+  year: z.number().min(1990, "Year must be 1990 or later").max(new Date().getFullYear() + 1, "Year cannot be in the future"),
+  licensePlate: z.string().min(1, "License plate is required"),
+  color: z.string().optional(),
+  isElectric: z.boolean().default(false)
+});
+
 type WaitingListForm = z.infer<typeof waitingListSchema>;
+type VehicleForm = z.infer<typeof vehicleSchema>;
 
 // Priority levels with descriptions
 const priorityLevels = {
@@ -117,9 +128,34 @@ export default function Profile() {
     }
   });
 
+  // Vehicle form
+  const vehicleForm = useForm<VehicleForm>({
+    resolver: zodResolver(vehicleSchema),
+    defaultValues: {
+      make: "",
+      model: "",
+      year: new Date().getFullYear(),
+      licensePlate: "",
+      color: "",
+      isElectric: false
+    }
+  });
+
   // Query user's waiting list status  
   const { data: waitingListEntry, isLoading: isLoadingWaitingList, refetch: refetchWaitingList } = useQuery<WaitingList | null>({
     queryKey: ["/api/waiting-list/user", user?.id],
+    enabled: !!user?.id
+  });
+
+  // Query user's assigned spots (for owners)
+  const { data: assignedSpots = [], isLoading: isLoadingSpots } = useQuery<ParkingSpot[]>({
+    queryKey: ["/api/users", user?.id, "assigned-spots"],
+    enabled: !!user?.id && isOwner()
+  });
+
+  // Query user's vehicles
+  const { data: userVehicles = [], isLoading: isLoadingVehicles, refetch: refetchVehicles } = useQuery<Vehicle[]>({
+    queryKey: ["/api/users", user?.id, "vehicles"],
     enabled: !!user?.id
   });
 
@@ -241,6 +277,88 @@ export default function Profile() {
     }
   });
 
+  // Vehicle mutations
+  const addVehicleMutation = useMutation({
+    mutationFn: async (vehicleData: VehicleForm) => {
+      if (!user) throw new Error("User not found");
+      const response = await apiRequest(`/api/users/${user.id}/vehicles`, { 
+        method: 'POST', 
+        body: vehicleData 
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "vehicles"] });
+      setShowAddVehicleDialog(false);
+      vehicleForm.reset();
+      toast({
+        title: "Vehicle Added",
+        description: "Your vehicle has been successfully added.",
+        variant: "default"
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to Add Vehicle",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const updateVehicleMutation = useMutation({
+    mutationFn: async (vehicleData: VehicleForm) => {
+      if (!editingVehicle?.id) throw new Error("Vehicle not found");
+      const response = await apiRequest(`/api/users/${user?.id}/vehicles/${editingVehicle.id}`, { 
+        method: 'PUT', 
+        body: vehicleData 
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "vehicles"] });
+      setEditingVehicle(null);
+      setShowAddVehicleDialog(false);
+      vehicleForm.reset();
+      toast({
+        title: "Vehicle Updated",
+        description: "Your vehicle has been successfully updated.",
+        variant: "default"
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to Update Vehicle",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const deleteVehicleMutation = useMutation({
+    mutationFn: async (vehicleId: string) => {
+      const response = await apiRequest(`/api/users/${user?.id}/vehicles/${vehicleId}`, { 
+        method: 'DELETE' 
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "vehicles"] });
+      toast({
+        title: "Vehicle Deleted",
+        description: "Your vehicle has been successfully removed.",
+        variant: "default"
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to Delete Vehicle",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
   if (!user) {
     return (
       <div className="p-6" data-testid="page-profile">
@@ -260,8 +378,9 @@ export default function Profile() {
     phone: user.phone || "(555) 000-0000",
     department: user.department || "Unknown",
     role: user.role,
-    vehicles: (user as any).vehicles || [],
-    spotCount: isOwner() ? 2 : undefined,
+    vehicles: userVehicles,
+    assignedSpots: assignedSpots,
+    spotCount: assignedSpots.length || 0,
     memberSince: user.memberSince || "Recently"
   }
 
@@ -350,12 +469,43 @@ export default function Profile() {
   }
 
   const handleAddVehicle = () => {
-    setActiveTab("vehicle")
-    toast({
-      title: "Add Vehicle",
-      description: "Go to the Vehicle tab to add a new vehicle to your profile.",
-      variant: "default"
-    })
+    setEditingVehicle(null);
+    vehicleForm.reset();
+    setShowAddVehicleDialog(true);
+  }
+
+  const handleEditVehicle = (vehicle: Vehicle) => {
+    setEditingVehicle(vehicle);
+    vehicleForm.reset({
+      make: vehicle.make,
+      model: vehicle.model,
+      year: vehicle.year,
+      licensePlate: vehicle.licensePlate,
+      color: vehicle.color || "",
+      isElectric: false // We'll need to add this to the Vehicle interface
+    });
+    setShowAddVehicleDialog(true);
+  }
+
+  const handleDeleteVehicle = async (vehicle: Vehicle) => {
+    const confirmed = await confirm({
+      title: "Delete Vehicle",
+      description: `Are you sure you want to delete ${vehicle.year} ${vehicle.make} ${vehicle.model}?`,
+      confirmText: "Delete",
+      variant: "destructive"
+    });
+    
+    if (confirmed) {
+      deleteVehicleMutation.mutate(vehicle.id);
+    }
+  }
+
+  const handleSubmitVehicle = (data: VehicleForm) => {
+    if (editingVehicle) {
+      updateVehicleMutation.mutate(data);
+    } else {
+      addVehicleMutation.mutate(data);
+    }
   }
 
   const handleManageBookings = () => {
@@ -388,15 +538,16 @@ export default function Profile() {
             user={userProfile} 
             onEditProfile={handleEditProfile}
             onAddVehicle={handleAddVehicle}
+            onEditVehicle={handleEditVehicle}
+            onDeleteVehicle={handleDeleteVehicle}
           />
           
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="notifications">Notifications</TabsTrigger>
-              <TabsTrigger value="vehicle">Vehicle</TabsTrigger>
-              <TabsTrigger value="waiting-list">Waiting List</TabsTrigger>
               <TabsTrigger value="privacy">Privacy</TabsTrigger>
               <TabsTrigger value="account">Account</TabsTrigger>
+              <TabsTrigger value="settings">Settings</TabsTrigger>
             </TabsList>
             
             {/* Notification Settings */}
@@ -493,8 +644,8 @@ export default function Profile() {
               </Card>
             </TabsContent>
 
-            {/* Vehicle Settings */}
-            <TabsContent value="vehicle" className="space-y-6">
+            {/* Settings Tab */}
+            <TabsContent value="settings" className="space-y-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
