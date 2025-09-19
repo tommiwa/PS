@@ -12,6 +12,8 @@ import {
   type InsertBooking,
   type WaitingList,
   type InsertWaitingList,
+  type Vehicle,
+  type InsertVehicle,
   type NotificationPreferences,
   type InsertNotificationPreferences,
   type UpdateNotificationPreferences,
@@ -96,6 +98,14 @@ export interface IStorage {
   updateWaitingListEntry(id: string, updates: Partial<InsertWaitingList>): Promise<WaitingList | undefined>;
   deleteWaitingListEntry(id: string): Promise<boolean>;
   assignWaitingListUser(waitingListId: string, spotId: string): Promise<WaitingList | undefined>;
+
+  // Vehicle operations
+  getVehicle(id: string): Promise<Vehicle | undefined>;
+  getVehiclesByUser(userId: string): Promise<Vehicle[]>;
+  getAllVehicles(): Promise<Vehicle[]>;
+  createVehicle(vehicle: InsertVehicle): Promise<Vehicle>;
+  updateVehicle(id: string, updates: Partial<InsertVehicle>): Promise<Vehicle | undefined>;
+  deleteVehicle(id: string): Promise<boolean>;
 
   // Bookability control operations
   toggleSpotBookability(spotId: string, isBookable: boolean): Promise<ParkingSpot | undefined>;
@@ -194,6 +204,7 @@ export class MemStorage implements IStorage {
   private spotListings: Map<string, SpotListing>;
   private bookings: Map<string, Booking>;
   private waitingList: Map<string, WaitingList>;
+  private vehicles: Map<string, Vehicle>;
   private notificationPreferences: Map<string, NotificationPreferences>;
   private auditStorage: IAuditStorage;
 
@@ -203,6 +214,7 @@ export class MemStorage implements IStorage {
     this.spotListings = new Map();
     this.bookings = new Map();
     this.waitingList = new Map();
+    this.vehicles = new Map();
     this.notificationPreferences = new Map();
     
     // Inject audit storage (will be set externally)
@@ -1304,6 +1316,52 @@ export class MemStorage implements IStorage {
     this.waitingList.delete(waitingListId);
     
     return finalEntry;
+  }
+
+  // Vehicle operations
+  async getVehicle(id: string): Promise<Vehicle | undefined> {
+    return this.vehicles.get(id);
+  }
+
+  async getVehiclesByUser(userId: string): Promise<Vehicle[]> {
+    return Array.from(this.vehicles.values()).filter(vehicle => vehicle.userId === userId);
+  }
+
+  async getAllVehicles(): Promise<Vehicle[]> {
+    return Array.from(this.vehicles.values());
+  }
+
+  async createVehicle(vehicle: InsertVehicle): Promise<Vehicle> {
+    const id = randomUUID();
+    const now = new Date();
+    
+    const newVehicle: Vehicle = {
+      id,
+      ...vehicle,
+      createdAt: now,
+      updatedAt: now,
+    };
+    
+    this.vehicles.set(id, newVehicle);
+    return newVehicle;
+  }
+
+  async updateVehicle(id: string, updates: Partial<InsertVehicle>): Promise<Vehicle | undefined> {
+    const vehicle = this.vehicles.get(id);
+    if (!vehicle) return undefined;
+    
+    const updatedVehicle: Vehicle = {
+      ...vehicle,
+      ...updates,
+      updatedAt: new Date(),
+    };
+    
+    this.vehicles.set(id, updatedVehicle);
+    return updatedVehicle;
+  }
+
+  async deleteVehicle(id: string): Promise<boolean> {
+    return this.vehicles.delete(id);
   }
 
   // Bookability control operations

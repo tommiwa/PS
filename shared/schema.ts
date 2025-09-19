@@ -233,6 +233,30 @@ export const insertWaitingListSchema = createInsertSchema(waitingList).omit({
 export type InsertWaitingList = z.infer<typeof insertWaitingListSchema>;
 export type WaitingList = typeof waitingList.$inferSelect;
 
+// Vehicles Table
+export const vehicles = pgTable("vehicles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(), // References users.id
+  make: text("make").notNull(),
+  model: text("model").notNull(),
+  year: integer("year").notNull(),
+  licensePlate: text("license_plate").notNull(),
+  color: text("color"),
+  isElectric: boolean("is_electric").notNull().default(false),
+  isDefault: boolean("is_default").notNull().default(false), // If this is the user's primary vehicle
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertVehicleSchema = createInsertSchema(vehicles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertVehicle = z.infer<typeof insertVehicleSchema>;
+export type Vehicle = typeof vehicles.$inferSelect;
+
 // Auth types for frontend
 export interface AuthUser {
   id: string;

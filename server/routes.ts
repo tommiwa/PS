@@ -21,9 +21,11 @@ import {
   insertSpotListingSchema,
   insertBookingSchema,
   insertWaitingListSchema,
+  insertVehicleSchema,
   insertUserSchema,
   type User,
   type WaitingList,
+  type Vehicle,
   type SpotType,
   type AuditAction,
   type EntityType,
@@ -332,6 +334,188 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error updating notification preferences:", error);
       res.status(500).json({ error: "Failed to update notification preferences" });
+    }
+  });
+
+  // Vehicle Routes
+  // Get user's vehicles
+  app.get("/api/users/:userId/vehicles", isAuthenticated, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const currentUserId = getAuthenticatedUserId(req);
+      
+      if (!currentUserId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      // Only allow users to access their own vehicles or admin to access any user's vehicles
+      const currentUser = await storage.getUser(currentUserId);
+      if (!currentUser) {
+        return res.status(401).json({ error: "User not found" });
+      }
+
+      if (currentUser.role !== "admin" && currentUserId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      const vehicles = await storage.getVehiclesByUser(userId);
+      res.json(vehicles);
+    } catch (error) {
+      console.error('❌ Failed to fetch vehicles:', error);
+      res.status(500).json({ error: "Failed to fetch vehicles" });
+    }
+  });
+
+  // Create a new vehicle for user
+  app.post("/api/users/:userId/vehicles", isAuthenticated, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const currentUserId = getAuthenticatedUserId(req);
+      
+      if (!currentUserId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      // Only allow users to create vehicles for themselves or admin to create for any user
+      const currentUser = await storage.getUser(currentUserId);
+      if (!currentUser) {
+        return res.status(401).json({ error: "User not found" });
+      }
+
+      if (currentUser.role !== "admin" && currentUserId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      // Validate input
+      const vehicleData = insertVehicleSchema.parse(req.body);
+      
+      // Ensure userId is set correctly
+      const vehicleWithUserId = {
+        ...vehicleData,
+        userId
+      };
+
+      const newVehicle = await storage.createVehicle(vehicleWithUserId);
+      
+      // Audit the vehicle creation
+      await auditService.logAction("CREATE", "vehicle", {
+        entityId: newVehicle.id,
+        message: `Created vehicle ${newVehicle.year} ${newVehicle.make} ${newVehicle.model} for user ${userId}`,
+        after: newVehicle
+      });
+      
+      res.status(201).json(newVehicle);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input data", details: error.errors });
+      }
+      console.error('❌ Failed to create vehicle:', error);
+      res.status(500).json({ error: "Failed to create vehicle" });
+    }
+  });
+
+  // Update a vehicle
+  app.put("/api/users/:userId/vehicles/:vehicleId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { userId, vehicleId } = req.params;
+      const currentUserId = getAuthenticatedUserId(req);
+      
+      if (!currentUserId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      // Only allow users to update their own vehicles or admin to update any vehicle
+      const currentUser = await storage.getUser(currentUserId);
+      if (!currentUser) {
+        return res.status(401).json({ error: "User not found" });
+      }
+
+      if (currentUser.role !== "admin" && currentUserId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      // Check if vehicle exists and belongs to the user
+      const existingVehicle = await storage.getVehicle(vehicleId);
+      if (!existingVehicle) {
+        return res.status(404).json({ error: "Vehicle not found" });
+      }
+
+      if (existingVehicle.userId !== userId) {
+        return res.status(403).json({ error: "Vehicle does not belong to this user" });
+      }
+
+      // Validate input (partial update)
+      const updates = insertVehicleSchema.partial().parse(req.body);
+      
+      const updatedVehicle = await storage.updateVehicle(vehicleId, updates);
+      if (!updatedVehicle) {
+        return res.status(404).json({ error: "Vehicle not found" });
+      }
+      
+      // Audit the vehicle update
+      await auditService.logAction("UPDATE", "vehicle", {
+        entityId: vehicleId,
+        message: `Updated vehicle ${updatedVehicle.year} ${updatedVehicle.make} ${updatedVehicle.model}`,
+        before: existingVehicle,
+        after: updatedVehicle
+      });
+      
+      res.json(updatedVehicle);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input data", details: error.errors });
+      }
+      console.error('❌ Failed to update vehicle:', error);
+      res.status(500).json({ error: "Failed to update vehicle" });
+    }
+  });
+
+  // Delete a vehicle
+  app.delete("/api/users/:userId/vehicles/:vehicleId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { userId, vehicleId } = req.params;
+      const currentUserId = getAuthenticatedUserId(req);
+      
+      if (!currentUserId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      // Only allow users to delete their own vehicles or admin to delete any vehicle
+      const currentUser = await storage.getUser(currentUserId);
+      if (!currentUser) {
+        return res.status(401).json({ error: "User not found" });
+      }
+
+      if (currentUser.role !== "admin" && currentUserId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      // Check if vehicle exists and belongs to the user
+      const existingVehicle = await storage.getVehicle(vehicleId);
+      if (!existingVehicle) {
+        return res.status(404).json({ error: "Vehicle not found" });
+      }
+
+      if (existingVehicle.userId !== userId) {
+        return res.status(403).json({ error: "Vehicle does not belong to this user" });
+      }
+
+      const deleted = await storage.deleteVehicle(vehicleId);
+      if (!deleted) {
+        return res.status(404).json({ error: "Vehicle not found" });
+      }
+      
+      // Audit the vehicle deletion
+      await auditService.logAction("DELETE", "vehicle", {
+        entityId: vehicleId,
+        message: `Deleted vehicle ${existingVehicle.year} ${existingVehicle.make} ${existingVehicle.model}`,
+        before: existingVehicle
+      });
+      
+      res.json({ success: true, message: "Vehicle deleted successfully" });
+    } catch (error) {
+      console.error('❌ Failed to delete vehicle:', error);
+      res.status(500).json({ error: "Failed to delete vehicle" });
     }
   });
 
