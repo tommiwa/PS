@@ -141,15 +141,8 @@ export function auditContextMiddleware(req: Request, res: Response, next: NextFu
   req.auditContext = auditContext;
   auditService.setRequestContext(auditContext);
 
-  // Log the request start (for admin/sensitive operations only)
-  if (req.path.startsWith('/api/admin') || ['DELETE', 'POST', 'PUT', 'PATCH'].includes(req.method)) {
-    auditService.logAction('VIEW', 'system', {
-      message: `${req.method} ${req.path}`,
-      entityId: req.path,
-    }).catch(error => {
-      console.error('[AuditMiddleware] Failed to log request start:', error);
-    });
-  }
+  // Skip logging GET requests to reduce database bloat
+  // Only meaningful operations like CREATE, UPDATE, DELETE will be logged in route handlers
 
   next();
 }
@@ -191,20 +184,17 @@ export function auditResponseMiddleware(req: Request, res: Response, next: NextF
 
   // Log response when response finishes
   function logResponse() {
-    // Only log failed operations or admin operations
-    const shouldLogResponse = res.statusCode >= 400 || req.path.startsWith('/api/admin');
+    // Only log failed operations to reduce database bloat
+    const shouldLogResponse = res.statusCode >= 400;
     
     if (shouldLogResponse && req.auditContext) {
-      const success = res.statusCode < 400;
-      const message = success 
-        ? `${req.method} ${req.path} completed successfully`
-        : `${req.method} ${req.path} failed with status ${res.statusCode}`;
+      const message = `${req.method} ${req.path} failed with status ${res.statusCode}`;
 
       auditService.logAction('VIEW', 'system', {
         message,
-        success,
+        success: false,
         entityId: req.path,
-        forceSync: !success, // Log failures synchronously
+        forceSync: true, // Log failures synchronously
       }).catch(error => {
         console.error('[AuditMiddleware] Failed to log response:', error);
       });
@@ -268,7 +258,7 @@ export function auditErrorMiddleware(error: any, req: Request, res: Response, ne
       method: req.method,
     });
 
-    // Try to log this audit system failure
+    // Try to log this audit system failure using valid action type
     auditService.auditSystem('VIEW', `Audit system error: ${error.message}`, {
       error: error.message,
       path: req.path,

@@ -1113,11 +1113,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const spots = await storage.getParkingSpotsByOwner(userId);
       
-      // Audit the spot access
-      await auditService.logAction("VIEW", "parking_spot", {
-        entityId: `user_spots_${userId}`,
-        message: `Admin retrieved ${spots.length} parking spots for user ${user.firstName} ${user.lastName} (${user.email})`
-      });
+      // No audit logging for simple data retrieval - saves database space
       
       res.json(spots);
     } catch (error) {
