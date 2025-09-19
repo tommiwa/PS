@@ -623,3 +623,157 @@ export const quickExportWaitingListExcel = (waitingList: any[], title?: string, 
     return false
   }
 }
+
+// Export functions for booking requests
+export const exportBookingRequestsData = (requests: any[], title: string = 'Booking Requests Report') => {
+  const columns: ExportColumn[] = [
+    { header: 'ID', dataKey: 'id', width: 15 },
+    { header: 'Request Type', dataKey: 'type', width: 15, formatter: (type) => type?.toUpperCase() || 'UNKNOWN' },
+    { header: 'Submitted By', dataKey: 'submittedBy', width: 25 },
+    { header: 'Email', dataKey: 'email', width: 30 },
+    { header: 'Spot Number', dataKey: 'spotNumber', width: 15 },
+    { header: 'Urgency', dataKey: 'urgency', width: 12, formatter: (urgency) => urgency?.toUpperCase() || 'MEDIUM' },
+    { header: 'Status', dataKey: 'status', width: 12, formatter: (status) => status?.toUpperCase() || 'PENDING' },
+    { header: 'Request Date', dataKey: 'requestDate', width: 15, formatter: (date) => new Date(date).toLocaleDateString() },
+    { header: 'Reason', dataKey: 'reason', width: 50 }
+  ]
+
+  const exportData: ExportData = {
+    title,
+    subtitle: 'Booking Request Management Report',
+    data: requests,
+    columns,
+    filename: `booking-requests-report-${new Date().toISOString().split('T')[0]}`,
+    summary: {
+      totalRecords: requests.length,
+      additionalStats: [
+        { label: 'Pending Requests', value: requests.filter(r => r.status === 'pending').length },
+        { label: 'Resolved Requests', value: requests.filter(r => r.status === 'resolved').length },
+        { label: 'High Urgency', value: requests.filter(r => r.urgency === 'high').length },
+        { label: 'Cancellation Requests', value: requests.filter(r => r.type === 'cancellation').length },
+        { label: 'Dispute Requests', value: requests.filter(r => r.type === 'dispute').length },
+        { label: 'Modification Requests', value: requests.filter(r => r.type === 'modification').length }
+      ]
+    }
+  }
+
+  return exportData
+}
+
+export const quickExportBookingRequestsPDF = (requests: any[], title?: string, onError?: (message: string) => void) => {
+  try {
+    if (!requests || requests.length === 0) {
+      const message = 'No booking requests data available to export'
+      if (onError) onError(message)
+      return false
+    }
+    const exportData = exportBookingRequestsData(requests, title)
+    exportToPDF(exportData)
+    return true
+  } catch (error) {
+    console.error('Error exporting booking requests to PDF:', error)
+    const message = error instanceof Error ? error.message : 'Failed to export booking requests to PDF'
+    if (onError) onError(message)
+    return false
+  }
+}
+
+export const quickExportBookingRequestsExcel = (requests: any[], title?: string, onError?: (message: string) => void) => {
+  try {
+    if (!requests || requests.length === 0) {
+      const message = 'No booking requests data available to export'
+      if (onError) onError(message)
+      return false
+    }
+    const exportData = exportBookingRequestsData(requests, title)
+    exportToExcel(exportData)
+    return true
+  } catch (error) {
+    console.error('Error exporting booking requests to Excel:', error)
+    const message = error instanceof Error ? error.message : 'Failed to export booking requests to Excel'
+    if (onError) onError(message)
+    return false
+  }
+}
+
+// Export functions for booking activity
+export const exportBookingActivityData = (activities: any[], title: string = 'Booking Activity Report') => {
+  const columns: ExportColumn[] = [
+    { header: 'ID', dataKey: 'id', width: 15 },
+    { header: 'Activity Type', dataKey: 'type', width: 20, formatter: (type) => {
+      switch (type) {
+        case 'booking_created': return 'Booking Created'
+        case 'booking_cancelled': return 'Booking Cancelled'
+        case 'booking_completed': return 'Booking Completed'
+        case 'payment_received': return 'Payment Received'
+        case 'payment_updated': return 'Payment Updated'
+        case 'spot_assigned': return 'Spot Assigned'
+        case 'listing_created': return 'Listing Created'
+        case 'listing_updated': return 'Listing Updated'
+        default: return 'Unknown Activity'
+      }
+    }},
+    { header: 'Actor', dataKey: 'actorName', width: 25 },
+    { header: 'Description', dataKey: 'description', width: 40 },
+    { header: 'Result', dataKey: 'success', width: 12, formatter: (success) => success ? 'SUCCESS' : 'FAILURE' },
+    { header: 'Timestamp', dataKey: 'timestamp', width: 20, formatter: (timestamp) => new Date(timestamp).toLocaleString() },
+    { header: 'Details', dataKey: 'details', width: 50 }
+  ]
+
+  const exportData: ExportData = {
+    title,
+    subtitle: 'Booking Activity Log Report',
+    data: activities,
+    columns,
+    filename: `booking-activity-report-${new Date().toISOString().split('T')[0]}`,
+    summary: {
+      totalRecords: activities.length,
+      additionalStats: [
+        { label: 'Successful Actions', value: activities.filter(a => a.success === true).length },
+        { label: 'Failed Actions', value: activities.filter(a => a.success === false).length },
+        { label: 'Bookings Created', value: activities.filter(a => a.type === 'booking_created').length },
+        { label: 'Bookings Cancelled', value: activities.filter(a => a.type === 'booking_cancelled').length },
+        { label: 'Payments Received', value: activities.filter(a => a.type === 'payment_received').length },
+        { label: 'Listings Created', value: activities.filter(a => a.type === 'listing_created').length }
+      ]
+    }
+  }
+
+  return exportData
+}
+
+export const quickExportBookingActivityPDF = (activities: any[], title?: string, onError?: (message: string) => void) => {
+  try {
+    if (!activities || activities.length === 0) {
+      const message = 'No booking activity data available to export'
+      if (onError) onError(message)
+      return false
+    }
+    const exportData = exportBookingActivityData(activities, title)
+    exportToPDF(exportData)
+    return true
+  } catch (error) {
+    console.error('Error exporting booking activity to PDF:', error)
+    const message = error instanceof Error ? error.message : 'Failed to export booking activity to PDF'
+    if (onError) onError(message)
+    return false
+  }
+}
+
+export const quickExportBookingActivityExcel = (activities: any[], title?: string, onError?: (message: string) => void) => {
+  try {
+    if (!activities || activities.length === 0) {
+      const message = 'No booking activity data available to export'
+      if (onError) onError(message)
+      return false
+    }
+    const exportData = exportBookingActivityData(activities, title)
+    exportToExcel(exportData)
+    return true
+  } catch (error) {
+    console.error('Error exporting booking activity to Excel:', error)
+    const message = error instanceof Error ? error.message : 'Failed to export booking activity to Excel'
+    if (onError) onError(message)
+    return false
+  }
+}

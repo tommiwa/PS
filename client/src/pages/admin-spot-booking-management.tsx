@@ -53,7 +53,7 @@ import {
   FileText
 } from "lucide-react"
 import type { Booking, BookingStatus, ParkingSpot } from "@shared/schema"
-import { quickExportBookingsPDF, quickExportBookingsExcel } from "@/utils/export-utils"
+import { quickExportBookingsPDF, quickExportBookingsExcel, quickExportBookingRequestsPDF, quickExportBookingRequestsExcel, quickExportBookingActivityPDF, quickExportBookingActivityExcel } from "@/utils/export-utils"
 
 // Admin-specific interfaces for extended booking data
 interface AdminBookingData {
@@ -128,6 +128,10 @@ export default function AdminSpotBookingManagement() {
   const { confirm } = useConfirm()
   const [searchTerm, setSearchTerm] = useState("")
   const [filterValues, setFilterValues] = useState<FilterValues>({})
+  const [requestsSearchTerm, setRequestsSearchTerm] = useState("")
+  const [requestsFilterValues, setRequestsFilterValues] = useState<FilterValues>({})
+  const [activitySearchTerm, setActivitySearchTerm] = useState("")
+  const [activityFilterValues, setActivityFilterValues] = useState<FilterValues>({})
   const [selectedBooking, setSelectedBooking] = useState<AdminBookingData | null>(null)
   const [selectedRequest, setSelectedRequest] = useState<BookingRequest | null>(null)
   const [showBookingDetails, setShowBookingDetails] = useState(false)
@@ -177,6 +181,11 @@ export default function AdminSpotBookingManagement() {
   // Fetch booking requests that need attention
   const { data: bookingRequests = [], isLoading: isLoadingRequests } = useQuery<BookingRequest[]>({
     queryKey: ["/api/admin/booking-requests"],
+  });
+
+  // Fetch booking activity data
+  const { data: bookingActivity, isLoading: isLoadingActivity } = useQuery({
+    queryKey: ["/api/admin/booking-activity", { pageSize: 100 }],
   });
 
 
@@ -287,6 +296,77 @@ export default function AdminSpotBookingManagement() {
     "desc" // Most recent first
   );
 
+  // Enhanced filtering for booking requests
+  const filteredBookingRequests = useMemo(() => displayBookingRequests.filter(request => {
+    // Search filter
+    if (requestsSearchTerm.trim()) {
+      const searchLower = requestsSearchTerm.toLowerCase()
+      const matchesSearch = request.submittedBy?.toLowerCase().includes(searchLower) ||
+                           request.email?.toLowerCase().includes(searchLower) ||
+                           request.spotNumber?.toLowerCase().includes(searchLower) ||
+                           request.reason?.toLowerCase().includes(searchLower)
+      if (!matchesSearch) return false
+    }
+    
+    // Type filter
+    if (requestsFilterValues.type && requestsFilterValues.type !== "all") {
+      if (request.type !== requestsFilterValues.type) return false
+    }
+    
+    // Urgency filter
+    if (requestsFilterValues.urgency && requestsFilterValues.urgency !== "all") {
+      if (request.urgency !== requestsFilterValues.urgency) return false
+    }
+    
+    // Status filter
+    if (requestsFilterValues.status && requestsFilterValues.status !== "all") {
+      if (request.status !== requestsFilterValues.status) return false
+    }
+    
+    return true
+  }), [displayBookingRequests, requestsSearchTerm, requestsFilterValues]);
+
+  // Sorting functionality for booking requests
+  const { sortState: requestsSortState, sortedData: sortedBookingRequests, handleSort: handleRequestsSort } = useTableSort(
+    filteredBookingRequests,
+    "requestDate", // Default sort by request date
+    "desc" // Most recent first
+  );
+
+  // Enhanced filtering for booking activity
+  const displayBookingActivity = bookingActivity?.items || [];
+  const filteredBookingActivity = useMemo(() => displayBookingActivity.filter((activity: any) => {
+    // Search filter
+    if (activitySearchTerm.trim()) {
+      const searchLower = activitySearchTerm.toLowerCase()
+      const matchesSearch = activity.actorName?.toLowerCase().includes(searchLower) ||
+                           activity.description?.toLowerCase().includes(searchLower) ||
+                           activity.details?.toLowerCase().includes(searchLower)
+      if (!matchesSearch) return false
+    }
+    
+    // Type filter
+    if (activityFilterValues.type && activityFilterValues.type !== "all") {
+      if (activity.type !== activityFilterValues.type) return false
+    }
+    
+    // Success filter
+    if (activityFilterValues.success && activityFilterValues.success !== "all") {
+      const isSuccess = activity.success === true
+      if (activityFilterValues.success === "success" && !isSuccess) return false
+      if (activityFilterValues.success === "failure" && isSuccess) return false
+    }
+    
+    return true
+  }), [displayBookingActivity, activitySearchTerm, activityFilterValues]);
+
+  // Sorting functionality for booking activity
+  const { sortState: activitySortState, sortedData: sortedBookingActivity, handleSort: handleActivitySort } = useTableSort(
+    filteredBookingActivity,
+    "timestamp", // Default sort by timestamp
+    "desc" // Most recent first
+  );
+
   // Filter configuration for spot booking management
   const bookingFilterConfigs: FilterConfig[] = [
     {
@@ -328,6 +408,68 @@ export default function AdminSpotBookingManagement() {
     }
   ];
 
+  // Filter configuration for booking requests
+  const requestsFilterConfigs: FilterConfig[] = [
+    {
+      key: "type",
+      label: "Request Type",
+      type: "select",
+      options: [
+        { value: "cancellation", label: "Cancellation" },
+        { value: "dispute", label: "Dispute" },
+        { value: "modification", label: "Modification" }
+      ]
+    },
+    {
+      key: "urgency",
+      label: "Urgency",
+      type: "select",
+      options: [
+        { value: "high", label: "High" },
+        { value: "medium", label: "Medium" },
+        { value: "low", label: "Low" }
+      ]
+    },
+    {
+      key: "status",
+      label: "Status",
+      type: "select",
+      options: [
+        { value: "pending", label: "Pending" },
+        { value: "resolved", label: "Resolved" },
+        { value: "rejected", label: "Rejected" }
+      ]
+    }
+  ]
+
+  // Filter configuration for booking activity
+  const activityFilterConfigs: FilterConfig[] = [
+    {
+      key: "type",
+      label: "Activity Type",
+      type: "select",
+      options: [
+        { value: "booking_created", label: "Booking Created" },
+        { value: "booking_cancelled", label: "Booking Cancelled" },
+        { value: "booking_completed", label: "Booking Completed" },
+        { value: "payment_received", label: "Payment Received" },
+        { value: "payment_updated", label: "Payment Updated" },
+        { value: "spot_assigned", label: "Spot Assigned" },
+        { value: "listing_created", label: "Listing Created" },
+        { value: "listing_updated", label: "Listing Updated" }
+      ]
+    },
+    {
+      key: "success",
+      label: "Result",
+      type: "select",
+      options: [
+        { value: "success", label: "Success" },
+        { value: "failure", label: "Failure" }
+      ]
+    }
+  ]
+
   // Handle filter changes
   const handleFilterChange = (key: string, value: string | undefined) => {
     setFilterValues(prev => ({
@@ -340,6 +482,34 @@ export default function AdminSpotBookingManagement() {
   const handleClearFilters = () => {
     setSearchTerm("")
     setFilterValues({})
+  }
+
+  // Handle requests filter changes
+  const handleRequestsFilterChange = (key: string, value: string | undefined) => {
+    setRequestsFilterValues(prev => ({
+      ...prev,
+      [key]: value
+    }))
+  }
+  
+  // Clear requests filters
+  const handleClearRequestsFilters = () => {
+    setRequestsSearchTerm("")
+    setRequestsFilterValues({})
+  }
+
+  // Handle activity filter changes
+  const handleActivityFilterChange = (key: string, value: string | undefined) => {
+    setActivityFilterValues(prev => ({
+      ...prev,
+      [key]: value
+    }))
+  }
+  
+  // Clear activity filters
+  const handleClearActivityFilters = () => {
+    setActivitySearchTerm("")
+    setActivityFilterValues({})
   }
 
   // Cancel booking mutation
@@ -864,9 +1034,73 @@ export default function AdminSpotBookingManagement() {
 
         {/* Booking Requests Tab */}
         <TabsContent value="requests" className="space-y-4">
+          {/* Enhanced Filters for Booking Requests */}
+          <EnhancedFilters
+            searchValue={requestsSearchTerm}
+            onSearchChange={setRequestsSearchTerm}
+            filterConfigs={requestsFilterConfigs}
+            filterValues={requestsFilterValues}
+            onFilterChange={handleRequestsFilterChange}
+            onClearFilters={handleClearRequestsFilters}
+            searchPlaceholder="Search requests by user, email, spot number, or reason..."
+            className="hover-elevate"
+          />
+          
           <Card>
             <CardHeader>
-              <CardTitle>Pending Requests ({displayBookingRequests.length})</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>Pending Requests ({sortedBookingRequests.length})</CardTitle>
+                <div className="flex gap-2">
+                  <Button 
+                    size="sm"
+                    variant="outline" 
+                    disabled={sortedBookingRequests.length === 0}
+                    onClick={() => {
+                      const success = quickExportBookingRequestsPDF(sortedBookingRequests, 'Booking Requests Report', (errorMessage) => {
+                        toast({
+                          variant: "destructive",
+                          title: "Export Failed",
+                          description: errorMessage
+                        })
+                      })
+                      if (success) {
+                        toast({
+                          title: "Export Successful",
+                          description: "PDF report has been downloaded successfully"
+                        })
+                      }
+                    }}
+                    data-testid="button-export-requests-pdf"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    PDF
+                  </Button>
+                  <Button 
+                    size="sm"
+                    variant="outline" 
+                    disabled={sortedBookingRequests.length === 0}
+                    onClick={() => {
+                      const success = quickExportBookingRequestsExcel(sortedBookingRequests, 'Booking Requests Report', (errorMessage) => {
+                        toast({
+                          variant: "destructive",
+                          title: "Export Failed",
+                          description: errorMessage
+                        })
+                      })
+                      if (success) {
+                        toast({
+                          title: "Export Successful",
+                          description: "Excel report has been downloaded successfully"
+                        })
+                      }
+                    }}
+                    data-testid="button-export-requests-excel"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Excel
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               {isLoadingRequests ? (
@@ -875,57 +1109,128 @@ export default function AdminSpotBookingManagement() {
                     <Skeleton key={i} className="h-24 w-full" />
                   ))}
                 </div>
-              ) : displayBookingRequests.length > 0 ? (
-                <div className="space-y-4">
-                  {displayBookingRequests.map((request) => (
-                    <Card key={request.id} className="p-4" data-testid={`request-card-${request.id}`}>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Badge variant="outline">{request.type.toUpperCase()}</Badge>
-                            {getUrgencyBadge(request.urgency)}
-                          </div>
-                          <h4 className="font-semibold">{request.submittedBy}</h4>
-                          <p className="text-sm text-muted-foreground mb-2">
-                            Spot {request.spotNumber} • {formatDate(request.requestDate)}
-                          </p>
-                          <p className="text-sm">{request.reason}</p>
-                        </div>
-                        <div className="flex gap-2">
-                          {request.type === "dispute" && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedRequest(request);
-                                setShowDisputeDialog(true);
-                              }}
-                              data-testid={`button-resolve-dispute-${request.id}`}
-                            >
-                              Resolve
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setContactMessage(`Regarding your ${request.type} request for spot ${request.spotNumber}...`);
-                              setShowContactDialog(true);
-                            }}
-                            data-testid={`button-contact-requester-${request.id}`}
-                          >
-                            <MessageSquare className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
+              ) : sortedBookingRequests.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground" data-testid="empty-booking-requests">
                   <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No pending requests</p>
+                  <p>No pending requests found</p>
                   <p className="text-sm">User requests for bookings will appear here when submitted.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table data-testid="table-booking-requests">
+                    <TableHeader>
+                      <TableRow>
+                        <SortableTableHeader
+                          column="submittedBy"
+                          currentSortColumn={requestsSortState.column}
+                          currentSortDirection={requestsSortState.direction}
+                          onSort={handleRequestsSort}
+                        >
+                          Submitted By
+                        </SortableTableHeader>
+                        <SortableTableHeader
+                          column="type"
+                          currentSortColumn={requestsSortState.column}
+                          currentSortDirection={requestsSortState.direction}
+                          onSort={handleRequestsSort}
+                        >
+                          Type
+                        </SortableTableHeader>
+                        <SortableTableHeader
+                          column="spotNumber"
+                          currentSortColumn={requestsSortState.column}
+                          currentSortDirection={requestsSortState.direction}
+                          onSort={handleRequestsSort}
+                        >
+                          Spot Number
+                        </SortableTableHeader>
+                        <SortableTableHeader
+                          column="urgency"
+                          currentSortColumn={requestsSortState.column}
+                          currentSortDirection={requestsSortState.direction}
+                          onSort={handleRequestsSort}
+                        >
+                          Urgency
+                        </SortableTableHeader>
+                        <SortableTableHeader
+                          column="status"
+                          currentSortColumn={requestsSortState.column}
+                          currentSortDirection={requestsSortState.direction}
+                          onSort={handleRequestsSort}
+                        >
+                          Status
+                        </SortableTableHeader>
+                        <SortableTableHeader
+                          column="requestDate"
+                          currentSortColumn={requestsSortState.column}
+                          currentSortDirection={requestsSortState.direction}
+                          onSort={handleRequestsSort}
+                        >
+                          Request Date
+                        </SortableTableHeader>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sortedBookingRequests.map((request) => (
+                        <TableRow key={request.id} data-testid={`row-request-${request.id}`}>
+                          <TableCell data-testid={`text-requester-${request.id}`}>
+                            <div>
+                              <p className="font-medium">{request.submittedBy}</p>
+                              <p className="text-sm text-muted-foreground">{request.email}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell data-testid={`badge-request-type-${request.id}`}>
+                            <Badge variant="outline">{request.type.toUpperCase()}</Badge>
+                          </TableCell>
+                          <TableCell className="font-medium" data-testid={`text-spot-${request.id}`}>
+                            {request.spotNumber}
+                          </TableCell>
+                          <TableCell data-testid={`badge-urgency-${request.id}`}>
+                            {getUrgencyBadge(request.urgency)}
+                          </TableCell>
+                          <TableCell data-testid={`badge-status-${request.id}`}>
+                            <Badge 
+                              variant={request.status === 'pending' ? 'secondary' : request.status === 'resolved' ? 'default' : 'destructive'}
+                            >
+                              {request.status?.toUpperCase()}
+                            </Badge>
+                          </TableCell>
+                          <TableCell data-testid={`text-date-${request.id}`}>
+                            {formatDate(request.requestDate)}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              {request.type === "dispute" && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedRequest(request);
+                                    setShowDisputeDialog(true);
+                                  }}
+                                  data-testid={`button-resolve-dispute-${request.id}`}
+                                >
+                                  Resolve
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setContactMessage(`Regarding your ${request.type} request for spot ${request.spotNumber}...`);
+                                  setShowContactDialog(true);
+                                }}
+                                data-testid={`button-contact-requester-${request.id}`}
+                              >
+                                <MessageSquare className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               )}
             </CardContent>
@@ -934,14 +1239,175 @@ export default function AdminSpotBookingManagement() {
 
         {/* Recent Activity Tab */}
         <TabsContent value="activity" className="space-y-4">
-          <BookingActivityList 
-            title="Recent Booking Activity"
-            showTitle={true}
-            maxHeight="500px"
-            queryParams={{
-              pageSize: 25
-            }}
+          {/* Enhanced Filters for Booking Activity */}
+          <EnhancedFilters
+            searchValue={activitySearchTerm}
+            onSearchChange={setActivitySearchTerm}
+            filterConfigs={activityFilterConfigs}
+            filterValues={activityFilterValues}
+            onFilterChange={handleActivityFilterChange}
+            onClearFilters={handleClearActivityFilters}
+            searchPlaceholder="Search activity by actor, description, or details..."
+            className="hover-elevate"
           />
+          
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5" />
+                  Recent Booking Activity ({sortedBookingActivity.length})
+                </CardTitle>
+                <div className="flex gap-2">
+                  <Button 
+                    size="sm"
+                    variant="outline" 
+                    disabled={sortedBookingActivity.length === 0}
+                    onClick={() => {
+                      const success = quickExportBookingActivityPDF(sortedBookingActivity, 'Booking Activity Report', (errorMessage) => {
+                        toast({
+                          variant: "destructive",
+                          title: "Export Failed",
+                          description: errorMessage
+                        })
+                      })
+                      if (success) {
+                        toast({
+                          title: "Export Successful",
+                          description: "PDF report has been downloaded successfully"
+                        })
+                      }
+                    }}
+                    data-testid="button-export-activity-pdf"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    PDF
+                  </Button>
+                  <Button 
+                    size="sm"
+                    variant="outline" 
+                    disabled={sortedBookingActivity.length === 0}
+                    onClick={() => {
+                      const success = quickExportBookingActivityExcel(sortedBookingActivity, 'Booking Activity Report', (errorMessage) => {
+                        toast({
+                          variant: "destructive",
+                          title: "Export Failed",
+                          description: errorMessage
+                        })
+                      })
+                      if (success) {
+                        toast({
+                          title: "Export Successful",
+                          description: "Excel report has been downloaded successfully"
+                        })
+                      }
+                    }}
+                    data-testid="button-export-activity-excel"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Excel
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoadingActivity ? (
+                <div className="space-y-4">
+                  {[...Array(5)].map((_, i) => (
+                    <Skeleton key={i} className="h-16 w-full" />
+                  ))}
+                </div>
+              ) : sortedBookingActivity.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground" data-testid="empty-booking-activity">
+                  <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No booking activity found</p>
+                  <p className="text-sm">Booking activity will appear here as users interact with the system.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table data-testid="table-booking-activity">
+                    <TableHeader>
+                      <TableRow>
+                        <SortableTableHeader
+                          column="type"
+                          currentSortColumn={activitySortState.column}
+                          currentSortDirection={activitySortState.direction}
+                          onSort={handleActivitySort}
+                        >
+                          Activity Type
+                        </SortableTableHeader>
+                        <SortableTableHeader
+                          column="actorName"
+                          currentSortColumn={activitySortState.column}
+                          currentSortDirection={activitySortState.direction}
+                          onSort={handleActivitySort}
+                        >
+                          Actor
+                        </SortableTableHeader>
+                        <SortableTableHeader
+                          column="description"
+                          currentSortColumn={activitySortState.column}
+                          currentSortDirection={activitySortState.direction}
+                          onSort={handleActivitySort}
+                        >
+                          Description
+                        </SortableTableHeader>
+                        <SortableTableHeader
+                          column="success"
+                          currentSortColumn={activitySortState.column}
+                          currentSortDirection={activitySortState.direction}
+                          onSort={handleActivitySort}
+                        >
+                          Result
+                        </SortableTableHeader>
+                        <SortableTableHeader
+                          column="timestamp"
+                          currentSortColumn={activitySortState.column}
+                          currentSortDirection={activitySortState.direction}
+                          onSort={handleActivitySort}
+                        >
+                          Timestamp
+                        </SortableTableHeader>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sortedBookingActivity.map((activity: any, index) => (
+                        <TableRow key={activity.id || index} data-testid={`row-activity-${activity.id || index}`}>
+                          <TableCell data-testid={`text-activity-type-${activity.id || index}`}>
+                            <div className="flex items-center gap-2">
+                              <Activity className="h-4 w-4 text-muted-foreground" />
+                              <Badge variant="outline">
+                                {activity.type?.replace('_', ' ').toUpperCase() || 'UNKNOWN'}
+                              </Badge>
+                            </div>
+                          </TableCell>
+                          <TableCell data-testid={`text-actor-${activity.id || index}`}>
+                            <p className="font-medium">{activity.actorName || 'System'}</p>
+                          </TableCell>
+                          <TableCell data-testid={`text-description-${activity.id || index}`}>
+                            <p className="text-sm">{activity.description || 'No description available'}</p>
+                            {activity.details && (
+                              <p className="text-xs text-muted-foreground mt-1">{activity.details}</p>
+                            )}
+                          </TableCell>
+                          <TableCell data-testid={`badge-result-${activity.id || index}`}>
+                            <Badge 
+                              variant={activity.success ? 'default' : 'destructive'}
+                            >
+                              {activity.success ? 'SUCCESS' : 'FAILURE'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell data-testid={`text-timestamp-${activity.id || index}`}>
+                            {activity.timestamp ? new Date(activity.timestamp).toLocaleString() : 'Unknown'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Analytics Tab */}
