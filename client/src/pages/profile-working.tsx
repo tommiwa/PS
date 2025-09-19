@@ -42,6 +42,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { useTheme } from "@/contexts/theme-context"
 import { useLanguage } from "@/contexts/language-context"
 import type { Vehicle, WaitingList, NotificationPreferences, UpdateNotificationPreferences, PaymentPreferences, UpdatePaymentPreferences } from "@shared/schema"
+import { insertPaymentPreferencesSchema } from "@shared/schema"
 
 // Vehicle form validation schema
 const vehicleSchema = z.object({
@@ -54,13 +55,8 @@ const vehicleSchema = z.object({
   isDefault: z.boolean().default(false)
 });
 
-// Payment preferences form validation schema
-const paymentPreferencesSchema = z.object({
-  paymentType: z.enum(["interac_transfer", "cash"], {
-    required_error: "Please select a payment type"
-  }),
-  paymentInstructions: z.string().optional()
-});
+// Payment preferences form validation schema - use shared schema
+const paymentPreferencesSchema = insertPaymentPreferencesSchema;
 
 type VehicleForm = z.infer<typeof vehicleSchema>;
 type PaymentPreferencesForm = z.infer<typeof paymentPreferencesSchema>;
@@ -101,16 +97,6 @@ export default function Profile() {
     }
   });
 
-  // Update payment form when payment preferences are loaded
-  useEffect(() => {
-    if (paymentPreferences) {
-      paymentForm.reset({
-        paymentType: paymentPreferences.paymentType,
-        paymentInstructions: paymentPreferences.paymentInstructions || ""
-      });
-    }
-  }, [paymentPreferences, paymentForm]);
-
   // Query user's waiting list status  
   const { data: waitingListEntry, isLoading: isLoadingWaitingList } = useQuery<WaitingList | null>({
     queryKey: ["/api/waiting-list/user", user?.id],
@@ -134,6 +120,16 @@ export default function Profile() {
     queryKey: ["/api/users", user?.id, "payment-preferences"],
     enabled: !!user?.id
   });
+
+  // Update payment form when payment preferences are loaded
+  useEffect(() => {
+    if (paymentPreferences) {
+      paymentForm.reset({
+        paymentType: paymentPreferences.paymentType,
+        paymentInstructions: paymentPreferences.paymentInstructions || ""
+      });
+    }
+  }, [paymentPreferences, paymentForm]);
 
   // Notification preferences mutation
   const updateNotificationPreferencesMutation = useMutation({
