@@ -907,21 +907,20 @@ export default function AdminParkingManagement() {
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh Data
           </Button>
-          <Button 
-            variant="outline"
-            onClick={() => setShowAddSpotDialog(true)}
-            data-testid="button-add-spot"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Spot
-          </Button>
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={() => setShowAddToWaitingDialog(true)}
             data-testid="button-add-to-waiting"
           >
             <UserPlus className="w-4 h-4 mr-2" />
             Add to Waiting
+          </Button>
+          <Button 
+            onClick={() => setShowAddSpotDialog(true)}
+            data-testid="button-add-spot"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Spot
           </Button>
         </div>
       </div>
