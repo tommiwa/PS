@@ -59,6 +59,37 @@ export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
+// Notification Preferences Table
+export const notificationPreferences = pgTable("notification_preferences", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(), // References users.id
+  emailNotifications: boolean("email_notifications").notNull().default(true),
+  bookingConfirmations: boolean("booking_confirmations").notNull().default(true),
+  paymentReminders: boolean("payment_reminders").notNull().default(true),
+  spotAvailability: boolean("spot_availability").notNull().default(true),
+  weeklyReports: boolean("weekly_reports").notNull().default(true),
+  systemMaintenance: boolean("system_maintenance").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertNotificationPreferencesSchema = createInsertSchema(notificationPreferences).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateNotificationPreferencesSchema = createInsertSchema(notificationPreferences).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+
+export type InsertNotificationPreferences = z.infer<typeof insertNotificationPreferencesSchema>;
+export type UpdateNotificationPreferences = z.infer<typeof updateNotificationPreferencesSchema>;
+export type NotificationPreferences = typeof notificationPreferences.$inferSelect;
+
 // Parking Spots Table
 export const spotTypes = z.enum(["regular", "electric", "tesla_ev", "accessible", "reserved"]);
 export type SpotType = z.infer<typeof spotTypes>;
