@@ -20,6 +20,7 @@ import { useConfirm, confirmations } from "@/hooks/use-confirm"
 import { useToast } from "@/hooks/use-toast"
 import { apiRequest, queryClient } from "@/lib/queryClient"
 import { insertUserSchema, type InsertUser, type User, type ParkingSpot } from "@shared/schema"
+import { quickExportUsersPDF, quickExportUsersExcel } from "@/utils/export-utils"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { z } from "zod"
 import { 
@@ -45,7 +46,8 @@ import {
   Phone,
   Calendar,
   Trash2,
-  MapPin
+  MapPin,
+  FileText
 } from "lucide-react"
 
 // Extend shared schema with UI validation refinements
@@ -516,6 +518,52 @@ export default function AdminUserManagement() {
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingUsers ? 'animate-spin' : ''}`} />
             Refresh
+          </Button>
+          <Button 
+            variant="outline" 
+            disabled={filteredUsers.length === 0}
+            onClick={() => {
+              const success = quickExportUsersPDF(filteredUsers, 'User Management Report', (errorMessage) => {
+                toast({
+                  variant: "destructive",
+                  title: "Export Failed",
+                  description: errorMessage
+                })
+              })
+              if (success) {
+                toast({
+                  title: "Export Successful",
+                  description: "PDF report has been downloaded successfully"
+                })
+              }
+            }}
+            data-testid="button-export-users-pdf"
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            Export PDF
+          </Button>
+          <Button 
+            variant="outline" 
+            disabled={filteredUsers.length === 0}
+            onClick={() => {
+              const success = quickExportUsersExcel(filteredUsers, 'User Management Report', (errorMessage) => {
+                toast({
+                  variant: "destructive",
+                  title: "Export Failed",
+                  description: errorMessage
+                })
+              })
+              if (success) {
+                toast({
+                  title: "Export Successful",
+                  description: "Excel report has been downloaded successfully"
+                })
+              }
+            }}
+            data-testid="button-export-users-excel"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export Excel
           </Button>
           <Button variant="outline">
             <Upload className="h-4 w-4 mr-2" />

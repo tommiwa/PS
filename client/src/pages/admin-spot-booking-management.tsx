@@ -42,9 +42,12 @@ import {
   Users,
   MapPin,
   Settings,
-  MoreHorizontal
+  MoreHorizontal,
+  Download,
+  FileText
 } from "lucide-react"
 import type { Booking, BookingStatus, ParkingSpot } from "@shared/schema"
+import { quickExportBookingsPDF, quickExportBookingsExcel } from "@/utils/export-utils"
 
 // Admin-specific interfaces for extended booking data
 interface AdminBookingData {
@@ -368,9 +371,51 @@ export default function AdminSpotBookingManagement() {
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh Data
           </Button>
-          <Button variant="outline" data-testid="button-export-report">
-            <TrendingUp className="h-4 w-4 mr-2" />
-            Export Report
+          <Button 
+            variant="outline" 
+            disabled={filteredActiveBookings.length === 0}
+            onClick={() => {
+              const success = quickExportBookingsPDF(filteredActiveBookings, 'Active Bookings Report', (errorMessage) => {
+                toast({
+                  variant: "destructive",
+                  title: "Export Failed",
+                  description: errorMessage
+                })
+              })
+              if (success) {
+                toast({
+                  title: "Export Successful",
+                  description: "PDF report has been downloaded successfully"
+                })
+              }
+            }}
+            data-testid="button-export-pdf"
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            Export PDF
+          </Button>
+          <Button 
+            variant="outline" 
+            disabled={filteredActiveBookings.length === 0}
+            onClick={() => {
+              const success = quickExportBookingsExcel(filteredActiveBookings, 'Active Bookings Report', (errorMessage) => {
+                toast({
+                  variant: "destructive",
+                  title: "Export Failed",
+                  description: errorMessage
+                })
+              })
+              if (success) {
+                toast({
+                  title: "Export Successful",
+                  description: "Excel report has been downloaded successfully"
+                })
+              }
+            }}
+            data-testid="button-export-excel"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export Excel
           </Button>
         </div>
       </div>
@@ -475,6 +520,54 @@ export default function AdminSpotBookingManagement() {
                       <SelectItem value="cancelled">Cancelled</SelectItem>
                     </SelectContent>
                   </Select>
+                  <Button 
+                    size="sm"
+                    variant="outline" 
+                    disabled={filteredActiveBookings.length === 0}
+                    onClick={() => {
+                      const success = quickExportBookingsPDF(filteredActiveBookings, 'Active Bookings Report', (errorMessage) => {
+                        toast({
+                          variant: "destructive",
+                          title: "Export Failed",
+                          description: errorMessage
+                        })
+                      })
+                      if (success) {
+                        toast({
+                          title: "Export Successful",
+                          description: "PDF report has been downloaded successfully"
+                        })
+                      }
+                    }}
+                    data-testid="button-export-active-pdf"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    PDF
+                  </Button>
+                  <Button 
+                    size="sm"
+                    variant="outline" 
+                    disabled={filteredActiveBookings.length === 0}
+                    onClick={() => {
+                      const success = quickExportBookingsExcel(filteredActiveBookings, 'Active Bookings Report', (errorMessage) => {
+                        toast({
+                          variant: "destructive",
+                          title: "Export Failed",
+                          description: errorMessage
+                        })
+                      })
+                      if (success) {
+                        toast({
+                          title: "Export Successful",
+                          description: "Excel report has been downloaded successfully"
+                        })
+                      }
+                    }}
+                    data-testid="button-export-active-excel"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Excel
+                  </Button>
                 </div>
               </div>
             </CardHeader>
