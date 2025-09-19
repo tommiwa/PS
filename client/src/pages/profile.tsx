@@ -649,56 +649,51 @@ export default function Profile() {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Car className="h-5 w-5" />
-                    Vehicle Information
+                    <Settings className="h-5 w-5" />
+                    App Settings
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="vehicle-make">Make</Label>
-                      <Input id="vehicle-make" placeholder="e.g., Tesla" defaultValue="Tesla" />
-                    </div>
-                    <div>
-                      <Label htmlFor="vehicle-model">Model</Label>
-                      <Input id="vehicle-model" placeholder="e.g., Model 3" defaultValue="Model 3" />
-                    </div>
-                    <div>
-                      <Label htmlFor="vehicle-year">Year</Label>
-                      <Input id="vehicle-year" placeholder="e.g., 2023" defaultValue="2023" />
-                    </div>
-                    <div>
-                      <Label htmlFor="vehicle-color">Color</Label>
-                      <Input id="vehicle-color" placeholder="e.g., White" defaultValue="White" />
-                    </div>
-                    <div>
-                      <Label htmlFor="license-plate">License Plate</Label>
-                      <Input id="license-plate" placeholder="e.g., ABC-123" defaultValue="ABC-123" />
-                    </div>
-                    <div>
-                      <Label htmlFor="vehicle-type">Vehicle Type</Label>
-                      <Select defaultValue="electric">
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select type" />
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>Theme</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Choose your preferred app theme
+                        </p>
+                      </div>
+                      <Select defaultValue={theme}>
+                        <SelectTrigger className="w-[150px]">
+                          <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="sedan">Sedan</SelectItem>
-                          <SelectItem value="suv">SUV</SelectItem>
-                          <SelectItem value="hatchback">Hatchback</SelectItem>
-                          <SelectItem value="truck">Truck</SelectItem>
-                          <SelectItem value="electric">Electric Vehicle</SelectItem>
+                          <SelectItem value="light">Light</SelectItem>
+                          <SelectItem value="dark">Dark</SelectItem>
+                          <SelectItem value="system">System</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Switch id="is-electric" defaultChecked />
-                    <Label htmlFor="is-electric">Electric Vehicle (requires charging spots)</Label>
-                  </div>
-                  
-                  <div className="flex justify-end">
-                    <Button data-testid="button-save-vehicle-info">Save Vehicle Info</Button>
+                    
+                    <Separator />
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>Language</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Select your preferred language
+                        </p>
+                      </div>
+                      <Select defaultValue="en">
+                        <SelectTrigger className="w-[150px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="en">English</SelectItem>
+                          <SelectItem value="es">Español</SelectItem>
+                          <SelectItem value="fr">Français</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -790,437 +785,191 @@ export default function Profile() {
               </Card>
             </TabsContent>
 
-            {/* Waiting List Tab */}
-            <TabsContent value="waiting-list" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <CalendarClock className="h-5 w-5" />
-                    Parking Waiting List
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {isLoadingWaitingList ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-6 w-6 animate-spin" />
-                      <span className="ml-2">Loading waiting list status...</span>
+            {/* Vehicle Dialog */}
+            <Dialog open={showAddVehicleDialog} onOpenChange={setShowAddVehicleDialog}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingVehicle ? 'Edit Vehicle' : 'Add Vehicle'}
+                  </DialogTitle>
+                </DialogHeader>
+                <Form {...vehicleForm}>
+                  <form onSubmit={vehicleForm.handleSubmit(handleSubmitVehicle)} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={vehicleForm.control}
+                        name="make"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Make</FormLabel>
+                            <FormControl>
+                              <Input placeholder="e.g., Tesla" {...field} data-testid="input-vehicle-make" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={vehicleForm.control}
+                        name="model"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Model</FormLabel>
+                            <FormControl>
+                              <Input placeholder="e.g., Model 3" {...field} data-testid="input-vehicle-model" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </div>
-                  ) : waitingListEntry && waitingListEntry.status === "active" && !editWaitingListMode ? (
-                    /* Enrolled State */
-                    <div className="space-y-6">
-                      <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800/50 rounded-lg p-4">
-                        <div className="flex items-start gap-3">
-                          <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
-                          <div className="space-y-1">
-                            <h4 className="font-medium text-green-900 dark:text-green-100">
-                              You're on the Waiting List!
-                            </h4>
-                            <p className="text-sm text-green-700 dark:text-green-300">
-                              You'll be notified when a parking spot matching your preferences becomes available.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-4">
-                          <div>
-                            <Label className="text-sm font-medium text-muted-foreground">Enrollment Date</Label>
-                            <p className="text-sm font-medium">
-                              {waitingListEntry.enrolledDate ? new Date(waitingListEntry.enrolledDate).toLocaleDateString() : 'N/A'}
-                            </p>
-                          </div>
-                          <div>
-                            <Label className="text-sm font-medium text-muted-foreground">Priority Level</Label>
-                            <div className="flex items-center gap-2">
-                              <Badge variant={waitingListEntry.priority === 1 ? "destructive" : waitingListEntry.priority === 2 ? "default" : "secondary"}>
-                                {priorityLevels[waitingListEntry.priority.toString() as keyof typeof priorityLevels]?.label || 'Unknown'}
-                              </Badge>
-                            </div>
-                          </div>
-                          <div>
-                            <Label className="text-sm font-medium text-muted-foreground">Status</Label>
-                            <Badge variant="outline" className="capitalize">
-                              {waitingListEntry.status}
-                            </Badge>
-                          </div>
-                        </div>
-                        <div className="space-y-4">
-                          <div>
-                            <Label className="text-sm font-medium text-muted-foreground">Preferred Spot Type</Label>
-                            <div className="flex items-center gap-2">
-                              {waitingListEntry.preferredSpotType === 'electric' && <Zap className="h-4 w-4 text-yellow-500" />}
-                              {waitingListEntry.preferredSpotType === 'accessible' && <Accessibility className="h-4 w-4 text-blue-500" />}
-                              {waitingListEntry.preferredSpotType === 'regular' && <CarIcon className="h-4 w-4 text-gray-500" />}
-                              <span className="text-sm font-medium capitalize">
-                                {waitingListEntry.preferredSpotType}
-                              </span>
-                            </div>
-                          </div>
-                          <div>
-                            <Label className="text-sm font-medium text-muted-foreground">Preferred Building</Label>
-                            <div className="flex items-center gap-2">
-                              <Building className="h-4 w-4 text-gray-500" />
-                              <span className="text-sm font-medium">{waitingListEntry.preferredBuilding}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div>
-                        <Label className="text-sm font-medium text-muted-foreground">Reason for Request</Label>
-                        <p className="text-sm mt-1 p-3 bg-muted/30 rounded-md">
-                          {waitingListEntry.reason}
-                        </p>
-                      </div>
-
-                      <div className="flex gap-2">
-                        <Button 
-                          variant="outline" 
-                          onClick={() => {
-                            setEditWaitingListMode(true);
-                            waitingListForm.setValue("preferredSpotType", waitingListEntry.preferredSpotType as "regular" | "electric" | "accessible");
-                            waitingListForm.setValue("preferredBuilding", waitingListEntry.preferredBuilding || "");
-                            waitingListForm.setValue("priority", waitingListEntry.priority.toString() as "1" | "2" | "3");
-                            waitingListForm.setValue("reason", waitingListEntry.reason || "");
-                          }}
-                          data-testid="button-edit-waiting-list"
-                        >
-                          <Edit className="h-4 w-4 mr-2" />
-                          Update Preferences
-                        </Button>
-                        <Button 
-                          variant="destructive" 
-                          onClick={() => cancelWaitingListMutation.mutate()}
-                          disabled={cancelWaitingListMutation.isPending}
-                          data-testid="button-cancel-waiting-list"
-                        >
-                          {cancelWaitingListMutation.isPending ? (
-                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          ) : (
-                            <XCircle className="h-4 w-4 mr-2" />
-                          )}
-                          Remove from List
-                        </Button>
-                      </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={vehicleForm.control}
+                        name="year"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Year</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                placeholder="2023" 
+                                {...field} 
+                                onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                                data-testid="input-vehicle-year" 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={vehicleForm.control}
+                        name="licensePlate"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>License Plate</FormLabel>
+                            <FormControl>
+                              <Input placeholder="ABC-123" {...field} data-testid="input-vehicle-license" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </div>
-                  ) : (
-                    /* Not Enrolled State or Edit Mode */
-                    <div className="space-y-6">
-                      {!waitingListEntry && (
-                        <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/50 rounded-lg p-4">
-                          <div className="flex items-start gap-3">
-                            <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-                            <div className="space-y-1">
-                              <h4 className="font-medium text-blue-900 dark:text-blue-100">
-                                Join the Parking Waiting List
-                              </h4>
-                              <p className="text-sm text-blue-700 dark:text-blue-300">
-                                Get notified when parking spots become available that match your preferences.
-                              </p>
-                            </div>
-                          </div>
-                        </div>
+                    <FormField
+                      control={vehicleForm.control}
+                      name="color"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Color (Optional)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., White" {...field} data-testid="input-vehicle-color" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
                       )}
-
-                      {editWaitingListMode && (
-                        <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/50 rounded-lg p-4">
-                          <div className="flex items-start gap-3">
-                            <Edit className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
-                            <div className="space-y-1">
-                              <h4 className="font-medium text-amber-900 dark:text-amber-100">
-                                Update Your Preferences
-                              </h4>
-                              <p className="text-sm text-amber-700 dark:text-amber-300">
-                                Modify your waiting list preferences below.
-                              </p>
-                            </div>
+                    />
+                    <FormField
+                      control={vehicleForm.control}
+                      name="isElectric"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                          <div className="space-y-0.5">
+                            <FormLabel>Electric Vehicle</FormLabel>
+                            <FormDescription>
+                              Check if this is an electric vehicle
+                            </FormDescription>
                           </div>
-                        </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="switch-vehicle-electric"
+                            />
+                          </FormControl>
+                        </FormItem>
                       )}
-
-                      <Form {...waitingListForm}>
-                        <form onSubmit={waitingListForm.handleSubmit((data) => {
-                          if (editWaitingListMode) {
-                            updateWaitingListMutation.mutate(data);
-                          } else {
-                            createWaitingListMutation.mutate(data);
-                          }
-                        })} className="space-y-6">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
-                              control={waitingListForm.control}
-                              name="preferredSpotType"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Preferred Spot Type</FormLabel>
-                                  <Select onValueChange={field.onChange} defaultValue={field.value} data-testid="select-spot-type">
-                                    <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select spot type" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      <SelectItem value="regular">
-                                        <div className="flex items-center gap-2">
-                                          <CarIcon className="h-4 w-4 text-gray-500" />
-                                          Regular Parking
-                                        </div>
-                                      </SelectItem>
-                                      <SelectItem value="electric">
-                                        <div className="flex items-center gap-2">
-                                          <Zap className="h-4 w-4 text-yellow-500" />
-                                          Electric Vehicle
-                                        </div>
-                                      </SelectItem>
-                                      <SelectItem value="accessible">
-                                        <div className="flex items-center gap-2">
-                                          <Accessibility className="h-4 w-4 text-blue-500" />
-                                          Accessible Parking
-                                        </div>
-                                      </SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  <FormDescription>
-                                    Choose the type of parking spot you prefer
-                                  </FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-
-                            <FormField
-                              control={waitingListForm.control}
-                              name="preferredBuilding"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Preferred Building</FormLabel>
-                                  <Select onValueChange={field.onChange} defaultValue={field.value} data-testid="select-building">
-                                    <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select building" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      {buildingOptions.map((building) => (
-                                        <SelectItem key={building.value} value={building.value}>
-                                          <div className="flex items-center gap-2">
-                                            <Building className="h-4 w-4 text-gray-500" />
-                                            {building.label}
-                                          </div>
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                  <FormDescription>
-                                    Select your preferred building location
-                                  </FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-
-                          <FormField
-                            control={waitingListForm.control}
-                            name="priority"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Priority Level</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value} data-testid="select-priority">
-                                  <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select priority level" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    {Object.entries(priorityLevels).map(([value, { label, description }]) => (
-                                      <SelectItem key={value} value={value}>
-                                        <div className="space-y-1">
-                                          <div className="font-medium">{label}</div>
-                                          <div className="text-xs text-muted-foreground">{description}</div>
-                                        </div>
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <FormDescription>
-                                  Higher priority may result in earlier assignment
-                                </FormDescription>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={waitingListForm.control}
-                            name="reason"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Reason for Request</FormLabel>
-                                <FormControl>
-                                  <Textarea
-                                    placeholder="Please explain why you need parking (e.g., daily commute, medical appointments, etc.)"
-                                    className="min-h-[100px] resize-none"
-                                    data-testid="textarea-reason"
-                                    {...field}
-                                  />
-                                </FormControl>
-                                <FormDescription>
-                                  Provide details about your parking needs (minimum 10 characters)
-                                </FormDescription>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <div className="flex gap-2">
-                            <Button 
-                              type="submit" 
-                              disabled={createWaitingListMutation.isPending || updateWaitingListMutation.isPending}
-                              data-testid="button-submit-waiting-list"
-                            >
-                              {(createWaitingListMutation.isPending || updateWaitingListMutation.isPending) ? (
-                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                              ) : editWaitingListMode ? (
-                                <CheckCircle className="h-4 w-4 mr-2" />
-                              ) : (
-                                <Users className="h-4 w-4 mr-2" />
-                              )}
-                              {editWaitingListMode ? "Update Preferences" : "Join Waiting List"}
-                            </Button>
-                            {editWaitingListMode && (
-                              <Button 
-                                type="button" 
-                                variant="outline" 
-                                onClick={() => {
-                                  setEditWaitingListMode(false);
-                                  waitingListForm.reset();
-                                }}
-                                data-testid="button-cancel-edit"
-                              >
-                                Cancel
-                              </Button>
-                            )}
-                          </div>
-                        </form>
-                      </Form>
+                    />
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setShowAddVehicleDialog(false)}
+                        data-testid="button-cancel-vehicle"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="submit"
+                        disabled={addVehicleMutation.isPending || updateVehicleMutation.isPending}
+                        data-testid="button-save-vehicle"
+                      >
+                        {addVehicleMutation.isPending || updateVehicleMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : null}
+                        {editingVehicle ? 'Update' : 'Add'} Vehicle
+                      </Button>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
 
             {/* Account Settings */}
             <TabsContent value="account" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Account Security</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Button variant="outline" onClick={handleChangePassword} className="w-full">
-                    <Key className="h-4 w-4 mr-2" />
-                    Change Password
-                  </Button>
-                  <Button variant="outline" onClick={handleExportData} className="w-full" data-testid="button-download-history">
-                    <Download className="h-4 w-4 mr-2" />
-                    Download My Data
-                  </Button>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Globe className="h-5 w-5" />
-                    Application Preferences
+                    <User className="h-5 w-5" />
+                    Account Settings
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
+                <CardContent className="space-y-6">
+                  <div className="space-y-4">
                     <div>
-                      <Label>Theme</Label>
+                      <Label className="text-sm font-medium">Profile Information</Label>
                       <p className="text-sm text-muted-foreground">
-                        Choose your preferred theme
+                        Manage your account profile and preferences
                       </p>
                     </div>
-                    <Select value={theme} onValueChange={setTheme} data-testid="select-theme">
-                      <SelectTrigger className="w-[150px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="bci">
-                          <div className="flex items-center gap-2">
-                            <Shield className="h-4 w-4" />
-                            BCI Corporate
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="light">
-                          <div className="flex items-center gap-2">
-                            <Sun className="h-4 w-4" />
-                            Light
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="dark">
-                          <div className="flex items-center gap-2">
-                            <Moon className="h-4 w-4" />
-                            Dark
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="system">
-                          <div className="flex items-center gap-2">
-                            <Globe className="h-4 w-4" />
-                            System
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                    
+                    <Separator />
+                    
+                    <div className="space-y-3">
+                      <Button variant="outline" className="w-full justify-start" onClick={handleEditProfile}>
+                        <User className="h-4 w-4 mr-2" />
+                        Edit Profile Information
+                      </Button>
+                      <Button variant="outline" className="w-full justify-start" onClick={handleChangePassword}>
+                        <Key className="h-4 w-4 mr-2" />
+                        Change Password
+                      </Button>
+                      <Button variant="outline" className="w-full justify-start" onClick={handleExportData}>
+                        <Download className="h-4 w-4 mr-2" />
+                        Export Account Data
+                      </Button>
+                    </div>
                   </div>
                   
-                  <div className="flex items-center justify-between">
+                  <Separator />
+                  
+                  <div className="space-y-4">
                     <div>
-                      <Label>Language</Label>
+                      <Label className="text-sm font-medium text-red-600">Danger Zone</Label>
                       <p className="text-sm text-muted-foreground">
-                        Choose your preferred language
+                        Irreversible and destructive actions
                       </p>
                     </div>
-                    <Select defaultValue="en">
-                      <SelectTrigger className="w-[150px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="en">English</SelectItem>
-                        <SelectItem value="es">Español</SelectItem>
-                        <SelectItem value="fr">Français</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Button 
+                      variant="destructive" 
+                      className="w-full"
+                      onClick={handleDeleteAccount}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete Account
+                    </Button>
                   </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="border-red-200 bg-red-50 dark:bg-red-900/20">
-                <CardHeader>
-                  <CardTitle className="text-red-700 dark:text-red-300 flex items-center gap-2">
-                    <AlertTriangle className="h-5 w-5" />
-                    Danger Zone
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label className="text-red-700 dark:text-red-300">Delete Account</Label>
-                    <p className="text-sm text-red-600 dark:text-red-400">
-                      Once you delete your account, there is no going back. Please be certain.
-                    </p>
-                  </div>
-                  <Button 
-                    variant="destructive" 
-                    onClick={handleDeleteAccount}
-                    className="w-full"
-                    data-testid="button-delete-account"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete My Account
-                  </Button>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -1228,108 +977,97 @@ export default function Profile() {
         </div>
         
         <div className="space-y-6">
+          {/* Parking Waiting List Sidebar */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Car className="h-5 w-5" />
-                Quick Stats
+                <CalendarClock className="h-5 w-5" />
+                Parking Waiting List
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {isRenter() && (
-                <>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Total Bookings Made</span>
-                    <span className="font-semibold">18</span>
+              {isLoadingWaitingList ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="ml-2 text-sm">Loading...</span>
+                </div>
+              ) : waitingListEntry && waitingListEntry.status === "active" ? (
+                <div className="space-y-3">
+                  <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800/50 rounded-lg p-3">
+                    <div className="flex items-start gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5" />
+                      <div className="space-y-1">
+                        <h4 className="text-sm font-medium text-green-900 dark:text-green-100">
+                          You're on the list!
+                        </h4>
+                        <p className="text-xs text-green-700 dark:text-green-300">
+                          Priority: {priorityLevels[waitingListEntry.priority.toString() as keyof typeof priorityLevels]?.label}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Total Amount Spent</span>
-                    <span className="font-semibold">$420</span>
+                  <div className="text-xs text-muted-foreground">
+                    <p><strong>Spot Type:</strong> {waitingListEntry.preferredSpotType}</p>
+                    <p><strong>Building:</strong> {waitingListEntry.preferredBuilding}</p>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Favorite Location</span>
-                    <span className="font-semibold">Main Building</span>
+                  <div className="flex gap-1">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="text-xs"
+                      onClick={() => setEditWaitingListMode(true)}
+                    >
+                      Edit
+                    </Button>
+                    <Button 
+                      variant="destructive" 
+                      size="sm"
+                      className="text-xs"
+                      onClick={() => cancelWaitingListMutation.mutate()}
+                      disabled={cancelWaitingListMutation.isPending}
+                    >
+                      Leave
+                    </Button>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Wait List Status</span>
-                    <Badge variant={isEnrolledInWaitingList ? "default" : "outline"}>
-                      {isEnrolledInWaitingList ? "Enrolled" : "Not Enrolled"}
-                    </Badge>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/50 rounded-lg p-3">
+                    <div className="flex items-start gap-2">
+                      <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5" />
+                      <div className="space-y-1">
+                        <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                          Join the Waiting List
+                        </h4>
+                        <p className="text-xs text-blue-700 dark:text-blue-300">
+                          Get notified when spots become available.
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                </>
-              )}
-              {isOwner() && (
-                <>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Total Bookings</span>
-                    <span className="font-semibold">23</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Spots Owned</span>
-                    <span className="font-semibold">2</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">This Month Earnings</span>
-                    <span className="font-semibold">$450</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Rating</span>
-                    <Badge variant="default">4.9/5</Badge>
-                  </div>
-                </>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="w-full text-xs"
+                    onClick={() => createWaitingListMutation.mutate({
+                      preferredSpotType: "regular",
+                      preferredBuilding: "Building A",
+                      priority: "2",
+                      reason: "Daily commute"
+                    })}
+                    disabled={createWaitingListMutation.isPending}
+                  >
+                    {createWaitingListMutation.isPending ? (
+                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                    ) : (
+                      <Plus className="h-3 w-3 mr-1" />
+                    )}
+                    Join List
+                  </Button>
+                </div>
               )}
             </CardContent>
           </Card>
-          
-          {isRenter() && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
-                  Waiting List Options
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button 
-                  variant={isEnrolledInWaitingList ? "default" : "outline"} 
-                  className="w-full justify-start" 
-                  size="sm" 
-                  onClick={handleEnrollWaitingList} 
-                  data-testid="button-enroll-waiting-list"
-                >
-                  <Users className="h-4 w-4 mr-2" />
-                  {isEnrolledInWaitingList ? "Leave Waiting List" : "Enroll in Waiting List"}
-                </Button>
-                <Button 
-                  variant={availabilityAlertsEnabled ? "default" : "outline"} 
-                  className="w-full justify-start" 
-                  size="sm" 
-                  onClick={handleAvailabilityAlerts} 
-                  data-testid="button-enable-notifications"
-                >
-                  <Bell className="h-4 w-4 mr-2" />
-                  {availabilityAlertsEnabled ? "Disable Availability Alerts" : "Enable Availability Alerts"}
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-          
-          {isOwner() && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Settings className="h-5 w-5" />
-                  Spot Management
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button variant="outline" className="w-full justify-start" size="sm" onClick={handleManageSpots} data-testid="button-manage-spots">
-                  <MapPin className="h-4 w-4 mr-2" />
-                  Manage My Spots
-                </Button>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
 
@@ -1346,7 +1084,7 @@ export default function Profile() {
             <div className="flex items-center gap-6">
               <Avatar className="h-20 w-20">
                 <AvatarFallback className="text-lg">
-                  {getInitials(user.name || 'User')}
+                  {getInitials(user?.name || 'User')}
                 </AvatarFallback>
               </Avatar>
               <div className="space-y-2">
@@ -1364,22 +1102,22 @@ export default function Profile() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="full-name">Full Name</Label>
-                <Input id="full-name" defaultValue={user.name} />
+                <Input id="full-name" defaultValue={user?.name} />
               </div>
               <div>
                 <Label htmlFor="email">Email Address</Label>
-                <Input id="email" defaultValue={user.email} disabled />
+                <Input id="email" defaultValue={user?.email} disabled />
                 <p className="text-xs text-muted-foreground mt-1">
                   Contact IT to change your email address
                 </p>
               </div>
               <div>
                 <Label htmlFor="phone">Phone Number</Label>
-                <Input id="phone" defaultValue={user.phone || "(555) 000-0000"} />
+                <Input id="phone" defaultValue={user?.phone || "(555) 000-0000"} />
               </div>
               <div>
                 <Label htmlFor="department">Department</Label>
-                <Input id="department" defaultValue={user.department || "Unknown"} disabled />
+                <Input id="department" defaultValue={user?.department || "Unknown"} disabled />
               </div>
             </div>
             
@@ -1403,7 +1141,6 @@ export default function Profile() {
           </div>
         </DialogContent>
       </Dialog>
-
     </div>
   )
 }
