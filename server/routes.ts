@@ -245,6 +245,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get assigned spots for a user (accessible by the user themselves or admin)
+  app.get("/api/users/:userId/assigned-spots", isAuthenticated, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const currentUserId = getAuthenticatedUserId(req);
+      
+      if (!currentUserId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      // Only allow users to access their own assigned spots or admin to access any user's spots
+      const currentUser = await storage.getUser(currentUserId);
+      const isAdmin = currentUser?.role === 'admin';
+      
+      if (!isAdmin && currentUserId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
+      const assignedSpots = await storage.getParkingSpotsByOwner(userId);
+      res.json(assignedSpots);
+    } catch (error) {
+      console.error("Error fetching assigned spots:", error);
+      res.status(500).json({ error: "Failed to fetch assigned spots" });
+    }
+  });
+
   // Add explicit handler for /api to stop excessive HEAD requests
   app.all("/api", (req, res) => {
     if (req.method === "HEAD") {
