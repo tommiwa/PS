@@ -1078,15 +1078,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         return {
           id: user.id,
+          firstName: user.firstName || "",
+          lastName: user.lastName || "",
           name: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.firstName || user.lastName || user.email,
           email: user.email,
+          phone: user.phone || "",
           department: user.department || "Unknown",
           role: user.role,
           status: "active", // Default status since User type doesn't have status field
           spotsOwned: userSpots.length,
           bookingsCount: userBookings.length,
-          lastLogin: user.lastLogin ? user.lastLogin.toISOString() : new Date().toISOString(),
-          memberSince: user.createdAt ? user.createdAt.toISOString() : new Date().toISOString()
+          lastLogin: user.lastLogin ? (user.lastLogin instanceof Date ? user.lastLogin.toISOString() : user.lastLogin) : new Date().toISOString(),
+          memberSince: user.memberSince ? (user.memberSince instanceof Date ? user.memberSince.toISOString() : user.memberSince) : user.createdAt ? (user.createdAt instanceof Date ? user.createdAt.toISOString() : user.createdAt) : new Date().toISOString()
         };
       });
       
