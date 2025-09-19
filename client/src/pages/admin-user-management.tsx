@@ -136,17 +136,17 @@ export default function AdminUserManagement() {
   });
 
   // Convert API user data to display format with computed name
-  const displayUsers = allUsers.map((user: User) => ({
+  const displayUsers = allUsers.map((user: any) => ({
     id: user.id,
-    name: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.firstName || user.lastName || user.email || 'Unknown User',
+    name: user.name || (user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.firstName || user.lastName || user.email || 'Unknown User'),
     email: user.email || 'No email',
     department: user.department || "Unknown",
     role: user.role || "renter",
-    spotsOwned: 0, // TODO: Calculate from actual data when needed
-    bookingsCount: 0, // TODO: Calculate from actual data when needed
-    status: "active" as const, // TODO: Add status field to schema if needed
+    spotsOwned: user.spotsOwned || 0, // Real count from backend
+    bookingsCount: user.bookingsCount || 0, // Real count from backend  
+    status: user.status || "active",
     lastLogin: user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : "Never",
-    memberSince: user.memberSince || (user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "Unknown"),
+    memberSince: user.memberSince ? new Date(user.memberSince).toLocaleDateString() : "Unknown",
     totalSpent: 0, // TODO: Calculate from bookings when needed
     phoneNumber: user.phone || "No phone",
     vehicleInfo: "Not configured" // TODO: Add vehicle info to schema if needed

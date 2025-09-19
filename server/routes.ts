@@ -1058,16 +1058,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Get all actual users from storage
       const allUsers = await storage.getAllUsers?.() || [];
+      const allSpots = await storage.getAllParkingSpots?.() || [];
+      const allBookings = await storage.getAllBookings?.() || [];
       
-      // Format users for the dropdown
-      const usersForDropdown = allUsers.map(user => ({
-        id: user.id,
-        name: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.firstName || user.lastName || user.email,
-        email: user.email,
-        department: user.department || "Unknown"
-      }));
+      // Calculate real spots and bookings counts for each user
+      const usersWithCounts = allUsers.map(user => {
+        const userSpots = allSpots.filter(spot => spot.ownerId === user.id);
+        const userBookings = allBookings.filter(booking => 
+          booking.renterId === user.id || booking.ownerId === user.id
+        );
+        
+        return {
+          id: user.id,
+          name: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.firstName || user.lastName || user.email,
+          email: user.email,
+          department: user.department || "Unknown",
+          role: user.role,
+          status: "active", // Default status since User type doesn't have status field
+          spotsOwned: userSpots.length,
+          bookingsCount: userBookings.length,
+          lastLogin: user.lastLogin ? user.lastLogin.toISOString() : new Date().toISOString(),
+          memberSince: user.createdAt ? user.createdAt.toISOString() : new Date().toISOString()
+        };
+      });
       
-      res.json(usersForDropdown);
+      res.json(usersWithCounts);
     } catch (error) {
       console.error("Error fetching users:", error);
       res.status(500).json({ error: "Failed to fetch users" });
