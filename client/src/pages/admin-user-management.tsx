@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { AdminUsersTable } from "@/components/admin-users-table"
 import { UserActivityList } from "@/components/user-activity-list"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { EnhancedFilters, type FilterConfig, type FilterValues } from "@/components/ui/enhanced-filters"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -92,8 +93,7 @@ export default function AdminUserManagement() {
   const { confirm } = useConfirm()
   const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
-  const [filterRole, setFilterRole] = useState("all")
-  const [filterStatus, setFilterStatus] = useState("all")
+  const [filterValues, setFilterValues] = useState<FilterValues>({})
   const [showAddUser, setShowAddUser] = useState(false)
   const [showEditUser, setShowEditUser] = useState(false)
   const [editingUser, setEditingUser] = useState<any>(null)
@@ -197,17 +197,62 @@ export default function AdminUserManagement() {
     vehicleInfo: "Not configured" // TODO: Add vehicle info to schema if needed
   }));
 
+  // Filter configuration for EnhancedFilters
+  const filterConfigs: FilterConfig[] = [
+    {
+      key: 'role',
+      label: 'Role',
+      type: 'select',
+      options: [
+        {value: 'all', label: 'All Roles'},
+        {value: 'admin', label: 'Admin'},
+        {value: 'owner', label: 'Owner'},
+        {value: 'renter', label: 'Renter'}
+      ]
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      type: 'select',
+      options: [
+        {value: 'all', label: 'All Status'},
+        {value: 'active', label: 'Active'},
+        {value: 'suspended', label: 'Suspended'},
+        {value: 'pending', label: 'Pending'}
+      ]
+    }
+  ];
+
+  // Handler for filter changes
+  const handleFilterChange = (key: string, value: string | undefined) => {
+    setFilterValues(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+
+  // Handler to clear all filters
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setFilterValues({});
+  };
+
+  // Handler for role card clicks to sync with EnhancedFilters
+  const handleRoleCardClick = (role: string) => {
+    handleFilterChange('role', role === 'all' ? undefined : role);
+  };
+
   // Memoized filtered users for performance
   const filteredUsers = useMemo(() => (isLoadingUsers ? [] : displayUsers).filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.department.toLowerCase().includes(searchTerm.toLowerCase())
     
-    const matchesRole = filterRole === "all" || user.role === filterRole
-    const matchesStatus = filterStatus === "all" || user.status === filterStatus
+    const matchesRole = !filterValues.role || filterValues.role === 'all' || user.role === filterValues.role
+    const matchesStatus = !filterValues.status || filterValues.status === 'all' || user.status === filterValues.status
     
     return matchesSearch && matchesRole && matchesStatus
-  }), [isLoadingUsers, displayUsers, searchTerm, filterRole, filterStatus])
+  }), [isLoadingUsers, displayUsers, searchTerm, filterValues])
 
   // Sorting functionality for users - moved from AdminUsersTable to enable export access
   const { sortState, sortedData: sortedUsers, handleSort } = useTableSort(
@@ -1022,9 +1067,9 @@ export default function AdminUserManagement() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card 
               className={`cursor-pointer hover-elevate ${
-                filterRole === 'admin' ? 'ring-2 ring-primary' : ''
+                filterValues.role === 'admin' ? 'ring-2 ring-primary' : ''
               }`}
-              onClick={() => setFilterRole(filterRole === 'admin' ? 'all' : 'admin')}
+              onClick={() => handleRoleCardClick('admin')}
               data-testid="card-filter-admin"
             >
               <CardHeader className="pb-2">
@@ -1039,9 +1084,9 @@ export default function AdminUserManagement() {
             </Card>
             <Card 
               className={`cursor-pointer hover-elevate ${
-                filterRole === 'owner' ? 'ring-2 ring-primary' : ''
+                filterValues.role === 'owner' ? 'ring-2 ring-primary' : ''
               }`}
-              onClick={() => setFilterRole(filterRole === 'owner' ? 'all' : 'owner')}
+              onClick={() => handleRoleCardClick('owner')}
               data-testid="card-filter-owner"
             >
               <CardHeader className="pb-2">
@@ -1056,9 +1101,9 @@ export default function AdminUserManagement() {
             </Card>
             <Card 
               className={`cursor-pointer hover-elevate ${
-                filterRole === 'renter' ? 'ring-2 ring-primary' : ''
+                filterValues.role === 'renter' ? 'ring-2 ring-primary' : ''
               }`}
-              onClick={() => setFilterRole(filterRole === 'renter' ? 'all' : 'renter')}
+              onClick={() => handleRoleCardClick('renter')}
               data-testid="card-filter-renter"
             >
               <CardHeader className="pb-2">
@@ -1073,9 +1118,9 @@ export default function AdminUserManagement() {
             </Card>
             <Card 
               className={`cursor-pointer hover-elevate ${
-                filterRole === 'all' ? 'ring-2 ring-primary' : ''
+                (!filterValues.role || filterValues.role === 'all') ? 'ring-2 ring-primary' : ''
               }`}
-              onClick={() => setFilterRole('all')}
+              onClick={() => handleRoleCardClick('all')}
               data-testid="card-filter-all"
             >
               <CardHeader className="pb-2">
@@ -1091,72 +1136,38 @@ export default function AdminUserManagement() {
             </div>
           )}
 
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>All Users ({filteredUsers.length})</CardTitle>
-                <div className="flex gap-2">
-                  <div className="relative">
-                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search users..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-8 w-64"
-                      data-testid="input-search-users"
-                    />
-                  </div>
-                  <Select value={filterRole} onValueChange={setFilterRole}>
-                    <SelectTrigger className="w-32" data-testid="select-filter-role">
-                      <SelectValue placeholder="Role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Roles</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="owner">Owner</SelectItem>
-                      <SelectItem value="renter">Renter</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select value={filterStatus} onValueChange={setFilterStatus}>
-                    <SelectTrigger className="w-32" data-testid="select-filter-status">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="suspended">Suspended</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button variant="outline" onClick={() => setShowBulkActions(!showBulkActions)}>
-                    <Filter className="h-4 w-4 mr-2" />
-                    Bulk Actions
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {isLoadingUsers ? (
-                <div className="space-y-4">
-                  {[...Array(5)].map((_, i) => (
-                    <Skeleton key={i} className="h-16 w-full" />
-                  ))}
-                </div>
-              ) : (
-                <AdminUsersTable 
-                  users={sortedUsers} 
-                  isLoading={isLoadingUsers}
-                  sortState={sortState}
-                  onSort={handleSort}
-                  onEditUser={handleEditUser}
-                  onDeleteUser={handleDeleteUser}
-                  onSuspendUser={handleSuspendUser}
-                  onAssignSpot={handleAssignSpot}
-                  onSendNotification={handleSendNotification}
-                />
-              )}
-            </CardContent>
-          </Card>
+          {/* Enhanced Filters */}
+          <EnhancedFilters
+            searchValue={searchTerm}
+            onSearchChange={setSearchTerm}
+            filterConfigs={filterConfigs}
+            filterValues={filterValues}
+            onFilterChange={handleFilterChange}
+            onClearFilters={handleClearFilters}
+            searchPlaceholder="Search users by name, email, or department..."
+            data-testid="enhanced-filters-users"
+          />
+
+          {/* Users Table */}
+          {isLoadingUsers ? (
+            <div className="space-y-4">
+              {[...Array(5)].map((_, i) => (
+                <Skeleton key={i} className="h-16 w-full" />
+              ))}
+            </div>
+          ) : (
+            <AdminUsersTable 
+              users={sortedUsers} 
+              isLoading={isLoadingUsers}
+              sortState={sortState}
+              onSort={handleSort}
+              onEditUser={handleEditUser}
+              onDeleteUser={handleDeleteUser}
+              onSuspendUser={handleSuspendUser}
+              onAssignSpot={handleAssignSpot}
+              onSendNotification={handleSendNotification}
+            />
+          )}
 
           {/* Bulk Actions */}
           {showBulkActions && (
