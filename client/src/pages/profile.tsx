@@ -1001,42 +1001,188 @@ export default function Profile() {
                 </div>
               ) : waitingListEntry && waitingListEntry.status === "active" ? (
                 <div className="space-y-3">
-                  <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800/50 rounded-lg p-3">
-                    <div className="flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5" />
-                      <div className="space-y-1">
-                        <h4 className="text-sm font-medium text-green-900 dark:text-green-100">
-                          You're on the list!
-                        </h4>
-                        <p className="text-xs text-green-700 dark:text-green-300">
-                          Priority: {priorityLevels[waitingListEntry.priority.toString() as keyof typeof priorityLevels]?.label}
-                        </p>
+                  {!editWaitingListMode ? (
+                    <>
+                      <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800/50 rounded-lg p-3">
+                        <div className="flex items-start gap-2">
+                          <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5" />
+                          <div className="space-y-1">
+                            <h4 className="text-sm font-medium text-green-900 dark:text-green-100">
+                              You're on the list!
+                            </h4>
+                            <p className="text-xs text-green-700 dark:text-green-300">
+                              Priority: {priorityLevels[waitingListEntry.priority.toString() as keyof typeof priorityLevels]?.label}
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    <p><strong>Spot Type:</strong> {waitingListEntry.preferredSpotType}</p>
-                    <p><strong>Building:</strong> {waitingListEntry.preferredBuilding}</p>
-                  </div>
-                  <div className="flex gap-1">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      className="text-xs"
-                      onClick={() => setEditWaitingListMode(true)}
-                    >
-                      Edit
-                    </Button>
-                    <Button 
-                      variant="destructive" 
-                      size="sm"
-                      className="text-xs"
-                      onClick={() => cancelWaitingListMutation.mutate()}
-                      disabled={cancelWaitingListMutation.isPending}
-                    >
-                      Leave
-                    </Button>
-                  </div>
+                      <div className="text-xs text-muted-foreground">
+                        <p><strong>Spot Type:</strong> {waitingListEntry.preferredSpotType}</p>
+                        <p><strong>Building:</strong> {waitingListEntry.preferredBuilding}</p>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="text-xs"
+                          onClick={() => {
+                            setEditWaitingListMode(true);
+                            waitingListForm.reset({
+                              preferredSpotType: waitingListEntry.preferredSpotType as any,
+                              preferredBuilding: waitingListEntry.preferredBuilding,
+                              priority: waitingListEntry.priority.toString() as any,
+                              reason: waitingListEntry.reason || ""
+                            });
+                          }}
+                          data-testid="button-edit-waiting-list"
+                        >
+                          Edit
+                        </Button>
+                        <Button 
+                          variant="destructive" 
+                          size="sm"
+                          className="text-xs"
+                          onClick={() => cancelWaitingListMutation.mutate()}
+                          disabled={cancelWaitingListMutation.isPending}
+                          data-testid="button-leave-waiting-list"
+                        >
+                          {cancelWaitingListMutation.isPending ? (
+                            <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                          ) : null}
+                          Leave
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <Form {...waitingListForm}>
+                      <form 
+                        onSubmit={waitingListForm.handleSubmit((data) => updateWaitingListMutation.mutate(data))}
+                        className="space-y-4"
+                      >
+                        <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/50 rounded-lg p-3">
+                          <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
+                            Edit Waiting List Preferences
+                          </h4>
+                        </div>
+                        
+                        <FormField
+                          control={waitingListForm.control}
+                          name="preferredSpotType"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs">Preferred Spot Type</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger className="h-8">
+                                    <SelectValue placeholder="Select spot type" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="regular">Regular</SelectItem>
+                                  <SelectItem value="electric">Electric</SelectItem>
+                                  <SelectItem value="accessible">Accessible</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={waitingListForm.control}
+                          name="preferredBuilding"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs">Preferred Building</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger className="h-8">
+                                    <SelectValue placeholder="Select building" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {buildingOptions.map((building) => (
+                                    <SelectItem key={building.value} value={building.value}>
+                                      {building.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={waitingListForm.control}
+                          name="priority"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs">Priority Level</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger className="h-8">
+                                    <SelectValue placeholder="Select priority" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {Object.entries(priorityLevels).map(([value, config]) => (
+                                    <SelectItem key={value} value={value}>
+                                      {config.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={waitingListForm.control}
+                          name="reason"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs">Reason (Optional)</FormLabel>
+                              <FormControl>
+                                <Textarea 
+                                  placeholder="Brief reason for parking need..."
+                                  className="resize-none h-16 text-xs"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <div className="flex gap-2">
+                          <Button 
+                            type="button"
+                            variant="outline" 
+                            size="sm"
+                            className="text-xs flex-1"
+                            onClick={() => setEditWaitingListMode(false)}
+                            data-testid="button-cancel-edit-waiting-list"
+                          >
+                            Cancel
+                          </Button>
+                          <Button 
+                            type="submit"
+                            size="sm"
+                            className="text-xs flex-1"
+                            disabled={updateWaitingListMutation.isPending}
+                            data-testid="button-save-waiting-list"
+                          >
+                            {updateWaitingListMutation.isPending ? (
+                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                            ) : null}
+                            Save Changes
+                          </Button>
+                        </div>
+                      </form>
+                    </Form>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-3">
