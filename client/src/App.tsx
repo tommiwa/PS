@@ -111,9 +111,46 @@ function LandingPageRedirect() {
   );
 }
 
+// Custom hook for automatic data refresh on navigation
+function useNavigationDataRefresh() {
+  const [location] = useLocation();
+
+  useEffect(() => {
+    // Map routes to query keys that should be refreshed when navigating to that route
+    const routeQueryMap: Record<string, string[]> = {
+      '/admin/users': ['/api/admin/users'],
+      '/admin/parking': ['/api/admin/all-spots', '/api/admin/unallocated-spots'],
+      '/admin/bookings': ['/api/admin/spot-bookings'],
+      '/admin/analytics': [
+        '/api/admin/analytics-overview',
+        '/api/admin/analytics-revenue', 
+        '/api/admin/analytics-top-performers',
+        '/api/admin/analytics-issues',
+        '/api/admin/analytics-usage'
+      ],
+      '/admin/audits': ['/api/admin/audit-logs'],
+      '/dashboard': ['/api/admin/users', '/api/admin/all-spots', '/api/admin/analytics-overview'],
+      '/my-bookings': ['/api/bookings', '/api/my-spots'],
+      '/my-spots': ['/api/my-spots'],
+      '/search': ['/api/admin/all-spots', '/api/bookings']
+    };
+
+    const queriesToRefresh = routeQueryMap[location];
+    if (queriesToRefresh) {
+      // Invalidate queries for the current route to get fresh data
+      queriesToRefresh.forEach(queryKey => {
+        queryClient.invalidateQueries({ queryKey: [queryKey] });
+      });
+    }
+  }, [location]);
+}
+
 // Main authenticated app layout
 function AuthenticatedApp() {
   const { user, logout } = useAuth();
+  
+  // Enable automatic data refresh on navigation
+  useNavigationDataRefresh();
   
   // Custom sidebar width for the parking application
   const style = {
