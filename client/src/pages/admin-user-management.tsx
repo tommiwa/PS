@@ -1090,9 +1090,6 @@ export default function AdminUserManagement() {
 
           {/* Users Table */}
           <Card>
-            <CardHeader>
-              <CardTitle>User Directory</CardTitle>
-            </CardHeader>
             <CardContent>
               {isLoadingUsers ? (
                 <div className="space-y-4">
