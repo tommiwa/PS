@@ -169,7 +169,7 @@ export default function Profile() {
   const updateNotificationPreferencesMutation = useMutation({
     mutationFn: async (preferences: UpdateNotificationPreferences) => {
       const response = await apiRequest(`/api/users/${user?.id}/notification-preferences`, { 
-        method: 'PUT', 
+        method: 'PATCH', 
         body: preferences 
       });
       return response.json();

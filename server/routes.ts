@@ -2415,7 +2415,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Find the user's waiting list entry
-      const userEntry = await storage.getWaitingListByUserId(userId);
+      const userEntry = await storage.getWaitingListByUser(userId);
       if (!userEntry) {
         return res.status(404).json({ error: "No waiting list entry found for this user" });
       }
