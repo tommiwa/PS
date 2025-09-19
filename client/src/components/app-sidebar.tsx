@@ -14,7 +14,7 @@ import {
   CalendarCheck,
   FileText
 } from "lucide-react"
-import { Link, useLocation } from "wouter"
+import { Link, useLocation, useRoute } from "wouter"
 import {
   Sidebar,
   SidebarContent,
@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/sidebar"
 import { UserRole } from "@shared/schema"
 import { useAuth } from "@/contexts/auth-context"
+import { queryClient } from "@/lib/queryClient"
 
 // Main navigation items
 const mainMenuItems = [
@@ -106,8 +107,8 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
-  const [location] = useLocation();
-  const { getCurrentViewRole } = useAuth();
+  const [location, setLocation] = useLocation();
+  const { getCurrentViewRole, user } = useAuth();
   
   // Use current view role for admins, otherwise use the actual user role
   const effectiveRole = getCurrentViewRole() || userRole;
@@ -155,6 +156,35 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
     item.roles.includes(effectiveRole)
   );
 
+  // Function to refresh profile data
+  const refreshProfileData = async () => {
+    if (!user?.id) return;
+    
+    // Invalidate all profile-related queries to force a refresh
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["/api/users", user.id, "vehicles"] }),
+      queryClient.invalidateQueries({ queryKey: ["/api/users", user.id, "notification-preferences"] }),
+      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/user", user.id] }),
+      queryClient.invalidateQueries({ queryKey: ["/api/users", user.id, "assigned-spots"] }),
+    ]);
+  };
+
+  const handleProfileClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    
+    // If already on profile page, refresh data
+    if (location === "/profile") {
+      await refreshProfileData();
+    } else {
+      // Navigate to profile and then refresh data
+      setLocation("/profile");
+      // Small delay to ensure navigation happens first
+      setTimeout(async () => {
+        await refreshProfileData();
+      }, 100);
+    }
+  };
+
   const renderMenuItems = (items: typeof mainMenuItems) => {
     return items.map((item) => {
       // Handle active state based on role and current location
@@ -179,10 +209,21 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
       return (
         <SidebarMenuItem key={item.title}>
           <SidebarMenuButton asChild data-active={isActive}>
-            <Link href={item.url} data-testid={`link-${displayTitle.toLowerCase().replace(/\s+/g, '-')}`}>
-              <item.icon />
-              <span>{displayTitle}</span>
-            </Link>
+            {item.title === "Profile" ? (
+              <button 
+                onClick={handleProfileClick}
+                data-testid={`link-${displayTitle.toLowerCase().replace(/\s+/g, '-')}`}
+                className="flex items-center gap-2 w-full text-left"
+              >
+                <item.icon />
+                <span>{displayTitle}</span>
+              </button>
+            ) : (
+              <Link href={item.url} data-testid={`link-${displayTitle.toLowerCase().replace(/\s+/g, '-')}`}>
+                <item.icon />
+                <span>{displayTitle}</span>
+              </Link>
+            )}
           </SidebarMenuButton>
         </SidebarMenuItem>
       );
