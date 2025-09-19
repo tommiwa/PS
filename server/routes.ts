@@ -6,6 +6,7 @@ import { z } from "zod";
 import { 
   sendAssignmentNotification, 
   sendWelcomeNotification,
+  sendBookingConfirmationNotification,
   getUserNotifications,
   markNotificationAsRead,
   getUnreadNotificationCount,
@@ -781,6 +782,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         entityId: newBooking.id,
         message: `Created booking for spot ${spot.spotNumber} on ${newBooking.bookingDate}`,
         after: newBooking
+      });
+
+      // Send booking confirmation email (fire-and-forget to avoid blocking response)
+      setImmediate(async () => {
+        try {
+          // Get user information for email notification
+          const user = await storage.getUser(userId);
+          if (user) {
+            // Get user's notification preferences
+            const notificationPreferences = await storage.getNotificationPreferences(userId);
+            
+            // Construct display name from firstName/lastName
+            const displayName = user.firstName && user.lastName 
+              ? `${user.firstName} ${user.lastName}`
+              : user.firstName || user.lastName || user.email || 'User';
+            
+            // Prepare booking details for email with correct field mapping
+            const bookingDetails = {
+              id: newBooking.id,
+              spotNumber: spot.spotNumber,
+              location: spot.location || 'BCI Campus',
+              building: spot.location || 'BCI Campus', // Use location as building since building field doesn't exist
+              startDate: new Date(newBooking.bookingDate), // Use bookingDate as start date
+              endDate: new Date(newBooking.bookingDate), // Same day booking
+              rate: Number(newBooking.dailyRate), // Convert decimal to number
+              totalAmount: Number(newBooking.totalAmount) // Convert decimal to number
+            };
+
+            // Send the notification asynchronously
+            await sendBookingConfirmationNotification(
+              { name: displayName, email: user.email, id: user.id },
+              bookingDetails,
+              notificationPreferences || {}
+            );
+          }
+        } catch (emailError) {
+          // Log error but don't impact the user experience
+          console.error('Failed to send booking confirmation email:', emailError);
+        }
       });
 
       res.json(newBooking);
