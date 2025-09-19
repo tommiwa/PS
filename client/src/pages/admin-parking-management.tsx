@@ -908,7 +908,7 @@ export default function AdminParkingManagement() {
             Refresh Data
           </Button>
           <Button
-            variant="secondary"
+            variant="outline"
             onClick={() => setShowAddToWaitingDialog(true)}
             data-testid="button-add-to-waiting"
           >
