@@ -728,52 +728,6 @@ export default function AdminParkingManagement() {
             Refresh Data
           </Button>
           <Button 
-            variant="outline" 
-            disabled={allSpots.length === 0}
-            onClick={() => {
-              const success = quickExportParkingSpotsPDF(sortedSpots, 'Parking Management Report', (errorMessage) => {
-                toast({
-                  variant: "destructive",
-                  title: "Export Failed",
-                  description: errorMessage
-                })
-              })
-              if (success) {
-                toast({
-                  title: "Export Successful",
-                  description: "PDF report has been downloaded successfully"
-                })
-              }
-            }}
-            data-testid="button-export-parking-pdf"
-          >
-            <FileText className="h-4 w-4 mr-2" />
-            Export PDF
-          </Button>
-          <Button 
-            variant="outline" 
-            disabled={allSpots.length === 0}
-            onClick={() => {
-              const success = quickExportParkingSpotsExcel(sortedSpots, 'Parking Management Report', (errorMessage) => {
-                toast({
-                  variant: "destructive",
-                  title: "Export Failed",
-                  description: errorMessage
-                })
-              })
-              if (success) {
-                toast({
-                  title: "Export Successful",
-                  description: "Excel report has been downloaded successfully"
-                })
-              }
-            }}
-            data-testid="button-export-parking-excel"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Export Excel
-          </Button>
-          <Button 
             variant="outline"
             onClick={() => setShowAddSpotDialog(true)}
             data-testid="button-add-spot"
