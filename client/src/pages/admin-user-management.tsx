@@ -1013,8 +1013,7 @@ export default function AdminUserManagement() {
         {/* Users Tab */}
         <TabsContent value="users" className="space-y-4">
           {/* Role Filter Cards */}
-          {cardsVisible && (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card 
               className={`cursor-pointer hover-elevate ${
                 filterValues.role === 'admin' ? 'ring-2 ring-primary' : ''
@@ -1083,8 +1082,7 @@ export default function AdminUserManagement() {
                 <Badge variant="outline" className="text-xs bg-gray-50 text-gray-700 border-gray-200">Total count</Badge>
               </CardContent>
             </Card>
-            </div>
-          )}
+          </div>
 
           {/* Enhanced Filters */}
           <EnhancedFilters
