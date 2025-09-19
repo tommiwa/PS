@@ -200,7 +200,11 @@ export default function Profile() {
           waitingListEntry: newEntry,
           preferences: {
             emailNotifications,
-            pushNotifications
+            bookingConfirmations,
+            paymentReminders,
+            spotAvailability,
+            weeklyReports,
+            systemMaintenance
           }
         }}).catch((error) => {
           console.warn('Failed to send welcome notification:', error);
