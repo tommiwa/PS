@@ -99,3 +99,15 @@ Enhanced the My Bookings page with comprehensive spot owner functionality:
 - **Revenue Tracking**: Automatic calculation of earnings from successful bookings vs. potential lost revenue from unused spots
 
 This provides spot owners complete visibility into their listing performance, enabling them to optimize pricing and availability based on historical booking patterns.
+
+### Waiting List Authentication Bug Fix (September 2024)
+Fixed critical authentication issues in the waiting list functionality:
+- **Session Cookie Configuration**: Fixed secure cookie setting to work properly in development (`secure: process.env.NODE_ENV === "production"`)
+- **Backend Route Handling**: Updated GET `/api/waiting-list/user/:userId` to return proper 404 when no entry exists
+- **Frontend Query Optimization**: Replaced manual fetch with shared `apiRequest` for consistent auth header handling
+- **Security Hardening**: 
+  - Gated demo authentication to development environments only
+  - Added `sameSite: 'lax'` to session cookies for enhanced security
+  - Ensured consistent authentication flow between POST and GET requests
+
+The waiting list now properly supports join/leave operations with correct UI state updates and secure authentication handling.

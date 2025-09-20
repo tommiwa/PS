@@ -128,7 +128,19 @@ export default function Profile() {
   // Query user's waiting list status  
   const { data: waitingListEntry, isLoading: isLoadingWaitingList } = useQuery<WaitingList | null>({
     queryKey: ["/api/waiting-list/user", user?.id],
-    enabled: !!user?.id
+    enabled: !!user?.id,
+    queryFn: async () => {
+      try {
+        const response = await apiRequest(`/api/waiting-list/user/${user?.id}`, { method: 'GET' });
+        return await response.json();
+      } catch (error) {
+        // Handle 404 as valid "no entry" state
+        if (error instanceof Error && error.message.includes('404')) {
+          return null;
+        }
+        throw error;
+      }
+    }
   });
 
   // Query user's vehicles  

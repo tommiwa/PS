@@ -39,7 +39,8 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: 'lax',
       maxAge: sessionTtl,
     },
   });
@@ -69,9 +70,8 @@ async function upsertUser(
   
   await storage.upsertUser(userData);
   
-  // Check if this should be an admin user based on email or specific user IDs
+  // Check if this should be an admin user based on specific user IDs and emails
   const isAdmin = claims["sub"] === "user-admin-001" || 
-                  claims["email"]?.includes("admin") || 
                   claims["email"] === "david.thomps@replit.com" ||
                   claims["email"] === "d.thompson@bci.ca";
                   
@@ -227,9 +227,9 @@ export async function setupAuth(app: Express) {
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   const user = req.user as any;
   
-  // Check for demo authentication from frontend
+  // Check for demo authentication from frontend (only in development)
   const demoAuth = req.headers['x-demo-auth'];
-  if (demoAuth) {
+  if (demoAuth && process.env.NODE_ENV !== "production") {
     try {
       const demoUser = JSON.parse(demoAuth as string);
       if (demoUser && demoUser.id) {
@@ -282,9 +282,9 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
 export const requireAdmin: RequestHandler = async (req, res, next) => {
   const user = req.user as any;
   
-  // Check for demo authentication from frontend
+  // Check for demo authentication from frontend (only in development)
   const demoAuth = req.headers['x-demo-auth'];
-  if (demoAuth) {
+  if (demoAuth && process.env.NODE_ENV !== "production") {
     try {
       const demoUser = JSON.parse(demoAuth as string);
       if (demoUser && demoUser.role === "admin") {
