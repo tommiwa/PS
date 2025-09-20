@@ -87,6 +87,7 @@ export default function Profile() {
   // State for various settings and drawers
   const [activeTab, setActiveTab] = useState("waiting-list")
   const [showAddVehicleDrawer, setShowAddVehicleDrawer] = useState(false)
+  const [showAddVehicleDialog, setShowAddVehicleDialog] = useState(false)
   const [showPaymentPreferencesDrawer, setShowPaymentPreferencesDrawer] = useState(false)
   const [showProfileEditDrawer, setShowProfileEditDrawer] = useState(false)
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null)
@@ -216,6 +217,7 @@ export default function Profile() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "vehicles"] });
       setShowAddVehicleDrawer(false);
+      setShowAddVehicleDialog(false);
       setEditingVehicle(null);
       vehicleForm.reset();
       toast({
@@ -308,12 +310,48 @@ export default function Profile() {
     }
   });
 
+  // Update vehicle mutation
+  const updateVehicleMutation = useMutation({
+    mutationFn: async (vehicleData: VehicleForm) => {
+      if (!editingVehicle?.id) throw new Error("Vehicle not found");
+      const response = await apiRequest(`/api/users/${user?.id}/vehicles/${editingVehicle.id}`, { 
+        method: 'PUT', 
+        body: vehicleData 
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "vehicles"] });
+      setShowAddVehicleDrawer(false);
+      setShowAddVehicleDialog(false);
+      setEditingVehicle(null);
+      vehicleForm.reset();
+      toast({
+        title: "Vehicle Updated",
+        description: "Your vehicle has been successfully updated.",
+        variant: "default"
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to Update Vehicle",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+
   const handlePreferenceChange = (preferences: UpdateNotificationPreferences) => {
     updateNotificationPreferencesMutation.mutate(preferences);
   };
 
   const handleSubmitVehicle = (data: VehicleForm) => {
-    addVehicleMutation.mutate(data);
+    if (editingVehicle) {
+      updateVehicleMutation.mutate(data);
+    } else {
+      addVehicleMutation.mutate(data);
+    }
   };
 
   // Payment preferences mutation
@@ -1301,7 +1339,7 @@ export default function Profile() {
 
                     {/* Desktop Vehicle Form - Dialog */}
                     <div className="hidden md:block">
-                      <Dialog open={showAddVehicleDrawer} onOpenChange={setShowAddVehicleDrawer}>
+                      <Dialog open={showAddVehicleDialog} onOpenChange={setShowAddVehicleDialog}>
                         <DialogTrigger asChild>
                           <Button data-testid="button-add-vehicle-desktop">
                             <Plus className="h-4 w-4 mr-2" />
