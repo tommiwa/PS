@@ -19,6 +19,7 @@ import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { useToast } from "@/hooks/use-toast"
 import { useConfirm, confirmations } from "@/hooks/use-confirm"
 import type { Vehicle } from "@/components/user-profile-card"
@@ -608,9 +609,6 @@ export default function Profile() {
           <UserProfileCard 
             user={userProfile} 
             onEditProfile={handleEditProfile}
-            onAddVehicle={handleAddVehicle}
-            onEditVehicle={handleEditVehicle}
-            onDeleteVehicle={handleDeleteVehicle}
           />
           
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -938,7 +936,14 @@ export default function Profile() {
                         <FormItem>
                           <FormLabel>{t("vehicles.make")}</FormLabel>
                           <FormControl>
-                            <Input placeholder="e.g., Tesla" {...field} data-testid="input-vehicle-make" />
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Input placeholder="e.g., Tesla" {...field} data-testid="input-vehicle-make" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Enter vehicle manufacturer</p>
+                              </TooltipContent>
+                            </Tooltip>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -951,7 +956,14 @@ export default function Profile() {
                         <FormItem>
                           <FormLabel>{t("vehicles.model")}</FormLabel>
                           <FormControl>
-                            <Input placeholder="e.g., Model 3" {...field} data-testid="input-vehicle-model" />
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Input placeholder="e.g., Model 3" {...field} data-testid="input-vehicle-model" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Enter vehicle model</p>
+                              </TooltipContent>
+                            </Tooltip>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -967,12 +979,19 @@ export default function Profile() {
                         <FormItem>
                           <FormLabel>{t("vehicles.year")}</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
-                              onChange={(e) => field.onChange(parseInt(e.target.value) || new Date().getFullYear())}
-                              data-testid="input-vehicle-year" 
-                            />
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Input 
+                                  type="number" 
+                                  {...field} 
+                                  onChange={(e) => field.onChange(parseInt(e.target.value) || new Date().getFullYear())}
+                                  data-testid="input-vehicle-year" 
+                                />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Enter vehicle year (1990 or later)</p>
+                              </TooltipContent>
+                            </Tooltip>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -985,7 +1004,14 @@ export default function Profile() {
                         <FormItem>
                           <FormLabel>{t("vehicles.licensePlate")}</FormLabel>
                           <FormControl>
-                            <Input {...field} data-testid="input-vehicle-license" />
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Input {...field} data-testid="input-vehicle-license" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Enter license plate number</p>
+                              </TooltipContent>
+                            </Tooltip>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1000,7 +1026,14 @@ export default function Profile() {
                       <FormItem>
                         <FormLabel>{t("vehicles.color")} (Optional)</FormLabel>
                         <FormControl>
-                          <Input {...field} data-testid="input-vehicle-color" />
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Input {...field} data-testid="input-vehicle-color" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Enter vehicle color (optional)</p>
+                            </TooltipContent>
+                          </Tooltip>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -1067,8 +1100,7 @@ export default function Profile() {
             </DialogContent>
           </Dialog>
         </div>
-      )
-    }
+
                     <div className="flex items-center justify-between">
                       <div>
                         <Label>Profile Visibility</Label>
@@ -1143,195 +1175,6 @@ export default function Profile() {
                 </CardContent>
               </Card>
             </TabsContent>
-
-            {/* Vehicle Dialog */}
-            <Dialog open={showAddVehicleDialog} onOpenChange={setShowAddVehicleDialog}>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingVehicle ? 'Edit Vehicle' : 'Add Vehicle'}
-                  </DialogTitle>
-                </DialogHeader>
-                <Form {...vehicleForm}>
-                  <form onSubmit={vehicleForm.handleSubmit(handleSubmitVehicle)} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={vehicleForm.control}
-                        name="make"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Make</FormLabel>
-                            <FormControl>
-                              <Input placeholder="e.g., Tesla" {...field} data-testid="input-vehicle-make" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={vehicleForm.control}
-                        name="model"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Model</FormLabel>
-                            <FormControl>
-                              <Input placeholder="e.g., Model 3" {...field} data-testid="input-vehicle-model" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={vehicleForm.control}
-                        name="year"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Year</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="number" 
-                                placeholder="2023" 
-                                {...field} 
-                                onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                                data-testid="input-vehicle-year" 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={vehicleForm.control}
-                        name="licensePlate"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>License Plate</FormLabel>
-                            <FormControl>
-                              <Input placeholder="ABC-123" {...field} data-testid="input-vehicle-license" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    <FormField
-                      control={vehicleForm.control}
-                      name="color"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Color (Optional)</FormLabel>
-                          <FormControl>
-                            <Input placeholder="e.g., White" {...field} data-testid="input-vehicle-color" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={vehicleForm.control}
-                      name="isElectric"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                          <div className="space-y-0.5">
-                            <FormLabel>Electric Vehicle</FormLabel>
-                            <FormDescription>
-                              Check if this is an electric vehicle
-                            </FormDescription>
-                          </div>
-                          <FormControl>
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                              data-testid="switch-vehicle-electric"
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setShowAddVehicleDialog(false)}
-                        data-testid="button-cancel-vehicle"
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        type="submit"
-                        disabled={addVehicleMutation.isPending || updateVehicleMutation.isPending}
-                        data-testid="button-save-vehicle"
-                      >
-                        {addVehicleMutation.isPending || updateVehicleMutation.isPending ? (
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        ) : null}
-                        {editingVehicle ? 'Update' : 'Add'} Vehicle
-                      </Button>
-                    </div>
-                  </form>
-                </Form>
-              </DialogContent>
-            </Dialog>
-
-            {/* Account Settings */}
-            <TabsContent value="account" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <User className="h-5 w-5" />
-                    Account Settings
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-4">
-                    <div>
-                      <Label className="text-sm font-medium">Profile Information</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Manage your account profile and preferences
-                      </p>
-                    </div>
-                    
-                    <Separator />
-                    
-                    <div className="space-y-3">
-                      <Button variant="outline" className="w-full justify-start" onClick={handleEditProfile}>
-                        <User className="h-4 w-4 mr-2" />
-                        Edit Profile Information
-                      </Button>
-                      <Button variant="outline" className="w-full justify-start" onClick={handleChangePassword}>
-                        <Key className="h-4 w-4 mr-2" />
-                        Change Password
-                      </Button>
-                      <Button variant="outline" className="w-full justify-start" onClick={handleExportData}>
-                        <Download className="h-4 w-4 mr-2" />
-                        Export Account Data
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  <Separator />
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <Label className="text-sm font-medium text-red-600">Danger Zone</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Irreversible and destructive actions
-                      </p>
-                    </div>
-                    <Button 
-                      variant="destructive" 
-                      className="w-full"
-                      onClick={handleDeleteAccount}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete Account
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
           </Tabs>
         </div>
         
@@ -1350,7 +1193,7 @@ export default function Profile() {
                   <Loader2 className="h-4 w-4 animate-spin" />
                   <span className="ml-2 text-sm">Loading...</span>
                 </div>
-              ) : waitingListEntry && waitingListEntry.status === "active" ? (
+              ) : waitingListEntry?.status === "active" ? (
                 <div className="space-y-3">
                   {!editWaitingListMode ? (
                     <>
@@ -1362,14 +1205,14 @@ export default function Profile() {
                               You're on the list!
                             </h4>
                             <p className="text-xs text-green-700 dark:text-green-300">
-                              Priority: {priorityLevels[waitingListEntry.priority.toString() as keyof typeof priorityLevels]?.label}
+                              Priority: {priorityLevels[waitingListEntry?.priority?.toString() as keyof typeof priorityLevels]?.label}
                             </p>
                           </div>
                         </div>
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        <p><strong>Spot Type:</strong> {waitingListEntry.preferredSpotType}</p>
-                        <p><strong>Building:</strong> {waitingListEntry.preferredBuilding}</p>
+                        <p><strong>Spot Type:</strong> {waitingListEntry?.preferredSpotType}</p>
+                        <p><strong>Building:</strong> {waitingListEntry?.preferredBuilding}</p>
                       </div>
                       <div className="flex gap-1">
                         <Button 
@@ -1379,10 +1222,10 @@ export default function Profile() {
                           onClick={() => {
                             setEditWaitingListMode(true);
                             waitingListForm.reset({
-                              preferredSpotType: waitingListEntry.preferredSpotType as any,
-                              preferredBuilding: waitingListEntry.preferredBuilding || "",
-                              priority: waitingListEntry.priority.toString() as any,
-                              reason: waitingListEntry.reason || ""
+                              preferredSpotType: waitingListEntry?.preferredSpotType as any,
+                              preferredBuilding: waitingListEntry?.preferredBuilding || "",
+                              priority: waitingListEntry?.priority?.toString() as any,
+                              reason: waitingListEntry?.reason || ""
                             });
                           }}
                           data-testid="button-edit-waiting-list"

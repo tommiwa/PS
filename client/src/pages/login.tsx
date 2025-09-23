@@ -10,10 +10,11 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { AuthService, userTypeDescriptions, demoCredentials } from "@/lib/auth";
 import { UserRole } from "@shared/schema";
 import { useAuth } from "@/contexts/auth-context";
-import { Car, Users, Shield, Clock, ChevronRight, Loader2, AlertCircle, ArrowLeft, Building2 } from "lucide-react";
+import { Car, Users, Shield, Clock, ChevronRight, Loader2, AlertCircle, ArrowLeft, Building2, Info, Eye } from "lucide-react";
 import BCILogo, { BCIHeroLogo } from "@/components/bci-logo";
 
 // Form validation schema
@@ -163,16 +164,25 @@ export default function Login() {
                   const credentials = demoCredentials[role];
                   
                   return (
-                    <Card
-                      key={role}
-                      className={`cursor-pointer transition-all duration-300 hover-elevate group relative overflow-hidden ${
-                        isSelected 
-                          ? `ring-2 ring-primary/50 shadow-lg ${userTypeColors[role]}` 
-                          : `${userTypeColors[role]} hover:shadow-md border`
-                      }`}
-                      onClick={() => handleUserTypeSelect(role)}
-                      data-testid={`card-user-type-${role}`}
-                    >
+                    <Tooltip key={role}>
+                      <TooltipTrigger asChild>
+                        <Card
+                          className={`cursor-pointer transition-all duration-300 hover-elevate group relative overflow-hidden ${
+                            isSelected 
+                              ? `ring-2 ring-primary/50 shadow-lg ${userTypeColors[role]}` 
+                              : `${userTypeColors[role]} hover:shadow-md border`
+                          }`}
+                          onClick={() => handleUserTypeSelect(role)}
+                          data-testid={`card-user-type-${role}`}
+                          tabIndex={0}
+                          role="button"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              handleUserTypeSelect(role);
+                            }
+                          }}
+                        >
                       {/* Selection indicator */}
                       {isSelected && (
                         <div className="absolute top-0 right-0 h-0 w-0 border-l-[40px] border-t-[40px] border-l-transparent border-t-primary/20" />
@@ -226,39 +236,58 @@ export default function Login() {
                         
                         {/* Action Buttons */}
                         <div className="flex gap-2 pt-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="flex-1 group/btn text-xs"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleQuickLogin(role);
-                            }}
-                            disabled={isLoading}
-                            data-testid={`button-quick-login-${role}`}
-                          >
-                            {isLoading ? (
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : (
-                              <>
-                                Quick Login
-                                <ChevronRight className="h-3 w-3 ml-1 group-hover/btn:translate-x-0.5 transition-transform" />
-                              </>
-                            )}
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="flex-1 group/btn text-xs"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleQuickLogin(role);
+                                }}
+                                disabled={isLoading}
+                                data-testid={`button-quick-login-${role}`}
+                              >
+                                {isLoading ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  <>
+                                    Quick Login
+                                    <ChevronRight className="h-3 w-3 ml-1 group-hover/btn:translate-x-0.5 transition-transform" />
+                                  </>
+                                )}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Quick login as {role}</p>
+                            </TooltipContent>
+                          </Tooltip>
                           
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="px-3 text-xs"
-                            onClick={() => handleUserTypeSelect(role)}
-                            data-testid={`button-select-${role}`}
-                          >
-                            Select
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="px-3 text-xs"
+                                onClick={() => handleUserTypeSelect(role)}
+                                data-testid={`button-select-${role}`}
+                              >
+                                Select
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Select {role} account type</p>
+                            </TooltipContent>
+                          </Tooltip>
                         </div>
                       </CardContent>
                     </Card>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Select {info.title} account type</p>
+                      </TooltipContent>
+                    </Tooltip>
                   );
                 })}
               </div>
@@ -272,22 +301,29 @@ export default function Login() {
                 <CardHeader className="text-center pb-6">
                   {/* Back Button */}
                   <div className="flex items-center mb-4">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setShowCredentials(false);
-                        setSelectedUserType(null);
-                        form.reset();
-                        setError(null);
-                      }}
-                      className="gap-2"
-                      data-testid="button-back"
-                    >
-                      <ArrowLeft className="h-4 w-4" />
-                      Back to Role Selection
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setShowCredentials(false);
+                            setSelectedUserType(null);
+                            form.reset();
+                            setError(null);
+                          }}
+                          className="gap-2"
+                          data-testid="button-back"
+                        >
+                          <ArrowLeft className="h-4 w-4" />
+                          Back to Role Selection
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Return to role selection</p>
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
                   
                   {/* Selected User Type Info */}
@@ -326,14 +362,21 @@ export default function Login() {
                       <Label htmlFor="email" className="text-sm font-medium">
                         Email Address
                       </Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="your.name@bci.ca"
-                        className="h-11 text-base"
-                        {...form.register("email")}
-                        data-testid="input-email"
-                      />
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Input
+                            id="email"
+                            type="email"
+                            placeholder="your.name@bci.ca"
+                            className="h-11 text-base"
+                            {...form.register("email")}
+                            data-testid="input-email"
+                          />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Enter BCI email address</p>
+                        </TooltipContent>
+                      </Tooltip>
                       {form.formState.errors.email && (
                         <p className="text-sm text-destructive flex items-center gap-1">
                           <AlertCircle className="h-3 w-3" />
@@ -347,14 +390,21 @@ export default function Login() {
                       <Label htmlFor="password" className="text-sm font-medium">
                         Password
                       </Label>
-                      <Input
-                        id="password"
-                        type="password"
-                        placeholder="Enter your password"
-                        className="h-11 text-base"
-                        {...form.register("password")}
-                        data-testid="input-password"
-                      />
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Input
+                            id="password"
+                            type="password"
+                            placeholder="Enter your password"
+                            className="h-11 text-base"
+                            {...form.register("password")}
+                            data-testid="input-password"
+                          />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Enter account password</p>
+                        </TooltipContent>
+                      </Tooltip>
                       {form.formState.errors.password && (
                         <p className="text-sm text-destructive flex items-center gap-1">
                           <AlertCircle className="h-3 w-3" />
@@ -389,21 +439,28 @@ export default function Login() {
                     </div>
 
                     {/* Login Button */}
-                    <Button 
-                      type="submit" 
-                      className="w-full h-11 text-base font-medium"
-                      disabled={isLoading}
-                      data-testid="button-login"
-                    >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          Signing in...
-                        </>
-                      ) : (
-                        "Sign In to BCI Parking"
-                      )}
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          type="submit" 
+                          className="w-full h-11 text-base font-medium"
+                          disabled={isLoading}
+                          data-testid="button-login"
+                        >
+                          {isLoading ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              Signing in...
+                            </>
+                          ) : (
+                            "Sign In to BCI Parking"
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Sign in to BCI Parking</p>
+                      </TooltipContent>
+                    </Tooltip>
                   </form>
                 </CardContent>
               </Card>

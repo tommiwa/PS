@@ -237,7 +237,7 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Click these buttons to quickly filter parking spots by common criteria</p>
+            <p>Click buttons for quick filters</p>
           </TooltipContent>
         </Tooltip>
         {QUICK_FILTERS.map((filter) => {
@@ -266,7 +266,7 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>{isActive ? `Remove this filter to see more search results` : filter.tooltip}</p>
+                <p>{isActive ? `Remove filter` : filter.tooltip}</p>
               </TooltipContent>
             </Tooltip>
           )
@@ -295,7 +295,7 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
                   />
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Search for parking spots using natural language. Try combinations like location + spot type + price (e.g., "750 pandora electric under $30")</p>
+                  <p>Search using natural language</p>
                 </TooltipContent>
               </Tooltip>
               {query && (
@@ -313,7 +313,7 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Clear search input and remove all filters to start fresh</p>
+                    <p>Clear search and filters</p>
                   </TooltipContent>
                 </Tooltip>
               )}
@@ -330,7 +330,7 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Search for parking spots based on your criteria and filters</p>
+                <p>Search with current criteria</p>
               </TooltipContent>
             </Tooltip>
           </div>
@@ -358,7 +358,7 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
                         </CommandItem>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Click to search for: "{suggestion}" - this will apply the search automatically</p>
+                        <p>Click to search for "{suggestion}"</p>
                       </TooltipContent>
                     </Tooltip>
                   ))}
@@ -384,7 +384,7 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>These are example search phrases that demonstrate how to combine location, spot type, and price criteria</p>
+          <p>Example search phrases</p>
         </TooltipContent>
       </Tooltip>
     </div>

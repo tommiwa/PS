@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { X, Search, Filter } from "lucide-react"
 
 export interface SearchFilters {
@@ -94,9 +95,16 @@ export function SearchFilters({ onFilterChange, onSearch }: SearchFiltersProps) 
           <div className="space-y-2">
             <Label htmlFor="location">Location</Label>
             <Select value={filters.location} onValueChange={(value) => updateFilter("location", value)}>
-              <SelectTrigger data-testid="select-location">
-                <SelectValue placeholder="Any location" />
-              </SelectTrigger>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <SelectTrigger data-testid="select-location">
+                    <SelectValue placeholder="Any location" />
+                  </SelectTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Choose specific building or parking area</p>
+                </TooltipContent>
+              </Tooltip>
               <SelectContent>
                 <SelectItem value="all">Any location</SelectItem>
                 <SelectItem value="main-building">Main Building</SelectItem>
@@ -110,9 +118,16 @@ export function SearchFilters({ onFilterChange, onSearch }: SearchFiltersProps) 
           <div className="space-y-2">
             <Label htmlFor="spotType">Spot Type</Label>
             <Select value={filters.spotType} onValueChange={(value) => updateFilter("spotType", value)}>
-              <SelectTrigger data-testid="select-spot-type">
-                <SelectValue placeholder="Any type" />
-              </SelectTrigger>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <SelectTrigger data-testid="select-spot-type">
+                    <SelectValue placeholder="Any type" />
+                  </SelectTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Filter by regular, electric, or accessible spots</p>
+                </TooltipContent>
+              </Tooltip>
               <SelectContent>
                 <SelectItem value="all">Any type</SelectItem>
                 <SelectItem value="regular">Regular</SelectItem>
@@ -124,42 +139,70 @@ export function SearchFilters({ onFilterChange, onSearch }: SearchFiltersProps) 
           
           <div className="space-y-2">
             <Label htmlFor="date">Date</Label>
-            <Input
-              type="date"
-              value={filters.date}
-              onChange={(e) => updateFilter("date", e.target.value)}
-              data-testid="input-date"
-            />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Input
+                  type="date"
+                  value={filters.date}
+                  onChange={(e) => updateFilter("date", e.target.value)}
+                  data-testid="input-date"
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Choose specific date or leave empty for any date</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
           
           <div className="space-y-2">
             <Label htmlFor="priceMin">Min Price ($)</Label>
-            <Input
-              type="number"
-              placeholder="0"
-              value={filters.priceMin}
-              onChange={(e) => updateFilter("priceMin", e.target.value)}
-              data-testid="input-price-min"
-            />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Input
+                  type="number"
+                  placeholder="0"
+                  value={filters.priceMin}
+                  onChange={(e) => updateFilter("priceMin", e.target.value)}
+                  data-testid="input-price-min"
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Set minimum daily price filter</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
           
           <div className="space-y-2">
             <Label htmlFor="priceMax">Max Price ($)</Label>
-            <Input
-              type="number"
-              placeholder="100"
-              value={filters.priceMax}
-              onChange={(e) => updateFilter("priceMax", e.target.value)}
-              data-testid="input-price-max"
-            />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Input
+                  type="number"
+                  placeholder="100"
+                  value={filters.priceMax}
+                  onChange={(e) => updateFilter("priceMax", e.target.value)}
+                  data-testid="input-price-max"
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Set maximum daily price filter</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
           
           <div className="space-y-2">
             <Label htmlFor="isInside">Location Type</Label>
             <Select value={filters.isInside} onValueChange={(value) => updateFilter("isInside", value)}>
-              <SelectTrigger data-testid="select-inside">
-                <SelectValue placeholder="Any" />
-              </SelectTrigger>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <SelectTrigger data-testid="select-inside">
+                    <SelectValue placeholder="Any" />
+                  </SelectTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Filter by indoor or outdoor spots</p>
+                </TooltipContent>
+              </Tooltip>
               <SelectContent>
                 <SelectItem value="all">Any</SelectItem>
                 <SelectItem value="true">Inside Building</SelectItem>
@@ -173,14 +216,21 @@ export function SearchFilters({ onFilterChange, onSearch }: SearchFiltersProps) 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label className="text-sm font-medium">Active Filters</Label>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={clearAllFilters}
-                data-testid="button-clear-all"
-              >
-                Clear All
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={clearAllFilters}
+                    data-testid="button-clear-all"
+                  >
+                    Clear All
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Remove all active filters</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
             <div className="flex flex-wrap gap-2">
               {activeFilters.map((filterKey) => (
@@ -203,14 +253,21 @@ export function SearchFilters({ onFilterChange, onSearch }: SearchFiltersProps) 
           </div>
         )}
         
-        <Button 
-          onClick={handleSearch} 
-          className="w-full gap-2"
-          data-testid="button-search"
-        >
-          <Search className="h-4 w-4" />
-          Search Parking Spots
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              onClick={handleSearch} 
+              className="w-full gap-2"
+              data-testid="button-search"
+            >
+              <Search className="h-4 w-4" />
+              Search Parking Spots
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Search with selected filters</p>
+          </TooltipContent>
+        </Tooltip>
       </CardContent>
     </Card>
   )

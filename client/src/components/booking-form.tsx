@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle, User, Zap, Accessibility, Building, CreditCard } from "lucide-react"
 import { ParkingSpot } from "./parking-spot-card"
 import { isPastDate, getTodayString } from "@/utils/date-utils"
@@ -232,16 +233,23 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
           {/* Date Selection */}
           <div className="space-y-2">
             <Label htmlFor="date">Select Date</Label>
-            <Input
-              type="date"
-              value={formData.date}
-              min={getTodayString()}
-              onChange={(e) => updateFormData("date", e.target.value)}
-              required
-              disabled={isDateLocked}
-              data-testid="input-booking-date"
-              className={`w-full md:w-auto ${isDateLocked ? 'bg-muted cursor-not-allowed' : ''}`}
-            />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Input
+                  type="date"
+                  value={formData.date}
+                  min={getTodayString()}
+                  onChange={(e) => updateFormData("date", e.target.value)}
+                  required
+                  disabled={isDateLocked}
+                  data-testid="input-booking-date"
+                  className={`w-full md:w-auto ${isDateLocked ? 'bg-muted cursor-not-allowed' : ''}`}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Select reservation date</p>
+              </TooltipContent>
+            </Tooltip>
             {isDateLocked && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Calendar className="h-4 w-4" />
@@ -298,9 +306,16 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
           <div className="space-y-2">
             <Label htmlFor="paymentMethod">Payment Method</Label>
             <Select value={formData.paymentMethod} onValueChange={(value) => updateFormData("paymentMethod", value)}>
-              <SelectTrigger data-testid="select-payment-method">
-                <SelectValue placeholder="Select payment method" />
-              </SelectTrigger>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <SelectTrigger data-testid="select-payment-method">
+                    <SelectValue placeholder="Select payment method" />
+                  </SelectTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Choose payment method for this booking</p>
+                </TooltipContent>
+              </Tooltip>
               <SelectContent>
                 <SelectItem value="Interac Transfer">Interac e-Transfer</SelectItem>
                 <SelectItem value="Cash">Cash</SelectItem>
@@ -323,15 +338,22 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
                   </Badge>
                 )}
               </Label>
-              <Input
-                type="tel"
-                placeholder="(555) 123-4567"
-                value={formData.contactPhone}
-                onChange={(e) => updateFormData("contactPhone", e.target.value)}
-                required
-                data-testid="input-contact-phone"
-                className={authUser?.phone ? "border-blue-200 bg-blue-50/50 dark:bg-blue-950/50" : ""}
-              />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Input
+                    type="tel"
+                    placeholder="(555) 123-4567"
+                    value={formData.contactPhone}
+                    onChange={(e) => updateFormData("contactPhone", e.target.value)}
+                    required
+                    data-testid="input-contact-phone"
+                    className={authUser?.phone ? "border-blue-200 bg-blue-50/50 dark:bg-blue-950/50" : ""}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Phone number for booking coordination</p>
+                </TooltipContent>
+              </Tooltip>
               {authUser?.phone && (
                 <p className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1">
                   <User className="h-3 w-3" />
@@ -352,14 +374,21 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
                   </Badge>
                 )}
               </Label>
-              <Input
-                placeholder="ABC-123"
-                value={formData.vehicleLicense}
-                onChange={(e) => updateFormData("vehicleLicense", e.target.value)}
-                required
-                data-testid="input-vehicle-license"
-                className={authUser?.vehicleInfo?.licensePlate ? "border-blue-200 bg-blue-50/50 dark:bg-blue-950/50" : ""}
-              />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Input
+                    placeholder="ABC-123"
+                    value={formData.vehicleLicense}
+                    onChange={(e) => updateFormData("vehicleLicense", e.target.value)}
+                    required
+                    data-testid="input-vehicle-license"
+                    className={authUser?.vehicleInfo?.licensePlate ? "border-blue-200 bg-blue-50/50 dark:bg-blue-950/50" : ""}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>License plate for parking identification</p>
+                </TooltipContent>
+              </Tooltip>
               {authUser?.vehicleInfo?.licensePlate ? (
                 <p className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1">
                   <User className="h-3 w-3" />
@@ -379,13 +408,20 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
           {/* Special Instructions */}
           <div className="space-y-2">
             <Label htmlFor="specialInstructions">Special Instructions (Optional)</Label>
-            <Textarea
-              placeholder="Any special instructions or notes for the spot owner..."
-              value={formData.specialInstructions}
-              onChange={(e) => updateFormData("specialInstructions", e.target.value)}
-              className="min-h-20"
-              data-testid="textarea-instructions"
-            />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Textarea
+                  placeholder="Any special instructions or notes for the spot owner..."
+                  value={formData.specialInstructions}
+                  onChange={(e) => updateFormData("specialInstructions", e.target.value)}
+                  className="min-h-20"
+                  data-testid="textarea-instructions"
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Add special requirements or arrival notes</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
 
           {/* Legal Notice */}
@@ -416,30 +452,44 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
 
           {/* Action Buttons */}
           <div className="flex gap-3 pt-4">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={onCancel}
-              className="flex-1"
-              data-testid="button-cancel-booking"
-            >
-              Cancel
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={isSubmitting || !formData.paymentMethod}
-              className="flex-1"
-              data-testid="button-submit-booking"
-            >
-              {isSubmitting ? (
-                <>
-                  <Clock className="h-4 w-4 mr-2 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                `Book for $${spot.price}`
-              )}
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={onCancel}
+                  className="flex-1"
+                  data-testid="button-cancel-booking"
+                >
+                  Cancel
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Cancel booking and return</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  type="submit" 
+                  disabled={isSubmitting || !formData.paymentMethod}
+                  className="flex-1"
+                  data-testid="button-submit-booking"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Clock className="h-4 w-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    `Book for $${spot.price}`
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Submit booking request</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
         </form>
       </CardContent>
