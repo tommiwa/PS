@@ -104,8 +104,11 @@ export class AuthService {
 
 }
 
+// Available user types for login (excluding disabled roles)
+type AvailableUserRoles = Exclude<UserRole, "owner">;
+
 // User type descriptions for the login page
-export const userTypeDescriptions: Record<UserRole, { title: string; description: string; features: string[] }> = {
+export const userTypeDescriptions: Record<AvailableUserRoles, { title: string; description: string; features: string[] }> = {
   renter: {
     title: "Spot Renter",
     description: "Search and book available parking spaces from other employees",
@@ -116,16 +119,18 @@ export const userTypeDescriptions: Record<UserRole, { title: string; description
       "Get notified about booking confirmations"
     ]
   },
-  owner: {
-    title: "Spot Owner", 
-    description: "Share your parking spots AND book spaces from others",
-    features: [
-      "List your parking spots for rental",
-      "Book parking spaces when you need them",
-      "Manage both your spots and bookings",
-      "Earn money from your unused spaces"
-    ]
-  },
+  // DISABLED FOR V1: Spot owner login functionality disabled
+  // Admins will manage unallocated spots instead
+  // owner: {
+  //   title: "Spot Owner", 
+  //   description: "Share your parking spots AND book spaces from others",
+  //   features: [
+  //     "List your parking spots for rental",
+  //     "Book parking spaces when you need them",
+  //     "Manage both your spots and bookings",
+  //     "Earn money from your unused spaces"
+  //   ]
+  // },
   admin: {
     title: "System Administrator",
     description: "Manage parking system and users", 
@@ -139,15 +144,16 @@ export const userTypeDescriptions: Record<UserRole, { title: string; description
 };
 
 // Default demo credentials for easy login
-export const demoCredentials: Record<UserRole, { email: string; password: string }> = {
+export const demoCredentials: Record<AvailableUserRoles, { email: string; password: string }> = {
   renter: {
     email: "michael.rodriguez@bci.ca",
     password: "demo123"
   },
-  owner: {
-    email: "sarah.chen@bci.ca", 
-    password: "demo123"
-  },
+  // DISABLED FOR V1: Spot owner login functionality disabled
+  // owner: {
+  //   email: "sarah.chen@bci.ca", 
+  //   password: "demo123"
+  // },
   admin: {
     email: "david.thompson@bci.ca",
     password: "admin123"
