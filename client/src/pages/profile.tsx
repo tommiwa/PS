@@ -20,6 +20,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
+import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card"
 import { useToast } from "@/hooks/use-toast"
 import { useConfirm, confirmations } from "@/hooks/use-confirm"
 import type { Vehicle } from "@/components/user-profile-card"
@@ -58,49 +60,26 @@ import {
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useTheme } from "@/contexts/theme-context"
-import { useLanguage } from "@/contexts/language-context"
+import { useLanguage } from "@/hooks/use-language"
 import { spotTypes, type SpotType, type WaitingList, type InsertWaitingList, type ParkingSpot, type NotificationPreferences, type UpdateNotificationPreferences } from "@shared/schema"
 
-// Waiting list form validation schema
-const waitingListSchema = z.object({
-  preferredSpotType: z.enum(["regular", "electric", "accessible"], {
-    required_error: "Please select a preferred spot type"
-  }),
-  preferredBuilding: z.string().min(1, "Please select a preferred building"),
-  priority: z.enum(["1", "2", "3"], {
-    required_error: "Please select a priority level"
-  }),
-  reason: z.string().min(10, "Please provide a reason (at least 10 characters)")
-});
-
-// Vehicle form validation schema
-const vehicleSchema = z.object({
-  make: z.string().min(1, "Vehicle make is required"),
-  model: z.string().min(1, "Vehicle model is required"),
-  year: z.number().min(1990, "Year must be 1990 or later").max(new Date().getFullYear() + 1, "Year cannot be in the future"),
-  licensePlate: z.string().min(1, "License plate is required"),
-  color: z.string().optional(),
-  isElectric: z.boolean().default(false),
-  isDefault: z.boolean().default(false)
-});
-
-type WaitingListForm = z.infer<typeof waitingListSchema>;
-type VehicleForm = z.infer<typeof vehicleSchema>;
-
-// Priority levels with descriptions
-const priorityLevels = {
-  "1": { label: "High Priority", description: "Urgent need due to accessibility, pregnancy, or medical reasons" },
-  "2": { label: "Medium Priority", description: "Regular commuter with consistent parking needs" },
-  "3": { label: "Low Priority", description: "Occasional use or flexible parking requirements" }
+// Type definitions for forms
+type WaitingListForm = {
+  preferredSpotType: "regular" | "electric" | "accessible";
+  preferredBuilding: string;
+  priority: "1" | "2" | "3";
+  reason: string;
 };
 
-// Building options
-const buildingOptions = [
-  { value: "Building A", label: "Building A - Main Campus" },
-  { value: "Building B", label: "Building B - East Wing" },
-  { value: "Building C", label: "Building C - West Wing" },
-  { value: "Building D", label: "Building D - Annex" }
-];
+type VehicleForm = {
+  make: string;
+  model: string;
+  year: number;
+  licensePlate: string;
+  color?: string;
+  isElectric: boolean;
+  isDefault: boolean;
+};
 
 export default function Profile() {
   const { user, isOwner, isRenter, isAdmin } = useAuth()
@@ -109,6 +88,43 @@ export default function Profile() {
   const { theme, setTheme } = useTheme()
   const { language, setLanguage, t } = useLanguage()
   const { confirm } = useConfirm()
+
+  // Schemas with translation support
+  const waitingListSchema = z.object({
+    preferredSpotType: z.enum(["regular", "electric", "accessible"], {
+      required_error: t("validation.spotTypeRequired")
+    }),
+    preferredBuilding: z.string().min(1, t("validation.buildingRequired")),
+    priority: z.enum(["1", "2", "3"], {
+      required_error: t("validation.priorityRequired")
+    }),
+    reason: z.string().min(10, t("validation.reasonMinLength"))
+  });
+
+  const vehicleSchema = z.object({
+    make: z.string().min(1, t("validation.makeRequired")),
+    model: z.string().min(1, t("validation.modelRequired")),
+    year: z.number().min(1990, t("validation.yearMin")).max(new Date().getFullYear() + 1, t("validation.yearMax")),
+    licensePlate: z.string().min(1, t("validation.licensePlateRequired")),
+    color: z.string().optional(),
+    isElectric: z.boolean().default(false),
+    isDefault: z.boolean().default(false)
+  });
+
+  // Priority levels with translations
+  const priorityLevels = {
+    "1": { label: t("priority.high.label"), description: t("priority.high.description") },
+    "2": { label: t("priority.medium.label"), description: t("priority.medium.description") },
+    "3": { label: t("priority.low.label"), description: t("priority.low.description") }
+  };
+
+  // Building options with translations
+  const buildingOptions = [
+    { value: "Building A", label: t("building.a") },
+    { value: "Building B", label: t("building.b") },
+    { value: "Building C", label: t("building.c") },
+    { value: "Building D", label: t("building.d") }
+  ];
   
   // State for various settings
   const [darkMode, setDarkMode] = useState(false)
@@ -210,15 +226,15 @@ export default function Profile() {
       }
       
       toast({
-        title: "🎉 Successfully Enrolled!",
-        description: "You've been added to the waiting list. You'll be notified when a spot becomes available.",
+        title: t("toast.enrollSuccess.title"),
+        description: t("toast.enrollSuccess.description"),
         variant: "default"
       });
     },
     onError: (error) => {
       toast({
-        title: "Enrollment Failed",
-        description: error instanceof Error ? error.message : "Failed to join waiting list. Please try again.",
+        title: t("toast.enrollFailed.title"),
+        description: error instanceof Error ? error.message : t("toast.enrollFailed.description"),
         variant: "destructive"
       });
     }
@@ -243,15 +259,15 @@ export default function Profile() {
       queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/user", user?.id] });
       setEditWaitingListMode(false);
       toast({
-        title: "Preferences Updated",
-        description: "Your waiting list preferences have been successfully updated.",
+        title: t("toast.preferencesUpdated.title"),
+        description: t("toast.preferencesUpdated.description"),
         variant: "default"
       });
     },
     onError: (error) => {
       toast({
-        title: "Update Failed",
-        description: error instanceof Error ? error.message : "Failed to update preferences. Please try again.",
+        title: t("toast.updateFailed.title"),
+        description: error instanceof Error ? error.message : t("toast.updateFailed.description"),
         variant: "destructive"
       });
     }
@@ -270,15 +286,15 @@ export default function Profile() {
       setIsEnrolledInWaitingList(false);
       setEditWaitingListMode(false);
       toast({
-        title: "Removed from Waiting List",
-        description: "You've been successfully removed from the waiting list.",
+        title: t("toast.removedFromList.title"),
+        description: t("toast.removedFromList.description"),
         variant: "default"
       });
     },
     onError: (error) => {
       toast({
-        title: "Cancellation Failed",
-        description: error instanceof Error ? error.message : "Failed to remove from waiting list. Please try again.",
+        title: t("toast.cancellationFailed.title"),
+        description: error instanceof Error ? error.message : t("toast.cancellationFailed.description"),
         variant: "destructive"
       });
     }
@@ -299,15 +315,15 @@ export default function Profile() {
       setShowAddVehicleDialog(false);
       vehicleForm.reset();
       toast({
-        title: "Vehicle Added",
-        description: "Your vehicle has been successfully added.",
+        title: t("toast.vehicleAdded.title"),
+        description: t("toast.vehicleAdded.description"),
         variant: "default"
       });
     },
     onError: (error) => {
       toast({
-        title: "Failed to Add Vehicle",
-        description: error instanceof Error ? error.message : "Please try again.",
+        title: t("toast.vehicleAddFailed.title"),
+        description: error instanceof Error ? error.message : t("toast.vehicleAddFailed.description"),
         variant: "destructive"
       });
     }
@@ -328,15 +344,15 @@ export default function Profile() {
       setShowAddVehicleDialog(false);
       vehicleForm.reset();
       toast({
-        title: "Vehicle Updated",
-        description: "Your vehicle has been successfully updated.",
+        title: t("toast.vehicleUpdated.title"),
+        description: t("toast.vehicleUpdated.description"),
         variant: "default"
       });
     },
     onError: (error) => {
       toast({
-        title: "Failed to Update Vehicle",
-        description: error instanceof Error ? error.message : "Please try again.",
+        title: t("toast.vehicleUpdateFailed.title"),
+        description: error instanceof Error ? error.message : t("toast.vehicleUpdateFailed.description"),
         variant: "destructive"
       });
     }
@@ -352,15 +368,15 @@ export default function Profile() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "vehicles"] });
       toast({
-        title: "Vehicle Deleted",
-        description: "Your vehicle has been successfully removed.",
+        title: t("toast.vehicleDeleted.title"),
+        description: t("toast.vehicleDeleted.description"),
         variant: "default"
       });
     },
     onError: (error) => {
       toast({
-        title: "Failed to Delete Vehicle",
-        description: error instanceof Error ? error.message : "Please try again.",
+        title: t("toast.vehicleDeleteFailed.title"),
+        description: error instanceof Error ? error.message : t("toast.vehicleDeleteFailed.description"),
         variant: "destructive"
       });
     }
@@ -415,8 +431,8 @@ export default function Profile() {
         context?.previousPreferences
       );
       toast({
-        title: "Failed to Update Preferences",
-        description: "Your notification preferences could not be saved. Please try again.",
+        title: t("toast.notificationUpdateFailed.title"),
+        description: t("toast.notificationUpdateFailed.description"),
         variant: "destructive"
       });
     },
@@ -435,8 +451,8 @@ export default function Profile() {
     return (
       <div className="p-6" data-testid="page-profile">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-2">Profile</h1>
-          <p className="text-muted-foreground">Please log in to view your profile.</p>
+          <h1 className="text-2xl font-bold mb-2">{t("profile.profile")}</h1>
+          <p className="text-muted-foreground">{t("profile.loginPrompt")}</p>
         </div>
       </div>
     )
@@ -445,15 +461,15 @@ export default function Profile() {
   // Create user profile object compatible with UserProfileCard
   const userProfile = {
     id: user.id,
-    name: user.name || "User",
+    name: user.name || t("profile.user"),
     email: user.email,
     phone: user.phone || "(555) 000-0000",
-    department: user.department || "Unknown",
+    department: user.department || t("profile.department"),
     role: user.role,
     vehicles: userVehicles,
     assignedSpots: assignedSpots,
     spotCount: assignedSpots.length || 0,
-    memberSince: user.memberSince || "Recently"
+    memberSince: user.memberSince || t("common.recently")
   }
 
   const handleSaveProfile = () => {
@@ -561,9 +577,9 @@ export default function Profile() {
 
   const handleDeleteVehicle = async (vehicle: Vehicle) => {
     const confirmed = await confirm({
-      title: "Delete Vehicle",
+      title: t("vehicles.delete"),
       description: `Are you sure you want to delete ${vehicle.year} ${vehicle.make} ${vehicle.model}?`,
-      confirmText: "Delete",
+      confirmText: t("common.delete"),
       variant: "destructive"
     });
     
@@ -587,8 +603,8 @@ export default function Profile() {
   const handleViewReports = () => {
     setLocation('/reports')
     toast({
-      title: "Reports Available",
-      description: "View your booking history and parking analytics.",
+      title: t("toast.reportsAvailable.title"),
+      description: t("toast.reportsAvailable.description"),
       variant: "default"
     })
   }
@@ -597,9 +613,9 @@ export default function Profile() {
     <div className="p-6 space-y-6" data-testid="page-profile">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Profile & Settings</h1>
+          <h1 className="text-3xl font-bold">{t("profile.title")}</h1>
           <p className="text-muted-foreground">
-            Manage your account settings, preferences, and personal information.
+            {t("profile.settings")}
           </p>
         </div>
       </div>
@@ -613,10 +629,38 @@ export default function Profile() {
           
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="notifications">{t("profile.tabs.notifications")}</TabsTrigger>
-              <TabsTrigger value="waitingList">{t("profile.tabs.waitingList")}</TabsTrigger>
-              <TabsTrigger value="vehicles">{t("profile.tabs.vehicles")}</TabsTrigger>
-              <TabsTrigger value="appSettings">{t("profile.tabs.appSettings")}</TabsTrigger>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="notifications" data-testid="tab-notifications">{t("profile.tabs.notifications")}</TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t("tooltip.tabs.notifications")}</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="waitingList" data-testid="tab-waiting-list">{t("profile.tabs.waitingList")}</TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t("tooltip.tabs.waitingList")}</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="vehicles" data-testid="tab-vehicles">{t("profile.tabs.vehicles")}</TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t("tooltip.tabs.vehicles")}</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="appSettings" data-testid="tab-app-settings">{t("profile.tabs.appSettings")}</TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t("tooltip.tabs.appSettings")}</p>
+                </TooltipContent>
+              </Tooltip>
             </TabsList>
             
             {/* Notification Settings */}
@@ -625,13 +669,13 @@ export default function Profile() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Bell className="h-5 w-5" />
-                    Notification Preferences
+                    {t("notifications.title")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {isLoadingPreferences ? (
                     <div className="flex items-center justify-center p-8">
-                      <div className="text-sm text-muted-foreground">Loading preferences...</div>
+                      <div className="text-sm text-muted-foreground">{t("profile.loadingPreferences")}</div>
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -639,75 +683,117 @@ export default function Profile() {
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
                             <Mail className="h-4 w-4" />
-                            <Label>Email Notifications</Label>
+                            <Label>{t("notifications.emailNotifications")}</Label>
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            Receive booking confirmations and updates via email
+                            {t("notifications.emailNotifications.description")}
                           </p>
                         </div>
-                        <Switch 
-                          checked={notificationPreferences?.emailNotifications ?? true}
-                          onCheckedChange={(checked) => handlePreferenceChange({ emailNotifications: checked })}
-                          data-testid="switch-email-notifications"
-                          disabled={updateNotificationPreferencesMutation.isPending}
-                        />
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Switch 
+                              checked={notificationPreferences?.emailNotifications ?? true}
+                              onCheckedChange={(checked) => handlePreferenceChange({ emailNotifications: checked })}
+                              data-testid="switch-email-notifications"
+                              disabled={updateNotificationPreferencesMutation.isPending}
+                            />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{t("tooltip.notifications.emailToggle")}</p>
+                          </TooltipContent>
+                        </Tooltip>
                       </div>
                       
                       {(notificationPreferences?.emailNotifications ?? true) && (
                         <>
                           <Separator />
                           <div className="space-y-4 pl-6">
-                            <h4 className="font-medium text-sm text-muted-foreground">Email Notification Types</h4>
+                            <h4 className="font-medium text-sm text-muted-foreground">{t("profile.emailNotificationTypes")}</h4>
                             <div className="space-y-3">
                               <div className="flex items-center justify-between">
-                                <Label htmlFor="booking-confirmations">Booking Confirmations</Label>
-                                <Switch 
-                                  id="booking-confirmations" 
-                                  checked={notificationPreferences?.bookingConfirmations ?? true}
-                                  onCheckedChange={(checked) => handlePreferenceChange({ bookingConfirmations: checked })}
-                                  data-testid="switch-booking-confirmations"
-                                  disabled={updateNotificationPreferencesMutation.isPending}
-                                />
+                                <Label htmlFor="booking-confirmations">{t("notifications.bookingConfirmations")}</Label>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Switch 
+                                      id="booking-confirmations" 
+                                      checked={notificationPreferences?.bookingConfirmations ?? true}
+                                      onCheckedChange={(checked) => handlePreferenceChange({ bookingConfirmations: checked })}
+                                      data-testid="switch-booking-confirmations"
+                                      disabled={updateNotificationPreferencesMutation.isPending}
+                                    />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{t("tooltip.notifications.bookingConfirmations")}</p>
+                                  </TooltipContent>
+                                </Tooltip>
                               </div>
                               <div className="flex items-center justify-between">
-                                <Label htmlFor="payment-reminders">Payment Reminders</Label>
-                                <Switch 
-                                  id="payment-reminders" 
-                                  checked={notificationPreferences?.paymentReminders ?? true}
-                                  onCheckedChange={(checked) => handlePreferenceChange({ paymentReminders: checked })}
-                                  data-testid="switch-payment-reminders"
-                                  disabled={updateNotificationPreferencesMutation.isPending}
-                                />
+                                <Label htmlFor="payment-reminders">{t("notifications.paymentReminders")}</Label>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Switch 
+                                      id="payment-reminders" 
+                                      checked={notificationPreferences?.paymentReminders ?? true}
+                                      onCheckedChange={(checked) => handlePreferenceChange({ paymentReminders: checked })}
+                                      data-testid="switch-payment-reminders"
+                                      disabled={updateNotificationPreferencesMutation.isPending}
+                                    />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{t("tooltip.notifications.paymentReminders")}</p>
+                                  </TooltipContent>
+                                </Tooltip>
                               </div>
                               <div className="flex items-center justify-between">
-                                <Label htmlFor="spot-availability">Spot Availability Updates</Label>
-                                <Switch 
-                                  id="spot-availability" 
-                                  checked={notificationPreferences?.spotAvailability ?? true}
-                                  onCheckedChange={(checked) => handlePreferenceChange({ spotAvailability: checked })}
-                                  data-testid="switch-spot-availability"
-                                  disabled={updateNotificationPreferencesMutation.isPending}
-                                />
+                                <Label htmlFor="spot-availability">{t("notifications.spotAvailability")}</Label>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Switch 
+                                      id="spot-availability" 
+                                      checked={notificationPreferences?.spotAvailability ?? true}
+                                      onCheckedChange={(checked) => handlePreferenceChange({ spotAvailability: checked })}
+                                      data-testid="switch-spot-availability"
+                                      disabled={updateNotificationPreferencesMutation.isPending}
+                                    />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{t("tooltip.notifications.spotAvailability")}</p>
+                                  </TooltipContent>
+                                </Tooltip>
                               </div>
                               <div className="flex items-center justify-between">
                                 <Label htmlFor="weekly-reports">Weekly Summary Reports</Label>
-                                <Switch 
-                                  id="weekly-reports" 
-                                  checked={notificationPreferences?.weeklyReports ?? true}
-                                  onCheckedChange={(checked) => handlePreferenceChange({ weeklyReports: checked })}
-                                  data-testid="switch-weekly-reports"
-                                  disabled={updateNotificationPreferencesMutation.isPending}
-                                />
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Switch 
+                                      id="weekly-reports" 
+                                      checked={notificationPreferences?.weeklyReports ?? true}
+                                      onCheckedChange={(checked) => handlePreferenceChange({ weeklyReports: checked })}
+                                      data-testid="switch-weekly-reports"
+                                      disabled={updateNotificationPreferencesMutation.isPending}
+                                    />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{t("tooltip.notifications.weeklyReports")}</p>
+                                  </TooltipContent>
+                                </Tooltip>
                               </div>
                               <div className="flex items-center justify-between">
                                 <Label htmlFor="system-maintenance">System Maintenance Alerts</Label>
-                                <Switch 
-                                  id="system-maintenance" 
-                                  checked={notificationPreferences?.systemMaintenance ?? true}
-                                  onCheckedChange={(checked) => handlePreferenceChange({ systemMaintenance: checked })}
-                                  data-testid="switch-system-maintenance"
-                                  disabled={updateNotificationPreferencesMutation.isPending}
-                                />
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Switch 
+                                      id="system-maintenance" 
+                                      checked={notificationPreferences?.systemMaintenance ?? true}
+                                      onCheckedChange={(checked) => handlePreferenceChange({ systemMaintenance: checked })}
+                                      data-testid="switch-system-maintenance"
+                                      disabled={updateNotificationPreferencesMutation.isPending}
+                                    />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{t("tooltip.notifications.systemMaintenance")}</p>
+                                  </TooltipContent>
+                                </Tooltip>
                               </div>
                             </div>
                           </div>
@@ -779,18 +865,25 @@ export default function Profile() {
                       <CarIcon className="h-5 w-5" />
                       {t("vehicles.title")}
                     </CardTitle>
-                    <Button
-                      onClick={() => {
-                        setEditingVehicle(null);
-                        vehicleForm.reset();
-                        setShowAddVehicleDialog(true);
-                      }}
-                      size="sm"
-                      data-testid="button-add-vehicle"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      {t("vehicles.addVehicle")}
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          onClick={() => {
+                            setEditingVehicle(null);
+                            vehicleForm.reset();
+                            setShowAddVehicleDialog(true);
+                          }}
+                          size="sm"
+                          data-testid="button-add-vehicle"
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          {t("vehicles.addVehicle")}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{t("tooltip.vehicles.add")}</p>
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -819,22 +912,57 @@ export default function Profile() {
                               </p>
                             </div>
                             <div className="flex gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEditVehicle(vehicle)}
-                                data-testid={`button-edit-vehicle-${vehicle.id}`}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDeleteVehicle(vehicle)}
-                                data-testid={`button-delete-vehicle-${vehicle.id}`}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleEditVehicle(vehicle)}
+                                    data-testid={`button-edit-vehicle-${vehicle.id}`}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{t("tooltip.vehicles.edit")}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              <div className="flex items-center gap-1">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleDeleteVehicle(vehicle)}
+                                      data-testid={`button-delete-vehicle-${vehicle.id}`}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{t("tooltip.vehicles.delete")}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button 
+                                      size="sm" 
+                                      variant="ghost" 
+                                      data-testid={`info-delete-vehicle-${vehicle.id}`}
+                                    >
+                                      <Info className="h-3 w-3" />
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-80" data-testid={`popover-delete-vehicle-${vehicle.id}`}>
+                                    <div className="space-y-2">
+                                      <h4 className="font-semibold text-destructive">{t("info.vehicles.delete.title")}</h4>
+                                      <p className="text-sm text-muted-foreground">
+                                        {t("info.vehicles.delete.content")}
+                                      </p>
+                                    </div>
+                                  </PopoverContent>
+                                </Popover>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -845,17 +973,24 @@ export default function Profile() {
                       <CarIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                       <h3 className="text-lg font-medium mb-2">{t("vehicles.noVehicles")}</h3>
                       <p className="text-muted-foreground mb-4">{t("vehicles.addFirst")}</p>
-                      <Button
-                        onClick={() => {
-                          setEditingVehicle(null);
-                          vehicleForm.reset();
-                          setShowAddVehicleDialog(true);
-                        }}
-                        data-testid="button-add-first-vehicle"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        {t("vehicles.addVehicle")}
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            onClick={() => {
+                              setEditingVehicle(null);
+                              vehicleForm.reset();
+                              setShowAddVehicleDialog(true);
+                            }}
+                            data-testid="button-add-first-vehicle"
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            {t("vehicles.addVehicle")}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{t("tooltip.vehicles.add")}</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
                   )}
                 </CardContent>
@@ -880,15 +1015,22 @@ export default function Profile() {
                           {t("appSettings.language.description")}
                         </p>
                       </div>
-                      <Select value={language} onValueChange={setLanguage}>
-                        <SelectTrigger className="w-[150px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="en">{t("appSettings.language.english")}</SelectItem>
-                          <SelectItem value="fr">{t("appSettings.language.french")}</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Select value={language} onValueChange={setLanguage}>
+                            <SelectTrigger className="w-[150px]" data-testid="select-language">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="en">{t("appSettings.language.english")}</SelectItem>
+                              <SelectItem value="fr">{t("appSettings.language.french")}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{t("tooltip.settings.language")}</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
                     
                     <Separator />
@@ -900,16 +1042,23 @@ export default function Profile() {
                           {t("appSettings.theme.description")}
                         </p>
                       </div>
-                      <Select value={theme} onValueChange={setTheme}>
-                        <SelectTrigger className="w-[150px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="light">{t("appSettings.theme.light")}</SelectItem>
-                          <SelectItem value="dark">{t("appSettings.theme.dark")}</SelectItem>
-                          <SelectItem value="system">{t("appSettings.theme.system")}</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Select value={theme} onValueChange={setTheme}>
+                            <SelectTrigger className="w-[150px]" data-testid="select-theme">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="light">{t("appSettings.theme.light")}</SelectItem>
+                              <SelectItem value="dark">{t("appSettings.theme.dark")}</SelectItem>
+                              <SelectItem value="system">{t("appSettings.theme.system")}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{t("tooltip.settings.theme")}</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
                   </div>
                 </CardContent>
@@ -941,7 +1090,7 @@ export default function Profile() {
                                 <Input placeholder="e.g., Tesla" {...field} data-testid="input-vehicle-make" />
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>Enter vehicle manufacturer</p>
+                                <p>{t("tooltip.vehicles.make")}</p>
                               </TooltipContent>
                             </Tooltip>
                           </FormControl>
@@ -961,7 +1110,7 @@ export default function Profile() {
                                 <Input placeholder="e.g., Model 3" {...field} data-testid="input-vehicle-model" />
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>Enter vehicle model</p>
+                                <p>{t("tooltip.vehicles.model")}</p>
                               </TooltipContent>
                             </Tooltip>
                           </FormControl>
@@ -989,7 +1138,7 @@ export default function Profile() {
                                 />
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>Enter vehicle year (1990 or later)</p>
+                                <p>{t("tooltip.vehicles.year")}</p>
                               </TooltipContent>
                             </Tooltip>
                           </FormControl>
@@ -1009,7 +1158,7 @@ export default function Profile() {
                                 <Input {...field} data-testid="input-vehicle-license" />
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>Enter license plate number</p>
+                                <p>{t("tooltip.vehicles.licensePlate")}</p>
                               </TooltipContent>
                             </Tooltip>
                           </FormControl>
@@ -1031,7 +1180,7 @@ export default function Profile() {
                               <Input {...field} data-testid="input-vehicle-color" />
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Enter vehicle color (optional)</p>
+                              <p>{t("tooltip.vehicles.color")}</p>
                             </TooltipContent>
                           </Tooltip>
                         </FormControl>
@@ -1050,11 +1199,18 @@ export default function Profile() {
                             <FormLabel>{t("vehicles.isElectric")}</FormLabel>
                           </div>
                           <FormControl>
-                            <Switch 
-                              checked={field.value} 
-                              onCheckedChange={field.onChange}
-                              data-testid="switch-vehicle-electric"
-                            />
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Switch 
+                                  checked={field.value} 
+                                  onCheckedChange={field.onChange}
+                                  data-testid="switch-vehicle-electric"
+                                />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{t("tooltip.vehicles.isElectric")}</p>
+                              </TooltipContent>
+                            </Tooltip>
                           </FormControl>
                         </FormItem>
                       )}
@@ -1069,11 +1225,18 @@ export default function Profile() {
                             <FormLabel>{t("vehicles.isDefault")}</FormLabel>
                           </div>
                           <FormControl>
-                            <Switch 
-                              checked={field.value} 
-                              onCheckedChange={field.onChange}
-                              data-testid="switch-vehicle-default"
-                            />
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Switch 
+                                  checked={field.value} 
+                                  onCheckedChange={field.onChange}
+                                  data-testid="switch-vehicle-default"
+                                />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{t("tooltip.vehicles.isDefault")}</p>
+                              </TooltipContent>
+                            </Tooltip>
                           </FormControl>
                         </FormItem>
                       )}
@@ -1081,19 +1244,33 @@ export default function Profile() {
                   </div>
 
                   <div className="flex justify-end gap-2 pt-4">
-                    <Button type="button" variant="outline" onClick={() => setShowAddVehicleDialog(false)}>
-                      {t("vehicles.cancel")}
-                    </Button>
-                    <Button 
-                      type="submit" 
-                      disabled={addVehicleMutation.isPending || updateVehicleMutation.isPending}
-                      data-testid="button-save-vehicle"
-                    >
-                      {(addVehicleMutation.isPending || updateVehicleMutation.isPending) && (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      )}
-                      {t("vehicles.save")}
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button type="button" variant="outline" onClick={() => setShowAddVehicleDialog(false)} data-testid="button-cancel-vehicle">
+                          {t("vehicles.cancel")}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{t("tooltip.profile.editCancel")}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          type="submit" 
+                          disabled={addVehicleMutation.isPending || updateVehicleMutation.isPending}
+                          data-testid="button-save-vehicle"
+                        >
+                          {(addVehicleMutation.isPending || updateVehicleMutation.isPending) && (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          )}
+                          {t("vehicles.save")}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{t("tooltip.profile.editSave")}</p>
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
                 </form>
               </Form>
@@ -1102,74 +1279,293 @@ export default function Profile() {
         </div>
 
                     <div className="flex items-center justify-between">
-                      <div>
-                        <Label>Profile Visibility</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Who can see your profile information
-                        </p>
+                      <div className="flex items-center gap-2">
+                        <div>
+                          <Label>{t("profile.profileVisibility")}</Label>
+                          <p className="text-sm text-muted-foreground">
+                            {t("profile.profileVisibilityDesc")}
+                          </p>
+                        </div>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button size="icon" variant="ghost" data-testid="info-profile-visibility" aria-label={t("info.security.profileVisibility.title")}>
+                                  <Info className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{t("tooltip.info.profileVisibility")}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-80" data-testid="popover-profile-visibility">
+                            <div className="space-y-2">
+                              <h4 className="font-semibold">{t("info.security.profileVisibility.title")}</h4>
+                              <p className="text-sm text-muted-foreground">
+                                {t("info.security.profileVisibility.content")}
+                              </p>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
                       </div>
-                      <Select defaultValue="colleagues">
-                        <SelectTrigger className="w-[200px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="colleagues">BCI Employees Only</SelectItem>
-                          <SelectItem value="private">Private</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Select defaultValue="colleagues">
+                            <SelectTrigger className="w-[200px]" data-testid="select-profile-visibility">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="colleagues">{t("profile.bciEmployeesOnly")}</SelectItem>
+                              <SelectItem value="private">{t("profile.private")}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{t("tooltip.security.profileVisibility")}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div>
+                          <Label>{t("profile.contactSharing")}</Label>
+                          <p className="text-sm text-muted-foreground">
+                            {t("profile.contactSharingDesc")}
+                          </p>
+                        </div>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button size="icon" variant="ghost" data-testid="info-contact-sharing" aria-label={t("info.security.contactSharing.title")}>
+                                  <Info className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{t("tooltip.info.contactSharing")}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-80" data-testid="popover-contact-sharing">
+                            <div className="space-y-2">
+                              <h4 className="font-semibold">{t("info.security.contactSharing.title")}</h4>
+                              <p className="text-sm text-muted-foreground">
+                                {t("info.security.contactSharing.content")}
+                              </p>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Switch defaultChecked data-testid="switch-contact-sharing" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{t("tooltip.security.dataSharing")}</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
                     
                     <Separator />
                     
                     <div className="flex items-center justify-between">
                       <div>
-                        <Label>Contact Information Sharing</Label>
+                        <Label>{t("profile.bookingHistory")}</Label>
                         <p className="text-sm text-muted-foreground">
-                          Share your contact info with spot owners/renters
+                          {t("profile.bookingHistoryDesc")}
                         </p>
                       </div>
-                      <Switch defaultChecked />
-                    </div>
-                    
-                    <Separator />
-                    
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label>Booking History Visibility</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Allow others to see your booking statistics
-                        </p>
-                      </div>
-                      <Switch />
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Switch data-testid="switch-booking-history" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{t("tooltip.security.dataSharing")}</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
                   </div>
                   
                   <Separator />
                   
                   <div className="space-y-4">
-                    <h4 className="font-medium">Security Settings</h4>
+                    <h4 className="font-medium">{t("profile.securitySettings")}</h4>
                     <div className="flex items-center justify-between">
-                      <div>
-                        <Label>Two-Factor Authentication</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Add an extra layer of security to your account
-                        </p>
+                      <div className="flex items-center gap-2">
+                        <div>
+                          <Label>{t("profile.twoFactor")}</Label>
+                          <p className="text-sm text-muted-foreground">
+                            {t("profile.twoFactorDesc")}
+                          </p>
+                        </div>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button size="icon" variant="ghost" data-testid="info-2fa" aria-label={t("info.security.twoFactor.title")}>
+                                  <Info className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{t("tooltip.info.twoFactor")}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-80" data-testid="popover-2fa">
+                            <div className="space-y-2">
+                              <h4 className="font-semibold">{t("info.security.twoFactor.title")}</h4>
+                              <p className="text-sm text-muted-foreground">
+                                {t("info.security.twoFactor.content")}
+                              </p>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
                       </div>
-                      <Badge variant="outline">Not Enabled</Badge>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge variant="outline" data-testid="badge-2fa-status">{t("profile.notEnabled")}</Badge>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{t("tooltip.security.twoFactor")}</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
-                    <Button variant="outline" className="w-full">
-                      <Key className="h-4 w-4 mr-2" />
-                      Enable Two-Factor Authentication
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="outline" className="flex-1" data-testid="button-enable-2fa">
+                            <Key className="h-4 w-4 mr-2" />
+                            {t("profile.enableTwoFactor")}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{t("tooltip.security.twoFactor")}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
                   </div>
                   
                   <Separator />
                   
                   <div className="space-y-2">
-                    <h4 className="font-medium">Recent Login Activity</h4>
+                    <h4 className="font-medium">{t("profile.recentActivity")}</h4>
                     <div className="text-sm text-muted-foreground space-y-1">
-                      <p>Last login: January 15, 2024 at 9:30 AM (Current session)</p>
-                      <p>Previous login: January 14, 2024 at 8:15 AM</p>
+                      <p>{t("profile.lastLogin", { date: "January 15, 2024", time: "9:30 AM" })}</p>
+                      <p>{t("profile.previousLogin", { date: "January 14, 2024", time: "8:15 AM" })}</p>
+                    </div>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div className="space-y-4">
+                    <h4 className="font-medium">{t("profile.accountActions")}</h4>
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label>{t("profile.changePassword")}</Label>
+                          <p className="text-sm text-muted-foreground">
+                            {t("profile.changePasswordDesc")}
+                          </p>
+                        </div>
+                        <HoverCard>
+                          <HoverCardTrigger asChild>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="outline" onClick={handleChangePassword} data-testid="button-change-password" aria-label={t("profile.changePassword")}>
+                                  <Key className="h-4 w-4 mr-2" />
+                                  {t("profile.changePassword")}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{t("tooltip.profile.changePassword")}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </HoverCardTrigger>
+                          <HoverCardContent className="w-80" data-testid="hovercard-change-password">
+                            <div className="space-y-2">
+                              <h4 className="font-semibold">{t("info.security.changePassword.title")}</h4>
+                              <p className="text-sm text-muted-foreground">
+                                {t("info.security.changePassword.content")}
+                              </p>
+                            </div>
+                          </HoverCardContent>
+                        </HoverCard>
+                      </div>
+                      
+                      <Separator />
+                      
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label>{t("profile.exportData")}</Label>
+                          <p className="text-sm text-muted-foreground">
+                            {t("profile.exportDataDesc")}
+                          </p>
+                        </div>
+                        <HoverCard>
+                          <HoverCardTrigger asChild>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="outline" onClick={handleExportData} data-testid="button-export-data" aria-label={t("profile.exportData")}>
+                                  <Download className="h-4 w-4 mr-2" />
+                                  {t("profile.exportData")}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{t("tooltip.profile.exportData")}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </HoverCardTrigger>
+                          <HoverCardContent className="w-80" data-testid="hovercard-export-data">
+                            <div className="space-y-2">
+                              <h4 className="font-semibold">{t("info.security.exportData.title")}</h4>
+                              <p className="text-sm text-muted-foreground">
+                                {t("info.security.exportData.content")}
+                              </p>
+                            </div>
+                          </HoverCardContent>
+                        </HoverCard>
+                      </div>
+                      
+                      <Separator />
+                      
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label className="text-destructive">{t("profile.deleteAccount")}</Label>
+                          <p className="text-sm text-muted-foreground">
+                            {t("profile.deleteAccountDesc")}
+                          </p>
+                        </div>
+                        <HoverCard>
+                          <HoverCardTrigger asChild>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="destructive" onClick={handleDeleteAccount} data-testid="button-delete-account" aria-label={t("profile.deleteAccount")}>
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  {t("profile.deleteAccount")}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{t("tooltip.profile.deleteAccount")}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </HoverCardTrigger>
+                          <HoverCardContent className="w-80" data-testid="hovercard-delete-account">
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <AlertTriangle className="h-5 w-5 text-destructive" />
+                                <h4 className="font-semibold text-destructive">{t("info.security.deleteAccount.title")}</h4>
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                {t("info.security.deleteAccount.content")}
+                              </p>
+                            </div>
+                          </HoverCardContent>
+                        </HoverCard>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -1184,14 +1580,14 @@ export default function Profile() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <CalendarClock className="h-5 w-5" />
-                Parking Waiting List
+                {t("waitingList.title")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {isLoadingWaitingList ? (
                 <div className="flex items-center justify-center py-4">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="ml-2 text-sm">Loading...</span>
+                  <span className="ml-2 text-sm">{t("common.loading")}</span>
                 </div>
               ) : waitingListEntry?.status === "active" ? (
                 <div className="space-y-3">
@@ -1202,10 +1598,10 @@ export default function Profile() {
                           <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5" />
                           <div className="space-y-1">
                             <h4 className="text-sm font-medium text-green-900 dark:text-green-100">
-                              You're on the list!
+                              {t("waitingList.enrolled")}
                             </h4>
                             <p className="text-xs text-green-700 dark:text-green-300">
-                              Priority: {priorityLevels[waitingListEntry?.priority?.toString() as keyof typeof priorityLevels]?.label}
+                              {t("waitingList.priority")}: {priorityLevels[waitingListEntry?.priority?.toString() as keyof typeof priorityLevels]?.label}
                             </p>
                           </div>
                         </div>
@@ -1215,36 +1611,50 @@ export default function Profile() {
                         <p><strong>Building:</strong> {waitingListEntry?.preferredBuilding}</p>
                       </div>
                       <div className="flex gap-1">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className="text-xs"
-                          onClick={() => {
-                            setEditWaitingListMode(true);
-                            waitingListForm.reset({
-                              preferredSpotType: waitingListEntry?.preferredSpotType as any,
-                              preferredBuilding: waitingListEntry?.preferredBuilding || "",
-                              priority: waitingListEntry?.priority?.toString() as any,
-                              reason: waitingListEntry?.reason || ""
-                            });
-                          }}
-                          data-testid="button-edit-waiting-list"
-                        >
-                          Edit
-                        </Button>
-                        <Button 
-                          variant="destructive" 
-                          size="sm"
-                          className="text-xs"
-                          onClick={() => cancelWaitingListMutation.mutate()}
-                          disabled={cancelWaitingListMutation.isPending}
-                          data-testid="button-leave-waiting-list"
-                        >
-                          {cancelWaitingListMutation.isPending ? (
-                            <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                          ) : null}
-                          Leave
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className="text-xs"
+                              onClick={() => {
+                                setEditWaitingListMode(true);
+                                waitingListForm.reset({
+                                  preferredSpotType: waitingListEntry?.preferredSpotType as any,
+                                  preferredBuilding: waitingListEntry?.preferredBuilding || "",
+                                  priority: waitingListEntry?.priority?.toString() as any,
+                                  reason: waitingListEntry?.reason || ""
+                                });
+                              }}
+                              data-testid="button-edit-waiting-list"
+                            >
+                              {t("waitingList.edit")}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{t("tooltip.waitingList.cancel")}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              variant="destructive" 
+                              size="sm"
+                              className="text-xs"
+                              onClick={() => cancelWaitingListMutation.mutate()}
+                              disabled={cancelWaitingListMutation.isPending}
+                              data-testid="button-leave-waiting-list"
+                            >
+                              {cancelWaitingListMutation.isPending ? (
+                                <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                              ) : null}
+                              {t("waitingList.leave")}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{t("tooltip.waitingList.cancel")}</p>
+                          </TooltipContent>
+                        </Tooltip>
                       </div>
                     </>
                   ) : (
@@ -1255,7 +1665,7 @@ export default function Profile() {
                       >
                         <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/50 rounded-lg p-3">
                           <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
-                            Edit Waiting List Preferences
+                            {t("waitingList.editPreferences")}
                           </h4>
                         </div>
                         
@@ -1264,17 +1674,24 @@ export default function Profile() {
                           name="preferredSpotType"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-xs">Preferred Spot Type</FormLabel>
+                              <FormLabel className="text-xs">{t("waitingList.form.preferredSpotType")}</FormLabel>
                               <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
-                                  <SelectTrigger className="h-8">
-                                    <SelectValue placeholder="Select spot type" />
-                                  </SelectTrigger>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <SelectTrigger className="h-8" data-testid="select-spot-type">
+                                        <SelectValue placeholder={t("placeholder.selectSpotType")} />
+                                      </SelectTrigger>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>{t("tooltip.waitingList.spotType")}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="regular">Regular</SelectItem>
-                                  <SelectItem value="electric">Electric</SelectItem>
-                                  <SelectItem value="accessible">Accessible</SelectItem>
+                                  <SelectItem value="regular">{t("spotType.regular")}</SelectItem>
+                                  <SelectItem value="electric">{t("spotType.electric")}</SelectItem>
+                                  <SelectItem value="accessible">{t("spotType.accessible")}</SelectItem>
                                 </SelectContent>
                               </Select>
                               <FormMessage />
@@ -1287,12 +1704,19 @@ export default function Profile() {
                           name="preferredBuilding"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-xs">Preferred Building</FormLabel>
+                              <FormLabel className="text-xs">{t("waitingList.form.preferredBuilding")}</FormLabel>
                               <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
-                                  <SelectTrigger className="h-8">
-                                    <SelectValue placeholder="Select building" />
-                                  </SelectTrigger>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <SelectTrigger className="h-8" data-testid="select-building">
+                                        <SelectValue placeholder={t("placeholder.selectBuilding")} />
+                                      </SelectTrigger>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>{t("tooltip.waitingList.building")}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
                                 </FormControl>
                                 <SelectContent>
                                   {buildingOptions.map((building) => (
@@ -1312,12 +1736,36 @@ export default function Profile() {
                           name="priority"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-xs">Priority Level</FormLabel>
+                              <div className="flex items-center gap-2">
+                                <FormLabel className="text-xs">{t("waitingList.form.priority")}</FormLabel>
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button size="sm" variant="ghost" data-testid="info-priority-guidelines">
+                                      <Info className="h-3 w-3" />
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-80" data-testid="popover-priority-guidelines">
+                                    <div className="space-y-2">
+                                      <h4 className="font-semibold">{t("info.waitingList.priority.title")}</h4>
+                                      <p className="text-sm text-muted-foreground">
+                                        {t("info.waitingList.priority.content")}
+                                      </p>
+                                    </div>
+                                  </PopoverContent>
+                                </Popover>
+                              </div>
                               <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
-                                  <SelectTrigger className="h-8">
-                                    <SelectValue placeholder="Select priority" />
-                                  </SelectTrigger>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <SelectTrigger className="h-8" data-testid="select-priority">
+                                        <SelectValue placeholder={t("placeholder.selectPriority")} />
+                                      </SelectTrigger>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>{t("tooltip.waitingList.priority")}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
                                 </FormControl>
                                 <SelectContent>
                                   {Object.entries(priorityLevels).map(([value, config]) => (
@@ -1337,13 +1785,21 @@ export default function Profile() {
                           name="reason"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-xs">Reason (Optional)</FormLabel>
+                              <FormLabel className="text-xs">{t("waitingList.form.reason")} ({t("common.optional")})</FormLabel>
                               <FormControl>
-                                <Textarea 
-                                  placeholder="Brief reason for parking need..."
-                                  className="resize-none h-16 text-xs"
-                                  {...field}
-                                />
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Textarea 
+                                      placeholder={t("placeholder.briefReason")}
+                                      className="resize-none h-16 text-xs"
+                                      data-testid="textarea-reason"
+                                      {...field}
+                                    />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{t("tooltip.waitingList.reason")}</p>
+                                  </TooltipContent>
+                                </Tooltip>
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -1351,28 +1807,42 @@ export default function Profile() {
                         />
 
                         <div className="flex gap-2">
-                          <Button 
-                            type="button"
-                            variant="outline" 
-                            size="sm"
-                            className="text-xs flex-1"
-                            onClick={() => setEditWaitingListMode(false)}
-                            data-testid="button-cancel-edit-waiting-list"
-                          >
-                            Cancel
-                          </Button>
-                          <Button 
-                            type="submit"
-                            size="sm"
-                            className="text-xs flex-1"
-                            disabled={updateWaitingListMutation.isPending}
-                            data-testid="button-save-waiting-list"
-                          >
-                            {updateWaitingListMutation.isPending ? (
-                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                            ) : null}
-                            Save Changes
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                type="button"
+                                variant="outline" 
+                                size="sm"
+                                className="text-xs flex-1"
+                                onClick={() => setEditWaitingListMode(false)}
+                                data-testid="button-cancel-edit-waiting-list"
+                              >
+                                {t("waitingList.form.cancel")}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{t("tooltip.waitingList.cancel")}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                type="submit"
+                                size="sm"
+                                className="text-xs flex-1"
+                                disabled={updateWaitingListMutation.isPending}
+                                data-testid="button-save-waiting-list"
+                              >
+                                {updateWaitingListMutation.isPending ? (
+                                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                ) : null}
+                                {t("waitingList.form.save")}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{t("tooltip.waitingList.save")}</p>
+                            </TooltipContent>
+                          </Tooltip>
                         </div>
                       </form>
                     </Form>
@@ -1385,33 +1855,41 @@ export default function Profile() {
                       <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5" />
                       <div className="space-y-1">
                         <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                          Join the Waiting List
+                          {t("waitingList.joinTitle")}
                         </h4>
                         <p className="text-xs text-blue-700 dark:text-blue-300">
-                          Get notified when spots become available.
+                          {t("waitingList.joinDescription")}
                         </p>
                       </div>
                     </div>
                   </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="w-full text-xs"
-                    onClick={() => createWaitingListMutation.mutate({
-                      preferredSpotType: "regular",
-                      preferredBuilding: "Building A",
-                      priority: "2",
-                      reason: "Daily commute"
-                    })}
-                    disabled={createWaitingListMutation.isPending}
-                  >
-                    {createWaitingListMutation.isPending ? (
-                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                    ) : (
-                      <Plus className="h-3 w-3 mr-1" />
-                    )}
-                    Join List
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="w-full text-xs"
+                        onClick={() => createWaitingListMutation.mutate({
+                          preferredSpotType: "regular",
+                          preferredBuilding: "Building A",
+                          priority: "2",
+                          reason: "Daily commute"
+                        })}
+                        disabled={createWaitingListMutation.isPending}
+                        data-testid="button-join-waiting-list"
+                      >
+                        {createWaitingListMutation.isPending ? (
+                          <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                        ) : (
+                          <Plus className="h-3 w-3 mr-1" />
+                        )}
+                        {t("waitingList.enrollButton")}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{t("tooltip.waitingList.enroll")}</p>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
               )}
             </CardContent>
@@ -1425,7 +1903,7 @@ export default function Profile() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />
-              Edit Profile
+              {t("profile.editProfile")}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-6">
@@ -1436,11 +1914,18 @@ export default function Profile() {
                 </AvatarFallback>
               </Avatar>
               <div className="space-y-2">
-                <Button variant="outline" size="sm">
-                  Change Photo
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" size="sm" data-testid="button-change-photo">
+                      {t("profile.changePhoto")}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{t("tooltip.profile.changePhoto")}</p>
+                  </TooltipContent>
+                </Tooltip>
                 <p className="text-xs text-muted-foreground">
-                  JPG, PNG or GIF. Max size 2MB.
+                  {t("profile.photoFormat")}
                 </p>
               </div>
             </div>
@@ -1449,42 +1934,92 @@ export default function Profile() {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="full-name">Full Name</Label>
-                <Input id="full-name" defaultValue={user?.name} />
+                <Label htmlFor="full-name">{t("profile.fullName")}</Label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Input id="full-name" defaultValue={user?.name} data-testid="input-full-name" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{t("tooltip.profile.fullName")}</p>
+                  </TooltipContent>
+                </Tooltip>
               </div>
               <div>
-                <Label htmlFor="email">Email Address</Label>
-                <Input id="email" defaultValue={user?.email} disabled />
+                <Label htmlFor="email">{t("profile.emailAddress")}</Label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Input id="email" defaultValue={user?.email} disabled data-testid="input-email" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{t("tooltip.profile.email")}</p>
+                  </TooltipContent>
+                </Tooltip>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Contact IT to change your email address
+                  {t("profile.managedByIT")}
                 </p>
               </div>
               <div>
-                <Label htmlFor="phone">Phone Number</Label>
-                <Input id="phone" defaultValue={user?.phone || "(555) 000-0000"} />
+                <Label htmlFor="phone">{t("profile.phoneNumber")}</Label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Input id="phone" defaultValue={user?.phone || "(555) 000-0000"} data-testid="input-phone" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{t("tooltip.profile.phone")}</p>
+                  </TooltipContent>
+                </Tooltip>
               </div>
               <div>
-                <Label htmlFor="department">Department</Label>
-                <Input id="department" defaultValue={user?.department || "Unknown"} disabled />
+                <Label htmlFor="department">{t("profile.department")}</Label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Input id="department" defaultValue={user?.department || "Unknown"} disabled data-testid="input-department" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{t("tooltip.profile.department")}</p>
+                  </TooltipContent>
+                </Tooltip>
               </div>
             </div>
             
             <div>
-              <Label htmlFor="bio">Bio (Optional)</Label>
-              <Textarea 
-                id="bio" 
-                placeholder="Tell others about yourself..."
-                className="mt-1"
-              />
+              <Label htmlFor="bio">{t("profile.bio")}</Label>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Textarea 
+                    id="bio" 
+                    placeholder={t("profile.bioPlaceholder")}
+                    className="mt-1"
+                    data-testid="textarea-bio"
+                  />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t("tooltip.profile.bio")}</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
             
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSaveProfile} data-testid="button-save-profile">
-                Save Changes
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" onClick={() => setEditDialogOpen(false)} data-testid="button-cancel-profile-edit">
+                    {t("common.cancel")}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t("tooltip.profile.editCancel")}</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button onClick={handleSaveProfile} data-testid="button-save-profile">
+                    {t("profile.saveChanges")}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t("tooltip.profile.editSave")}</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
           </div>
         </DialogContent>

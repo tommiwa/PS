@@ -2,6 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
+import { useLanguage } from "@/hooks/use-language"
 import { Mail, Phone, Car, Settings, MapPin, Plus, Edit3, Trash2 } from "lucide-react"
 
 export interface Vehicle {
@@ -51,15 +53,16 @@ export function UserProfileCard({
   onEditProfile, 
   showEditButton = true 
 }: UserProfileCardProps) {
+  const { t } = useLanguage()
   const getRoleBadge = () => {
     const roleConfig = {
-      admin: { variant: "default" as const, label: "Administrator" },
-      owner: { variant: "secondary" as const, label: "Spot Owner" },
-      renter: { variant: "outline" as const, label: "Renter" },
+      admin: { variant: "default" as const, label: t("role.admin") },
+      owner: { variant: "secondary" as const, label: t("role.owner") },
+      renter: { variant: "outline" as const, label: t("role.renter") },
     }
     
     const config = roleConfig[user.role]
-    return <Badge variant={config.variant}>{config.label}</Badge>
+    return <Badge variant={config.variant} data-testid={`badge-role-${user.role}`}>{config.label}</Badge>
   }
 
   const getInitials = (name: string) => {
@@ -92,20 +95,27 @@ export function UserProfileCard({
             {user.spotCount && (
               <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
                 <MapPin className="h-4 w-4" />
-                {user.spotCount} parking spot{user.spotCount !== 1 ? 's' : ''} owned
+                {t("profile.spotsOwned", { count: user.spotCount?.toString() || '0' })}
               </div>
             )}
           </div>
           {showEditButton && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleEdit}
-              data-testid="button-edit-profile"
-            >
-              <Settings className="h-4 w-4" />
-              Edit
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleEdit}
+                  data-testid="button-edit-profile"
+                >
+                  <Settings className="h-4 w-4" />
+                  {t("common.edit")}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{t("tooltip.profile.editSave")}</p>
+              </TooltipContent>
+            </Tooltip>
           )}
         </div>
       </CardHeader>
@@ -116,7 +126,7 @@ export function UserProfileCard({
           <div className="flex items-center gap-3">
             <Mail className="h-4 w-4 text-muted-foreground" />
             <div>
-              <div className="text-sm font-medium">Email</div>
+              <div className="text-sm font-medium">{t("profile.emailAddress")}</div>
               <div className="text-sm text-muted-foreground" data-testid="text-user-email">
                 {user.email}
               </div>
@@ -126,7 +136,7 @@ export function UserProfileCard({
           <div className="flex items-center gap-3">
             <Phone className="h-4 w-4 text-muted-foreground" />
             <div>
-              <div className="text-sm font-medium">Phone</div>
+              <div className="text-sm font-medium">{t("profile.phoneNumber")}</div>
               <div className="text-sm text-muted-foreground">
                 {user.phone}
               </div>
@@ -138,7 +148,7 @@ export function UserProfileCard({
         <div className="space-y-3">
           <h4 className="text-sm font-medium flex items-center gap-2">
             <MapPin className="h-4 w-4" />
-            My Assigned Parking Spots
+            {t("profile.assignedSpots")}
             {user.assignedSpots && user.assignedSpots.length > 0 && (
               <Badge variant="secondary" className="ml-2">
                 {user.assignedSpots.length} Spot{user.assignedSpots.length !== 1 ? 's' : ''}
@@ -162,20 +172,20 @@ export function UserProfileCard({
                     }`} />
                     <div>
                       <div className="text-sm font-medium">
-                        Spot {spot.spotNumber}
+                        {t("profile.spotNumber", { number: spot.spotNumber })}
                         <Badge variant="outline" className="ml-2 capitalize">
-                          {spot.spotType === 'tesla_ev' ? 'Tesla EV' : spot.spotType}
+                          {spot.spotType === 'tesla_ev' ? t("spotType.teslaEv") : t(`spotType.${spot.spotType}`)}
                         </Badge>
                         {spot.isActive && (
                           <Badge variant="default" className="ml-2 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
-                            Active
+                            {t("common.active")}
                           </Badge>
                         )}
                       </div>
                       <div className="text-sm text-muted-foreground">
                         {spot.location}
-                        {spot.isIndoor && ' • Indoor'}
-                        {spot.isBookable && ' • Available for Sharing'}
+                        {spot.isIndoor && ` • ${t('common.indoor')}`}
+                        {spot.isBookable && ` • ${t('common.availableForSharing')}`}
                       </div>
                       {spot.description && (
                         <div className="text-xs text-muted-foreground mt-1">
@@ -186,11 +196,11 @@ export function UserProfileCard({
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     <div className={`text-sm font-medium ${spot.isActive ? 'text-green-600 dark:text-green-400' : 'text-gray-500'}`}>
-                      {spot.isActive ? 'Active' : 'Inactive'}
+                      {spot.isActive ? t("common.active") : t("common.inactive")}
                     </div>
                     {spot.isBookable && spot.isActive && (
                       <div className="text-xs text-muted-foreground">
-                        Can be shared
+                        {t("common.canBeShared")}
                       </div>
                     )}
                   </div>
@@ -200,14 +210,14 @@ export function UserProfileCard({
           ) : (
             <div className="text-center py-6 text-muted-foreground">
               <MapPin className="h-10 w-10 mx-auto mb-3 opacity-50" />
-              <p className="text-sm font-medium">No parking spots assigned</p>
-              <p className="text-xs">Contact your administrator to assign parking spots to your account</p>
+              <p className="text-sm font-medium">{t("profile.noSpotsAssigned")}</p>
+              <p className="text-xs">{t("profile.contactAdmin")}</p>
             </div>
           )}
         </div>
         
         <div className="text-xs text-muted-foreground">
-          Member since {user.memberSince}
+          {t("profile.memberSince", { date: user.memberSince })}
         </div>
       </CardContent>
     </Card>
