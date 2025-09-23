@@ -197,23 +197,37 @@ export default function AdminAnalytics() {
               {cardsVisible ? 'Hide analytics cards' : 'Show analytics cards'}
             </TooltipContent>
           </UITooltip>
-          <Button 
-            variant="outline" 
-            onClick={handleRefresh}
-            disabled={isLoading}
-            data-testid="button-refresh-analytics"
-          >
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4 mr-2" />
-            )}
-            Refresh
-          </Button>
+          <UITooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                onClick={handleRefresh}
+                disabled={isLoading}
+                data-testid="button-refresh-analytics"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                )}
+                Refresh
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              Refresh all analytics data including revenue, usage patterns, top performers, and system issues
+            </TooltipContent>
+          </UITooltip>
           <Select value={dateRange} onValueChange={setDateRange}>
-            <SelectTrigger className="w-[180px]" data-testid="select-date-range">
-              <SelectValue />
-            </SelectTrigger>
+            <UITooltip>
+              <TooltipTrigger asChild>
+                <SelectTrigger className="w-[180px]" data-testid="select-date-range">
+                  <SelectValue />
+                </SelectTrigger>
+              </TooltipTrigger>
+              <TooltipContent>
+                Select time period for analytics data - affects revenue trends
+              </TooltipContent>
+            </UITooltip>
             <SelectContent>
               <SelectItem value="last-7-days">Last 7 days</SelectItem>
               <SelectItem value="last-30-days">Last 30 days</SelectItem>
@@ -221,10 +235,17 @@ export default function AdminAnalytics() {
               <SelectItem value="last-year">Last year</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" disabled={isLoading}>
-            <Download className="h-4 w-4 mr-2" />
-            Export Report
-          </Button>
+          <UITooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" disabled={isLoading} data-testid="button-export-report">
+                <Download className="h-4 w-4 mr-2" />
+                Export Report
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              Export comprehensive analytics report as Excel file including all metrics, charts data, and insights
+            </TooltipContent>
+          </UITooltip>
         </div>
       </div>
 
@@ -396,10 +417,38 @@ export default function AdminAnalytics() {
 
       <Tabs defaultValue="revenue" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="revenue">Revenue Analysis</TabsTrigger>
-          <TabsTrigger value="usage">Usage Patterns</TabsTrigger>
-          <TabsTrigger value="performers">Top Performers</TabsTrigger>
-          <TabsTrigger value="issues">Issues & Alerts</TabsTrigger>
+          <UITooltip>
+            <TooltipTrigger asChild>
+              <TabsTrigger value="revenue" data-testid="tab-revenue-analysis">Revenue Analysis</TabsTrigger>
+            </TooltipTrigger>
+            <TooltipContent>
+              View revenue trends, monthly earnings, and financial breakdown by category
+            </TooltipContent>
+          </UITooltip>
+          <UITooltip>
+            <TooltipTrigger asChild>
+              <TabsTrigger value="usage" data-testid="tab-usage-patterns">Usage Patterns</TabsTrigger>
+            </TooltipTrigger>
+            <TooltipContent>
+              Analyze peak hours, location performance, and booking patterns throughout the day
+            </TooltipContent>
+          </UITooltip>
+          <UITooltip>
+            <TooltipTrigger asChild>
+              <TabsTrigger value="performers" data-testid="tab-top-performers">Top Performers</TabsTrigger>
+            </TooltipTrigger>
+            <TooltipContent>
+              View top-performing parking spots, highest-earning owners, and utilization metrics
+            </TooltipContent>
+          </UITooltip>
+          <UITooltip>
+            <TooltipTrigger asChild>
+              <TabsTrigger value="issues" data-testid="tab-issues-alerts">Issues & Alerts</TabsTrigger>
+            </TooltipTrigger>
+            <TooltipContent>
+              Monitor system issues, alerts, and incidents that require administrator attention
+            </TooltipContent>
+          </UITooltip>
         </TabsList>
 
         {/* Revenue Analysis Tab */}

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { 
   Users, Car, CalendarCheck, BarChart3, FileText, Shield,
   TrendingUp, Clock, MapPin, AlertTriangle, ArrowRight,
@@ -137,15 +138,22 @@ export default function Admin() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Button 
-              variant="outline" 
-              onClick={handleRefreshAll}
-              disabled={isLoading}
-              data-testid="button-refresh-admin-dashboard"
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-              Refresh All
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  onClick={handleRefreshAll}
+                  disabled={isLoading}
+                  data-testid="button-refresh-admin-dashboard"
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                  Refresh All
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                Refresh all dashboard data including users, spots, bookings, and system metrics
+              </TooltipContent>
+            </Tooltip>
             <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
               <Avatar className="h-10 w-10">
                 <AvatarFallback className="text-sm bg-primary text-primary-foreground">
@@ -169,69 +177,121 @@ export default function Admin() {
       <div className="space-y-4">
         <h2 className="text-xl font-semibold">System Overview</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card data-testid="card-total-users" className="hover-elevate">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  {isLoading ? (
-                    <Skeleton className="h-8 w-16 mb-1" />
-                  ) : (
-                    <div className="text-2xl font-bold text-blue-600">{systemMetrics.totalUsers}</div>
-                  )}
-                  <div className="text-sm text-muted-foreground">Total Users</div>
-                </div>
-                <Users className="h-8 w-8 text-blue-600 opacity-80" />
-              </div>
-            </CardContent>
-          </Card>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card 
+                data-testid="card-total-users" 
+                className="hover-elevate" 
+                tabIndex={0}
+                role="button"
+                aria-label="View total users details"
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      {isLoading ? (
+                        <Skeleton className="h-8 w-16 mb-1" />
+                      ) : (
+                        <div className="text-2xl font-bold text-blue-600">{systemMetrics.totalUsers}</div>
+                      )}
+                      <div className="text-sm text-muted-foreground">Total Users</div>
+                    </div>
+                    <Users className="h-8 w-8 text-blue-600 opacity-80" />
+                  </div>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent>
+              Registered users including employees, admins, and active accounts
+            </TooltipContent>
+          </Tooltip>
 
-          <Card data-testid="card-parking-utilization" className="hover-elevate">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  {isLoading ? (
-                    <Skeleton className="h-8 w-16 mb-1" />
-                  ) : (
-                    <div className="text-2xl font-bold text-green-600">{systemMetrics.utilizationRate}%</div>
-                  )}
-                  <div className="text-sm text-muted-foreground">Parking Utilization</div>
-                </div>
-                <Car className="h-8 w-8 text-green-600 opacity-80" />
-              </div>
-            </CardContent>
-          </Card>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card 
+                data-testid="card-parking-utilization" 
+                className="hover-elevate"
+                tabIndex={0}
+                role="button"
+                aria-label="View parking utilization details"
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      {isLoading ? (
+                        <Skeleton className="h-8 w-16 mb-1" />
+                      ) : (
+                        <div className="text-2xl font-bold text-green-600">{systemMetrics.utilizationRate}%</div>
+                      )}
+                      <div className="text-sm text-muted-foreground">Parking Utilization</div>
+                    </div>
+                    <Car className="h-8 w-8 text-green-600 opacity-80" />
+                  </div>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent>
+              Utilization: {systemMetrics.allocatedSpots} of {systemMetrics.totalSpots} spots allocated
+            </TooltipContent>
+          </Tooltip>
 
-          <Card data-testid="card-active-bookings" className="hover-elevate">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  {isLoading ? (
-                    <Skeleton className="h-8 w-16 mb-1" />
-                  ) : (
-                    <div className="text-2xl font-bold text-purple-600">{systemMetrics.recentBookingsCount}</div>
-                  )}
-                  <div className="text-sm text-muted-foreground">Recent Bookings</div>
-                </div>
-                <CalendarCheck className="h-8 w-8 text-purple-600 opacity-80" />
-              </div>
-            </CardContent>
-          </Card>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card 
+                data-testid="card-active-bookings" 
+                className="hover-elevate"
+                tabIndex={0}
+                role="button"
+                aria-label="View recent bookings details"
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      {isLoading ? (
+                        <Skeleton className="h-8 w-16 mb-1" />
+                      ) : (
+                        <div className="text-2xl font-bold text-purple-600">{systemMetrics.recentBookingsCount}</div>
+                      )}
+                      <div className="text-sm text-muted-foreground">Recent Bookings</div>
+                    </div>
+                    <CalendarCheck className="h-8 w-8 text-purple-600 opacity-80" />
+                  </div>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent>
+              Recent bookings - tracks current booking activity and usage patterns
+            </TooltipContent>
+          </Tooltip>
 
-          <Card data-testid="card-pending-requests" className="hover-elevate">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  {isLoading ? (
-                    <Skeleton className="h-8 w-16 mb-1" />
-                  ) : (
-                    <div className="text-2xl font-bold text-orange-600">{systemMetrics.pendingRequests}</div>
-                  )}
-                  <div className="text-sm text-muted-foreground">Urgent Requests</div>
-                </div>
-                <AlertTriangle className="h-8 w-8 text-orange-600 opacity-80" />
-              </div>
-            </CardContent>
-          </Card>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card 
+                data-testid="card-pending-requests" 
+                className="hover-elevate"
+                tabIndex={0}
+                role="button"
+                aria-label="View urgent requests details"
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      {isLoading ? (
+                        <Skeleton className="h-8 w-16 mb-1" />
+                      ) : (
+                        <div className="text-2xl font-bold text-orange-600">{systemMetrics.pendingRequests}</div>
+                      )}
+                      <div className="text-sm text-muted-foreground">Urgent Requests</div>
+                    </div>
+                    <AlertTriangle className="h-8 w-8 text-orange-600 opacity-80" />
+                  </div>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent>
+              High-priority waiting list requests requiring immediate attention
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
@@ -292,17 +352,37 @@ export default function Admin() {
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm">System Health</span>
-              <Badge variant="default" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                <CheckCircle2 className="h-3 w-3 mr-1" />
-                Operational
-              </Badge>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge variant="default" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    Operational
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  System is running normally with all services functioning properly
+                </TooltipContent>
+              </Tooltip>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm">Database</span>
-              <Badge variant="default" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                <CheckCircle2 className="h-3 w-3 mr-1" />
-                Connected
-              </Badge>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge 
+                    variant="default" 
+                    className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                    tabIndex={0}
+                    role="status"
+                    aria-label="Database status: Connected"
+                  >
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    Connected
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Database connection active and responding normally
+                </TooltipContent>
+              </Tooltip>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm">Last Backup</span>
@@ -320,35 +400,66 @@ export default function Admin() {
       <div className="space-y-4">
         <h2 className="text-xl font-semibold">Administrative Functions</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {quickActions.map((action) => (
-            <Card key={action.url} className="hover-elevate active-elevate-2 cursor-pointer transition-all duration-200 h-full">
-              <Link 
-                href={action.url}
-                data-testid={`link-${action.title.toLowerCase().replace(/\s+/g, '-')}`}
-                className="block h-full"
-              >
-                <CardContent className="p-6 h-full">
-                  <div className="space-y-4">
-                    <div className="flex items-start justify-between">
-                      <div className={`p-3 rounded-lg ${action.bgColor}`}>
-                        <action.icon className={`h-6 w-6 ${action.iconColor}`} />
-                      </div>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <div className="space-y-2">
-                      <h3 className="font-semibold text-base">{action.title}</h3>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        {action.description}
-                      </p>
-                      <div className="text-xs text-muted-foreground font-medium">
-                        {action.stats}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Link>
-            </Card>
-          ))}
+          {quickActions.map((action) => {
+            const getTooltipContent = (title: string) => {
+              switch (title) {
+                case "User Management":
+                  return "Manage user accounts, roles, and permissions"
+                case "Parking Management":
+                  return "Manage parking spots, assignments, and waiting lists"
+                case "Spot Booking Management":
+                  return "Monitor active bookings and availability schedules"
+                case "Analytics & Reports":
+                  return "View system analytics and generate reports"
+                case "Audit Logs":
+                  return "View system activity logs and security audit trails"
+                default:
+                  return `Access ${title.toLowerCase()}`
+              }
+            }
+            
+            return (
+              <Tooltip key={action.url}>
+                <TooltipTrigger asChild>
+                  <Card 
+                    className="hover-elevate active-elevate-2 cursor-pointer transition-all duration-200 h-full"
+                    tabIndex={0}
+                    role="link"
+                    aria-label={`Navigate to ${action.title}`}
+                  >
+                    <Link 
+                      href={action.url}
+                      data-testid={`link-${action.title.toLowerCase().replace(/\s+/g, '-')}`}
+                      className="block h-full"
+                    >
+                      <CardContent className="p-6 h-full">
+                        <div className="space-y-4">
+                          <div className="flex items-start justify-between">
+                            <div className={`p-3 rounded-lg ${action.bgColor}`}>
+                              <action.icon className={`h-6 w-6 ${action.iconColor}`} />
+                            </div>
+                            <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                          <div className="space-y-2">
+                            <h3 className="font-semibold text-base">{action.title}</h3>
+                            <p className="text-sm text-muted-foreground leading-relaxed">
+                              {action.description}
+                            </p>
+                            <div className="text-xs text-muted-foreground font-medium">
+                              {action.stats}
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Link>
+                  </Card>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {getTooltipContent(action.title)}
+                </TooltipContent>
+              </Tooltip>
+            )
+          })}
         </div>
       </div>
 
