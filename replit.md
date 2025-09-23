@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is a corporate parking spot sharing application for BCI company, serving 1000 employees across 4 locations with 150 total parking spots. The system facilitates efficient parking allocation through peer-to-peer spot sharing and administrative controls. The application supports three user roles (administrators, spot owners, and renters) with role-specific functionality for booking management, spot sharing, and system administration.
+This is a corporate parking spot sharing application for BCI company, serving 1000 employees across 4 locations with 150 total parking spots. The system facilitates efficient parking allocation and administrative controls. For the first version, the application supports two user roles (administrators and renters), with administrators managing unallocated spots instead of individual spot owners.
 
 ## User Preferences
 
@@ -32,7 +32,7 @@ Preferred communication style: Simple, everyday language.
 - **Database Pool**: Connection pooling with @neondatabase/serverless
 
 ### Authentication & Authorization
-- **User Management**: Role-based access control (admin, owner, renter)
+- **User Management**: Role-based access control (admin, renter) - spot owner role disabled for V1
 - **Session-based Authentication**: Server-side session management
 - **Employee Integration**: Designed for company employee login system integration
 - **Permission System**: Route-level and component-level role checking
@@ -111,3 +111,13 @@ Fixed critical authentication issues in the waiting list functionality:
   - Ensured consistent authentication flow between POST and GET requests
 
 The waiting list now properly supports join/leave operations with correct UI state updates and secure authentication handling.
+
+### Spot Owner Login Functionality Disabled (September 2024)
+For the first version, spot owner login functionality has been disabled to simplify the user experience:
+- **Architectural Change**: Removed spot owner role from login interface while preserving backend schema for future use
+- **Admin-Managed Spots**: Administrators will manage unallocated parking spots instead of individual spot owners
+- **Simplified Login**: Login interface now shows only two options: "Spot Renter" and "System Administrator"
+- **Type Safety**: Updated TypeScript definitions to use `AvailableUserRoles` type excluding the owner role
+- **Future Compatibility**: Owner role schema preserved in database for potential future implementation
+
+This change reduces complexity for the initial release while maintaining the foundation for spot owner functionality in future versions.
