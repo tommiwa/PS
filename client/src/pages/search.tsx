@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { MapPin, Filter, SortAsc, Calendar, Grid, Sparkles } from "lucide-react"
 import { isPastDate } from "@/utils/date-utils"
 import { apiRequest } from "@/lib/queryClient"
@@ -18,15 +19,13 @@ import { type ParkingSpot as DBParkingSpot } from "@shared/schema"
 import { useToast } from "@/hooks/use-toast"
 
 // Convert database spot to display format
-interface DisplaySpot extends Omit<DBParkingSpot, 'spotType'> {
-  spotNumber: string
-  location: string
+interface DisplaySpot extends DBParkingSpot {
+  // Additional display properties for backwards compatibility 
   type: "regular" | "accessible" | "electric" | "tesla_ev" | "reserved"
   isInside: boolean
   price: number
   owner: string
   isAvailable: boolean
-  isBookable: boolean
   availability?: {
     date: string
   }
@@ -338,14 +337,28 @@ export default function Search() {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
             <TabsList className="grid w-[200px] grid-cols-2">
-              <TabsTrigger value="tiles" className="flex items-center gap-2" data-testid="tab-tiles">
-                <Grid className="h-4 w-4" />
-                Tiles
-              </TabsTrigger>
-              <TabsTrigger value="calendar" className="flex items-center gap-2" data-testid="tab-calendar">
-                <Calendar className="h-4 w-4" />
-                Calendar
-              </TabsTrigger>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="tiles" className="flex items-center gap-2" data-testid="tab-tiles">
+                    <Grid className="h-4 w-4" />
+                    Tiles
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Grid view - Browse parking spots as individual cards with detailed information</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="calendar" className="flex items-center gap-2" data-testid="tab-calendar">
+                    <Calendar className="h-4 w-4" />
+                    Calendar
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Calendar view - See spot availability across dates and plan your bookings</p>
+                </TooltipContent>
+              </Tooltip>
             </TabsList>
             
             <div className="flex items-center gap-4">
@@ -353,10 +366,24 @@ export default function Search() {
                 {getResultsLabel()}
               </h2>
               {getActiveFilterCount() > 0 && (
-                <Badge variant="secondary" className="gap-1">
-                  <Filter className="h-3 w-3" />
-                  {getActiveFilterCount()} filter{getActiveFilterCount() !== 1 ? 's' : ''} active
-                </Badge>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto p-0 hover:bg-transparent"
+                      data-testid="badge-active-filters"
+                    >
+                      <Badge variant="secondary" className="gap-1">
+                        <Filter className="h-3 w-3" />
+                        {getActiveFilterCount()} filter{getActiveFilterCount() !== 1 ? 's' : ''} active
+                      </Badge>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Number of active search filters - clear search to remove all filters and see all available spots</p>
+                  </TooltipContent>
+                </Tooltip>
               )}
             </div>
           </div>
@@ -364,19 +391,33 @@ export default function Search() {
           {activeTab === "tiles" && (
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Sort by:</span>
-              <select 
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="px-3 py-1 border rounded-md text-sm"
-                data-testid="select-sort"
-              >
-                <option value="price">Price (Low to High)</option>
-                <option value="location">Location</option>
-                <option value="distance">Distance</option>
-              </select>
-              <Button variant="ghost" size="sm">
-                <SortAsc className="h-4 w-4" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <select 
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="px-3 py-1 border rounded-md text-sm cursor-pointer"
+                    data-testid="select-sort"
+                  >
+                    <option value="price">Price (Low to High)</option>
+                    <option value="location">Location</option>
+                    <option value="distance">Distance</option>
+                  </select>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Sort parking spots by price (cheapest first), location (alphabetical), or distance (indoor spots first)</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" data-testid="button-sort-direction">
+                    <SortAsc className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Sort direction indicator - currently showing ascending order (low to high)</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
           )}
         </div>
@@ -390,12 +431,19 @@ export default function Search() {
                 <p className="text-muted-foreground mb-4">
                   Try adjusting your search filters to find more available parking spots.
                 </p>
-                <Button onClick={() => setSearchCriteria({
-                  query: "",
-                  quickFilters: []
-                })}>
-                  Clear Search
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button onClick={() => setSearchCriteria({
+                      query: "",
+                      quickFilters: []
+                    })} data-testid="button-clear-search-results">
+                      Clear Search
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Remove all search filters and see all available parking spots</p>
+                  </TooltipContent>
+                </Tooltip>
               </CardContent>
             </Card>
           ) : (

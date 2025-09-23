@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { Search, X, MapPin, Car, Zap, Accessibility, DollarSign, Calendar, Clock, Filter, Building } from "lucide-react"
 
 export interface ParsedSearch {
@@ -38,13 +39,13 @@ const SEARCH_SUGGESTIONS = [
 ]
 
 const QUICK_FILTERS = [
-  { label: "Electric Charging", value: "electric", icon: Zap, type: "spotType" },
-  { label: "Tesla Charger", value: "tesla_ev", icon: Zap, type: "spotType" },
-  { label: "Accessible", value: "accessible", icon: Accessibility, type: "spotType" },
-  { label: "Inside Building", value: "inside", icon: MapPin, type: "location" },
-  { label: "Under $25", value: "cheap", icon: DollarSign, type: "price" },
-  { label: "Main Building", value: "750 pandora ave", icon: MapPin, type: "location" },
-  { label: "Today", value: "today", icon: Calendar, type: "date" }
+  { label: "Electric Charging", value: "electric", icon: Zap, type: "spotType", tooltip: "Filter for electric vehicle charging stations with standard EV connectors" },
+  { label: "Tesla Charger", value: "tesla_ev", icon: Zap, type: "spotType", tooltip: "Filter for Tesla-specific charging stations optimized for Tesla vehicles" },
+  { label: "Accessible", value: "accessible", icon: Accessibility, type: "spotType", tooltip: "Filter for accessible parking spots designed for mobility accommodations" },
+  { label: "Inside Building", value: "inside", icon: MapPin, type: "location", tooltip: "Filter for indoor parking spots protected from weather" },
+  { label: "Under $25", value: "cheap", icon: DollarSign, type: "price", tooltip: "Filter for budget-friendly parking spots under $25 per day" },
+  { label: "Main Building", value: "750 pandora ave", icon: MapPin, type: "location", tooltip: "Filter for parking spots at the main building (750 Pandora Ave)" },
+  { label: "Today", value: "today", icon: Calendar, type: "date", tooltip: "Filter for parking spots available today" }
 ]
 
 export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
@@ -223,25 +224,51 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
     <div className={`space-y-4 ${className}`} data-testid="enhanced-search">
       {/* Quick Filters */}
       <div className="flex flex-wrap gap-2">
-        <span className="text-sm font-medium text-muted-foreground flex items-center gap-1 py-1">
-          <Filter className="h-3 w-3" />
-          Quick filters:
-        </span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-auto p-1 text-sm font-medium text-muted-foreground hover:bg-transparent hover:text-muted-foreground"
+              data-testid="text-quick-filters-label"
+            >
+              <Filter className="h-3 w-3 mr-1" />
+              Quick filters:
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Click these buttons to quickly filter parking spots by common criteria</p>
+          </TooltipContent>
+        </Tooltip>
         {QUICK_FILTERS.map((filter) => {
           const Icon = filter.icon
           const isActive = activeFilters.includes(filter.value)
           return (
-            <Badge
-              key={filter.value}
-              variant={isActive ? "default" : "secondary"}
-              className={`cursor-pointer gap-1 hover-elevate ${isActive ? 'bg-primary text-primary-foreground' : ''}`}
-              onClick={() => handleQuickFilter(filter)}
-              data-testid={`filter-${filter.value}`}
-            >
-              <Icon className="h-3 w-3" />
-              {filter.label}
-              {isActive && <X className="h-3 w-3" />}
-            </Badge>
+            <Tooltip key={filter.value}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto p-0 hover:bg-transparent"
+                  onClick={() => handleQuickFilter(filter)}
+                  aria-pressed={isActive}
+                  role="button"
+                  data-testid={`filter-${filter.value}`}
+                >
+                  <Badge
+                    variant={isActive ? "default" : "secondary"}
+                    className={`gap-1 ${isActive ? 'bg-primary text-primary-foreground' : ''}`}
+                  >
+                    <Icon className="h-3 w-3" />
+                    {filter.label}
+                    {isActive && <X className="h-3 w-3" />}
+                  </Badge>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{isActive ? `Remove this filter to see more search results` : filter.tooltip}</p>
+              </TooltipContent>
+            </Tooltip>
           )
         })}
       </div>
@@ -252,39 +279,60 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
           <div className="flex gap-2 items-center">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                ref={inputRef}
-                type="text"
-                placeholder="Search parking spots... (e.g., '750 pandora ave electric $20-30', 'accessible north lot today')"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={handleKeyDown}
-                onFocus={() => setFocused(true)}
-                onBlur={() => setTimeout(() => setFocused(false), 200)}
-                className={`pl-10 h-12 text-base ${query ? 'pr-12' : 'pr-4'}`}
-                data-testid="input-enhanced-search"
-              />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Input
+                    ref={inputRef}
+                    type="text"
+                    placeholder="Search parking spots... (e.g., '750 pandora ave electric $20-30', 'accessible north lot today')"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    onFocus={() => setFocused(true)}
+                    onBlur={() => setTimeout(() => setFocused(false), 200)}
+                    className={`pl-10 h-12 text-base ${query ? 'pr-12' : 'pr-4'}`}
+                    data-testid="input-enhanced-search"
+                  />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Search for parking spots using natural language. Try combinations like location + spot type + price (e.g., "750 pandora electric under $30")</p>
+                </TooltipContent>
+              </Tooltip>
               {query && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearSearch}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
-                  data-testid="button-clear-search"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearSearch}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+                      data-testid="button-clear-search"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Clear search input and remove all filters to start fresh</p>
+                  </TooltipContent>
+                </Tooltip>
               )}
             </div>
-            <Button
-              onClick={handleSearch}
-              className="h-12 px-6"
-              data-testid="button-search"
-            >
-              <Search className="h-4 w-4 mr-2" />
-              Search
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={handleSearch}
+                  className="h-12 px-6"
+                  data-testid="button-search"
+                >
+                  <Search className="h-4 w-4 mr-2" />
+                  Search
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Search for parking spots based on your criteria and filters</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
         </PopoverTrigger>
         
@@ -298,15 +346,21 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
               {filteredSuggestions.length > 0 ? (
                 <CommandGroup heading="Suggestions">
                   {filteredSuggestions.map((suggestion, index) => (
-                    <CommandItem
-                      key={index}
-                      onSelect={() => handleSuggestionSelect(suggestion)}
-                      className="cursor-pointer"
-                      data-testid={`suggestion-${index}`}
-                    >
-                      <Search className="h-4 w-4 mr-2" />
-                      {suggestion}
-                    </CommandItem>
+                    <Tooltip key={index}>
+                      <TooltipTrigger asChild>
+                        <CommandItem
+                          onSelect={() => handleSuggestionSelect(suggestion)}
+                          className="cursor-pointer"
+                          data-testid={`suggestion-${index}`}
+                        >
+                          <Search className="h-4 w-4 mr-2" />
+                          {suggestion}
+                        </CommandItem>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Click to search for: "{suggestion}" - this will apply the search automatically</p>
+                      </TooltipContent>
+                    </Tooltip>
                   ))}
                 </CommandGroup>
               ) : (
@@ -318,9 +372,21 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
       </Popover>
 
       {/* Search Examples */}
-      <div className="text-sm text-muted-foreground">
-        <span className="font-medium">Try searching:</span> "tesla ev charger", "accessible under $25", "level 1 inside", or "electric charging"
-      </div>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-auto p-0 text-sm text-muted-foreground hover:bg-transparent hover:text-muted-foreground text-left justify-start"
+            data-testid="text-search-examples"
+          >
+            <span className="font-medium">Try searching:</span> "tesla ev charger", "accessible under $25", "level 1 inside", or "electric charging"
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>These are example search phrases that demonstrate how to combine location, spot type, and price criteria</p>
+        </TooltipContent>
+      </Tooltip>
     </div>
   )
 }
