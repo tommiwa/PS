@@ -7,14 +7,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { SpotListingForm } from "@/components/spot-listing-form"
-import { Calendar, Search, Filter, Download, Clock, CheckCircle, XCircle, Car, MapPin, DollarSign, AlertTriangle, Plus, Edit, Trash2, CreditCard } from "lucide-react"
+import { Calendar, Search, Filter, Download, Clock, CheckCircle, XCircle, Car, MapPin, DollarSign, AlertTriangle, Plus, Edit, Trash2, CreditCard, Info } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { isPastDate } from "@/utils/date-utils"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { apiRequest, queryClient } from "@/lib/queryClient"
 import type { Booking, SpotListing } from "@shared/schema"
 import { useConfirm, confirmations } from "@/hooks/use-confirm"
+import { useToast } from "@/hooks/use-toast"
 
 export default function MyBookings() {
   const { user, isOwner } = useAuth()
@@ -26,6 +28,7 @@ export default function MyBookings() {
   const [selectedListing, setSelectedListing] = useState<any>(null)
   const [activeTab, setActiveTab] = useState("active")
   const { confirm } = useConfirm()
+  const { toast } = useToast()
 
   // Fetch real data based on user role
   const { data: renterBookings = [], isLoading: isLoadingBookings } = useQuery<Booking[]>({
@@ -214,23 +217,37 @@ export default function MyBookings() {
           </Badge>
           {(listing.status === "available" || listing.status === "booked") && (
             <div className="flex gap-1">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => handleEditListing(listing)}
-                data-testid={`button-edit-listing-${listing.id}`}
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => handleDeleteListing(listing)}
-                className="text-red-600 hover:text-red-700 hover:border-red-300"
-                data-testid={`button-delete-listing-${listing.id}`}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => handleEditListing(listing)}
+                    data-testid={`button-edit-listing-${listing.id}`}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Edit listing details including price, availability, and spot information</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => handleDeleteListing(listing)}
+                    className="text-red-600 hover:text-red-700 hover:border-red-300"
+                    data-testid={`button-delete-listing-${listing.id}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Permanently remove this listing - action cannot be undone</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
           )}
         </div>
@@ -290,16 +307,23 @@ export default function MyBookings() {
             {listing.status}
           </Badge>
           {listing.status === "used" && (
-            <Button
-              variant={listing.paymentReceived ? "outline" : "default"}
-              size="sm"
-              onClick={() => handleMarkPayment(listing.id, listing.paymentReceived)}
-              disabled={markPaymentMutation.isPending}
-              data-testid={`button-payment-${listing.id}`}
-            >
-              <CreditCard className="h-4 w-4 mr-1" />
-              {listing.paymentReceived ? "Unmark" : "Mark Paid"}
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={listing.paymentReceived ? "outline" : "default"}
+                  size="sm"
+                  onClick={() => handleMarkPayment(listing.id, listing.paymentReceived)}
+                  disabled={markPaymentMutation.isPending}
+                  data-testid={`button-payment-${listing.id}`}
+                >
+                  <CreditCard className="h-4 w-4 mr-1" />
+                  {listing.paymentReceived ? "Unmark" : "Mark Paid"}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{listing.paymentReceived ? "Mark payment as not received" : "Confirm you have received payment from the renter"}</p>
+              </TooltipContent>
+            </Tooltip>
           )}
         </div>
       </div>
@@ -401,24 +425,38 @@ export default function MyBookings() {
       {(booking.canCancel || booking.canEdit) && (
         <div className="flex gap-2 pt-2 border-t">
           {booking.canEdit && (
-            <Button 
-              size="sm" 
-              variant="outline"
-              onClick={() => handleEditBooking(booking.id)}
-              data-testid={`button-edit-${booking.id}`}
-            >
-              Edit
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => handleEditBooking(booking.id)}
+                  data-testid={`button-edit-${booking.id}`}
+                >
+                  Edit
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Modify booking details such as date, time, or vehicle information</p>
+              </TooltipContent>
+            </Tooltip>
           )}
           {booking.canCancel && (
-            <Button 
-              size="sm" 
-              variant="destructive"
-              onClick={() => handleCancelBooking(booking.id)}
-              data-testid={`button-cancel-${booking.id}`}
-            >
-              Cancel
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  size="sm" 
+                  variant="destructive"
+                  onClick={() => handleCancelBooking(booking.id)}
+                  data-testid={`button-cancel-${booking.id}`}
+                >
+                  Cancel
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Cancel this reservation - may be subject to cancellation fees</p>
+              </TooltipContent>
+            </Tooltip>
           )}
         </div>
       )}
@@ -453,55 +491,145 @@ export default function MyBookings() {
         </div>
         <div className="flex gap-2">
           {isOwner() && (
-            <Button onClick={() => setShowListingForm(true)} data-testid="button-list-spot">
-              <Plus className="h-4 w-4 mr-2" />
-              List My Spot
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button onClick={() => setShowListingForm(true)} data-testid="button-list-spot">
+                  <Plus className="h-4 w-4 mr-2" />
+                  List My Spot
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Create a new parking spot listing to earn money from your available spaces</p>
+              </TooltipContent>
+            </Tooltip>
           )}
-          <Button onClick={handleDownloadHistory} variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Download History
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button onClick={handleDownloadHistory} variant="outline" data-testid="button-download-history">
+                <Download className="h-4 w-4 mr-2" />
+                Download History
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Export your {isOwner() ? 'listing' : 'booking'} history as a PDF or Excel file for record keeping</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
+        <Card className="hover-elevate" data-testid="card-stat-active">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {isOwner() ? "Active Listings" : "Active Bookings"}
             </CardTitle>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto p-1 text-muted-foreground"
+                  data-testid="info-button-stat-active"
+                >
+                  <Info className="h-3 w-3" />
+                  <span className="sr-only">Info about {isOwner() ? "active listings" : "active bookings"}</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{isOwner() ? 
+                  "Number of parking spots currently available for booking by renters" : 
+                  "Your confirmed reservations for upcoming dates"}
+                </p>
+              </TooltipContent>
+            </Tooltip>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{activeItems.length}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
+        <Card className="hover-elevate" data-testid="card-stat-completed">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {isOwner() ? "Spots Used" : "Completed"}
             </CardTitle>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto p-1 text-muted-foreground"
+                  data-testid="info-button-stat-completed"
+                >
+                  <Info className="h-3 w-3" />
+                  <span className="sr-only">Info about {isOwner() ? "spots used" : "completed bookings"}</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{isOwner() ? 
+                  "Number of parking spots that were successfully rented out to users" : 
+                  "Bookings you've finished using with confirmed payment"}
+                </p>
+              </TooltipContent>
+            </Tooltip>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{completedItems.length}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
+        <Card className="hover-elevate" data-testid="card-stat-negative">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {isOwner() ? "Spots Unused" : "Cancelled"}
             </CardTitle>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto p-1 text-muted-foreground"
+                  data-testid="info-button-stat-negative"
+                >
+                  <Info className="h-3 w-3" />
+                  <span className="sr-only">Info about {isOwner() ? "unused spots" : "cancelled bookings"}</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{isOwner() ? 
+                  "Parking spots that were listed but never booked by anyone" : 
+                  "Reservations that were cancelled before the booking date"}
+                </p>
+              </TooltipContent>
+            </Tooltip>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{isOwner() ? unusedItems.length : cancelledItems.length}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
+        <Card className="hover-elevate" data-testid="card-stat-money">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {isOwner() ? "Total Earned" : "Total Spent"}
             </CardTitle>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto p-1 text-muted-foreground"
+                  data-testid="info-button-stat-money"
+                >
+                  <Info className="h-3 w-3" />
+                  <span className="sr-only">Info about {isOwner() ? "total earned" : "total spent"}</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{isOwner() ? 
+                  "Total revenue generated from all completed parking spot rentals" : 
+                  "Total amount paid for all completed parking reservations"}
+                </p>
+              </TooltipContent>
+            </Tooltip>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -521,47 +649,68 @@ export default function MyBookings() {
             <div className="flex-1 min-w-[250px]">
               <div className="relative">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by spot, location, or owner..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8"
-                  data-testid="input-search-bookings"
-                />
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Input
+                      placeholder="Search by spot, location, or owner..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-8"
+                      data-testid="input-search-bookings"
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Search through your {isOwner() ? 'listings' : 'bookings'} by spot number, location, or {isOwner() ? 'renter' : 'owner'} name</p>
+                  </TooltipContent>
+                </Tooltip>
               </div>
             </div>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-[180px]" data-testid="select-filter-status">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                {isOwner() ? (
-                  <>
-                    <SelectItem value="available">Available</SelectItem>
-                    <SelectItem value="booked">Booked</SelectItem>
-                    <SelectItem value="used">Used</SelectItem>
-                    <SelectItem value="unused">Unused</SelectItem>
-                  </>
-                ) : (
-                  <>
-                    <SelectItem value="confirmed">Confirmed</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                  </>
-                )}
-              </SelectContent>
-            </Select>
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-[150px]" data-testid="select-sort-bookings">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="date">Date</SelectItem>
-                <SelectItem value="price">Price</SelectItem>
-                <SelectItem value="location">Location</SelectItem>
-              </SelectContent>
-            </Select>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger className="w-[180px]" data-testid="select-filter-status">
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    {isOwner() ? (
+                      <>
+                        <SelectItem value="available">Available</SelectItem>
+                        <SelectItem value="booked">Booked</SelectItem>
+                        <SelectItem value="used">Used</SelectItem>
+                        <SelectItem value="unused">Unused</SelectItem>
+                      </>
+                    ) : (
+                      <>
+                        <SelectItem value="confirmed">Confirmed</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Filter {isOwner() ? 'listings' : 'bookings'} by their current status to find specific items quickly</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="w-[150px]" data-testid="select-sort-bookings">
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="date">Date</SelectItem>
+                    <SelectItem value="price">Price</SelectItem>
+                    <SelectItem value="location">Location</SelectItem>
+                  </SelectContent>
+                </Select>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Sort your {isOwner() ? 'listings' : 'bookings'} by date (newest first), price (highest first), or location alphabetically</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
         </CardContent>
       </Card>
@@ -569,33 +718,68 @@ export default function MyBookings() {
       {/* Enhanced Status-Based Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="active" className="data-[state=active]:bg-emerald-50 data-[state=active]:text-emerald-600 dark:data-[state=active]:bg-emerald-950/30 dark:data-[state=active]:text-emerald-400">
-            <div className="flex items-center gap-1">
-              <CheckCircle className="h-3 w-3" />
-              Active ({activeItems.length})
-            </div>
-          </TabsTrigger>
-          <TabsTrigger value="pending" className="data-[state=active]:bg-amber-50 data-[state=active]:text-amber-600 dark:data-[state=active]:bg-amber-950/30 dark:data-[state=active]:text-amber-400">
-            <div className="flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              Pending ({pendingItems.length})
-            </div>
-          </TabsTrigger>
-          <TabsTrigger value="payment-pending" className="data-[state=active]:bg-orange-50 data-[state=active]:text-orange-600 dark:data-[state=active]:bg-orange-950/30 dark:data-[state=active]:text-orange-400">
-            <div className="flex items-center gap-1">
-              <CreditCard className="h-3 w-3" />
-              Payment ({paymentPendingItems.length})
-            </div>
-          </TabsTrigger>
-          <TabsTrigger value="completed" className="data-[state=active]:bg-violet-50 data-[state=active]:text-violet-600 dark:data-[state=active]:bg-violet-950/30 dark:data-[state=active]:text-violet-400">
-            <div className="flex items-center gap-1">
-              <CheckCircle className="h-3 w-3" />
-              Completed ({completedItems.length})
-            </div>
-          </TabsTrigger>
-          <TabsTrigger value="all" className="data-[state=active]:bg-slate-50 data-[state=active]:text-slate-600 dark:data-[state=active]:bg-slate-950/30 dark:data-[state=active]:text-slate-400">
-            All ({sortedItems.length})
-          </TabsTrigger>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <TabsTrigger value="active" className="data-[state=active]:bg-emerald-50 data-[state=active]:text-emerald-600 dark:data-[state=active]:bg-emerald-950/30 dark:data-[state=active]:text-emerald-400" data-testid="tab-active">
+                <div className="flex items-center gap-1">
+                  <CheckCircle className="h-3 w-3" />
+                  Active ({activeItems.length})
+                </div>
+              </TabsTrigger>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{isOwner() ? "Parking spots currently available for booking" : "Your confirmed upcoming reservations"}</p>
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <TabsTrigger value="pending" className="data-[state=active]:bg-amber-50 data-[state=active]:text-amber-600 dark:data-[state=active]:bg-amber-950/30 dark:data-[state=active]:text-amber-400" data-testid="tab-pending">
+                <div className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  Pending ({pendingItems.length})
+                </div>
+              </TabsTrigger>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{isOwner() ? "Booking requests awaiting your approval" : "Reservation requests waiting for owner confirmation"}</p>
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <TabsTrigger value="payment-pending" className="data-[state=active]:bg-orange-50 data-[state=active]:text-orange-600 dark:data-[state=active]:bg-orange-950/30 dark:data-[state=active]:text-orange-400" data-testid="tab-payment">
+                <div className="flex items-center gap-1">
+                  <CreditCard className="h-3 w-3" />
+                  Payment ({paymentPendingItems.length})
+                </div>
+              </TabsTrigger>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{isOwner() ? "Completed bookings with pending payment receipt" : "Confirmed bookings requiring payment processing"}</p>
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <TabsTrigger value="completed" className="data-[state=active]:bg-violet-50 data-[state=active]:text-violet-600 dark:data-[state=active]:bg-violet-950/30 dark:data-[state=active]:text-violet-400" data-testid="tab-completed">
+                <div className="flex items-center gap-1">
+                  <CheckCircle className="h-3 w-3" />
+                  Completed ({completedItems.length})
+                </div>
+              </TabsTrigger>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{isOwner() ? "Successfully rented spots with confirmed payments" : "Finished reservations with completed payments"}</p>
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <TabsTrigger value="all" className="data-[state=active]:bg-slate-50 data-[state=active]:text-slate-600 dark:data-[state=active]:bg-slate-950/30 dark:data-[state=active]:text-slate-400" data-testid="tab-all">
+                All ({sortedItems.length})
+              </TabsTrigger>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>View all your {isOwner() ? 'listings' : 'bookings'} regardless of status for complete history overview</p>
+            </TooltipContent>
+          </Tooltip>
         </TabsList>
         
         <TabsContent value="active" className="space-y-4">

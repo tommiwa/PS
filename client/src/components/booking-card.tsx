@@ -46,14 +46,19 @@ export function BookingCard({
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="h-auto p-0 hover:bg-transparent"
+          <span 
+            tabIndex={0}
+            role="button"
+            className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded"
             data-testid={`badge-status-${booking.status}-${booking.id}`}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+              }
+            }}
           >
             <Badge variant={config.variant}>{config.label}</Badge>
-          </Button>
+          </span>
         </TooltipTrigger>
         <TooltipContent>
           <p>{config.tooltip}</p>
@@ -74,14 +79,19 @@ export function BookingCard({
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="h-auto p-0 hover:bg-transparent"
+          <span 
+            tabIndex={0}
+            role="button"
+            className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded"
             data-testid={`badge-payment-${booking.paymentStatus}-${booking.id}`}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+              }
+            }}
           >
             <Badge variant={config.variant}>{config.label}</Badge>
-          </Button>
+          </span>
         </TooltipTrigger>
         <TooltipContent>
           <p>{config.tooltip}</p>
