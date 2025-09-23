@@ -896,6 +896,7 @@ export default function AdminParkingManagement() {
                 size="icon"
                 onClick={toggleCards}
                 data-testid="button-toggle-cards"
+                aria-label={cardsVisible ? "Hide dashboard cards" : "Show dashboard cards"}
               >
                 {cardsVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
@@ -904,38 +905,79 @@ export default function AdminParkingManagement() {
               {cardsVisible ? "Hide dashboard cards" : "Show dashboard cards"}
             </TooltipContent>
           </Tooltip>
-          <Button 
-            variant="outline"
-            onClick={handleRefreshAll}
-            data-testid="button-refresh-data"
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh Data
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => setShowAddToWaitingDialog(true)}
-            data-testid="button-add-to-waiting"
-          >
-            <UserPlus className="w-4 h-4 mr-2" />
-            Add to Waiting
-          </Button>
-          <Button 
-            onClick={() => setShowAddSpotDialog(true)}
-            data-testid="button-add-spot"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Spot
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline"
+                onClick={handleRefreshAll}
+                data-testid="button-refresh-data"
+                aria-label="Refresh all parking data"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh Data
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              Refresh all parking data and assignments
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                onClick={() => setShowAddToWaitingDialog(true)}
+                data-testid="button-add-to-waiting"
+                aria-label="Add user to waiting list"
+              >
+                <UserPlus className="w-4 h-4 mr-2" />
+                Add to Waiting
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              Add user to parking spot waiting list
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                onClick={() => setShowAddSpotDialog(true)}
+                data-testid="button-add-spot"
+                aria-label="Create new parking spot"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Spot
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              Create new parking spot with location settings
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
       {/* Quick Analytics Cards */}
       {cardsVisible && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card data-testid="card-total-spots">
+        <Card data-testid="card-total-spots" className="hover-elevate">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Available Spots</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-sm font-medium">Available Spots</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-4 w-4 p-0"
+                    aria-label="Available spots information"
+                  >
+                    <Info className="h-3 w-3 text-muted-foreground" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  View spots currently unassigned and available for rental
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <Car className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -948,9 +990,26 @@ export default function AdminParkingManagement() {
           </CardContent>
         </Card>
 
-        <Card data-testid="card-waiting-users">
+        <Card data-testid="card-waiting-users" className="hover-elevate">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Users Waiting</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-sm font-medium">Users Waiting</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-4 w-4 p-0"
+                    aria-label="Users waiting information"
+                  >
+                    <Info className="h-3 w-3 text-muted-foreground" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  View users actively waiting for spot assignments
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -963,9 +1022,26 @@ export default function AdminParkingManagement() {
           </CardContent>
         </Card>
 
-        <Card data-testid="card-avg-wait">
+        <Card data-testid="card-avg-wait" className="hover-elevate">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Wait Time</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-sm font-medium">Avg Wait Time</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-4 w-4 p-0"
+                    aria-label="Average wait time information"
+                  >
+                    <Info className="h-3 w-3 text-muted-foreground" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  View average days users wait before getting assigned
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <Timer className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -978,9 +1054,26 @@ export default function AdminParkingManagement() {
           </CardContent>
         </Card>
 
-        <Card data-testid="card-assignments">
+        <Card data-testid="card-assignments" className="hover-elevate">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Assigned</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-sm font-medium">Total Assigned</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-4 w-4 p-0"
+                    aria-label="Total assigned information"
+                  >
+                    <Info className="h-3 w-3 text-muted-foreground" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  View total spots successfully assigned from waiting list
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -1024,82 +1117,114 @@ export default function AdminParkingManagement() {
                 <div className="flex gap-2">
                   {selectedSpots.size > 0 && (
                     <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => toggleSpotBookabilityMutation.mutate({ 
-                          spotIds: Array.from(selectedSpots), 
-                          isBookable: true 
-                        })}
-                        disabled={toggleSpotBookabilityMutation.isPending}
-                        data-testid="button-enable-spots"
-                      >
-                        <CheckCircle2 className="w-4 h-4 mr-2" />
-                        Enable ({selectedSpots.size})
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => toggleSpotBookabilityMutation.mutate({ 
-                          spotIds: Array.from(selectedSpots), 
-                          isBookable: false 
-                        })}
-                        disabled={toggleSpotBookabilityMutation.isPending}
-                        data-testid="button-disable-spots"
-                      >
-                        <AlertTriangle className="w-4 h-4 mr-2" />
-                        Disable ({selectedSpots.size})
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => toggleSpotBookabilityMutation.mutate({ 
+                              spotIds: Array.from(selectedSpots), 
+                              isBookable: true 
+                            })}
+                            disabled={toggleSpotBookabilityMutation.isPending}
+                            data-testid="button-enable-spots"
+                            aria-label="Enable selected spots for booking"
+                          >
+                            <CheckCircle2 className="w-4 h-4 mr-2" />
+                            Enable ({selectedSpots.size})
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          Enable selected spots for booking and rental
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => toggleSpotBookabilityMutation.mutate({ 
+                              spotIds: Array.from(selectedSpots), 
+                              isBookable: false 
+                            })}
+                            disabled={toggleSpotBookabilityMutation.isPending}
+                            data-testid="button-disable-spots"
+                            aria-label="Disable selected spots from booking"
+                          >
+                            <AlertTriangle className="w-4 h-4 mr-2" />
+                            Disable ({selectedSpots.size})
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          Disable selected spots from booking (maintenance)
+                        </TooltipContent>
+                      </Tooltip>
                     </>
                   )}
-                  <Button 
-                    size="sm"
-                    variant="outline" 
-                    disabled={sortedSpots.length === 0}
-                    onClick={() => {
-                      const success = quickExportParkingSpotsPDF(sortedSpots, 'Parking Spots Report', (errorMessage) => {
-                        toast({
-                          variant: "destructive",
-                          title: "Export Failed",
-                          description: errorMessage
-                        })
-                      })
-                      if (success) {
-                        toast({
-                          title: "Export Successful",
-                          description: "PDF report has been downloaded successfully"
-                        })
-                      }
-                    }}
-                    data-testid="button-export-spots-pdf"
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    PDF
-                  </Button>
-                  <Button 
-                    size="sm"
-                    variant="outline" 
-                    disabled={sortedSpots.length === 0}
-                    onClick={() => {
-                      const success = quickExportParkingSpotsExcel(sortedSpots, 'Parking Spots Report', (errorMessage) => {
-                        toast({
-                          variant: "destructive",
-                          title: "Export Failed",
-                          description: errorMessage
-                        })
-                      })
-                      if (success) {
-                        toast({
-                          title: "Export Successful",
-                          description: "Excel report has been downloaded successfully"
-                        })
-                      }
-                    }}
-                    data-testid="button-export-spots-excel"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Excel
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        size="sm"
+                        variant="outline" 
+                        disabled={sortedSpots.length === 0}
+                        onClick={() => {
+                          const success = quickExportParkingSpotsPDF(sortedSpots, 'Parking Spots Report', (errorMessage) => {
+                            toast({
+                              variant: "destructive",
+                              title: "Export Failed",
+                              description: errorMessage
+                            })
+                          })
+                          if (success) {
+                            toast({
+                              title: "Export Successful",
+                              description: "PDF report has been downloaded successfully"
+                            })
+                          }
+                        }}
+                        data-testid="button-export-spots-pdf"
+                        aria-label="Export parking spots to PDF"
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        PDF
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Export parking spots data to PDF report
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        size="sm"
+                        variant="outline" 
+                        disabled={sortedSpots.length === 0}
+                        onClick={() => {
+                          const success = quickExportParkingSpotsExcel(sortedSpots, 'Parking Spots Report', (errorMessage) => {
+                            toast({
+                              variant: "destructive",
+                              title: "Export Failed",
+                              description: errorMessage
+                            })
+                          })
+                          if (success) {
+                            toast({
+                              title: "Export Successful",
+                              description: "Excel report has been downloaded successfully"
+                            })
+                          }
+                        }}
+                        data-testid="button-export-spots-excel"
+                        aria-label="Export parking spots to Excel"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Excel
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Export parking spots data to Excel spreadsheet
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
               </div>
             </CardHeader>
@@ -1296,54 +1421,70 @@ export default function AdminParkingManagement() {
               <div className="flex items-center justify-between">
                 <CardTitle>Available Spots ({sortedAvailableSpots.length})</CardTitle>
                 <div className="flex gap-2">
-                  <Button 
-                    size="sm"
-                    variant="outline" 
-                    disabled={sortedAvailableSpots.length === 0}
-                    onClick={() => {
-                      const success = quickExportParkingSpotsPDF(sortedAvailableSpots, 'Available Spots Report', (errorMessage) => {
-                        toast({
-                          variant: "destructive",
-                          title: "Export Failed",
-                          description: errorMessage
-                        })
-                      })
-                      if (success) {
-                        toast({
-                          title: "Export Successful",
-                          description: "PDF report has been downloaded successfully"
-                        })
-                      }
-                    }}
-                    data-testid="button-export-available-spots-pdf"
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    PDF
-                  </Button>
-                  <Button 
-                    size="sm"
-                    variant="outline" 
-                    disabled={sortedAvailableSpots.length === 0}
-                    onClick={() => {
-                      const success = quickExportParkingSpotsExcel(sortedAvailableSpots, 'Available Spots Report', (errorMessage) => {
-                        toast({
-                          variant: "destructive",
-                          title: "Export Failed",
-                          description: errorMessage
-                        })
-                      })
-                      if (success) {
-                        toast({
-                          title: "Export Successful",
-                          description: "Excel report has been downloaded successfully"
-                        })
-                      }
-                    }}
-                    data-testid="button-export-available-spots-excel"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Excel
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        size="sm"
+                        variant="outline" 
+                        disabled={sortedAvailableSpots.length === 0}
+                        onClick={() => {
+                          const success = quickExportParkingSpotsPDF(sortedAvailableSpots, 'Available Spots Report', (errorMessage) => {
+                            toast({
+                              variant: "destructive",
+                              title: "Export Failed",
+                              description: errorMessage
+                            })
+                          })
+                          if (success) {
+                            toast({
+                              title: "Export Successful",
+                              description: "PDF report has been downloaded successfully"
+                            })
+                          }
+                        }}
+                        data-testid="button-export-available-spots-pdf"
+                        aria-label="Export available spots to PDF"
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        PDF
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Export available spots data to PDF report
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        size="sm"
+                        variant="outline" 
+                        disabled={sortedAvailableSpots.length === 0}
+                        onClick={() => {
+                          const success = quickExportParkingSpotsExcel(sortedAvailableSpots, 'Available Spots Report', (errorMessage) => {
+                            toast({
+                              variant: "destructive",
+                              title: "Export Failed",
+                              description: errorMessage
+                            })
+                          })
+                          if (success) {
+                            toast({
+                              title: "Export Successful",
+                              description: "Excel report has been downloaded successfully"
+                            })
+                          }
+                        }}
+                        data-testid="button-export-available-spots-excel"
+                        aria-label="Export available spots to Excel"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Excel
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Export available spots data to Excel spreadsheet
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
               </div>
             </CardHeader>

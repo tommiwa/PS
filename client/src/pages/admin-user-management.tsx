@@ -53,7 +53,8 @@ import {
   Calendar,
   Trash2,
   MapPin,
-  FileText
+  FileText,
+  Info
 } from "lucide-react"
 
 // Extend shared schema with UI validation refinements
@@ -592,6 +593,7 @@ export default function AdminUserManagement() {
                 size="icon"
                 onClick={toggleCards}
                 data-testid="button-toggle-cards"
+                aria-label={cardsVisible ? "Hide analytics cards" : "Show analytics cards"}
               >
                 {cardsVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
@@ -600,22 +602,37 @@ export default function AdminUserManagement() {
               {cardsVisible ? "Hide analytics cards" : "Show analytics cards"}
             </TooltipContent>
           </Tooltip>
-          <Button 
-            variant="outline" 
-            onClick={() => refetchUsers()}
-            disabled={isLoadingUsers}
-            data-testid="button-refresh-users"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingUsers ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
-            <DialogTrigger asChild>
-              <Button data-testid="button-add-user">
-                <UserPlus className="h-4 w-4 mr-2" />
-                Add User
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                onClick={() => refetchUsers()}
+                disabled={isLoadingUsers}
+                data-testid="button-refresh-users"
+                aria-label="Refresh all user data"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingUsers ? 'animate-spin' : ''}`} />
+                Refresh
               </Button>
-            </DialogTrigger>
+            </TooltipTrigger>
+            <TooltipContent>
+              Refresh all user data from database
+            </TooltipContent>
+          </Tooltip>
+          <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DialogTrigger asChild>
+                  <Button data-testid="button-add-user">
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Add User
+                  </Button>
+                </DialogTrigger>
+              </TooltipTrigger>
+              <TooltipContent>
+                Create new user account with role assignment and department allocation
+              </TooltipContent>
+            </Tooltip>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>Add New User</DialogTitle>
@@ -687,9 +704,16 @@ export default function AdminUserManagement() {
                           <FormLabel>Role</FormLabel>
                           <Select onValueChange={field.onChange} defaultValue={field.value || 'renter'}>
                             <FormControl>
-                              <SelectTrigger data-testid="select-role">
-                                <SelectValue placeholder="Select role" />
-                              </SelectTrigger>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <SelectTrigger data-testid="select-role">
+                                    <SelectValue placeholder="Select role" />
+                                  </SelectTrigger>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  Admin: Full system access | Owner: Can list spots for rent | Renter: Can book available spots
+                                </TooltipContent>
+                              </Tooltip>
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="renter">Renter</SelectItem>
@@ -841,9 +865,16 @@ export default function AdminUserManagement() {
                           <FormLabel>Role</FormLabel>
                           <Select onValueChange={field.onChange} defaultValue={field.value ?? ""} value={field.value ?? ""}>
                             <FormControl>
-                              <SelectTrigger data-testid="select-edit-role">
-                                <SelectValue placeholder="Select role" />
-                              </SelectTrigger>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <SelectTrigger data-testid="select-edit-role">
+                                    <SelectValue placeholder="Select role" />
+                                  </SelectTrigger>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  Changing roles affects user permissions and system access immediately
+                                </TooltipContent>
+                              </Tooltip>
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="renter">Renter</SelectItem>
@@ -904,22 +935,29 @@ export default function AdminUserManagement() {
                                   )}
                                 </div>
                               </div>
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => {
-                                  unassignSpotMutation.mutate(spot.id);
-                                }}
-                                disabled={unassignSpotMutation.isPending}
-                                data-testid={`button-unassign-${spot.id}`}
-                              >
-                                {unassignSpotMutation.isPending ? (
-                                  <RefreshCw className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <><Trash2 className="h-4 w-4 mr-1" />Unassign</>
-                                )}
-                              </Button>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => {
+                                      unassignSpotMutation.mutate(spot.id);
+                                    }}
+                                    disabled={unassignSpotMutation.isPending}
+                                    data-testid={`button-unassign-${spot.id}`}
+                                  >
+                                    {unassignSpotMutation.isPending ? (
+                                      <RefreshCw className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <><Trash2 className="h-4 w-4 mr-1" />Unassign</>
+                                    )}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  Remove parking spot assignment and return spot to available pool
+                                </TooltipContent>
+                              </Tooltip>
                             </div>
                           ))}
                         </div>
@@ -954,9 +992,26 @@ export default function AdminUserManagement() {
       {/* Quick Analytics Cards */}
       {cardsVisible && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
+        <Card className="hover-elevate">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-4 w-4 p-0"
+                    aria-label="Total users information"
+                  >
+                    <Info className="h-3 w-3 text-muted-foreground" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  View total registered user accounts across all roles
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -969,9 +1024,26 @@ export default function AdminUserManagement() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover-elevate">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-4 w-4 p-0"
+                    aria-label="Active users information"
+                  >
+                    <Info className="h-3 w-3 text-muted-foreground" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  View users logged in within the last 30 days
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <UserCheck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -984,9 +1056,26 @@ export default function AdminUserManagement() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover-elevate">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">New This Week</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-sm font-medium">New This Week</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-4 w-4 p-0"
+                    aria-label="New users information"
+                  >
+                    <Info className="h-3 w-3 text-muted-foreground" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  View new user registrations in the past 7 days
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -999,9 +1088,26 @@ export default function AdminUserManagement() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover-elevate">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Most Active Dept</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-sm font-medium">Most Active Dept</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-4 w-4 p-0"
+                    aria-label="Most active department information"
+                  >
+                    <Info className="h-3 w-3 text-muted-foreground" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  View department with highest user engagement
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <Building className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -1026,9 +1132,35 @@ export default function AdminUserManagement() {
               }`}
               onClick={() => handleRoleCardClick('admin')}
               data-testid="card-filter-admin"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleRoleCardClick('admin');
+                }
+              }}
+              aria-describedby="admin-card-description"
             >
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Administrators</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Administrators</CardTitle>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-4 w-4 p-0"
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label="Administrator filter information"
+                      >
+                        <Info className="h-3 w-3 text-muted-foreground" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Filter users with full system access and management privileges
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
@@ -1036,16 +1168,46 @@ export default function AdminUserManagement() {
                 </div>
                 <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">System access</Badge>
               </CardContent>
+              <div id="admin-card-description" className="sr-only">
+                Filter to show only administrators with full system access and user management privileges
+              </div>
             </Card>
+            
             <Card 
               className={`cursor-pointer hover-elevate ${
                 filterValues.role === 'owner' ? 'ring-2 ring-primary' : ''
               }`}
               onClick={() => handleRoleCardClick('owner')}
               data-testid="card-filter-owner"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleRoleCardClick('owner');
+                }
+              }}
+              aria-describedby="owner-card-description"
             >
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Spot Owners</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Spot Owners</CardTitle>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-4 w-4 p-0"
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label="Spot owner filter information"
+                      >
+                        <Info className="h-3 w-3 text-muted-foreground" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Filter users who can list parking spaces for rental
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
@@ -1053,16 +1215,46 @@ export default function AdminUserManagement() {
                 </div>
                 <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">Revenue generators</Badge>
               </CardContent>
+              <div id="owner-card-description" className="sr-only">
+                Filter to show only spot owners who can list parking spaces for rental and earn revenue
+              </div>
             </Card>
+            
             <Card 
               className={`cursor-pointer hover-elevate ${
                 filterValues.role === 'renter' ? 'ring-2 ring-primary' : ''
               }`}
               onClick={() => handleRoleCardClick('renter')}
               data-testid="card-filter-renter"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleRoleCardClick('renter');
+                }
+              }}
+              aria-describedby="renter-card-description"
             >
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Renters</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Renters</CardTitle>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-4 w-4 p-0"
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label="Renter filter information"
+                      >
+                        <Info className="h-3 w-3 text-muted-foreground" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Filter users who book parking spaces
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
@@ -1070,16 +1262,46 @@ export default function AdminUserManagement() {
                 </div>
                 <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">Regular users</Badge>
               </CardContent>
+              <div id="renter-card-description" className="sr-only">
+                Filter to show only renters who book parking spaces but don't own spots
+              </div>
             </Card>
+            
             <Card 
               className={`cursor-pointer hover-elevate ${
                 (!filterValues.role || filterValues.role === 'all') ? 'ring-2 ring-primary' : ''
               }`}
               onClick={() => handleRoleCardClick('all')}
               data-testid="card-filter-all"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleRoleCardClick('all');
+                }
+              }}
+              aria-describedby="all-card-description"
             >
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">All Users</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">All Users</CardTitle>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-4 w-4 p-0"
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label="All users filter information"
+                      >
+                        <Info className="h-3 w-3 text-muted-foreground" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Clear filters to display all users
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
@@ -1087,6 +1309,9 @@ export default function AdminUserManagement() {
                 </div>
                 <Badge variant="outline" className="text-xs bg-gray-50 text-gray-700 border-gray-200">Total count</Badge>
               </CardContent>
+              <div id="all-card-description" className="sr-only">
+                Clear role filters to display all users regardless of their assigned role
+              </div>
             </Card>
           </div>
 
@@ -1133,26 +1358,91 @@ export default function AdminUserManagement() {
               <CardContent className="p-4">
                 <div className="flex items-center gap-4">
                   <span className="text-sm font-medium">Bulk Actions:</span>
-                  <Button size="sm" variant="outline" onClick={() => handleBulkAction('send-notification')}>
-                    <Mail className="h-4 w-4 mr-1" />
-                    Send Notification
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => handleBulkAction('suspend-users')}>
-                    <XCircle className="h-4 w-4 mr-1" />
-                    Suspend Selected
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => handleBulkAction('activate-users')}>
-                    <CheckCircle className="h-4 w-4 mr-1" />
-                    Activate Selected
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => handleBulkAction('export-data')}>
-                    <Download className="h-4 w-4 mr-1" />
-                    Export Data
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => setShowBulkActions(false)}>
-                    <XCircle className="h-4 w-4 mr-1" />
-                    Close
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => handleBulkAction('send-notification')} 
+                        data-testid="button-bulk-send-notification"
+                        aria-label="Send email notifications to selected users"
+                      >
+                        <Mail className="h-4 w-4 mr-1" />
+                        Send Notification
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Send email notifications to selected users
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => handleBulkAction('suspend-users')} 
+                        data-testid="button-bulk-suspend"
+                        aria-label="Suspend selected users"
+                      >
+                        <XCircle className="h-4 w-4 mr-1" />
+                        Suspend Selected
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Suspend selected users and block system access
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => handleBulkAction('activate-users')} 
+                        data-testid="button-bulk-activate"
+                        aria-label="Activate selected users"
+                      >
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                        Activate Selected
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Activate selected users and restore access
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => handleBulkAction('export-data')} 
+                        data-testid="button-bulk-export"
+                        aria-label="Export selected user data"
+                      >
+                        <Download className="h-4 w-4 mr-1" />
+                        Export Data
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Export selected user data to Excel or PDF
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => setShowBulkActions(false)} 
+                        data-testid="button-bulk-close"
+                        aria-label="Close bulk actions panel"
+                      >
+                        <XCircle className="h-4 w-4 mr-1" />
+                        Close
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Close bulk actions panel
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
               </CardContent>
             </Card>

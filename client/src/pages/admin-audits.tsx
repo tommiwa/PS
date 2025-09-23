@@ -21,7 +21,8 @@ import {
   TrendingUp,
   Users,
   RefreshCw,
-  Shield
+  Shield,
+  Info
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -241,6 +242,7 @@ export default function AdminAudits() {
                 size="icon"
                 onClick={toggleCards}
                 data-testid="button-toggle-cards"
+                aria-label={cardsVisible ? "Hide analytics cards" : "Show analytics cards"}
               >
                 {cardsVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
@@ -249,22 +251,38 @@ export default function AdminAudits() {
               {cardsVisible ? 'Hide analytics cards' : 'Show analytics cards'}
             </TooltipContent>
           </Tooltip>
-          <Button 
-            variant="outline" 
-            onClick={() => refetch()}
-            data-testid="button-refresh-data"
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh Data
-          </Button>
-          <Button 
-            onClick={handleExport}
-            variant="outline"
-            data-testid="button-export-audits"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Export Report
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                onClick={() => refetch()}
+                data-testid="button-refresh-data"
+                aria-label="Refresh audit log data"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh Data
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              Refresh audit log data and security events
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                onClick={handleExport}
+                variant="outline"
+                data-testid="button-export-audits"
+                aria-label="Export audit trail to Excel"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export Report
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              Export audit trail to Excel for compliance
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
@@ -273,7 +291,24 @@ export default function AdminAudits() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" data-testid="analytics-cards">
         <Card className="hover-elevate">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Logs Today</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-sm font-medium">Total Logs Today</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-4 w-4 p-0"
+                    aria-label="Total logs today information"
+                  >
+                    <Info className="h-3 w-3 text-muted-foreground" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  View audit entries recorded today from all user actions
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -288,7 +323,24 @@ export default function AdminAudits() {
 
         <Card className="hover-elevate">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Failed Actions</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-sm font-medium">Failed Actions</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-4 w-4 p-0"
+                    aria-label="Failed actions information"
+                  >
+                    <Info className="h-3 w-3 text-muted-foreground" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  View failed actions requiring security investigation
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <AlertCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -303,7 +355,24 @@ export default function AdminAudits() {
 
         <Card className="hover-elevate">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-4 w-4 p-0"
+                    aria-label="Active users information"
+                  >
+                    <Info className="h-3 w-3 text-muted-foreground" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  View number of users with activity today
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -318,7 +387,24 @@ export default function AdminAudits() {
 
         <Card className="hover-elevate">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">System Health</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-sm font-medium">System Health</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-4 w-4 p-0"
+                    aria-label="System health information"
+                  >
+                    <Info className="h-3 w-3 text-muted-foreground" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  View overall system performance and security status
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <Shield className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -355,9 +441,16 @@ export default function AdminAudits() {
                 data-testid="input-audit-search"
               />
             </div>
-            <Button onClick={handleSearch} data-testid="button-search-audits">
-              Search
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button onClick={handleSearch} data-testid="button-search-audits" aria-label="Search audit logs">
+                  Search
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                Search audit logs by usernames and actions
+              </TooltipContent>
+            </Tooltip>
           </div>
 
           {/* Filter Controls */}
@@ -476,6 +569,7 @@ export default function AdminAudits() {
               size="sm"
               onClick={() => refetch()}
               data-testid="button-refresh-audits"
+              aria-label="Refresh audit results"
             >
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh

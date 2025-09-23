@@ -50,7 +50,8 @@ import {
   Settings,
   MoreHorizontal,
   Download,
-  FileText
+  FileText,
+  Info
 } from "lucide-react"
 import type { Booking, BookingStatus, ParkingSpot } from "@shared/schema"
 import { quickExportBookingsPDF, quickExportBookingsExcel, quickExportBookingRequestsPDF, quickExportBookingRequestsExcel, quickExportBookingActivityPDF, quickExportBookingActivityExcel } from "@/utils/export-utils"
@@ -68,6 +69,7 @@ interface AdminBookingData {
   ownerDepartment: string;
   bookingDate: string;
   dailyRate: number;
+  totalAmount: number;
   status: BookingStatus;
   paymentReceived: boolean;
   startTime: string;
@@ -770,6 +772,7 @@ export default function AdminSpotBookingManagement() {
                 size="icon"
                 onClick={toggleCards}
                 data-testid="button-toggle-cards"
+                aria-label={cardsVisible ? "Hide analytics cards" : "Show analytics cards"}
               >
                 {cardsVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
@@ -778,69 +781,110 @@ export default function AdminSpotBookingManagement() {
               {cardsVisible ? "Hide analytics cards" : "Show analytics cards"}
             </TooltipContent>
           </Tooltip>
-          <Button 
-            variant="outline" 
-            onClick={handleRefreshAll}
-            data-testid="button-refresh-data"
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh Data
-          </Button>
-          <Button 
-            variant="outline" 
-            disabled={filteredActiveBookings.length === 0}
-            onClick={() => {
-              const success = quickExportBookingsPDF(sortedActiveBookings, 'Active Bookings Report', (errorMessage) => {
-                toast({
-                  variant: "destructive",
-                  title: "Export Failed",
-                  description: errorMessage
-                })
-              })
-              if (success) {
-                toast({
-                  title: "Export Successful",
-                  description: "PDF report has been downloaded successfully"
-                })
-              }
-            }}
-            data-testid="button-export-pdf"
-          >
-            <FileText className="h-4 w-4 mr-2" />
-            Export PDF
-          </Button>
-          <Button 
-            variant="outline" 
-            disabled={filteredActiveBookings.length === 0}
-            onClick={() => {
-              const success = quickExportBookingsExcel(sortedActiveBookings, 'Active Bookings Report', (errorMessage) => {
-                toast({
-                  variant: "destructive",
-                  title: "Export Failed",
-                  description: errorMessage
-                })
-              })
-              if (success) {
-                toast({
-                  title: "Export Successful",
-                  description: "Excel report has been downloaded successfully"
-                })
-              }
-            }}
-            data-testid="button-export-excel"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Export Excel
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                onClick={handleRefreshAll}
+                data-testid="button-refresh-data"
+                aria-label="Refresh all booking data"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh Data
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              Refresh all booking data and payment status
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                disabled={filteredActiveBookings.length === 0}
+                onClick={() => {
+                  const success = quickExportBookingsPDF(sortedActiveBookings, 'Active Bookings Report', (errorMessage) => {
+                    toast({
+                      variant: "destructive",
+                      title: "Export Failed",
+                      description: errorMessage
+                    })
+                  })
+                  if (success) {
+                    toast({
+                      title: "Export Successful",
+                      description: "PDF report has been downloaded successfully"
+                    })
+                  }
+                }}
+                data-testid="button-export-pdf"
+                aria-label="Export active bookings to PDF"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Export PDF
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              Export active booking data to PDF report
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                disabled={filteredActiveBookings.length === 0}
+                onClick={() => {
+                  const success = quickExportBookingsExcel(sortedActiveBookings, 'Active Bookings Report', (errorMessage) => {
+                    toast({
+                      variant: "destructive",
+                      title: "Export Failed",
+                      description: errorMessage
+                    })
+                  })
+                  if (success) {
+                    toast({
+                      title: "Export Successful",
+                      description: "Excel report has been downloaded successfully"
+                    })
+                  }
+                }}
+                data-testid="button-export-excel"
+                aria-label="Export active bookings to Excel"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export Excel
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              Export active booking data to Excel spreadsheet
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
       {/* Quick Analytics Cards */}
       {cardsVisible && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
+        <Card className="hover-elevate">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Bookings</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-sm font-medium">Active Bookings</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-4 w-4 p-0"
+                    aria-label="Active bookings information"
+                  >
+                    <Info className="h-3 w-3 text-muted-foreground" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  View confirmed bookings currently in progress
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <CalendarCheck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -853,9 +897,26 @@ export default function AdminSpotBookingManagement() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover-elevate">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Daily Revenue</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-sm font-medium">Daily Revenue</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-4 w-4 p-0"
+                    aria-label="Daily revenue information"
+                  >
+                    <Info className="h-3 w-3 text-muted-foreground" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  View total revenue generated today from confirmed bookings
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -868,9 +929,26 @@ export default function AdminSpotBookingManagement() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover-elevate">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-4 w-4 p-0"
+                    aria-label="Pending requests information"
+                  >
+                    <Info className="h-3 w-3 text-muted-foreground" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  View booking requests awaiting admin approval
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -883,9 +961,26 @@ export default function AdminSpotBookingManagement() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover-elevate">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Occupancy Rate</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-sm font-medium">Occupancy Rate</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-4 w-4 p-0"
+                    aria-label="Occupancy rate information"
+                  >
+                    <Info className="h-3 w-3 text-muted-foreground" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  View percentage of spots currently booked vs available
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -928,54 +1023,70 @@ export default function AdminSpotBookingManagement() {
               <div className="flex items-center justify-between">
                 <CardTitle>Pending Requests ({sortedBookingRequests.length})</CardTitle>
                 <div className="flex gap-2">
-                  <Button 
-                    size="sm"
-                    variant="outline" 
-                    disabled={sortedBookingRequests.length === 0}
-                    onClick={() => {
-                      const success = quickExportBookingRequestsPDF(sortedBookingRequests, 'Booking Requests Report', (errorMessage) => {
-                        toast({
-                          variant: "destructive",
-                          title: "Export Failed",
-                          description: errorMessage
-                        })
-                      })
-                      if (success) {
-                        toast({
-                          title: "Export Successful",
-                          description: "PDF report has been downloaded successfully"
-                        })
-                      }
-                    }}
-                    data-testid="button-export-requests-pdf"
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    PDF
-                  </Button>
-                  <Button 
-                    size="sm"
-                    variant="outline" 
-                    disabled={sortedBookingRequests.length === 0}
-                    onClick={() => {
-                      const success = quickExportBookingRequestsExcel(sortedBookingRequests, 'Booking Requests Report', (errorMessage) => {
-                        toast({
-                          variant: "destructive",
-                          title: "Export Failed",
-                          description: errorMessage
-                        })
-                      })
-                      if (success) {
-                        toast({
-                          title: "Export Successful",
-                          description: "Excel report has been downloaded successfully"
-                        })
-                      }
-                    }}
-                    data-testid="button-export-requests-excel"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Excel
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        size="sm"
+                        variant="outline" 
+                        disabled={sortedBookingRequests.length === 0}
+                        onClick={() => {
+                          const success = quickExportBookingRequestsPDF(sortedBookingRequests, 'Booking Requests Report', (errorMessage) => {
+                            toast({
+                              variant: "destructive",
+                              title: "Export Failed",
+                              description: errorMessage
+                            })
+                          })
+                          if (success) {
+                            toast({
+                              title: "Export Successful",
+                              description: "PDF report has been downloaded successfully"
+                            })
+                          }
+                        }}
+                        data-testid="button-export-requests-pdf"
+                        aria-label="Export booking requests to PDF"
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        PDF
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Export booking requests data to PDF report
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        size="sm"
+                        variant="outline" 
+                        disabled={sortedBookingRequests.length === 0}
+                        onClick={() => {
+                          const success = quickExportBookingRequestsExcel(sortedBookingRequests, 'Booking Requests Report', (errorMessage) => {
+                            toast({
+                              variant: "destructive",
+                              title: "Export Failed",
+                              description: errorMessage
+                            })
+                          })
+                          if (success) {
+                            toast({
+                              title: "Export Successful",
+                              description: "Excel report has been downloaded successfully"
+                            })
+                          }
+                        }}
+                        data-testid="button-export-requests-excel"
+                        aria-label="Export booking requests to Excel"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Excel
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Export booking requests data to Excel spreadsheet
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
               </div>
             </CardHeader>
@@ -1470,7 +1581,7 @@ export default function AdminSpotBookingManagement() {
                           Status
                         </SortableTableHeader>
                         <SortableTableHeader
-                          column="totalPrice"
+                          column="totalAmount"
                           currentSortColumn={pastBookingsSortState.column}
                           currentSortDirection={pastBookingsSortState.direction}
                           onSort={handlePastBookingsSort}
@@ -1515,7 +1626,7 @@ export default function AdminSpotBookingManagement() {
                             </Badge>
                           </TableCell>
                           <TableCell className="font-medium" data-testid={`text-amount-${booking.id}`}>
-                            ${booking.totalPrice}
+                            ${booking.totalAmount}
                           </TableCell>
                           <TableCell>
                             <Button
