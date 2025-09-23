@@ -2,7 +2,7 @@ import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -179,7 +179,14 @@ function AuthenticatedApp() {
         <div className="flex flex-col flex-1">
           <header className="flex items-center justify-between p-4 border-b bg-background">
             <div className="flex items-center gap-4">
-              <SidebarTrigger data-testid="button-sidebar-toggle" />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <SidebarTrigger data-testid="button-sidebar-toggle" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Toggle sidebar navigation - hide or show the main menu</p>
+                </TooltipContent>
+              </Tooltip>
               <div className="hidden md:block">
                 <h2 className="text-lg font-semibold">BCI Parking</h2>
                 <p className="text-sm text-muted-foreground">Spot Sharing Application</p>
@@ -195,23 +202,38 @@ function AuthenticatedApp() {
                     {user.department}
                   </p>
                 </div>
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="text-sm">
-                    {getInitials(user.name || 'User')}
-                  </AvatarFallback>
-                </Avatar>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Avatar className="h-8 w-8 cursor-pointer">
+                      <AvatarFallback className="text-sm">
+                        {getInitials(user.name || 'User')}
+                      </AvatarFallback>
+                    </Avatar>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>User profile: {user.name} ({user.role})</p>
+                  </TooltipContent>
+                </Tooltip>
               </div>
               <RoleSwitcher />
               <NotificationCenter />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleLogout}
-                data-testid="button-logout"
-                title="Log out"
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleLogout}
+                    data-testid="button-logout"
+                    aria-label="Logout"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span className="sr-only">Logout</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Log out of your account and return to the login page</p>
+                </TooltipContent>
+              </Tooltip>
               <ThemeToggle />
             </div>
           </header>
@@ -260,7 +282,7 @@ function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
+        <TooltipProvider delayDuration={200}>
           <ThemeProvider>
             <LanguageProvider>
               <AuthProvider>

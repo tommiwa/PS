@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Separator } from "@/components/ui/separator"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useAuth } from "@/contexts/auth-context"
 import { useConfirm, confirmations } from "@/hooks/use-confirm"
 import { 
@@ -140,42 +141,70 @@ export function NotificationCenter() {
 
   if (!user) return null;
 
+  const getNotificationTooltip = () => {
+    if (unreadCount === 0) {
+      return "Notifications - No new notifications";
+    } else if (unreadCount === 1) {
+      return "Notifications - 1 new notification";
+    } else {
+      return `Notifications - ${unreadCount} new notifications`;
+    }
+  };
+
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="relative"
-          data-testid="button-notification-center"
-        >
-          <Bell className="h-5 w-5" />
-          {unreadCount > 0 && (
-            <Badge
-              variant="destructive"
-              className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs"
-              data-testid="badge-notification-count"
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative"
+              data-testid="button-notification-center"
+              aria-label={unreadCount > 0 ? `Notifications (${unreadCount} unread)` : "Notifications"}
             >
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </Badge>
-          )}
-        </Button>
-      </PopoverTrigger>
+              <Bell className="h-5 w-5" />
+              <span className="sr-only">
+                {unreadCount > 0 ? `${unreadCount} unread notifications` : "No unread notifications"}
+              </span>
+              {unreadCount > 0 && (
+                <Badge
+                  variant="destructive"
+                  className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs"
+                  data-testid="badge-notification-count"
+                >
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </Badge>
+              )}
+            </Button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{getNotificationTooltip()}</p>
+        </TooltipContent>
+      </Tooltip>
       
       <PopoverContent className="w-80 p-0" align="end" data-testid="popover-notification-center">
         <div className="flex items-center justify-between p-4 border-b">
           <h3 className="font-semibold">Notifications</h3>
           <div className="flex items-center gap-2">
             {unreadCount > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => markAllAsReadMutation.mutate()}
-                disabled={markAllAsReadMutation.isPending}
-                data-testid="button-mark-all-read"
-              >
-                Mark all read
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => markAllAsReadMutation.mutate()}
+                    disabled={markAllAsReadMutation.isPending}
+                    data-testid="button-mark-all-read"
+                  >
+                    Mark all read
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Mark all {unreadCount} notifications as read</p>
+                </TooltipContent>
+              </Tooltip>
             )}
           </div>
         </div>
@@ -220,21 +249,28 @@ export function NotificationCenter() {
                             {!notification.read && (
                               <div className="w-2 h-2 bg-blue-500 rounded-full" data-testid="indicator-unread" />
                             )}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 opacity-0 group-hover:opacity-100"
-                              onClick={async (e) => {
-                                e.stopPropagation();
-                                const confirmed = await confirm(confirmations.deleteNotification());
-                                if (confirmed) {
-                                  deleteNotificationMutation.mutate(notification.id);
-                                }
-                              }}
-                              data-testid={`button-delete-notification-${notification.id}`}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 opacity-0 group-hover:opacity-100"
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    const confirmed = await confirm(confirmations.deleteNotification());
+                                    if (confirmed) {
+                                      deleteNotificationMutation.mutate(notification.id);
+                                    }
+                                  }}
+                                  data-testid={`button-delete-notification-${notification.id}`}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Delete this notification</p>
+                              </TooltipContent>
+                            </Tooltip>
                           </div>
                         </div>
                         
@@ -281,18 +317,25 @@ export function NotificationCenter() {
           <>
             <Separator />
             <div className="p-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full"
-                onClick={() => {
-                  setIsOpen(false);
-                  // Could navigate to a full notifications page
-                }}
-                data-testid="button-view-all-notifications"
-              >
-                View All Notifications
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => {
+                      setIsOpen(false);
+                      // Could navigate to a full notifications page
+                    }}
+                    data-testid="button-view-all-notifications"
+                  >
+                    View All Notifications
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>View all notifications in expanded view</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
           </>
         )}
@@ -321,15 +364,22 @@ export function NotificationToast({
             </div>
             <CardTitle className="text-sm">{notification.title}</CardTitle>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={onDismiss}
-            data-testid="button-dismiss-toast"
-          >
-            <X className="h-3 w-3" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={onDismiss}
+                data-testid="button-dismiss-toast"
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Dismiss notification</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
       </CardHeader>
       <CardContent className="pt-0">

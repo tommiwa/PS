@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ChevronDown, Shield, User, Car } from "lucide-react";
 import { UserRole } from "@shared/schema";
 
@@ -72,22 +73,33 @@ export function RoleSwitcher() {
     }
   };
 
+  const getTooltipText = () => {
+    return `Switch views between different user roles (Admin only). Currently viewing as: ${currentConfig.label}. Click to switch to a different role perspective.`;
+  };
+
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button 
-          variant="ghost" 
-          size="sm"
-          className="flex items-center gap-2 h-8"
-          data-testid="button-role-switcher"
-        >
-          <Badge variant="secondary" className={`flex items-center gap-1 text-xs ${currentConfig.color}`}>
-            <CurrentIcon className="h-3 w-3" />
-            {currentConfig.label}
-          </Badge>
-          <ChevronDown className="h-3 w-3" />
-        </Button>
-      </DropdownMenuTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              className="flex items-center gap-2 h-8"
+              data-testid="button-role-switcher"
+            >
+              <Badge variant="secondary" className={`flex items-center gap-1 text-xs ${currentConfig.color}`}>
+                <CurrentIcon className="h-3 w-3" />
+                {currentConfig.label}
+              </Badge>
+              <ChevronDown className="h-3 w-3" />
+            </Button>
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p className="max-w-xs">{getTooltipText()}</p>
+        </TooltipContent>
+      </Tooltip>
       
       <DropdownMenuContent align="end" className="w-44" data-testid="dropdown-role-switcher">
         <DropdownMenuLabel className="text-xs text-muted-foreground">

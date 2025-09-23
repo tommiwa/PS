@@ -26,79 +26,94 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from "@/components/ui/sidebar"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { UserRole } from "@shared/schema"
 import { useAuth } from "@/contexts/auth-context"
 import { queryClient } from "@/lib/queryClient"
 
-// Main navigation items
+// Main navigation items with tooltips
 const mainMenuItems = [
   {
     title: "Find Parking",
     url: "/search",
     icon: Search,
-    roles: ["owner", "renter"]
+    roles: ["owner", "renter"],
+    tooltip: "Find Parking"
   },
   {
     title: "My Bookings",
     url: "/my-bookings",
     icon: Calendar,
-    roles: ["owner", "renter"]
+    roles: ["owner", "renter"],
+    tooltip: "My Bookings"
   },
   {
     title: "Dashboard",
     url: "/dashboard",
     icon: Home,
-    roles: ["admin", "owner", "renter"]
+    roles: ["admin", "owner", "renter"],
+    tooltip: {
+      admin: "Dashboard",
+      owner: "Statistics",
+      renter: "Statistics"
+    }
   },
   {
     title: "My Spots",
     url: "/my-spots",
     icon: Car,
-    roles: ["owner"]
+    roles: ["owner"],
+    tooltip: "My Spots"
   },
 ]
 
-// Admin-specific menu items
+// Admin-specific menu items with tooltips
 const adminMenuItems = [
   {
     title: "User Management",
     url: "/admin/users",
     icon: Users,
-    roles: ["admin"]
+    roles: ["admin"],
+    tooltip: "User Management"
   },
   {
     title: "Parking Management",
     url: "/admin/parking",
     icon: Shield,
-    roles: ["admin"]
+    roles: ["admin"],
+    tooltip: "Parking Management"
   },
   {
     title: "Spot Booking Management",
     url: "/admin/bookings",
     icon: CalendarCheck,
-    roles: ["admin"]
+    roles: ["admin"],
+    tooltip: "Booking Management"
   },
   {
     title: "Analytics & Reports",
     url: "/admin/analytics",
     icon: BarChart3,
-    roles: ["admin"]
+    roles: ["admin"],
+    tooltip: "Analytics & Reports"
   },
   {
     title: "Audit Logs",
     url: "/admin/audits",
     icon: FileText,
-    roles: ["admin"]
+    roles: ["admin"],
+    tooltip: "Audit Logs"
   },
 ]
 
-// Settings menu items
+// Settings menu items with tooltips
 const settingsMenuItems = [
   {
     title: "Profile",
     url: "/profile",
     icon: Users,
-    roles: ["admin", "owner", "renter"]
+    roles: ["admin", "owner", "renter"],
+    tooltip: "Profile"
   },
 ]
 
@@ -185,6 +200,15 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
     }
   };
 
+  const getTooltipText = (item: any) => {
+    if (typeof item.tooltip === 'string') {
+      return item.tooltip;
+    } else if (typeof item.tooltip === 'object' && item.tooltip[effectiveRole]) {
+      return item.tooltip[effectiveRole];
+    }
+    return "";
+  };
+
   const renderMenuItems = (items: typeof mainMenuItems) => {
     return items.map((item) => {
       // Handle active state based on role and current location
@@ -206,9 +230,15 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
         ? "Statistics" 
         : item.title;
       
+      const tooltipText = getTooltipText(item);
+      
       return (
         <SidebarMenuItem key={item.title}>
-          <SidebarMenuButton asChild data-active={isActive}>
+          <SidebarMenuButton 
+            asChild 
+            isActive={isActive}
+            tooltip={tooltipText}
+          >
             {item.title === "Profile" ? (
               <button 
                 onClick={handleProfileClick}
