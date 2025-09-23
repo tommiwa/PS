@@ -1,6 +1,5 @@
 import { useState } from "react"
 import { BookingCard } from "@/components/booking-card"
-import { ParkingCalendar } from "@/components/parking-calendar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -25,7 +24,7 @@ export default function MyBookings() {
   const [showListingForm, setShowListingForm] = useState(false)
   const [showEditListing, setShowEditListing] = useState(false)
   const [selectedListing, setSelectedListing] = useState<any>(null)
-  const [activeTab, setActiveTab] = useState("calendar")
+  const [activeTab, setActiveTab] = useState("active")
   const { confirm } = useConfirm()
 
   // Fetch real data based on user role
@@ -141,30 +140,6 @@ export default function MyBookings() {
     }
   }
 
-  const handleBookSpot = (spotId: string) => {
-    console.log('Book spot:', spotId)
-    // Handle spot booking from calendar
-  }
-
-  // Transform real listing data for calendar
-  const transformListingsToCalendarSpots = (listings: any[]) => {
-    return listings.map((listing: any) => ({
-      id: listing.id,
-      spotNumber: listing.spotNumber || `Spot-${listing.id.slice(-4)}`,
-      location: listing.location || "Location not specified",
-      type: listing.spotType || "regular" as const,
-      isInside: listing.isIndoor || false,
-      price: Number(listing.dailyRate) || 0,
-      isAvailable: listing.status === "active" || listing.status === "available",
-      owner: isOwner() ? "You" : "Other Owner",
-      availability: { 
-        date: listing.singleDate || listing.periodStartDate || new Date().toISOString().split('T')[0]
-      },
-      isOwned: true // All listings in MyBookings are owned by the current user
-    }))
-  }
-
-  const calendarSpots = isOwner() ? transformListingsToCalendarSpots(listings) : []
 
   // Mutations for listing management
   const updateListingMutation = useMutation({
@@ -593,13 +568,7 @@ export default function MyBookings() {
 
       {/* Enhanced Status-Based Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="calendar" className="data-[state=active]:bg-sky-50 data-[state=active]:text-sky-600 dark:data-[state=active]:bg-sky-950/30 dark:data-[state=active]:text-sky-400">
-            <div className="flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
-              Calendar
-            </div>
-          </TabsTrigger>
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="active" className="data-[state=active]:bg-emerald-50 data-[state=active]:text-emerald-600 dark:data-[state=active]:bg-emerald-950/30 dark:data-[state=active]:text-emerald-400">
             <div className="flex items-center gap-1">
               <CheckCircle className="h-3 w-3" />
@@ -717,23 +686,6 @@ export default function MyBookings() {
           )}
         </TabsContent>
         
-        <TabsContent value="calendar" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Calendar View</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                {isOwner() ? "View and manage your spot availability" : "Browse available parking spots"}
-              </p>
-            </CardHeader>
-            <CardContent>
-              <ParkingCalendar 
-                spots={calendarSpots}
-                onBookSpot={handleBookSpot}
-                isOwnerView={isOwner()}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
         
         <TabsContent value="all" className="space-y-4">
           {sortedItems.length === 0 ? (
