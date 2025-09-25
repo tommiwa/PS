@@ -141,7 +141,7 @@ const translations: Record<Language, Translations> = {
     "tooltip.vehicles.isDefault": "Set as your primary vehicle for faster booking",
     
     "tooltip.profile.editCancel": "Discard changes and close profile editing without saving",
-    "tooltip.profile.editSave": "Save your profile changes - updated information will be visible to other users based on privacy settings",
+    "tooltip.profile.editSave": "Edit and save profile information",
     "tooltip.profile.deleteAccount": "Permanently delete your account and all associated data - this action cannot be undone and will remove all bookings, vehicles, and preferences",
     "tooltip.profile.exportData": "Download a copy of all your personal data stored in the system",
     "tooltip.profile.changePassword": "Update your account password for enhanced security",
@@ -206,12 +206,12 @@ const translations: Record<Language, Translations> = {
     "profile.editProfile": "Edit Profile",
 
     // Profile Specific  
-    "profile.assignedSpots": "My Assigned Parking Spots",
+    "profile.assignedSpots": "Assigned Spots",
     "profile.spotsOwned": "{count} parking spot{count !== '1' ? 's' : ''} owned",
-    "profile.spotNumber": "Spot {number}",
-    "profile.noSpotsAssigned": "No parking spots assigned",
-    "profile.contactAdmin": "Contact your administrator to assign parking spots to your account",
-    "profile.memberSince": "Member since {date}",
+    "profile.spotNumber": "Spot Number",
+    "profile.noSpotsAssigned": "No spots assigned",
+    "profile.contactAdmin": "Contact Admin",
+    "profile.memberSince": "Member Since",
     "profile.privacy": "Privacy & Security",
     "profile.profileVisibility": "Profile Visibility",
     "profile.profileVisibilityDesc": "Who can see your profile information",
@@ -457,7 +457,7 @@ const translations: Record<Language, Translations> = {
     "tooltip.vehicles.isDefault": "Définissez comme votre véhicule principal pour une réservation plus rapide",
     
     "tooltip.profile.editCancel": "Annulez les modifications et fermez l'édition du profil sans enregistrer",
-    "tooltip.profile.editSave": "Enregistrez vos modifications de profil - les informations mises à jour seront visibles par les autres utilisateurs selon les paramètres de confidentialité",
+    "tooltip.profile.editSave": "Modifier et enregistrer les informations du profil",
     "tooltip.profile.deleteAccount": "Supprimez définitivement votre compte et toutes les données associées - cette action ne peut pas être annulée et supprimera toutes les réservations, véhicules et préférences",
     "tooltip.profile.exportData": "Téléchargez une copie de toutes vos données personnelles stockées dans le système",
     "tooltip.profile.changePassword": "Mettez à jour le mot de passe de votre compte pour une sécurité renforcée",
@@ -522,12 +522,12 @@ const translations: Record<Language, Translations> = {
     "profile.editProfile": "Modifier le Profil",
 
     // Profile Specific  
-    "profile.assignedSpots": "Mes Places de Parking Assignées",
+    "profile.assignedSpots": "Places Assignées",
     "profile.spotsOwned": "{count} place{count !== '1' ? 's' : ''} de parking possédée{count !== '1' ? 's' : ''}",
-    "profile.spotNumber": "Place {number}",
-    "profile.noSpotsAssigned": "Aucune place de parking assignée",
-    "profile.contactAdmin": "Contactez votre administrateur pour assigner des places de parking à votre compte",
-    "profile.memberSince": "Membre depuis {date}",
+    "profile.spotNumber": "Numéro de Place",
+    "profile.noSpotsAssigned": "Aucune place assignée",
+    "profile.contactAdmin": "Contacter l'Admin",
+    "profile.memberSince": "Membre Depuis",
     "profile.privacy": "Confidentialité et Sécurité",
     "profile.profileVisibility": "Visibilité du Profil",
     "profile.profileVisibilityDesc": "Qui peut voir les informations de votre profil",
@@ -631,7 +631,7 @@ const translations: Record<Language, Translations> = {
     "role.renter": "Locataire",
 
     // Spot Types
-    "spotType.regular": "Normale",
+    "spotType.regular": "Régulier",
     "spotType.electric": "Électrique",
     "spotType.accessible": "Accessible",
     "spotType.teslaEv": "Tesla VE",
@@ -675,17 +675,8 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   // Memoize the translation function for stable references
   const t = useCallback((key: string, params?: Record<string, string>): string => {
-    const keys = key.split('.')
-    let value: any = translations[language]
-    
-    for (const k of keys) {
-      if (value && typeof value === 'object') {
-        value = value[k]
-      } else {
-        value = undefined
-        break
-      }
-    }
+    // Look up the key directly in the flat translation object (keys are stored with dots)
+    const value = translations[language][key]
 
     if (typeof value !== 'string') {
       console.warn(`Translation missing for key: ${key} in language: ${language}`)
