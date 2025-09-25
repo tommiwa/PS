@@ -1173,7 +1173,7 @@ export default function Profile() {
                     name="color"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t("vehicles.color")} (Optional)</FormLabel>
+                        <FormLabel>{t("vehicles.color")} ({t("common.optional")})</FormLabel>
                         <FormControl>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -1607,8 +1607,8 @@ export default function Profile() {
                         </div>
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        <p><strong>Spot Type:</strong> {waitingListEntry?.preferredSpotType}</p>
-                        <p><strong>Building:</strong> {waitingListEntry?.preferredBuilding}</p>
+                        <p><strong>{t("waitingList.spotType")}:</strong> {waitingListEntry?.preferredSpotType}</p>
+                        <p><strong>{t("waitingList.building")}:</strong> {waitingListEntry?.preferredBuilding}</p>
                       </div>
                       <div className="flex gap-1">
                         <Tooltip>

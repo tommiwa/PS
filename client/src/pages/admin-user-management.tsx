@@ -22,6 +22,7 @@ import { useConfirm, confirmations } from "@/hooks/use-confirm"
 import { useToast } from "@/hooks/use-toast"
 import { useTableSort } from "@/hooks/use-table-sort"
 import { useCardsVisibility } from "@/hooks/use-cards-visibility"
+import { useLanguage } from "@/hooks/use-language"
 import { apiRequest, queryClient } from "@/lib/queryClient"
 import { insertUserSchema, type InsertUser, type User, type ParkingSpot } from "@shared/schema"
 import { quickExportUsersPDF, quickExportUsersExcel } from "@/utils/export-utils"
@@ -93,6 +94,7 @@ interface UserAnalytics {
 export default function AdminUserManagement() {
   const { confirm } = useConfirm()
   const { toast } = useToast()
+  const { t } = useLanguage()
   const [searchTerm, setSearchTerm] = useState("")
   const [filterValues, setFilterValues] = useState<FilterValues>({})
   const [showAddUser, setShowAddUser] = useState(false)
@@ -769,7 +771,7 @@ export default function AdminUserManagement() {
           <Dialog open={showEditUser} onOpenChange={setShowEditUser}>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
-                <DialogTitle>Edit User</DialogTitle>
+                <DialogTitle>{t("admin.editUser")}</DialogTitle>
               </DialogHeader>
               <Form {...editForm}>
                 <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4 py-4">
@@ -779,7 +781,7 @@ export default function AdminUserManagement() {
                       name="firstName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>First Name</FormLabel>
+                          <FormLabel>{t("profile.firstName")}</FormLabel>
                           <FormControl>
                             <Input data-testid="input-edit-first-name" placeholder="First name" {...field} value={field.value ?? ""} />
                           </FormControl>
@@ -792,7 +794,7 @@ export default function AdminUserManagement() {
                       name="lastName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Last Name</FormLabel>
+                          <FormLabel>{t("profile.lastName")}</FormLabel>
                           <FormControl>
                             <Input data-testid="input-edit-last-name" placeholder="Last name" {...field} value={field.value ?? ""} />
                           </FormControl>
@@ -808,7 +810,7 @@ export default function AdminUserManagement() {
                       name="email"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Email</FormLabel>
+                          <FormLabel>{t("profile.emailAddress")}</FormLabel>
                           <FormControl>
                             <Input data-testid="input-edit-email" placeholder="email@company.com" type="email" {...field} value={field.value ?? ""} />
                           </FormControl>
@@ -821,7 +823,7 @@ export default function AdminUserManagement() {
                       name="phone"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Phone</FormLabel>
+                          <FormLabel>{t("profile.phoneNumber")}</FormLabel>
                           <FormControl>
                             <Input data-testid="input-edit-phone" placeholder="+1 (555) 123-4567" {...field} value={field.value ?? ""} />
                           </FormControl>
@@ -837,7 +839,7 @@ export default function AdminUserManagement() {
                       name="department"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Department</FormLabel>
+                          <FormLabel>{t("profile.department")}</FormLabel>
                           <Select onValueChange={field.onChange} defaultValue={field.value ?? ""} value={field.value ?? ""}>
                             <FormControl>
                               <SelectTrigger data-testid="select-edit-department">
@@ -862,7 +864,7 @@ export default function AdminUserManagement() {
                       name="role"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Role</FormLabel>
+                          <FormLabel>{t("admin.role")}</FormLabel>
                           <Select onValueChange={field.onChange} defaultValue={field.value ?? ""} value={field.value ?? ""}>
                             <FormControl>
                               <Tooltip>

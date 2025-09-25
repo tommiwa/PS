@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast"
 import { quickExportUsersPDF, quickExportUsersExcel } from "@/utils/export-utils"
 import { useConfirm, confirmations } from "@/hooks/use-confirm"
 import { useTableSort } from "@/hooks/use-table-sort"
+import { useLanguage } from "@/hooks/use-language"
 
 export interface AdminUser {
   id: string
@@ -59,6 +60,7 @@ export function AdminUsersTable({
 }: AdminUsersTableProps) {
   const { confirm } = useConfirm()
   const { toast } = useToast()
+  const { t } = useLanguage()
   
   // Internal state for backward compatibility if no external state provided
   const [internalSearchTerm, setInternalSearchTerm] = useState("")
@@ -143,55 +145,55 @@ export function AdminUsersTable({
   const userFilterConfigs: FilterConfig[] = [
     {
       key: "role",
-      label: "Role",
+      label: t("common.role"),
       type: "select",
       options: [
-        { value: "admin", label: "Admin" },
-        { value: "owner", label: "Owner" },
-        { value: "renter", label: "Renter" }
+        { value: "admin", label: t("role.admin") },
+        { value: "owner", label: t("role.owner") },
+        { value: "renter", label: t("role.renter") }
       ]
     },
     {
       key: "department",
-      label: "Department",
+      label: t("common.department"),
       type: "select",
       options: [
         // These would ideally come from API or be dynamic
-        { value: "engineering", label: "Engineering" },
-        { value: "marketing", label: "Marketing" },
-        { value: "sales", label: "Sales" },
-        { value: "hr", label: "Human Resources" },
-        { value: "finance", label: "Finance" },
-        { value: "operations", label: "Operations" }
+        { value: "engineering", label: t("department.engineering") },
+        { value: "marketing", label: t("department.marketing") },
+        { value: "sales", label: t("department.sales") },
+        { value: "hr", label: t("department.hr") },
+        { value: "finance", label: t("department.finance") },
+        { value: "operations", label: t("department.operations") }
       ]
     },
     {
       key: "status",
-      label: "Status",
+      label: t("common.status"),
       type: "select",
       options: [
-        { value: "active", label: "Active" },
-        { value: "inactive", label: "Inactive" }
+        { value: "active", label: t("common.active") },
+        { value: "inactive", label: t("common.inactive") }
       ]
     },
     {
       key: "location",
-      label: "Location",
+      label: t("common.location"),
       type: "select",
       options: [
-        { value: "building-a", label: "Building A" },
-        { value: "building-b", label: "Building B" },
-        { value: "remote", label: "Remote" },
-        { value: "satellite", label: "Satellite Office" }
+        { value: "building-a", label: t("building.a") },
+        { value: "building-b", label: t("building.b") },
+        { value: "remote", label: t("location.remote") },
+        { value: "satellite", label: t("location.satellite") }
       ]
     }
   ]
 
   const getRoleBadge = (role: string) => {
     const roleConfig = {
-      admin: { variant: "default" as const, label: "Admin" },
-      owner: { variant: "secondary" as const, label: "Owner" },
-      renter: { variant: "outline" as const, label: "Renter" },
+      admin: { variant: "default" as const, label: t("role.admin") },
+      owner: { variant: "secondary" as const, label: t("role.owner") },
+      renter: { variant: "outline" as const, label: t("role.renter") },
     }
     
     const config = roleConfig[role as keyof typeof roleConfig]
@@ -201,7 +203,7 @@ export function AdminUsersTable({
   const getStatusBadge = (status: string) => {
     return (
       <Badge variant={status === "active" ? "default" : "secondary"}>
-        {status}
+        {status === "active" ? t("common.active") : t("common.inactive")}
       </Badge>
     )
   }
@@ -261,13 +263,13 @@ export function AdminUsersTable({
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5" />
-                User Directory
+                {t("admin.userDirectory")}
               </CardTitle>
               <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
-                <span>{stats.total} total users</span>
-                <span>{stats.filtered} shown</span>
-                <span>{stats.active} active</span>
-                <span>{stats.owners} spot owners</span>
+                <span>{stats.total} {t("admin.totalUsers")}</span>
+                <span>{stats.filtered} {t("admin.shown")}</span>
+                <span>{stats.active} {t("admin.active")}</span>
+                <span>{stats.owners} {t("admin.spotOwners")}</span>
               </div>
             </div>
             <div className="flex gap-2">
@@ -276,17 +278,17 @@ export function AdminUsersTable({
                 variant="outline" 
                 disabled={users.length === 0}
                 onClick={() => {
-                  const success = quickExportUsersPDF(users, 'User Directory Report', (errorMessage) => {
+                  const success = quickExportUsersPDF(users, t("admin.userDirectoryReport"), (errorMessage) => {
                     toast({
                       variant: "destructive",
-                      title: "Export Failed",
+                      title: t("export.failed"),
                       description: errorMessage
                     })
                   })
                   if (success) {
                     toast({
-                      title: "Export Successful",
-                      description: "PDF report has been downloaded successfully"
+                      title: t("export.successful"),
+                      description: t("export.pdfDownloaded")
                     })
                   }
                 }}
@@ -300,17 +302,17 @@ export function AdminUsersTable({
                 variant="outline" 
                 disabled={users.length === 0}
                 onClick={() => {
-                  const success = quickExportUsersExcel(users, 'User Directory Report', (errorMessage) => {
+                  const success = quickExportUsersExcel(users, t("admin.userDirectoryReport"), (errorMessage) => {
                     toast({
                       variant: "destructive",
-                      title: "Export Failed",
+                      title: t("export.failed"),
                       description: errorMessage
                     })
                   })
                   if (success) {
                     toast({
-                      title: "Export Successful",
-                      description: "Excel report has been downloaded successfully"
+                      title: t("export.successful"),
+                      description: t("export.excelDownloaded")
                     })
                   }
                 }}
@@ -334,7 +336,7 @@ export function AdminUsersTable({
                   currentSortDirection={sortState.direction}
                   onSort={handleSort}
                 >
-                  User
+                  {t("common.user")}
                 </SortableTableHeader>
                 <SortableTableHeader
                   column="department"
@@ -342,7 +344,7 @@ export function AdminUsersTable({
                   currentSortDirection={sortState.direction}
                   onSort={handleSort}
                 >
-                  Department
+                  {t("common.department")}
                 </SortableTableHeader>
                 <SortableTableHeader
                   column="role"
@@ -350,7 +352,7 @@ export function AdminUsersTable({
                   currentSortDirection={sortState.direction}
                   onSort={handleSort}
                 >
-                  Role
+                  {t("common.role")}
                 </SortableTableHeader>
                 <SortableTableHeader
                   column="spotsOwned"
@@ -359,7 +361,7 @@ export function AdminUsersTable({
                   onSort={handleSort}
                   align="right"
                 >
-                  Spots
+                  {t("admin.spots")}
                 </SortableTableHeader>
                 <SortableTableHeader
                   column="bookingsCount"
@@ -368,7 +370,7 @@ export function AdminUsersTable({
                   onSort={handleSort}
                   align="right"
                 >
-                  Bookings
+                  {t("admin.bookings")}
                 </SortableTableHeader>
                 <SortableTableHeader
                   column="status"
@@ -376,7 +378,7 @@ export function AdminUsersTable({
                   currentSortDirection={sortState.direction}
                   onSort={handleSort}
                 >
-                  Status
+                  {t("common.status")}
                 </SortableTableHeader>
                 <SortableTableHeader
                   column="lastLogin"
@@ -384,9 +386,9 @@ export function AdminUsersTable({
                   currentSortDirection={sortState.direction}
                   onSort={handleSort}
                 >
-                  Last Login
+                  {t("admin.lastLogin")}
                 </SortableTableHeader>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="text-right">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -451,7 +453,7 @@ export function AdminUsersTable({
         
         {sortedUsers.length === 0 && (
           <div className="text-center py-8 text-muted-foreground">
-            No users found matching your criteria.
+            {t("admin.noUsersFound")}
           </div>
         )}
       </CardContent>

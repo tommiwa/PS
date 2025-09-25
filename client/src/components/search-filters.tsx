@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { X, Search, Filter } from "lucide-react"
+import { useLanguage } from "@/hooks/use-language"
 
 export interface SearchFilters {
   location: string
@@ -23,6 +24,7 @@ interface SearchFiltersProps {
 }
 
 export function SearchFilters({ onFilterChange, onSearch }: SearchFiltersProps) {
+  const { t } = useLanguage()
   const [filters, setFilters] = useState<SearchFilters>({
     location: "",
     spotType: "",
@@ -72,12 +74,12 @@ export function SearchFilters({ onFilterChange, onSearch }: SearchFiltersProps) 
 
   const getFilterLabel = (key: string) => {
     const labels = {
-      location: "Location",
-      spotType: "Spot Type",
-      date: "Date",
-      priceMin: "Min Price",
-      priceMax: "Max Price",
-      isInside: "Inside Building"
+      location: t("filters.location"),
+      spotType: t("filters.spotType"),
+      date: t("filters.date"),
+      priceMin: t("filters.priceMin"),
+      priceMax: t("filters.priceMax"),
+      isInside: t("filters.isInside")
     }
     return labels[key as keyof typeof labels] || key
   }
@@ -87,7 +89,7 @@ export function SearchFilters({ onFilterChange, onSearch }: SearchFiltersProps) 
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Filter className="h-5 w-5" />
-          Search Filters
+          {t("filters.searchFilters")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">

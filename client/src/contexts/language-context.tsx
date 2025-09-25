@@ -41,7 +41,8 @@ const translations: Record<Language, Translations> = {
     "profile.title": "Profile & Settings",
     "profile.tabs.notifications": "Notifications",
     "profile.tabs.waitingList": "Waiting List",
-    "profile.tabs.vehicles": "Vehicles", 
+    "profile.tabs.vehicles": "Vehicles",
+    "profile.tabs.payment": "Payment", 
     "profile.tabs.appSettings": "App Settings",
     
     // App Settings
@@ -75,6 +76,7 @@ const translations: Record<Language, Translations> = {
     "waitingList.description": "Join the waiting list to be notified when parking spots become available.",
     "waitingList.enrollButton": "Join Waiting List",
     "waitingList.enrolled": "You're on the list!",
+    "waitingList.notEnrolled": "Not enrolled",
     "waitingList.spotType": "Spot Type",
     "waitingList.building": "Building", 
     "waitingList.priority": "Priority",
@@ -185,6 +187,8 @@ const translations: Record<Language, Translations> = {
     // Profile UI Text
     "profile.profile": "Profile",
     "profile.loginPrompt": "Please log in to view your profile.",
+    "profile.firstName": "First Name",
+    "profile.lastName": "Last Name",
     "profile.fullName": "Full Name",
     "profile.emailAddress": "Email Address",
     "profile.phoneNumber": "Phone Number",
@@ -332,12 +336,59 @@ const translations: Record<Language, Translations> = {
     "common.saving": "Saving...",
     "common.tryAgain": "Please try again.",
     "common.recently": "Recently",
+    "common.user": "User",
+    "common.role": "Role",
+    "common.department": "Department",
+    "common.status": "Status",
+    "common.location": "Location",
+    "common.actions": "Actions",
     "common.active": "Active",
     "common.inactive": "Inactive",
     "common.indoor": "Indoor",
     "common.availableForSharing": "Available for Sharing",
     "common.canBeShared": "Can be shared",
     "common.optional": "Optional",
+
+    // Admin
+    "admin.editUser": "Edit User",
+    "admin.userDirectory": "User Directory",
+    "admin.totalUsers": "total users",
+    "admin.shown": "shown",
+    "admin.active": "active",
+    "admin.spotOwners": "spot owners",
+    "admin.userDirectoryReport": "User Directory Report",
+    "admin.lastLogin": "Last Login",
+    "admin.noUsersFound": "No users found matching your criteria.",
+    "admin.role": "Role",
+    "admin.spots": "Spots",
+    "admin.bookings": "Bookings",
+
+    // Departments
+    "department.engineering": "Engineering",
+    "department.marketing": "Marketing",
+    "department.sales": "Sales",
+    "department.hr": "Human Resources",
+    "department.finance": "Finance",
+    "department.operations": "Operations",
+
+    // Locations
+    "location.remote": "Remote",
+    "location.satellite": "Satellite Office",
+
+    // Export
+    "export.failed": "Export Failed",
+    "export.successful": "Export Successful",
+    "export.pdfDownloaded": "PDF report has been downloaded successfully",
+    "export.excelDownloaded": "Excel report has been downloaded successfully",
+
+    // Search and Filters
+    "filters.location": "Location",
+    "filters.spotType": "Spot Type",
+    "filters.date": "Date",
+    "filters.priceMin": "Min Price",
+    "filters.priceMax": "Max Price",
+    "filters.isInside": "Inside Building",
+    "filters.searchFilters": "Search Filters",
   },
   fr: {
     // Navigation
@@ -358,6 +409,7 @@ const translations: Record<Language, Translations> = {
     "profile.tabs.notifications": "Notifications",
     "profile.tabs.waitingList": "Liste d'Attente",
     "profile.tabs.vehicles": "Véhicules",
+    "profile.tabs.payment": "Paiement",
     "profile.tabs.appSettings": "Paramètres de l'Application",
     
     // App Settings
@@ -391,6 +443,7 @@ const translations: Record<Language, Translations> = {
     "waitingList.description": "Rejoignez la liste d'attente pour être notifié lorsque des places de parking se libèrent.",
     "waitingList.enrollButton": "Rejoindre la Liste d'Attente",
     "waitingList.enrolled": "Vous êtes sur la liste !",
+    "waitingList.notEnrolled": "Non inscrit",
     "waitingList.spotType": "Type de Place",
     "waitingList.building": "Bâtiment",
     "waitingList.priority": "Priorité",
@@ -501,6 +554,8 @@ const translations: Record<Language, Translations> = {
     // Profile UI Text
     "profile.profile": "Profil",
     "profile.loginPrompt": "Veuillez vous connecter pour voir votre profil.",
+    "profile.firstName": "Prénom",
+    "profile.lastName": "Nom",
     "profile.fullName": "Nom Complet",
     "profile.emailAddress": "Adresse Email",
     "profile.phoneNumber": "Numéro de Téléphone",
@@ -648,12 +703,59 @@ const translations: Record<Language, Translations> = {
     "common.saving": "Enregistrement...",
     "common.tryAgain": "Veuillez réessayer.",
     "common.recently": "Récemment",
+    "common.user": "Utilisateur",
+    "common.role": "Rôle",
+    "common.department": "Département",
+    "common.status": "Statut",
+    "common.location": "Emplacement",
+    "common.actions": "Actions",
     "common.active": "Actif",
     "common.inactive": "Inactif",
     "common.indoor": "Intérieur",
     "common.availableForSharing": "Disponible pour Partage",
     "common.canBeShared": "Peut être partagé",
     "common.optional": "Optionnel",
+
+    // Admin
+    "admin.editUser": "Modifier l'utilisateur",
+    "admin.userDirectory": "Annuaire des utilisateurs",
+    "admin.totalUsers": "utilisateurs au total",
+    "admin.shown": "affichés",
+    "admin.active": "actifs",
+    "admin.spotOwners": "propriétaires de places",
+    "admin.userDirectoryReport": "Rapport de l'annuaire des utilisateurs",
+    "admin.lastLogin": "Dernière connexion",
+    "admin.noUsersFound": "Aucun utilisateur trouvé correspondant à vos critères.",
+    "admin.role": "Rôle",
+    "admin.spots": "Places",
+    "admin.bookings": "Réservations",
+
+    // Departments
+    "department.engineering": "Ingénierie",
+    "department.marketing": "Marketing",
+    "department.sales": "Ventes",
+    "department.hr": "Ressources humaines",
+    "department.finance": "Finance",
+    "department.operations": "Opérations",
+
+    // Locations
+    "location.remote": "À distance",
+    "location.satellite": "Bureau satellite",
+
+    // Export
+    "export.failed": "Échec de l'exportation",
+    "export.successful": "Exportation réussie",
+    "export.pdfDownloaded": "Le rapport PDF a été téléchargé avec succès",
+    "export.excelDownloaded": "Le rapport Excel a été téléchargé avec succès",
+
+    // Search and Filters
+    "filters.location": "Emplacement",
+    "filters.spotType": "Type de Place",
+    "filters.date": "Date",
+    "filters.priceMin": "Prix Min",
+    "filters.priceMax": "Prix Max",
+    "filters.isInside": "À l'Intérieur",
+    "filters.searchFilters": "Filtres de Recherche",
   }
 }
 

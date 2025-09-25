@@ -496,8 +496,8 @@ export default function Profile() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">{user?.name || "Profile"}</h1>
-              <p className="text-sm text-muted-foreground">Manage your account settings</p>
+              <h1 className="text-2xl font-bold tracking-tight">{user?.name || t("profile.profile")}</h1>
+              <p className="text-sm text-muted-foreground">{t("profile.settings")}</p>
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -545,18 +545,18 @@ export default function Profile() {
                 <div className="flex items-center gap-3">
                   <Calendar className="h-5 w-5 text-primary" />
                   <div className="text-left">
-                    <h3 className="font-medium">Parking Waiting List</h3>
+                    <h3 className="font-medium">{t("waitingList.title")}</h3>
                     <p className="text-sm text-muted-foreground">
-                      {isLoadingWaitingList ? "Loading..." : 
-                       waitingListEntry ? `Enrolled • Priority ${waitingListEntry.priority}` : 
-                       "Not enrolled"}
+                      {isLoadingWaitingList ? t("common.loading") : 
+                       waitingListEntry ? `${t("waitingList.enrolled")} • Priority ${waitingListEntry.priority}` : 
+                       t("waitingList.notEnrolled")}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   {waitingListEntry && (
                     <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
-                      Active
+                      {t("common.active")}
                     </Badge>
                   )}
                 </div>
@@ -570,7 +570,7 @@ export default function Profile() {
                   </div>
                 ) : !waitingListEntry ? (
                   <div className="text-center py-6">
-                    <p className="text-muted-foreground mb-4">Join the waiting list to be notified when parking spots become available.</p>
+                    <p className="text-muted-foreground mb-4">{t("waitingList.description")}</p>
                     <Button 
                       className="w-full h-12" 
                       onClick={handleJoinWaitingList}
@@ -578,7 +578,7 @@ export default function Profile() {
                       data-testid="button-join-waiting-list"
                     >
                       {createWaitingListMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                      Join Waiting List
+                      {t("waitingList.enrollButton")}
                     </Button>
                   </div>
                 ) : (
@@ -587,7 +587,7 @@ export default function Profile() {
                       <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
                       <div className="space-y-2">
                         <h4 className="font-medium text-green-900 dark:text-green-100">
-                          Successfully Enrolled
+                          {t("waitingList.enrolled")}
                         </h4>
                         <p className="text-sm text-green-700 dark:text-green-300">
                           Priority: {waitingListEntry.priority} • Enrolled: {waitingListEntry.enrolledDate ? new Date(waitingListEntry.enrolledDate).toLocaleDateString() : 'N/A'}
@@ -601,7 +601,7 @@ export default function Profile() {
                           data-testid="button-leave-waiting-list"
                         >
                           {cancelWaitingListMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                          Leave Waiting List
+                          {t("waitingList.leave")}
                         </Button>
                       </div>
                     </div>
@@ -903,7 +903,7 @@ export default function Profile() {
                 <div className="flex items-center gap-3">
                   <Settings className="h-5 w-5 text-primary" />
                   <div className="text-left">
-                    <h3 className="font-medium">App Settings</h3>
+                    <h3 className="font-medium">{t("profile.tabs.appSettings")}</h3>
                     <p className="text-sm text-muted-foreground">
                       Theme: {theme} • Language: {language === 'en' ? 'English' : 'Français'}
                     </p>
@@ -917,10 +917,10 @@ export default function Profile() {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <Palette className="h-4 w-4" />
-                      <Label>Theme</Label>
+                      <Label>{t("appSettings.theme")}</Label>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Choose your preferred theme
+                      {t("appSettings.theme.description")}
                     </p>
                   </div>
                   <Select value={theme} onValueChange={setTheme}>
@@ -928,9 +928,9 @@ export default function Profile() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="light">Light</SelectItem>
-                      <SelectItem value="dark">Dark</SelectItem>
-                      <SelectItem value="system">System</SelectItem>
+                      <SelectItem value="light">{t("appSettings.theme.light")}</SelectItem>
+                      <SelectItem value="dark">{t("appSettings.theme.dark")}</SelectItem>
+                      <SelectItem value="system">{t("appSettings.theme.system")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -939,10 +939,10 @@ export default function Profile() {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <Globe className="h-4 w-4" />
-                      <Label>Language</Label>
+                      <Label>{t("appSettings.language")}</Label>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Select your preferred language
+                      {t("appSettings.language.description")}
                     </p>
                   </div>
                   <Select value={language} onValueChange={setLanguage}>
@@ -950,8 +950,8 @@ export default function Profile() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="en">English</SelectItem>
-                      <SelectItem value="fr">Français</SelectItem>
+                      <SelectItem value="en">{t("appSettings.language.english")}</SelectItem>
+                      <SelectItem value="fr">{t("appSettings.language.french")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -968,23 +968,23 @@ export default function Profile() {
             <TabsList className="grid w-full grid-cols-5 mb-6">
               <TabsTrigger value="waiting-list" className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
-                Waiting List
+                {t("profile.tabs.waitingList")}
               </TabsTrigger>
               <TabsTrigger value="payment-preferences" className="flex items-center gap-2">
                 <CreditCard className="h-4 w-4" />
-                Payment
+                {t("profile.tabs.payment")}
               </TabsTrigger>
               <TabsTrigger value="vehicles" className="flex items-center gap-2">
                 <Car className="h-4 w-4" />
-                Vehicles
+                {t("profile.tabs.vehicles")}
               </TabsTrigger>
               <TabsTrigger value="notifications" className="flex items-center gap-2">
                 <Bell className="h-4 w-4" />
-                Notifications
+                {t("profile.tabs.notifications")}
               </TabsTrigger>
               <TabsTrigger value="app-settings" className="flex items-center gap-2">
                 <Settings className="h-4 w-4" />
-                Settings
+                {t("profile.tabs.appSettings")}
               </TabsTrigger>
             </TabsList>
 
@@ -994,10 +994,10 @@ export default function Profile() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Calendar className="h-5 w-5" />
-                    Parking Waiting List
+                    {t("waitingList.title")}
                   </CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    Join the waiting list to be notified when parking spots become available.
+                    {t("waitingList.description")}
                   </p>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -1007,7 +1007,7 @@ export default function Profile() {
                     </div>
                   ) : !waitingListEntry ? (
                     <div className="text-center py-6">
-                      <p className="text-muted-foreground mb-4">Join the waiting list to be notified when parking spots become available.</p>
+                      <p className="text-muted-foreground mb-4">{t("waitingList.description")}</p>
                       <Button 
                         className="w-full h-12" 
                         onClick={handleJoinWaitingList}
@@ -1015,7 +1015,7 @@ export default function Profile() {
                         data-testid="button-join-waiting-list"
                       >
                         {createWaitingListMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                        Join Waiting List
+                        {t("waitingList.enrollButton")}
                       </Button>
                     </div>
                   ) : (
@@ -1024,7 +1024,7 @@ export default function Profile() {
                         <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
                         <div className="space-y-2">
                           <h4 className="font-medium text-green-900 dark:text-green-100">
-                            Successfully Enrolled
+                            {t("waitingList.enrolled")}
                           </h4>
                           <p className="text-sm text-green-700 dark:text-green-300">
                             Priority: {waitingListEntry.priority} • Enrolled: {waitingListEntry.enrolledDate ? new Date(waitingListEntry.enrolledDate).toLocaleDateString() : 'N/A'}
@@ -1038,7 +1038,7 @@ export default function Profile() {
                             data-testid="button-leave-waiting-list"
                           >
                             {cancelWaitingListMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                            Leave Waiting List
+                            {t("waitingList.leave")}
                           </Button>
                         </div>
                       </div>
@@ -1664,7 +1664,7 @@ export default function Profile() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Settings className="h-5 w-5" />
-                    App Settings
+                    {t("profile.tabs.appSettings")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -1673,10 +1673,10 @@ export default function Profile() {
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <Palette className="h-4 w-4" />
-                          <Label>Theme</Label>
+                          <Label>{t("appSettings.theme")}</Label>
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          Choose your preferred theme
+                          {t("appSettings.theme.description")}
                         </p>
                       </div>
                       <Select value={theme} onValueChange={setTheme}>
@@ -1684,9 +1684,9 @@ export default function Profile() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="light">Light</SelectItem>
-                          <SelectItem value="dark">Dark</SelectItem>
-                          <SelectItem value="system">System</SelectItem>
+                          <SelectItem value="light">{t("appSettings.theme.light")}</SelectItem>
+                          <SelectItem value="dark">{t("appSettings.theme.dark")}</SelectItem>
+                          <SelectItem value="system">{t("appSettings.theme.system")}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -1695,7 +1695,7 @@ export default function Profile() {
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <Globe className="h-4 w-4" />
-                          <Label>Language</Label>
+                          <Label>{t("appSettings.language")}</Label>
                         </div>
                         <p className="text-sm text-muted-foreground">
                           Select your preferred language
@@ -1723,7 +1723,7 @@ export default function Profile() {
       <Drawer open={showProfileEditDrawer} onOpenChange={setShowProfileEditDrawer}>
         <DrawerContent className="max-h-[90vh]">
           <DrawerHeader>
-            <DrawerTitle>Edit Profile</DrawerTitle>
+            <DrawerTitle>{t("profile.editProfile")}</DrawerTitle>
           </DrawerHeader>
           <div className="px-4 pb-4 overflow-y-auto">
             <Form {...profileForm}>
@@ -1733,7 +1733,7 @@ export default function Profile() {
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Full Name</FormLabel>
+                      <FormLabel>{t("profile.fullName")}</FormLabel>
                       <FormControl>
                         <Input placeholder="Enter your full name" {...field} data-testid="input-profile-name" />
                       </FormControl>
@@ -1747,7 +1747,7 @@ export default function Profile() {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
+                      <FormLabel>{t("profile.emailAddress")}</FormLabel>
                       <FormControl>
                         <Input type="email" placeholder="Enter your email" {...field} data-testid="input-profile-email" />
                       </FormControl>
@@ -1761,7 +1761,7 @@ export default function Profile() {
                   name="phone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Phone Number</FormLabel>
+                      <FormLabel>{t("profile.phoneNumber")}</FormLabel>
                       <FormControl>
                         <Input placeholder="Enter your phone number" {...field} data-testid="input-profile-phone" />
                       </FormControl>
@@ -1775,7 +1775,7 @@ export default function Profile() {
                   name="department"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Department</FormLabel>
+                      <FormLabel>{t("profile.department")}</FormLabel>
                       <FormControl>
                         <Input placeholder="Enter your department" {...field} data-testid="input-profile-department" />
                       </FormControl>
@@ -1795,10 +1795,10 @@ export default function Profile() {
               {updateProfileMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
+                  {t("common.saving")}
                 </>
               ) : (
-                "Save Changes"
+                t("profile.saveChanges")
               )}
             </Button>
             <DrawerClose asChild>

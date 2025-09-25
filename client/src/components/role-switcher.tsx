@@ -13,28 +13,30 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ChevronDown, Shield, User, Car } from "lucide-react";
 import { UserRole } from "@shared/schema";
-
-const roleConfig = {
-  admin: {
-    label: "Admin",
-    icon: Shield,
-    color: "bg-sky-50 text-sky-600 dark:bg-sky-950/20 dark:text-sky-400"
-  },
-  owner: {
-    label: "Spot Owner", 
-    icon: Car,
-    color: "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400"
-  },
-  renter: {
-    label: "Renter",
-    icon: User,
-    color: "bg-violet-50 text-violet-600 dark:bg-violet-950/20 dark:text-violet-400"
-  }
-};
+import { useLanguage } from "@/hooks/use-language";
 
 export function RoleSwitcher() {
   const { user, getCurrentViewRole, switchViewRole, resetViewRole, isAdmin } = useAuth();
   const [, setLocation] = useLocation();
+  const { t } = useLanguage();
+
+  const roleConfig = {
+    admin: {
+      label: t("role.admin"),
+      icon: Shield,
+      color: "bg-sky-50 text-sky-600 dark:bg-sky-950/20 dark:text-sky-400"
+    },
+    owner: {
+      label: t("role.owner"), 
+      icon: Car,
+      color: "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400"
+    },
+    renter: {
+      label: t("role.renter"),
+      icon: User,
+      color: "bg-violet-50 text-violet-600 dark:bg-violet-950/20 dark:text-violet-400"
+    }
+  };
 
   // Only show for admin users
   if (!isAdmin()) {
