@@ -466,47 +466,49 @@ export default function AdminAnalytics() {
                 ) : revenueQuery.error ? (
                   <SectionError title="Monthly Revenue" onRetry={() => queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-revenue'] })} />
                 ) : (
-                  <ChartContainer config={chartConfig} className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={revenueQuery.data?.monthlyData || []}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis 
-                          dataKey="month" 
-                          tick={{ fontSize: 12 }}
-                        />
-                        <YAxis 
-                          tick={{ fontSize: 12 }}
-                          tickFormatter={(value) => `$${value}`}
-                        />
-                        <RechartsTooltip 
-                          formatter={(value: number, name: string) => [
-                            `$${value.toLocaleString()}`, 
-                            name === 'revenue' ? 'Revenue' : name
-                          ]}
-                          labelFormatter={(label) => `Month: ${label}`}
-                        />
-                        <Legend />
-                        <Line 
-                          type="monotone" 
-                          dataKey="revenue" 
-                          stroke="var(--color-revenue)"
-                          strokeWidth={3}
-                          dot={{ fill: "var(--color-revenue)", strokeWidth: 2, r: 4 }}
-                          activeDot={{ r: 6 }}
-                          name="Revenue"
-                        />
-                        <Line 
-                          type="monotone" 
-                          dataKey="bookings" 
-                          stroke="var(--color-bookings)"
-                          strokeWidth={2}
-                          dot={{ fill: "var(--color-bookings)", strokeWidth: 2, r: 3 }}
-                          activeDot={{ r: 5 }}
-                          name="Bookings"
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </ChartContainer>
+                  <div className="h-[300px]">
+                    <LineChart 
+                      data={revenueQuery.data?.monthlyData || []}
+                      width={533}
+                      height={300}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        dataKey="month" 
+                        tick={{ fontSize: 12 }}
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 12 }}
+                        tickFormatter={(value) => `$${value}`}
+                      />
+                      <RechartsTooltip 
+                        formatter={(value: number, name: string) => [
+                          `$${value.toLocaleString()}`, 
+                          name === 'revenue' ? 'Revenue' : name
+                        ]}
+                        labelFormatter={(label) => `Month: ${label}`}
+                      />
+                      <Legend />
+                      <Line 
+                        type="monotone" 
+                        dataKey="revenue" 
+                        stroke="hsl(var(--chart-1))"
+                        strokeWidth={3}
+                        dot={{ fill: "hsl(var(--chart-1))", strokeWidth: 2, r: 4 }}
+                        activeDot={{ r: 6 }}
+                        name="Revenue"
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="bookings" 
+                        stroke="hsl(var(--chart-2))"
+                        strokeWidth={2}
+                        dot={{ fill: "hsl(var(--chart-2))", strokeWidth: 2, r: 3 }}
+                        activeDot={{ r: 5 }}
+                        name="Bookings"
+                      />
+                    </LineChart>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -523,37 +525,35 @@ export default function AdminAnalytics() {
                 ) : revenueQuery.error ? (
                   <SectionError title="Revenue Breakdown" onRetry={() => queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-revenue'] })} />
                 ) : (
-                  <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={[
-                            { name: 'Owner Earnings', value: revenueQuery.data?.revenueBreakdown.ownerEarnings || 0, color: 'hsl(var(--chart-1))' },
-                            { name: 'Platform Fees', value: revenueQuery.data?.revenueBreakdown.platformFees || 0, color: 'hsl(var(--chart-2))' },
-                            { name: 'Processing Fees', value: revenueQuery.data?.revenueBreakdown.processingFees || 0, color: 'hsl(var(--chart-3))' },
-                            { name: 'Other Revenue', value: revenueQuery.data?.revenueBreakdown.otherRevenue || 0, color: 'hsl(var(--chart-4))' }
-                          ]}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
-                          outerRadius={80}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          {[
-                            { name: 'Owner Earnings', value: revenueQuery.data?.revenueBreakdown.ownerEarnings || 0, color: 'hsl(var(--chart-1))' },
-                            { name: 'Platform Fees', value: revenueQuery.data?.revenueBreakdown.platformFees || 0, color: 'hsl(var(--chart-2))' },
-                            { name: 'Processing Fees', value: revenueQuery.data?.revenueBreakdown.processingFees || 0, color: 'hsl(var(--chart-3))' },
-                            { name: 'Other Revenue', value: revenueQuery.data?.revenueBreakdown.otherRevenue || 0, color: 'hsl(var(--chart-4))' }
-                          ].map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <RechartsTooltip formatter={(value: number) => [`$${value.toLocaleString()}`, 'Amount']} />
-                        <Legend />
-                      </PieChart>
-                    </ResponsiveContainer>
+                  <div className="h-[300px] flex justify-center">
+                    <PieChart width={533} height={300}>
+                      <Pie
+                        data={[
+                          { name: 'Owner Earnings', value: revenueQuery.data?.revenueBreakdown.ownerEarnings || 0, color: 'hsl(var(--chart-1))' },
+                          { name: 'Platform Fees', value: revenueQuery.data?.revenueBreakdown.platformFees || 0, color: 'hsl(var(--chart-2))' },
+                          { name: 'Processing Fees', value: revenueQuery.data?.revenueBreakdown.processingFees || 0, color: 'hsl(var(--chart-3))' },
+                          { name: 'Other Revenue', value: revenueQuery.data?.revenueBreakdown.otherRevenue || 0, color: 'hsl(var(--chart-4))' }
+                        ]}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {[
+                          { name: 'Owner Earnings', value: revenueQuery.data?.revenueBreakdown.ownerEarnings || 0, color: 'hsl(var(--chart-1))' },
+                          { name: 'Platform Fees', value: revenueQuery.data?.revenueBreakdown.platformFees || 0, color: 'hsl(var(--chart-2))' },
+                          { name: 'Processing Fees', value: revenueQuery.data?.revenueBreakdown.processingFees || 0, color: 'hsl(var(--chart-3))' },
+                          { name: 'Other Revenue', value: revenueQuery.data?.revenueBreakdown.otherRevenue || 0, color: 'hsl(var(--chart-4))' }
+                        ].map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip formatter={(value: number) => [`$${value.toLocaleString()}`, 'Amount']} />
+                      <Legend />
+                    </PieChart>
                   </div>
                 )}
               </CardContent>
@@ -577,30 +577,32 @@ export default function AdminAnalytics() {
                   <SectionError title="Peak Hours" onRetry={() => queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-usage'] })} />
                 ) : (
                   <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={usageQuery.data?.peakHours || []}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis 
-                          dataKey="time" 
-                          tick={{ fontSize: 12 }}
-                        />
-                        <YAxis 
-                          tick={{ fontSize: 12 }}
-                          tickFormatter={(value) => `${value}%`}
-                        />
-                        <RechartsTooltip 
-                          formatter={(value: number) => [`${value}%`, 'Usage']}
-                          labelFormatter={(label) => `Time: ${label}`}
-                        />
-                        <Legend />
-                        <Bar 
-                          dataKey="usage" 
-                          fill={'hsl(var(--chart-1))'}
-                          radius={[4, 4, 0, 0]}
-                          name="Usage Percentage"
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
+                    <BarChart 
+                      data={usageQuery.data?.peakHours || []}
+                      width={533}
+                      height={300}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        dataKey="time" 
+                        tick={{ fontSize: 12 }}
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 12 }}
+                        tickFormatter={(value) => `${value}%`}
+                      />
+                      <RechartsTooltip 
+                        formatter={(value: number) => [`${value}%`, 'Usage']}
+                        labelFormatter={(label) => `Time: ${label}`}
+                      />
+                      <Legend />
+                      <Bar 
+                        dataKey="usage" 
+                        fill={'hsl(var(--chart-1))'}
+                        radius={[4, 4, 0, 0]}
+                        name="Usage Percentage"
+                      />
+                    </BarChart>
                   </div>
                 )}
               </CardContent>
@@ -619,40 +621,40 @@ export default function AdminAnalytics() {
                   <SectionError title="Location Performance" onRetry={() => queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-usage'] })} />
                 ) : (
                   <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart 
-                        data={usageQuery.data?.locationPerformance || []}
-                        layout="horizontal"
-                        margin={{ left: 20, right: 20, top: 20, bottom: 20 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis 
-                          type="number" 
-                          tick={{ fontSize: 12 }}
-                          tickFormatter={(value) => `${value}%`}
-                        />
-                        <YAxis 
-                          type="category" 
-                          dataKey="location" 
-                          tick={{ fontSize: 12 }}
-                          width={60}
-                        />
-                        <RechartsTooltip 
-                          formatter={(value: number, name: string) => [
-                            name === 'utilization' ? `${value}%` : `$${value.toLocaleString()}`,
-                            name === 'utilization' ? 'Utilization' : name === 'earnings' ? 'Earnings' : name
-                          ]}
-                          labelFormatter={(label) => `Location: ${label}`}
-                        />
-                        <Legend />
-                        <Bar 
-                          dataKey="utilization" 
-                          fill={'hsl(var(--chart-1))'} 
-                          name="Utilization %"
-                          radius={[0, 4, 4, 0]}
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
+                    <BarChart 
+                      data={usageQuery.data?.locationPerformance || []}
+                      layout="horizontal"
+                      width={533}
+                      height={300}
+                      margin={{ left: 20, right: 20, top: 20, bottom: 20 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        type="number" 
+                        tick={{ fontSize: 12 }}
+                        tickFormatter={(value) => `${value}%`}
+                      />
+                      <YAxis 
+                        type="category" 
+                        dataKey="location" 
+                        tick={{ fontSize: 12 }}
+                        width={60}
+                      />
+                      <RechartsTooltip 
+                        formatter={(value: number, name: string) => [
+                          name === 'utilization' ? `${value}%` : `$${value.toLocaleString()}`,
+                          name === 'utilization' ? 'Utilization' : name === 'earnings' ? 'Earnings' : name
+                        ]}
+                        labelFormatter={(label) => `Location: ${label}`}
+                      />
+                      <Legend />
+                      <Bar 
+                        dataKey="utilization" 
+                        fill={'hsl(var(--chart-1))'} 
+                        name="Utilization %"
+                        radius={[0, 4, 4, 0]}
+                      />
+                    </BarChart>
                   </div>
                 )}
               </CardContent>
@@ -673,38 +675,40 @@ export default function AdminAnalytics() {
                 <SectionError title="Weekly Trends" onRetry={() => queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-usage'] })} />
               ) : (
                 <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={usageQuery.data?.weeklyTrends || []}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis 
-                        dataKey="dayOfWeek" 
-                        tick={{ fontSize: 12 }}
-                      />
-                      <YAxis 
-                        tick={{ fontSize: 12 }}
-                      />
-                      <RechartsTooltip 
-                        formatter={(value: number, name: string) => [
-                          name === 'utilization' ? `${value}%` : value,
-                          name === 'utilization' ? 'Utilization' : 'Bookings'
-                        ]}
-                        labelFormatter={(label) => `Day: ${label}`}
-                      />
-                      <Legend />
-                      <Bar 
-                        dataKey="bookings" 
-                        fill={'hsl(var(--chart-1))'} 
-                        name="Bookings"
-                        radius={[4, 4, 0, 0]}
-                      />
-                      <Bar 
-                        dataKey="utilization" 
-                        fill={'hsl(var(--chart-2))'} 
-                        name="Utilization %"
-                        radius={[4, 4, 0, 0]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <BarChart 
+                    data={usageQuery.data?.weeklyTrends || []}
+                    width={533}
+                    height={300}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="dayOfWeek" 
+                      tick={{ fontSize: 12 }}
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 12 }}
+                    />
+                    <RechartsTooltip 
+                      formatter={(value: number, name: string) => [
+                        name === 'utilization' ? `${value}%` : value,
+                        name === 'utilization' ? 'Utilization' : 'Bookings'
+                      ]}
+                      labelFormatter={(label) => `Day: ${label}`}
+                    />
+                    <Legend />
+                    <Bar 
+                      dataKey="bookings" 
+                      fill={'hsl(var(--chart-1))'} 
+                      name="Bookings"
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <Bar 
+                      dataKey="utilization" 
+                      fill={'hsl(var(--chart-2))'} 
+                      name="Utilization %"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
                 </div>
               )}
             </CardContent>
@@ -727,42 +731,42 @@ export default function AdminAnalytics() {
                   <SectionError title="Top Spots" onRetry={() => queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-top-performers'] })} />
                 ) : (
                   <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart 
-                        data={topPerformersQuery.data?.topSpots || []}
-                        layout="horizontal"
-                        margin={{ left: 60, right: 20, top: 20, bottom: 20 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis 
-                          type="number" 
-                          tick={{ fontSize: 12 }}
-                          tickFormatter={(value) => `$${value}`}
-                        />
-                        <YAxis 
-                          type="category" 
-                          dataKey="spotNumber" 
-                          tick={{ fontSize: 10 }}
-                          width={50}
-                        />
-                        <RechartsTooltip 
-                          formatter={(value: number, name: string) => [
-                            name === 'earnings' ? `$${value.toLocaleString()}` : 
-                            name === 'utilization' ? `${value}%` : value,
-                            name === 'earnings' ? 'Earnings' : 
-                            name === 'utilization' ? 'Utilization' : 'Bookings'
-                          ]}
-                          labelFormatter={(label) => `Spot #${label}`}
-                        />
-                        <Legend />
-                        <Bar 
-                          dataKey="earnings" 
-                          fill={'hsl(var(--chart-1))'} 
-                          name="Earnings"
-                          radius={[0, 4, 4, 0]}
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
+                    <BarChart 
+                      data={topPerformersQuery.data?.topSpots || []}
+                      layout="horizontal"
+                      width={533}
+                      height={300}
+                      margin={{ left: 60, right: 20, top: 20, bottom: 20 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        type="number" 
+                        tick={{ fontSize: 12 }}
+                        tickFormatter={(value) => `$${value}`}
+                      />
+                      <YAxis 
+                        type="category" 
+                        dataKey="spotNumber" 
+                        tick={{ fontSize: 10 }}
+                        width={50}
+                      />
+                      <RechartsTooltip 
+                        formatter={(value: number, name: string) => [
+                          name === 'earnings' ? `$${value.toLocaleString()}` : 
+                          name === 'utilization' ? `${value}%` : value,
+                          name === 'earnings' ? 'Earnings' : 
+                          name === 'utilization' ? 'Utilization' : 'Bookings'
+                        ]}
+                        labelFormatter={(label) => `Spot #${label}`}
+                      />
+                      <Legend />
+                      <Bar 
+                        dataKey="earnings" 
+                        fill={'hsl(var(--chart-1))'} 
+                        name="Earnings"
+                        radius={[0, 4, 4, 0]}
+                      />
+                    </BarChart>
                   </div>
                 )}
               </CardContent>
@@ -781,43 +785,43 @@ export default function AdminAnalytics() {
                   <SectionError title="Top Owners" onRetry={() => queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-top-performers'] })} />
                 ) : (
                   <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart 
-                        data={topPerformersQuery.data?.topOwners || []}
-                        layout="horizontal"
-                        margin={{ left: 80, right: 20, top: 20, bottom: 20 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis 
-                          type="number" 
-                          tick={{ fontSize: 12 }}
-                          tickFormatter={(value) => `$${value}`}
-                        />
-                        <YAxis 
-                          type="category" 
-                          dataKey="name" 
-                          tick={{ fontSize: 10 }}
-                          width={70}
-                        />
-                        <RechartsTooltip 
-                          formatter={(value: number, name: string) => [
-                            name === 'earnings' ? `$${value.toLocaleString()}` : 
-                            name === 'averageRating' ? `${value}⭐` : value,
-                            name === 'earnings' ? 'Earnings' : 
-                            name === 'spotsCount' ? 'Spots' : 
-                            name === 'bookingsCount' ? 'Bookings' : 'Rating'
-                          ]}
-                          labelFormatter={(label) => `Owner: ${label}`}
-                        />
-                        <Legend />
-                        <Bar 
-                          dataKey="earnings" 
-                          fill={'hsl(var(--chart-2))'} 
-                          name="Earnings"
-                          radius={[0, 4, 4, 0]}
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
+                    <BarChart 
+                      data={topPerformersQuery.data?.topOwners || []}
+                      layout="horizontal"
+                      width={533}
+                      height={300}
+                      margin={{ left: 80, right: 20, top: 20, bottom: 20 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        type="number" 
+                        tick={{ fontSize: 12 }}
+                        tickFormatter={(value) => `$${value}`}
+                      />
+                      <YAxis 
+                        type="category" 
+                        dataKey="name" 
+                        tick={{ fontSize: 10 }}
+                        width={70}
+                      />
+                      <RechartsTooltip 
+                        formatter={(value: number, name: string) => [
+                          name === 'earnings' ? `$${value.toLocaleString()}` : 
+                          name === 'averageRating' ? `${value}⭐` : value,
+                          name === 'earnings' ? 'Earnings' : 
+                          name === 'spotsCount' ? 'Spots' : 
+                          name === 'bookingsCount' ? 'Bookings' : 'Rating'
+                        ]}
+                        labelFormatter={(label) => `Owner: ${label}`}
+                      />
+                      <Legend />
+                      <Bar 
+                        dataKey="earnings" 
+                        fill={'hsl(var(--chart-2))'} 
+                        name="Earnings"
+                        radius={[0, 4, 4, 0]}
+                      />
+                    </BarChart>
                   </div>
                 )}
               </CardContent>
@@ -839,29 +843,31 @@ export default function AdminAnalytics() {
                   <SectionError title="Utilization" onRetry={() => queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-top-performers'] })} />
                 ) : (
                   <div className="h-[200px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={topPerformersQuery.data?.topSpots?.map(spot => ({ 
+                    <BarChart 
+                      data={topPerformersQuery.data?.topSpots?.map(spot => ({ 
                         spot: spot.spotNumber, 
                         utilization: spot.utilization 
-                      })) || []}>
-                        <XAxis 
-                          dataKey="spot" 
-                          tick={{ fontSize: 10 }}
-                        />
-                        <YAxis 
-                          tick={{ fontSize: 10 }}
-                          tickFormatter={(value) => `${value}%`}
-                        />
-                        <RechartsTooltip 
-                          formatter={(value: number) => [`${value}%`, 'Utilization']}
-                        />
-                        <Bar 
-                          dataKey="utilization" 
-                          fill={'hsl(var(--chart-3))'} 
-                          radius={[4, 4, 0, 0]}
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
+                      })) || []}
+                      width={350}
+                      height={200}
+                    >
+                      <XAxis 
+                        dataKey="spot" 
+                        tick={{ fontSize: 10 }}
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 10 }}
+                        tickFormatter={(value) => `${value}%`}
+                      />
+                      <RechartsTooltip 
+                        formatter={(value: number) => [`${value}%`, 'Utilization']}
+                      />
+                      <Bar 
+                        dataKey="utilization" 
+                        fill={'hsl(var(--chart-3))'} 
+                        radius={[4, 4, 0, 0]}
+                      />
+                    </BarChart>
                   </div>
                 )}
               </CardContent>
@@ -880,29 +886,31 @@ export default function AdminAnalytics() {
                   <SectionError title="Ratings" onRetry={() => queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-top-performers'] })} />
                 ) : (
                   <div className="h-[200px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={topPerformersQuery.data?.topOwners?.map(owner => ({ 
+                    <BarChart 
+                      data={topPerformersQuery.data?.topOwners?.map(owner => ({ 
                         name: owner.name.split(' ')[0], 
                         rating: owner.averageRating 
-                      })) || []}>
-                        <XAxis 
-                          dataKey="name" 
-                          tick={{ fontSize: 10 }}
-                        />
-                        <YAxis 
-                          tick={{ fontSize: 10 }}
-                          domain={[0, 5]}
-                        />
-                        <RechartsTooltip 
-                          formatter={(value: number) => [`${value}⭐`, 'Rating']}
-                        />
-                        <Bar 
-                          dataKey="rating" 
-                          fill={'hsl(var(--chart-4))'} 
-                          radius={[4, 4, 0, 0]}
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
+                      })) || []}
+                      width={350}
+                      height={200}
+                    >
+                      <XAxis 
+                        dataKey="name" 
+                        tick={{ fontSize: 10 }}
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 10 }}
+                        domain={[0, 5]}
+                      />
+                      <RechartsTooltip 
+                        formatter={(value: number) => [`${value}⭐`, 'Rating']}
+                      />
+                      <Bar 
+                        dataKey="rating" 
+                        fill={'hsl(var(--chart-4))'} 
+                        radius={[4, 4, 0, 0]}
+                      />
+                    </BarChart>
                   </div>
                 )}
               </CardContent>
@@ -921,28 +929,30 @@ export default function AdminAnalytics() {
                   <SectionError title="Bookings" onRetry={() => queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-top-performers'] })} />
                 ) : (
                   <div className="h-[200px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={topPerformersQuery.data?.topOwners?.map(owner => ({ 
+                    <BarChart 
+                      data={topPerformersQuery.data?.topOwners?.map(owner => ({ 
                         name: owner.name.split(' ')[0], 
                         bookings: owner.bookingsCount 
-                      })) || []}>
-                        <XAxis 
-                          dataKey="name" 
-                          tick={{ fontSize: 10 }}
-                        />
-                        <YAxis 
-                          tick={{ fontSize: 10 }}
-                        />
-                        <RechartsTooltip 
-                          formatter={(value: number) => [value, 'Bookings']}
-                        />
-                        <Bar 
-                          dataKey="bookings" 
-                          fill={'hsl(var(--chart-5))'} 
-                          radius={[4, 4, 0, 0]}
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
+                      })) || []}
+                      width={350}
+                      height={200}
+                    >
+                      <XAxis 
+                        dataKey="name" 
+                        tick={{ fontSize: 10 }}
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 10 }}
+                      />
+                      <RechartsTooltip 
+                        formatter={(value: number) => [value, 'Bookings']}
+                      />
+                      <Bar 
+                        dataKey="bookings" 
+                        fill={'hsl(var(--chart-5))'} 
+                        radius={[4, 4, 0, 0]}
+                      />
+                    </BarChart>
                   </div>
                 )}
               </CardContent>
