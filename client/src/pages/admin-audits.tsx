@@ -1,6 +1,7 @@
 import React, { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { apiRequest } from "@/lib/queryClient"
+import { useLanguage } from "@/hooks/use-language"
 import { format } from "date-fns"
 import { 
   Calendar,
@@ -88,6 +89,7 @@ interface AuditAnalytics {
 }
 
 export default function AdminAudits() {
+  const { t } = useLanguage()
   const [filters, setFilters] = useState<AuditFilters>({});
   const [page, setPage] = useState(1);
   const [pageSize] = useState(50);
@@ -228,10 +230,10 @@ export default function AdminAudits() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold" data-testid="text-page-title">
-            Audit Logs
+            {t('admin.auditLogs.title')}
           </h1>
           <p className="text-muted-foreground">
-            Monitor and track all system activities and user actions for security and compliance.
+            {t('admin.auditLogs.description')}
           </p>
         </div>
         <div className="flex gap-2">
@@ -260,7 +262,7 @@ export default function AdminAudits() {
                 aria-label="Refresh audit log data"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh Data
+                {t('admin.auditLogs.refreshData')}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
@@ -433,7 +435,7 @@ export default function AdminAudits() {
             <div className="relative flex-1">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search audit logs..."
+                placeholder={t('admin.auditLogs.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -456,7 +458,7 @@ export default function AdminAudits() {
           {/* Filter Controls */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">From Date</label>
+              <label className="text-sm font-medium">{t('admin.auditLogs.fromDate')}</label>
               <Input
                 type="date"
                 value={filters.from || ""}
@@ -465,7 +467,7 @@ export default function AdminAudits() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">To Date</label>
+              <label className="text-sm font-medium">{t('admin.auditLogs.toDate')}</label>
               <Input
                 type="date"
                 value={filters.to || ""}
@@ -474,16 +476,16 @@ export default function AdminAudits() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Action</label>
+              <label className="text-sm font-medium">{t('admin.auditLogs.action')}</label>
               <Select
                 value={filters.action || "all"}
                 onValueChange={(value) => handleFilterChange("action", value === "all" ? undefined : value)}
               >
                 <SelectTrigger data-testid="select-filter-action">
-                  <SelectValue placeholder="All actions" />
+                  <SelectValue placeholder={t('admin.auditLogs.allActions')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All actions</SelectItem>
+                  <SelectItem value="all">{t('admin.auditLogs.allActions')}</SelectItem>
                   {AUDIT_ACTIONS.map(action => (
                     <SelectItem key={action} value={action}>
                       {action}
@@ -493,16 +495,16 @@ export default function AdminAudits() {
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Entity Type</label>
+              <label className="text-sm font-medium">{t('admin.auditLogs.entityType')}</label>
               <Select
                 value={filters.entityType || "all"}
                 onValueChange={(value) => handleFilterChange("entityType", value === "all" ? undefined : value)}
               >
                 <SelectTrigger data-testid="select-filter-entity-type">
-                  <SelectValue placeholder="All entities" />
+                  <SelectValue placeholder={t('admin.auditLogs.allEntities')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All entities</SelectItem>
+                  <SelectItem value="all">{t('admin.auditLogs.allEntities')}</SelectItem>
                   {ENTITY_TYPES.map(type => (
                     <SelectItem key={type} value={type}>
                       {type.replace("_", " ")}
@@ -515,34 +517,34 @@ export default function AdminAudits() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Actor ID</label>
+              <label className="text-sm font-medium">{t('admin.auditLogs.actorId')}</label>
               <Input
-                placeholder="User ID"
+                placeholder={t('admin.auditLogs.userId')}
                 value={filters.actorId || ""}
                 onChange={(e) => handleFilterChange("actorId", e.target.value)}
                 data-testid="input-filter-actor-id"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Entity ID</label>
+              <label className="text-sm font-medium">{t('admin.auditLogs.entityId')}</label>
               <Input
-                placeholder="Entity ID"
+                placeholder={t('admin.auditLogs.entityId')}
                 value={filters.entityId || ""}
                 onChange={(e) => handleFilterChange("entityId", e.target.value)}
                 data-testid="input-filter-entity-id"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Success</label>
+              <label className="text-sm font-medium">{t('admin.auditLogs.success')}</label>
               <Select
                 value={filters.success === undefined ? "all" : String(filters.success)}
                 onValueChange={(value) => handleFilterChange("success", value === "all" ? undefined : value === "true")}
               >
                 <SelectTrigger data-testid="select-filter-success">
-                  <SelectValue placeholder="All results" />
+                  <SelectValue placeholder={t('admin.auditLogs.allResults')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All results</SelectItem>
+                  <SelectItem value="all">{t('admin.auditLogs.allResults')}</SelectItem>
                   <SelectItem value="true">Success only</SelectItem>
                   <SelectItem value="false">Failures only</SelectItem>
                 </SelectContent>
@@ -557,7 +559,7 @@ export default function AdminAudits() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>
-              Audit Results
+              {t('admin.auditLogs.auditResults')}
               {data && data.total > 0 && (
                 <span className="text-muted-foreground font-normal ml-2">
                   ({data.total.toLocaleString()} total entries)
@@ -598,12 +600,12 @@ export default function AdminAudits() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-12"></TableHead>
-                    <TableHead>Timestamp</TableHead>
-                    <TableHead>Actor</TableHead>
-                    <TableHead>Action</TableHead>
-                    <TableHead>Entity</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Message</TableHead>
+                    <TableHead>{t('admin.auditLogs.timestamp')}</TableHead>
+                    <TableHead>{t('admin.auditLogs.actor')}</TableHead>
+                    <TableHead>{t('admin.auditLogs.action')}</TableHead>
+                    <TableHead>{t('admin.auditLogs.entity')}</TableHead>
+                    <TableHead>{t('table.status')}</TableHead>
+                    <TableHead>{t('admin.auditLogs.message')}</TableHead>
                     <TableHead className="w-32">Correlation</TableHead>
                   </TableRow>
                 </TableHeader>

@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useConfirm, confirmations } from "@/hooks/use-confirm"
 import { useTableSort } from "@/hooks/use-table-sort"
 import { useCardsVisibility } from "@/hooks/use-cards-visibility"
+import { useLanguage } from "@/hooks/use-language"
 import { BookingActivityList } from "@/components/booking-activity-list"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -128,6 +129,8 @@ interface BookingAnalytics {
 export default function AdminSpotBookingManagement() {
   const { toast } = useToast()
   const { confirm } = useConfirm()
+  const { t } = useLanguage()
+  
   const [searchTerm, setSearchTerm] = useState("")
   const [filterValues, setFilterValues] = useState<FilterValues>({})
   const [requestsSearchTerm, setRequestsSearchTerm] = useState("")
@@ -759,9 +762,9 @@ export default function AdminSpotBookingManagement() {
     <div className="p-6 space-y-6" data-testid="page-admin-booking-management">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Spot Booking Management</h1>
+          <h1 className="text-3xl font-bold">{t('admin.spotBookingManagement.title')}</h1>
           <p className="text-muted-foreground">
-            Monitor and manage peer-to-peer parking bookings, resolve disputes, and handle emergency situations.
+            {t('admin.spotBookingManagement.description')}
           </p>
         </div>
         <div className="flex gap-2">
@@ -790,7 +793,7 @@ export default function AdminSpotBookingManagement() {
                 aria-label="Refresh all booking data"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh Data
+                {t('admin.spotBookingManagement.refreshData')}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
@@ -821,7 +824,7 @@ export default function AdminSpotBookingManagement() {
                 aria-label="Export active bookings to PDF"
               >
                 <FileText className="h-4 w-4 mr-2" />
-                Export PDF
+                {t('common.exportPDF')}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
@@ -852,7 +855,7 @@ export default function AdminSpotBookingManagement() {
                 aria-label="Export active bookings to Excel"
               >
                 <Download className="h-4 w-4 mr-2" />
-                Export Excel
+                {t('common.exportExcel')}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
@@ -998,10 +1001,10 @@ export default function AdminSpotBookingManagement() {
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="requests" data-testid="tab-booking-requests">Booking Requests</TabsTrigger>
-          <TabsTrigger value="active" data-testid="tab-active-bookings">Active Bookings</TabsTrigger>
-          <TabsTrigger value="analytics" data-testid="tab-past-bookings">Past Bookings</TabsTrigger>
-          <TabsTrigger value="activity" data-testid="tab-recent-activity">Recent Activity</TabsTrigger>
+          <TabsTrigger value="requests" data-testid="tab-booking-requests">{t('admin.spotBookingManagement.bookingRequests')}</TabsTrigger>
+          <TabsTrigger value="active" data-testid="tab-active-bookings">{t('admin.spotBookingManagement.activeBookings')}</TabsTrigger>
+          <TabsTrigger value="analytics" data-testid="tab-past-bookings">{t('admin.spotBookingManagement.pastBookings')}</TabsTrigger>
+          <TabsTrigger value="activity" data-testid="tab-recent-activity">{t('admin.spotBookingManagement.recentActivity')}</TabsTrigger>
         </TabsList>
 
         {/* Booking Requests Tab */}
@@ -1235,7 +1238,7 @@ export default function AdminSpotBookingManagement() {
             filterValues={filterValues}
             onFilterChange={handleFilterChange}
             onClearFilters={handleClearFilters}
-            searchPlaceholder="Search bookings by renter, owner, spot number, or location..."
+            searchPlaceholder={t('admin.spotBookingManagement.searchPlaceholder')}
             className="hover-elevate"
           />
           
