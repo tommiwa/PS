@@ -363,6 +363,19 @@ const translations: Record<Language, Translations> = {
     "admin.spots": "Spots",
     "admin.bookings": "Bookings",
 
+    // Admin User Management
+    "admin.userManagement.title": "User Management",
+    "admin.userManagement.description": "Manage user accounts, roles, and permissions across the parking system.",
+    "admin.userManagement.addUser": "Add User",
+    "admin.userManagement.administrators": "Administrators",
+    "admin.userManagement.spotOwners": "Spot Owners",
+    "admin.userManagement.renters": "Renters",
+    "admin.userManagement.allUsers": "All Users",
+    "admin.userManagement.systemAccess": "System access",
+    "admin.userManagement.revenueGenerators": "Revenue generators",
+    "admin.userManagement.regularUsers": "Regular users",
+    "admin.userManagement.totalCount": "Total count",
+
     // Departments
     "department.engineering": "Engineering",
     "department.marketing": "Marketing",
@@ -866,6 +879,19 @@ const translations: Record<Language, Translations> = {
     "admin.role": "Rôle",
     "admin.spots": "Places",
     "admin.bookings": "Réservations",
+
+    // Admin User Management
+    "admin.userManagement.title": "Gestion des Utilisateurs",
+    "admin.userManagement.description": "Gérez les comptes utilisateurs, les rôles et les permissions dans le système de stationnement.",
+    "admin.userManagement.addUser": "Ajouter un Utilisateur",
+    "admin.userManagement.administrators": "Administrateurs",
+    "admin.userManagement.spotOwners": "Propriétaires de Places",
+    "admin.userManagement.renters": "Locataires",
+    "admin.userManagement.allUsers": "Tous les Utilisateurs",
+    "admin.userManagement.systemAccess": "Accès système",
+    "admin.userManagement.revenueGenerators": "Générateurs de revenus",
+    "admin.userManagement.regularUsers": "Utilisateurs réguliers",
+    "admin.userManagement.totalCount": "Nombre total",
 
     // Departments
     "department.engineering": "Ingénierie",

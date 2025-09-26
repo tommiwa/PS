@@ -582,9 +582,9 @@ export default function AdminUserManagement() {
     <div className="p-6 space-y-6" data-testid="page-admin-users">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">User Management</h1>
+          <h1 className="text-3xl font-bold">{t("admin.userManagement.title")}</h1>
           <p className="text-muted-foreground">
-            Manage user accounts, roles, and permissions across the parking system.
+            {t("admin.userManagement.description")}
           </p>
         </div>
         <div className="flex gap-2">
@@ -614,7 +614,7 @@ export default function AdminUserManagement() {
                 aria-label="Refresh all user data"
               >
                 <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingUsers ? 'animate-spin' : ''}`} />
-                Refresh
+                {t("common.refresh")}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
@@ -627,7 +627,7 @@ export default function AdminUserManagement() {
                 <DialogTrigger asChild>
                   <Button data-testid="button-add-user">
                     <UserPlus className="h-4 w-4 mr-2" />
-                    Add User
+                    {t("admin.userManagement.addUser")}
                   </Button>
                 </DialogTrigger>
               </TooltipTrigger>
@@ -1145,7 +1145,7 @@ export default function AdminUserManagement() {
             >
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Administrators</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">{t("admin.userManagement.administrators")}</CardTitle>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
@@ -1168,7 +1168,7 @@ export default function AdminUserManagement() {
                 <div className="text-2xl font-bold">
                   {isLoadingUsers ? "..." : roleStats.admin}
                 </div>
-                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">System access</Badge>
+                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">{t("admin.userManagement.systemAccess")}</Badge>
               </CardContent>
               <div id="admin-card-description" className="sr-only">
                 Filter to show only administrators with full system access and user management privileges
@@ -1192,7 +1192,7 @@ export default function AdminUserManagement() {
             >
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Spot Owners</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">{t("admin.userManagement.spotOwners")}</CardTitle>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
@@ -1215,7 +1215,7 @@ export default function AdminUserManagement() {
                 <div className="text-2xl font-bold">
                   {isLoadingUsers ? "..." : roleStats.owner}
                 </div>
-                <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">Revenue generators</Badge>
+                <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">{t("admin.userManagement.revenueGenerators")}</Badge>
               </CardContent>
               <div id="owner-card-description" className="sr-only">
                 Filter to show only spot owners who can list parking spaces for rental and earn revenue
@@ -1239,7 +1239,7 @@ export default function AdminUserManagement() {
             >
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Renters</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">{t("admin.userManagement.renters")}</CardTitle>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
@@ -1262,7 +1262,7 @@ export default function AdminUserManagement() {
                 <div className="text-2xl font-bold">
                   {isLoadingUsers ? "..." : roleStats.renter}
                 </div>
-                <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">Regular users</Badge>
+                <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">{t("admin.userManagement.regularUsers")}</Badge>
               </CardContent>
               <div id="renter-card-description" className="sr-only">
                 Filter to show only renters who book parking spaces but don't own spots
@@ -1286,7 +1286,7 @@ export default function AdminUserManagement() {
             >
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">All Users</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">{t("admin.userManagement.allUsers")}</CardTitle>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
@@ -1309,7 +1309,7 @@ export default function AdminUserManagement() {
                 <div className="text-2xl font-bold">
                   {isLoadingUsers ? "..." : allUsers.length}
                 </div>
-                <Badge variant="outline" className="text-xs bg-gray-50 text-gray-700 border-gray-200">Total count</Badge>
+                <Badge variant="outline" className="text-xs bg-gray-50 text-gray-700 border-gray-200">{t("admin.userManagement.totalCount")}</Badge>
               </CardContent>
               <div id="all-card-description" className="sr-only">
                 Clear role filters to display all users regardless of their assigned role
