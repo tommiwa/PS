@@ -490,6 +490,8 @@ const translations: Record<Language, Translations> = {
     // Additional Common Keys
     "common.refresh": "Refresh",
     "common.exportReport": "Export Report",
+    "common.exportPDF": "Export PDF",
+    "common.exportExcel": "Export Excel",
     "common.showFilters": "Show Filters",
     "common.hideFilters": "Hide Filters",
     "common.retry": "Retry",
@@ -1090,6 +1092,8 @@ const translations: Record<Language, Translations> = {
     // Additional Common Keys
     "common.refresh": "Actualiser",
     "common.exportReport": "Exporter le Rapport",
+    "common.exportPDF": "Exporter en PDF",
+    "common.exportExcel": "Exporter en Excel",
     "common.showFilters": "Afficher les Filtres",
     "common.hideFilters": "Masquer les Filtres",
     "common.retry": "Réessayer",

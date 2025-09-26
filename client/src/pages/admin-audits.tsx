@@ -278,7 +278,7 @@ export default function AdminAudits() {
                 aria-label="Export audit trail to Excel"
               >
                 <Download className="h-4 w-4 mr-2" />
-                Export Report
+                {t('common.exportReport')}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
