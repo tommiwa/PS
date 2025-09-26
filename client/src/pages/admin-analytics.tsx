@@ -47,11 +47,13 @@ import type {
 } from "@shared/schema"
 import { useCardsVisibility } from "@/hooks/use-cards-visibility"
 import { Tooltip as UITooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { useLanguage } from "@/hooks/use-language"
 
 export default function AdminAnalytics() {
   const queryClient = useQueryClient();
   const [dateRange, setDateRange] = useState("last-30-days");
   const { cardsVisible, toggleCards } = useCardsVisibility('analytics');
+  const { t } = useLanguage();
   
   // Helper function to convert dateRange to monthsBack for revenue API
   const getMonthsBack = (range: string): number => {
@@ -108,13 +110,13 @@ export default function AdminAnalytics() {
   const SectionError = ({ title, onRetry }: { title: string; onRetry: () => void }) => (
     <div className="flex flex-col items-center justify-center py-8 text-center">
       <AlertCircle className="h-8 w-8 text-destructive mb-2" />
-      <h4 className="text-sm font-medium mb-1">Error Loading {title}</h4>
+      <h4 className="text-sm font-medium mb-1">{t('common.errorLoading')} {title}</h4>
       <p className="text-xs text-muted-foreground mb-3">
-        Failed to load this section. Please try again.
+        {t('common.failedToLoad')}
       </p>
       <Button onClick={onRetry} variant="outline" size="sm">
         <RefreshCw className="h-3 w-3 mr-1" />
-        Retry
+        {t('common.retry')}
       </Button>
     </div>
   );
@@ -176,9 +178,9 @@ export default function AdminAnalytics() {
     <div className="p-6 space-y-6" data-testid="page-admin-analytics">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Analytics & Reports</h1>
+          <h1 className="text-3xl font-bold">{t('analytics.title')}</h1>
           <p className="text-muted-foreground">
-            Comprehensive insights into parking system performance and usage.
+            {t('analytics.description')}
           </p>
         </div>
         <div className="flex gap-2">
@@ -194,7 +196,7 @@ export default function AdminAnalytics() {
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              {cardsVisible ? 'Hide analytics cards' : 'Show analytics cards'}
+              {cardsVisible ? t('tooltip.analytics.hideCards') : t('tooltip.analytics.toggleCards')}
             </TooltipContent>
           </UITooltip>
           <UITooltip>
@@ -210,11 +212,11 @@ export default function AdminAnalytics() {
                 ) : (
                   <RefreshCw className="h-4 w-4 mr-2" />
                 )}
-                Refresh
+                {t('common.refresh')}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              Refresh all analytics data including revenue, usage patterns, top performers, and system issues
+              {t('tooltip.analytics.refreshData')}
             </TooltipContent>
           </UITooltip>
           <Select value={dateRange} onValueChange={setDateRange}>
@@ -225,25 +227,25 @@ export default function AdminAnalytics() {
                 </SelectTrigger>
               </TooltipTrigger>
               <TooltipContent>
-                Select time period for analytics data - affects revenue trends
+                {t('tooltip.analytics.dateRange')}
               </TooltipContent>
             </UITooltip>
             <SelectContent>
-              <SelectItem value="last-7-days">Last 7 days</SelectItem>
-              <SelectItem value="last-30-days">Last 30 days</SelectItem>
-              <SelectItem value="last-3-months">Last 3 months</SelectItem>
-              <SelectItem value="last-year">Last year</SelectItem>
+              <SelectItem value="last-7-days">{t('dateRange.last7Days')}</SelectItem>
+              <SelectItem value="last-30-days">{t('dateRange.last30Days')}</SelectItem>
+              <SelectItem value="last-3-months">{t('dateRange.last3Months')}</SelectItem>
+              <SelectItem value="last-year">{t('dateRange.lastYear')}</SelectItem>
             </SelectContent>
           </Select>
           <UITooltip>
             <TooltipTrigger asChild>
               <Button variant="outline" disabled={isLoading} data-testid="button-export-report">
                 <Download className="h-4 w-4 mr-2" />
-                Export Report
+                {t('common.exportReport')}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              Export comprehensive analytics report as Excel file including all metrics, charts data, and insights
+              {t('tooltip.analytics.exportReport')}
             </TooltipContent>
           </UITooltip>
         </div>
@@ -256,7 +258,7 @@ export default function AdminAnalytics() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <DollarSign className="h-4 w-4" />
-              Total Revenue
+              {t('analytics.totalRevenue')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -273,7 +275,7 @@ export default function AdminAnalytics() {
                   ${overviewQuery.data?.totalRevenue.toLocaleString() || 0}
                 </div>
                 <p className="text-xs text-green-600">
-                  +{overviewQuery.data?.monthlyGrowth || 0}% from last month
+                  +{overviewQuery.data?.monthlyGrowth || 0}% {t('analytics.fromLastMonth')}
                 </p>
               </>
             )}
@@ -284,7 +286,7 @@ export default function AdminAnalytics() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Calendar className="h-4 w-4" />
-              Total Bookings
+              {t('analytics.totalBookings')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -300,7 +302,7 @@ export default function AdminAnalytics() {
                 <div className="text-2xl font-bold">
                   {overviewQuery.data?.totalBookings.toLocaleString() || 0}
                 </div>
-                <p className="text-xs text-muted-foreground">This year</p>
+                <p className="text-xs text-muted-foreground">{t('analytics.thisYear')}</p>
               </>
             )}
           </CardContent>
@@ -310,7 +312,7 @@ export default function AdminAnalytics() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Users className="h-4 w-4" />
-              Active Users
+              {t('analytics.activeUsers')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -326,7 +328,7 @@ export default function AdminAnalytics() {
                 <div className="text-2xl font-bold">
                   {overviewQuery.data?.activeUsers || 0}
                 </div>
-                <p className="text-xs text-muted-foreground">Monthly active</p>
+                <p className="text-xs text-muted-foreground">{t('analytics.monthlyActive')}</p>
               </>
             )}
           </CardContent>
@@ -336,7 +338,7 @@ export default function AdminAnalytics() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Car className="h-4 w-4" />
-              Utilization Rate
+              {t('analytics.utilizationRate')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -353,7 +355,7 @@ export default function AdminAnalytics() {
                   {overviewQuery.data?.utilizationRate || 0}%
                 </div>
                 <p className="text-xs text-green-600">
-                  {(overviewQuery.data?.utilizationRate || 0) > 75 ? 'Above target (75%)' : 'Below target (75%)'}
+                  {(overviewQuery.data?.utilizationRate || 0) > 75 ? t('analytics.aboveTarget') : t('analytics.belowTarget')}
                 </p>
               </>
             )}
@@ -364,7 +366,7 @@ export default function AdminAnalytics() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
-              Avg Booking Value
+              {t('analytics.avgBookingValue')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -380,7 +382,7 @@ export default function AdminAnalytics() {
                 <div className="text-2xl font-bold">
                   ${overviewQuery.data?.averageBookingValue || 0}
                 </div>
-                <p className="text-xs text-muted-foreground">Per booking</p>
+                <p className="text-xs text-muted-foreground">{t('analytics.perBooking')}</p>
               </>
             )}
           </CardContent>
@@ -390,7 +392,7 @@ export default function AdminAnalytics() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
-              Growth Rate
+              {t('analytics.growthRate')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -407,7 +409,7 @@ export default function AdminAnalytics() {
                   {overviewQuery.data?.monthlyGrowth && overviewQuery.data.monthlyGrowth >= 0 ? '+' : ''}
                   {overviewQuery.data?.monthlyGrowth || 0}%
                 </div>
-                <p className="text-xs text-green-600">Month over month</p>
+                <p className="text-xs text-green-600">{t('analytics.monthOverMonth')}</p>
               </>
             )}
           </CardContent>
@@ -419,34 +421,34 @@ export default function AdminAnalytics() {
         <TabsList className="grid w-full grid-cols-4">
           <UITooltip>
             <TooltipTrigger asChild>
-              <TabsTrigger value="revenue" data-testid="tab-revenue-analysis">Revenue Analysis</TabsTrigger>
+              <TabsTrigger value="revenue" data-testid="tab-revenue-analysis">{t('analytics.tabs.revenueAnalysis')}</TabsTrigger>
             </TooltipTrigger>
             <TooltipContent>
-              View revenue trends, monthly earnings, and financial breakdown by category
+              {t('tooltip.analytics.revenueAnalysis')}
             </TooltipContent>
           </UITooltip>
           <UITooltip>
             <TooltipTrigger asChild>
-              <TabsTrigger value="usage" data-testid="tab-usage-patterns">Usage Patterns</TabsTrigger>
+              <TabsTrigger value="usage" data-testid="tab-usage-patterns">{t('analytics.tabs.usagePatterns')}</TabsTrigger>
             </TooltipTrigger>
             <TooltipContent>
-              Analyze peak hours, location performance, and booking patterns throughout the day
+              {t('tooltip.analytics.usagePatterns')}
             </TooltipContent>
           </UITooltip>
           <UITooltip>
             <TooltipTrigger asChild>
-              <TabsTrigger value="performers" data-testid="tab-top-performers">Top Performers</TabsTrigger>
+              <TabsTrigger value="performers" data-testid="tab-top-performers">{t('analytics.tabs.topPerformers')}</TabsTrigger>
             </TooltipTrigger>
             <TooltipContent>
-              View top-performing parking spots, highest-earning owners, and utilization metrics
+              {t('tooltip.analytics.topPerformers')}
             </TooltipContent>
           </UITooltip>
           <UITooltip>
             <TooltipTrigger asChild>
-              <TabsTrigger value="issues" data-testid="tab-issues-alerts">Issues & Alerts</TabsTrigger>
+              <TabsTrigger value="issues" data-testid="tab-issues-alerts">{t('analytics.tabs.issuesAlerts')}</TabsTrigger>
             </TooltipTrigger>
             <TooltipContent>
-              Monitor system issues, alerts, and incidents that require administrator attention
+              {t('tooltip.analytics.issuesAlerts')}
             </TooltipContent>
           </UITooltip>
         </TabsList>
@@ -456,7 +458,7 @@ export default function AdminAnalytics() {
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle>Monthly Revenue Trend</CardTitle>
+                <CardTitle>{t('analytics.monthlyRevenueTrend')}</CardTitle>
               </CardHeader>
               <CardContent>
                 {revenueQuery.isLoading ? (
@@ -496,7 +498,7 @@ export default function AdminAnalytics() {
                         strokeWidth={3}
                         dot={{ fill: "hsl(var(--chart-1))", strokeWidth: 2, r: 4 }}
                         activeDot={{ r: 6 }}
-                        name="Revenue"
+                        name={t('analytics.revenue')}
                       />
                       <Line 
                         type="monotone" 
@@ -505,7 +507,7 @@ export default function AdminAnalytics() {
                         strokeWidth={2}
                         dot={{ fill: "hsl(var(--chart-2))", strokeWidth: 2, r: 3 }}
                         activeDot={{ r: 5 }}
-                        name="Bookings"
+                        name={t('analytics.bookings')}
                       />
                     </LineChart>
                   </div>
@@ -515,7 +517,7 @@ export default function AdminAnalytics() {
             
             <Card>
               <CardHeader>
-                <CardTitle>Revenue Breakdown</CardTitle>
+                <CardTitle>{t('analytics.revenueBreakdown')}</CardTitle>
               </CardHeader>
               <CardContent>
                 {revenueQuery.isLoading ? (
@@ -529,10 +531,10 @@ export default function AdminAnalytics() {
                     <PieChart width={533} height={300}>
                       <Pie
                         data={[
-                          { name: 'Owner Earnings', value: revenueQuery.data?.revenueBreakdown.ownerEarnings || 0, color: 'hsl(var(--chart-1))' },
-                          { name: 'Platform Fees', value: revenueQuery.data?.revenueBreakdown.platformFees || 0, color: 'hsl(var(--chart-2))' },
-                          { name: 'Processing Fees', value: revenueQuery.data?.revenueBreakdown.processingFees || 0, color: 'hsl(var(--chart-3))' },
-                          { name: 'Other Revenue', value: revenueQuery.data?.revenueBreakdown.otherRevenue || 0, color: 'hsl(var(--chart-4))' }
+                          { name: t('analytics.ownerEarnings'), value: revenueQuery.data?.revenueBreakdown.ownerEarnings || 0, color: 'hsl(var(--chart-1))' },
+                          { name: t('analytics.platformFees'), value: revenueQuery.data?.revenueBreakdown.platformFees || 0, color: 'hsl(var(--chart-2))' },
+                          { name: t('analytics.processingFees'), value: revenueQuery.data?.revenueBreakdown.processingFees || 0, color: 'hsl(var(--chart-3))' },
+                          { name: t('analytics.otherRevenue'), value: revenueQuery.data?.revenueBreakdown.otherRevenue || 0, color: 'hsl(var(--chart-4))' }
                         ]}
                         cx="50%"
                         cy="50%"
@@ -543,10 +545,10 @@ export default function AdminAnalytics() {
                         dataKey="value"
                       >
                         {[
-                          { name: 'Owner Earnings', value: revenueQuery.data?.revenueBreakdown.ownerEarnings || 0, color: 'hsl(var(--chart-1))' },
-                          { name: 'Platform Fees', value: revenueQuery.data?.revenueBreakdown.platformFees || 0, color: 'hsl(var(--chart-2))' },
-                          { name: 'Processing Fees', value: revenueQuery.data?.revenueBreakdown.processingFees || 0, color: 'hsl(var(--chart-3))' },
-                          { name: 'Other Revenue', value: revenueQuery.data?.revenueBreakdown.otherRevenue || 0, color: 'hsl(var(--chart-4))' }
+                          { name: t('analytics.ownerEarnings'), value: revenueQuery.data?.revenueBreakdown.ownerEarnings || 0, color: 'hsl(var(--chart-1))' },
+                          { name: t('analytics.platformFees'), value: revenueQuery.data?.revenueBreakdown.platformFees || 0, color: 'hsl(var(--chart-2))' },
+                          { name: t('analytics.processingFees'), value: revenueQuery.data?.revenueBreakdown.processingFees || 0, color: 'hsl(var(--chart-3))' },
+                          { name: t('analytics.otherRevenue'), value: revenueQuery.data?.revenueBreakdown.otherRevenue || 0, color: 'hsl(var(--chart-4))' }
                         ].map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
@@ -566,7 +568,7 @@ export default function AdminAnalytics() {
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle>Peak Hours Usage</CardTitle>
+                <CardTitle>{t('analytics.peakHoursUsage')}</CardTitle>
               </CardHeader>
               <CardContent>
                 {usageQuery.isLoading ? (
@@ -1029,9 +1031,9 @@ export default function AdminAnalytics() {
                               </div>
                               <h4 className="font-medium mb-1">{issue.description}</h4>
                               <div className="text-sm text-muted-foreground">
-                                Created: {issue.created} • Assignee: {issue.assignee}
+                                {t('analytics.created')}: {issue.created} • {t('analytics.assignee')}: {issue.assignee}
                                 {issue.entityId && issue.entityType && (
-                                  <span> • Related {issue.entityType}: {issue.entityId.slice(-8)}</span>
+                                  <span> • {t('analytics.related')} {issue.entityType}: {issue.entityId.slice(-8)}</span>
                                 )}
                               </div>
                             </div>
@@ -1048,7 +1050,7 @@ export default function AdminAnalytics() {
                   </div>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
-                    No active issues found
+                    {t('analytics.noActiveIssuesFound')}
                   </div>
                 )}
               </CardContent>
