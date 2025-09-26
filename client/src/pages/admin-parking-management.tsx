@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useConfirm, confirmations } from "@/hooks/use-confirm"
 import { useTableSort } from "@/hooks/use-table-sort"
 import { useCardsVisibility } from "@/hooks/use-cards-visibility"
+import { useLanguage } from "@/hooks/use-language"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -31,6 +32,7 @@ import type { WaitingList, ParkingSpot, ParkingSpotWithUser, SpotType } from "@s
 import { quickExportParkingSpotsPDF, quickExportParkingSpotsExcel, quickExportWaitingListPDF, quickExportWaitingListExcel } from "@/utils/export-utils"
 
 export default function AdminParkingManagement() {
+  const { t } = useLanguage()
   const { toast } = useToast()
   const { confirm } = useConfirm()
   const [searchTerm, setSearchTerm] = useState("")
@@ -883,9 +885,9 @@ export default function AdminParkingManagement() {
     <div className="p-6 space-y-6" data-testid="page-admin-parking-management">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Parking Management</h1>
+          <h1 className="text-3xl font-bold">{t("admin.parkingManagement.title")}</h1>
           <p className="text-muted-foreground">
-            Comprehensive management of parking spots and waiting list assignments.
+            {t("admin.parkingManagement.description")}
           </p>
         </div>
         <div className="flex gap-2">
@@ -914,7 +916,7 @@ export default function AdminParkingManagement() {
                 aria-label="Refresh all parking data"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh Data
+                {t("admin.parkingManagement.refreshData")}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
@@ -930,7 +932,7 @@ export default function AdminParkingManagement() {
                 aria-label="Add user to waiting list"
               >
                 <UserPlus className="w-4 h-4 mr-2" />
-                Add to Waiting
+                {t("admin.parkingManagement.addToWaiting")}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
@@ -945,7 +947,7 @@ export default function AdminParkingManagement() {
                 aria-label="Create new parking spot"
               >
                 <Plus className="w-4 h-4 mr-2" />
-                Add Spot
+                {t("admin.parkingManagement.addSpot")}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
@@ -961,7 +963,7 @@ export default function AdminParkingManagement() {
         <Card data-testid="card-total-spots" className="hover-elevate">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div className="flex items-center gap-2">
-              <CardTitle className="text-sm font-medium">Available Spots</CardTitle>
+              <CardTitle className="text-sm font-medium">{t("admin.parkingManagement.availableSpots")}</CardTitle>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -985,7 +987,7 @@ export default function AdminParkingManagement() {
               {unallocatedSpots.length}
             </div>
             <p className="text-xs text-muted-foreground">
-              Ready for assignment
+{t("admin.parkingManagement.readyForAssignment")}
             </p>
           </CardContent>
         </Card>
@@ -993,7 +995,7 @@ export default function AdminParkingManagement() {
         <Card data-testid="card-waiting-users" className="hover-elevate">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div className="flex items-center gap-2">
-              <CardTitle className="text-sm font-medium">Users Waiting</CardTitle>
+              <CardTitle className="text-sm font-medium">{t("admin.parkingManagement.usersWaiting")}</CardTitle>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -1017,7 +1019,7 @@ export default function AdminParkingManagement() {
               {waitingListMetrics.active}
             </div>
             <p className="text-xs text-muted-foreground">
-              Active waiting list entries
+{t("admin.parkingManagement.activeWaitingListEntries")}
             </p>
           </CardContent>
         </Card>
@@ -1025,7 +1027,7 @@ export default function AdminParkingManagement() {
         <Card data-testid="card-avg-wait" className="hover-elevate">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div className="flex items-center gap-2">
-              <CardTitle className="text-sm font-medium">Avg Wait Time</CardTitle>
+              <CardTitle className="text-sm font-medium">{t("admin.parkingManagement.avgWaitTime")}</CardTitle>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -1049,7 +1051,7 @@ export default function AdminParkingManagement() {
               {waitingListMetrics.averageWaitTime}
             </div>
             <p className="text-xs text-muted-foreground">
-              Days on waiting list
+{t("admin.parkingManagement.daysOnWaitingList")}
             </p>
           </CardContent>
         </Card>
@@ -1057,7 +1059,7 @@ export default function AdminParkingManagement() {
         <Card data-testid="card-assignments" className="hover-elevate">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div className="flex items-center gap-2">
-              <CardTitle className="text-sm font-medium">Total Assigned</CardTitle>
+              <CardTitle className="text-sm font-medium">{t("admin.parkingManagement.totalAssigned")}</CardTitle>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -1081,7 +1083,7 @@ export default function AdminParkingManagement() {
               {waitingListMetrics.assigned}
             </div>
             <p className="text-xs text-muted-foreground">
-              Spots successfully assigned
+{t("admin.parkingManagement.spotsSuccessfullyAssigned")}
             </p>
           </CardContent>
         </Card>
@@ -1091,9 +1093,9 @@ export default function AdminParkingManagement() {
       {/* Main Content Tabs */}
       <Tabs value={activeSpotTab} onValueChange={setActiveSpotTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="all" data-testid="tab-all-spots">All Spots</TabsTrigger>
-          <TabsTrigger value="unallocated" data-testid="tab-available-spots">Available ({unallocatedSpots.length})</TabsTrigger>
-          <TabsTrigger value="waiting" data-testid="tab-waiting-list">Waiting List ({waitingListMetrics.active})</TabsTrigger>
+          <TabsTrigger value="all" data-testid="tab-all-spots">{t("admin.parkingManagement.allSpots")}</TabsTrigger>
+          <TabsTrigger value="unallocated" data-testid="tab-available-spots">{t("admin.parkingManagement.available")} ({unallocatedSpots.length})</TabsTrigger>
+          <TabsTrigger value="waiting" data-testid="tab-waiting-list">{t("admin.parkingManagement.waiting")} ({waitingListMetrics.active})</TabsTrigger>
         </TabsList>
 
         {/* All Spots and Unallocated Spots Tab */}
@@ -1106,14 +1108,14 @@ export default function AdminParkingManagement() {
             filterValues={filterValues}
             onFilterChange={handleFilterChange}
             onClearFilters={handleClearFilters}
-            searchPlaceholder="Search spots by number or location..."
+            searchPlaceholder={t("admin.parkingManagement.searchPlaceholder")}
             className="hover-elevate"
           />
           
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Parking Spots ({sortedSpots.length})</CardTitle>
+                <CardTitle>{t("admin.parkingManagement.parkingSpots")} ({sortedSpots.length})</CardTitle>
                 <div className="flex gap-2">
                   {selectedSpots.size > 0 && (
                     <>
@@ -1131,7 +1133,7 @@ export default function AdminParkingManagement() {
                             aria-label="Enable selected spots for booking"
                           >
                             <CheckCircle2 className="w-4 h-4 mr-2" />
-                            Enable ({selectedSpots.size})
+{t("admin.parkingManagement.enable")} ({selectedSpots.size})
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -1152,7 +1154,7 @@ export default function AdminParkingManagement() {
                             aria-label="Disable selected spots from booking"
                           >
                             <AlertTriangle className="w-4 h-4 mr-2" />
-                            Disable ({selectedSpots.size})
+{t("admin.parkingManagement.disable")} ({selectedSpots.size})
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -1232,7 +1234,7 @@ export default function AdminParkingManagement() {
           {sortedSpots.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground" data-testid="text-no-spots">
               <Car className="h-12 w-12 mx-auto mb-4 opacity-30" />
-              <p>No parking spots found matching your criteria.</p>
+              <p>{t("admin.parkingManagement.noSpotsFound")}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -1252,7 +1254,7 @@ export default function AdminParkingManagement() {
                             currentSortDirection={sortState.direction}
                             onSort={handleSort}
                           >
-                            Spot Number
+{t("admin.parkingManagement.spotNumber")}
                           </SortableTableHeader>
                           <SortableTableHeader
                             column="location"
@@ -1260,7 +1262,7 @@ export default function AdminParkingManagement() {
                             currentSortDirection={sortState.direction}
                             onSort={handleSort}
                           >
-                            Location
+{t("admin.parkingManagement.location")}
                           </SortableTableHeader>
                           <SortableTableHeader
                             column="spotType"
@@ -1268,7 +1270,7 @@ export default function AdminParkingManagement() {
                             currentSortDirection={sortState.direction}
                             onSort={handleSort}
                           >
-                            Type
+{t("admin.parkingManagement.type")}
                           </SortableTableHeader>
                           <SortableTableHeader
                             column="isActive"
@@ -1276,7 +1278,7 @@ export default function AdminParkingManagement() {
                             currentSortDirection={sortState.direction}
                             onSort={handleSort}
                           >
-                            Status
+{t("admin.parkingManagement.status")}
                           </SortableTableHeader>
                           <SortableTableHeader
                             column="ownerId"
@@ -1284,7 +1286,7 @@ export default function AdminParkingManagement() {
                             currentSortDirection={sortState.direction}
                             onSort={handleSort}
                           >
-                            Assigned To
+{t("admin.parkingManagement.assignedTo")}
                           </SortableTableHeader>
                           <SortableTableHeader
                             column="isBookable"
@@ -1292,9 +1294,9 @@ export default function AdminParkingManagement() {
                             currentSortDirection={sortState.direction}
                             onSort={handleSort}
                           >
-                            Assignment Status
+{t("admin.parkingManagement.assignmentStatus")}
                           </SortableTableHeader>
-                          <TableHead>Actions</TableHead>
+                          <TableHead>{t("admin.parkingManagement.actions")}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1312,7 +1314,7 @@ export default function AdminParkingManagement() {
                             </TableCell>
                             <TableCell data-testid={`text-spot-location-${spot.id}`}>
                               {spot.location}
-                              {spot.isIndoor && <Badge variant="outline" className="ml-2">Indoor</Badge>}
+                              {spot.isIndoor && <Badge variant="outline" className="ml-2">{t("admin.parkingManagement.indoor")}</Badge>}
                             </TableCell>
                             <TableCell data-testid={`text-spot-type-${spot.id}`}>
                               {getSpotTypeBadge(spot.spotType)}
@@ -1320,14 +1322,14 @@ export default function AdminParkingManagement() {
                             <TableCell data-testid={`text-spot-status-${spot.id}`}>
                               <div className="flex gap-2">
                                 {spot.isActive !== false ? (
-                                  <Badge variant="secondary" className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100">Active</Badge>
+                                  <Badge variant="secondary" className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100">{t("admin.parkingManagement.active")}</Badge>
                                 ) : (
-                                  <Badge variant="secondary" className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100">Inactive</Badge>
+                                  <Badge variant="secondary" className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100">{t("admin.parkingManagement.inactive")}</Badge>
                                 )}
                                 {spot.isBookable !== false ? (
-                                  <Badge variant="outline">Bookable</Badge>
+                                  <Badge variant="outline">{t("admin.parkingManagement.bookable")}</Badge>
                                 ) : (
-                                  <Badge variant="secondary" className="bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100">Disabled</Badge>
+                                  <Badge variant="secondary" className="bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100">{t("admin.parkingManagement.disabled")}</Badge>
                                 )}
                               </div>
                             </TableCell>
@@ -1339,14 +1341,14 @@ export default function AdminParkingManagement() {
                                    'Assigned User'}
                                 </p>
                               ) : (
-                                <p className="font-medium text-muted-foreground">Workplace Services</p>
+                                <p className="font-medium text-muted-foreground">{t("admin.parkingManagement.workplaceServices")}</p>
                               )}
                             </TableCell>
                             <TableCell data-testid={`text-spot-assignment-status-${spot.id}`}>
                               {spot.ownerId ? (
-                                <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100">Assigned</Badge>
+                                <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100">{t("admin.parkingManagement.assigned")}</Badge>
                               ) : (
-                                <Badge variant="outline">Available</Badge>
+                                <Badge variant="outline">{t("admin.parkingManagement.available")}</Badge>
                               )}
                             </TableCell>
                             <TableCell>
@@ -1412,14 +1414,14 @@ export default function AdminParkingManagement() {
             filterValues={availableSpotsFilterValues}
             onFilterChange={handleAvailableSpotsFilterChange}
             onClearFilters={handleClearAvailableSpotsFilters}
-            searchPlaceholder="Search available spots by number or location..."
+            searchPlaceholder={t("admin.parkingManagement.availableSearchPlaceholder")}
             className="hover-elevate"
           />
           
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Available Spots ({sortedAvailableSpots.length})</CardTitle>
+                <CardTitle>{t("admin.parkingManagement.availableSpotsTitle")} ({sortedAvailableSpots.length})</CardTitle>
                 <div className="flex gap-2">
                   <Tooltip>
                     <TooltipTrigger asChild>
