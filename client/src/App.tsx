@@ -177,35 +177,38 @@ function AuthenticatedApp() {
       <div className="flex h-screen w-full">
         <AppSidebar userRole={user.role} />
         <div className="flex flex-col flex-1">
-          <header className="flex items-center justify-between p-4 border-b bg-background">
+          <header className="flex items-center justify-between p-4 border-b bg-primary text-primary-foreground shadow-sm">
             <div className="flex items-center gap-4">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <SidebarTrigger data-testid="button-sidebar-toggle" />
+                  <SidebarTrigger 
+                    data-testid="button-sidebar-toggle" 
+                    className="text-primary-foreground hover:text-primary hover:bg-primary-foreground/20"
+                  />
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Toggle sidebar navigation - hide or show the main menu</p>
                 </TooltipContent>
               </Tooltip>
               <div className="hidden md:block">
-                <h2 className="text-lg font-semibold">BCI Parking</h2>
-                <p className="text-sm text-muted-foreground">Spot Sharing Application</p>
+                <h2 className="text-lg font-semibold text-primary-foreground">BCI Parking</h2>
+                <p className="text-sm text-primary-foreground/80">Spot Sharing Application</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <div className="hidden md:flex items-center gap-3">
                 <div className="text-right">
-                  <p className="text-sm font-medium" data-testid="text-current-user">
+                  <p className="text-sm font-medium text-primary-foreground" data-testid="text-current-user">
                     {user.name}
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-primary-foreground/70">
                     {user.department}
                   </p>
                 </div>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Avatar className="h-8 w-8 cursor-pointer">
-                      <AvatarFallback className="text-sm">
+                      <AvatarFallback className="text-sm bg-primary-foreground text-primary">
                         {getInitials(user.name || 'User')}
                       </AvatarFallback>
                     </Avatar>
@@ -225,6 +228,7 @@ function AuthenticatedApp() {
                     onClick={handleLogout}
                     data-testid="button-logout"
                     aria-label="Logout"
+                    className="text-primary-foreground hover:text-primary hover:bg-primary-foreground/20"
                   >
                     <LogOut className="h-4 w-4" />
                     <span className="sr-only">Logout</span>

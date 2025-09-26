@@ -43,6 +43,7 @@ export function ThemeToggle() {
           size="icon"
           onClick={toggleTheme}
           data-testid="button-theme-toggle"
+          className="text-primary-foreground hover:text-primary hover:bg-primary-foreground/20"
         >
           {actualTheme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
           <span className="sr-only">Toggle theme</span>
