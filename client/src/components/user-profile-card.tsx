@@ -151,7 +151,7 @@ export function UserProfileCard({
             {t("profile.assignedSpots")}
             {user.assignedSpots && user.assignedSpots.length > 0 && (
               <Badge variant="secondary" className="ml-2">
-                {user.assignedSpots.length} Spot{user.assignedSpots.length !== 1 ? 's' : ''}
+                {t("profile.spotStatus", { count: user.assignedSpots.length.toString() })}
               </Badge>
             )}
           </h4>

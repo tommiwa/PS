@@ -105,7 +105,7 @@ export function RoleSwitcher() {
       
       <DropdownMenuContent align="end" className="w-44" data-testid="dropdown-role-switcher">
         <DropdownMenuLabel className="text-xs text-muted-foreground">
-          View As
+          {t("roleSwitcher.viewAs")}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         
@@ -116,11 +116,11 @@ export function RoleSwitcher() {
         >
           <Shield className="h-4 w-4" />
           <div className="flex-1">
-            <p className="text-sm font-medium">Admin</p>
-            <p className="text-xs text-muted-foreground">Dashboard & Management</p>
+            <p className="text-sm font-medium">{t("role.admin")}</p>
+            <p className="text-xs text-muted-foreground">{t("roleSwitcher.adminDesc")}</p>
           </div>
           {currentViewRole === "admin" && (
-            <Badge variant="outline" className="text-xs">Current</Badge>
+            <Badge variant="outline" className="text-xs">{t("roleSwitcher.current")}</Badge>
           )}
         </DropdownMenuItem>
 
@@ -131,11 +131,11 @@ export function RoleSwitcher() {
         >
           <Car className="h-4 w-4" />
           <div className="flex-1">
-            <p className="text-sm font-medium">Spot Owner</p>
-            <p className="text-xs text-muted-foreground">My Spots & Bookings</p>
+            <p className="text-sm font-medium">{t("role.owner")}</p>
+            <p className="text-xs text-muted-foreground">{t("roleSwitcher.ownerDesc")}</p>
           </div>
           {currentViewRole === "owner" && (
-            <Badge variant="outline" className="text-xs">Current</Badge>
+            <Badge variant="outline" className="text-xs">{t("roleSwitcher.current")}</Badge>
           )}
         </DropdownMenuItem>
 
@@ -146,11 +146,11 @@ export function RoleSwitcher() {
         >
           <User className="h-4 w-4" />
           <div className="flex-1">
-            <p className="text-sm font-medium">Renter</p>
-            <p className="text-xs text-muted-foreground">Find & Book Parking</p>
+            <p className="text-sm font-medium">{t("role.renter")}</p>
+            <p className="text-xs text-muted-foreground">{t("roleSwitcher.renterDesc")}</p>
           </div>
           {currentViewRole === "renter" && (
-            <Badge variant="outline" className="text-xs">Current</Badge>
+            <Badge variant="outline" className="text-xs">{t("roleSwitcher.current")}</Badge>
           )}
         </DropdownMenuItem>
       </DropdownMenuContent>

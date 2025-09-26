@@ -295,7 +295,7 @@ export function AdminUsersTable({
                 data-testid="button-export-users-pdf"
               >
                 <FileText className="h-4 w-4 mr-2" />
-                PDF
+                {t("admin.exportPDF")}
               </Button>
               <Button 
                 size="sm"
@@ -319,7 +319,7 @@ export function AdminUsersTable({
                 data-testid="button-export-users-excel"
               >
                 <Download className="h-4 w-4 mr-2" />
-                Excel
+                {t("admin.exportExcel")}
               </Button>
             </div>
           </div>

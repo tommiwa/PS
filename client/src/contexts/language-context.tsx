@@ -437,6 +437,78 @@ const translations: Record<Language, Translations> = {
     "common.retry": "Retry",
     "common.errorLoading": "Error Loading",
     "common.failedToLoad": "Failed to load this section. Please try again.",
+    "common.search": "Search",
+    "common.searchPlaceholder": "Search users...",
+    "common.clearFilters": "Clear Filters",
+    "common.current": "Current",
+    "common.any": "Any",
+    "common.spot": "Spot",
+    "common.spots": "Spots",
+    "common.viewAs": "View As",
+
+    // Profile Card Specific
+    "profile.spotStatus": "{count} Spot{count !== '1' ? 's' : ''}",
+
+    // Search Filter Options
+    "filters.anyLocation": "Any location",
+    "filters.anyType": "Any type",
+    "filters.anyInside": "Any",
+    "filters.clearAllFilters": "Clear All Filters",
+    "filters.searchBtn": "Search Parking Spots",
+    "filters.activeFilters": "Active Filters",
+    "filters.insideBuilding": "Inside Building",
+    "filters.outsidePublic": "Outside/Public",
+
+    // Location Options
+    "location.mainBuilding": "Main Building",
+    "location.northLot": "North Parking Lot",
+    "location.southLot": "South Parking Lot",
+    "location.westGarage": "West Garage",
+
+    // Spot Type Options (additional)
+    "spotType.electricVehicle": "Electric Vehicle",
+
+    // Role Switcher
+    "roleSwitcher.viewAs": "View As",
+    "roleSwitcher.current": "Current",
+    "roleSwitcher.adminDesc": "Dashboard & Management",
+    "roleSwitcher.ownerDesc": "My Spots & Bookings",
+    "roleSwitcher.renterDesc": "Find & Book Parking",
+
+    // Filter Tooltips
+    "tooltip.filter.location": "Choose specific building or parking area",
+    "tooltip.filter.spotType": "Filter by regular, electric, or accessible spots",
+    "tooltip.filter.date": "Choose specific date or leave empty for any date",
+    "tooltip.filter.priceMin": "Set minimum daily price filter",
+    "tooltip.filter.priceMax": "Set maximum daily price filter",
+    "tooltip.filter.inside": "Choose between indoor and outdoor parking",
+    "tooltip.filter.clearAll": "Remove all active filters",
+    "tooltip.filter.search": "Search with selected filters",
+
+    // Admin Table
+    "admin.searchUsers": "Search users...",
+    "admin.clearFilters": "Clear Filters",
+    "admin.exportPDF": "Export PDF",
+    "admin.exportExcel": "Export Excel",
+    "admin.edit": "Edit",
+    "admin.suspend": "Suspend",
+    "admin.assignSpot": "Assign Spot",
+    "admin.sendNotification": "Send Notification",
+    "admin.name": "Name",
+    "admin.email": "Email",
+    "admin.memberSince": "Member Since",
+
+    // Table Headers
+    "table.name": "Name",
+    "table.email": "Email",
+    "table.department": "Department",
+    "table.role": "Role",
+    "table.spots": "Spots",
+    "table.bookings": "Bookings",
+    "table.status": "Status",
+    "table.lastLogin": "Last Login",
+    "table.memberSince": "Member Since",
+    "table.actions": "Actions",
 
     // Date Range Options
     "dateRange.last7Days": "Last 7 days",
@@ -886,6 +958,80 @@ const translations: Record<Language, Translations> = {
     "tooltip.analytics.usagePatterns": "Analyser les heures de pointe, la performance par emplacement et les modèles de réservation tout au long de la journée",
     "tooltip.analytics.topPerformers": "Voir les places de stationnement les plus performantes, les propriétaires avec les plus hauts revenus et les métriques d'utilisation",
     "tooltip.analytics.issuesAlerts": "Surveiller les problèmes système, alertes et incidents qui nécessitent l'attention de l'administrateur",
+
+    // Additional Common Keys
+    "common.search": "Rechercher",
+    "common.searchPlaceholder": "Rechercher des utilisateurs...",
+    "common.clearFilters": "Effacer les filtres",
+    "common.current": "Actuel",
+    "common.any": "Tout",
+    "common.spot": "Place",
+    "common.spots": "Places",
+    "common.viewAs": "Voir comme",
+
+    // Profile Card Specific
+    "profile.spotStatus": "{count} Place{count !== '1' ? 's' : ''}",
+
+    // Search Filter Options
+    "filters.anyLocation": "Tout emplacement",
+    "filters.anyType": "Tout type",
+    "filters.anyInside": "Tout",
+    "filters.clearAllFilters": "Effacer tous les filtres",
+    "filters.searchBtn": "Rechercher des places de parking",
+    "filters.activeFilters": "Filtres actifs",
+    "filters.insideBuilding": "À l'intérieur du bâtiment",
+    "filters.outsidePublic": "Extérieur/Public",
+
+    // Location Options
+    "location.mainBuilding": "Bâtiment principal",
+    "location.northLot": "Parking nord",
+    "location.southLot": "Parking sud",
+    "location.westGarage": "Garage ouest",
+
+    // Spot Type Options (additional)
+    "spotType.electricVehicle": "Véhicule électrique",
+
+    // Role Switcher
+    "roleSwitcher.viewAs": "Voir comme",
+    "roleSwitcher.current": "Actuel",
+    "roleSwitcher.adminDesc": "Tableau de bord et gestion",
+    "roleSwitcher.ownerDesc": "Mes places et réservations",
+    "roleSwitcher.renterDesc": "Trouver et réserver un parking",
+
+    // Filter Tooltips
+    "tooltip.filter.location": "Choisir un bâtiment ou une zone de parking spécifique",
+    "tooltip.filter.spotType": "Filtrer par places régulières, électriques ou accessibles",
+    "tooltip.filter.date": "Choisir une date spécifique ou laisser vide pour toute date",
+    "tooltip.filter.priceMin": "Définir le filtre de prix minimum quotidien",
+    "tooltip.filter.priceMax": "Définir le filtre de prix maximum quotidien",
+    "tooltip.filter.inside": "Choisir entre parking intérieur et extérieur",
+    "tooltip.filter.clearAll": "Supprimer tous les filtres actifs",
+    "tooltip.filter.search": "Rechercher avec les filtres sélectionnés",
+
+    // Admin Table
+    "admin.searchUsers": "Rechercher des utilisateurs...",
+    "admin.clearFilters": "Effacer les filtres",
+    "admin.exportPDF": "Exporter PDF",
+    "admin.exportExcel": "Exporter Excel",
+    "admin.edit": "Modifier",
+    "admin.suspend": "Suspendre",
+    "admin.assignSpot": "Assigner une place",
+    "admin.sendNotification": "Envoyer une notification",
+    "admin.name": "Nom",
+    "admin.email": "Courriel",
+    "admin.memberSince": "Membre depuis",
+
+    // Table Headers
+    "table.name": "Nom",
+    "table.email": "Courriel",
+    "table.department": "Département",
+    "table.role": "Rôle",
+    "table.spots": "Places",
+    "table.bookings": "Réservations",
+    "table.status": "Statut",
+    "table.lastLogin": "Dernière connexion",
+    "table.memberSince": "Membre depuis",
+    "table.actions": "Actions",
   }
 }
 
