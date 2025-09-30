@@ -73,7 +73,8 @@ async function upsertUser(
   // Check if this should be an admin user based on specific user IDs and emails
   const isAdmin = claims["sub"] === "user-admin-001" || 
                   claims["email"] === "david.thomps@replit.com" ||
-                  claims["email"] === "d.thompson@bci.ca";
+                  claims["email"] === "d.thompson@bci.ca" ||
+                  claims["email"] === "lijin.joseji@bci.ca";
                   
   // If this is an admin user, ensure their role is set to admin
   if (isAdmin) {
