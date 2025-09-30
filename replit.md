@@ -137,3 +137,14 @@ Migrated the notification system from in-memory storage to persistent database s
 - **Mock Email Support**: Development mode uses mock SendGrid for testing without live email service
 
 The notification system provides reliable, preference-aware communication with users while maintaining a persistent record of all notifications in the database for future reference and audit trails.
+
+### Production-Ready Replit OIDC Authentication (September 2025)
+Removed demo login system and implemented production-ready Replit OIDC authentication:
+- **Login Interface**: Replaced demo login UI with simple "Sign In with Replit" button that redirects to /api/login
+- **Auth Context**: Updated to fetch authenticated user from backend /api/auth/user endpoint using session cookies
+- **Query Client**: Removed all demo authentication headers (x-demo-auth) from API requests
+- **Security Hardening**: Demo authentication is gated behind `process.env.NODE_ENV !== "production"` check in backend
+- **Admin Auto-Promotion**: Production email lijin.joseji@bci.ca is automatically promoted to admin role on first login
+- **Session-Based Flow**: All authentication uses Replit OIDC with server-side session management
+
+The authentication system now uses only Replit credentials with no passwords stored in the application, providing a secure production-ready authentication flow.
