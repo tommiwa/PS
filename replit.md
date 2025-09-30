@@ -138,13 +138,31 @@ Migrated the notification system from in-memory storage to persistent database s
 
 The notification system provides reliable, preference-aware communication with users while maintaining a persistent record of all notifications in the database for future reference and audit trails.
 
-### Production-Ready Replit OIDC Authentication (September 2025)
-Removed demo login system and implemented production-ready Replit OIDC authentication:
-- **Login Interface**: Replaced demo login UI with simple "Sign In with Replit" button that redirects to /api/login
-- **Auth Context**: Updated to fetch authenticated user from backend /api/auth/user endpoint using session cookies
-- **Query Client**: Removed all demo authentication headers (x-demo-auth) from API requests
-- **Security Hardening**: Demo authentication is gated behind `process.env.NODE_ENV !== "production"` check in backend
-- **Admin Auto-Promotion**: Production email lijin.joseji@bci.ca is automatically promoted to admin role on first login
-- **Session-Based Flow**: All authentication uses Replit OIDC with server-side session management
+### Production-Ready Replit OIDC Authentication with Role-Based Redirects (September 2025)
+Implemented comprehensive production-ready Replit OIDC authentication with automatic role-based redirects:
 
-The authentication system now uses only Replit credentials with no passwords stored in the application, providing a secure production-ready authentication flow.
+**Authentication Flow**:
+- **Login Interface**: Simple "Sign In with Replit" button redirects to /api/login for OIDC authentication
+- **User Persistence**: Users automatically created/updated in PostgreSQL database during OIDC callback
+- **Dual Storage**: User data persisted in both PostgreSQL (source of truth) and in-memory storage (backward compatibility)
+- **Role Preservation**: Existing user roles in database are preserved unless user is in hardcoded admin list
+
+**Role-Based Redirect System**:
+- **Admin Users** → Redirected to `/admin` (admin dashboard with user management)
+- **Renter Users** → Redirected to `/dashboard` (parking spot search and booking)
+- **Owner Users** → Redirected to `/my-spots` (parking spot listing management)
+- **Role Determination**: Database queried first for user role, falls back to in-memory storage if needed
+
+**Security & Admin Management**:
+- **Session-Based Auth**: Express sessions with PostgreSQL session store
+- **Auto-Admin Promotion**: Hardcoded emails (lijin.joseji@bci.ca, d.thompson@bci.ca, david.thomps@replit.com) automatically promoted to admin
+- **Demo Auth Disabled**: Demo authentication gated behind development-only check
+- **Audit Logging**: All authentication events logged with role information and redirect destination
+
+**Technical Implementation**:
+- **Database-First**: PostgreSQL serves as authoritative source for user roles
+- **Concurrent Updates**: Both database and memory storage updated during authentication
+- **Type Safety**: Full TypeScript support with role-based type checking
+- **Error Handling**: Graceful fallbacks and comprehensive error logging
+
+The authentication system provides secure, production-ready OIDC authentication with automatic role-based navigation, ensuring users land on the appropriate dashboard based on their assigned role.

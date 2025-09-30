@@ -8,6 +8,9 @@ import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
 import { auditService } from "./audit-service";
+import { db } from "./db";
+import { users } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 if (!process.env.REPLIT_DOMAINS) {
   throw new Error("Environment variable REPLIT_DOMAINS not provided");
@@ -59,29 +62,69 @@ function updateUserSession(
 async function upsertUser(
   claims: any,
 ) {
-  // Always upsert the user first
+  const userId = claims["sub"];
   const userData = {
-    id: claims["sub"],
+    id: userId,
     email: claims["email"],
     firstName: claims["first_name"],
     lastName: claims["last_name"],
     profileImageUrl: claims["profile_image_url"],
   };
   
-  await storage.upsertUser(userData);
+  // Check if user exists in database first to preserve their role
+  console.log(`[UPSERT] Checking database for existing user: ${userId}`);
+  const existingDbUser = await db.select().from(users).where(eq(users.id, userId)).then(rows => rows[0]);
+  console.log(`[UPSERT] Existing user:`, existingDbUser ? `Found with role: ${existingDbUser.role}` : 'Not found');
   
-  // Check if this should be an admin user based on specific user IDs and emails
+  // Determine if this should be an admin user based on specific user IDs and emails
   const isAdmin = claims["sub"] === "user-admin-001" || 
                   claims["email"] === "david.thomps@replit.com" ||
                   claims["email"] === "d.thompson@bci.ca" ||
                   claims["email"] === "lijin.joseji@bci.ca";
-                  
-  // If this is an admin user, ensure their role is set to admin
+  console.log(`[UPSERT] Is hardcoded admin: ${isAdmin}`);
+  
+  // Determine final role: preserve existing role unless they should be admin
+  let finalRole = existingDbUser?.role || "renter";
   if (isAdmin) {
-    const existingUser = await storage.getUser(claims["sub"]);
-    if (existingUser && existingUser.role !== "admin") {
-      await storage.updateUser(claims["sub"], { role: "admin" });
-    }
+    finalRole = "admin";
+  }
+  console.log(`[UPSERT] Final role to be saved: ${finalRole}`);
+  
+  const now = new Date();
+  
+  // Upsert into PostgreSQL database
+  if (existingDbUser) {
+    // Update existing user in database
+    await db.update(users)
+      .set({
+        email: userData.email,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        profileImageUrl: userData.profileImageUrl,
+        role: finalRole,
+        lastLogin: now,
+        updatedAt: now,
+      })
+      .where(eq(users.id, userId));
+  } else {
+    // Insert new user into database
+    await db.insert(users).values({
+      id: userId,
+      email: userData.email,
+      firstName: userData.firstName,
+      lastName: userData.lastName,
+      profileImageUrl: userData.profileImageUrl,
+      role: finalRole,
+      lastLogin: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+  
+  // Also update in-memory storage for backward compatibility
+  await storage.upsertUser(userData);
+  if (isAdmin || existingDbUser?.role === "admin") {
+    await storage.updateUser(userId, { role: "admin" });
   }
 }
 
@@ -198,11 +241,21 @@ export async function setupAuth(app: Express) {
         }
         
         try {
-          // Fetch user from database to get their role
-          const dbUser = await storage.getUser(userId);
+          // Fetch user from PostgreSQL database directly to get their role
+          // This ensures we check the database first before falling back to in-memory storage
+          console.log(`[AUTH] Querying database for user ${userId}`);
+          let dbUser = await db.select().from(users).where(eq(users.id, userId)).then(rows => rows[0]);
+          console.log(`[AUTH] Database query result:`, dbUser ? `User found with role: ${dbUser.role}` : 'User not found in database');
+          
+          // If not found in database, check in-memory storage
+          if (!dbUser) {
+            console.log(`[AUTH] Falling back to in-memory storage for user ${userId}`);
+            dbUser = await storage.getUser(userId);
+            console.log(`[AUTH] In-memory storage result:`, dbUser ? `User found with role: ${dbUser.role}` : 'User not found in storage');
+          }
           
           if (!dbUser) {
-            console.error("User not found in database after authentication");
+            console.error("User not found in database or storage after authentication");
             
             // Log failed authentication
             auditService.auditAuth(
