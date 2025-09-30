@@ -20,6 +20,9 @@ import {
   type PaymentPreferences,
   type InsertPaymentPreferences,
   type UpdatePaymentPreferences,
+  type InAppNotification,
+  type InsertInAppNotification,
+  type NotificationType,
   type UserRole,
   type SpotType,
   type ListingType,
@@ -121,6 +124,14 @@ export interface IStorage {
   getNotificationPreferences(userId: string): Promise<NotificationPreferences | undefined>;
   updateNotificationPreferences(userId: string, updates: UpdateNotificationPreferences): Promise<NotificationPreferences>;
   
+  // In-App Notifications operations
+  createInAppNotification(notification: InsertInAppNotification): Promise<InAppNotification>;
+  getInAppNotifications(userId: string, includeRead?: boolean): Promise<InAppNotification[]>;
+  markNotificationAsRead(notificationId: string): Promise<InAppNotification>;
+  markAllNotificationsAsRead(userId: string): Promise<void>;
+  deleteInAppNotification(notificationId: string): Promise<void>;
+  getUnreadNotificationCount(userId: string): Promise<number>;
+  
   // Payment Preferences operations
   getPaymentPreferences(userId: string): Promise<PaymentPreferences | undefined>;
   createPaymentPreferences(userId: string, preferences: InsertPaymentPreferences): Promise<PaymentPreferences>;
@@ -216,6 +227,7 @@ export class MemStorage implements IStorage {
   private vehicles: Map<string, Vehicle>;
   private notificationPreferences: Map<string, NotificationPreferences>;
   private paymentPreferences: Map<string, PaymentPreferences>;
+  private inAppNotifications: Map<string, InAppNotification>;
   private auditStorage: IAuditStorage;
 
   constructor(auditStorage?: IAuditStorage) {
@@ -227,6 +239,7 @@ export class MemStorage implements IStorage {
     this.vehicles = new Map();
     this.notificationPreferences = new Map();
     this.paymentPreferences = new Map();
+    this.inAppNotifications = new Map();
     
     // Inject audit storage (will be set externally)
     this.auditStorage = auditStorage as IAuditStorage;
@@ -1970,6 +1983,77 @@ export class MemStorage implements IStorage {
     
     this.notificationPreferences.set(userId, updatedPreferences);
     return updatedPreferences;
+  }
+
+  // In-App Notifications operations
+  async createInAppNotification(insertNotification: InsertInAppNotification): Promise<InAppNotification> {
+    const id = randomUUID();
+    const notification: InAppNotification = {
+      ...insertNotification,
+      type: insertNotification.type as NotificationType,
+      id,
+      read: insertNotification.read ?? false,
+      data: insertNotification.data ?? null,
+      expiresAt: insertNotification.expiresAt ?? null,
+      createdAt: new Date()
+    };
+    this.inAppNotifications.set(id, notification);
+    return notification;
+  }
+
+  async getInAppNotifications(userId: string, includeRead: boolean = false): Promise<InAppNotification[]> {
+    const notifications = Array.from(this.inAppNotifications.values())
+      .filter(notification => {
+        if (notification.userId !== userId) return false;
+        if (!includeRead && notification.read) return false;
+        return true;
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    
+    return notifications;
+  }
+
+  async markNotificationAsRead(notificationId: string): Promise<InAppNotification> {
+    const notification = this.inAppNotifications.get(notificationId);
+    if (!notification) {
+      throw new Error(`Notification ${notificationId} not found`);
+    }
+    
+    const updatedNotification: InAppNotification = {
+      ...notification,
+      read: true
+    };
+    
+    this.inAppNotifications.set(notificationId, updatedNotification);
+    return updatedNotification;
+  }
+
+  async markAllNotificationsAsRead(userId: string): Promise<void> {
+    const userNotifications = Array.from(this.inAppNotifications.entries())
+      .filter(([_, notification]) => notification.userId === userId && !notification.read);
+    
+    for (const [id, notification] of userNotifications) {
+      const updatedNotification: InAppNotification = {
+        ...notification,
+        read: true
+      };
+      this.inAppNotifications.set(id, updatedNotification);
+    }
+  }
+
+  async deleteInAppNotification(notificationId: string): Promise<void> {
+    const deleted = this.inAppNotifications.delete(notificationId);
+    if (!deleted) {
+      throw new Error(`Notification ${notificationId} not found`);
+    }
+  }
+
+  async getUnreadNotificationCount(userId: string): Promise<number> {
+    const unreadCount = Array.from(this.inAppNotifications.values())
+      .filter(notification => notification.userId === userId && !notification.read)
+      .length;
+    
+    return unreadCount;
   }
 
   // Audit decorators will be applied via server initialization

@@ -3,6 +3,7 @@
 
 import { MailService } from '@sendgrid/mail';
 import type { WaitingList, ParkingSpot, AuthUser } from '@shared/schema';
+import { storage } from './storage';
 
 // Development mode check - will use mock notifications if API key not available
 const isDevelopment = !process.env.SENDGRID_API_KEY;
@@ -27,13 +28,13 @@ export interface EmailNotification {
   subject: string;
   text: string;
   html: string;
-  type: 'assignment' | 'welcome' | 'booking_confirmation' | 'payment_reminder' | 'spot_availability' | 'weekly_report' | 'system_maintenance' | 'general';
+  type: 'assignment' | 'welcome' | 'booking_confirmation' | 'booking_cancelled' | 'payment_reminder' | 'spot_availability' | 'weekly_report' | 'system_maintenance' | 'general';
 }
 
 export interface InAppNotification {
   id: string;
   userId: string;
-  type: 'assignment' | 'welcome' | 'booking_confirmation' | 'payment_reminder' | 'spot_availability' | 'weekly_report' | 'system_maintenance' | 'general';
+  type: 'assignment' | 'welcome' | 'booking_confirmation' | 'booking_cancelled' | 'payment_reminder' | 'spot_availability' | 'weekly_report' | 'system_maintenance' | 'general';
   title: string;
   message: string;
   data?: any;
@@ -41,10 +42,6 @@ export interface InAppNotification {
   createdAt: Date;
   expiresAt?: Date;
 }
-
-// In-memory storage for in-app notifications (for development)
-// In production, this would be stored in database
-const inAppNotifications = new Map<string, InAppNotification[]>();
 
 /**
  * Email Templates
@@ -312,6 +309,137 @@ BCI Parking Management Team`;
     text,
     html,
     type: 'booking_confirmation'
+  };
+};
+
+export const createBookingCancellationNotification = (
+  user: { name: string; email: string },
+  booking: {
+    id: string;
+    spotNumber: string;
+    location: string;
+    building: string;
+    bookingDate: Date | string;
+    cancelledBy: string;
+    reason?: string;
+  }
+): EmailNotification => {
+  const subject = `❌ Booking Cancelled - Spot ${booking.spotNumber}`;
+  
+  const bookingDateStr = booking.bookingDate instanceof Date 
+    ? booking.bookingDate.toLocaleDateString() 
+    : new Date(booking.bookingDate).toLocaleDateString();
+  
+  const text = `Dear ${user.name},
+
+Your parking spot booking has been cancelled.
+
+BOOKING DETAILS:
+• Booking ID: ${booking.id}
+• Spot Number: ${booking.spotNumber}
+• Location: ${booking.location}
+• Building: ${booking.building}
+• Booking Date: ${bookingDateStr}
+• Cancelled By: ${booking.cancelledBy}${booking.reason ? `\n• Reason: ${booking.reason}` : ''}
+
+REFUND INFORMATION:
+• If you made a payment, a refund will be processed according to our cancellation policy
+• Refunds typically take 5-7 business days to appear in your account
+• You'll receive a separate confirmation once the refund is processed
+
+WHAT'S NEXT:
+• You can search for and book another available parking spot
+• Update your preferences to receive notifications about available spots
+• Contact support if you have any questions about this cancellation
+
+We apologize for any inconvenience this may have caused.
+
+Best regards,
+BCI Parking Management Team`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Booking Cancelled</title>
+  <style>
+    .container { max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; }
+    .header { background: #ef4444; color: white; padding: 20px; text-align: center; }
+    .content { padding: 30px; background: #f8fafc; }
+    .booking-details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ef4444; }
+    .refund-info { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; }
+    .next-steps { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; }
+    .button { display: inline-block; background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 10px 5px; }
+    .footer { text-align: center; color: #64748b; padding: 20px; }
+    .info-box { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>❌ Booking Cancelled</h1>
+    </div>
+    
+    <div class="content">
+      <p>Dear ${user.name},</p>
+      <p>Your parking spot booking has been cancelled.</p>
+      
+      <div class="booking-details">
+        <h3>📋 Booking Details</h3>
+        <ul>
+          <li><strong>Booking ID:</strong> ${booking.id}</li>
+          <li><strong>Spot Number:</strong> ${booking.spotNumber}</li>
+          <li><strong>Location:</strong> ${booking.location}</li>
+          <li><strong>Building:</strong> ${booking.building}</li>
+          <li><strong>Booking Date:</strong> ${bookingDateStr}</li>
+          <li><strong>Cancelled By:</strong> ${booking.cancelledBy}</li>
+          ${booking.reason ? `<li><strong>Reason:</strong> ${booking.reason}</li>` : ''}
+        </ul>
+      </div>
+      
+      <div class="refund-info">
+        <h3>💰 Refund Information</h3>
+        <ul>
+          <li>If you made a payment, a refund will be processed according to our cancellation policy</li>
+          <li>Refunds typically take 5-7 business days to appear in your account</li>
+          <li>You'll receive a separate confirmation once the refund is processed</li>
+        </ul>
+      </div>
+      
+      <div class="next-steps">
+        <h3>🎯 What's Next</h3>
+        <ul>
+          <li>You can search for and book another available parking spot</li>
+          <li>Update your preferences to receive notifications about available spots</li>
+          <li>Contact support if you have any questions about this cancellation</li>
+        </ul>
+        
+        <div style="text-align: center; margin-top: 20px;">
+          <a href="#" class="button">Search Available Spots</a>
+          <a href="#" class="button" style="background: #3b82f6;">Contact Support</a>
+        </div>
+      </div>
+      
+      <div class="info-box">
+        We apologize for any inconvenience this may have caused.
+      </div>
+    </div>
+    
+    <div class="footer">
+      <p>Best regards,<br>BCI Parking Management Team</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  return {
+    to: user.email,
+    subject,
+    text,
+    html,
+    type: 'booking_cancelled'
   };
 };
 
@@ -802,51 +930,6 @@ export async function sendEmailNotification(notification: EmailNotification): Pr
 }
 
 /**
- * In-App Notification Functions
- */
-export function createInAppNotification(notification: Omit<InAppNotification, 'id' | 'createdAt'>): InAppNotification {
-  return {
-    id: `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    createdAt: new Date(),
-    ...notification
-  };
-}
-
-export function addInAppNotification(notification: InAppNotification): void {
-  const userNotifications = inAppNotifications.get(notification.userId) || [];
-  userNotifications.unshift(notification); // Add to beginning
-  
-  // Keep only the 50 most recent notifications per user
-  if (userNotifications.length > 50) {
-    userNotifications.splice(50);
-  }
-  
-  inAppNotifications.set(notification.userId, userNotifications);
-  console.log(`📱 In-app notification added for user ${notification.userId}: ${notification.title}`);
-}
-
-export function getUserNotifications(userId: string): InAppNotification[] {
-  return inAppNotifications.get(userId) || [];
-}
-
-export function markNotificationAsRead(userId: string, notificationId: string): boolean {
-  const userNotifications = inAppNotifications.get(userId) || [];
-  const notification = userNotifications.find(n => n.id === notificationId);
-  
-  if (notification) {
-    notification.read = true;
-    return true;
-  }
-  
-  return false;
-}
-
-export function getUnreadNotificationCount(userId: string): number {
-  const userNotifications = inAppNotifications.get(userId) || [];
-  return userNotifications.filter(n => !n.read).length;
-}
-
-/**
  * Main Notification Functions
  */
 export async function sendAssignmentNotification(
@@ -867,7 +950,7 @@ export async function sendAssignmentNotification(
 
     // Send in-app notification if user has push notifications enabled
     if (userPreferences.pushNotifications !== false) {
-      const inAppNotification = createInAppNotification({
+      await storage.createInAppNotification({
         userId: user.id,
         type: 'assignment',
         title: `Parking Spot Assigned: ${spotDetails.spotNumber}`,
@@ -877,13 +960,12 @@ export async function sendAssignmentNotification(
           location: spotDetails.location,
           building: spotDetails.building,
           waitingListEntryId: waitingListEntry.id,
-          expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000) // 48 hours from now
+          expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000)
         },
         read: false,
         expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000)
       });
       
-      addInAppNotification(inAppNotification);
       results.inAppSent = true;
     }
 
@@ -913,7 +995,7 @@ export async function sendWelcomeNotification(
 
     // Send in-app welcome notification
     if (userPreferences.pushNotifications !== false) {
-      const inAppNotification = createInAppNotification({
+      await storage.createInAppNotification({
         userId: user.id,
         type: 'welcome',
         title: 'Welcome to BCI Parking Waiting List',
@@ -926,7 +1008,6 @@ export async function sendWelcomeNotification(
         read: false
       });
       
-      addInAppNotification(inAppNotification);
       results.inAppSent = true;
     }
 
@@ -964,7 +1045,7 @@ export async function sendBookingConfirmationNotification(
     }
 
     // Send in-app notification
-    const inAppNotification = createInAppNotification({
+    await storage.createInAppNotification({
       userId: user.id,
       type: 'booking_confirmation',
       title: `Booking Confirmed: Spot ${booking.spotNumber}`,
@@ -977,7 +1058,6 @@ export async function sendBookingConfirmationNotification(
       read: false
     });
     
-    addInAppNotification(inAppNotification);
     results.inAppSent = true;
 
     console.log(`✓ Booking confirmation notifications sent to ${user.name} (email: ${results.emailSent}, in-app: ${results.inAppSent})`);
@@ -1012,7 +1092,7 @@ export async function sendPaymentReminderNotification(
 
     // Send in-app notification
     const isOverdue = payment.daysOverdue && payment.daysOverdue > 0;
-    const inAppNotification = createInAppNotification({
+    await storage.createInAppNotification({
       userId: user.id,
       type: 'payment_reminder',
       title: isOverdue ? `Payment Overdue: Spot ${payment.spotNumber}` : `Payment Reminder: Spot ${payment.spotNumber}`,
@@ -1026,7 +1106,6 @@ export async function sendPaymentReminderNotification(
       read: false
     });
     
-    addInAppNotification(inAppNotification);
     results.inAppSent = true;
 
     console.log(`✓ Payment reminder notifications sent to ${user.name} (email: ${results.emailSent}, in-app: ${results.inAppSent})`);
@@ -1060,7 +1139,7 @@ export async function sendSpotAvailabilityNotification(
     }
 
     // Send in-app notification
-    const inAppNotification = createInAppNotification({
+    await storage.createInAppNotification({
       userId: user.id,
       type: 'spot_availability',
       title: `${spots.length} Spot${spots.length > 1 ? 's' : ''} Available`,
@@ -1072,7 +1151,6 @@ export async function sendSpotAvailabilityNotification(
       read: false
     });
     
-    addInAppNotification(inAppNotification);
     results.inAppSent = true;
 
     console.log(`✓ Spot availability notifications sent to ${user.name} (email: ${results.emailSent}, in-app: ${results.inAppSent})`);
@@ -1108,7 +1186,7 @@ export async function sendWeeklySummaryNotification(
     }
 
     // Send in-app notification
-    const inAppNotification = createInAppNotification({
+    await storage.createInAppNotification({
       userId: user.id,
       type: 'weekly_report',
       title: 'Weekly Parking Summary',
@@ -1117,7 +1195,6 @@ export async function sendWeeklySummaryNotification(
       read: false
     });
     
-    addInAppNotification(inAppNotification);
     results.inAppSent = true;
 
     console.log(`✓ Weekly summary notifications sent to ${user.name} (email: ${results.emailSent}, in-app: ${results.inAppSent})`);
@@ -1152,7 +1229,7 @@ export async function sendSystemMaintenanceNotification(
     }
 
     // Send in-app notification
-    const inAppNotification = createInAppNotification({
+    await storage.createInAppNotification({
       userId: user.id,
       type: 'system_maintenance',
       title: maintenance.isUrgent ? 'URGENT: System Maintenance' : 'System Maintenance Notice',
@@ -1161,13 +1238,63 @@ export async function sendSystemMaintenanceNotification(
       read: false
     });
     
-    addInAppNotification(inAppNotification);
     results.inAppSent = true;
 
     console.log(`✓ System maintenance notifications sent to ${user.name} (email: ${results.emailSent}, in-app: ${results.inAppSent})`);
     
   } catch (error) {
     console.error('❌ Error sending system maintenance notifications:', error);
+  }
+
+  return results;
+}
+
+export async function sendBookingCancellationNotification(
+  user: { name: string; email: string; id: string },
+  booking: {
+    id: string;
+    spotNumber: string;
+    location: string;
+    building: string;
+    bookingDate: Date | string;
+    cancelledBy: string;
+    reason?: string;
+  },
+  userPreferences: { bookingConfirmations?: boolean; emailNotifications?: boolean } = {}
+): Promise<{ emailSent: boolean; inAppSent: boolean }> {
+  const results = { emailSent: false, inAppSent: false };
+
+  try {
+    // Send email notification if user has booking confirmations enabled
+    if (userPreferences.emailNotifications !== false && userPreferences.bookingConfirmations !== false) {
+      const emailNotification = createBookingCancellationNotification(user, booking);
+      const emailResult = await sendEmailNotification(emailNotification);
+      results.emailSent = emailResult.success;
+    }
+
+    // Send in-app notification (always sent)
+    await storage.createInAppNotification({
+      userId: user.id,
+      type: 'booking_cancelled',
+      title: `Booking Cancelled: Spot ${booking.spotNumber}`,
+      message: `Your booking for spot ${booking.spotNumber} has been cancelled by ${booking.cancelledBy}.${booking.reason ? ` Reason: ${booking.reason}` : ''}`,
+      data: {
+        bookingId: booking.id,
+        spotNumber: booking.spotNumber,
+        location: booking.location,
+        building: booking.building,
+        cancelledBy: booking.cancelledBy,
+        reason: booking.reason
+      },
+      read: false
+    });
+    
+    results.inAppSent = true;
+
+    console.log(`✓ Booking cancellation notifications sent to ${user.name} (email: ${results.emailSent}, in-app: ${results.inAppSent})`);
+    
+  } catch (error) {
+    console.error('❌ Error sending booking cancellation notifications:', error);
   }
 
   return results;

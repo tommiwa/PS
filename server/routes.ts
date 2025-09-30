@@ -11,9 +11,6 @@ import {
   sendSpotAvailabilityNotification,
   sendWeeklySummaryNotification,
   sendSystemMaintenanceNotification,
-  getUserNotifications,
-  markNotificationAsRead,
-  getUnreadNotificationCount,
   type InAppNotification 
 } from "./notification-service";
 import { 
@@ -2490,7 +2487,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Not authorized to access these notifications" });
       }
       
-      const notifications = getUserNotifications(userId);
+      const notifications = await storage.getInAppNotifications(userId, true);
       res.json(notifications);
     } catch (error) {
       console.error("Error fetching notifications:", error);
@@ -2508,8 +2505,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "User not authenticated" });
       }
       
-      const success = markNotificationAsRead(userId, id);
-      if (!success) {
+      const updatedNotification = await storage.markNotificationAsRead(id);
+      if (!updatedNotification) {
         return res.status(404).json({ error: "Notification not found" });
       }
       
@@ -2529,17 +2526,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "User not authenticated" });
       }
       
-      const notifications = getUserNotifications(userId);
-      let markedCount = 0;
+      await storage.markAllNotificationsAsRead(userId);
       
-      for (const notification of notifications) {
-        if (!notification.read) {
-          const success = markNotificationAsRead(userId, notification.id);
-          if (success) markedCount++;
-        }
-      }
-      
-      res.json({ success: true, markedCount });
+      res.json({ success: true });
     } catch (error) {
       console.error("Error marking all notifications as read:", error);
       res.status(500).json({ error: "Failed to mark all notifications as read" });
@@ -2556,14 +2545,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "User not authenticated" });
       }
       
-      const notifications = getUserNotifications(userId);
-      const index = notifications.findIndex(n => n.id === id);
-      
-      if (index === -1) {
-        return res.status(404).json({ error: "Notification not found" });
-      }
-      
-      notifications.splice(index, 1);
+      await storage.deleteInAppNotification(id);
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting notification:", error);
@@ -2587,7 +2569,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Not authorized to access this unread count" });
       }
       
-      const count = getUnreadNotificationCount(userId);
+      const count = await storage.getUnreadNotificationCount(userId);
       res.json({ count });
     } catch (error) {
       console.error("Error getting unread count:", error);
