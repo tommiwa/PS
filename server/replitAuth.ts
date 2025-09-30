@@ -158,38 +158,115 @@ export async function setupAuth(app: Express) {
   });
 
   app.get("/api/callback", (req, res, next) => {
-    const originalRedirect = res.redirect;
-    
-    res.redirect = function(...args: any[]) {
-      const url = typeof args[0] === 'string' ? args[0] : args[1];
-      const success = !url.includes("/api/login");
-      
-      // Extract user info if available
-      let actorId: string | undefined;
-      let actorEmail: string | undefined;
-      
-      if (req.user && (req.user as any).claims) {
-        actorId = (req.user as any).claims.sub;
-        actorEmail = (req.user as any).claims.email;
+    passport.authenticate(`replitauth:${req.hostname}`, async (err: any, user: any, info: any) => {
+      if (err) {
+        console.error("Authentication error:", err);
+        return res.redirect("/api/login");
       }
       
-      // Log authentication callback result
-      auditService.auditAuth(
-        "LOGIN",
-        actorId || "unknown",
-        actorEmail || "unknown",
-        success,
-        success ? "Authentication callback successful" : "Authentication callback failed - redirected to login"
-      ).catch(error => {
-        console.error("Failed to log authentication callback:", error);
-      });
+      if (!user) {
+        console.error("No user returned from authentication");
+        return res.redirect("/api/login");
+      }
       
-      return (originalRedirect as any).apply(this, args);
-    } as any;
-    
-    passport.authenticate(`replitauth:${req.hostname}`, {
-      successReturnToOrRedirect: "/",
-      failureRedirect: "/api/login",
+      // Log the user in
+      req.logIn(user, async (loginErr) => {
+        if (loginErr) {
+          console.error("Login error:", loginErr);
+          
+          // Log failed authentication
+          auditService.auditAuth(
+            "LOGIN",
+            "unknown",
+            "unknown",
+            false,
+            `Login failed: ${loginErr.message}`
+          ).catch(error => {
+            console.error("Failed to log authentication failure:", error);
+          });
+          
+          return res.redirect("/api/login");
+        }
+        
+        // Get user ID from claims
+        const userId = user.claims?.sub;
+        const userEmail = user.claims?.email;
+        
+        if (!userId) {
+          console.error("No user ID in claims");
+          return res.redirect("/api/login");
+        }
+        
+        try {
+          // Fetch user from database to get their role
+          const dbUser = await storage.getUser(userId);
+          
+          if (!dbUser) {
+            console.error("User not found in database after authentication");
+            
+            // Log failed authentication
+            auditService.auditAuth(
+              "LOGIN",
+              userId,
+              userEmail || "unknown",
+              false,
+              "User not found in database after authentication"
+            ).catch(error => {
+              console.error("Failed to log authentication failure:", error);
+            });
+            
+            return res.redirect("/api/login");
+          }
+          
+          // Log successful authentication
+          auditService.auditAuth(
+            "LOGIN",
+            userId,
+            userEmail || "unknown",
+            true,
+            `User logged in successfully with role: ${dbUser.role}`
+          ).catch(error => {
+            console.error("Failed to log authentication success:", error);
+          });
+          
+          // Redirect based on user role
+          let redirectUrl = "/dashboard"; // Default redirect
+          
+          switch (dbUser.role) {
+            case "admin":
+              redirectUrl = "/admin";
+              break;
+            case "owner":
+              redirectUrl = "/my-spots";
+              break;
+            case "renter":
+              redirectUrl = "/dashboard";
+              break;
+            default:
+              redirectUrl = "/dashboard";
+          }
+          
+          console.log(`Redirecting user ${userId} (${dbUser.role}) to ${redirectUrl}`);
+          return res.redirect(redirectUrl);
+          
+        } catch (error) {
+          console.error("Error fetching user role:", error);
+          
+          // Log failed authentication
+          auditService.auditAuth(
+            "LOGIN",
+            userId,
+            userEmail || "unknown",
+            false,
+            `Error fetching user role: ${error instanceof Error ? error.message : String(error)}`
+          ).catch(logError => {
+            console.error("Failed to log authentication failure:", logError);
+          });
+          
+          // Default to dashboard on error
+          return res.redirect("/dashboard");
+        }
+      });
     })(req, res, next);
   });
 
