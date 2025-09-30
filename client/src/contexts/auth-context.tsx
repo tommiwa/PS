@@ -1,12 +1,19 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { AuthUser, UserRole } from "@shared/schema";
-import { AuthService } from "@/lib/auth";
+import { UserRole } from "@shared/schema";
+
+interface AuthUser {
+  id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  role: UserRole;
+  profileImageUrl?: string;
+}
 
 interface AuthContextType {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (userType: UserRole, email?: string) => Promise<AuthUser>;
   logout: () => void;
   hasRole: (role: UserRole) => boolean;
   hasAnyRole: (roles: UserRole[]) => boolean;
@@ -19,6 +26,7 @@ interface AuthContextType {
   resetViewRole: () => void;
   getCurrentViewRole: () => UserRole | null;
   isViewingAs: (role: UserRole) => boolean;
+  refreshUser: () => Promise<void>;
 }
 
 // Create a default context value to prevent HMR issues
@@ -26,7 +34,6 @@ const defaultAuthContextValue: AuthContextType = {
   user: null,
   isAuthenticated: false,
   isLoading: true,
-  login: async () => { throw new Error("AuthProvider not initialized") },
   logout: () => { throw new Error("AuthProvider not initialized") },
   hasRole: () => false,
   hasAnyRole: () => false,
@@ -38,6 +45,7 @@ const defaultAuthContextValue: AuthContextType = {
   resetViewRole: () => { throw new Error("AuthProvider not initialized") },
   getCurrentViewRole: () => null,
   isViewingAs: () => false,
+  refreshUser: async () => { throw new Error("AuthProvider not initialized") },
 };
 
 const AuthContext = createContext<AuthContextType>(defaultAuthContextValue);
@@ -51,39 +59,34 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [viewRole, setViewRole] = useState<UserRole | null>(null);
 
-  // Initialize auth state from localStorage on mount
-  useEffect(() => {
-    const initAuth = () => {
-      try {
-        const storedUser = AuthService.getAuthUser();
-        if (storedUser && AuthService.isAuthenticated()) {
-          setUser(storedUser);
-        }
-      } catch (error) {
-        console.error("Error initializing auth:", error);
-        AuthService.clearAuth();
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    initAuth();
-  }, []);
-
-  const login = async (userType: UserRole, email?: string): Promise<AuthUser> => {
+  // Fetch authenticated user from backend
+  const fetchUser = async () => {
     try {
-      const authenticatedUser = await AuthService.demoLogin(userType, email);
-      setUser(authenticatedUser);
-      return authenticatedUser;
+      const response = await fetch('/api/auth/user', {
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
+      } else {
+        setUser(null);
+      }
     } catch (error) {
-      throw error;
+      console.error("Error fetching user:", error);
+      setUser(null);
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  // Initialize auth state on mount
+  useEffect(() => {
+    fetchUser();
+  }, []);
+
   const logout = () => {
-    AuthService.clearAuth();
-    setUser(null);
-    setViewRole(null);
+    window.location.href = '/api/logout';
   };
 
   const hasRole = (role: UserRole): boolean => {
@@ -128,11 +131,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return getCurrentViewRole() === role;
   };
 
+  const refreshUser = async () => {
+    await fetchUser();
+  };
+
   const value: AuthContextType = {
     user,
     isAuthenticated: !!user,
     isLoading,
-    login,
     logout,
     hasRole,
     hasAnyRole,
@@ -144,6 +150,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     resetViewRole,
     getCurrentViewRole,
     isViewingAs,
+    refreshUser,
   };
 
   return (

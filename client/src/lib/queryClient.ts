@@ -11,20 +11,9 @@ export async function apiRequest(
   url: string,
   options: { method: string; body?: unknown } = { method: 'GET' },
 ): Promise<Response> {
-  // Add demo authentication header for API requests
   const headers: Record<string, string> = {
     ...(options.body ? { "Content-Type": "application/json" } : {}),
   };
-  
-  // Check if user is authenticated with demo auth
-  const authUser = localStorage.getItem("bci_parking_user");
-  if (authUser) {
-    try {
-      headers["x-demo-auth"] = authUser;
-    } catch (error) {
-      console.error("Error adding demo auth header:", error);
-    }
-  }
 
   const res = await fetch(url, {
     method: options.method,
@@ -107,25 +96,11 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    // Add demo authentication header for queries
-    const headers: Record<string, string> = {};
-    
-    // Check if user is authenticated with demo auth
-    const authUser = localStorage.getItem("bci_parking_user");
-    if (authUser) {
-      try {
-        headers["x-demo-auth"] = authUser;
-      } catch (error) {
-        console.error("Error adding demo auth header:", error);
-      }
-    }
-
     // Build URL using the robust URL builder
     const url = buildUrlFromQueryKey(queryKey);
 
     const res = await fetch(url, {
       credentials: "include",
-      headers,
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
