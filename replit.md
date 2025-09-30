@@ -121,3 +121,19 @@ For the first version, spot owner login functionality has been disabled to simpl
 - **Future Compatibility**: Owner role schema preserved in database for potential future implementation
 
 This change reduces complexity for the initial release while maintaining the foundation for spot owner functionality in future versions.
+
+### Persistent In-App Notifications System (September 2025)
+Migrated the notification system from in-memory storage to persistent database storage with comprehensive email notification support:
+- **Database-Backed Storage**: Created `in_app_notifications` table with proper indexing for efficient queries
+- **Complete CRUD Operations**: Full notification lifecycle management (create, read, update, delete, mark as read, unread count)
+- **Email Preference Compliance**: All email notifications respect user preferences (`emailNotifications` + specific notification type preferences)
+- **Always-On In-App Notifications**: In-app notifications are always created in the bell icon regardless of email preferences
+- **Notification Types**: Support for booking confirmations, booking cancellations, spot availability, payment received, and system updates
+- **Professional Email Templates**: HTML/text dual-format emails with consistent branding and clear calls-to-action
+- **Automatic Triggers**: 
+  - Spot availability notifications sent to waiting list users when new listings are created
+  - Booking cancellation notifications ready for implementation when cancellation endpoints are added
+- **Asynchronous Processing**: Notifications processed via `setImmediate()` to prevent blocking API responses
+- **Mock Email Support**: Development mode uses mock SendGrid for testing without live email service
+
+The notification system provides reliable, preference-aware communication with users while maintaining a persistent record of all notifications in the database for future reference and audit trails.
