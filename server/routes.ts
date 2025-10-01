@@ -3,6 +3,9 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, requireAdmin, getAuthenticatedUserId, getAuthenticatedUserRole } from "./replitAuth";
 import { z } from "zod";
+import { db } from "./db";
+import { parkingSpots } from "@shared/schema";
+import { inArray } from "drizzle-orm";
 import { 
   sendAssignmentNotification, 
   sendWelcomeNotification,
@@ -51,6 +54,16 @@ const toggleBookabilitySchema = z.object({
 const bulkToggleBookabilitySchema = z.object({
   spotIds: z.array(z.string().min(1, "spotId is required")).min(1, "At least one spotId is required"),
   isBookable: z.boolean()
+});
+
+const bulkUpdateSpotsSchema = z.object({
+  spotIds: z.array(z.string().min(1, "spotId is required")).min(1, "At least one spotId is required"),
+  updates: z.object({
+    isActive: z.boolean().optional(),
+    isBookable: z.boolean().optional()
+  }).refine(data => data.isActive !== undefined || data.isBookable !== undefined, {
+    message: "At least one update field (isActive or isBookable) must be provided"
+  })
 });
 
 // Zod schemas for audit endpoints
@@ -1797,6 +1810,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error bulk toggling spot bookability:", error);
       res.status(500).json({ error: "Failed to bulk toggle spot bookability" });
+    }
+  });
+
+  // Bulk update parking spots (Admin only)
+  app.post("/api/admin/spots/bulk-update", requireAdmin, async (req, res) => {
+    try {
+      // Validate request body with Zod
+      const validatedData = bulkUpdateSpotsSchema.parse(req.body);
+      const { spotIds, updates } = validatedData;
+      
+      // Build the update object with only provided fields
+      const updateData: any = {};
+      if (updates.isActive !== undefined) updateData.isActive = updates.isActive;
+      if (updates.isBookable !== undefined) updateData.isBookable = updates.isBookable;
+      
+      // Perform bulk update using Drizzle with inArray
+      await db.update(parkingSpots)
+        .set(updateData)
+        .where(inArray(parkingSpots.id, spotIds));
+      
+      // Fetch updated spots for audit and response
+      const updatedSpots = await Promise.all(
+        spotIds.map(id => storage.getParkingSpot(id))
+      );
+      const validUpdatedSpots = updatedSpots.filter(spot => spot !== undefined);
+      
+      // Audit the bulk update
+      const updateDescription = Object.entries(updates)
+        .filter(([_, value]) => value !== undefined)
+        .map(([key, value]) => `${key}=${value}`)
+        .join(", ");
+      
+      await auditService.logAction("BULK_UPDATE", "parking_spot", {
+        entityId: spotIds.join(","),
+        message: `Bulk updated ${validUpdatedSpots.length} spots: ${updateDescription}`,
+        after: { 
+          spotIds, 
+          updates,
+          count: validUpdatedSpots.length,
+          updatedSpots: validUpdatedSpots.map(s => ({ 
+            id: s!.id, 
+            spotNumber: s!.spotNumber, 
+            isActive: s!.isActive,
+            isBookable: s!.isBookable 
+          }))
+        }
+      });
+      
+      res.json({ 
+        success: true, 
+        count: validUpdatedSpots.length,
+        message: `Successfully updated ${validUpdatedSpots.length} spots` 
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input data", details: error.errors });
+      }
+      console.error("Error bulk updating spots:", error);
+      res.status(500).json({ error: "Failed to bulk update spots" });
     }
   });
 

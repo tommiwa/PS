@@ -248,6 +248,43 @@ export default function AdminParkingManagement() {
     },
   });
 
+  // Mutation for bulk update of spots
+  const bulkUpdateSpotsMutation = useMutation({
+    mutationFn: async ({ spotIds, updates }: { spotIds: string[]; updates: { isActive?: boolean; isBookable?: boolean } }) => {
+      return await apiRequest(`/api/admin/spots/bulk-update`, {
+        method: "POST",
+        body: { spotIds, updates },
+      });
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/all-spots"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] });
+      
+      const updateMessages = [];
+      if (variables.updates.isActive !== undefined) {
+        updateMessages.push(`made ${variables.updates.isActive ? 'active' : 'inactive'}`);
+      }
+      if (variables.updates.isBookable !== undefined) {
+        updateMessages.push(`made ${variables.updates.isBookable ? 'bookable' : 'not bookable'}`);
+      }
+      
+      toast({
+        title: "Success",
+        description: `${variables.spotIds.length} spot(s) ${updateMessages.join(' and ')}.`,
+        variant: "success",
+      });
+      
+      handleClearSelection();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update spots.",
+        variant: "error",
+      });
+    },
+  });
+
   // Mutation to add a new spot
   const addSpotMutation = useMutation({
     mutationFn: async (spotData: typeof addSpotFormData) => {
@@ -534,17 +571,39 @@ export default function AdminParkingManagement() {
       newSelectedSpots.add(spotId);
     }
     setSelectedSpots(newSelectedSpots);
-    setIsSelectAllChecked(newSelectedSpots.size === allSpots.length);
+    
+    // Update select all checkbox based on sortedAvailableSpots
+    const allAvailableSpotsSelected = sortedAvailableSpots.every(spot => newSelectedSpots.has(spot.id));
+    setIsSelectAllChecked(allAvailableSpotsSelected && sortedAvailableSpots.length > 0);
   };
 
   const handleSelectAllSpots = () => {
     if (isSelectAllChecked) {
+      // Deselect all spots
       setSelectedSpots(new Set());
       setIsSelectAllChecked(false);
     } else {
+      // Select all spots from allSpots
       setSelectedSpots(new Set(allSpots.map(spot => spot.id)));
       setIsSelectAllChecked(true);
     }
+  };
+
+  const handleSelectAllAvailableSpots = () => {
+    if (isSelectAllChecked) {
+      // Deselect all available spots
+      setSelectedSpots(new Set());
+      setIsSelectAllChecked(false);
+    } else {
+      // Select all available spots from sortedAvailableSpots
+      setSelectedSpots(new Set(sortedAvailableSpots.map(spot => spot.id)));
+      setIsSelectAllChecked(true);
+    }
+  };
+  
+  const handleClearSelection = () => {
+    setSelectedSpots(new Set());
+    setIsSelectAllChecked(false);
   };
 
   // Enhanced filtering for parking spots
@@ -1499,18 +1558,70 @@ export default function AdminParkingManagement() {
                   <p>No available spots found matching your criteria.</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <Table data-testid="table-unallocated-spots">
-                    <TableHeader>
-                      <TableRow>
-                        <SortableTableHeader
-                          column="spotNumber"
-                          currentSortColumn={availableSpotsSortState.column}
-                          currentSortDirection={availableSpotsSortState.direction}
-                          onSort={handleAvailableSpotsSort}
-                        >
-                          Spot Number
-                        </SortableTableHeader>
+                <>
+                  {selectedSpots.size > 0 && (
+                    <Alert className="mb-4" data-testid="toolbar-bulk-actions">
+                      <AlertDescription className="flex items-center justify-between">
+                        <span className="font-medium">{selectedSpots.size} spot(s) selected</span>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => bulkUpdateSpotsMutation.mutate({
+                              spotIds: Array.from(selectedSpots),
+                              updates: { isActive: true }
+                            })}
+                            disabled={bulkUpdateSpotsMutation.isPending}
+                            data-testid="button-make-available"
+                          >
+                            <CheckCircle2 className="h-4 w-4 mr-2" />
+                            Make Available
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => bulkUpdateSpotsMutation.mutate({
+                              spotIds: Array.from(selectedSpots),
+                              updates: { isBookable: true }
+                            })}
+                            disabled={bulkUpdateSpotsMutation.isPending}
+                            data-testid="button-make-bookable"
+                          >
+                            <Zap className="h-4 w-4 mr-2" />
+                            Make Bookable
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={handleClearSelection}
+                            data-testid="button-clear-selection"
+                          >
+                            Clear Selection
+                          </Button>
+                        </div>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  <div className="overflow-x-auto">
+                    <Table data-testid="table-unallocated-spots">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-12">
+                            <Checkbox
+                              checked={isSelectAllChecked}
+                              onCheckedChange={handleSelectAllAvailableSpots}
+                              data-testid="checkbox-select-all-available-spots"
+                              aria-label="Select all available spots"
+                            />
+                          </TableHead>
+                          <SortableTableHeader
+                            column="spotNumber"
+                            currentSortColumn={availableSpotsSortState.column}
+                            currentSortDirection={availableSpotsSortState.direction}
+                            onSort={handleAvailableSpotsSort}
+                          >
+                            Spot Number
+                          </SortableTableHeader>
                         <SortableTableHeader
                           column="location"
                           currentSortColumn={availableSpotsSortState.column}
@@ -1557,6 +1668,14 @@ export default function AdminParkingManagement() {
                     <TableBody>
                       {sortedAvailableSpots.map((spot) => (
                         <TableRow key={spot.id} data-testid={`row-unallocated-spot-${spot.id}`}>
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedSpots.has(spot.id)}
+                              onCheckedChange={() => handleToggleSpotSelection(spot.id)}
+                              data-testid={`checkbox-select-spot-${spot.id}`}
+                              aria-label={`Select spot ${spot.spotNumber}`}
+                            />
+                          </TableCell>
                           <TableCell className="font-medium" data-testid={`text-unallocated-spot-number-${spot.id}`}>
                             {spot.spotNumber}
                           </TableCell>
@@ -1623,6 +1742,7 @@ export default function AdminParkingManagement() {
                     </TableBody>
                   </Table>
                 </div>
+                </>
               )}
             </CardContent>
           </Card>
