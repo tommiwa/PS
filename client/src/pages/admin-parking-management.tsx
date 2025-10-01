@@ -370,14 +370,16 @@ export default function AdminParkingManagement() {
   // Mutation for direct assignment
   const directAssignMutation = useMutation({
     mutationFn: async ({ spotId, assignmentData }: { spotId: string; assignmentData: typeof directAssignFormData }) => {
-      return await apiRequest(`/api/admin/direct-assign`, {
+      return await apiRequest(`/api/admin/assign-spot`, {
         method: "POST",
-        body: { spotId, ...assignmentData },
+        body: { spotId, userId: assignmentData.userId },
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/all-spots"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/active"] });
       toast({
         title: "Success",
         description: "Spot assigned directly to user successfully.",
