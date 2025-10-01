@@ -168,6 +168,16 @@ export async function setupAuth(app: Express) {
   passport.serializeUser((user: Express.User, cb) => cb(null, user));
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
+  // Helper to get the correct domain for the current request
+  const getDomainForRequest = (req: any) => {
+    // In development, use REPLIT_DEV_DOMAIN
+    if (process.env.NODE_ENV !== "production" && process.env.REPLIT_DEV_DOMAIN) {
+      return process.env.REPLIT_DEV_DOMAIN;
+    }
+    // In production, use the request hostname
+    return req.hostname;
+  };
+
   app.get("/api/login", (req, res, next) => {
     // Log login attempt
     const loginAttemptTime = Date.now();
@@ -199,14 +209,16 @@ export async function setupAuth(app: Express) {
       return originalEnd.call(this, chunk, encoding);
     };
     
-    passport.authenticate(`replitauth:${req.hostname}`, {
+    const domain = getDomainForRequest(req);
+    passport.authenticate(`replitauth:${domain}`, {
       prompt: "login consent",
       scope: ["openid", "email", "profile", "offline_access"],
     })(req, res, next);
   });
 
   app.get("/api/callback", (req, res, next) => {
-    passport.authenticate(`replitauth:${req.hostname}`, async (err: any, user: any, info: any) => {
+    const domain = getDomainForRequest(req);
+    passport.authenticate(`replitauth:${domain}`, async (err: any, user: any, info: any) => {
       if (err) {
         console.error("Authentication error:", err);
         return res.redirect("/api/login");
