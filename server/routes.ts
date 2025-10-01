@@ -1473,6 +1473,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         after: updatedSpot
       });
       
+      // Automatic role change: if user is a renter, change to owner
+      if (user && user.role === "renter") {
+        await storage.updateUser(userId, { role: "owner" });
+      }
+      
       res.json(updatedSpot);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -1529,6 +1534,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           assignedSpots: updatedSpots.map(s => ({ id: s.id, spotNumber: s.spotNumber, location: s.location }))
         }
       });
+      
+      // Automatic role change: if user is a renter, change to owner
+      if (user && user.role === "renter") {
+        await storage.updateUser(userId, { role: "owner" });
+      }
       
       res.json({ 
         success: true, 
@@ -1665,6 +1675,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         before: existingSpot,
         after: updatedSpot
       });
+      
+      // Automatic role change: if former owner has 0 remaining spots and is an owner, change to renter
+      if (existingSpot.ownerId && formerOwner && formerOwner.role === "owner") {
+        const remainingSpots = await storage.getParkingSpotsByOwner(existingSpot.ownerId);
+        if (remainingSpots.length === 0) {
+          await storage.updateUser(existingSpot.ownerId, { role: "renter" });
+        }
+      }
       
       res.json(updatedSpot);
     } catch (error) {
@@ -2922,7 +2940,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get target users
       const targetUsers = userId 
-        ? [await storage.getUser(userId)].filter(Boolean)
+        ? [await storage.getUser(userId)].filter((u): u is User => u !== undefined && u !== null)
         : await storage.getAllUsers();
       
       const summaryResults = [];
@@ -3000,7 +3018,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             setImmediate(async () => {
               try {
                 const result = await sendWeeklySummaryNotification(
-                  { name: displayName, email: user.email, id: user.id },
+                  { name: displayName, email: user.email || '', id: user.id },
                   summaryData,
                   notificationPreferences || {}
                 );
@@ -3133,7 +3151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           setImmediate(async () => {
             try {
               const result = await sendSystemMaintenanceNotification(
-                { name: displayName, email: user.email, id: user.id },
+                { name: displayName, email: user.email || '', id: user.id },
                 maintenanceDetails,
                 notificationPreferences || {}
               );
