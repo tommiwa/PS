@@ -350,7 +350,12 @@ export async function setupAuth(app: Express) {
       actorEmail = (req.user as any).claims.email;
     }
     
-    req.logout((err) => {
+    // Clear the session
+    req.session.destroy((err) => {
+      if (err) {
+        console.error("Session destruction error:", err);
+      }
+      
       // Log logout event
       auditService.auditAuth(
         "LOGOUT",
@@ -362,12 +367,12 @@ export async function setupAuth(app: Express) {
         console.error("Failed to log logout event:", error);
       });
       
-      res.redirect(
-        client.buildEndSessionUrl(config, {
-          client_id: process.env.REPL_ID!,
-          post_logout_redirect_uri: `${req.protocol}://${req.hostname}`,
-        }).href
-      );
+      // Clear the cookie
+      res.clearCookie('connect.sid');
+      
+      // Redirect to login page
+      console.log(`User ${actorId} (${actorEmail}) logged out successfully`);
+      res.redirect('/');
     });
   });
 }
