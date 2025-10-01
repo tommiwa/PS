@@ -91,13 +91,6 @@ const adminMenuItems = [
     tooltip: "Booking Management"
   },
   {
-    title: "Analytics & Reports",
-    url: "/admin/analytics",
-    icon: BarChart3,
-    roles: ["admin"],
-    tooltip: "Analytics & Reports"
-  },
-  {
     title: "Audit Logs",
     url: "/admin/audits",
     icon: FileText,
