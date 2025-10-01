@@ -499,27 +499,26 @@ export class MemStorage implements IStorage {
   }
 
   async getAllParkingSpots(): Promise<ParkingSpot[]> {
-    return Array.from(this.parkingSpots.values());
+    return await db.select().from(parkingSpots);
   }
 
   // Enriched parking spot methods with user information
   async getParkingSpotWithUser(id: string): Promise<ParkingSpotWithUser | undefined> {
-    const spot = this.parkingSpots.get(id);
+    const spots = await db.select().from(parkingSpots).where(eq(parkingSpots.id, id));
+    const spot = spots[0];
     if (!spot) return undefined;
 
     return this.enrichSpotWithUserInfo(spot);
   }
 
   async getParkingSpotsByOwnerWithUser(ownerId: string): Promise<ParkingSpotWithUser[]> {
-    const spots = Array.from(this.parkingSpots.values()).filter(
-      (spot) => spot.ownerId === ownerId
-    );
+    const spots = await db.select().from(parkingSpots).where(eq(parkingSpots.ownerId, ownerId));
     
     return Promise.all(spots.map(spot => this.enrichSpotWithUserInfo(spot)));
   }
 
   async getAllParkingSpotsWithUser(): Promise<ParkingSpotWithUser[]> {
-    const spots = Array.from(this.parkingSpots.values());
+    const spots = await db.select().from(parkingSpots);
     return Promise.all(spots.map(spot => this.enrichSpotWithUserInfo(spot)));
   }
 
