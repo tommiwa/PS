@@ -211,7 +211,6 @@ export async function setupAuth(app: Express) {
     
     const domain = getDomainForRequest(req);
     passport.authenticate(`replitauth:${domain}`, {
-      prompt: "login consent",
       scope: ["openid", "email", "profile", "offline_access"],
     })(req, res, next);
   });
