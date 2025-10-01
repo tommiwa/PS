@@ -73,6 +73,33 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Feature Implementations
 
+### Automatic User Role Management (October 2025)
+Implemented dynamic role changes based on parking spot ownership, providing seamless user experience:
+
+**Feature Overview**:
+- Users automatically transition between "renter" and "owner" roles based on spot assignment
+- When a renter is assigned a parking spot → role changes to "owner"
+- When an owner loses their last spot → role changes back to "renter"
+- Works for both single and bulk spot assignments
+
+**Implementation**:
+- **Single Assignment**: POST `/api/admin/assign-spot` checks user role after assignment
+- **Bulk Assignment**: POST `/api/admin/bulk-assign-spots` updates role after bulk operations
+- **Unassignment**: PUT `/api/admin/spots/:spotId/unassign` counts remaining spots before role change
+- All role changes use `storage.updateUser(userId, { role })` with proper null checks
+- No audit logging for role changes to keep implementation simple
+
+**Critical Database Fixes**:
+- Fixed `getParkingSpot()`: Now queries PostgreSQL instead of in-memory Map
+- Fixed `updateParkingSpot()`: Now uses database operations with Drizzle ORM
+- Fixed `deleteParkingSpot()`: Now uses database delete operations
+- All parking spot operations now properly persist to the database
+
+**User Experience**:
+- Automatic role transitions happen seamlessly without user intervention
+- Role-based navigation and permissions update immediately
+- Admin dashboard reflects current ownership status accurately
+
 ### Admin Dashboard Redesign (October 2025)
 Streamlined the admin dashboard experience by consolidating analytics and removing redundant sections:
 
