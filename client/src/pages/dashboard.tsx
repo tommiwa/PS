@@ -1534,42 +1534,7 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
         )
         
       case "admin":
-        return (
-          <div className="space-y-6">
-            {/* Admin Quick Actions */}
-            {(!activeFilter || activeFilter === "total-spots" || activeFilter === "active-users") && (
-            <div>
-              <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <Button variant="outline" className="h-20 flex-col gap-2" asChild>
-                  <Link href="/admin/users" data-testid="button-manage-users">
-                    <Users className="h-6 w-6" />
-                    Manage Users
-                  </Link>
-                </Button>
-                <Button variant="outline" className="h-20 flex-col gap-2" asChild>
-                  <Link href="/admin/parking" data-testid="button-assign-spots">
-                    <Car className="h-6 w-6" />
-                    Assign Spots
-                  </Link>
-                </Button>
-                <Button variant="outline" className="h-20 flex-col gap-2" asChild>
-                  <Link href="/admin/analytics" data-testid="button-view-reports">
-                    <Clock className="h-6 w-6" />
-                    View Reports
-                  </Link>
-                </Button>
-                <Button variant="outline" className="h-20 flex-col gap-2" asChild>
-                  <Link href="/admin/analytics" data-testid="button-generate-report">
-                    <MapPin className="h-6 w-6" />
-                    Generate Report
-                  </Link>
-                </Button>
-              </div>
-            </div>
-            )}
-          </div>
-        )
+        return null
         
       default:
         return null
