@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { apiRequest, queryClient } from "@/lib/queryClient"
-import type { ParkingSpot as DBParkingSpot, InsertParkingSpot } from "@shared/schema"
+import type { ParkingSpot as DBParkingSpot, InsertParkingSpot, InsertSpotListing } from "@shared/schema"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -12,8 +12,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Car, MapPin, DollarSign, Clock, Edit, Plus, Eye, Users, TrendingUp, Grid, Trash2 } from "lucide-react"
 import { useConfirm, confirmations } from "@/hooks/use-confirm"
+import { useAuth } from "@/contexts/auth-context"
+import { useToast } from "@/hooks/use-toast"
 
 // Use the database type directly since we're fetching real data now
 // type ParkingSpot = DBParkingSpot
@@ -22,7 +25,12 @@ export default function MySpots() {
   const [showAddSpot, setShowAddSpot] = useState(false)
   const [selectedSpot, setSelectedSpot] = useState<DBParkingSpot | null>(null)
   const [showEditSpot, setShowEditSpot] = useState(false)
+  const [showCreateListingDialog, setShowCreateListingDialog] = useState(false)
+  const [selectedSpotForListing, setSelectedSpotForListing] = useState<DBParkingSpot | null>(null)
   const { confirm } = useConfirm()
+  const { user } = useAuth()
+  const { toast } = useToast()
+  
   // Removed activeTab state as calendar functionality moved to MyBookings
   const [newSpotData, setNewSpotData] = useState({
     spotNumber: "",
@@ -30,6 +38,24 @@ export default function MySpots() {
     spotType: "regular" as const,
     isIndoor: false,
     description: ""
+  })
+
+  const [listingFormData, setListingFormData] = useState({
+    listingType: "single" as "single" | "period" | "recurring",
+    singleDate: "",
+    periodStartDate: "",
+    periodEndDate: "",
+    recurringStartDate: "",
+    recurringEndDate: "",
+    daysOfWeek: [] as string[],
+    dailyRate: "",
+    notes: "",
+    status: "active" as const
+  })
+
+  const [dateValidationErrors, setDateValidationErrors] = useState({
+    periodDateRange: "",
+    recurringDateRange: ""
   })
 
   // Fetch user's parking spots
@@ -84,6 +110,52 @@ export default function MySpots() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/my-spots'] })
+    }
+  })
+
+  // Create listing mutation
+  const createListingMutation = useMutation({
+    mutationFn: async (listingData: InsertSpotListing) => {
+      const response = await apiRequest('/api/spot-listings', {
+        method: 'POST',
+        body: listingData
+      })
+      if (!response.ok) throw new Error('Failed to create listing')
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/my-spots'] })
+      queryClient.invalidateQueries({ queryKey: ['/api/spot-listings'] })
+      queryClient.invalidateQueries({ queryKey: ['/api/listings'] })
+      toast({
+        title: "Success",
+        description: "Listing created successfully",
+      })
+      setShowCreateListingDialog(false)
+      setSelectedSpotForListing(null)
+      setListingFormData({
+        listingType: "single",
+        singleDate: "",
+        periodStartDate: "",
+        periodEndDate: "",
+        recurringStartDate: "",
+        recurringEndDate: "",
+        daysOfWeek: [],
+        dailyRate: "",
+        notes: "",
+        status: "active"
+      })
+      setDateValidationErrors({
+        periodDateRange: "",
+        recurringDateRange: ""
+      })
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create listing",
+        variant: "destructive",
+      })
     }
   })
 
@@ -197,6 +269,122 @@ export default function MySpots() {
   const handleViewBookingHistory = (spotId: string) => {
     console.log('View booking history for spot:', spotId)
     // Navigate to spot booking history
+  }
+
+  const handleOpenCreateListing = (spot: DBParkingSpot) => {
+    setSelectedSpotForListing(spot)
+    setShowCreateListingDialog(true)
+  }
+
+  const handleCreateListing = () => {
+    if (!selectedSpotForListing || !user) return
+
+    // Clear previous date validation errors
+    setDateValidationErrors({
+      periodDateRange: "",
+      recurringDateRange: ""
+    })
+
+    // Validate required fields based on listing type
+    const { listingType, dailyRate, singleDate, periodStartDate, periodEndDate, recurringStartDate, recurringEndDate, daysOfWeek } = listingFormData
+
+    if (!dailyRate || parseFloat(dailyRate) <= 0) {
+      toast({
+        title: "Validation Error",
+        description: "Daily rate must be greater than 0",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (listingType === "single" && !singleDate) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a date for single day listing",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (listingType === "period" && (!periodStartDate || !periodEndDate)) {
+      toast({
+        title: "Validation Error",
+        description: "Please select start and end dates for period listing",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Date range validation for period type
+    if (listingType === "period" && periodStartDate && periodEndDate) {
+      if (new Date(periodStartDate) > new Date(periodEndDate)) {
+        setDateValidationErrors(prev => ({
+          ...prev,
+          periodDateRange: "Start date must be before or equal to end date"
+        }))
+        return
+      }
+    }
+
+    if (listingType === "recurring" && !recurringStartDate) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a start date for recurring listing",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Date range validation for recurring type (if end date is provided)
+    if (listingType === "recurring" && recurringStartDate && recurringEndDate) {
+      if (new Date(recurringStartDate) > new Date(recurringEndDate)) {
+        setDateValidationErrors(prev => ({
+          ...prev,
+          recurringDateRange: "Start date must be before or equal to end date"
+        }))
+        return
+      }
+    }
+
+    if (listingType === "recurring" && daysOfWeek.length === 0) {
+      toast({
+        title: "Validation Error",
+        description: "Please select at least one day of the week for recurring listing",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Build the listing data (server will set ownerId from authenticated user)
+    const listingData: InsertSpotListing = {
+      spotId: selectedSpotForListing.id,
+      listingType: listingType,
+      dailyRate: dailyRate,
+      status: listingFormData.status,
+      notes: listingFormData.notes || undefined,
+      // Conditional fields based on listing type
+      ...(listingType === "single" && { singleDate: singleDate }),
+      ...(listingType === "period" && { 
+        periodStartDate: periodStartDate,
+        periodEndDate: periodEndDate 
+      }),
+      ...(listingType === "recurring" && { 
+        recurringStartDate: recurringStartDate,
+        recurringEndDate: recurringEndDate || undefined,
+        daysOfWeek: daysOfWeek
+      })
+    }
+
+    createListingMutation.mutate(listingData)
+  }
+
+  const handleToggleDayOfWeek = (day: string) => {
+    setListingFormData(prev => ({
+      ...prev,
+      daysOfWeek: prev.daysOfWeek.includes(day)
+        ? prev.daysOfWeek.filter(d => d !== day)
+        : [...prev.daysOfWeek, day]
+    }))
   }
 
   const getSpotTypeIcon = (type: string) => {
@@ -380,6 +568,15 @@ export default function MySpots() {
                   <Button
                     variant="outline"
                     size="sm"
+                    onClick={() => handleOpenCreateListing(spot)}
+                    data-testid={`button-create-listing-${spot.id}`}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Create Listing
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => handleViewBookingHistory(spot.id)}
                     data-testid={`button-history-${spot.id}`}
                   >
@@ -544,6 +741,231 @@ export default function MySpots() {
                 </Button>
                 <Button onClick={() => setShowEditSpot(false)}>
                   Save Changes
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Listing Dialog */}
+      <Dialog open={showCreateListingDialog} onOpenChange={(open) => {
+        setShowCreateListingDialog(open)
+        if (!open) {
+          setSelectedSpotForListing(null)
+          setListingFormData({
+            listingType: "single",
+            singleDate: "",
+            periodStartDate: "",
+            periodEndDate: "",
+            recurringStartDate: "",
+            recurringEndDate: "",
+            daysOfWeek: [],
+            dailyRate: "",
+            notes: "",
+            status: "active"
+          })
+          setDateValidationErrors({
+            periodDateRange: "",
+            recurringDateRange: ""
+          })
+        }
+      }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create Spot Listing</DialogTitle>
+          </DialogHeader>
+          {selectedSpotForListing && (
+            <div className="space-y-4 py-4">
+              {/* Spot Context */}
+              <div className="bg-muted p-4 rounded-lg">
+                <h3 className="font-semibold text-lg mb-1">Spot {selectedSpotForListing.spotNumber}</h3>
+                <p className="text-muted-foreground text-sm flex items-center gap-1">
+                  <MapPin className="h-4 w-4" />
+                  {selectedSpotForListing.location}
+                </p>
+              </div>
+
+              {/* Listing Type */}
+              <div>
+                <Label htmlFor="listing-type">Listing Type</Label>
+                <Select 
+                  value={listingFormData.listingType} 
+                  onValueChange={(value) => {
+                    setListingFormData(prev => ({ ...prev, listingType: value as any }))
+                    setDateValidationErrors({ periodDateRange: "", recurringDateRange: "" })
+                  }}
+                >
+                  <SelectTrigger id="listing-type" data-testid="select-listing-type">
+                    <SelectValue placeholder="Select listing type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="single">Single Day</SelectItem>
+                    <SelectItem value="period">Period</SelectItem>
+                    <SelectItem value="recurring">Recurring</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Conditional Date Fields */}
+              {listingFormData.listingType === "single" && (
+                <div>
+                  <Label htmlFor="single-date">Date</Label>
+                  <Input 
+                    id="single-date"
+                    type="date"
+                    value={listingFormData.singleDate}
+                    onChange={(e) => setListingFormData(prev => ({ ...prev, singleDate: e.target.value }))}
+                    data-testid="input-single-date"
+                  />
+                </div>
+              )}
+
+              {listingFormData.listingType === "period" && (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="period-start-date">Start Date</Label>
+                      <Input 
+                        id="period-start-date"
+                        type="date"
+                        value={listingFormData.periodStartDate}
+                        onChange={(e) => {
+                          setListingFormData(prev => ({ ...prev, periodStartDate: e.target.value }))
+                          setDateValidationErrors(prev => ({ ...prev, periodDateRange: "" }))
+                        }}
+                        data-testid="input-period-start-date"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="period-end-date">End Date</Label>
+                      <Input 
+                        id="period-end-date"
+                        type="date"
+                        value={listingFormData.periodEndDate}
+                        onChange={(e) => {
+                          setListingFormData(prev => ({ ...prev, periodEndDate: e.target.value }))
+                          setDateValidationErrors(prev => ({ ...prev, periodDateRange: "" }))
+                        }}
+                        data-testid="input-period-end-date"
+                      />
+                    </div>
+                  </div>
+                  {dateValidationErrors.periodDateRange && (
+                    <p className="text-sm text-destructive" data-testid="error-period-date-range">
+                      {dateValidationErrors.periodDateRange}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {listingFormData.listingType === "recurring" && (
+                <>
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="recurring-start-date">Start Date</Label>
+                        <Input 
+                          id="recurring-start-date"
+                          type="date"
+                          value={listingFormData.recurringStartDate}
+                          onChange={(e) => {
+                            setListingFormData(prev => ({ ...prev, recurringStartDate: e.target.value }))
+                            setDateValidationErrors(prev => ({ ...prev, recurringDateRange: "" }))
+                          }}
+                          data-testid="input-recurring-start-date"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="recurring-end-date">End Date (Optional)</Label>
+                        <Input 
+                          id="recurring-end-date"
+                          type="date"
+                          value={listingFormData.recurringEndDate}
+                          onChange={(e) => {
+                            setListingFormData(prev => ({ ...prev, recurringEndDate: e.target.value }))
+                            setDateValidationErrors(prev => ({ ...prev, recurringDateRange: "" }))
+                          }}
+                          data-testid="input-recurring-end-date"
+                        />
+                      </div>
+                    </div>
+                    {dateValidationErrors.recurringDateRange && (
+                      <p className="text-sm text-destructive" data-testid="error-recurring-date-range">
+                        {dateValidationErrors.recurringDateRange}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <Label>Days of Week</Label>
+                    <div className="grid grid-cols-2 gap-3 mt-2">
+                      {["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"].map((day) => (
+                        <div key={day} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`day-${day}`}
+                            checked={listingFormData.daysOfWeek.includes(day)}
+                            onCheckedChange={() => handleToggleDayOfWeek(day)}
+                            data-testid={`checkbox-day-${day}`}
+                          />
+                          <Label 
+                            htmlFor={`day-${day}`} 
+                            className="text-sm font-normal capitalize cursor-pointer"
+                          >
+                            {day}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Daily Rate */}
+              <div>
+                <Label htmlFor="daily-rate">Daily Rate</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                  <Input 
+                    id="daily-rate"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={listingFormData.dailyRate}
+                    onChange={(e) => setListingFormData(prev => ({ ...prev, dailyRate: e.target.value }))}
+                    className="pl-7"
+                    data-testid="input-daily-rate"
+                  />
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div>
+                <Label htmlFor="listing-notes">Notes (Optional)</Label>
+                <Textarea 
+                  id="listing-notes"
+                  placeholder="Add any additional notes about this listing..."
+                  value={listingFormData.notes}
+                  onChange={(e) => setListingFormData(prev => ({ ...prev, notes: e.target.value }))}
+                  data-testid="textarea-listing-notes"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-2 pt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowCreateListingDialog(false)}
+                  data-testid="button-cancel-listing"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleCreateListing}
+                  disabled={createListingMutation.isPending}
+                  data-testid="button-submit-listing"
+                >
+                  {createListingMutation.isPending ? "Creating..." : "Create Listing"}
                 </Button>
               </div>
             </div>

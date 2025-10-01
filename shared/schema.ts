@@ -196,6 +196,8 @@ export const insertSpotListingSchema = createInsertSchema(spotListings).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).partial({
+  ownerId: true,
 });
 
 export type InsertSpotListing = z.infer<typeof insertSpotListingSchema>;

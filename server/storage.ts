@@ -34,6 +34,9 @@ import {
 import { randomUUID } from "crypto";
 import { auditDecorator } from "./audit-service";
 import { type IAuditStorage } from "./audit-storage";
+import { db } from "./db";
+import { spotListings, parkingSpots } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 // Storage interface with comprehensive CRUD methods
 export interface IStorage {
@@ -492,9 +495,7 @@ export class MemStorage implements IStorage {
   }
 
   async getParkingSpotsByOwner(ownerId: string): Promise<ParkingSpot[]> {
-    return Array.from(this.parkingSpots.values()).filter(
-      (spot) => spot.ownerId === ownerId
-    );
+    return await db.select().from(parkingSpots).where(eq(parkingSpots.ownerId, ownerId));
   }
 
   async getAllParkingSpots(): Promise<ParkingSpot[]> {
@@ -636,23 +637,21 @@ export class MemStorage implements IStorage {
   }
 
   async createSpotListing(insertListing: InsertSpotListing): Promise<SpotListing> {
-    const id = randomUUID();
-    const listing: SpotListing = { 
-      ...insertListing,
+    const [listing] = await db.insert(spotListings).values({
+      spotId: insertListing.spotId,
+      ownerId: insertListing.ownerId!,
       listingType: insertListing.listingType as ListingType,
-      status: (insertListing.status as ListingStatus) ?? "active",
       singleDate: insertListing.singleDate ?? null,
       periodStartDate: insertListing.periodStartDate ?? null,
       periodEndDate: insertListing.periodEndDate ?? null,
       recurringStartDate: insertListing.recurringStartDate ?? null,
       recurringEndDate: insertListing.recurringEndDate ?? null,
       daysOfWeek: insertListing.daysOfWeek ?? null,
+      dailyRate: insertListing.dailyRate,
+      status: (insertListing.status as ListingStatus) ?? "active",
       notes: insertListing.notes ?? null,
-      id,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    this.spotListings.set(id, listing);
+    }).returning();
+    
     return listing;
   }
 
