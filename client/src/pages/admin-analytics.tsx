@@ -419,38 +419,10 @@ export default function AdminAnalytics() {
 
       <Tabs defaultValue="revenue" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
-          <UITooltip>
-            <TooltipTrigger asChild>
-              <TabsTrigger value="revenue" data-testid="tab-revenue-analysis">{t('analytics.tabs.revenueAnalysis')}</TabsTrigger>
-            </TooltipTrigger>
-            <TooltipContent>
-              {t('tooltip.analytics.revenueAnalysis')}
-            </TooltipContent>
-          </UITooltip>
-          <UITooltip>
-            <TooltipTrigger asChild>
-              <TabsTrigger value="usage" data-testid="tab-usage-patterns">{t('analytics.tabs.usagePatterns')}</TabsTrigger>
-            </TooltipTrigger>
-            <TooltipContent>
-              {t('tooltip.analytics.usagePatterns')}
-            </TooltipContent>
-          </UITooltip>
-          <UITooltip>
-            <TooltipTrigger asChild>
-              <TabsTrigger value="performers" data-testid="tab-top-performers">{t('analytics.tabs.topPerformers')}</TabsTrigger>
-            </TooltipTrigger>
-            <TooltipContent>
-              {t('tooltip.analytics.topPerformers')}
-            </TooltipContent>
-          </UITooltip>
-          <UITooltip>
-            <TooltipTrigger asChild>
-              <TabsTrigger value="issues" data-testid="tab-issues-alerts">{t('analytics.tabs.issuesAlerts')}</TabsTrigger>
-            </TooltipTrigger>
-            <TooltipContent>
-              {t('tooltip.analytics.issuesAlerts')}
-            </TooltipContent>
-          </UITooltip>
+          <TabsTrigger value="revenue" data-testid="tab-revenue-analysis">{t('analytics.tabs.revenueAnalysis')}</TabsTrigger>
+          <TabsTrigger value="usage" data-testid="tab-usage-patterns">{t('analytics.tabs.usagePatterns')}</TabsTrigger>
+          <TabsTrigger value="performers" data-testid="tab-top-performers">{t('analytics.tabs.topPerformers')}</TabsTrigger>
+          <TabsTrigger value="issues" data-testid="tab-issues-alerts">{t('analytics.tabs.issuesAlerts')}</TabsTrigger>
         </TabsList>
 
         {/* Revenue Analysis Tab */}
