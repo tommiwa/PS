@@ -216,6 +216,18 @@ export interface IStorage {
     newUsersThisWeek: number;
     mostActiveDepartment: string;
   }>;
+  
+  // Admin Dashboard Metrics
+  getAdminDashboardMetrics(): Promise<{
+    todaysOccupancy: {
+      occupiedSpots: number;
+      totalBookableSpots: number;
+      utilizationPercent: number;
+    };
+    pendingIssues: number;
+    revenueToday: number;
+    newRegistrations: number;
+  }>;
 }
 
 export class MemStorage implements IStorage {
@@ -1436,6 +1448,78 @@ export class MemStorage implements IStorage {
       activeUsers,
       newUsersThisWeek,
       mostActiveDepartment
+    };
+  }
+
+  async getAdminDashboardMetrics(): Promise<{
+    todaysOccupancy: {
+      occupiedSpots: number;
+      totalBookableSpots: number;
+      utilizationPercent: number;
+    };
+    pendingIssues: number;
+    revenueToday: number;
+    newRegistrations: number;
+  }> {
+    // Import date-fns functions for date handling
+    const { format, subDays } = await import('date-fns');
+    
+    // Get today's date in YYYY-MM-DD format
+    const today = format(new Date(), 'yyyy-MM-dd');
+    
+    // 1. Calculate Today's Occupancy
+    const allBookings = Array.from(this.bookings.values());
+    const todaysBookings = allBookings.filter(
+      booking => booking.bookingDate === today && booking.status === 'confirmed'
+    );
+    
+    // Count unique spot IDs using Set
+    const uniqueSpotIds = new Set(todaysBookings.map(booking => booking.spotId));
+    const occupiedSpots = uniqueSpotIds.size;
+    
+    // Get total bookable spots
+    const allSpots = Array.from(this.parkingSpots.values());
+    const totalBookableSpots = allSpots.filter(spot => spot.isBookable === true).length;
+    
+    // Calculate utilization percentage (clamped 0-100)
+    let utilizationPercent = 0;
+    if (totalBookableSpots > 0) {
+      utilizationPercent = Math.round((occupiedSpots / totalBookableSpots) * 100);
+      utilizationPercent = Math.max(0, Math.min(100, utilizationPercent)); // Clamp to 0-100
+    }
+    
+    // 2. Calculate Pending Issues (active waiting list with priority === 1)
+    const waitingListEntries = Array.from(this.waitingList.values());
+    const pendingIssues = waitingListEntries.filter(
+      entry => entry.status === 'active' && entry.priority === 1
+    ).length;
+    
+    // 3. Calculate Revenue Today (bookings with today's date AND paymentReceived === true)
+    const revenueToday = todaysBookings
+      .filter(booking => booking.paymentReceived === true)
+      .reduce((sum, booking) => {
+        const amount = parseFloat(booking.totalAmount.toString());
+        return sum + (isNaN(amount) ? 0 : amount);
+      }, 0);
+    
+    // 4. Calculate New Registrations (users created in last 7 days)
+    const sevenDaysAgo = subDays(new Date(), 7);
+    const allUsers = Array.from(this.users.values());
+    const newRegistrations = allUsers.filter(user => {
+      if (!user.createdAt) return false;
+      const userCreatedDate = new Date(user.createdAt);
+      return userCreatedDate >= sevenDaysAgo;
+    }).length;
+    
+    return {
+      todaysOccupancy: {
+        occupiedSpots,
+        totalBookableSpots,
+        utilizationPercent
+      },
+      pendingIssues,
+      revenueToday,
+      newRegistrations
     };
   }
 

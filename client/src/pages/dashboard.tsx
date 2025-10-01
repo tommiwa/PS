@@ -5,11 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Calendar, MapPin, Clock, Plus, Users, Car, TrendingUp, BarChart3, PieChart, Target, DollarSign, AlertTriangle } from "lucide-react"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { useAuth } from "@/contexts/auth-context"
 import { useState, useEffect } from "react"
 import { Link } from "wouter"
+import { useQuery } from "@tanstack/react-query"
+import type { Booking, ParkingSpot, WaitingList, User, AdminDashboardMetrics } from "@shared/schema"
 
 interface DashboardProps {
   userRole?: "admin" | "owner" | "renter"
@@ -23,6 +26,13 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
   
   // State for managing active filter from stat card clicks
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
+
+  // Fetch admin metrics from the new endpoint
+  const { data: adminMetrics, isLoading: isLoadingMetrics } = useQuery<AdminDashboardMetrics>({
+    queryKey: ['/api/admin/dashboard-metrics'],
+    enabled: effectiveRole === "admin",
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  });
   
   // Handle stat card clicks for filtering
   const handleStatCardClick = (statId: string) => {
@@ -517,51 +527,97 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
             {/* Admin Stats Grid */}
             {(!activeFilter || activeFilter === "total-spots" || activeFilter === "active-users" || activeFilter === "todays-bookings" || activeFilter === "revenue-month") && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card>
+              <Card data-testid="card-todays-occupancy">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
                     Today's Occupancy
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">89/150</div>
-                  <p className="text-xs text-green-600">59% utilization</p>
+                  {isLoadingMetrics ? (
+                    <>
+                      <Skeleton className="h-8 w-24 mb-1" />
+                      <Skeleton className="h-4 w-32" />
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold" data-testid="text-occupancy-ratio">
+                        {adminMetrics?.todaysOccupancy.occupiedSpots || 0}/{adminMetrics?.todaysOccupancy.totalBookableSpots || 0}
+                      </div>
+                      <p className="text-xs text-green-600" data-testid="text-occupancy-utilization">
+                        {adminMetrics?.todaysOccupancy.utilizationPercent || 0}% utilization
+                      </p>
+                    </>
+                  )}
                 </CardContent>
               </Card>
               
-              <Card>
+              <Card data-testid="card-pending-issues">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
                     Pending Issues
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">3</div>
-                  <p className="text-xs text-yellow-600">Require attention</p>
+                  {isLoadingMetrics ? (
+                    <>
+                      <Skeleton className="h-8 w-16 mb-1" />
+                      <Skeleton className="h-4 w-32" />
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold" data-testid="text-pending-issues-count">
+                        {adminMetrics?.pendingIssues || 0}
+                      </div>
+                      <p className="text-xs text-yellow-600">Require attention</p>
+                    </>
+                  )}
                 </CardContent>
               </Card>
               
-              <Card>
+              <Card data-testid="card-revenue-today">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
                     Revenue Today
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">$1,890</div>
-                  <p className="text-xs text-green-600">+12% vs yesterday</p>
+                  {isLoadingMetrics ? (
+                    <>
+                      <Skeleton className="h-8 w-24 mb-1" />
+                      <Skeleton className="h-4 w-32" />
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold" data-testid="text-revenue-today">
+                        ${(adminMetrics?.revenueToday || 0).toFixed(2)}
+                      </div>
+                      <p className="text-xs text-muted-foreground">From confirmed bookings</p>
+                    </>
+                  )}
                 </CardContent>
               </Card>
               
-              <Card>
+              <Card data-testid="card-new-registrations">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
                     New Registrations
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">7</div>
-                  <p className="text-xs text-muted-foreground">This week</p>
+                  {isLoadingMetrics ? (
+                    <>
+                      <Skeleton className="h-8 w-16 mb-1" />
+                      <Skeleton className="h-4 w-24" />
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold" data-testid="text-new-registrations-count">
+                        {adminMetrics?.newRegistrations || 0}
+                      </div>
+                      <p className="text-xs text-muted-foreground">This week</p>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </div>

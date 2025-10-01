@@ -658,3 +658,14 @@ export interface BookingActivityResponse {
   pageSize: number;
   totalPages: number;
 }
+
+export interface AdminDashboardMetrics {
+  todaysOccupancy: {
+    occupiedSpots: number;
+    totalBookableSpots: number;
+    utilizationPercent: number;
+  };
+  pendingIssues: number;
+  revenueToday: number;
+  newRegistrations: number;
+}

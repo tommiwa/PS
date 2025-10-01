@@ -1195,6 +1195,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get admin dashboard metrics (Admin only)
+  app.get("/api/admin/dashboard-metrics", requireAdmin, async (req, res) => {
+    try {
+      const metrics = await storage.getAdminDashboardMetrics();
+      res.json(metrics);
+    } catch (error) {
+      console.error("Error fetching dashboard metrics:", error);
+      res.status(500).json({ error: "Failed to fetch dashboard metrics" });
+    }
+  });
+
   // Get comprehensive dashboard statistics (Admin only)
   app.get("/api/admin/dashboard-stats", requireAdmin, async (req, res) => {
     try {
