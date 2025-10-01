@@ -135,34 +135,22 @@ export default function BCILogo({
 // Corporate BCI Hero Logo for large displays
 export function BCIHeroLogo({ className }: { className?: string }) {
   return (
-    <div className={cn("text-center space-y-4", className)} data-testid="bci-hero-logo">
-      {/* Large Icon */}
+    <div className={cn("text-center space-y-6", className)} data-testid="bci-hero-logo">
+      {/* Simple Professional Logo */}
       <div className="flex justify-center">
-        <div className="relative">
-          <div className="h-24 w-24 rounded-2xl bg-gradient-to-br from-primary via-primary to-primary/80 shadow-2xl flex items-center justify-center p-6">
-            <div className="relative">
-              <Building2 className="h-12 w-12 text-primary-foreground" />
-              <Car className="absolute -bottom-2 -right-2 h-6 w-6 text-primary-foreground/90" />
-            </div>
-          </div>
-          {/* Glow effect */}
-          <div className="absolute inset-0 h-24 w-24 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/10 blur-xl -z-10 scale-110" />
+        <div className="h-16 w-16 rounded-lg bg-primary flex items-center justify-center">
+          <Car className="h-8 w-8 text-primary-foreground" />
         </div>
       </div>
 
-      {/* Corporate Text */}
-      <div className="space-y-2">
-        <h1 className="text-5xl font-bold tracking-tight text-foreground">
-          BCI
+      {/* Clean Typography */}
+      <div className="space-y-1">
+        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+          BCI Parking
         </h1>
-        <div className="space-y-1">
-          <p className="text-xl font-semibold text-primary">
-            Parking Management System
-          </p>
-          <p className="text-sm text-muted-foreground font-medium">
-            Enterprise Spot Sharing Solution
-          </p>
-        </div>
+        <p className="text-sm text-muted-foreground">
+          Spot Sharing Application
+        </p>
       </div>
     </div>
   );
