@@ -166,3 +166,35 @@ Implemented comprehensive production-ready Replit OIDC authentication with autom
 - **Error Handling**: Graceful fallbacks and comprehensive error logging
 
 The authentication system provides secure, production-ready OIDC authentication with automatic role-based navigation, ensuring users land on the appropriate dashboard based on their assigned role.
+
+### Server-Side Admin Dashboard Metrics (October 2025)
+Replaced static dummy values in the admin dashboard with real database-driven calculations using a dedicated server-side endpoint:
+
+**Performance Optimization**:
+- **Single API Call**: Frontend makes 1 request to `/api/admin/dashboard-metrics` instead of 4 separate queries
+- **Server-Side Aggregation**: All calculations performed on the backend for efficiency
+- **Proper Caching**: TanStack Query caching with 2-minute staleTime
+
+**Metrics Calculation Logic**:
+- **Today's Occupancy**: Counts UNIQUE spotIds with confirmed bookings for today (using Set data structure) to prevent >100% utilization
+- **Utilization Percentage**: Calculated as `(occupiedSpots / totalBookableSpots) * 100` and clamped to 0-100 range
+- **Pending Issues**: Counts active waiting list entries with priority === 1
+- **Revenue Today**: Sums totalAmount from bookings where bookingDate is today AND paymentReceived === true
+- **New Registrations**: Counts users created in the last 7 days
+
+**Date Handling**:
+- Uses date-fns library for all date operations (format, subDays)
+- Compares booking dates as strings in YYYY-MM-DD format for consistency
+- Handles timezone considerations with local date comparisons
+
+**Security & Error Handling**:
+- Protected by requireAdmin middleware for admin-only access
+- Handles edge cases: division by zero, null values, missing fields
+- Proper error responses and logging
+
+**Type Safety**:
+- Added AdminDashboardMetrics interface to shared/schema.ts
+- Full TypeScript support across frontend and backend
+- Storage interface method: getAdminDashboardMetrics()
+
+This implementation provides accurate, real-time administrative metrics with proper security controls and optimal performance.
