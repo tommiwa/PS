@@ -70,3 +70,37 @@ Preferred communication style: Simple, everyday language.
 - **Node.js**: Backend runtime
 - **PostgreSQL**: Database engine
 - **WebSocket**: Real-time communication (via neonConfig)
+
+## Recent Feature Implementations
+
+### Admin Bulk Spot Selection (October 2025)
+Implemented comprehensive bulk selection and bulk action functionality for admin parking management, enabling efficient multi-spot operations:
+
+**Feature Components**:
+- **Checkbox Selection Column**: Added as first column in Available Spots table with individual and select-all checkboxes
+- **Bulk Action Toolbar**: Contextual toolbar appears when spots are selected, showing selection count and action buttons
+- **Make Available Action**: Sets `isActive=true` for all selected spots in bulk
+- **Make Bookable Action**: Sets `isBookable=true` for all selected spots in bulk
+- **Clear Selection**: Deselects all spots and hides toolbar
+
+**Technical Implementation**:
+- **Frontend State**: `selectedSpots` (Set<string>) tracks selected spot IDs, `isSelectAllChecked` manages select-all state
+- **Backend Endpoint**: POST `/api/admin/spots/bulk-update` with Zod validation (`bulkUpdateSpotsSchema`)
+- **Database Updates**: Uses Drizzle ORM with `db.update()` and `inArray()` for efficient bulk operations
+- **Query Invalidation**: Automatically refreshes `/api/admin/all-spots` and `/api/admin/unallocated-spots` after updates
+- **Selection Management**: Auto-clears selections after successful bulk actions
+
+**Critical Database Fixes**:
+- Fixed `getAllParkingSpotsWithUser()`: Now queries PostgreSQL instead of in-memory storage
+- Fixed `getParkingSpotWithUser()`: Now queries database with proper ID filtering
+- Fixed `getParkingSpotsByOwnerWithUser()`: Now uses database query with owner filtering
+- Fixed `getAllParkingSpots()`: Now returns all spots from database
+
+**User Experience**:
+- Select individual spots or use select-all checkbox for bulk operations
+- Visual feedback with toolbar showing selection count
+- Success/error toast notifications for all actions
+- Disabled states during mutations prevent accidental duplicate operations
+- Automatic selection clearing prevents stale UI state
+
+This feature dramatically improves admin efficiency when managing parking availability across multiple spots, reducing what previously required individual spot updates to single bulk operations.
