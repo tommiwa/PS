@@ -491,7 +491,8 @@ export class MemStorage implements IStorage {
 
   // Parking Spot operations
   async getParkingSpot(id: string): Promise<ParkingSpot | undefined> {
-    return this.parkingSpots.get(id);
+    const spots = await db.select().from(parkingSpots).where(eq(parkingSpots.id, id));
+    return spots[0];
   }
 
   async getParkingSpotsByOwner(ownerId: string): Promise<ParkingSpot[]> {
@@ -589,23 +590,24 @@ export class MemStorage implements IStorage {
   }
 
   async updateParkingSpot(id: string, updates: Partial<InsertParkingSpot>): Promise<ParkingSpot | undefined> {
-    const existingSpot = this.parkingSpots.get(id);
-    if (!existingSpot) return undefined;
+    // First check if spot exists
+    const existing = await db.select().from(parkingSpots).where(eq(parkingSpots.id, id));
+    if (existing.length === 0) return undefined;
     
-    const updatedSpot: ParkingSpot = { 
-      ...existingSpot, 
-      ...updates,
-      spotType: updates.spotType ? (updates.spotType as SpotType) : existingSpot.spotType,
-      description: updates.description !== undefined ? updates.description : existingSpot.description,
-      isIndoor: updates.isIndoor !== undefined ? updates.isIndoor : existingSpot.isIndoor,
-      isActive: updates.isActive !== undefined ? updates.isActive : existingSpot.isActive
-    };
-    this.parkingSpots.set(id, updatedSpot);
-    return updatedSpot;
+    // Update in database
+    const updated = await db.update(parkingSpots)
+      .set(updates)
+      .where(eq(parkingSpots.id, id))
+      .returning();
+    
+    return updated[0];
   }
 
   async deleteParkingSpot(id: string): Promise<boolean> {
-    return this.parkingSpots.delete(id);
+    const deleted = await db.delete(parkingSpots)
+      .where(eq(parkingSpots.id, id))
+      .returning();
+    return deleted.length > 0;
   }
 
   // Spot Listing operations
