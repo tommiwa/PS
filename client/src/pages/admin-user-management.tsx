@@ -1013,7 +1013,7 @@ export default function AdminUserManagement() {
 
       {/* Quick Analytics Cards */}
       {cardsVisible && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card className="hover-elevate">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div className="flex items-center gap-2">
@@ -1286,53 +1286,6 @@ export default function AdminUserManagement() {
               </CardContent>
               <div id="renter-card-description" className="sr-only">
                 Filter to show only renters who book parking spaces but don't own spots
-              </div>
-            </Card>
-            
-            <Card 
-              className={`cursor-pointer hover-elevate ${
-                (!filterValues.role || filterValues.role === 'all') ? 'ring-2 ring-primary' : ''
-              }`}
-              onClick={() => handleRoleCardClick('all')}
-              data-testid="card-filter-all"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  handleRoleCardClick('all');
-                }
-              }}
-              aria-describedby="all-card-description"
-            >
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">{t("admin.userManagement.allUsers")}</CardTitle>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-4 w-4 p-0"
-                        onClick={(e) => e.stopPropagation()}
-                        aria-label="All users filter information"
-                      >
-                        <Info className="h-3 w-3 text-muted-foreground" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      Clear filters to display all users
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {isLoadingUsers ? "..." : allUsers.length}
-                </div>
-                <Badge variant="outline" className="text-xs bg-gray-50 text-gray-700 border-gray-200">{t("admin.userManagement.totalCount")}</Badge>
-              </CardContent>
-              <div id="all-card-description" className="sr-only">
-                Clear role filters to display all users regardless of their assigned role
               </div>
             </Card>
           </div>
