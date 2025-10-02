@@ -50,6 +50,12 @@ export interface IStorage {
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
   deleteUser(id: string): Promise<boolean>;
 
+  // Role management helpers
+  addUserRole(userId: string, role: UserRole): Promise<User | undefined>;
+  removeUserRole(userId: string, role: UserRole): Promise<User | undefined>;
+  hasRole(userId: string, role: UserRole): Promise<boolean>;
+  hasAnyRole(userId: string, roles: UserRole[]): Promise<boolean>;
+
   // Parking Spot operations
   getParkingSpot(id: string): Promise<ParkingSpot | undefined>;
   getParkingSpotsByOwner(ownerId: string): Promise<ParkingSpot[]>;
@@ -400,24 +406,24 @@ export class MemStorage implements IStorage {
     const now = new Date();
     
     // Dynamic role assignment based on spot ownership and admin list
-    let assignedRole: UserRole;
+    let assignedRoles: UserRole[];
     
     // Hardcoded admin emails
     const adminEmails = ['lijin.joseji@bci.ca', 'd.thompson@bci.ca', 'david.thomps@replit.com'];
     
-    if (existingUser?.role) {
-      // Preserve existing role if user already exists
-      assignedRole = existingUser.role;
+    if (existingUser?.roles) {
+      // Preserve existing roles if user already exists
+      assignedRoles = existingUser.roles;
     } else if (userData.email && adminEmails.includes(userData.email.toLowerCase())) {
       // Admin role for hardcoded emails
-      assignedRole = "admin";
+      assignedRoles = ["admin"] as UserRole[];
     } else {
       // Check if user owns any parking spot
       const userSpots = Array.from(this.parkingSpots.values()).filter(
         spot => spot.ownerId === userData.id
       );
       
-      assignedRole = userSpots.length > 0 ? "owner" : "renter";
+      assignedRoles = userSpots.length > 0 ? (["owner"] as UserRole[]) : (["renter"] as UserRole[]);
     }
     
     const user: User = {
@@ -428,7 +434,7 @@ export class MemStorage implements IStorage {
       firstName: userData.firstName ?? null, // Convert undefined to null for schema compatibility
       lastName: userData.lastName ?? null, // Convert undefined to null for schema compatibility
       profileImageUrl: userData.profileImageUrl ?? null, // Convert undefined to null for schema compatibility
-      role: assignedRole, // Dynamically assigned role
+      roles: assignedRoles, // Dynamically assigned roles
       phone: existingUser?.phone || null,
       department: existingUser?.department || null,
       memberSince: existingUser?.memberSince || null,
@@ -451,7 +457,7 @@ export class MemStorage implements IStorage {
     const user: User = { 
       ...insertUser,
       email: insertUser.email ?? null, // Convert undefined to null for schema compatibility
-      role: insertUser.role as UserRole,
+      roles: insertUser.roles || ['renter'],
       phone: insertUser.phone ?? null,
       department: insertUser.department ?? null,
       memberSince: insertUser.memberSince ?? null,
@@ -487,6 +493,49 @@ export class MemStorage implements IStorage {
 
   async deleteUser(id: string): Promise<boolean> {
     return this.users.delete(id);
+  }
+
+  // Role management helpers
+  async addUserRole(userId: string, role: UserRole): Promise<User | undefined> {
+    const user = this.users.get(userId);
+    if (!user) return undefined;
+    
+    // Add role if not already present
+    if (!user.roles.includes(role)) {
+      const updatedRoles = [...user.roles, role];
+      return this.updateUser(userId, { roles: updatedRoles });
+    }
+    
+    return user;
+  }
+
+  async removeUserRole(userId: string, role: UserRole): Promise<User | undefined> {
+    const user = this.users.get(userId);
+    if (!user) return undefined;
+    
+    // Remove role if present, but ensure at least one role remains
+    if (user.roles.includes(role)) {
+      const updatedRoles = user.roles.filter(r => r !== role);
+      // If no roles left, default to 'renter'
+      if (updatedRoles.length === 0) {
+        updatedRoles.push('renter');
+      }
+      return this.updateUser(userId, { roles: updatedRoles });
+    }
+    
+    return user;
+  }
+
+  async hasRole(userId: string, role: UserRole): Promise<boolean> {
+    const user = this.users.get(userId);
+    if (!user) return false;
+    return user.roles.includes(role);
+  }
+
+  async hasAnyRole(userId: string, roles: UserRole[]): Promise<boolean> {
+    const user = this.users.get(userId);
+    if (!user) return false;
+    return roles.some(role => user.roles.includes(role));
   }
 
   // Parking Spot operations
@@ -1219,7 +1268,7 @@ export class MemStorage implements IStorage {
     const bookings = Array.from(this.bookings.values())
       .filter(b => b.paymentReceived);
     const spots = Array.from(this.parkingSpots.values());
-    const users = Array.from(this.users.values()).filter(u => u.role === 'owner');
+    const users = Array.from(this.users.values()).filter(u => u.roles.includes('owner'));
     
     // Group bookings by owner
     const ownerEarnings = new Map<string, { earnings: number; bookingsCount: number }>();

@@ -9,7 +9,7 @@ import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
 import { auditService } from "./audit-service";
 import { db } from "./db";
-import { users } from "@shared/schema";
+import { users, type User } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
 if (!process.env.REPLIT_DOMAINS) {
@@ -62,18 +62,11 @@ async function upsertUser(
   claims: any,
 ) {
   const userId = claims["sub"];
-  const userData = {
-    id: userId,
-    email: claims["email"],
-    firstName: claims["first_name"],
-    lastName: claims["last_name"],
-    profileImageUrl: claims["profile_image_url"],
-  };
   
-  // Check if user exists in database first to preserve their role
+  // Check if user exists in database first to preserve their roles
   console.log(`[UPSERT] Checking database for existing user: ${userId}`);
   const existingDbUser = await db.select().from(users).where(eq(users.id, userId)).then(rows => rows[0]);
-  console.log(`[UPSERT] Existing user:`, existingDbUser ? `Found with role: ${existingDbUser.role}` : 'Not found');
+  console.log(`[UPSERT] Existing user:`, existingDbUser ? `Found with roles: ${JSON.stringify(existingDbUser.roles)}` : 'Not found');
   
   // Determine if this should be an admin user based on specific user IDs and emails
   const isAdmin = claims["sub"] === "user-admin-001" || 
@@ -82,12 +75,21 @@ async function upsertUser(
                   claims["email"] === "lijin.joseji@bci.ca";
   console.log(`[UPSERT] Is hardcoded admin: ${isAdmin}`);
   
-  // Determine final role: preserve existing role unless they should be admin
-  let finalRole = existingDbUser?.role || "renter";
-  if (isAdmin) {
-    finalRole = "admin";
+  // Determine final roles: preserve existing roles unless they should be admin
+  let finalRoles = existingDbUser?.roles || ["renter"];
+  if (isAdmin && !finalRoles.includes("admin")) {
+    finalRoles = [...finalRoles.filter(r => r !== "renter"), "admin"];
   }
-  console.log(`[UPSERT] Final role to be saved: ${finalRole}`);
+  console.log(`[UPSERT] Final roles to be saved: ${JSON.stringify(finalRoles)}`);
+  
+  // Prepare user data with roles included
+  const userData = {
+    id: userId,
+    email: claims["email"],
+    firstName: claims["first_name"],
+    lastName: claims["last_name"],
+    profileImageUrl: claims["profile_image_url"],
+  };
   
   const now = new Date();
   
@@ -100,7 +102,7 @@ async function upsertUser(
         firstName: userData.firstName,
         lastName: userData.lastName,
         profileImageUrl: userData.profileImageUrl,
-        role: finalRole,
+        roles: finalRoles,
         lastLogin: now,
         updatedAt: now,
       })
@@ -113,18 +115,18 @@ async function upsertUser(
       firstName: userData.firstName,
       lastName: userData.lastName,
       profileImageUrl: userData.profileImageUrl,
-      role: finalRole,
+      roles: finalRoles,
       lastLogin: now,
       createdAt: now,
       updatedAt: now,
     });
   }
   
-  // Also update in-memory storage for backward compatibility
-  await storage.upsertUser(userData);
-  if (isAdmin || existingDbUser?.role === "admin") {
-    await storage.updateUser(userId, { role: "admin" });
-  }
+  // Update in-memory storage with complete user data including roles (single atomic operation)
+  await storage.upsertUser({
+    ...userData,
+    roles: finalRoles,
+  } as any);
 }
 
 export async function setupAuth(app: Express) {
@@ -257,17 +259,17 @@ export async function setupAuth(app: Express) {
         }
         
         try {
-          // Fetch user from PostgreSQL database directly to get their role
+          // Fetch user from PostgreSQL database directly to get their roles
           // This ensures we check the database first before falling back to in-memory storage
           console.log(`[AUTH] Querying database for user ${userId}`);
-          let dbUser = await db.select().from(users).where(eq(users.id, userId)).then(rows => rows[0]);
-          console.log(`[AUTH] Database query result:`, dbUser ? `User found with role: ${dbUser.role}` : 'User not found in database');
+          let dbUser: User | undefined = await db.select().from(users).where(eq(users.id, userId)).then(rows => rows[0]);
+          console.log(`[AUTH] Database query result:`, dbUser ? `User found with roles: ${JSON.stringify(dbUser.roles)}` : 'User not found in database');
           
           // If not found in database, check in-memory storage
           if (!dbUser) {
             console.log(`[AUTH] Falling back to in-memory storage for user ${userId}`);
             dbUser = await storage.getUser(userId);
-            console.log(`[AUTH] In-memory storage result:`, dbUser ? `User found with role: ${dbUser.role}` : 'User not found in storage');
+            console.log(`[AUTH] In-memory storage result:`, dbUser ? `User found with roles: ${JSON.stringify(dbUser.roles)}` : 'User not found in storage');
           }
           
           if (!dbUser) {
@@ -293,29 +295,23 @@ export async function setupAuth(app: Express) {
             userId,
             userEmail || "unknown",
             true,
-            `User logged in successfully with role: ${dbUser.role}`
+            `User logged in successfully with roles: ${JSON.stringify(dbUser.roles)}`
           ).catch(error => {
             console.error("Failed to log authentication success:", error);
           });
           
-          // Redirect based on user role
+          // Redirect based on user roles
           let redirectUrl = "/dashboard"; // Default redirect
           
-          switch (dbUser.role) {
-            case "admin":
-              redirectUrl = "/admin";
-              break;
-            case "owner":
-              redirectUrl = "/my-spots";
-              break;
-            case "renter":
-              redirectUrl = "/dashboard";
-              break;
-            default:
-              redirectUrl = "/dashboard";
+          if (dbUser.roles.includes("admin")) {
+            redirectUrl = "/admin";
+          } else if (dbUser.roles.includes("owner")) {
+            redirectUrl = "/my-spots";
+          } else if (dbUser.roles.includes("renter")) {
+            redirectUrl = "/dashboard";
           }
           
-          console.log(`Redirecting user ${userId} (${dbUser.role}) to ${redirectUrl}`);
+          console.log(`Redirecting user ${userId} (${JSON.stringify(dbUser.roles)}) to ${redirectUrl}`);
           return res.redirect(redirectUrl);
           
         } catch (error) {
@@ -439,7 +435,7 @@ export const requireAdmin: RequestHandler = async (req, res, next) => {
   if (demoAuth && process.env.NODE_ENV !== "production") {
     try {
       const demoUser = JSON.parse(demoAuth as string);
-      if (demoUser && demoUser.role === "admin") {
+      if (demoUser && demoUser.roles?.includes("admin")) {
         // For demo mode, create/ensure admin user exists in database
         await storage.upsertUser({
           id: demoUser.id,
@@ -465,7 +461,7 @@ export const requireAdmin: RequestHandler = async (req, res, next) => {
 
   try {
     const dbUser = await storage.getUser(user.claims.sub);
-    if (!dbUser || dbUser.role !== "admin") {
+    if (!dbUser || !dbUser.roles.includes("admin")) {
       return res.status(403).json({ message: "Admin access required" });
     }
     next();
@@ -480,14 +476,15 @@ export function getAuthenticatedUserId(req: any): string | null {
   return req.user?.claims?.sub || null;
 }
 
-// Helper to get authenticated user role
+// Helper to get authenticated user roles
 export async function getAuthenticatedUserRole(req: any): Promise<string | null> {
   const userId = getAuthenticatedUserId(req);
   if (!userId) return null;
   
   try {
     const user = await storage.getUser(userId);
-    return user?.role || null;
+    // Return the primary role (first one in the array) for backward compatibility
+    return user?.roles?.[0] || null;
   } catch (error) {
     console.error("Error getting user role:", error);
     return null;

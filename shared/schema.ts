@@ -28,7 +28,7 @@ export const users = pgTable("users", {
   // Custom fields for parking app
   phone: text("phone"),
   department: text("department"),
-  role: text("role").$type<UserRole>().default("renter"),
+  roles: text("roles").array().notNull().default(sql`ARRAY['renter']::text[]`),
   memberSince: text("member_since"),
   lastLogin: timestamp("last_login"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -41,7 +41,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
   lastName: true,
   phone: true,
   department: true,
-  role: true,
+  roles: true,
   memberSince: true,
 });
 
@@ -58,6 +58,7 @@ export type UpsertUser = z.infer<typeof upsertUserSchema>;
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+export type UserRoles = UserRole[];
 
 // Notification Preferences Table
 export const notificationPreferences = pgTable("notification_preferences", {

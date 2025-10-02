@@ -6,7 +6,7 @@ interface AuthUser {
   email: string;
   firstName?: string;
   lastName?: string;
-  role: UserRole;
+  roles: UserRole[];
   profileImageUrl?: string;
 }
 
@@ -27,6 +27,7 @@ interface AuthContextType {
   getCurrentViewRole: () => UserRole | null;
   isViewingAs: (role: UserRole) => boolean;
   refreshUser: () => Promise<void>;
+  effectiveRole: UserRole | null;
 }
 
 // Create a default context value to prevent HMR issues
@@ -46,6 +47,7 @@ const defaultAuthContextValue: AuthContextType = {
   getCurrentViewRole: () => null,
   isViewingAs: () => false,
   refreshUser: async () => { throw new Error("AuthProvider not initialized") },
+  effectiveRole: null,
 };
 
 const AuthContext = createContext<AuthContextType>(defaultAuthContextValue);
@@ -90,11 +92,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const hasRole = (role: UserRole): boolean => {
-    return user?.role === role;
+    return user ? user.roles.includes(role) : false;
   };
 
   const hasAnyRole = (roles: UserRole[]): boolean => {
-    return user ? roles.includes(user.role) : false;
+    return user ? roles.some(role => user.roles.includes(role)) : false;
   };
 
   const isAdmin = (): boolean => {
@@ -109,9 +111,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return hasRole("renter");
   };
 
+  const getEffectiveRole = (): UserRole | null => {
+    if (!user || !user.roles || user.roles.length === 0) return null;
+    
+    // Priority: admin > owner > renter
+    if (user.roles.includes('admin')) return 'admin';
+    if (user.roles.includes('owner')) return 'owner';
+    return 'renter';
+  };
+
   // Role switching functions for admins
   const switchViewRole = (role: UserRole) => {
-    if (user?.role === "admin") {
+    if (user?.roles?.includes("admin")) {
       setViewRole(role);
     }
   };
@@ -121,10 +132,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const getCurrentViewRole = (): UserRole | null => {
-    if (user?.role === "admin" && viewRole) {
+    if (user?.roles?.includes("admin") && viewRole) {
       return viewRole;
     }
-    return user?.role || null;
+    return getEffectiveRole();
   };
 
   const isViewingAs = (role: UserRole): boolean => {
@@ -151,6 +162,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     getCurrentViewRole,
     isViewingAs,
     refreshUser,
+    effectiveRole: getEffectiveRole(),
   };
 
   return (
@@ -178,7 +190,7 @@ export function useRequireAuth(allowedRoles?: UserRole[]) {
   const hasAccess = () => {
     if (!isAuthenticated || !user) return false;
     if (!allowedRoles) return true;
-    return allowedRoles.includes(user.role);
+    return allowedRoles.some(role => user.roles.includes(role));
   };
 
   return {

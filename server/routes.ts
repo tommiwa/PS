@@ -117,17 +117,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/promote-to-admin', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const updatedUser = await storage.updateUser(userId, { role: "admin" });
-      if (!updatedUser) {
+      const user = await storage.getUser(userId);
+      if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
       
+      const beforeRoles = [...user.roles];
+      await storage.addUserRole(userId, "admin");
+      const updatedUser = await storage.getUser(userId);
+      
       // Audit the role change
       await auditService.logAction("UPDATE", "user", {
-        entityId: updatedUser.id,
-        message: `User promoted to admin role: ${updatedUser.firstName} ${updatedUser.lastName} (${updatedUser.email})`,
-        before: { role: "renter" }, // Assume previous role
-        after: { role: "admin" }
+        entityId: userId,
+        message: `User promoted to admin role: ${updatedUser?.firstName} ${updatedUser?.lastName} (${updatedUser?.email})`,
+        before: { roles: beforeRoles },
+        after: { roles: updatedUser?.roles }
       });
       
       res.json({ message: "User promoted to admin successfully", user: updatedUser });
@@ -148,7 +152,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Audit the user creation
       await auditService.logAction("CREATE", "user", {
         entityId: newUser.id,
-        message: `Created user ${newUser.firstName} ${newUser.lastName} (${newUser.email}) with role ${newUser.role}`,
+        message: `Created user ${newUser.firstName} ${newUser.lastName} (${newUser.email}) with roles ${JSON.stringify(newUser.roles)}`,
         after: newUser
       });
       
@@ -184,8 +188,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         phone: parseResult.phone,
         department: parseResult.department,
         memberSince: parseResult.memberSince,
-        ...(parseResult.role && userRoles.options.includes(parseResult.role as any) && { 
-          role: parseResult.role as UserRole 
+        ...(parseResult.roles && Array.isArray(parseResult.roles) && { 
+          roles: parseResult.roles as UserRole[] 
         })
       };
       
@@ -218,7 +222,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       
       // Users can only edit their own profile (unless admin)
-      if (req.user?.id !== id && req.user?.role !== 'admin') {
+      if (req.user?.id !== id && !req.user?.roles?.includes('admin')) {
         return res.status(403).json({ error: "You can only edit your own profile" });
       }
       
@@ -328,7 +332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Only allow users to access their own assigned spots or admin to access any user's spots
       const currentUser = await storage.getUser(currentUserId);
-      const isAdmin = currentUser?.role === 'admin';
+      const isAdmin = currentUser?.roles?.includes('admin');
       
       if (!isAdmin && currentUserId !== userId) {
         return res.status(403).json({ error: "Access denied" });
@@ -354,7 +358,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Only allow users to access their own preferences or admin to access any user's preferences
       const currentUser = await storage.getUser(currentUserId);
-      const isAdmin = currentUser?.role === 'admin';
+      const isAdmin = currentUser?.roles?.includes('admin');
       
       if (!isAdmin && currentUserId !== userId) {
         return res.status(403).json({ error: "Access denied" });
@@ -380,7 +384,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Only allow users to update their own preferences or admin to update any user's preferences
       const currentUser = await storage.getUser(currentUserId);
-      const isAdmin = currentUser?.role === 'admin';
+      const isAdmin = currentUser?.roles?.includes('admin');
       
       if (!isAdmin && currentUserId !== userId) {
         return res.status(403).json({ error: "Access denied" });
@@ -414,7 +418,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Only allow users to access their own preferences or admin to access any user's preferences
       const currentUser = await storage.getUser(currentUserId);
-      const isAdmin = currentUser?.role === 'admin';
+      const isAdmin = currentUser?.roles?.includes('admin');
       
       if (!isAdmin && currentUserId !== userId) {
         return res.status(403).json({ error: "Access denied" });
@@ -440,7 +444,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Only allow users to update their own preferences or admin to update any user's preferences
       const currentUser = await storage.getUser(currentUserId);
-      const isAdmin = currentUser?.role === 'admin';
+      const isAdmin = currentUser?.roles?.includes('admin');
       
       if (!isAdmin && currentUserId !== userId) {
         return res.status(403).json({ error: "Access denied" });
@@ -477,7 +481,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "User not found" });
       }
 
-      if (currentUser.role !== "admin" && currentUserId !== userId) {
+      if (!currentUser.roles.includes("admin") && currentUserId !== userId) {
         return res.status(403).json({ error: "Access denied" });
       }
 
@@ -505,7 +509,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "User not found" });
       }
 
-      if (currentUser.role !== "admin" && currentUserId !== userId) {
+      if (!currentUser.roles.includes("admin") && currentUserId !== userId) {
         return res.status(403).json({ error: "Access denied" });
       }
 
@@ -547,7 +551,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "User not found" });
       }
 
-      if (currentUser.role !== "admin" && currentUserId !== userId) {
+      if (!currentUser.roles.includes("admin") && currentUserId !== userId) {
         return res.status(403).json({ error: "Access denied" });
       }
 
@@ -603,7 +607,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "User not found" });
       }
 
-      if (currentUser.role !== "admin" && currentUserId !== userId) {
+      if (!currentUser.roles.includes("admin") && currentUserId !== userId) {
         return res.status(403).json({ error: "Access denied" });
       }
 
@@ -1473,9 +1477,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         after: updatedSpot
       });
       
-      // Automatic role change: if user is a renter, change to owner
-      if (user && user.role === "renter") {
-        await storage.updateUser(userId, { role: "owner" });
+      // Automatic role change: if user doesn't have owner role, add it
+      if (user && !user.roles.includes("owner")) {
+        await storage.addUserRole(userId, "owner");
       }
       
       res.json(updatedSpot);
@@ -1535,9 +1539,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
       
-      // Automatic role change: if user is a renter, change to owner
-      if (user && user.role === "renter") {
-        await storage.updateUser(userId, { role: "owner" });
+      // Automatic role change: if user doesn't have owner role, add it
+      if (user && !user.roles.includes("owner")) {
+        await storage.addUserRole(userId, "owner");
       }
       
       res.json({ 
@@ -1607,7 +1611,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           email: user.email,
           phone: user.phone || "",
           department: user.department || "Unknown",
-          role: user.role,
+          roles: user.roles,
           status: "active", // Default status since User type doesn't have status field
           spotsOwned: userSpots.length,
           bookingsCount: userBookings.length,
@@ -1676,11 +1680,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         after: updatedSpot
       });
       
-      // Automatic role change: if former owner has 0 remaining spots and is an owner, change to renter
-      if (existingSpot.ownerId && formerOwner && formerOwner.role === "owner") {
+      // Automatic role change: if former owner has 0 remaining spots and is an owner, remove owner role
+      if (existingSpot.ownerId && formerOwner && formerOwner.roles.includes("owner")) {
         const remainingSpots = await storage.getParkingSpotsByOwner(existingSpot.ownerId);
         if (remainingSpots.length === 0) {
-          await storage.updateUser(existingSpot.ownerId, { role: "renter" });
+          await storage.removeUserRole(existingSpot.ownerId, "owner");
         }
       }
       
