@@ -1437,6 +1437,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get recent bookings (last 7 days) for admin dashboard (Admin only)
+  app.get("/api/admin/recent-bookings", requireAdmin, async (req, res) => {
+    try {
+      // Get all bookings
+      const allBookings = await storage.getAllBookings();
+      
+      // Filter for recent bookings (last 7 days)
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      
+      const recentBookings = allBookings.filter(booking => {
+        const bookingCreated = booking.createdAt ? new Date(booking.createdAt) : new Date(booking.bookingDate);
+        return bookingCreated >= sevenDaysAgo;
+      });
+      
+      res.json(recentBookings);
+    } catch (error) {
+      console.error("Error fetching recent bookings:", error);
+      res.status(500).json({ error: "Failed to fetch recent bookings" });
+    }
+  });
+
   // Assign a parking spot to a user (Admin only)
   app.post("/api/admin/assign-spot", requireAdmin, async (req, res) => {
     try {
