@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Separator } from "@/components/ui/separator"
 import { Calendar, MapPin, Clock, Plus, Users, Car, TrendingUp, BarChart3, PieChart, Target, DollarSign, AlertTriangle, Download, RefreshCw, Loader2, Eye, EyeOff, AlertCircle } from "lucide-react"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { useAuth } from "@/contexts/auth-context"
@@ -50,7 +51,7 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ userRole = "owner" }: DashboardProps) {
-  const { getCurrentViewRole } = useAuth();
+  const { user, getCurrentViewRole } = useAuth();
   const queryClient = useQueryClient();
   const { t } = useLanguage();
   
@@ -267,14 +268,138 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
 
 
   const renderRoleSpecificContent = () => {
-    switch (effectiveRole) {
-      case "renter":
-        return (
-          <div className="space-y-6">
+    return (
+      <div className="space-y-6">
+        {/* Admin section - show if user has admin role */}
+        {user?.roles?.includes("admin") && (
+          <div className="space-y-4" data-testid="section-admin-dashboard">
+            <h2 className="text-xl font-semibold">Admin Dashboard</h2>
+            <p className="text-muted-foreground">
+              Admin-specific dashboard content would go here. Currently, admins use the dedicated /admin page for analytics and management.
+            </p>
+          </div>
+        )}
+
+        {/* Separator between admin and owner sections */}
+        {user?.roles?.includes("admin") && user?.roles?.includes("owner") && (
+          <Separator className="my-6" />
+        )}
+
+        {/* Owner section - show if user has owner role */}
+        {user?.roles?.includes("owner") && (
+          <div className="space-y-6" data-testid="section-owner-dashboard">
+            <h2 className="text-2xl font-semibold">Spot Owner Dashboard</h2>
+            
+            {/* Owner's Rental Business Section */}
+            {(!activeFilter || activeFilter === "my-spots" || activeFilter === "month-earnings") && (
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-semibold">Your Spots - Recent Bookings</h3>
+                <Button size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  List Availability
+                </Button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {mockUpcomingBookings.map((booking) => (
+                  <BookingCard 
+                    key={booking.id} 
+                    booking={booking} 
+                    showRenterInfo={true}
+                  />
+                ))}
+              </div>
+            </div>
+            )}
+            
+            {/* Owner Quick Actions */}
+            {(!activeFilter || activeFilter === "availability-listed") && (
+            <div>
+              <h3 className="text-xl font-semibold mb-4">Spot Management</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="hover-elevate cursor-pointer">
+                  <CardContent className="p-6 text-center">
+                    <Calendar className="h-8 w-8 mx-auto mb-2 text-primary" />
+                    <h3 className="font-medium">List Spot</h3>
+                    <p className="text-sm text-muted-foreground">Make your spot available</p>
+                  </CardContent>
+                </Card>
+                <Card className="hover-elevate cursor-pointer">
+                  <CardContent className="p-6 text-center">
+                    <Clock className="h-8 w-8 mx-auto mb-2 text-primary" />
+                    <h3 className="font-medium">Set Recurring</h3>
+                    <p className="text-sm text-muted-foreground">Weekly availability</p>
+                  </CardContent>
+                </Card>
+                <Card className="hover-elevate cursor-pointer">
+                  <CardContent className="p-6 text-center">
+                    <MapPin className="h-8 w-8 mx-auto mb-2 text-primary" />
+                    <h3 className="font-medium">Manage Spots</h3>
+                    <p className="text-sm text-muted-foreground">Edit spot details</p>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+            )}
+
+            {/* Renter Functionality for Owners */}
+            {(!activeFilter || activeFilter === "upcoming-bookings") && (
+            <div className="border-t pt-6">
+              <div className="flex items-center gap-2 mb-6">
+                <Car className="h-5 w-5 text-primary" />
+                <h3 className="text-xl font-semibold">Your Bookings - When You Need Parking</h3>
+              </div>
+              
+              <div className="space-y-6">
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-lg font-medium">Your Upcoming Bookings</h4>
+                    <Button size="sm" variant="outline">
+                      <Calendar className="h-4 w-4 mr-2" />
+                      View All
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {mockUpcomingBookings.slice(0, 2).map((booking) => (
+                      <BookingCard key={`renter-${booking.id}`} booking={booking} />
+                    ))}
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-lg font-medium">Available Spots to Book</h4>
+                    <Button size="sm" variant="outline">
+                      <MapPin className="h-4 w-4 mr-2" />
+                      Search All
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {mockAvailableSpots.map((spot) => (
+                      <ParkingSpotCard key={spot.id} spot={spot} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+            )}
+          </div>
+        )}
+
+        {/* Separator between owner and renter sections */}
+        {user?.roles?.includes("owner") && user?.roles?.includes("renter") && (
+          <Separator className="my-6" />
+        )}
+
+        {/* Renter section - show if user has renter role */}
+        {user?.roles?.includes("renter") && (
+          <div className="space-y-6" data-testid="section-renter-dashboard">
+            <h2 className="text-2xl font-semibold">Renter Dashboard</h2>
+            
             {/* Simplified Spending Overview */}
             {(!activeFilter || activeFilter === "month-spent") && (
             <div>
-              <h2 className="text-xl font-semibold mb-4">Spending Overview</h2>
+              <h3 className="text-xl font-semibold mb-4">Spending Overview</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -339,7 +464,7 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
             {/* Location & Usage Patterns */}
             {(!activeFilter || activeFilter === "favorite-locations") && (
             <div>
-              <h2 className="text-xl font-semibold mb-4">Usage Patterns</h2>
+              <h3 className="text-xl font-semibold mb-4">Usage Patterns</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -511,7 +636,7 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
             {/* Simple Performance Summary */}
             {(!activeFilter || activeFilter === "active-bookings" || activeFilter === "booking-history") && (
             <div>
-              <h2 className="text-xl font-semibold mb-4">Booking Summary</h2>
+              <h3 className="text-xl font-semibold mb-4">Booking Summary</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -578,113 +703,9 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
             </div>
             )}
           </div>
-        )
-        
-      case "owner":
-        return (
-          <div className="space-y-6">
-            {/* Owner's Rental Business Section */}
-            {(!activeFilter || activeFilter === "my-spots" || activeFilter === "month-earnings") && (
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold">Your Spots - Recent Bookings</h2>
-                <Button size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  List Availability
-                </Button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {mockUpcomingBookings.map((booking) => (
-                  <BookingCard 
-                    key={booking.id} 
-                    booking={booking} 
-                    showRenterInfo={true}
-                  />
-                ))}
-              </div>
-            </div>
-            )}
-            
-            {/* Owner Quick Actions */}
-            {(!activeFilter || activeFilter === "availability-listed") && (
-            <div>
-              <h2 className="text-xl font-semibold mb-4">Spot Management</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="hover-elevate cursor-pointer">
-                  <CardContent className="p-6 text-center">
-                    <Calendar className="h-8 w-8 mx-auto mb-2 text-primary" />
-                    <h3 className="font-medium">List Spot</h3>
-                    <p className="text-sm text-muted-foreground">Make your spot available</p>
-                  </CardContent>
-                </Card>
-                <Card className="hover-elevate cursor-pointer">
-                  <CardContent className="p-6 text-center">
-                    <Clock className="h-8 w-8 mx-auto mb-2 text-primary" />
-                    <h3 className="font-medium">Set Recurring</h3>
-                    <p className="text-sm text-muted-foreground">Weekly availability</p>
-                  </CardContent>
-                </Card>
-                <Card className="hover-elevate cursor-pointer">
-                  <CardContent className="p-6 text-center">
-                    <MapPin className="h-8 w-8 mx-auto mb-2 text-primary" />
-                    <h3 className="font-medium">Manage Spots</h3>
-                    <p className="text-sm text-muted-foreground">Edit spot details</p>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-            )}
-
-            {/* Renter Functionality for Owners */}
-            {(!activeFilter || activeFilter === "upcoming-bookings") && (
-            <div className="border-t pt-6">
-              <div className="flex items-center gap-2 mb-6">
-                <Car className="h-5 w-5 text-primary" />
-                <h2 className="text-xl font-semibold">Your Bookings - When You Need Parking</h2>
-              </div>
-              
-              <div className="space-y-6">
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-medium">Your Upcoming Bookings</h3>
-                    <Button size="sm" variant="outline">
-                      <Calendar className="h-4 w-4 mr-2" />
-                      View All
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {mockUpcomingBookings.slice(0, 2).map((booking) => (
-                      <BookingCard key={`renter-${booking.id}`} booking={booking} />
-                    ))}
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-medium">Available Spots to Book</h3>
-                    <Button size="sm" variant="outline">
-                      <MapPin className="h-4 w-4 mr-2" />
-                      Search All
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {mockAvailableSpots.map((spot) => (
-                      <ParkingSpotCard key={spot.id} spot={spot} />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-            )}
-          </div>
-        )
-        
-      case "admin":
-        return null
-        
-      default:
-        return null
-    }
+        )}
+      </div>
+    )
   }
 
   return (

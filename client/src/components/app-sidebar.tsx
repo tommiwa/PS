@@ -118,17 +118,15 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
   const [location, setLocation] = useLocation();
   const { getCurrentViewRole, user } = useAuth();
   
-  // Use current view role for admins, otherwise use the actual user role
-  const effectiveRole = getCurrentViewRole() || userRole;
-  
-  // Filter menu items based on effective role (current view role for admins)
+  // Filter menu items to show ALL items matching ANY of the user's roles
   const filteredMainItems = mainMenuItems.filter(item => 
-    item.roles.includes(effectiveRole)
+    user?.roles?.some(role => item.roles.includes(role)) ?? false
   );
 
   // Custom ordering for spot owners: My Bookings, My Spots, Find Parking, Statistics
   const getOrderedMainItems = () => {
-    if (effectiveRole === "owner") {
+    // If user has owner role, use custom ordering
+    if (user?.roles?.includes("owner") ?? false) {
       const orderedItems = [];
       
       // 1. My Bookings (first)
@@ -157,11 +155,11 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
   const orderedMainItems = getOrderedMainItems();
   
   const filteredAdminItems = adminMenuItems.filter(item => 
-    item.roles.includes(effectiveRole)
+    user?.roles?.some(role => item.roles.includes(role)) ?? false
   );
   
   const filteredSettingsItems = settingsMenuItems.filter(item => 
-    item.roles.includes(effectiveRole)
+    user?.roles?.some(role => item.roles.includes(role)) ?? false
   );
 
   // Function to refresh profile data
@@ -193,11 +191,19 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
     }
   };
 
+  // Get highest priority role for tooltip display (admin > owner > renter)
+  const getHighestPriorityRole = (): UserRole => {
+    if (user?.roles?.includes("admin") ?? false) return "admin";
+    if (user?.roles?.includes("owner") ?? false) return "owner";
+    return "renter";
+  };
+
   const getTooltipText = (item: any) => {
     if (typeof item.tooltip === 'string') {
       return item.tooltip;
-    } else if (typeof item.tooltip === 'object' && item.tooltip[effectiveRole]) {
-      return item.tooltip[effectiveRole];
+    } else if (typeof item.tooltip === 'object') {
+      const priorityRole = getHighestPriorityRole();
+      return item.tooltip[priorityRole] || "";
     }
     return "";
   };
@@ -207,19 +213,21 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
       // Handle active state based on role and current location
       let isActive = location === item.url;
       
-      // Special handling for root path active states based on effective role
+      // Special handling for root path active states based on user's highest priority role
       if (location === "/") {
-        if (item.url === "/dashboard" && effectiveRole === "admin") {
+        const priorityRole = getHighestPriorityRole();
+        if (item.url === "/dashboard" && priorityRole === "admin") {
           isActive = true; // Admin lands on dashboard, so dashboard should be active
-        } else if (item.url === "/search" && effectiveRole === "renter") {
+        } else if (item.url === "/search" && priorityRole === "renter") {
           isActive = true; // Renter lands on search, so search should be active
-        } else if (item.url === "/my-bookings" && effectiveRole === "owner") {
+        } else if (item.url === "/my-bookings" && priorityRole === "owner") {
           isActive = true; // Owner lands on my-bookings (if has spots), so my-bookings should be active
         }
       }
       
       // For Dashboard item, show "Statistics" for renter/owner roles, "Dashboard" for admin
-      const displayTitle = item.title === "Dashboard" && (effectiveRole === "renter" || effectiveRole === "owner") 
+      const priorityRole = getHighestPriorityRole();
+      const displayTitle = item.title === "Dashboard" && (priorityRole === "renter" || priorityRole === "owner") 
         ? "Statistics" 
         : item.title;
       
@@ -266,8 +274,8 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Admin Section - Only shown when viewing as admin */}
-        {effectiveRole === "admin" && filteredAdminItems.length > 0 && (
+        {/* Admin Section - Only shown when user has admin role */}
+        {user?.roles?.includes("admin") && filteredAdminItems.length > 0 && (
           <>
             <SidebarSeparator />
             <SidebarGroup>
