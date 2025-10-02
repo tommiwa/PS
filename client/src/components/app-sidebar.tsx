@@ -118,15 +118,20 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
   const [location, setLocation] = useLocation();
   const { getCurrentViewRole, user } = useAuth();
   
-  // Filter menu items to show ALL items matching ANY of the user's roles
+  // Get effective role: use view role if set (for admin viewing as other role), 
+  // otherwise use user's actual roles
+  const effectiveRole = getCurrentViewRole();
+  const effectiveRoles = effectiveRole ? [effectiveRole] : (user?.roles || []);
+  
+  // Filter menu items based on effective roles (respects "view as" functionality)
   const filteredMainItems = mainMenuItems.filter(item => 
-    user?.roles?.some(role => item.roles.includes(role)) ?? false
+    effectiveRoles.some(role => item.roles.includes(role))
   );
 
   // Custom ordering for spot owners: My Bookings, My Spots, Find Parking, Statistics
   const getOrderedMainItems = () => {
-    // If user has owner role, use custom ordering
-    if (user?.roles?.includes("owner") ?? false) {
+    // If effective roles include owner, use custom ordering
+    if (effectiveRoles.includes("owner")) {
       const orderedItems = [];
       
       // 1. My Bookings (first)
@@ -154,12 +159,14 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
 
   const orderedMainItems = getOrderedMainItems();
   
-  const filteredAdminItems = adminMenuItems.filter(item => 
-    user?.roles?.some(role => item.roles.includes(role)) ?? false
-  );
+  // Admin items only shown if effective role is admin (respects "view as")
+  const filteredAdminItems = effectiveRoles.includes("admin") 
+    ? adminMenuItems.filter(item => effectiveRoles.some(role => item.roles.includes(role)))
+    : [];
   
+  // Settings items shown based on effective roles
   const filteredSettingsItems = settingsMenuItems.filter(item => 
-    user?.roles?.some(role => item.roles.includes(role)) ?? false
+    effectiveRoles.some(role => item.roles.includes(role))
   );
 
   // Function to refresh profile data
@@ -191,8 +198,12 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
     }
   };
 
-  // Get highest priority role for tooltip display (admin > owner > renter)
-  const getHighestPriorityRole = (): UserRole => {
+  // Get effective role: use view role if set (for admin viewing as other role), 
+  // otherwise use highest priority role (admin > owner > renter)
+  const getEffectiveRole = (): UserRole => {
+    const viewRole = getCurrentViewRole();
+    if (viewRole) return viewRole;
+    
     if (user?.roles?.includes("admin") ?? false) return "admin";
     if (user?.roles?.includes("owner") ?? false) return "owner";
     return "renter";
@@ -202,42 +213,42 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
     if (typeof item.tooltip === 'string') {
       return item.tooltip;
     } else if (typeof item.tooltip === 'object') {
-      const priorityRole = getHighestPriorityRole();
-      return item.tooltip[priorityRole] || "";
+      const effectiveRole = getEffectiveRole();
+      return item.tooltip[effectiveRole] || "";
     }
     return "";
   };
 
   const renderMenuItems = (items: typeof mainMenuItems) => {
     return items.map((item) => {
-      const priorityRole = getHighestPriorityRole();
+      const effectiveRole = getEffectiveRole();
       
       // For Dashboard item, admin users should go to /admin, others to /dashboard
-      const itemUrl = item.title === "Dashboard" && priorityRole === "admin" 
+      const itemUrl = item.title === "Dashboard" && effectiveRole === "admin" 
         ? "/admin" 
         : item.url;
       
       // Handle active state based on role and current location
       let isActive = location === itemUrl;
       
-      // Special handling for root path active states based on user's highest priority role
+      // Special handling for root path active states based on user's effective role
       if (location === "/") {
-        if (item.title === "Dashboard" && priorityRole === "admin") {
+        if (item.title === "Dashboard" && effectiveRole === "admin") {
           isActive = true; // Admin lands on /admin, so dashboard should be active
-        } else if (item.url === "/search" && priorityRole === "renter") {
+        } else if (item.url === "/search" && effectiveRole === "renter") {
           isActive = true; // Renter lands on search, so search should be active
-        } else if (item.url === "/my-bookings" && priorityRole === "owner") {
+        } else if (item.url === "/my-bookings" && effectiveRole === "owner") {
           isActive = true; // Owner lands on my-bookings (if has spots), so my-bookings should be active
         }
       }
       
       // Special handling for admin on /admin page - Dashboard should be active
-      if (location === "/admin" && item.title === "Dashboard" && priorityRole === "admin") {
+      if (location === "/admin" && item.title === "Dashboard" && effectiveRole === "admin") {
         isActive = true;
       }
       
       // For Dashboard item, show "Statistics" for renter/owner roles, "Dashboard" for admin
-      const displayTitle = item.title === "Dashboard" && (priorityRole === "renter" || priorityRole === "owner") 
+      const displayTitle = item.title === "Dashboard" && (effectiveRole === "renter" || effectiveRole === "owner") 
         ? "Statistics" 
         : item.title;
       
@@ -284,8 +295,8 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Admin Section - Only shown when user has admin role */}
-        {user?.roles?.includes("admin") && filteredAdminItems.length > 0 && (
+        {/* Admin Section - Only shown when viewing as admin */}
+        {filteredAdminItems.length > 0 && (
           <>
             <SidebarSeparator />
             <SidebarGroup>

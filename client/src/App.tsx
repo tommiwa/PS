@@ -85,8 +85,11 @@ function LandingPageRedirect() {
   useEffect(() => {
     if (!user) return;
     
-    // Use current view role for admins, otherwise use actual role
-    const effectiveRole = getCurrentViewRole() || user.role;
+    // Get effective role: getCurrentViewRole for admins viewing as other roles, 
+    // otherwise use highest priority role from user.roles
+    const effectiveRole = getCurrentViewRole() || 
+      (user.roles.includes("admin") ? "admin" : 
+       user.roles.includes("owner") ? "owner" : "renter");
     
     // Use replace: true to keep browser history clean
     if (effectiveRole === "admin") {
@@ -171,10 +174,19 @@ function AuthenticatedApp() {
     return <Login />;
   }
 
+  // Get highest priority role for sidebar
+  const userRole = user.roles.includes("admin") ? "admin" : 
+                   user.roles.includes("owner") ? "owner" : "renter";
+  
+  // Construct user name from firstName and lastName
+  const userName = user.firstName && user.lastName 
+    ? `${user.firstName} ${user.lastName}` 
+    : user.firstName || user.lastName || user.email;
+
   return (
     <SidebarProvider style={style as React.CSSProperties}>
       <div className="flex h-screen w-full">
-        <AppSidebar userRole={user.role} />
+        <AppSidebar userRole={userRole} />
         <div className="flex flex-col flex-1">
           <header className="flex items-center justify-between p-4 border-b bg-primary/10 border-primary/20 shadow-sm">
             <div className="flex items-center gap-4">
@@ -195,22 +207,22 @@ function AuthenticatedApp() {
               <div className="hidden md:flex items-center gap-3">
                 <div className="text-right">
                   <p className="text-sm font-medium" data-testid="text-current-user">
-                    {user.name}
+                    {userName}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {user.department}
+                    {user.email}
                   </p>
                 </div>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Avatar className="h-8 w-8 cursor-pointer">
                       <AvatarFallback className="text-sm">
-                        {getInitials(user.name || 'User')}
+                        {getInitials(userName)}
                       </AvatarFallback>
                     </Avatar>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>User profile: {user.name} ({user.role})</p>
+                    <p>User profile: {userName} ({userRole})</p>
                   </TooltipContent>
                 </Tooltip>
               </div>
@@ -246,7 +258,7 @@ function AuthenticatedApp() {
               
               {/* Main dashboard - handles all role-based rendering */}
               <Route path="/dashboard">
-                <Dashboard userRole={user?.role} />
+                <Dashboard userRole={userRole} />
               </Route>
               
               {/* General pages available to all authenticated users */}

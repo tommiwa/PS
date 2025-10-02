@@ -59,7 +59,7 @@ export function RoleSwitcher() {
   const handleRoleSwitch = (role: UserRole) => {
     if (role === "admin") {
       resetViewRole(); // Reset to admin view
-      setLocation("/dashboard", { replace: true });
+      setLocation("/admin", { replace: true }); // Admin goes to /admin, not /dashboard
     } else {
       switchViewRole(role); // Switch to other role view
       
@@ -69,8 +69,8 @@ export function RoleSwitcher() {
         const targetPage = hasRegisteredSpots(user?.id || "") ? "/my-bookings" : "/my-spots";
         setLocation(targetPage, { replace: true });
       } else if (role === "renter") {
-        // Renters: Search page
-        setLocation("/search", { replace: true });
+        // Renters: Dashboard (Statistics page)
+        setLocation("/dashboard", { replace: true });
       }
     }
   };

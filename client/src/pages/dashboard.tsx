@@ -270,8 +270,8 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
   const renderRoleSpecificContent = () => {
     return (
       <div className="space-y-6">
-        {/* Admin section - show if user has admin role */}
-        {user?.roles?.includes("admin") && (
+        {/* Admin section - show only if viewing as admin */}
+        {effectiveRole === "admin" && (
           <div className="space-y-4" data-testid="section-admin-dashboard">
             <h2 className="text-xl font-semibold">Admin Dashboard</h2>
             <p className="text-muted-foreground">
@@ -280,13 +280,8 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
           </div>
         )}
 
-        {/* Separator between admin and owner sections */}
-        {user?.roles?.includes("admin") && user?.roles?.includes("owner") && (
-          <Separator className="my-6" />
-        )}
-
-        {/* Owner section - show if user has owner role */}
-        {user?.roles?.includes("owner") && (
+        {/* Owner section - show only if viewing as owner */}
+        {effectiveRole === "owner" && (
           <div className="space-y-6" data-testid="section-owner-dashboard">
             <h2 className="text-2xl font-semibold">Spot Owner Dashboard</h2>
             
@@ -386,13 +381,8 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
           </div>
         )}
 
-        {/* Separator between owner and renter sections */}
-        {user?.roles?.includes("owner") && user?.roles?.includes("renter") && (
-          <Separator className="my-6" />
-        )}
-
-        {/* Renter section - show if user has renter role */}
-        {user?.roles?.includes("renter") && (
+        {/* Renter section - show only if viewing as renter */}
+        {effectiveRole === "renter" && (
           <div className="space-y-6" data-testid="section-renter-dashboard">
             <h2 className="text-2xl font-semibold">Renter Dashboard</h2>
             
