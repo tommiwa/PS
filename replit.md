@@ -28,6 +28,7 @@ Preferred communication style: Simple, everyday language.
 - **Schema Management**: Drizzle migrations
 - **Session Storage**: PostgreSQL
 - **Database Pool**: @neondatabase/serverless
+- **Storage Layer**: All CRUD operations use database queries; spot listing methods migrated from in-memory Map to database persistence (October 2025)
 
 ### Authentication & Authorization
 - **User Management**: Multi-role access control (admin, owner, renter) with dynamic role assignment based on spot ownership.

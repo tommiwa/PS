@@ -716,29 +716,24 @@ export class MemStorage implements IStorage {
 
   // Spot Listing operations
   async getSpotListing(id: string): Promise<SpotListing | undefined> {
-    return this.spotListings.get(id);
+    const listings = await db.select().from(spotListings).where(eq(spotListings.id, id));
+    return listings[0];
   }
 
   async getSpotListingsByOwner(ownerId: string): Promise<SpotListing[]> {
-    return Array.from(this.spotListings.values()).filter(
-      (listing) => listing.ownerId === ownerId
-    );
+    return await db.select().from(spotListings).where(eq(spotListings.ownerId, ownerId));
   }
 
   async getSpotListingsBySpot(spotId: string): Promise<SpotListing[]> {
-    return Array.from(this.spotListings.values()).filter(
-      (listing) => listing.spotId === spotId
-    );
+    return await db.select().from(spotListings).where(eq(spotListings.spotId, spotId));
   }
 
   async getAllSpotListings(): Promise<SpotListing[]> {
-    return Array.from(this.spotListings.values());
+    return await db.select().from(spotListings);
   }
 
   async getActiveSpotListings(): Promise<SpotListing[]> {
-    return Array.from(this.spotListings.values()).filter(
-      (listing) => listing.status === "active"
-    );
+    return await db.select().from(spotListings).where(eq(spotListings.status, "active"));
   }
 
   async createSpotListing(insertListing: InsertSpotListing): Promise<SpotListing> {
@@ -761,22 +756,27 @@ export class MemStorage implements IStorage {
   }
 
   async updateSpotListing(id: string, updates: Partial<InsertSpotListing>): Promise<SpotListing | undefined> {
-    const existingListing = this.spotListings.get(id);
-    if (!existingListing) return undefined;
+    const existing = await db.select().from(spotListings).where(eq(spotListings.id, id));
+    if (existing.length === 0) return undefined;
     
-    const updatedListing: SpotListing = { 
-      ...existingListing, 
-      ...updates,
-      listingType: updates.listingType ? (updates.listingType as ListingType) : existingListing.listingType,
-      status: updates.status ? (updates.status as ListingStatus) : existingListing.status,
-      updatedAt: new Date()
-    };
-    this.spotListings.set(id, updatedListing);
-    return updatedListing;
+    const updated = await db.update(spotListings)
+      .set({
+        ...updates,
+        listingType: updates.listingType ? (updates.listingType as ListingType) : undefined,
+        status: updates.status ? (updates.status as ListingStatus) : undefined,
+        updatedAt: new Date()
+      })
+      .where(eq(spotListings.id, id))
+      .returning();
+    
+    return updated[0];
   }
 
   async deleteSpotListing(id: string): Promise<boolean> {
-    return this.spotListings.delete(id);
+    const deleted = await db.delete(spotListings)
+      .where(eq(spotListings.id, id))
+      .returning();
+    return deleted.length > 0;
   }
 
   // Booking operations
