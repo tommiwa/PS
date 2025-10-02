@@ -9,7 +9,7 @@ import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
 import { auditService } from "./audit-service";
 import { db } from "./db";
-import { users, type User } from "@shared/schema";
+import { users, parkingSpots, type User } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
 if (!process.env.REPLIT_DOMAINS) {
@@ -80,7 +80,20 @@ async function upsertUser(
   if (isAdmin && !finalRoles.includes("admin")) {
     finalRoles = [...finalRoles.filter(r => r !== "renter"), "admin"];
   }
-  console.log(`[UPSERT] Final roles to be saved: ${JSON.stringify(finalRoles)}`);
+  
+  // Check if user owns any parking spots
+  const userSpots = await db.select().from(parkingSpots).where(eq(parkingSpots.ownerId, userId));
+  const hasSpots = userSpots.length > 0;
+  console.log(`[UPSERT] User has ${userSpots.length} parking spots`);
+  
+  // Update roles based on spots
+  if (hasSpots && !finalRoles.includes("owner")) {
+    finalRoles = [...finalRoles.filter(r => r !== "renter"), "owner"];
+  } else if (!hasSpots && !isAdmin && finalRoles.includes("owner")) {
+    // Optionally remove owner role if they no longer have spots (only if not admin)
+    // For now, keep the owner role for historical reasons
+  }
+  console.log(`[UPSERT] Final roles after spot check: ${JSON.stringify(finalRoles)}`);
   
   // Prepare user data with roles included
   const userData = {
