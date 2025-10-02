@@ -972,7 +972,13 @@ export class MemStorage implements IStorage {
       createdAt: new Date(),
       updatedAt: new Date()
     };
+    
+    // Insert into database
+    await db.insert(waitingList).values(entry);
+    
+    // Also cache in memory
     this.waitingList.set(id, entry);
+    
     return entry;
   }
 
