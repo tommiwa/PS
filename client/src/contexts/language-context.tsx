@@ -508,6 +508,7 @@ const translations: Record<Language, Translations> = {
 
     // Profile Card Specific
     "profile.spotStatus": "{count} spot(s)",
+    "profile.bciManaged": "BCI Managed",
 
     // Search Filter Options
     "filters.anyLocation": "Any location",
@@ -1129,6 +1130,7 @@ const translations: Record<Language, Translations> = {
 
     // Profile Card Specific
     "profile.spotStatus": "{count} place(s)",
+    "profile.bciManaged": "Géré par BCI",
 
     // Search Filter Options
     "filters.anyLocation": "Tout emplacement",

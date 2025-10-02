@@ -176,6 +176,9 @@ export function UserProfileCard({
                         <Badge variant="outline" className="ml-2 capitalize">
                           {spot.spotType === 'tesla_ev' ? t("spotType.teslaEv") : t(`spotType.${spot.spotType}`)}
                         </Badge>
+                        <Badge variant="secondary" className="ml-2">
+                          {t("profile.bciManaged")}
+                        </Badge>
                         {spot.isActive && (
                           <Badge variant="default" className="ml-2 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
                             {t("common.active")}
