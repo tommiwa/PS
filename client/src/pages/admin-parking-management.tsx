@@ -31,6 +31,23 @@ import {
 import type { WaitingList, ParkingSpot, ParkingSpotWithUser, SpotType } from "@shared/schema"
 import { quickExportParkingSpotsPDF, quickExportParkingSpotsExcel, quickExportWaitingListPDF, quickExportWaitingListExcel } from "@/utils/export-utils"
 
+// Standard parking locations (preferred for new spots)
+const STANDARD_PARKING_LOCATIONS = [
+  { value: "Building A - Level 1", label: "Building A - Level 1" },
+  { value: "Building A - Level 2", label: "Building A - Level 2" },
+  { value: "Building B - Level 1", label: "Building B - Level 1" },
+  { value: "Building B - Level 2", label: "Building B - Level 2" },
+  { value: "Building C - Level 1", label: "Building C - Level 1" },
+  { value: "Building D - Level 1", label: "Building D - Level 1" },
+  { value: "Main Parking Lot", label: "Main Parking Lot" },
+  { value: "Parking Garage - P1", label: "Parking Garage - P1" },
+  { value: "Parking Garage - P2", label: "Parking Garage - P2" },
+  { value: "Outdoor Lot - North", label: "Outdoor Lot - North" },
+  { value: "Outdoor Lot - South", label: "Outdoor Lot - South" },
+  { value: "Underground - Level 1", label: "Underground - Level 1" },
+  { value: "Underground - Level 2", label: "Underground - Level 2" }
+];
+
 export default function AdminParkingManagement() {
   const { t } = useLanguage()
   const { toast } = useToast()
@@ -129,6 +146,30 @@ export default function AdminParkingManagement() {
   const { data: allSpots = [] } = useQuery<ParkingSpotWithUser[]>({
     queryKey: ["/api/admin/all-spots"],
   });
+
+  // Extract unique locations from existing spots
+  const uniqueLocationsFromSpots = useMemo(() => {
+    const locations = new Set<string>();
+    allSpots.forEach(spot => {
+      if (spot.location) {
+        locations.add(spot.location);
+      }
+    });
+    return Array.from(locations).sort();
+  }, [allSpots]);
+
+  // Combine standard locations with unique locations from existing spots
+  const allLocationOptions = useMemo(() => {
+    const standardValues = STANDARD_PARKING_LOCATIONS.map(l => l.value);
+    const existingNotInStandard = uniqueLocationsFromSpots.filter(
+      loc => !standardValues.includes(loc)
+    );
+    
+    return [
+      ...STANDARD_PARKING_LOCATIONS,
+      ...existingNotInStandard.map(loc => ({ value: loc, label: `${loc} (existing)` }))
+    ];
+  }, [uniqueLocationsFromSpots]);
 
   // Fetch all users for dropdown selection
   const { data: allUsers = [], isLoading: isLoadingUsers, error: usersError } = useQuery<any[]>({
@@ -625,9 +666,9 @@ export default function AdminParkingManagement() {
       if (spot.spotType !== filterValues.spotType) return false
     }
     
-    // Location filter
+    // Location filter - exact match since dropdown has all actual values
     if (filterValues.location && filterValues.location !== "all") {
-      if (!spot.location.toLowerCase().includes(filterValues.location.toLowerCase())) {
+      if (spot.location !== filterValues.location) {
         return false
       }
     }
@@ -641,7 +682,7 @@ export default function AdminParkingManagement() {
     
     // Enable/Disable status filter
     if (filterValues.enableStatus && filterValues.enableStatus !== "all") {
-      const isEnabled = spot.isBookable !== false
+      const isEnabled = spot.isActive !== false
       if (filterValues.enableStatus === "enabled" && !isEnabled) return false
       if (filterValues.enableStatus === "disabled" && isEnabled) return false
     }
@@ -671,16 +712,16 @@ export default function AdminParkingManagement() {
       if (spot.spotType !== availableSpotsFilterValues.spotType) return false
     }
     
-    // Location filter
+    // Location filter - exact match since dropdown has all actual values
     if (availableSpotsFilterValues.location && availableSpotsFilterValues.location !== "all") {
-      if (!spot.location.toLowerCase().includes(availableSpotsFilterValues.location.toLowerCase())) {
+      if (spot.location !== availableSpotsFilterValues.location) {
         return false
       }
     }
     
     // Enable/Disable status filter
     if (availableSpotsFilterValues.enableStatus && availableSpotsFilterValues.enableStatus !== "all") {
-      const isEnabled = spot.isBookable !== false
+      const isEnabled = spot.isActive !== false
       if (availableSpotsFilterValues.enableStatus === "enabled" && !isEnabled) return false
       if (availableSpotsFilterValues.enableStatus === "disabled" && isEnabled) return false
     }
@@ -749,14 +790,7 @@ export default function AdminParkingManagement() {
       key: "location",
       label: "Location",
       type: "select",
-      options: [
-        // These would ideally come from the API
-        { value: "building-a", label: "Building A" },
-        { value: "building-b", label: "Building B" },
-        { value: "parking-garage", label: "Parking Garage" },
-        { value: "outdoor-lot", label: "Outdoor Lot" },
-        { value: "underground", label: "Underground" }
-      ]
+      options: allLocationOptions
     },
     {
       key: "assignmentStatus",
@@ -796,13 +830,7 @@ export default function AdminParkingManagement() {
       key: "location",
       label: "Location",
       type: "select",
-      options: [
-        { value: "building-a", label: "Building A" },
-        { value: "building-b", label: "Building B" },
-        { value: "parking-garage", label: "Parking Garage" },
-        { value: "outdoor-lot", label: "Outdoor Lot" },
-        { value: "underground", label: "Underground" }
-      ]
+      options: allLocationOptions
     },
     {
       key: "enableStatus",
@@ -1972,12 +2000,21 @@ export default function AdminParkingManagement() {
             </div>
             <div>
               <label className="text-sm font-medium">Location</label>
-              <Input
+              <Select
                 value={addSpotFormData.location}
-                onChange={(e) => setAddSpotFormData(prev => ({ ...prev, location: e.target.value }))}
-                placeholder="e.g., Level 1, Section A"
-                data-testid="input-add-spot-location"
-              />
+                onValueChange={(value) => setAddSpotFormData(prev => ({ ...prev, location: value }))}
+              >
+                <SelectTrigger data-testid="select-add-spot-location">
+                  <SelectValue placeholder="Select location" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allLocationOptions.map(loc => (
+                    <SelectItem key={loc.value} value={loc.value}>
+                      {loc.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="text-sm font-medium">Spot Type</label>
@@ -2054,11 +2091,21 @@ export default function AdminParkingManagement() {
             </div>
             <div>
               <label className="text-sm font-medium">Location</label>
-              <Input
+              <Select
                 value={editFormData.location}
-                onChange={(e) => setEditFormData(prev => ({ ...prev, location: e.target.value }))}
-                data-testid="input-edit-spot-location"
-              />
+                onValueChange={(value) => setEditFormData(prev => ({ ...prev, location: value }))}
+              >
+                <SelectTrigger data-testid="select-edit-spot-location">
+                  <SelectValue placeholder="Select location" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allLocationOptions.map(loc => (
+                    <SelectItem key={loc.value} value={loc.value}>
+                      {loc.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="text-sm font-medium">Spot Type</label>
