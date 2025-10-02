@@ -210,14 +210,20 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
 
   const renderMenuItems = (items: typeof mainMenuItems) => {
     return items.map((item) => {
+      const priorityRole = getHighestPriorityRole();
+      
+      // For Dashboard item, admin users should go to /admin, others to /dashboard
+      const itemUrl = item.title === "Dashboard" && priorityRole === "admin" 
+        ? "/admin" 
+        : item.url;
+      
       // Handle active state based on role and current location
-      let isActive = location === item.url;
+      let isActive = location === itemUrl;
       
       // Special handling for root path active states based on user's highest priority role
       if (location === "/") {
-        const priorityRole = getHighestPriorityRole();
-        if (item.url === "/dashboard" && priorityRole === "admin") {
-          isActive = true; // Admin lands on dashboard, so dashboard should be active
+        if (item.title === "Dashboard" && priorityRole === "admin") {
+          isActive = true; // Admin lands on /admin, so dashboard should be active
         } else if (item.url === "/search" && priorityRole === "renter") {
           isActive = true; // Renter lands on search, so search should be active
         } else if (item.url === "/my-bookings" && priorityRole === "owner") {
@@ -225,8 +231,12 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
         }
       }
       
+      // Special handling for admin on /admin page - Dashboard should be active
+      if (location === "/admin" && item.title === "Dashboard" && priorityRole === "admin") {
+        isActive = true;
+      }
+      
       // For Dashboard item, show "Statistics" for renter/owner roles, "Dashboard" for admin
-      const priorityRole = getHighestPriorityRole();
       const displayTitle = item.title === "Dashboard" && (priorityRole === "renter" || priorityRole === "owner") 
         ? "Statistics" 
         : item.title;
@@ -250,7 +260,7 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
                 <span>{displayTitle}</span>
               </button>
             ) : (
-              <Link href={item.url} data-testid={`link-${displayTitle.toLowerCase().replace(/\s+/g, '-')}`}>
+              <Link href={itemUrl} data-testid={`link-${displayTitle.toLowerCase().replace(/\s+/g, '-')}`}>
                 <item.icon />
                 <span>{displayTitle}</span>
               </Link>
