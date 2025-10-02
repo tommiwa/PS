@@ -90,7 +90,7 @@ function LandingPageRedirect() {
     
     // Use replace: true to keep browser history clean
     if (effectiveRole === "admin") {
-      setLocation("/dashboard", { replace: true });
+      setLocation("/admin", { replace: true });
     } else if (effectiveRole === "owner") {
       // Spot owners: My Bookings if they have spots, My Spots if they don't
       const targetPage = hasRegisteredSpots(user.id) ? "/my-bookings" : "/my-spots";
