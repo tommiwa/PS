@@ -26,6 +26,7 @@ export interface AssignedSpot {
   description: string | null
   isActive: boolean
   isBookable: boolean
+  isBciManaged: boolean
 }
 
 export interface UserProfile {
@@ -176,9 +177,21 @@ export function UserProfileCard({
                         <Badge variant="outline" className="ml-2 capitalize">
                           {spot.spotType === 'tesla_ev' ? t("spotType.teslaEv") : t(`spotType.${spot.spotType}`)}
                         </Badge>
-                        <Badge variant="secondary" className="ml-2">
-                          {t("profile.bciManaged")}
-                        </Badge>
+                        {spot.isBciManaged && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge 
+                                className="ml-2 bg-purple-50 text-purple-700 border-purple-200" 
+                                data-testid={`badge-bci-managed-${spot.id}`}
+                              >
+                                {t("profile.bciManaged")}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>This spot is managed by BCI administrators</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
                         {spot.isActive && (
                           <Badge variant="default" className="ml-2 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
                             {t("common.active")}
