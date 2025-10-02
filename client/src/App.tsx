@@ -164,8 +164,7 @@ function AuthenticatedApp() {
   };
 
   const handleLogout = () => {
-    logout();
-    window.location.reload(); // Force reload to reset app state
+    logout(); // Redirects to /api/logout which clears session and redirects to /
   };
 
   if (!user) {
