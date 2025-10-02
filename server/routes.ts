@@ -1451,16 +1451,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existingSpot = await storage.getParkingSpot(spotId);
       const user = await storage.getUser(userId);
       
-      // Check if user has an active waiting list entry and remove it
+      // Check if user has an active waiting list entry and mark it as assigned
       const waitingListEntry = await storage.getWaitingListByUser(userId);
       if (waitingListEntry) {
-        await storage.deleteWaitingListEntry(waitingListEntry.id);
+        const updatedWaitingListEntry = await storage.updateWaitingListEntry(waitingListEntry.id, {
+          status: 'assigned',
+          assignedDate: new Date(),
+          assignedSpotId: spotId
+        });
         
-        // Audit the waiting list removal
-        await auditService.logAction("DELETE", "waiting_list", {
+        if (!updatedWaitingListEntry) {
+          console.error(`Failed to update waiting list entry ${waitingListEntry.id} for user ${userId}`);
+          return res.status(500).json({ error: "Failed to update waiting list entry" });
+        }
+        
+        // Audit the waiting list assignment
+        await auditService.logAction("UPDATE", "waiting_list", {
           entityId: waitingListEntry.id,
-          message: `Removed ${user?.firstName} ${user?.lastName} (${user?.email}) from waiting list due to spot assignment`,
-          before: waitingListEntry
+          message: `Marked ${user?.firstName} ${user?.lastName} (${user?.email}) as assigned in waiting list (spot: ${spotId})`,
+          before: waitingListEntry,
+          after: updatedWaitingListEntry
         });
       }
       
@@ -1505,16 +1515,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get user info for audit logging
       const user = await storage.getUser(userId);
       
-      // Check if user has an active waiting list entry and remove it (only once for bulk assignment)
+      // Check if user has an active waiting list entry and mark it as assigned (only once for bulk assignment)
       const waitingListEntry = await storage.getWaitingListByUser(userId);
       if (waitingListEntry) {
-        await storage.deleteWaitingListEntry(waitingListEntry.id);
+        // Store all assigned spot IDs as comma-separated string for bulk assignments
+        const assignedSpotIds = spotIds.join(',');
+        const updatedWaitingListEntry = await storage.updateWaitingListEntry(waitingListEntry.id, {
+          status: 'assigned',
+          assignedDate: new Date(),
+          assignedSpotId: assignedSpotIds // Store all spot IDs (comma-separated for bulk assignments)
+        });
         
-        // Audit the waiting list removal
-        await auditService.logAction("DELETE", "waiting_list", {
+        if (!updatedWaitingListEntry) {
+          console.error(`Failed to update waiting list entry ${waitingListEntry.id} for user ${userId}`);
+          return res.status(500).json({ error: "Failed to update waiting list entry during bulk assignment" });
+        }
+        
+        // Audit the waiting list assignment
+        await auditService.logAction("UPDATE", "waiting_list", {
           entityId: waitingListEntry.id,
-          message: `Removed ${user?.firstName} ${user?.lastName} (${user?.email}) from waiting list due to bulk spot assignment`,
-          before: waitingListEntry
+          message: `Marked ${user?.firstName} ${user?.lastName} (${user?.email}) as assigned in waiting list due to bulk spot assignment (${spotIds.length} spots: ${assignedSpotIds})`,
+          before: waitingListEntry,
+          after: updatedWaitingListEntry
         });
       }
       
