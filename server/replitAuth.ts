@@ -62,11 +62,24 @@ async function upsertUser(
   claims: any,
 ) {
   const userId = claims["sub"];
+  const userEmail = claims["email"];
   
-  // Check if user exists in database first to preserve their roles
-  console.log(`[UPSERT] Checking database for existing user: ${userId}`);
+  // Check if user exists in database by ID OR email to preserve their roles
+  console.log(`[UPSERT] Checking database for existing user: ${userId} (${userEmail})`);
   const existingDbUser = await db.select().from(users).where(eq(users.id, userId)).then(rows => rows[0]);
-  console.log(`[UPSERT] Existing user:`, existingDbUser ? `Found with roles: ${JSON.stringify(existingDbUser.roles)}` : 'Not found');
+  
+  // Also check by email in case admin pre-created this user with a different ID
+  let existingEmailUser = null;
+  if (!existingDbUser && userEmail) {
+    existingEmailUser = await db.select().from(users).where(eq(users.email, userEmail)).then(rows => rows[0]);
+    if (existingEmailUser) {
+      console.log(`[UPSERT] Found user by email with different ID: ${existingEmailUser.id} → ${userId}`);
+    }
+  }
+  
+  // Use email-matched user if found, otherwise use ID-matched user
+  const matchedUser = existingDbUser || existingEmailUser;
+  console.log(`[UPSERT] Existing user:`, matchedUser ? `Found with roles: ${JSON.stringify(matchedUser.roles)}` : 'Not found');
   
   // Determine if this should be an admin user based on specific user IDs and emails
   const isAdmin = claims["sub"] === "user-admin-001" || 
@@ -75,8 +88,8 @@ async function upsertUser(
                   claims["email"] === "lijin.joseji@bci.ca";
   console.log(`[UPSERT] Is hardcoded admin: ${isAdmin}`);
   
-  // Determine final roles: preserve existing roles unless they should be admin
-  let finalRoles = existingDbUser?.roles || ["renter"];
+  // Determine final roles: preserve existing roles (including manually assigned admin)
+  let finalRoles = matchedUser?.roles || ["renter"];
   if (isAdmin && !finalRoles.includes("admin")) {
     finalRoles = [...finalRoles.filter(r => r !== "renter"), "admin"];
   }
@@ -106,8 +119,32 @@ async function upsertUser(
   
   const now = new Date();
   
-  // Upsert into PostgreSQL database
-  if (existingDbUser) {
+  // Handle user migration: if found by email with different ID, migrate to OIDC ID
+  if (existingEmailUser && !existingDbUser) {
+    console.log(`[UPSERT] Migrating user from ${existingEmailUser.id} to ${userId}`);
+    
+    // Delete the old user record (admin-created with random UUID)
+    await db.delete(users).where(eq(users.id, existingEmailUser.id));
+    
+    // Create new user with OIDC ID, preserving roles and other data
+    await db.insert(users).values({
+      id: userId,
+      email: userData.email,
+      firstName: userData.firstName || existingEmailUser.firstName,
+      lastName: userData.lastName || existingEmailUser.lastName,
+      profileImageUrl: userData.profileImageUrl,
+      phone: existingEmailUser.phone,
+      department: existingEmailUser.department,
+      memberSince: existingEmailUser.memberSince,
+      roles: finalRoles,
+      lastLogin: now,
+      createdAt: existingEmailUser.createdAt, // Preserve original creation date
+      updatedAt: now,
+    });
+    
+    // Remove old user from in-memory storage
+    await storage.deleteUser(existingEmailUser.id);
+  } else if (existingDbUser) {
     // Update existing user in database
     await db.update(users)
       .set({

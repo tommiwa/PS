@@ -37,7 +37,8 @@ Preferred communication style: Simple, everyday language.
 - **Role Assignment Logic**: 
   - First-time login: Users default to "renter" role
   - Automatic promotion: Users with assigned parking spots automatically receive "owner" role
-  - Admin users: Hardcoded admin emails/IDs receive "admin" role
+  - Admin users: Hardcoded admin emails/IDs receive "admin" role OR manually assigned by another admin
+  - **Email-based user matching**: When admin pre-creates a user with admin role, the system matches by email during OIDC login to preserve manually assigned roles
 - **Landing Pages by Role**:
   - Admin → `/admin` (Admin Dashboard)
   - Owner → `/my-spots` (My Parking Spots)
