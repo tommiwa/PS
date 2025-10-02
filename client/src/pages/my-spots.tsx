@@ -13,7 +13,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Car, MapPin, DollarSign, Clock, Edit, Plus, Eye, Users, TrendingUp, Grid, Trash2 } from "lucide-react"
+import { Car, MapPin, DollarSign, Clock, Edit, Plus, Eye, Users, TrendingUp, Grid, Trash2, Info } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useConfirm, confirmations } from "@/hooks/use-confirm"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
@@ -517,6 +518,24 @@ export default function MySpots() {
                       {spot.isIndoor && (
                         <Badge variant="outline">Indoor</Badge>
                       )}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          {spot.isBciManaged ? (
+                            <Badge variant="secondary" className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100" data-testid={`badge-bci-managed-${spot.id}`}>
+                              BCI Managed
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100" data-testid={`badge-personal-${spot.id}`}>
+                              Personal
+                            </Badge>
+                          )}
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {spot.isBciManaged 
+                            ? "This spot is managed by BCI administrators"
+                            : "You can create listings for this spot"}
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
                     <p className="text-muted-foreground flex items-center gap-1">
                       <MapPin className="h-4 w-4" />
@@ -565,15 +584,36 @@ export default function MySpots() {
                   />
                 </div>
                 <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleOpenCreateListing(spot)}
-                    data-testid={`button-create-listing-${spot.id}`}
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Create Listing
-                  </Button>
+                  {spot.isBciManaged ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled
+                            data-testid={`button-create-listing-${spot.id}`}
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Create Listing
+                          </Button>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        BCI-managed spots cannot be listed. Contact administrator.
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenCreateListing(spot)}
+                      data-testid={`button-create-listing-${spot.id}`}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Create Listing
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"
