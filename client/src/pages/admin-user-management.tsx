@@ -64,9 +64,13 @@ const createUserFormSchema = insertUserSchema.extend({
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().min(1, "Email is required").email("Please enter a valid email address"),
   department: z.string().min(1, "Department is required"),
+}).omit({
+  roles: true // Remove roles from schema since we'll use 'role' (singular) in the form
+}).extend({
+  role: z.string().optional() // Add singular 'role' field for the form
 });
 
-type CreateUserFormData = InsertUser;
+type CreateUserFormData = z.infer<typeof createUserFormSchema>;
 
 // Admin-specific interfaces for extended user data
 interface UserActivity {
@@ -175,7 +179,15 @@ export default function AdminUserManagement() {
   // Create user mutation
   const createUserMutation = useMutation({
     mutationFn: async (userData: CreateUserFormData): Promise<User> => {
-      const response = await apiRequest('/api/users', { method: 'POST', body: userData });
+      // Transform role (singular string) to roles (array) for API
+      const apiData = {
+        ...userData,
+        roles: userData.role ? [userData.role] : ['renter'],
+      };
+      // Remove the singular 'role' field
+      delete (apiData as any).role;
+      
+      const response = await apiRequest('/api/users', { method: 'POST', body: apiData });
       return await response.json();
     },
     onSuccess: (newUser: User) => {
@@ -206,7 +218,7 @@ export default function AdminUserManagement() {
     name: user.name || (user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.firstName || user.lastName || user.email || 'Unknown User'),
     email: user.email || 'No email',
     department: user.department || "Unknown",
-    role: user.role || "renter",
+    role: user.roles?.[0] || "renter", // Convert roles array to single role for display
     spotsOwned: user.spotsOwned || 0, // Real count from backend
     bookingsCount: user.bookingsCount || 0, // Real count from backend  
     status: user.status || "active",
@@ -317,7 +329,15 @@ export default function AdminUserManagement() {
   // Edit user mutation
   const editUserMutation = useMutation({
     mutationFn: async ({ userId, userData }: { userId: string, userData: Partial<InsertUser> }): Promise<User> => {
-      const response = await apiRequest(`/api/users/${userId}`, { method: 'PUT', body: userData });
+      // Transform role (singular string) to roles (array) for API
+      const apiData = {
+        ...userData,
+        roles: (userData as any).role ? [(userData as any).role] : undefined,
+      };
+      // Remove the singular 'role' field
+      delete (apiData as any).role;
+      
+      const response = await apiRequest(`/api/users/${userId}`, { method: 'PUT', body: apiData });
       return await response.json();
     },
     onSuccess: (updatedUser: User) => {
@@ -414,7 +434,7 @@ export default function AdminUserManagement() {
       email: user.email ?? "",
       phone: user.phone ?? "",
       department: user.department ?? "",
-      role: user.role ?? "renter",
+      role: user.roles?.[0] ?? "renter", // Convert roles array to single role for form
       memberSince: user.memberSince ?? new Date().toISOString().split('T')[0]
     })
     setShowEditUser(true)
@@ -500,9 +520,9 @@ export default function AdminUserManagement() {
   };
 
   const roleStats = {
-    admin: allUsers.filter((u: User) => u.role === "admin").length,
-    owner: allUsers.filter((u: User) => u.role === "owner").length,
-    renter: allUsers.filter((u: User) => u.role === "renter").length,
+    admin: allUsers.filter((u: User) => u.roles?.includes("admin")).length,
+    owner: allUsers.filter((u: User) => u.roles?.includes("owner")).length,
+    renter: allUsers.filter((u: User) => u.roles?.includes("renter")).length,
   }
 
   // Mock data for Activity and Reports tabs (would come from API in production)
