@@ -507,7 +507,7 @@ const translations: Record<Language, Translations> = {
     "common.viewAs": "View As",
 
     // Profile Card Specific
-    "profile.spotStatus": "{count} Spot{count !== '1' ? 's' : ''}",
+    "profile.spotStatus": "{count} spot(s)",
 
     // Search Filter Options
     "filters.anyLocation": "Any location",
@@ -1128,7 +1128,7 @@ const translations: Record<Language, Translations> = {
     "common.viewAs": "Voir comme",
 
     // Profile Card Specific
-    "profile.spotStatus": "{count} Place{count !== '1' ? 's' : ''}",
+    "profile.spotStatus": "{count} place(s)",
 
     // Search Filter Options
     "filters.anyLocation": "Tout emplacement",
