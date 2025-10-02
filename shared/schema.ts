@@ -133,6 +133,7 @@ export const parkingSpots = pgTable("parking_spots", {
   description: text("description"),
   isActive: boolean("is_active").notNull().default(true),
   isBookable: boolean("is_bookable").notNull().default(true), // Whether spot can be booked by renters
+  isBciManaged: boolean("is_bci_managed").notNull().default(false), // BCI-managed spots (true) vs personal spots (false)
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
