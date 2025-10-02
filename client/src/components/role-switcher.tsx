@@ -69,8 +69,8 @@ export function RoleSwitcher() {
         const targetPage = hasRegisteredSpots(user?.id || "") ? "/my-bookings" : "/my-spots";
         setLocation(targetPage, { replace: true });
       } else if (role === "renter") {
-        // Renters: Dashboard (Statistics page)
-        setLocation("/dashboard", { replace: true });
+        // Renters: Smart Parking Search page
+        setLocation("/search", { replace: true });
       }
     }
   };

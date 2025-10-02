@@ -34,6 +34,14 @@ Preferred communication style: Simple, everyday language.
 - **Authentication**: Server-side session management, Replit OIDC.
 - **Employee Integration**: Designed for company employee login.
 - **Permission System**: Route and component-level checking with support for users having multiple roles simultaneously.
+- **Role Assignment Logic**: 
+  - First-time login: Users default to "renter" role
+  - Automatic promotion: Users with assigned parking spots automatically receive "owner" role
+  - Admin users: Hardcoded admin emails/IDs receive "admin" role
+- **Landing Pages by Role**:
+  - Admin → `/admin` (Admin Dashboard)
+  - Owner → `/my-spots` (My Parking Spots)
+  - Renter → `/search` (Smart Parking Search)
 
 ### Design System
 - **Color Palette**: Professional blue (#2563eb), neutral grays, semantic colors.

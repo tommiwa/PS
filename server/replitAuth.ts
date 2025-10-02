@@ -314,14 +314,14 @@ export async function setupAuth(app: Express) {
           });
           
           // Redirect based on user roles
-          let redirectUrl = "/dashboard"; // Default redirect
+          let redirectUrl = "/search"; // Default redirect for renters
           
           if (dbUser.roles.includes("admin")) {
             redirectUrl = "/admin";
           } else if (dbUser.roles.includes("owner")) {
             redirectUrl = "/my-spots";
           } else if (dbUser.roles.includes("renter")) {
-            redirectUrl = "/dashboard";
+            redirectUrl = "/search";
           }
           
           console.log(`Redirecting user ${userId} (${JSON.stringify(dbUser.roles)}) to ${redirectUrl}`);
@@ -341,8 +341,8 @@ export async function setupAuth(app: Express) {
             console.error("Failed to log authentication failure:", logError);
           });
           
-          // Default to dashboard on error
-          return res.redirect("/dashboard");
+          // Default to search on error (default renter page)
+          return res.redirect("/search");
         }
       });
     })(req, res, next);
