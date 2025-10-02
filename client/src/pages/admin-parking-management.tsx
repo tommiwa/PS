@@ -231,10 +231,10 @@ export default function AdminParkingManagement() {
 
   // Mutation to assign a spot from the waiting list
   const assignFromWaitingListMutation = useMutation({
-    mutationFn: async ({ waitingListId, spotId }: { waitingListId: string; spotId: string }) => {
+    mutationFn: async ({ userId, spotId }: { userId: string; spotId: string }) => {
       return await apiRequest(`/api/admin/assign-spot`, {
         method: "POST",
-        body: { waitingListId, spotId },
+        body: { userId, spotId },
       });
     },
     onSuccess: () => {
@@ -1958,7 +1958,7 @@ export default function AdminParkingManagement() {
                             <Badge 
                               variant="secondary"
                               className={
-                                item.status === "waiting" ? "bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100" :
+                                item.status === "active" ? "bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100" :
                                 item.status === "assigned" ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100" :
                                 "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
                               }
@@ -1974,7 +1974,7 @@ export default function AdminParkingManagement() {
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center justify-end gap-1">
-                              {item.status === "waiting" && (
+                              {item.status === "active" && (
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -1982,7 +1982,8 @@ export default function AdminParkingManagement() {
                                   data-testid={`button-assign-waiting-${item.id}`}
                                   title="Assign Spot"
                                 >
-                                  <ArrowRight className="h-4 w-4" />
+                                  <ArrowRight className="h-4 w-4 mr-1" />
+                                  Assign
                                 </Button>
                               )}
                               <Button
@@ -2255,10 +2256,13 @@ export default function AdminParkingManagement() {
               <Button
                 onClick={() => {
                   if (selectedWaitingListItem && selectedSpotForAssign) {
-                    assignFromWaitingListMutation.mutate({
-                      waitingListId: selectedWaitingListItem,
-                      spotId: selectedSpotForAssign.id
-                    });
+                    const waitingListEntry = filteredWaitingList.find(w => w.id === selectedWaitingListItem);
+                    if (waitingListEntry) {
+                      assignFromWaitingListMutation.mutate({
+                        userId: waitingListEntry.userId,
+                        spotId: selectedSpotForAssign.id
+                      });
+                    }
                   }
                 }}
                 disabled={!selectedWaitingListItem || !selectedSpotForAssign || assignFromWaitingListMutation.isPending}

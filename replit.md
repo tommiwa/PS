@@ -46,7 +46,7 @@ Preferred communication style: Simple, everyday language.
 - **Booking System**: Real-time management with status tracking.
 - **Calendar Integration**: Custom parking calendar.
 - **Search & Filtering**: Location, spot type, pricing.
-- **Admin Management**: User management, analytics, bulk spot management (assign, unassign, update status), enhanced filtering for parking spots with dynamic and standardized location options, searchable user lookup for direct spot assignment with real-time database search (min 3 characters, 300ms debounce).
+- **Admin Management**: User management, analytics, bulk spot management (assign, unassign, update status), enhanced filtering for parking spots with dynamic and standardized location options, searchable user lookup for direct spot assignment with real-time database search (min 3 characters, 300ms debounce), waiting list management with direct assignment capability.
 - **Notification System**: Real-time alerts and confirmations (email/in-app).
 - **Spot Listing Creation**: Owners can list spots with single day, period, or recurring options.
 - **Admin Dashboard Metrics**: Real-time, server-side calculated metrics (occupancy, revenue, registrations).

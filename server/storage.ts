@@ -35,8 +35,8 @@ import { randomUUID } from "crypto";
 import { auditDecorator } from "./audit-service";
 import { type IAuditStorage } from "./audit-storage";
 import { db } from "./db";
-import { spotListings, parkingSpots, users } from "@shared/schema";
-import { eq, or, ilike } from "drizzle-orm";
+import { spotListings, parkingSpots, users, waitingList } from "@shared/schema";
+import { eq, or, ilike, asc, and } from "drizzle-orm";
 
 // Storage interface with comprehensive CRUD methods
 export interface IStorage {
@@ -891,21 +891,67 @@ export class MemStorage implements IStorage {
 
   // Waiting List operations
   async getWaitingListEntry(id: string): Promise<WaitingList | undefined> {
-    return this.waitingList.get(id);
+    const result = await db
+      .select()
+      .from(waitingList)
+      .where(eq(waitingList.id, id))
+      .limit(1);
+    
+    if (result.length === 0) {
+      return undefined;
+    }
+    
+    const entry = result[0];
+    // Cache in memory
+    this.waitingList.set(entry.id, entry);
+    
+    return entry;
   }
 
   async getWaitingListByUser(userId: string): Promise<WaitingList | undefined> {
-    return Array.from(this.waitingList.values()).find(entry => entry.userId === userId && entry.status === 'active');
+    const result = await db
+      .select()
+      .from(waitingList)
+      .where(and(
+        eq(waitingList.userId, userId),
+        eq(waitingList.status, 'active')
+      ))
+      .limit(1);
+    
+    if (result.length === 0) {
+      return undefined;
+    }
+    
+    const entry = result[0];
+    // Cache in memory
+    this.waitingList.set(entry.id, entry);
+    
+    return entry;
   }
 
   async getAllWaitingList(): Promise<WaitingList[]> {
-    return Array.from(this.waitingList.values()).sort((a, b) => a.priority - b.priority);
+    const entries = await db
+      .select()
+      .from(waitingList)
+      .orderBy(asc(waitingList.priority));
+    
+    // Cache in memory
+    entries.forEach(entry => this.waitingList.set(entry.id, entry));
+    
+    return entries;
   }
 
   async getActiveWaitingList(): Promise<WaitingList[]> {
-    return Array.from(this.waitingList.values())
-      .filter(entry => entry.status === 'active')
-      .sort((a, b) => a.priority - b.priority);
+    const entries = await db
+      .select()
+      .from(waitingList)
+      .where(eq(waitingList.status, 'active'))
+      .orderBy(asc(waitingList.priority));
+    
+    // Cache in memory
+    entries.forEach(entry => this.waitingList.set(entry.id, entry));
+    
+    return entries;
   }
 
   async createWaitingListEntry(insertEntry: InsertWaitingList): Promise<WaitingList> {
@@ -931,21 +977,47 @@ export class MemStorage implements IStorage {
   }
 
   async updateWaitingListEntry(id: string, updates: Partial<InsertWaitingList>): Promise<WaitingList | undefined> {
-    const existingEntry = this.waitingList.get(id);
-    if (!existingEntry) return undefined;
-
-    const updatedEntry: WaitingList = {
-      ...existingEntry,
-      ...updates,
-      preferredSpotType: updates.preferredSpotType ? (updates.preferredSpotType as SpotType) : existingEntry.preferredSpotType,
-      updatedAt: new Date()
-    };
-    this.waitingList.set(id, updatedEntry);
-    return updatedEntry;
+    try {
+      const result = await db
+        .update(waitingList)
+        .set({
+          ...updates,
+          preferredSpotType: updates.preferredSpotType ? (updates.preferredSpotType as SpotType) : undefined,
+          updatedAt: new Date()
+        })
+        .where(eq(waitingList.id, id))
+        .returning();
+      
+      if (result.length === 0) {
+        return undefined;
+      }
+      
+      const updatedEntry = result[0];
+      // Also update in memory
+      this.waitingList.set(id, updatedEntry);
+      
+      return updatedEntry;
+    } catch (error) {
+      console.error("Error updating waiting list entry:", error);
+      return undefined;
+    }
   }
 
   async deleteWaitingListEntry(id: string): Promise<boolean> {
-    return this.waitingList.delete(id);
+    try {
+      const result = await db
+        .delete(waitingList)
+        .where(eq(waitingList.id, id))
+        .returning();
+      
+      // Also delete from memory
+      this.waitingList.delete(id);
+      
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting waiting list entry:", error);
+      return false;
+    }
   }
 
   async getWaitingListById(id: string): Promise<WaitingList | undefined> {
