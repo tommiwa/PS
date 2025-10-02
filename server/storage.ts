@@ -35,8 +35,8 @@ import { randomUUID } from "crypto";
 import { auditDecorator } from "./audit-service";
 import { type IAuditStorage } from "./audit-storage";
 import { db } from "./db";
-import { spotListings, parkingSpots } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { spotListings, parkingSpots, users } from "@shared/schema";
+import { eq, or, ilike } from "drizzle-orm";
 
 // Storage interface with comprehensive CRUD methods
 export interface IStorage {
@@ -55,6 +55,9 @@ export interface IStorage {
   removeUserRole(userId: string, role: UserRole): Promise<User | undefined>;
   hasRole(userId: string, role: UserRole): Promise<boolean>;
   hasAnyRole(userId: string, roles: UserRole[]): Promise<boolean>;
+  
+  // User search operation
+  searchUsers(query: string): Promise<Pick<User, 'id' | 'firstName' | 'lastName' | 'email'>[]>;
 
   // Parking Spot operations
   getParkingSpot(id: string): Promise<ParkingSpot | undefined>;
@@ -386,7 +389,20 @@ export class MemStorage implements IStorage {
 
   // User operations
   async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+    const result = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, id))
+      .limit(1);
+    
+    if (result.length === 0) {
+      return undefined;
+    }
+    
+    const user = result[0];
+    // Update in-memory cache
+    this.users.set(id, user);
+    return user;
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
@@ -474,20 +490,32 @@ export class MemStorage implements IStorage {
   }
 
   async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
-    const existingUser = this.users.get(id);
+    const existingUser = await this.getUser(id);
     if (!existingUser) {
       return undefined;
     }
     
     const now = new Date();
-    const updatedUser: User = {
-      ...existingUser,
-      ...updates,
-      id, // Keep original ID
-      updatedAt: now
-    };
     
+    // Update in database
+    const result = await db
+      .update(users)
+      .set({
+        ...updates,
+        updatedAt: now,
+      })
+      .where(eq(users.id, id))
+      .returning();
+    
+    if (result.length === 0) {
+      return undefined;
+    }
+    
+    const updatedUser = result[0];
+    
+    // Also update in-memory map for consistency
     this.users.set(id, updatedUser);
+    
     return updatedUser;
   }
 
@@ -497,7 +525,7 @@ export class MemStorage implements IStorage {
 
   // Role management helpers
   async addUserRole(userId: string, role: UserRole): Promise<User | undefined> {
-    const user = this.users.get(userId);
+    const user = await this.getUser(userId);
     if (!user) return undefined;
     
     // Add role if not already present
@@ -510,7 +538,7 @@ export class MemStorage implements IStorage {
   }
 
   async removeUserRole(userId: string, role: UserRole): Promise<User | undefined> {
-    const user = this.users.get(userId);
+    const user = await this.getUser(userId);
     if (!user) return undefined;
     
     // Remove role if present, but ensure at least one role remains
@@ -527,15 +555,42 @@ export class MemStorage implements IStorage {
   }
 
   async hasRole(userId: string, role: UserRole): Promise<boolean> {
-    const user = this.users.get(userId);
+    const user = await this.getUser(userId);
     if (!user) return false;
     return user.roles.includes(role);
   }
 
   async hasAnyRole(userId: string, roles: UserRole[]): Promise<boolean> {
-    const user = this.users.get(userId);
+    const user = await this.getUser(userId);
     if (!user) return false;
     return roles.some(role => user.roles.includes(role));
+  }
+
+  async searchUsers(query: string): Promise<Pick<User, 'id' | 'firstName' | 'lastName' | 'email'>[]> {
+    const lowerQuery = `%${query.toLowerCase()}%`;
+    
+    const results = await db
+      .select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email,
+      })
+      .from(users)
+      .where(
+        or(
+          ilike(users.firstName, lowerQuery),
+          ilike(users.lastName, lowerQuery),
+          ilike(users.email, lowerQuery)
+        )
+      );
+    
+    return results.map(r => ({
+      id: r.id!,
+      firstName: r.firstName ?? null,
+      lastName: r.lastName ?? null,
+      email: r.email ?? null,
+    }));
   }
 
   // Parking Spot operations

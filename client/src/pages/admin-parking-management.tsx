@@ -15,6 +15,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { SortableTableHeader } from "@/components/ui/sortable-table-header"
 import { EnhancedFilters, type FilterConfig, type FilterValues } from "@/components/ui/enhanced-filters"
@@ -90,6 +92,20 @@ export default function AdminParkingManagement() {
     duration: "permanent",
     notes: ""
   })
+  
+  // User search state for direct assignment
+  const [userSearchQuery, setUserSearchQuery] = useState("")
+  const [debouncedUserSearchQuery, setDebouncedUserSearchQuery] = useState("")
+  const [isUserSearchOpen, setIsUserSearchOpen] = useState(false)
+  
+  // Debounce user search query (300ms delay)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedUserSearchQuery(userSearchQuery)
+    }, 300)
+    
+    return () => clearTimeout(timer)
+  }, [userSearchQuery])
   
   // Bookability control state
   const [selectedSpots, setSelectedSpots] = useState<Set<string>>(new Set())
@@ -176,6 +192,16 @@ export default function AdminParkingManagement() {
     queryKey: ["/api/admin/users"],
   });
 
+  // Search users for direct assignment (only triggers when query >= 3 chars)
+  const { data: searchedUsers = [], isLoading: isSearchingUsers } = useQuery<Array<{
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+  }>>({
+    queryKey: [`/api/admin/search-users?query=${encodeURIComponent(debouncedUserSearchQuery)}`],
+    enabled: debouncedUserSearchQuery.length >= 3,
+  });
 
   // Calculate waiting list metrics
   const waitingListMetrics = {
@@ -2369,27 +2395,78 @@ export default function AdminParkingManagement() {
             )}
             <div>
               <label className="text-sm font-medium">Select User</label>
-              {usersError ? (
-                <div className="text-sm text-red-600">Error loading users. Please try again.</div>
-              ) : isLoadingUsers ? (
-                <Skeleton className="h-10 w-full" />
-              ) : (
-                <Select 
-                  value={directAssignFormData.userId} 
-                  onValueChange={(userId) => setDirectAssignFormData(prev => ({ ...prev, userId }))}
-                >
-                  <SelectTrigger data-testid="select-direct-assign-user">
-                    <SelectValue placeholder="Choose a user..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(allUsers as any[]).map((user: any) => (
-                      <SelectItem key={user.id} value={user.id}>
-                        {user.name || user.firstName || user.email} ({user.email})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+              <Popover open={isUserSearchOpen} onOpenChange={setIsUserSearchOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={isUserSearchOpen}
+                    className="w-full justify-between"
+                    data-testid="button-select-user"
+                  >
+                    {directAssignFormData.userId ? (
+                      (() => {
+                        const selectedUser = searchedUsers.find(u => u.id === directAssignFormData.userId) || 
+                                           allUsers.find((u: any) => u.id === directAssignFormData.userId);
+                        if (selectedUser) {
+                          const firstName = selectedUser.firstName || '';
+                          const lastName = selectedUser.lastName || '';
+                          const email = selectedUser.email || '';
+                          return `${firstName} ${lastName} (${email})`.trim();
+                        }
+                        return "Select user...";
+                      })()
+                    ) : (
+                      "Select user..."
+                    )}
+                    <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start">
+                  <Command shouldFilter={false}>
+                    <CommandInput 
+                      placeholder="Search users..." 
+                      value={userSearchQuery}
+                      onValueChange={setUserSearchQuery}
+                      data-testid="input-search-user"
+                    />
+                    <CommandList>
+                      <CommandEmpty>
+                        {userSearchQuery.length < 3 
+                          ? "Type at least 3 characters to search..." 
+                          : isSearchingUsers 
+                            ? "Searching..." 
+                            : "No users found."}
+                      </CommandEmpty>
+                      {debouncedUserSearchQuery.length >= 3 && !isSearchingUsers && searchedUsers.length > 0 && (
+                        <CommandGroup>
+                          {searchedUsers.map((user) => {
+                            const firstName = user.firstName || '';
+                            const lastName = user.lastName || '';
+                            const email = user.email || '';
+                            const displayName = `${firstName} ${lastName} (${email})`.trim();
+                            
+                            return (
+                              <CommandItem
+                                key={user.id}
+                                value={user.id}
+                                onSelect={() => {
+                                  setDirectAssignFormData(prev => ({ ...prev, userId: user.id }));
+                                  setIsUserSearchOpen(false);
+                                  setUserSearchQuery("");
+                                }}
+                                data-testid={`button-user-option-${user.id}`}
+                              >
+                                {displayName}
+                              </CommandItem>
+                            );
+                          })}
+                        </CommandGroup>
+                      )}
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
             <div>
               <label className="text-sm font-medium">Duration</label>

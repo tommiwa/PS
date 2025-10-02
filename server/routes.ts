@@ -1464,7 +1464,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const updatedSpot = await storage.updateParkingSpot(spotId, { ownerId: userId });
+      const updatedSpot = await storage.updateParkingSpot(spotId, { ownerId: userId, isBookable: false });
       if (!updatedSpot) {
         return res.status(404).json({ error: "Parking spot not found" });
       }
@@ -1520,7 +1520,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const updatedSpots = [];
       for (const spotId of spotIds) {
-        const updatedSpot = await storage.updateParkingSpot(spotId, { ownerId: userId });
+        const updatedSpot = await storage.updateParkingSpot(spotId, { ownerId: userId, isBookable: false });
         if (updatedSpot) {
           updatedSpots.push(updatedSpot);
         }
@@ -1624,6 +1624,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching users:", error);
       res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
+  // Search users for assignment (Admin only)
+  app.get("/api/admin/search-users", requireAdmin, async (req, res) => {
+    try {
+      const { query } = req.query;
+      
+      // Validate query parameter
+      if (!query || typeof query !== 'string') {
+        return res.status(400).json({ error: "Query parameter is required" });
+      }
+      
+      // Minimum query length check
+      if (query.length < 3) {
+        return res.status(400).json({ error: "Query must be at least 3 characters long" });
+      }
+      
+      const users = await storage.searchUsers(query);
+      res.json(users);
+    } catch (error) {
+      console.error("Error searching users:", error);
+      res.status(500).json({ error: "Failed to search users" });
     }
   });
 
