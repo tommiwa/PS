@@ -796,6 +796,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ownerId: userId
       });
       
+      // PERMISSION CHECK: Prevent creating listings for BCI-managed spots
+      const spot = await storage.getParkingSpot(validatedData.spotId);
+      if (!spot) {
+        return res.status(404).json({ error: "Parking spot not found" });
+      }
+      
+      if (spot.isBciManaged) {
+        return res.status(403).json({ 
+          error: "Cannot create listings for BCI-managed spots. Contact administrator." 
+        });
+      }
+      
+      // Verify that the user owns the spot
+      if (spot.ownerId !== userId) {
+        return res.status(403).json({ 
+          error: "You can only create listings for spots you own" 
+        });
+      }
+      
       const newListing = await storage.createSpotListing(validatedData);
       
       // Generate date description based on listing type
@@ -1464,10 +1483,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const assignSpotSchema = z.object({
         spotId: z.string().min(1, "spotId is required"),
-        userId: z.string().min(1, "userId is required")
+        userId: z.string().min(1, "userId is required"),
+        isBciManaged: z.boolean().optional()
       });
       
-      const { spotId, userId } = assignSpotSchema.parse(req.body);
+      const { spotId, userId, isBciManaged } = assignSpotSchema.parse(req.body);
 
       // Get spot info before assignment for audit logging
       const existingSpot = await storage.getParkingSpot(spotId);
@@ -1496,7 +1516,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const updatedSpot = await storage.updateParkingSpot(spotId, { ownerId: userId, isBookable: false });
+      // Build update data with proper isBciManaged logic
+      // Since isBciManaged has .notNull().default(false), it ALWAYS has a value
+      // 1. If isBciManaged is explicitly provided → use that value
+      // 2. Otherwise → preserve the existing spot's isBciManaged value
+      const updateData = {
+        ownerId: userId,
+        isBookable: false,
+        ...(isBciManaged !== undefined 
+          ? { isBciManaged } 
+          : existingSpot?.isBciManaged !== undefined 
+            ? { isBciManaged: existingSpot.isBciManaged }
+            : {})
+      };
+      
+      const updatedSpot = await storage.updateParkingSpot(spotId, updateData);
       if (!updatedSpot) {
         return res.status(404).json({ error: "Parking spot not found" });
       }
@@ -1529,10 +1563,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const bulkAssignSchema = z.object({
         spotIds: z.array(z.string()).min(1, "At least one spotId is required"),
-        userId: z.string().min(1, "userId is required")
+        userId: z.string().min(1, "userId is required"),
+        isBciManaged: z.boolean().optional()
       });
       
-      const { spotIds, userId } = bulkAssignSchema.parse(req.body);
+      const { spotIds, userId, isBciManaged } = bulkAssignSchema.parse(req.body);
 
       // Get user info for audit logging
       const user = await storage.getUser(userId);
@@ -1564,7 +1599,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const updatedSpots = [];
       for (const spotId of spotIds) {
-        const updatedSpot = await storage.updateParkingSpot(spotId, { ownerId: userId, isBookable: false });
+        // Fetch existing spot to preserve its isBciManaged value
+        const existingSpot = await storage.getParkingSpot(spotId);
+        
+        // Build update data with proper isBciManaged logic
+        // Since isBciManaged has .notNull().default(false), it ALWAYS has a value
+        // 1. If isBciManaged is explicitly provided → use that value
+        // 2. Otherwise → preserve the existing spot's isBciManaged value
+        const updateData = {
+          ownerId: userId,
+          isBookable: false,
+          ...(isBciManaged !== undefined 
+            ? { isBciManaged } 
+            : existingSpot?.isBciManaged !== undefined 
+              ? { isBciManaged: existingSpot.isBciManaged }
+              : {})
+        };
+        
+        const updatedSpot = await storage.updateParkingSpot(spotId, updateData);
         if (updatedSpot) {
           updatedSpots.push(updatedSpot);
         }
