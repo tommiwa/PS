@@ -75,6 +75,9 @@ export default function AdminParkingManagement() {
   const [selectedUserForWaiting, setSelectedUserForWaiting] = useState("")
   const [selectedUserForAssign, setSelectedUserForAssign] = useState("")
   const [selectedUserForAvailableSpot, setSelectedUserForAvailableSpot] = useState("")
+  const [assignAvailableSpotFormData, setAssignAvailableSpotFormData] = useState({
+    isBciManaged: true
+  })
   const [activeSpotTab, setActiveSpotTab] = useState("all")
   const [unallocatedFilterType, setUnallocatedFilterType] = useState("all")
   
@@ -90,6 +93,7 @@ export default function AdminParkingManagement() {
   const [directAssignFormData, setDirectAssignFormData] = useState({
     userId: "",
     duration: "permanent",
+    isBciManaged: true,
     notes: ""
   })
   
@@ -131,6 +135,7 @@ export default function AdminParkingManagement() {
     isIndoor: false,
     isActive: true,
     isBookable: true,
+    isBciManaged: false,
     description: "",
     ownerId: null as string | null
   })
@@ -141,6 +146,7 @@ export default function AdminParkingManagement() {
     location: "",
     spotType: "regular" as SpotType,
     isIndoor: false,
+    isBciManaged: false,
     description: ""
   })
   
@@ -374,6 +380,7 @@ export default function AdminParkingManagement() {
         location: "",
         spotType: "regular",
         isIndoor: false,
+        isBciManaged: false,
         description: ""
       });
     },
@@ -476,7 +483,7 @@ export default function AdminParkingManagement() {
     mutationFn: async ({ spotId, assignmentData }: { spotId: string; assignmentData: typeof directAssignFormData }) => {
       return await apiRequest(`/api/admin/assign-spot`, {
         method: "POST",
-        body: { spotId, userId: assignmentData.userId },
+        body: { spotId, userId: assignmentData.userId, isBciManaged: assignmentData.isBciManaged },
       });
     },
     onSuccess: () => {
@@ -494,6 +501,7 @@ export default function AdminParkingManagement() {
       setDirectAssignFormData({
         userId: "",
         duration: "permanent",
+        isBciManaged: true,
         notes: ""
       });
     },
@@ -537,10 +545,10 @@ export default function AdminParkingManagement() {
 
   // Mutation to assign available spot to user
   const assignAvailableSpotMutation = useMutation({
-    mutationFn: async ({ spotId, userId }: { spotId: string; userId: string }) => {
+    mutationFn: async ({ spotId, userId, isBciManaged }: { spotId: string; userId: string; isBciManaged: boolean }) => {
       return await apiRequest(`/api/admin/assign-spot`, {
         method: "POST",
-        body: { spotId, userId },
+        body: { spotId, userId, isBciManaged },
       });
     },
     onSuccess: (response) => {
@@ -559,6 +567,9 @@ export default function AdminParkingManagement() {
       setShowAssignAvailableSpotDialog(false);
       setSelectedAvailableSpot(null);
       setSelectedUserForAvailableSpot("");
+      setAssignAvailableSpotFormData({
+        isBciManaged: true
+      });
     },
     onError: (error: any) => {
       toast({
@@ -579,6 +590,7 @@ export default function AdminParkingManagement() {
       isIndoor: spot.isIndoor || false,
       isActive: spot.isActive !== false,
       isBookable: spot.isBookable !== false,
+      isBciManaged: spot.isBciManaged || false,
       description: spot.description || "",
       ownerId: spot.ownerId || null
     });
@@ -617,6 +629,12 @@ export default function AdminParkingManagement() {
 
   const handleDirectAssign = (spot: ParkingSpot) => {
     setSelectedSpotForAssign(spot);
+    setDirectAssignFormData({
+      userId: "",
+      duration: "permanent",
+      isBciManaged: spot?.isBciManaged ?? true,
+      notes: ""
+    });
     setShowDirectAssignDialog(true);
   };
 
@@ -627,6 +645,9 @@ export default function AdminParkingManagement() {
 
   const handleAssignAvailableSpot = (spot: ParkingSpot) => {
     setSelectedAvailableSpot(spot);
+    setAssignAvailableSpotFormData({
+      isBciManaged: spot?.isBciManaged ?? true
+    });
     setShowAssignAvailableSpotDialog(true);
   };
 
@@ -1411,6 +1432,14 @@ export default function AdminParkingManagement() {
                           >
 {t("admin.parkingManagement.assignmentStatus")}
                           </SortableTableHeader>
+                          <SortableTableHeader
+                            column="isBciManaged"
+                            currentSortColumn={sortState.column}
+                            currentSortDirection={sortState.direction}
+                            onSort={handleSort}
+                          >
+                            Management Type
+                          </SortableTableHeader>
                           <TableHead>{t("admin.parkingManagement.actions")}</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -1465,6 +1494,26 @@ export default function AdminParkingManagement() {
                               ) : (
                                 <Badge variant="outline">{t("admin.parkingManagement.available")}</Badge>
                               )}
+                            </TableCell>
+                            <TableCell data-testid={`text-spot-management-type-${spot.id}`}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  {spot.isBciManaged ? (
+                                    <Badge variant="secondary" className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100">
+                                      BCI Managed
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100">
+                                      Personal
+                                    </Badge>
+                                  )}
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {spot.isBciManaged 
+                                    ? "BCI Managed: Only admins can reassign. Personal: Owner can create listings."
+                                    : "Personal: Owner can create listings and manage availability."}
+                                </TooltipContent>
+                              </Tooltip>
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center justify-end gap-1">
@@ -1716,6 +1765,14 @@ export default function AdminParkingManagement() {
                         >
                           Assignment Status
                         </SortableTableHeader>
+                        <SortableTableHeader
+                          column="isBciManaged"
+                          currentSortColumn={availableSpotsSortState.column}
+                          currentSortDirection={availableSpotsSortState.direction}
+                          onSort={handleAvailableSpotsSort}
+                        >
+                          Management Type
+                        </SortableTableHeader>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1759,6 +1816,26 @@ export default function AdminParkingManagement() {
                           </TableCell>
                           <TableCell data-testid={`text-unallocated-spot-assignment-status-${spot.id}`}>
                             <Badge variant="outline">Available</Badge>
+                          </TableCell>
+                          <TableCell data-testid={`text-unallocated-spot-management-type-${spot.id}`}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                {spot.isBciManaged ? (
+                                  <Badge variant="secondary" className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100">
+                                    BCI Managed
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100">
+                                    Personal
+                                  </Badge>
+                                )}
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {spot.isBciManaged 
+                                  ? "BCI Managed: Only admins can reassign. Personal: Owner can create listings."
+                                  : "Personal: Owner can create listings and manage availability."}
+                              </TooltipContent>
+                            </Tooltip>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center justify-end gap-1">
@@ -2070,6 +2147,36 @@ export default function AdminParkingManagement() {
               />
               <label htmlFor="indoor" className="text-sm font-medium">Indoor Spot</label>
             </div>
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="bci-managed"
+                  checked={addSpotFormData.isBciManaged}
+                  onCheckedChange={(checked) => setAddSpotFormData(prev => ({ ...prev, isBciManaged: checked as boolean }))}
+                  data-testid="checkbox-add-spot-bci-managed"
+                />
+                <label htmlFor="bci-managed" className="text-sm font-medium">BCI Managed</label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-4 w-4 p-0"
+                      type="button"
+                      aria-label="BCI Managed information"
+                    >
+                      <Info className="h-3 w-3 text-muted-foreground" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    BCI Managed: Only admins can reassign. Personal: Owner can create listings.
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <p className="text-xs text-muted-foreground pl-6">
+                Default is Personal (unchecked) for new spots
+              </p>
+            </div>
             <div>
               <label className="text-sm font-medium">Description (Optional)</label>
               <Input
@@ -2180,6 +2287,31 @@ export default function AdminParkingManagement() {
                 data-testid="checkbox-edit-spot-bookable"
               />
               <label htmlFor="edit-bookable" className="text-sm font-medium">Bookable</label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="edit-bci-managed"
+                checked={editFormData.isBciManaged}
+                onCheckedChange={(checked) => setEditFormData(prev => ({ ...prev, isBciManaged: checked as boolean }))}
+                data-testid="checkbox-edit-spot-bci-managed"
+              />
+              <label htmlFor="edit-bci-managed" className="text-sm font-medium">BCI Managed</label>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-4 w-4 p-0"
+                    type="button"
+                    aria-label="BCI Managed information"
+                  >
+                    <Info className="h-3 w-3 text-muted-foreground" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  BCI Managed: Only admins can reassign. Personal: Owner can create listings.
+                </TooltipContent>
+              </Tooltip>
             </div>
             <div>
               <label className="text-sm font-medium">Description</label>
@@ -2490,6 +2622,36 @@ export default function AdminParkingManagement() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="direct-assign-bci-managed"
+                  checked={directAssignFormData.isBciManaged}
+                  onCheckedChange={(checked) => setDirectAssignFormData(prev => ({ ...prev, isBciManaged: checked as boolean }))}
+                  data-testid="checkbox-direct-assign-bci-managed"
+                />
+                <label htmlFor="direct-assign-bci-managed" className="text-sm font-medium">BCI Managed</label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-4 w-4 p-0"
+                      type="button"
+                      aria-label="BCI Managed information"
+                    >
+                      <Info className="h-3 w-3 text-muted-foreground" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    BCI Managed: Only admins can reassign. Personal: Owner can create listings.
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <p className="text-xs text-muted-foreground pl-6">
+                Default is BCI Managed (checked) for direct assignments
+              </p>
+            </div>
             <div>
               <label className="text-sm font-medium">Notes (Optional)</label>
               <Input
@@ -2598,13 +2760,44 @@ export default function AdminParkingManagement() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="assign-available-bci-managed"
+                      checked={assignAvailableSpotFormData.isBciManaged}
+                      onCheckedChange={(checked) => setAssignAvailableSpotFormData(prev => ({ ...prev, isBciManaged: checked as boolean }))}
+                      data-testid="checkbox-assign-available-bci-managed"
+                    />
+                    <label htmlFor="assign-available-bci-managed" className="text-sm font-medium">BCI Managed</label>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-4 w-4 p-0"
+                          type="button"
+                          aria-label="BCI Managed information"
+                        >
+                          <Info className="h-3 w-3 text-muted-foreground" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        BCI Managed: Only admins can reassign. Personal: Owner can create listings.
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <p className="text-xs text-muted-foreground pl-6">
+                    Default is BCI Managed (checked) for assignments
+                  </p>
+                </div>
                 <div className="flex gap-2 pt-4">
                   <Button
                     onClick={() => {
                       if (selectedAvailableSpot && selectedUserForAvailableSpot) {
                         assignAvailableSpotMutation.mutate({
                           spotId: selectedAvailableSpot.id,
-                          userId: selectedUserForAvailableSpot
+                          userId: selectedUserForAvailableSpot,
+                          isBciManaged: assignAvailableSpotFormData.isBciManaged
                         });
                       }
                     }}
