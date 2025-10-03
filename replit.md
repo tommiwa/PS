@@ -51,6 +51,7 @@ Preferred communication style: Simple, everyday language.
   - Privilege separation: `getAuthenticatedUserBaseRole()` returns real admin role for access control, `getAuthenticatedUserRole()` returns impersonated role for UI/data filtering
   - Admins maintain full privileges (data access, endpoint permissions) while viewing as other roles
   - View-as role persists across page reloads via server-side session storage
+  - Security: Defense-in-depth validation (requireAdmin middleware + explicit base role check) and SameSite=lax cookie protection against CSRF attacks
 
 ### Design System
 - **Color Palette**: Professional blue (#2563eb), neutral grays, semantic colors.
