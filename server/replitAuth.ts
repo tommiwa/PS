@@ -522,14 +522,18 @@ export const requireAdmin: RequestHandler = async (req, res, next) => {
   }
 
   try {
-    const dbUser = await storage.getUser(user.claims.sub);
-    if (!dbUser || !dbUser.roles.includes("admin")) {
+    // Use BASE role to check admin privileges, not impersonated role
+    // This ensures admins can still access admin endpoints even when using "view as"
+    const baseRole = await getAuthenticatedUserBaseRole(req);
+    
+    if (baseRole !== "admin") {
       return res.status(403).json({ message: "Admin access required" });
     }
+    
     next();
   } catch (error) {
-    console.error("Error checking admin status:", error);
-    res.status(500).json({ message: "Internal server error" });
+    console.error("Error in requireAdmin middleware:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -554,6 +558,22 @@ export async function getAuthenticatedUserRole(req: any): Promise<string | null>
     return user?.roles?.[0] || null;
   } catch (error) {
     console.error("Error getting user role:", error);
+    return null;
+  }
+}
+
+// Helper to get authenticated user's BASE role (ignores viewAsRole)
+// This is used for privilege checks to ensure admins maintain their permissions even when impersonating
+export async function getAuthenticatedUserBaseRole(req: any): Promise<string | null> {
+  const userId = getAuthenticatedUserId(req);
+  if (!userId) return null;
+  
+  try {
+    const user = await storage.getUser(userId);
+    // Return the primary role (first one in the array) for backward compatibility
+    return user?.roles?.[0] || null;
+  } catch (error) {
+    console.error("Error getting user base role:", error);
     return null;
   }
 }
