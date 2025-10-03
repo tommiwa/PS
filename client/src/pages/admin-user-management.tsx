@@ -1016,7 +1016,8 @@ export default function AdminUserManagement() {
       {/* Main Content */}
       <div className="space-y-4">
           {/* Role Filter Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {cardsVisible && (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card 
               className={`cursor-pointer hover-elevate ${
                 filterValues.role === 'admin' ? 'ring-2 ring-primary' : ''
@@ -1204,7 +1205,8 @@ export default function AdminUserManagement() {
                 Show all users in the system regardless of their role
               </div>
             </Card>
-          </div>
+            </div>
+          )}
 
           {/* Enhanced Filters */}
           <EnhancedFilters
