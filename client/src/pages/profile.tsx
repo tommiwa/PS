@@ -835,20 +835,6 @@ export default function Profile() {
                   </p>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {(() => {
-                    console.log("===== TAB BCI CHECK DEBUG =====");
-                    console.log("isLoadingWaitingList:", isLoadingWaitingList);
-                    console.log("isLoadingSpots:", isLoadingSpots);
-                    console.log("assignedSpots:", assignedSpots);
-                    console.log("assignedSpots.length:", assignedSpots.length);
-                    if (assignedSpots.length > 0) {
-                      console.log("First spot keys:", Object.keys(assignedSpots[0]));
-                      console.log("First spot isBciManaged:", assignedSpots[0].isBciManaged);
-                      console.log("Has BCI spot:", assignedSpots.some(spot => spot.isBciManaged));
-                    }
-                    console.log("==============================");
-                    return null;
-                  })()}
                   {isLoadingWaitingList || isLoadingSpots ? (
                     <div className="flex items-center justify-center p-8">
                       <div className="text-sm text-muted-foreground">{t("common.loading")}</div>
@@ -1327,20 +1313,6 @@ export default function Profile() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {(() => {
-                console.log("===== SIDEBAR BCI CHECK DEBUG =====");
-                console.log("isLoadingWaitingList:", isLoadingWaitingList);
-                console.log("isLoadingSpots:", isLoadingSpots);
-                console.log("assignedSpots:", assignedSpots);
-                console.log("assignedSpots.length:", assignedSpots.length);
-                if (assignedSpots.length > 0) {
-                  console.log("First spot keys:", Object.keys(assignedSpots[0]));
-                  console.log("First spot isBciManaged:", assignedSpots[0].isBciManaged);
-                  console.log("Has BCI spot:", assignedSpots.some(spot => spot.isBciManaged));
-                }
-                console.log("===================================");
-                return null;
-              })()}
               {isLoadingWaitingList || isLoadingSpots ? (
                 <div className="flex items-center justify-center py-4">
                   <Loader2 className="h-4 w-4 animate-spin" />
