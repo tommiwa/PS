@@ -1170,15 +1170,15 @@ export default function AdminUserManagement() {
                   <CardTitle className="text-sm font-medium text-muted-foreground">{t("admin.userManagement.administrators")}</CardTitle>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-4 w-4 p-0"
+                      <button
+                        type="button"
+                        className="rounded-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                         onClick={(e) => e.stopPropagation()}
                         aria-label="Administrator filter information"
+                        tabIndex={0}
                       >
-                        <Info className="h-3 w-3 text-muted-foreground" />
-                      </Button>
+                        <Shield className="h-5 w-5 text-blue-600" />
+                      </button>
                     </TooltipTrigger>
                     <TooltipContent>
                       Filter users with full system access and management privileges
@@ -1217,15 +1217,15 @@ export default function AdminUserManagement() {
                   <CardTitle className="text-sm font-medium text-muted-foreground">{t("admin.userManagement.spotOwners")}</CardTitle>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-4 w-4 p-0"
+                      <button
+                        type="button"
+                        className="rounded-sm focus:outline-none focus:ring-2 focus:ring-green-400"
                         onClick={(e) => e.stopPropagation()}
                         aria-label="Spot owner filter information"
+                        tabIndex={0}
                       >
-                        <Info className="h-3 w-3 text-muted-foreground" />
-                      </Button>
+                        <Car className="h-5 w-5 text-green-600" />
+                      </button>
                     </TooltipTrigger>
                     <TooltipContent>
                       Filter users who can list parking spaces for rental
@@ -1264,15 +1264,15 @@ export default function AdminUserManagement() {
                   <CardTitle className="text-sm font-medium text-muted-foreground">{t("admin.userManagement.renters")}</CardTitle>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-4 w-4 p-0"
+                      <button
+                        type="button"
+                        className="rounded-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
                         onClick={(e) => e.stopPropagation()}
                         aria-label="Renter filter information"
+                        tabIndex={0}
                       >
-                        <Info className="h-3 w-3 text-muted-foreground" />
-                      </Button>
+                        <UserCheck className="h-5 w-5 text-purple-600" />
+                      </button>
                     </TooltipTrigger>
                     <TooltipContent>
                       Filter users who book parking spaces
@@ -1311,15 +1311,15 @@ export default function AdminUserManagement() {
                   <CardTitle className="text-sm font-medium text-muted-foreground">All Users</CardTitle>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-4 w-4 p-0"
+                      <button
+                        type="button"
+                        className="rounded-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
                         onClick={(e) => e.stopPropagation()}
                         aria-label="All users filter information"
+                        tabIndex={0}
                       >
-                        <Info className="h-3 w-3 text-muted-foreground" />
-                      </Button>
+                        <Users className="h-5 w-5 text-gray-600" />
+                      </button>
                     </TooltipTrigger>
                     <TooltipContent>
                       Show all users regardless of role
