@@ -1022,14 +1022,14 @@ export default function AdminUserManagement() {
               <CardTitle className="text-sm font-medium">Total Users</CardTitle>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-4 w-4 p-0"
+                  <button
+                    type="button"
+                    className="rounded-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                     aria-label="Total users information"
+                    tabIndex={0}
                   >
-                    <Info className="h-3 w-3 text-muted-foreground" />
-                  </Button>
+                    <Users className="h-5 w-5 text-blue-600" />
+                  </button>
                 </TooltipTrigger>
                 <TooltipContent>
                   View total registered user accounts across all roles
@@ -1054,14 +1054,14 @@ export default function AdminUserManagement() {
               <CardTitle className="text-sm font-medium">Active Users</CardTitle>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-4 w-4 p-0"
+                  <button
+                    type="button"
+                    className="rounded-sm focus:outline-none focus:ring-2 focus:ring-green-400"
                     aria-label="Active users information"
+                    tabIndex={0}
                   >
-                    <Info className="h-3 w-3 text-muted-foreground" />
-                  </Button>
+                    <UserCheck className="h-5 w-5 text-green-600" />
+                  </button>
                 </TooltipTrigger>
                 <TooltipContent>
                   View users logged in within the last 30 days
@@ -1086,14 +1086,14 @@ export default function AdminUserManagement() {
               <CardTitle className="text-sm font-medium">New This Week</CardTitle>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-4 w-4 p-0"
+                  <button
+                    type="button"
+                    className="rounded-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
                     aria-label="New users information"
+                    tabIndex={0}
                   >
-                    <Info className="h-3 w-3 text-muted-foreground" />
-                  </Button>
+                    <TrendingUp className="h-5 w-5 text-purple-600" />
+                  </button>
                 </TooltipTrigger>
                 <TooltipContent>
                   View new user registrations in the past 7 days
@@ -1118,14 +1118,14 @@ export default function AdminUserManagement() {
               <CardTitle className="text-sm font-medium">Most Active Dept</CardTitle>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-4 w-4 p-0"
+                  <button
+                    type="button"
+                    className="rounded-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
                     aria-label="Most active department information"
+                    tabIndex={0}
                   >
-                    <Info className="h-3 w-3 text-muted-foreground" />
-                  </Button>
+                    <Building className="h-5 w-5 text-orange-600" />
+                  </button>
                 </TooltipTrigger>
                 <TooltipContent>
                   View department with highest user engagement
