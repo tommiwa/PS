@@ -427,7 +427,7 @@ export class MemStorage implements IStorage {
     let assignedRoles: UserRole[];
     
     // Hardcoded admin emails
-    const adminEmails = ['lijin.joseji@bci.ca', 'd.thompson@bci.ca', 'david.thomps@replit.com'];
+    const adminEmails = ['colleen.norcross@bci.ca', 'lijin.joseji@bci.ca', 'thuyan.nhung@bci.ca'];
     
     if (existingUser?.roles) {
       // Preserve existing roles if user already exists
