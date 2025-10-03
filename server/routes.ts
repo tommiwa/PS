@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated, requireAdmin, getAuthenticatedUserId, getAuthenticatedUserRole } from "./replitAuth";
+import { setupAuth, isAuthenticated, requireAdmin, getAuthenticatedUserId, getAuthenticatedUserRole, getAuthenticatedUserBaseRole } from "./replitAuth";
 import { z } from "zod";
 import { db } from "./db";
 import { parkingSpots } from "@shared/schema";
@@ -2480,7 +2480,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Only allow users to see their own waiting list entry, or admins to see any
-      const userRole = await getAuthenticatedUserRole(req);
+      const userRole = await getAuthenticatedUserBaseRole(req);
       if (userId !== authenticatedUserId && userRole !== "admin") {
         return res.status(403).json({ error: "Not authorized to access this waiting list entry" });
       }
@@ -2716,7 +2716,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Users can only remove their own entry (unless admin)
-      const userRole = await getAuthenticatedUserRole(req);
+      const userRole = await getAuthenticatedUserBaseRole(req);
       if (userId !== authenticatedUserId && userRole !== "admin") {
         return res.status(403).json({ error: "You can only remove your own waiting list entry" });
       }
@@ -2789,7 +2789,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Only allow users to see their own notifications, or admins to see any
-      const userRole = await getAuthenticatedUserRole(req);
+      const userRole = await getAuthenticatedUserBaseRole(req);
       if (userId !== authenticatedUserId && userRole !== "admin") {
         return res.status(403).json({ error: "Not authorized to access these notifications" });
       }
@@ -2871,7 +2871,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Only allow users to see their own unread count, or admins to see any
-      const userRole = await getAuthenticatedUserRole(req);
+      const userRole = await getAuthenticatedUserBaseRole(req);
       if (userId !== authenticatedUserId && userRole !== "admin") {
         return res.status(403).json({ error: "Not authorized to access this unread count" });
       }
@@ -3056,7 +3056,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Only allow users to check their own reminders, or admins to check any
-      const userRole = await getAuthenticatedUserRole(req);
+      const userRole = await getAuthenticatedUserBaseRole(req);
       if (userId !== authenticatedUserId && userRole !== "admin") {
         return res.status(403).json({ error: "Not authorized to check payment reminders for this user" });
       }
