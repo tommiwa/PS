@@ -44,6 +44,13 @@ Preferred communication style: Simple, everyday language.
   - Admin → `/admin` (Admin Dashboard)
   - Owner → `/my-spots` (My Parking Spots)
   - Renter → `/search` (Smart Parking Search)
+- **"View As" Functionality** (Admin Only):
+  - Session-based role impersonation allowing admins to view the application as different roles
+  - Backend: POST/GET/DELETE /api/auth/view-as endpoints store impersonation role in session
+  - Frontend: RoleSwitcher component in header allows switching between admin/owner/renter views
+  - Privilege separation: `getAuthenticatedUserBaseRole()` returns real admin role for access control, `getAuthenticatedUserRole()` returns impersonated role for UI/data filtering
+  - Admins maintain full privileges (data access, endpoint permissions) while viewing as other roles
+  - View-as role persists across page reloads via server-side session storage
 
 ### Design System
 - **Color Palette**: Professional blue (#2563eb), neutral grays, semantic colors.

@@ -147,6 +147,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { role } = req.body;
       
+      // Double-check user is admin (defense-in-depth)
+      const baseRole = await getAuthenticatedUserBaseRole(req);
+      if (baseRole !== 'admin') {
+        return res.status(403).json({ error: "Only admins can use view-as functionality" });
+      }
+      
       // Validate role
       if (!role || !['admin', 'owner', 'renter'].includes(role)) {
         return res.status(400).json({ error: "Invalid role. Must be 'admin', 'owner', or 'renter'" });
