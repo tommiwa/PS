@@ -158,29 +158,8 @@ export default function AdminParkingManagement() {
     queryKey: ["/api/admin/all-spots"],
   });
 
-  // Extract unique locations from existing spots
-  const uniqueLocationsFromSpots = useMemo(() => {
-    const locations = new Set<string>();
-    allSpots.forEach(spot => {
-      if (spot.location) {
-        locations.add(spot.location);
-      }
-    });
-    return Array.from(locations).sort();
-  }, [allSpots]);
-
-  // Combine standard locations with unique locations from existing spots
-  const allLocationOptions = useMemo(() => {
-    const standardValues = STANDARD_PARKING_LOCATIONS.map(l => l.value);
-    const existingNotInStandard = uniqueLocationsFromSpots.filter(
-      loc => !standardValues.includes(loc)
-    );
-    
-    return [
-      ...STANDARD_PARKING_LOCATIONS,
-      ...existingNotInStandard.map(loc => ({ value: loc, label: `${loc} (existing)` }))
-    ];
-  }, [uniqueLocationsFromSpots]);
+  // Use only standard parking locations (no existing locations)
+  const allLocationOptions = STANDARD_PARKING_LOCATIONS;
 
   // Fetch all users for dropdown selection
   const { data: allUsers = [], isLoading: isLoadingUsers, error: usersError } = useQuery<any[]>({
