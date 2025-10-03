@@ -105,9 +105,10 @@ export function AdminUsersTable({
       if (!matchesSearch) return false
     }
     
-    // Role filter
+    // Role filter (supports multi-role users)
     if (currentFilterValues.role && currentFilterValues.role !== "all") {
-      if (user.role !== currentFilterValues.role) return false
+      const userRoles = (user as any).roles || [user.role];
+      if (!userRoles.includes(currentFilterValues.role)) return false
     }
     
     // Department filter
@@ -200,6 +201,26 @@ export function AdminUsersTable({
     return <Badge variant={config.variant}>{config.label}</Badge>
   }
 
+  const getRoleBadges = (roles: string[] | string) => {
+    const rolesArray = Array.isArray(roles) ? roles : [roles];
+    const roleConfig = {
+      admin: { variant: "default" as const, label: t("role.admin") },
+      owner: { variant: "secondary" as const, label: t("role.owner") },
+      renter: { variant: "outline" as const, label: t("role.renter") },
+    }
+    
+    return (
+      <div className="flex gap-1 flex-wrap">
+        {rolesArray.map((role, index) => {
+          const config = roleConfig[role as keyof typeof roleConfig];
+          return config ? (
+            <Badge key={index} variant={config.variant}>{config.label}</Badge>
+          ) : null;
+        })}
+      </div>
+    );
+  }
+
   const getStatusBadge = (status: string) => {
     return (
       <Badge variant={status === "active" ? "default" : "secondary"}>
@@ -252,7 +273,7 @@ export function AdminUsersTable({
     total: users.length,
     filtered: sortedUsers.length,
     active: users.filter(u => u.status === "active").length,
-    owners: users.filter(u => u.role === "owner").length,
+    owners: users.filter(u => (u as any).roles?.includes("owner") || u.role === "owner").length,
   }
 
   return (
@@ -408,7 +429,7 @@ export function AdminUsersTable({
                     </div>
                   </TableCell>
                   <TableCell>{user.department}</TableCell>
-                  <TableCell>{getRoleBadge(user.role)}</TableCell>
+                  <TableCell>{getRoleBadges((user as any).roles || user.role)}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
                       <Car className="h-4 w-4 text-muted-foreground" />

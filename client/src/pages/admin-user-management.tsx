@@ -218,7 +218,8 @@ export default function AdminUserManagement() {
     name: user.name || (user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.firstName || user.lastName || user.email || 'Unknown User'),
     email: user.email || 'No email',
     department: user.department || "Unknown",
-    role: user.roles?.[0] || "renter", // Convert roles array to single role for display
+    role: user.roles?.[0] || "renter", // Primary role for display
+    roles: user.roles || ["renter"], // Keep full roles array for filtering
     spotsOwned: user.spotsOwned || 0, // Real count from backend
     bookingsCount: user.bookingsCount || 0, // Real count from backend  
     status: user.status || "active",
@@ -280,7 +281,8 @@ export default function AdminUserManagement() {
                          user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.department.toLowerCase().includes(searchTerm.toLowerCase())
     
-    const matchesRole = !filterValues.role || filterValues.role === 'all' || user.role === filterValues.role
+    // Check if user's roles array includes the selected role (supports multi-role users)
+    const matchesRole = !filterValues.role || filterValues.role === 'all' || user.roles?.includes(filterValues.role)
     const matchesStatus = !filterValues.status || filterValues.status === 'all' || user.status === filterValues.status
     
     return matchesSearch && matchesRole && matchesStatus
