@@ -22,6 +22,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useToast } from "@/hooks/use-toast"
 import { useConfirm, confirmations } from "@/hooks/use-confirm"
 import type { Vehicle } from "@/components/user-profile-card"
@@ -113,9 +114,9 @@ export default function Profile() {
 
   // Priority levels with translations
   const priorityLevels = {
-    "1": { label: t("priority.high.label"), description: t("priority.high.description") },
-    "2": { label: t("priority.medium.label"), description: t("priority.medium.description") },
-    "3": { label: t("priority.low.label"), description: t("priority.low.description") }
+    "1": { label: `${t("priority.high.label")} (1)`, description: t("priority.high.description") },
+    "2": { label: `${t("priority.medium.label")} (2)`, description: t("priority.medium.description") },
+    "3": { label: `${t("priority.low.label")} (3)`, description: t("priority.low.description") }
   };
 
   // Building options with translations
@@ -135,6 +136,7 @@ export default function Profile() {
   const [isEnrolledInWaitingList, setIsEnrolledInWaitingList] = useState(false)
   const [availabilityAlertsEnabled, setAvailabilityAlertsEnabled] = useState(false)
   const [editWaitingListMode, setEditWaitingListMode] = useState(false)
+  const [showEnrollmentDialog, setShowEnrollmentDialog] = useState(false)
 
   // Waiting list form
   const waitingListForm = useForm<WaitingListForm>({
@@ -167,10 +169,10 @@ export default function Profile() {
     enabled: !!user?.id
   });
 
-  // Query user's assigned spots (for owners and admins)
+  // Query user's assigned spots (for all authenticated users to check BCI-managed spots)
   const { data: assignedSpots = [], isLoading: isLoadingSpots } = useQuery<ParkingSpot[]>({
     queryKey: ["/api/users", user?.id, "assigned-spots"],
-    enabled: !!user?.id && (isOwner() || isAdmin())
+    enabled: !!user?.id
   });
 
   // Query user's vehicles
@@ -204,11 +206,19 @@ export default function Profile() {
       };
       
       const response = await apiRequest("/api/waiting-list", { method: 'POST', body: waitingListData });
+      
+      // Handle 403 specifically
+      if (response.status === 403) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "You are not allowed to enroll in the waiting list");
+      }
+      
       return response.json();
     },
     onSuccess: (newEntry) => {
       queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/user", user?.id] });
       setIsEnrolledInWaitingList(true);
+      setShowEnrollmentDialog(false);
       waitingListForm.reset();
 
       // Send welcome notification (in background, don't block UI)
@@ -1278,302 +1288,6 @@ export default function Profile() {
           </Dialog>
         </div>
 
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div>
-                          <Label>{t("profile.profileVisibility")}</Label>
-                          <p className="text-sm text-muted-foreground">
-                            {t("profile.profileVisibilityDesc")}
-                          </p>
-                        </div>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button size="icon" variant="ghost" data-testid="info-profile-visibility" aria-label={t("info.security.profileVisibility.title")}>
-                                  <Info className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{t("tooltip.info.profileVisibility")}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-80" data-testid="popover-profile-visibility">
-                            <div className="space-y-2">
-                              <h4 className="font-semibold">{t("info.security.profileVisibility.title")}</h4>
-                              <p className="text-sm text-muted-foreground">
-                                {t("info.security.profileVisibility.content")}
-                              </p>
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Select defaultValue="colleagues">
-                            <SelectTrigger className="w-[200px]" data-testid="select-profile-visibility">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="colleagues">{t("profile.bciEmployeesOnly")}</SelectItem>
-                              <SelectItem value="private">{t("profile.private")}</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{t("tooltip.security.profileVisibility")}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                    
-                    <Separator />
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div>
-                          <Label>{t("profile.contactSharing")}</Label>
-                          <p className="text-sm text-muted-foreground">
-                            {t("profile.contactSharingDesc")}
-                          </p>
-                        </div>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button size="icon" variant="ghost" data-testid="info-contact-sharing" aria-label={t("info.security.contactSharing.title")}>
-                                  <Info className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{t("tooltip.info.contactSharing")}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-80" data-testid="popover-contact-sharing">
-                            <div className="space-y-2">
-                              <h4 className="font-semibold">{t("info.security.contactSharing.title")}</h4>
-                              <p className="text-sm text-muted-foreground">
-                                {t("info.security.contactSharing.content")}
-                              </p>
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Switch defaultChecked data-testid="switch-contact-sharing" />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{t("tooltip.security.dataSharing")}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                    
-                    <Separator />
-                    
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label>{t("profile.bookingHistory")}</Label>
-                        <p className="text-sm text-muted-foreground">
-                          {t("profile.bookingHistoryDesc")}
-                        </p>
-                      </div>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Switch data-testid="switch-booking-history" />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{t("tooltip.security.dataSharing")}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                  </div>
-                  
-                  <Separator />
-                  
-                  <div className="space-y-4">
-                    <h4 className="font-medium">{t("profile.securitySettings")}</h4>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div>
-                          <Label>{t("profile.twoFactor")}</Label>
-                          <p className="text-sm text-muted-foreground">
-                            {t("profile.twoFactorDesc")}
-                          </p>
-                        </div>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button size="icon" variant="ghost" data-testid="info-2fa" aria-label={t("info.security.twoFactor.title")}>
-                                  <Info className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{t("tooltip.info.twoFactor")}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-80" data-testid="popover-2fa">
-                            <div className="space-y-2">
-                              <h4 className="font-semibold">{t("info.security.twoFactor.title")}</h4>
-                              <p className="text-sm text-muted-foreground">
-                                {t("info.security.twoFactor.content")}
-                              </p>
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Badge variant="outline" data-testid="badge-2fa-status">{t("profile.notEnabled")}</Badge>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{t("tooltip.security.twoFactor")}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="outline" className="flex-1" data-testid="button-enable-2fa">
-                            <Key className="h-4 w-4 mr-2" />
-                            {t("profile.enableTwoFactor")}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{t("tooltip.security.twoFactor")}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                  </div>
-                  
-                  <Separator />
-                  
-                  <div className="space-y-2">
-                    <h4 className="font-medium">{t("profile.recentActivity")}</h4>
-                    <div className="text-sm text-muted-foreground space-y-1">
-                      <p>{t("profile.lastLogin", { date: "January 15, 2024", time: "9:30 AM" })}</p>
-                      <p>{t("profile.previousLogin", { date: "January 14, 2024", time: "8:15 AM" })}</p>
-                    </div>
-                  </div>
-                  
-                  <Separator />
-                  
-                  <div className="space-y-4">
-                    <h4 className="font-medium">{t("profile.accountActions")}</h4>
-                    <div className="flex flex-col gap-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Label>{t("profile.changePassword")}</Label>
-                          <p className="text-sm text-muted-foreground">
-                            {t("profile.changePasswordDesc")}
-                          </p>
-                        </div>
-                        <HoverCard>
-                          <HoverCardTrigger asChild>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button variant="outline" onClick={handleChangePassword} data-testid="button-change-password" aria-label={t("profile.changePassword")}>
-                                  <Key className="h-4 w-4 mr-2" />
-                                  {t("profile.changePassword")}
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{t("tooltip.profile.changePassword")}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </HoverCardTrigger>
-                          <HoverCardContent className="w-80" data-testid="hovercard-change-password">
-                            <div className="space-y-2">
-                              <h4 className="font-semibold">{t("info.security.changePassword.title")}</h4>
-                              <p className="text-sm text-muted-foreground">
-                                {t("info.security.changePassword.content")}
-                              </p>
-                            </div>
-                          </HoverCardContent>
-                        </HoverCard>
-                      </div>
-                      
-                      <Separator />
-                      
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Label>{t("profile.exportData")}</Label>
-                          <p className="text-sm text-muted-foreground">
-                            {t("profile.exportDataDesc")}
-                          </p>
-                        </div>
-                        <HoverCard>
-                          <HoverCardTrigger asChild>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button variant="outline" onClick={handleExportData} data-testid="button-export-data" aria-label={t("profile.exportData")}>
-                                  <Download className="h-4 w-4 mr-2" />
-                                  {t("profile.exportData")}
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{t("tooltip.profile.exportData")}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </HoverCardTrigger>
-                          <HoverCardContent className="w-80" data-testid="hovercard-export-data">
-                            <div className="space-y-2">
-                              <h4 className="font-semibold">{t("info.security.exportData.title")}</h4>
-                              <p className="text-sm text-muted-foreground">
-                                {t("info.security.exportData.content")}
-                              </p>
-                            </div>
-                          </HoverCardContent>
-                        </HoverCard>
-                      </div>
-                      
-                      <Separator />
-                      
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Label className="text-destructive">{t("profile.deleteAccount")}</Label>
-                          <p className="text-sm text-muted-foreground">
-                            {t("profile.deleteAccountDesc")}
-                          </p>
-                        </div>
-                        <HoverCard>
-                          <HoverCardTrigger asChild>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button variant="destructive" onClick={handleDeleteAccount} data-testid="button-delete-account" aria-label={t("profile.deleteAccount")}>
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  {t("profile.deleteAccount")}
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{t("tooltip.profile.deleteAccount")}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </HoverCardTrigger>
-                          <HoverCardContent className="w-80" data-testid="hovercard-delete-account">
-                            <div className="space-y-2">
-                              <div className="flex items-center gap-2">
-                                <AlertTriangle className="h-5 w-5 text-destructive" />
-                                <h4 className="font-semibold text-destructive">{t("info.security.deleteAccount.title")}</h4>
-                              </div>
-                              <p className="text-sm text-muted-foreground">
-                                {t("info.security.deleteAccount.content")}
-                              </p>
-                            </div>
-                          </HoverCardContent>
-                        </HoverCard>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
-        
         <div className="space-y-6">
           {/* Parking Waiting List Sidebar */}
           <Card>
@@ -1785,12 +1499,12 @@ export default function Profile() {
                           name="reason"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-xs">{t("waitingList.form.reason")} ({t("common.optional")})</FormLabel>
+                              <FormLabel className="text-xs">{t("waitingList.form.reason")}</FormLabel>
                               <FormControl>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <Textarea 
-                                      placeholder={t("placeholder.briefReason")}
+                                      placeholder="Please explain why you need a parking spot"
                                       className="resize-none h-16 text-xs"
                                       data-testid="textarea-reason"
                                       {...field}
@@ -1850,46 +1564,56 @@ export default function Profile() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/50 rounded-lg p-3">
-                    <div className="flex items-start gap-2">
-                      <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5" />
-                      <div className="space-y-1">
-                        <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                          {t("waitingList.joinTitle")}
-                        </h4>
-                        <p className="text-xs text-blue-700 dark:text-blue-300">
-                          {t("waitingList.joinDescription")}
-                        </p>
+                  {/* Check if user has BCI-managed spots */}
+                  {assignedSpots.some(spot => spot.isBciManaged) ? (
+                    <Alert data-testid="alert-bci-managed-spot">
+                      <Info className="h-4 w-4" />
+                      <AlertDescription>
+                        You already have a BCI-assigned spot and cannot enroll in the waiting list. Only users without BCI-managed spots can join the waiting list.
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <>
+                      <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/50 rounded-lg p-3">
+                        <div className="flex items-start gap-2">
+                          <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5" />
+                          <div className="space-y-1">
+                            <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                              {t("waitingList.joinTitle")}
+                            </h4>
+                            <p className="text-xs text-blue-700 dark:text-blue-300">
+                              {t("waitingList.joinDescription")}
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="w-full text-xs"
-                        onClick={() => createWaitingListMutation.mutate({
-                          preferredSpotType: "regular",
-                          preferredBuilding: "Building A",
-                          priority: "2",
-                          reason: "Daily commute"
-                        })}
-                        disabled={createWaitingListMutation.isPending}
-                        data-testid="button-join-waiting-list"
-                      >
-                        {createWaitingListMutation.isPending ? (
-                          <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                        ) : (
-                          <Plus className="h-3 w-3 mr-1" />
-                        )}
-                        {t("waitingList.enrollButton")}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{t("tooltip.waitingList.enroll")}</p>
-                    </TooltipContent>
-                  </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="w-full text-xs"
+                            onClick={() => {
+                              waitingListForm.reset();
+                              setShowEnrollmentDialog(true);
+                            }}
+                            disabled={isLoadingSpots}
+                            data-testid="button-join-waiting-list"
+                          >
+                            {isLoadingSpots ? (
+                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                            ) : (
+                              <Plus className="h-3 w-3 mr-1" />
+                            )}
+                            {isLoadingSpots ? t("common.loading") : t("waitingList.enrollButton")}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{isLoadingSpots ? "Checking your parking spot status..." : t("tooltip.waitingList.enroll")}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -2022,6 +1746,134 @@ export default function Profile() {
               </Tooltip>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Waiting List Enrollment Dialog */}
+      <Dialog open={showEnrollmentDialog} onOpenChange={setShowEnrollmentDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarClock className="h-5 w-5" />
+              {t("waitingList.enrollButton")}
+            </DialogTitle>
+          </DialogHeader>
+          <Form {...waitingListForm}>
+            <form onSubmit={waitingListForm.handleSubmit((data) => createWaitingListMutation.mutate(data))} className="space-y-4">
+              <FormField
+                control={waitingListForm.control}
+                name="preferredSpotType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("waitingList.form.preferredSpotType")}</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-enrollment-spot-type">
+                          <SelectValue placeholder={t("placeholder.selectSpotType")} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="regular">{t("spotType.regular")}</SelectItem>
+                        <SelectItem value="electric">{t("spotType.electric")}</SelectItem>
+                        <SelectItem value="accessible">{t("spotType.accessible")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={waitingListForm.control}
+                name="preferredBuilding"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("waitingList.form.preferredBuilding")}</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-enrollment-building">
+                          <SelectValue placeholder={t("placeholder.selectBuilding")} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {buildingOptions.map((building) => (
+                          <SelectItem key={building.value} value={building.value}>
+                            {building.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={waitingListForm.control}
+                name="priority"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("waitingList.form.priority")}</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-enrollment-priority">
+                          <SelectValue placeholder={t("placeholder.selectPriority")} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {Object.entries(priorityLevels).map(([value, config]) => (
+                          <SelectItem key={value} value={value}>
+                            {config.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={waitingListForm.control}
+                name="reason"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("waitingList.form.reason")}</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Please explain why you need a parking spot"
+                        className="resize-none h-20"
+                        data-testid="textarea-enrollment-reason"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="flex justify-end gap-2 pt-4">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setShowEnrollmentDialog(false)}
+                  data-testid="button-cancel-enrollment"
+                >
+                  {t("common.cancel")}
+                </Button>
+                <Button 
+                  type="submit"
+                  disabled={createWaitingListMutation.isPending}
+                  data-testid="button-submit-enrollment"
+                >
+                  {createWaitingListMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  {t("waitingList.enrollButton")}
+                </Button>
+              </div>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
     </div>

@@ -5,7 +5,7 @@ import { setupAuth, isAuthenticated, requireAdmin, getAuthenticatedUserId, getAu
 import { z } from "zod";
 import { db } from "./db";
 import { parkingSpots } from "@shared/schema";
-import { inArray } from "drizzle-orm";
+import { inArray, and, eq } from "drizzle-orm";
 import { 
   sendAssignmentNotification, 
   sendWelcomeNotification,
@@ -2441,6 +2441,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
+      }
+      
+      // Check if user already has a BCI-managed spot
+      const userBciSpots = await db
+        .select()
+        .from(parkingSpots)
+        .where(and(
+          eq(parkingSpots.ownerId, userId),
+          eq(parkingSpots.isBciManaged, true)
+        ))
+        .limit(1);
+      
+      if (userBciSpots.length > 0) {
+        return res.status(403).json({ 
+          error: "You already have a BCI-assigned spot and cannot enroll in the waiting list" 
+        });
       }
       
       // Validate request body and add user information

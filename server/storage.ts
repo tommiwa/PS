@@ -36,7 +36,7 @@ import { auditDecorator } from "./audit-service";
 import { type IAuditStorage } from "./audit-storage";
 import { db } from "./db";
 import { spotListings, parkingSpots, users, waitingList } from "@shared/schema";
-import { eq, or, ilike, asc, and } from "drizzle-orm";
+import { eq, or, ilike, asc, and, notExists, sql as sqlOp } from "drizzle-orm";
 
 // Storage interface with comprehensive CRUD methods
 export interface IStorage {
@@ -942,10 +942,21 @@ export class MemStorage implements IStorage {
   }
 
   async getActiveWaitingList(): Promise<WaitingList[]> {
+    // Exclude users who already have BCI-managed spots
     const entries = await db
       .select()
       .from(waitingList)
-      .where(eq(waitingList.status, 'active'))
+      .where(and(
+        eq(waitingList.status, 'active'),
+        notExists(
+          db.select({ id: parkingSpots.id })
+            .from(parkingSpots)
+            .where(and(
+              eq(parkingSpots.ownerId, waitingList.userId),
+              eq(parkingSpots.isBciManaged, true)
+            ))
+        )
+      ))
       .orderBy(asc(waitingList.priority));
     
     // Cache in memory

@@ -2020,6 +2020,14 @@ export default function AdminParkingManagement() {
                         Enrolled Date
                       </SortableTableHeader>
                       <TableHead>Waiting Days</TableHead>
+                      <SortableTableHeader
+                        column="reason"
+                        currentSortColumn={waitingListSortState.column}
+                        currentSortDirection={waitingListSortState.direction}
+                        onSort={handleWaitingListSort}
+                      >
+                        Reason
+                      </SortableTableHeader>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -2057,6 +2065,22 @@ export default function AdminParkingManagement() {
                           </TableCell>
                           <TableCell data-testid={`text-waiting-days-${item.id}`}>
                             <Badge variant="outline">{waitingDays} days</Badge>
+                          </TableCell>
+                          <TableCell data-testid={`text-waiting-reason-${item.id}`}>
+                            {item.reason && item.reason.trim() ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="max-w-[200px] truncate block cursor-help">
+                                    {item.reason}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-sm">
+                                  <p>{item.reason}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">Not specified</span>
+                            )}
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center justify-end gap-1">
