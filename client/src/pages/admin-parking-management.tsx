@@ -35,19 +35,8 @@ import { quickExportParkingSpotsPDF, quickExportParkingSpotsExcel, quickExportWa
 
 // Standard parking locations (preferred for new spots)
 const STANDARD_PARKING_LOCATIONS = [
-  { value: "Building A - Level 1", label: "Building A - Level 1" },
-  { value: "Building A - Level 2", label: "Building A - Level 2" },
-  { value: "Building B - Level 1", label: "Building B - Level 1" },
-  { value: "Building B - Level 2", label: "Building B - Level 2" },
-  { value: "Building C - Level 1", label: "Building C - Level 1" },
-  { value: "Building D - Level 1", label: "Building D - Level 1" },
-  { value: "Main Parking Lot", label: "Main Parking Lot" },
-  { value: "Parking Garage - P1", label: "Parking Garage - P1" },
-  { value: "Parking Garage - P2", label: "Parking Garage - P2" },
-  { value: "Outdoor Lot - North", label: "Outdoor Lot - North" },
-  { value: "Outdoor Lot - South", label: "Outdoor Lot - South" },
-  { value: "Underground - Level 1", label: "Underground - Level 1" },
-  { value: "Underground - Level 2", label: "Underground - Level 2" }
+  { value: "Victoria - 750 Pandora Ave, Parking Level 1", label: "Victoria - 750 Pandora Ave, Parking Level 1" },
+  { value: "Victoria - 750 Pandora Ave, Parking Level 2", label: "Victoria - 750 Pandora Ave, Parking Level 2" }
 ];
 
 export default function AdminParkingManagement() {

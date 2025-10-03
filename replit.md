@@ -50,6 +50,7 @@ Preferred communication style: Simple, everyday language.
 - **Typography**: Inter font family.
 - **Layout System**: Tailwind's 8-point grid system.
 - **Component Library**: Custom components for parking functionality.
+- **Location Format**: All parking spot locations follow the standardized format: "Victoria - 750 Pandora Ave, Parking Level 1" or "Victoria - 750 Pandora Ave, Parking Level 2" (Building - Address, then Parking Level X)
 
 ### Key Features
 - **Multi-role Dashboard**: Dynamic content and navigation per user role, displaying all applicable sections simultaneously for multi-role users.

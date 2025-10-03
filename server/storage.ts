@@ -308,7 +308,7 @@ export class MemStorage implements IStorage {
       let isBookable: boolean;
 
       if (taxableBenefitSpots.includes(spotNum)) {
-        spotType = "taxable_benefit";
+        spotType = "reserved";
         description = "Taxable benefit parking stall";
         isBookable = false;
       } else if (accessibleSpots.includes(spotNum)) {
@@ -330,7 +330,7 @@ export class MemStorage implements IStorage {
       }
 
       // All spots are at the same BCI location
-      const buildingLocation = "750 Pandora Ave, Victoria, BC - Level 1";
+      const buildingLocation = "Victoria - 750 Pandora Ave, Parking Level 1";
 
       parkingSpots.push({
         id: `spot-${spotNum}`,
@@ -341,6 +341,7 @@ export class MemStorage implements IStorage {
         isIndoor: true,
         isActive: true,
         isBookable,
+        isBciManaged: true, // All BCI spots are managed by admin
         ownerId: null, // NO OWNERS - all spots unallocated
         createdAt: new Date()
       });
@@ -363,7 +364,7 @@ export class MemStorage implements IStorage {
       }
 
       // All spots are at the same BCI location
-      const buildingLocation = "750 Pandora Ave, Victoria, BC - Level 2";
+      const buildingLocation = "Victoria - 750 Pandora Ave, Parking Level 2";
 
       parkingSpots.push({
         id: `spot-${spotNum}`,
@@ -374,6 +375,7 @@ export class MemStorage implements IStorage {
         isIndoor: true,
         isActive: true,
         isBookable,
+        isBciManaged: true, // All BCI spots are managed by admin
         ownerId: null, // NO OWNERS - all spots unallocated
         createdAt: new Date()
       });

@@ -212,7 +212,7 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
     {
       id: "B-001",
       spotNumber: "A-15",
-      location: "750 Pandora Ave, Victoria BC - Level 2",
+      location: "Victoria - 750 Pandora Ave, Parking Level 2",
       date: "2024-01-16",
       startTime: "8:00 AM",
       endTime: "6:00 PM",
@@ -246,6 +246,7 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
       location: "South Parking Lot",
       spotType: "regular" as const,
       isIndoor: false,
+      isBciManaged: false,
       ownerId: "user-owner-002", // Changed from owner to ownerId with proper format
       description: "Regular parking spot in South Parking Lot",
       isActive: true, // Changed from isAvailable to isActive
@@ -255,9 +256,10 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
     {
       id: "P-004",
       spotNumber: "A-22",
-      location: "750 Pandora Ave, Victoria BC - Level 1",
+      location: "Victoria - 750 Pandora Ave, Parking Level 1",
       spotType: "accessible" as const,
       isIndoor: true,
+      isBciManaged: true,
       ownerId: "user-owner-003", // Changed from owner to ownerId with proper format
       description: "Accessible parking spot with convenient access",
       isActive: true, // Changed from isAvailable to isActive
@@ -469,8 +471,8 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
                             <div>
-                              <div className="font-medium">750 Pandora Ave, Victoria BC</div>
-                              <div className="text-xs text-muted-foreground">Level 2 - Indoor</div>
+                              <div className="font-medium">Victoria - 750 Pandora Ave</div>
+                              <div className="text-xs text-muted-foreground">Parking Level 2 - Indoor</div>
                             </div>
                             <div className="text-right">
                               <div className="text-sm font-medium">67%</div>

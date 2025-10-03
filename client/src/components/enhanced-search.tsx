@@ -25,15 +25,15 @@ interface EnhancedSearchProps {
 }
 
 const SEARCH_SUGGESTIONS = [
-  "750 pandora ave electric",
+  "Victoria 750 pandora ave electric",
   "tesla charging spots",
   "accessible spots under $25", 
   "inside spots",
   "electric charging",
-  "level 1",
-  "level 2 parking",
+  "parking level 1",
+  "parking level 2",
   "accessible tomorrow",
-  "regular spots 750 pandora ave",
+  "regular spots Victoria",
   "tesla ev charger",
   "reserved spots"
 ]
@@ -44,7 +44,7 @@ const QUICK_FILTERS = [
   { label: "Accessible", value: "accessible", icon: Accessibility, type: "spotType", tooltip: "Filter for accessible parking spots designed for mobility accommodations" },
   { label: "Inside Building", value: "inside", icon: MapPin, type: "location", tooltip: "Filter for indoor parking spots protected from weather" },
   { label: "Under $25", value: "cheap", icon: DollarSign, type: "price", tooltip: "Filter for budget-friendly parking spots under $25 per day" },
-  { label: "Main Building", value: "750 pandora ave", icon: MapPin, type: "location", tooltip: "Filter for parking spots at the main building (750 Pandora Ave)" },
+  { label: "Main Building", value: "750 pandora ave", icon: MapPin, type: "location", tooltip: "Filter for parking spots at Victoria - 750 Pandora Ave" },
   { label: "Today", value: "today", icon: Calendar, type: "date", tooltip: "Filter for parking spots available today" }
 ]
 
@@ -284,7 +284,7 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
                   <Input
                     ref={inputRef}
                     type="text"
-                    placeholder="Search parking spots... (e.g., '750 pandora ave electric $20-30', 'accessible north lot today')"
+                    placeholder="Search parking spots... (e.g., 'Victoria 750 pandora ave electric $20-30', 'accessible parking level 1')"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     onKeyDown={handleKeyDown}
