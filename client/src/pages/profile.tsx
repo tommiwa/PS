@@ -835,22 +835,35 @@ export default function Profile() {
                   </p>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {isLoadingWaitingList ? (
+                  {(() => {
+                    console.log("===== TAB BCI CHECK DEBUG =====");
+                    console.log("isLoadingWaitingList:", isLoadingWaitingList);
+                    console.log("isLoadingSpots:", isLoadingSpots);
+                    console.log("assignedSpots:", assignedSpots);
+                    console.log("assignedSpots.length:", assignedSpots.length);
+                    if (assignedSpots.length > 0) {
+                      console.log("First spot keys:", Object.keys(assignedSpots[0]));
+                      console.log("First spot isBciManaged:", assignedSpots[0].isBciManaged);
+                      console.log("Has BCI spot:", assignedSpots.some(spot => spot.isBciManaged));
+                    }
+                    console.log("==============================");
+                    return null;
+                  })()}
+                  {isLoadingWaitingList || isLoadingSpots ? (
                     <div className="flex items-center justify-center p-8">
                       <div className="text-sm text-muted-foreground">{t("common.loading")}</div>
                     </div>
-                  ) : !waitingListEntry ? (
-                    <Button 
-                      onClick={() => setIsEnrolledInWaitingList(true)}
-                      className="w-full"
-                      data-testid="button-join-waiting-list"
-                    >
-                      {t("waitingList.enrollButton")}
-                    </Button>
-                  ) : (
+                  ) : assignedSpots.some(spot => spot.isBciManaged) ? (
+                    <Alert data-testid="alert-bci-managed-spot-tab">
+                      <Info className="h-4 w-4" />
+                      <AlertDescription>
+                        You already have a BCI-assigned spot and cannot enroll in the waiting list. Only users without BCI-managed spots can join the waiting list.
+                      </AlertDescription>
+                    </Alert>
+                  ) : waitingListEntry ? (
                     <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800/50 rounded-lg p-3">
-                      <div className="flex items-start gap-2">
-                        <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5" />
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
                         <div className="space-y-1">
                           <h4 className="text-sm font-medium text-green-900 dark:text-green-100">
                             {t("waitingList.enrolled")}
@@ -861,6 +874,22 @@ export default function Profile() {
                         </div>
                       </div>
                     </div>
+                  ) : (
+                    <Button 
+                      onClick={() => setIsEnrolledInWaitingList(true)}
+                      className="w-full"
+                      data-testid="button-join-waiting-list-tab"
+                      disabled={isLoadingSpots}
+                    >
+                      {isLoadingSpots ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          {t("common.loading")}
+                        </>
+                      ) : (
+                        t("waitingList.enrollButton")
+                      )}
+                    </Button>
                   )}
                 </CardContent>
               </Card>
@@ -1298,11 +1327,32 @@ export default function Profile() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {isLoadingWaitingList ? (
+              {(() => {
+                console.log("===== SIDEBAR BCI CHECK DEBUG =====");
+                console.log("isLoadingWaitingList:", isLoadingWaitingList);
+                console.log("isLoadingSpots:", isLoadingSpots);
+                console.log("assignedSpots:", assignedSpots);
+                console.log("assignedSpots.length:", assignedSpots.length);
+                if (assignedSpots.length > 0) {
+                  console.log("First spot keys:", Object.keys(assignedSpots[0]));
+                  console.log("First spot isBciManaged:", assignedSpots[0].isBciManaged);
+                  console.log("Has BCI spot:", assignedSpots.some(spot => spot.isBciManaged));
+                }
+                console.log("===================================");
+                return null;
+              })()}
+              {isLoadingWaitingList || isLoadingSpots ? (
                 <div className="flex items-center justify-center py-4">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   <span className="ml-2 text-sm">{t("common.loading")}</span>
                 </div>
+              ) : assignedSpots.some(spot => spot.isBciManaged) ? (
+                <Alert data-testid="alert-bci-managed-spot">
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>
+                    You already have a BCI-assigned spot and cannot enroll in the waiting list. Only users without BCI-managed spots can join the waiting list.
+                  </AlertDescription>
+                </Alert>
               ) : waitingListEntry?.status === "active" ? (
                 <div className="space-y-3">
                   {!editWaitingListMode ? (
@@ -1564,56 +1614,44 @@ export default function Profile() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {/* Check if user has BCI-managed spots */}
-                  {assignedSpots.some(spot => spot.isBciManaged) ? (
-                    <Alert data-testid="alert-bci-managed-spot">
-                      <Info className="h-4 w-4" />
-                      <AlertDescription>
-                        You already have a BCI-assigned spot and cannot enroll in the waiting list. Only users without BCI-managed spots can join the waiting list.
-                      </AlertDescription>
-                    </Alert>
-                  ) : (
-                    <>
-                      <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/50 rounded-lg p-3">
-                        <div className="flex items-start gap-2">
-                          <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5" />
-                          <div className="space-y-1">
-                            <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                              {t("waitingList.joinTitle")}
-                            </h4>
-                            <p className="text-xs text-blue-700 dark:text-blue-300">
-                              {t("waitingList.joinDescription")}
-                            </p>
-                          </div>
-                        </div>
+                  <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/50 rounded-lg p-3">
+                    <div className="flex items-start gap-2">
+                      <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5" />
+                      <div className="space-y-1">
+                        <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                          {t("waitingList.joinTitle")}
+                        </h4>
+                        <p className="text-xs text-blue-700 dark:text-blue-300">
+                          {t("waitingList.joinDescription")}
+                        </p>
                       </div>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            className="w-full text-xs"
-                            onClick={() => {
-                              waitingListForm.reset();
-                              setShowEnrollmentDialog(true);
-                            }}
-                            disabled={isLoadingSpots}
-                            data-testid="button-join-waiting-list"
-                          >
-                            {isLoadingSpots ? (
-                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                            ) : (
-                              <Plus className="h-3 w-3 mr-1" />
-                            )}
-                            {isLoadingSpots ? t("common.loading") : t("waitingList.enrollButton")}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{isLoadingSpots ? "Checking your parking spot status..." : t("tooltip.waitingList.enroll")}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </>
-                  )}
+                    </div>
+                  </div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="w-full text-xs"
+                        onClick={() => {
+                          waitingListForm.reset();
+                          setShowEnrollmentDialog(true);
+                        }}
+                        disabled={isLoadingSpots}
+                        data-testid="button-join-waiting-list"
+                      >
+                        {isLoadingSpots ? (
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        ) : (
+                          <Plus className="h-3 w-3 mr-1" />
+                        )}
+                        {isLoadingSpots ? t("common.loading") : t("waitingList.enrollButton")}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{isLoadingSpots ? "Checking your parking spot status..." : t("tooltip.waitingList.enroll")}</p>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
               )}
             </CardContent>

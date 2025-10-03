@@ -339,6 +339,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const assignedSpots = await storage.getParkingSpotsByOwner(userId);
+      console.log("===== DEBUG: assigned-spots API response =====");
+      console.log("Number of spots:", assignedSpots.length);
+      if (assignedSpots.length > 0) {
+        console.log("First spot keys:", Object.keys(assignedSpots[0]));
+        console.log("First spot sample:", JSON.stringify(assignedSpots[0], null, 2));
+      }
+      console.log("==============================================");
       res.json(assignedSpots);
     } catch (error) {
       console.error("Error fetching assigned spots:", error);
