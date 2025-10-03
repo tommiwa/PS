@@ -1102,14 +1102,14 @@ export default function AdminParkingManagement() {
               <CardTitle className="text-sm font-medium">{t("admin.parkingManagement.availableSpots")}</CardTitle>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-4 w-4 p-0"
+                  <button
+                    type="button"
+                    className="rounded-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                     aria-label="Available spots information"
+                    tabIndex={0}
                   >
-                    <Info className="h-3 w-3 text-muted-foreground" />
-                  </Button>
+                    <Car className="h-5 w-5 text-blue-600" />
+                  </button>
                 </TooltipTrigger>
                 <TooltipContent>
                   View spots currently unassigned and available for rental
@@ -1134,14 +1134,14 @@ export default function AdminParkingManagement() {
               <CardTitle className="text-sm font-medium">{t("admin.parkingManagement.usersWaiting")}</CardTitle>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-4 w-4 p-0"
+                  <button
+                    type="button"
+                    className="rounded-sm focus:outline-none focus:ring-2 focus:ring-green-400"
                     aria-label="Users waiting information"
+                    tabIndex={0}
                   >
-                    <Info className="h-3 w-3 text-muted-foreground" />
-                  </Button>
+                    <Users className="h-5 w-5 text-green-600" />
+                  </button>
                 </TooltipTrigger>
                 <TooltipContent>
                   View users actively waiting for spot assignments
@@ -1166,14 +1166,14 @@ export default function AdminParkingManagement() {
               <CardTitle className="text-sm font-medium">{t("admin.parkingManagement.avgWaitTime")}</CardTitle>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-4 w-4 p-0"
+                  <button
+                    type="button"
+                    className="rounded-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
                     aria-label="Average wait time information"
+                    tabIndex={0}
                   >
-                    <Info className="h-3 w-3 text-muted-foreground" />
-                  </Button>
+                    <Timer className="h-5 w-5 text-purple-600" />
+                  </button>
                 </TooltipTrigger>
                 <TooltipContent>
                   View average days users wait before getting assigned
@@ -1198,14 +1198,14 @@ export default function AdminParkingManagement() {
               <CardTitle className="text-sm font-medium">{t("admin.parkingManagement.totalAssigned")}</CardTitle>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-4 w-4 p-0"
+                  <button
+                    type="button"
+                    className="rounded-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
                     aria-label="Total assigned information"
+                    tabIndex={0}
                   >
-                    <Info className="h-3 w-3 text-muted-foreground" />
-                  </Button>
+                    <Target className="h-5 w-5 text-orange-600" />
+                  </button>
                 </TooltipTrigger>
                 <TooltipContent>
                   View total spots successfully assigned from waiting list
