@@ -28,7 +28,7 @@ import {
   Timer, Target, CheckCircle2, Search, Filter,
   Zap, Accessibility, Building, MoreHorizontal, Info, RefreshCw,
   Trash2, Edit, UserMinus, UserCheck, Download, FileText,
-  Eye, EyeOff
+  Eye, EyeOff, Layers, Sparkles
 } from "lucide-react"
 import type { WaitingList, ParkingSpot, ParkingSpotWithUser, SpotType } from "@shared/schema"
 import { quickExportParkingSpotsPDF, quickExportParkingSpotsExcel, quickExportWaitingListPDF, quickExportWaitingListExcel } from "@/utils/export-utils"
@@ -1229,9 +1229,18 @@ export default function AdminParkingManagement() {
       {/* Main Content Tabs */}
       <Tabs value={activeSpotTab} onValueChange={setActiveSpotTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="all" data-testid="tab-all-spots">{t("admin.parkingManagement.allSpots")}</TabsTrigger>
-          <TabsTrigger value="unallocated" data-testid="tab-available-spots">{t("admin.parkingManagement.available")} ({unallocatedSpots.length})</TabsTrigger>
-          <TabsTrigger value="waiting" data-testid="tab-waiting-list">{t("admin.parkingManagement.waiting")} ({waitingListMetrics.active})</TabsTrigger>
+          <TabsTrigger value="all" data-testid="tab-all-spots" className="gap-2">
+            <Layers className="h-4 w-4 text-blue-600" />
+            {t("admin.parkingManagement.allSpots")}
+          </TabsTrigger>
+          <TabsTrigger value="unallocated" data-testid="tab-available-spots" className="gap-2">
+            <Sparkles className="h-4 w-4 text-green-600" />
+            {t("admin.parkingManagement.available")} ({unallocatedSpots.length})
+          </TabsTrigger>
+          <TabsTrigger value="waiting" data-testid="tab-waiting-list" className="gap-2">
+            <Clock className="h-4 w-4 text-orange-600" />
+            {t("admin.parkingManagement.waiting")} ({waitingListMetrics.active})
+          </TabsTrigger>
         </TabsList>
 
         {/* All Spots and Unallocated Spots Tab */}
