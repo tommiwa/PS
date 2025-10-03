@@ -22,8 +22,8 @@ interface AuthContextType {
   isRenter: () => boolean;
   // Role switching for admins
   viewRole: UserRole | null;
-  switchViewRole: (role: UserRole) => void;
-  resetViewRole: () => void;
+  switchViewRole: (role: UserRole) => Promise<void>;
+  resetViewRole: () => Promise<void>;
   getCurrentViewRole: () => UserRole | null;
   isViewingAs: (role: UserRole) => boolean;
   refreshUser: () => Promise<void>;
@@ -42,8 +42,8 @@ const defaultAuthContextValue: AuthContextType = {
   isOwner: () => false,
   isRenter: () => false,
   viewRole: null,
-  switchViewRole: () => { throw new Error("AuthProvider not initialized") },
-  resetViewRole: () => { throw new Error("AuthProvider not initialized") },
+  switchViewRole: async () => { throw new Error("AuthProvider not initialized") },
+  resetViewRole: async () => { throw new Error("AuthProvider not initialized") },
   getCurrentViewRole: () => null,
   isViewingAs: () => false,
   refreshUser: async () => { throw new Error("AuthProvider not initialized") },
@@ -87,6 +87,27 @@ export function AuthProvider({ children }: AuthProviderProps) {
     fetchUser();
   }, []);
 
+  // Initialize view role from backend session
+  useEffect(() => {
+    const initializeViewRole = async () => {
+      try {
+        const response = await fetch('/api/auth/view-as', { credentials: 'include' });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.viewAsRole) {
+            setViewRole(data.viewAsRole);
+          }
+        }
+      } catch (error) {
+        console.error("Error initializing view role:", error);
+      }
+    };
+    
+    if (user?.roles?.includes("admin")) {
+      initializeViewRole();
+    }
+  }, [user]);
+
   const logout = () => {
     window.location.href = '/api/logout';
   };
@@ -121,14 +142,36 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   // Role switching functions for admins
-  const switchViewRole = (role: UserRole) => {
+  const switchViewRole = async (role: UserRole) => {
     if (user?.roles?.includes("admin")) {
       setViewRole(role);
+      
+      // Persist to backend
+      try {
+        await fetch('/api/auth/view-as', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ role }),
+          credentials: 'include',
+        });
+      } catch (error) {
+        console.error("Error persisting view role:", error);
+      }
     }
   };
 
-  const resetViewRole = () => {
+  const resetViewRole = async () => {
     setViewRole(null);
+    
+    // Clear from backend
+    try {
+      await fetch('/api/auth/view-as', {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+    } catch (error) {
+      console.error("Error clearing view role:", error);
+    }
   };
 
   const getCurrentViewRole = (): UserRole | null => {
