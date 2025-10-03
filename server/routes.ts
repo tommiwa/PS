@@ -141,6 +141,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // View-as endpoints for admin role impersonation
+  // POST /api/auth/view-as - Set view-as role (Admin only)
+  app.post('/api/auth/view-as', requireAdmin, async (req: any, res) => {
+    try {
+      const { role } = req.body;
+      
+      // Validate role
+      if (!role || !['admin', 'owner', 'renter'].includes(role)) {
+        return res.status(400).json({ error: "Invalid role. Must be 'admin', 'owner', or 'renter'" });
+      }
+      
+      // Store in session
+      req.session.viewAsRole = role;
+      
+      // Save session and return response
+      req.session.save((err: any) => {
+        if (err) {
+          console.error("Failed to save session:", err);
+          return res.status(500).json({ error: "Failed to save session" });
+        }
+        
+        const userId = getAuthenticatedUserId(req);
+        console.log(`Admin ${userId} is now viewing as ${role}`);
+        res.json({ success: true, viewAsRole: role });
+      });
+    } catch (error) {
+      console.error("Error setting view-as role:", error);
+      res.status(500).json({ error: "Failed to set view-as role" });
+    }
+  });
+
+  // GET /api/auth/view-as - Get current view-as role
+  app.get('/api/auth/view-as', isAuthenticated, async (req: any, res) => {
+    try {
+      const viewAsRole = req.session?.viewAsRole || null;
+      res.json({ viewAsRole });
+    } catch (error) {
+      console.error("Error getting view-as role:", error);
+      res.status(500).json({ error: "Failed to get view-as role" });
+    }
+  });
+
+  // DELETE /api/auth/view-as - Clear view-as role
+  app.delete('/api/auth/view-as', isAuthenticated, async (req: any, res) => {
+    try {
+      // Clear the view-as role from session
+      if (req.session?.viewAsRole) {
+        delete req.session.viewAsRole;
+      }
+      
+      // Save session and return response
+      req.session.save((err: any) => {
+        if (err) {
+          console.error("Failed to save session:", err);
+          return res.status(500).json({ error: "Failed to save session" });
+        }
+        
+        const userId = getAuthenticatedUserId(req);
+        console.log(`Admin ${userId} cleared view-as role`);
+        res.json({ success: true, message: "View-as role cleared" });
+      });
+    } catch (error) {
+      console.error("Error clearing view-as role:", error);
+      res.status(500).json({ error: "Failed to clear view-as role" });
+    }
+  });
+
   // Create new user (Admin only)
   app.post("/api/users", requireAdmin, async (req: any, res) => {
     try {

@@ -12,6 +12,13 @@ import { db } from "./db";
 import { users, parkingSpots, type User } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
+// Extend Express Session to include viewAsRole
+declare module 'express-session' {
+  interface SessionData {
+    viewAsRole?: string;
+  }
+}
+
 if (!process.env.REPLIT_DOMAINS) {
   throw new Error("Environment variable REPLIT_DOMAINS not provided");
 }
@@ -395,6 +402,11 @@ export async function setupAuth(app: Express) {
       actorEmail = (req.user as any).claims.email;
     }
     
+    // Clear view-as role before destroying session
+    if (req.session?.viewAsRole) {
+      delete req.session.viewAsRole;
+    }
+    
     // Clear the session
     req.session.destroy((err) => {
       if (err) {
@@ -528,6 +540,11 @@ export function getAuthenticatedUserId(req: any): string | null {
 
 // Helper to get authenticated user roles
 export async function getAuthenticatedUserRole(req: any): Promise<string | null> {
+  // Check for view-as override in session (for admin impersonation)
+  if (req.session?.viewAsRole) {
+    return req.session.viewAsRole;
+  }
+  
   const userId = getAuthenticatedUserId(req);
   if (!userId) return null;
   
