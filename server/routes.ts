@@ -1728,6 +1728,192 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Location endpoints
+  // GET /api/locations - Get all locations (authenticated users)
+  app.get("/api/locations", isAuthenticated, async (req, res) => {
+    try {
+      const locations = await storage.getLocations();
+      res.json(locations);
+    } catch (error) {
+      console.error("Error fetching locations:", error);
+      res.status(500).json({ error: "Failed to fetch locations" });
+    }
+  });
+
+  // POST /api/admin/locations - Create location (admin only)
+  app.post("/api/admin/locations", requireAdmin, async (req, res) => {
+    try {
+      const { campus, building, level, address, timezone, isActive } = req.body;
+      
+      if (!campus || !building || !level) {
+        return res.status(400).json({ error: "Campus, building, and level are required" });
+      }
+      
+      const location = await storage.createLocation({
+        campus: campus.trim(),
+        building: building.trim(),
+        level: level.trim(),
+        address: address?.trim(),
+        timezone: timezone || "America/Vancouver",
+        isActive: isActive ?? true
+      });
+      res.status(201).json(location);
+    } catch (error: any) {
+      console.error("Error creating location:", error);
+      if (error.message?.includes('unique') || error.code === '23505') {
+        return res.status(409).json({ error: "Location with this configuration already exists" });
+      }
+      res.status(500).json({ error: "Failed to create location" });
+    }
+  });
+
+  // PATCH /api/admin/locations/:id - Update location (admin only)
+  app.patch("/api/admin/locations/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { campus, building, level, address, timezone, isActive } = req.body;
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid location ID" });
+      }
+      
+      const updates: any = {};
+      if (campus !== undefined) updates.campus = campus.trim();
+      if (building !== undefined) updates.building = building.trim();
+      if (level !== undefined) updates.level = level.trim();
+      if (address !== undefined) updates.address = address?.trim();
+      if (timezone !== undefined) updates.timezone = timezone;
+      if (isActive !== undefined) updates.isActive = isActive;
+      
+      const location = await storage.updateLocation(id, updates);
+      
+      if (!location) {
+        return res.status(404).json({ error: "Location not found" });
+      }
+      
+      res.json(location);
+    } catch (error: any) {
+      console.error("Error updating location:", error);
+      if (error.message?.includes('unique') || error.code === '23505') {
+        return res.status(409).json({ error: "Location with this configuration already exists" });
+      }
+      res.status(500).json({ error: "Failed to update location" });
+    }
+  });
+
+  // DELETE /api/admin/locations/:id - Delete location (admin only)
+  app.delete("/api/admin/locations/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid location ID" });
+      }
+      
+      const deleted = await storage.deleteLocation(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Location not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error: any) {
+      console.error("Error deleting location:", error);
+      res.status(500).json({ error: "Failed to delete location" });
+    }
+  });
+
+  // Spot Type endpoints
+  // GET /api/spot-types - Get all spot types (authenticated users)
+  app.get("/api/spot-types", isAuthenticated, async (req, res) => {
+    try {
+      const spotTypes = await storage.getSpotTypes();
+      res.json(spotTypes);
+    } catch (error) {
+      console.error("Error fetching spot types:", error);
+      res.status(500).json({ error: "Failed to fetch spot types" });
+    }
+  });
+
+  // POST /api/admin/spot-types - Create spot type (admin only)
+  app.post("/api/admin/spot-types", requireAdmin, async (req, res) => {
+    try {
+      const { name, slug, description, isActive } = req.body;
+      
+      if (!name || !slug) {
+        return res.status(400).json({ error: "Name and slug are required" });
+      }
+      
+      const spotType = await storage.createSpotType({
+        name: name.trim(),
+        slug: slug.trim().toLowerCase(),
+        description: description?.trim(),
+        isActive: isActive ?? true
+      });
+      res.status(201).json(spotType);
+    } catch (error: any) {
+      console.error("Error creating spot type:", error);
+      if (error.message?.includes('unique') || error.code === '23505') {
+        return res.status(409).json({ error: "Spot type with this name or slug already exists" });
+      }
+      res.status(500).json({ error: "Failed to create spot type" });
+    }
+  });
+
+  // PATCH /api/admin/spot-types/:id - Update spot type (admin only)
+  app.patch("/api/admin/spot-types/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { name, slug, description, isActive } = req.body;
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid spot type ID" });
+      }
+      
+      const updates: any = {};
+      if (name !== undefined) updates.name = name.trim();
+      if (slug !== undefined) updates.slug = slug.trim().toLowerCase();
+      if (description !== undefined) updates.description = description?.trim();
+      if (isActive !== undefined) updates.isActive = isActive;
+      
+      const spotType = await storage.updateSpotType(id, updates);
+      
+      if (!spotType) {
+        return res.status(404).json({ error: "Spot type not found" });
+      }
+      
+      res.json(spotType);
+    } catch (error: any) {
+      console.error("Error updating spot type:", error);
+      if (error.message?.includes('unique') || error.code === '23505') {
+        return res.status(409).json({ error: "Spot type with this name or slug already exists" });
+      }
+      res.status(500).json({ error: "Failed to update spot type" });
+    }
+  });
+
+  // DELETE /api/admin/spot-types/:id - Delete spot type (admin only)
+  app.delete("/api/admin/spot-types/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid spot type ID" });
+      }
+      
+      const deleted = await storage.deleteSpotType(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Spot type not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error: any) {
+      console.error("Error deleting spot type:", error);
+      res.status(500).json({ error: "Failed to delete spot type" });
+    }
+  });
+
   // Assign a parking spot to a user (Admin only)
   app.post("/api/admin/assign-spot", requireAdmin, async (req, res) => {
     try {
