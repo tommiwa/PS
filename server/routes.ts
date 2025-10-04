@@ -281,6 +281,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
       };
       
+      // Allow admin to update status if provided
+      if (req.body.status !== undefined) {
+        updateData.status = req.body.status;
+      }
+      
       const updatedUser = await storage.updateUser(id, updateData);
       if (!updatedUser) {
         return res.status(404).json({ error: "User not found" });
@@ -405,6 +410,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting user:", error);
       res.status(500).json({ error: "Failed to delete user" });
+    }
+  });
+
+  // Suspend/Unsuspend user (Admin only)
+  app.patch("/api/users/:id/suspend", requireAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { suspend } = req.body;
+      
+      // Get existing user for audit trail
+      const existingUser = await storage.getUser(id);
+      if (!existingUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      // Determine new status
+      const newStatus = suspend ? "suspended" : "active";
+      
+      // Update user status
+      const updatedUser = await storage.updateUser(id, { status: newStatus });
+      if (!updatedUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      // Audit the status change
+      await auditService.logAction("UPDATE", "user", {
+        entityId: id,
+        message: `${suspend ? 'Suspended' : 'Activated'} user ${updatedUser.firstName} ${updatedUser.lastName} (${updatedUser.email})`,
+        before: { status: existingUser.status },
+        after: { status: updatedUser.status }
+      });
+      
+      res.json({ 
+        success: true, 
+        message: `User ${suspend ? 'suspended' : 'activated'} successfully`,
+        user: updatedUser 
+      });
+    } catch (error) {
+      console.error("Error updating user status:", error);
+      res.status(500).json({ error: "Failed to update user status" });
     }
   });
 
@@ -1862,13 +1907,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all users for assignment dropdown (Admin only)
   app.get("/api/admin/users", requireAdmin, async (req, res) => {
     try {
+      // Support status filtering via query parameter
+      const { status } = req.query;
+      
+      // Include deleted users only when filtering for "deleted" status
+      const includeDeleted = status === 'deleted';
+      
       // Get all actual users from storage
-      const allUsers = await storage.getAllUsers?.() || [];
+      const allUsers = await storage.getAllUsers?.(includeDeleted) || [];
       const allSpots = await storage.getAllParkingSpots?.() || [];
       const allBookings = await storage.getAllBookings?.() || [];
       
+      // Apply status filter if specified
+      let filteredUsers = allUsers;
+      if (status && status !== 'all' && typeof status === 'string') {
+        filteredUsers = allUsers.filter(user => user.status === status);
+      }
+      
       // Calculate real spots and bookings counts for each user
-      const usersWithCounts = allUsers.map(user => {
+      const usersWithCounts = filteredUsers.map(user => {
         const userSpots = allSpots.filter(spot => spot.ownerId === user.id);
         const userBookings = allBookings.filter(booking => 
           booking.renterId === user.id || booking.ownerId === user.id
@@ -1883,7 +1940,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           phone: user.phone || "",
           department: user.department || "Unknown",
           roles: user.roles,
-          status: "active", // Default status since User type doesn't have status field
+          status: user.status || "active",
           spotsOwned: userSpots.length,
           bookingsCount: userBookings.length,
           lastLogin: user.lastLogin ? (user.lastLogin instanceof Date ? user.lastLogin.toISOString() : user.lastLogin) : new Date().toISOString(),

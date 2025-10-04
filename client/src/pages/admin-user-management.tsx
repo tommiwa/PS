@@ -100,7 +100,8 @@ const createUserFormSchema = insertUserSchema.extend({
 }).omit({
   roles: true // Remove roles from schema since we'll use 'role' (singular) in the form
 }).extend({
-  role: z.string().optional() // Add singular 'role' field for the form
+  role: z.string().optional(), // Add singular 'role' field for the form
+  status: z.enum(["active", "suspended"]).optional() // Add status field
 });
 
 type CreateUserFormData = z.infer<typeof createUserFormSchema>;
@@ -317,7 +318,7 @@ export default function AdminUserManagement() {
         {value: 'all', label: 'All Status'},
         {value: 'active', label: 'Active'},
         {value: 'suspended', label: 'Suspended'},
-        {value: 'pending', label: 'Pending'}
+        {value: 'deleted', label: 'Deleted'}
       ]
     }
   ];
@@ -503,6 +504,7 @@ export default function AdminUserManagement() {
       phone: user.phone ?? "",
       department: user.department ?? "",
       role: user.roles?.[0] ?? "renter", // Convert roles array to single role for form
+      status: user.status ?? "active",
       memberSince: user.memberSince ?? new Date().toISOString().split('T')[0]
     })
     setShowEditUser(true)
@@ -1020,6 +1022,37 @@ export default function AdminUserManagement() {
                               <SelectItem value="renter">Renter</SelectItem>
                               <SelectItem value="owner">Owner</SelectItem>
                               <SelectItem value="admin">Admin</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={editForm.control}
+                      name="status"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Status</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value ?? "active"} value={field.value ?? "active"}>
+                            <FormControl>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <SelectTrigger data-testid="select-edit-status">
+                                    <SelectValue placeholder="Select status" />
+                                  </SelectTrigger>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  Active users can login and use the system. Suspended users cannot login.
+                                </TooltipContent>
+                              </Tooltip>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="active">Active</SelectItem>
+                              <SelectItem value="suspended">Suspended</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />

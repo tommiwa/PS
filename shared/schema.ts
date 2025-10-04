@@ -7,6 +7,10 @@ import { z } from "zod";
 export const userRoles = z.enum(["admin", "owner", "renter"]);
 export type UserRole = z.infer<typeof userRoles>;
 
+// Define user status enum
+export const userStatuses = z.enum(["active", "suspended", "deleted"]);
+export type UserStatus = z.infer<typeof userStatuses>;
+
 // Session storage table.
 // (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
 export const sessions = pgTable(
@@ -29,8 +33,10 @@ export const users = pgTable("users", {
   phone: text("phone"),
   department: text("department"),
   roles: text("roles").array().notNull().default(sql`ARRAY['renter']::text[]`),
+  status: text("status").notNull().$type<UserStatus>().default("active"),
   memberSince: text("member_since"),
   lastLogin: timestamp("last_login"),
+  deletedAt: timestamp("deleted_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

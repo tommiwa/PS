@@ -47,7 +47,7 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   getUserByEmail(email: string): Promise<User | undefined>;
-  getAllUsers(): Promise<User[]>;
+  getAllUsers(includeDeleted?: boolean): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
   deleteUser(id: string): Promise<boolean>;
@@ -455,8 +455,15 @@ export class MemStorage implements IStorage {
     }
   }
 
-  async getAllUsers(): Promise<User[]> {
-    const allUsers = await db.select().from(users);
+  async getAllUsers(includeDeleted: boolean = false): Promise<User[]> {
+    let query = db.select().from(users);
+    
+    // By default, exclude deleted users
+    if (!includeDeleted) {
+      query = query.where(sqlOp`${users.status} != 'deleted'`) as any;
+    }
+    
+    const allUsers = await query;
     
     // Update memory cache
     allUsers.forEach(user => this.users.set(user.id, user));
@@ -520,12 +527,27 @@ export class MemStorage implements IStorage {
   }
 
   async deleteUser(id: string): Promise<boolean> {
-    const deleted = await db.delete(users).where(eq(users.id, id));
+    // Soft delete: set status to 'deleted' and record deletedAt timestamp
+    const now = new Date();
     
-    // Also delete from memory cache
-    this.users.delete(id);
+    const result = await db
+      .update(users)
+      .set({
+        status: "deleted",
+        deletedAt: now,
+        updatedAt: now,
+      })
+      .where(eq(users.id, id))
+      .returning();
     
-    return deleted.rowCount !== undefined && deleted.rowCount > 0;
+    if (result.length === 0) {
+      return false;
+    }
+    
+    // Update memory cache with the soft-deleted user
+    this.users.set(id, result[0]);
+    
+    return true;
   }
 
   // Role management helpers
