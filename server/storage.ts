@@ -637,13 +637,17 @@ export class MemStorage implements IStorage {
     const enrichedSpot: ParkingSpotWithUser = { ...spot };
     
     if (spot.ownerId) {
-      const user = this.users.get(spot.ownerId);
-      if (user) {
+      // Query database for user instead of memory
+      const userResult = await db.select().from(users).where(eq(users.id, spot.ownerId)).limit(1);
+      if (userResult.length > 0) {
+        const user = userResult[0];
         enrichedSpot.assignedUserName = user.firstName && user.lastName 
           ? `${user.firstName} ${user.lastName}` 
           : user.firstName || user.lastName || user.email;
         enrichedSpot.assignedUserEmail = user.email;
         enrichedSpot.assignedUserDepartment = user.department || undefined;
+        // Update user cache
+        this.users.set(user.id, user);
       }
     }
     
@@ -652,9 +656,16 @@ export class MemStorage implements IStorage {
 
   // Safe enriched parking spot methods (without sensitive user data)
   async getParkingSpotWithSafeUserData(id: string): Promise<ParkingSpotWithSafeUserData | undefined> {
-    const spot = this.parkingSpots.get(id);
-    if (!spot) return undefined;
+    // Query database first
+    const result = await db.select().from(parkingSpots).where(eq(parkingSpots.id, id)).limit(1);
+    if (result.length === 0) return undefined;
 
+    const spot = result[0];
+    
+    // Update memory cache for performance
+    this.parkingSpots.set(spot.id, spot);
+    
+    // Enrich with user data (also from database)
     return this.enrichSpotWithSafeUserInfo(spot);
   }
 
@@ -668,12 +679,16 @@ export class MemStorage implements IStorage {
     const enrichedSpot: ParkingSpotWithSafeUserData = { ...spot };
     
     if (spot.ownerId) {
-      const user = this.users.get(spot.ownerId);
-      if (user) {
+      // Query database for user instead of memory
+      const userResult = await db.select().from(users).where(eq(users.id, spot.ownerId)).limit(1);
+      if (userResult.length > 0) {
+        const user = userResult[0];
         enrichedSpot.assignedUserName = user.firstName && user.lastName 
           ? `${user.firstName} ${user.lastName}` 
           : user.firstName || user.lastName || user.email;
         enrichedSpot.assignedUserDepartment = user.department || undefined;
+        // Update user cache
+        this.users.set(user.id, user);
         // Intentionally NOT including assignedUserEmail for data security
       }
     }
@@ -1222,27 +1237,35 @@ export class MemStorage implements IStorage {
 
   // Bookability control operations
   async toggleSpotBookability(spotId: string, isBookable: boolean): Promise<ParkingSpot | undefined> {
-    const spot = this.parkingSpots.get(spotId);
-    if (!spot) return undefined;
+    // Query database first
+    const existing = await db.select().from(parkingSpots).where(eq(parkingSpots.id, spotId)).limit(1);
+    if (existing.length === 0) return undefined;
 
-    const updatedSpot: ParkingSpot = {
-      ...spot,
-      isBookable
-    };
+    // Update database
+    const [updatedSpot] = await db.update(parkingSpots)
+      .set({ isBookable })
+      .where(eq(parkingSpots.id, spotId))
+      .returning();
+
+    // Update memory cache for performance
     this.parkingSpots.set(spotId, updatedSpot);
     return updatedSpot;
   }
 
   async bulkToggleSpotBookability(spotIds: string[], isBookable: boolean): Promise<ParkingSpot[]> {
+    if (spotIds.length === 0) return [];
+
     const updatedSpots: ParkingSpot[] = [];
     
+    // Bulk update in database
     for (const spotId of spotIds) {
-      const spot = this.parkingSpots.get(spotId);
-      if (spot) {
-        const updatedSpot: ParkingSpot = {
-          ...spot,
-          isBookable
-        };
+      const [updatedSpot] = await db.update(parkingSpots)
+        .set({ isBookable })
+        .where(eq(parkingSpots.id, spotId))
+        .returning();
+      
+      if (updatedSpot) {
+        // Update memory cache for performance
         this.parkingSpots.set(spotId, updatedSpot);
         updatedSpots.push(updatedSpot);
       }
