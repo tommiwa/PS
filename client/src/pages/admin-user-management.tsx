@@ -139,6 +139,7 @@ export default function AdminUserManagement() {
   const [editingUser, setEditingUser] = useState<any>(null)
   const [showBulkActions, setShowBulkActions] = useState(false)
   const [activeTab, setActiveTab] = useState("users")
+  const [isSubmitting, setIsSubmitting] = useState(false)
   
   // Cards visibility toggle hook
   const { cardsVisible, toggleCards } = useCardsVisibility("user-management")
@@ -225,8 +226,33 @@ export default function AdminUserManagement() {
       // Remove the singular 'role' field
       delete (apiData as any).role;
       
-      const response = await apiRequest('/api/users', { method: 'POST', body: apiData });
-      return await response.json();
+      try {
+        const response = await apiRequest('/api/users', { method: 'POST', body: apiData });
+        return await response.json();
+      } catch (error: any) {
+        // apiRequest throws errors with format "statusCode: responseText"
+        // Try to extract a user-friendly message from the JSON response
+        const errorMessage = error.message || '';
+        
+        // Extract the response text after the status code (format: "409: {json}")
+        const match = errorMessage.match(/\d+:\s*(.+)/);
+        if (match) {
+          const responseText = match[1].trim();
+          try {
+            // Try to parse as JSON
+            const errorData = JSON.parse(responseText);
+            // Use the message field if available, otherwise use error field
+            const friendlyMessage = errorData.message || errorData.error || 'Failed to create user';
+            throw new Error(friendlyMessage);
+          } catch (parseError) {
+            // If JSON parsing fails, use the raw response text
+            throw new Error(responseText);
+          }
+        }
+        
+        // Re-throw the original error if we can't parse it
+        throw error;
+      }
     },
     onSuccess: (newUser: User) => {
       // Invalidate and refetch user data
@@ -234,6 +260,7 @@ export default function AdminUserManagement() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/user-analytics"] });
       setShowAddUser(false);
       form.reset();
+      setIsSubmitting(false);
       const userName = [newUser?.firstName, newUser?.lastName].filter(Boolean).join(' ') || newUser?.email || 'Unknown User';
       toast({
         title: "User Created",
@@ -242,6 +269,7 @@ export default function AdminUserManagement() {
     },
     onError: (error: any) => {
       console.error('Error creating user:', error);
+      setIsSubmitting(false);
       toast({
         variant: "destructive",
         title: "Error Creating User",
@@ -555,7 +583,13 @@ export default function AdminUserManagement() {
   };
 
   // Handle create form submission
-  const onSubmit = (data: CreateUserFormData) => {
+  const onSubmit = async (data: CreateUserFormData) => {
+    // Prevent double submission
+    if (isSubmitting || createUserMutation.isPending) {
+      return;
+    }
+    
+    setIsSubmitting(true);
     createUserMutation.mutate(data);
   };
 
@@ -841,10 +875,10 @@ export default function AdminUserManagement() {
                     </Button>
                     <Button 
                       type="submit"
-                      disabled={createUserMutation.isPending}
+                      disabled={createUserMutation.isPending || isSubmitting}
                       data-testid="button-submit-add-user"
                     >
-                      {createUserMutation.isPending ? "Creating..." : "Add User"}
+                      {createUserMutation.isPending || isSubmitting ? "Creating..." : "Add User"}
                     </Button>
                   </div>
                 </form>

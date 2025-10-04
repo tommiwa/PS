@@ -28,7 +28,10 @@ Preferred communication style: Simple, everyday language.
 - **Schema Management**: Drizzle migrations
 - **Session Storage**: PostgreSQL
 - **Database Pool**: @neondatabase/serverless
-- **Storage Layer**: All CRUD operations use database queries; spot listing methods migrated from in-memory Map to database persistence (October 2025)
+- **Storage Layer**: All CRUD operations use database queries with Drizzle ORM
+  - **User CRUD**: `createUser` uses `db.insert(users).returning()` for database persistence (October 2025)
+  - **Spot Listings**: Migrated from in-memory Map to database persistence
+  - **Hybrid Approach**: Database-first with in-memory cache for backwards compatibility
 
 ### Authentication & Authorization
 - **User Management**: Multi-role access control (admin, owner, renter) with dynamic role assignment based on spot ownership.
@@ -65,7 +68,10 @@ Preferred communication style: Simple, everyday language.
 - **Booking System**: Real-time management with status tracking.
 - **Calendar Integration**: Custom parking calendar.
 - **Search & Filtering**: Location, spot type, pricing.
-- **Admin Management**: User management, analytics, bulk spot management (assign, unassign, update status), enhanced filtering for parking spots with dynamic and standardized location options, searchable user lookup for direct spot assignment with real-time database search (min 3 characters, 300ms debounce), waiting list management with direct assignment capability and historical tracking (entries marked as 'assigned' instead of deleted).
+- **Admin Management**: User management with comprehensive form validation and duplicate prevention, analytics, bulk spot management (assign, unassign, update status), enhanced filtering for parking spots with dynamic and standardized location options, searchable user lookup for direct spot assignment with real-time database search (min 3 characters, 300ms debounce), waiting list management with direct assignment capability and historical tracking (entries marked as 'assigned' instead of deleted).
+  - **User Creation/Editing**: Form validation (name 2-50 chars, letters/spaces/hyphens/apostrophes only; email max 100 chars; phone optional 10 digits with auto-formatting), duplicate email prevention (backend 409 Conflict, frontend double-click protection), department dropdown from database
+  - **Phone Formatting**: Display format "(123) 456-7890", storage format "1234567890" (digits only)
+  - **Assigned Spots Display**: Full location format "Victoria - 750 Pandora Ave, Parking Level 1 - Spot A-101", spot type badges in sentence case
 - **Notification System**: Real-time alerts and confirmations (email/in-app).
 - **Spot Listing Creation**: Owners can list spots with single day, period, or recurring options.
 - **Admin Dashboard Metrics**: Real-time, server-side calculated metrics (occupancy, revenue, registrations).

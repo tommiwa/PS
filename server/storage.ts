@@ -481,9 +481,11 @@ export class MemStorage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
     const now = new Date();
-    const user: User = { 
-      ...insertUser,
-      email: insertUser.email ?? null, // Convert undefined to null for schema compatibility
+    
+    // Insert user into database
+    const [createdUser] = await db.insert(users).values({
+      id,
+      email: insertUser.email ?? null,
       roles: insertUser.roles || ['renter'],
       phone: insertUser.phone ?? null,
       department: insertUser.department ?? null,
@@ -491,13 +493,15 @@ export class MemStorage implements IStorage {
       firstName: insertUser.firstName ?? null,
       lastName: insertUser.lastName ?? null,
       profileImageUrl: null,
-      id, 
       lastLogin: null,
       createdAt: now,
       updatedAt: now
-    };
-    this.users.set(id, user);
-    return user;
+    }).returning();
+    
+    // Also update in-memory cache for backwards compatibility
+    this.users.set(id, createdUser);
+    
+    return createdUser;
   }
 
   async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {

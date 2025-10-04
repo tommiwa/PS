@@ -220,6 +220,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate request body
       const validatedData = insertUserSchema.parse(req.body);
       
+      // Check if user with email already exists
+      if (validatedData.email) {
+        const existingUsers = await storage.getAllUsers();
+        const existingUser = existingUsers.find(
+          (u: User) => u.email?.toLowerCase() === validatedData.email?.toLowerCase()
+        );
+        
+        if (existingUser) {
+          return res.status(409).json({ 
+            error: "User with this email already exists",
+            message: `A user with email ${validatedData.email} already exists in the system.`
+          });
+        }
+      }
+      
       const newUser = await storage.createUser(validatedData);
       
       // Audit the user creation
