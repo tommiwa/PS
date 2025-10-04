@@ -1782,13 +1782,64 @@ export class MemStorage implements IStorage {
     usage: number;
     label: string;
   }[]> {
-    // Simulate peak hours based on typical parking patterns
-    return [
-      { hour: 8, time: "8:00 AM", usage: 95, label: "Morning Rush" },
-      { hour: 12, time: "12:00 PM", usage: 78, label: "Lunch Break" },
-      { hour: 17, time: "5:00 PM", usage: 88, label: "Evening Rush" },
-      { hour: 21, time: "9:00 PM", usage: 23, label: "Night" }
+    // Get all bookings from database
+    const allBookings = await db.select().from(bookings);
+    const allSpots = await db.select().from(parkingSpots);
+    const totalBookableSpots = allSpots.filter(spot => spot.isBookable).length;
+    
+    // Define the hours we want to track
+    const trackedHours = [
+      { hour: 8, label: "Morning Rush" },
+      { hour: 12, label: "Lunch Break" },
+      { hour: 17, label: "Evening Rush" },
+      { hour: 21, label: "Night" }
     ];
+    
+    // Count bookings per hour based on booking dates (using recent 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const recentBookings = allBookings.filter(booking => {
+      const bookingDate = new Date(booking.bookingDate);
+      return bookingDate >= thirtyDaysAgo;
+    });
+    
+    // Calculate usage for each hour based on booking patterns
+    // Estimate based on total bookings (simplified: distribute evenly then adjust)
+    const totalRecentBookings = recentBookings.length;
+    const averageBookingsPerHour = totalBookableSpots > 0 && totalRecentBookings > 0
+      ? (totalRecentBookings / 30) / 24 // Average per hour per day over 30 days
+      : 0;
+    
+    return trackedHours.map(({ hour, label }) => {
+      // Calculate usage percentage based on booking patterns
+      // Morning (8am) and evening (5pm) typically have higher usage
+      let usageFactor = 1.0;
+      if (hour === 8 || hour === 17) {
+        usageFactor = 1.3; // 30% more during peak hours
+      } else if (hour === 12) {
+        usageFactor = 1.1; // 10% more during lunch
+      } else if (hour === 21) {
+        usageFactor = 0.4; // 60% less at night
+      }
+      
+      const usage = totalBookableSpots > 0
+        ? Math.min(100, Math.round((averageBookingsPerHour * usageFactor / totalBookableSpots) * 100))
+        : 0;
+      
+      const timeLabel = hour < 12 
+        ? `${hour}:00 AM`
+        : hour === 12 
+          ? "12:00 PM" 
+          : `${hour - 12}:00 PM`;
+      
+      return {
+        hour,
+        time: timeLabel,
+        usage,
+        label
+      };
+    });
   }
 
   async getLocationPerformanceData(): Promise<{
