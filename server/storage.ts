@@ -805,7 +805,12 @@ export class MemStorage implements IStorage {
 
   // Booking operations
   async getBooking(id: string): Promise<Booking | undefined> {
-    return this.bookings.get(id);
+    const result = await db.select().from(bookings).where(eq(bookings.id, id)).limit(1);
+    if (result.length === 0) return undefined;
+    
+    // Update memory cache for performance
+    this.bookings.set(result[0].id, result[0]);
+    return result[0];
   }
 
   async getBookingsByRenter(renterId: string): Promise<Booking[]> {
@@ -881,15 +886,21 @@ export class MemStorage implements IStorage {
   }
 
   async updateBooking(id: string, updates: Partial<InsertBooking>): Promise<Booking | undefined> {
-    const existingBooking = this.bookings.get(id);
-    if (!existingBooking) return undefined;
-    
-    const updatedBooking: Booking = { 
-      ...existingBooking, 
-      ...updates,
-      status: updates.status ? (updates.status as BookingStatus) : existingBooking.status,
-      updatedAt: new Date()
-    };
+    // Query database first
+    const existing = await db.select().from(bookings).where(eq(bookings.id, id)).limit(1);
+    if (existing.length === 0) return undefined;
+
+    // Update database
+    const [updatedBooking] = await db.update(bookings)
+      .set({ 
+        ...updates, 
+        status: updates.status ? (updates.status as BookingStatus) : undefined,
+        updatedAt: new Date() 
+      })
+      .where(eq(bookings.id, id))
+      .returning();
+
+    // Update memory cache for performance
     this.bookings.set(id, updatedBooking);
     return updatedBooking;
   }
@@ -914,15 +925,22 @@ export class MemStorage implements IStorage {
 
   // Payment marking functionality
   async markPaymentReceived(id: string, paymentReceived: boolean): Promise<Booking | undefined> {
-    const existingBooking = this.bookings.get(id);
-    if (!existingBooking) return undefined;
+    // Query database first
+    const existing = await db.select().from(bookings).where(eq(bookings.id, id)).limit(1);
+    if (existing.length === 0) return undefined;
+
+    const now = new Date();
     
-    // Update the booking with payment status - assuming we add this field to the schema
-    const updatedBooking: Booking = { 
-      ...existingBooking, 
-      paymentReceived,
-      updatedAt: new Date()
-    };
+    // Update database
+    const [updatedBooking] = await db.update(bookings)
+      .set({
+        paymentReceived,
+        updatedAt: now
+      })
+      .where(eq(bookings.id, id))
+      .returning();
+
+    // Update memory cache for performance
     this.bookings.set(id, updatedBooking);
     return updatedBooking;
   }
