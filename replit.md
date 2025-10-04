@@ -81,6 +81,8 @@ Preferred communication style: Simple, everyday language.
 - **Search & Filtering**: Location, spot type, pricing.
 - **Admin Management**: User management with comprehensive form validation and duplicate prevention, analytics, bulk spot management (assign, unassign, update status), enhanced filtering for parking spots with dynamic and standardized location options, searchable user lookup for direct spot assignment with real-time database search (min 3 characters, 300ms debounce), waiting list management with direct assignment capability and historical tracking (entries marked as 'assigned' instead of deleted).
   - **User Creation/Editing**: Form validation (name 2-50 chars, letters/spaces/hyphens/apostrophes only; email max 100 chars; phone optional 10 digits with auto-formatting), duplicate email prevention (backend 409 Conflict, frontend double-click protection), department dropdown from database
+  - **User Status Management**: Three status types (Active, Suspended, Deleted), soft delete implementation preserving user data for audit trails, status filter dropdown, suspend/activate functionality in edit form
+  - **Soft Delete**: Users marked as deleted (status="deleted", deletedAt timestamp) remain in database but are excluded from default queries, can be viewed by filtering for "Deleted" status
   - **Phone Formatting**: Display format "(123) 456-7890", storage format "1234567890" (digits only)
   - **Assigned Spots Display**: Full location format "Victoria - 750 Pandora Ave, Parking Level 1 - Spot A-101", spot type badges in sentence case
 - **Notification System**: Real-time alerts and confirmations (email/in-app).
