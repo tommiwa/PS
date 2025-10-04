@@ -387,7 +387,6 @@ export function AdminUsersTable({
                   currentSortColumn={sortState.column}
                   currentSortDirection={sortState.direction}
                   onSort={handleSort}
-                  align="right"
                 >
                   {t("admin.spots")}
                 </SortableTableHeader>
@@ -396,7 +395,6 @@ export function AdminUsersTable({
                   currentSortColumn={sortState.column}
                   currentSortDirection={sortState.direction}
                   onSort={handleSort}
-                  align="right"
                 >
                   {t("admin.bookings")}
                 </SortableTableHeader>
