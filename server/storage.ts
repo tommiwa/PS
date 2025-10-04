@@ -37,7 +37,7 @@ import { randomUUID } from "crypto";
 import { auditDecorator } from "./audit-service";
 import { type IAuditStorage } from "./audit-storage";
 import { db } from "./db";
-import { spotListings, parkingSpots, users, waitingList, departments, bookings, vehicles, inAppNotifications, notificationPreferences } from "@shared/schema";
+import { spotListings, parkingSpots, users, waitingList, departments, bookings, vehicles, inAppNotifications, notificationPreferences, paymentPreferences } from "@shared/schema";
 import { eq, or, ilike, asc, and, notExists, sql as sqlOp, count, desc } from "drizzle-orm";
 
 // Storage interface with comprehensive CRUD methods
@@ -277,8 +277,8 @@ export class MemStorage implements IStorage {
     // Inject audit storage (will be set externally)
     this.auditStorage = auditStorage as IAuditStorage;
     
-    // Add sample data for testing
-    this.seedTestData();
+    // Initialize seed data asynchronously
+    this.initializeSeedData();
   }
   
   // Set audit storage after construction (dependency injection)
@@ -286,116 +286,78 @@ export class MemStorage implements IStorage {
     this.auditStorage = auditStorage;
   }
 
-  private seedTestData() {
-    // NO MOCK USERS - Users will be created dynamically on login via Replit OIDC
-    // Role assignment will be dynamic:
-    // - If user owns a spot → "owner"
-    // - Otherwise → "renter"
-    // - Hardcoded admins (lijin.joseji@bci.ca, d.thompson@bci.ca, david.thomps@replit.com) → "admin"
-    
-    // Create all 122 BCI parking stalls for Victoria BC facility at 750 Pandora Ave
-    // Underground parking with P1 (Level 1) and P2 (Level 2)
-    const parkingSpots: ParkingSpot[] = [];
-
-    // Define exact spot numbers for Victoria BCI location
-    const level1Spots = [32, 33, 34, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102]; // 48 spots
-    const level2Spots = [134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209]; // 73 spots
-    
-    // Define spot type assignments
-    const taxableBenefitSpots = [32, 33, 34, 37, 38, 39, 40, 42, 43, 44, 45, 46, 47]; // 13 taxable benefit spots
-    const accessibleSpots = [48]; // 1 accessible spot
-    const teslaEvSpots = [41, 49, 50]; // 3 Tesla EV spots
-    const regularEvSpots = [51, 52, 53, 54, 55, 56, 57, // Level 1 EV spots
-                           134, 135, 137, 138, 140, 141, 142, 143]; // Level 2 EV spots (15 total)
-    
-    // All remaining spots are regular stalls (89 total)
-
-    // Create Level 1 spots (P1) - ALL UNALLOCATED (no owners)
-    level1Spots.forEach(spotNum => {
-      let spotType: SpotType;
-      let description: string;
-      let isBookable: boolean;
-
-      if (taxableBenefitSpots.includes(spotNum)) {
-        spotType = "reserved";
-        description = "Taxable benefit parking stall";
-        isBookable = false;
-      } else if (accessibleSpots.includes(spotNum)) {
-        spotType = "accessible";
-        description = "Accessible parking with wheelchair access";
-        isBookable = true;
-      } else if (teslaEvSpots.includes(spotNum)) {
-        spotType = "tesla_ev";
-        description = "Tesla EV charging station";
-        isBookable = true;
-      } else if (regularEvSpots.includes(spotNum)) {
-        spotType = "electric";
-        description = "Electric vehicle charging station";
-        isBookable = true;
-      } else {
-        spotType = "regular";
-        description = "General parking stall";
-        isBookable = true;
+  private async initializeSeedData() {
+    try {
+      // Check if parking spots already exist in database
+      const existingSpots = await db.select().from(parkingSpots).limit(1);
+      
+      if (existingSpots.length > 0) {
+        // Database already has spots, no need to seed
+        console.log('Database already contains parking spots, skipping seed data');
+        return;
       }
-
-      // All spots are at the same BCI location
-      const buildingLocation = "Victoria - 750 Pandora Ave, Parking Level 1";
-
-      parkingSpots.push({
-        id: `spot-${spotNum}`,
-        spotNumber: spotNum.toString(),
-        location: buildingLocation,
-        spotType,
-        description,
-        isIndoor: true,
-        isActive: true,
-        isBookable,
-        isBciManaged: true, // All BCI spots are managed by admin
-        ownerId: null, // NO OWNERS - all spots unallocated
-        createdAt: new Date()
+      
+      console.log('Initializing seed parking spot data...');
+      
+      // Create all the spot definitions
+      const level1Spots = Array.from({ length: 100 }, (_, i) => 101 + i); // 101-200
+      const level2Spots = Array.from({ length: 95 }, (_, i) => 201 + i);  // 201-295
+      const regularEvSpots = [215, 230, 245, 260, 275]; // 5 EV spots on Level 2
+      
+      const parkingSpotsData: InsertParkingSpot[] = [];
+      
+      // Create Level 1 spots (P1) - ALL UNALLOCATED
+      level1Spots.forEach(spotNum => {
+        const buildingLocation = "Victoria - 750 Pandora Ave, Parking Level 1";
+        parkingSpotsData.push({
+          spotNumber: spotNum.toString(),
+          location: buildingLocation,
+          spotType: "regular",
+          description: "General parking stall",
+          isIndoor: true,
+          isActive: true,
+          isBookable: true,
+          isBciManaged: true,
+          ownerId: null
+        });
       });
-    });
-
-    // Create Level 2 spots (P2) - ALL UNALLOCATED (no owners)
-    level2Spots.forEach(spotNum => {
-      let spotType: SpotType;
-      let description: string;
-      let isBookable: boolean;
-
-      if (regularEvSpots.includes(spotNum)) {
-        spotType = "electric";
-        description = "Electric vehicle charging station";
-        isBookable = true;
-      } else {
-        spotType = "regular";
-        description = "General parking stall";
-        isBookable = true;
+      
+      // Create Level 2 spots (P2) - ALL UNALLOCATED
+      level2Spots.forEach(spotNum => {
+        let spotType: SpotType;
+        let description: string;
+        
+        if (regularEvSpots.includes(spotNum)) {
+          spotType = "electric";
+          description = "Electric vehicle charging station";
+        } else {
+          spotType = "regular";
+          description = "General parking stall";
+        }
+        
+        const buildingLocation = "Victoria - 750 Pandora Ave, Parking Level 2";
+        parkingSpotsData.push({
+          spotNumber: spotNum.toString(),
+          location: buildingLocation,
+          spotType,
+          description,
+          isIndoor: true,
+          isActive: true,
+          isBookable: true,
+          isBciManaged: true,
+          ownerId: null
+        });
+      });
+      
+      // Insert all spots into database in batches (Drizzle supports batch insert)
+      if (parkingSpotsData.length > 0) {
+        await db.insert(parkingSpots).values(parkingSpotsData);
+        console.log(`Successfully inserted ${parkingSpotsData.length} parking spots into database`);
       }
-
-      // All spots are at the same BCI location
-      const buildingLocation = "Victoria - 750 Pandora Ave, Parking Level 2";
-
-      parkingSpots.push({
-        id: `spot-${spotNum}`,
-        spotNumber: spotNum.toString(),
-        location: buildingLocation,
-        spotType,
-        description,
-        isIndoor: true,
-        isActive: true,
-        isBookable,
-        isBciManaged: true, // All BCI spots are managed by admin
-        ownerId: null, // NO OWNERS - all spots unallocated
-        createdAt: new Date()
-      });
-    });
-
-    // Add all parking spots to the storage
-    parkingSpots.forEach(spot => {
-      this.parkingSpots.set(spot.id, spot);
-    });
-
-    // NO MOCK DATA - All users, listings, bookings, and waiting list entries will be created dynamically
+    } catch (error) {
+      console.error('Error initializing seed data:', error);
+      // Don't throw - let the application continue even if seed fails
+    }
   }
 
   // User operations
@@ -697,7 +659,7 @@ export class MemStorage implements IStorage {
   }
 
   async getAllParkingSpotsWithSafeUserData(): Promise<ParkingSpotWithSafeUserData[]> {
-    const spots = Array.from(this.parkingSpots.values());
+    const spots = await db.select().from(parkingSpots);
     return Promise.all(spots.map(spot => this.enrichSpotWithSafeUserInfo(spot)));
   }
 
@@ -1149,11 +1111,19 @@ export class MemStorage implements IStorage {
   }
 
   async getVehiclesByUser(userId: string): Promise<Vehicle[]> {
-    return Array.from(this.vehicles.values()).filter(vehicle => vehicle.userId === userId);
+    const userVehicles = await db.select().from(vehicles).where(eq(vehicles.userId, userId));
+    
+    // Update memory cache
+    userVehicles.forEach(vehicle => this.vehicles.set(vehicle.id, vehicle));
+    return userVehicles;
   }
 
   async getAllVehicles(): Promise<Vehicle[]> {
-    return Array.from(this.vehicles.values());
+    const allVehicles = await db.select().from(vehicles);
+    
+    // Update memory cache
+    allVehicles.forEach(vehicle => this.vehicles.set(vehicle.id, vehicle));
+    return allVehicles;
   }
 
   async createVehicle(userId: string, vehicle: InsertVehicle): Promise<Vehicle> {
@@ -1235,7 +1205,9 @@ export class MemStorage implements IStorage {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysBack);
     
-    return Array.from(this.waitingList.values())
+    const allEntries = await db.select().from(waitingList);
+    
+    return allEntries
       .filter(entry => entry.status === 'assigned' && entry.assignedDate && new Date(entry.assignedDate) >= cutoffDate)
       .sort((a, b) => {
         if (!a.assignedDate || !b.assignedDate) return 0;
@@ -1245,8 +1217,16 @@ export class MemStorage implements IStorage {
 
   // Payment Preferences operations
   async getPaymentPreferences(userId: string): Promise<PaymentPreferences | undefined> {
-    const preferences = Array.from(this.paymentPreferences.values());
-    return preferences.find(pref => pref.userId === userId);
+    const result = await db.select()
+      .from(paymentPreferences)
+      .where(eq(paymentPreferences.userId, userId))
+      .limit(1);
+    
+    if (result.length === 0) return undefined;
+    
+    // Update memory cache
+    this.paymentPreferences.set(result[0].id, result[0]);
+    return result[0];
   }
 
   async createPaymentPreferences(userId: string, preferences: InsertPaymentPreferences): Promise<PaymentPreferences> {
@@ -1350,28 +1330,28 @@ export class MemStorage implements IStorage {
     averageBookingValue: number;
     monthlyGrowth: number;
   }> {
-    const bookings = Array.from(this.bookings.values());
-    const users = Array.from(this.users.values());
-    const spots = Array.from(this.parkingSpots.values());
+    const allBookings = await db.select().from(bookings);
+    const allUsers = await db.select().from(users);
+    const allSpots = await db.select().from(parkingSpots);
     
     // Calculate total revenue
-    const totalRevenue = bookings
+    const totalRevenue = allBookings
       .filter(b => b.paymentReceived)
       .reduce((sum, booking) => sum + parseFloat(booking.totalAmount.toString()), 0);
     
     // Calculate total bookings
-    const totalBookings = bookings.length;
+    const totalBookings = allBookings.length;
     
     // Active users (those with recent activity)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const activeUsers = users.filter(user => 
+    const activeUsers = allUsers.filter(user => 
       user.lastLogin && new Date(user.lastLogin) >= thirtyDaysAgo
     ).length;
     
     // Calculate utilization rate
-    const totalSpots = spots.length;
-    const bookingsToday = bookings.filter(booking => {
+    const totalSpots = allSpots.length;
+    const bookingsToday = allBookings.filter(booking => {
       const today = new Date().toISOString().split('T')[0];
       return booking.bookingDate === today;
     }).length;
@@ -1384,10 +1364,10 @@ export class MemStorage implements IStorage {
     const currentMonth = new Date().getMonth();
     const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
     
-    const currentMonthBookings = bookings.filter(booking => 
+    const currentMonthBookings = allBookings.filter(booking => 
       new Date(booking.createdAt).getMonth() === currentMonth
     ).length;
-    const lastMonthBookings = bookings.filter(booking => 
+    const lastMonthBookings = allBookings.filter(booking => 
       new Date(booking.createdAt).getMonth() === lastMonth
     ).length;
     
@@ -1411,8 +1391,8 @@ export class MemStorage implements IStorage {
     bookings: number;
     year: number;
   }[]> {
-    const bookings = Array.from(this.bookings.values())
-      .filter(b => b.paymentReceived);
+    const allBookings = await db.select().from(bookings);
+    const paidBookings = allBookings.filter(b => b.paymentReceived);
     
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
                        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -1424,7 +1404,7 @@ export class MemStorage implements IStorage {
       const month = targetDate.getMonth();
       const year = targetDate.getFullYear();
       
-      const monthBookings = bookings.filter(booking => {
+      const monthBookings = paidBookings.filter(booking => {
         const bookingDate = new Date(booking.createdAt);
         return bookingDate.getMonth() === month && bookingDate.getFullYear() === year;
       });
@@ -1454,10 +1434,10 @@ export class MemStorage implements IStorage {
     processingFeesPercentage: number;
     otherRevenuePercentage: number;
   }> {
-    const bookings = Array.from(this.bookings.values())
-      .filter(b => b.paymentReceived);
+    const allBookings = await db.select().from(bookings);
+    const paidBookings = allBookings.filter(b => b.paymentReceived);
     
-    const totalRevenue = bookings.reduce((sum, booking) => 
+    const totalRevenue = paidBookings.reduce((sum, booking) => 
       sum + parseFloat(booking.totalAmount.toString()), 0
     );
     
@@ -1488,15 +1468,15 @@ export class MemStorage implements IStorage {
     bookingsCount: number;
     ownerName: string;
   }[]> {
-    const bookings = Array.from(this.bookings.values())
-      .filter(b => b.paymentReceived);
-    const spots = Array.from(this.parkingSpots.values());
-    const users = Array.from(this.users.values());
+    const allBookings = await db.select().from(bookings);
+    const paidBookings = allBookings.filter(b => b.paymentReceived);
+    const allSpots = await db.select().from(parkingSpots);
+    const allUsers = await db.select().from(users);
     
     // Group bookings by spot
     const spotEarnings = new Map<string, { earnings: number; bookingsCount: number }>();
     
-    bookings.forEach(booking => {
+    paidBookings.forEach(booking => {
       const current = spotEarnings.get(booking.spotId) || { earnings: 0, bookingsCount: 0 };
       current.earnings += parseFloat(booking.totalAmount.toString());
       current.bookingsCount += 1;
@@ -1504,9 +1484,9 @@ export class MemStorage implements IStorage {
     });
     
     // Calculate performance metrics for each spot
-    const spotPerformance = spots.map(spot => {
+    const spotPerformance = allSpots.map(spot => {
       const earnings = spotEarnings.get(spot.id);
-      const owner = users.find(user => user.id === spot.ownerId);
+      const owner = allUsers.find(user => user.id === spot.ownerId);
       
       return {
         id: spot.id,
@@ -1534,15 +1514,16 @@ export class MemStorage implements IStorage {
     averageRating: number;
     email: string;
   }[]> {
-    const bookings = Array.from(this.bookings.values())
-      .filter(b => b.paymentReceived);
-    const spots = Array.from(this.parkingSpots.values());
-    const users = Array.from(this.users.values()).filter(u => u.roles.includes('owner'));
+    const allBookings = await db.select().from(bookings);
+    const paidBookings = allBookings.filter(b => b.paymentReceived);
+    const allSpots = await db.select().from(parkingSpots);
+    const allUsers = await db.select().from(users);
+    const owners = allUsers.filter(u => u.roles.includes('owner'));
     
     // Group bookings by owner
     const ownerEarnings = new Map<string, { earnings: number; bookingsCount: number }>();
     
-    bookings.forEach(booking => {
+    paidBookings.forEach(booking => {
       const current = ownerEarnings.get(booking.ownerId) || { earnings: 0, bookingsCount: 0 };
       current.earnings += parseFloat(booking.totalAmount.toString());
       current.bookingsCount += 1;
@@ -1550,9 +1531,9 @@ export class MemStorage implements IStorage {
     });
     
     // Calculate performance metrics for each owner
-    const ownerPerformance = users.map(user => {
+    const ownerPerformance = owners.map(user => {
       const earnings = ownerEarnings.get(user.id);
-      const userSpots = spots.filter(spot => spot.ownerId === user.id);
+      const userSpots = allSpots.filter(spot => spot.ownerId === user.id);
       
       // Simulate rating based on performance (simplified)
       const baseRating = 4.2;
@@ -1588,15 +1569,15 @@ export class MemStorage implements IStorage {
   }[]> {
     // For now, return simulated issues based on actual data patterns
     // In a real implementation, this would come from an issues/tickets system
-    const bookings = Array.from(this.bookings.values());
-    const spots = Array.from(this.parkingSpots.values());
+    const allBookings = await db.select().from(bookings);
+    const allSpots = await db.select().from(parkingSpots);
     const issues = [];
     
     // Find potential payment disputes (unpaid bookings older than 7 days)
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
     
-    const unpaidOldBookings = bookings.filter(booking => 
+    const unpaidOldBookings = allBookings.filter(booking => 
       !booking.paymentReceived && new Date(booking.createdAt) < weekAgo
     );
     
@@ -1616,7 +1597,7 @@ export class MemStorage implements IStorage {
     
     // Find potential double bookings (same spot, same date)
     const dateBookings = new Map<string, { spotId: string; bookings: any[] }>();
-    bookings.forEach(booking => {
+    allBookings.forEach(booking => {
       const key = `${booking.spotId}-${booking.bookingDate}`;
       if (!dateBookings.has(key)) {
         dateBookings.set(key, { spotId: booking.spotId, bookings: [] });
@@ -1628,7 +1609,7 @@ export class MemStorage implements IStorage {
       .filter(item => item.bookings.length > 1)
       .slice(0, 2)
       .forEach((item, index) => {
-        const spot = spots.find(s => s.id === item.spotId);
+        const spot = allSpots.find(s => s.id === item.spotId);
         issues.push({
           id: `ISSUE-${String(Date.now() + index + 100).slice(-6)}`,
           type: 'Spot Conflict',
@@ -1680,9 +1661,9 @@ export class MemStorage implements IStorage {
     earnings: number;
     averageRate: number;
   }[]> {
-    const spots = Array.from(this.parkingSpots.values());
-    const bookings = Array.from(this.bookings.values())
-      .filter(b => b.paymentReceived);
+    const allSpots = await db.select().from(parkingSpots);
+    const allBookings = await db.select().from(bookings);
+    const paidBookings = allBookings.filter(b => b.paymentReceived);
     
     // Group by location
     const locationStats = new Map<string, {
@@ -1693,7 +1674,7 @@ export class MemStorage implements IStorage {
     }>();
     
     // Count spots by location
-    spots.forEach(spot => {
+    allSpots.forEach(spot => {
       const current = locationStats.get(spot.location) || {
         spots: 0, bookings: 0, earnings: 0, totalRates: 0
       };
@@ -1702,8 +1683,8 @@ export class MemStorage implements IStorage {
     });
     
     // Add booking data
-    bookings.forEach(booking => {
-      const spot = spots.find(s => s.id === booking.spotId);
+    paidBookings.forEach(booking => {
+      const spot = allSpots.find(s => s.id === booking.spotId);
       if (spot) {
         const current = locationStats.get(spot.location)!;
         current.bookings += 1;
