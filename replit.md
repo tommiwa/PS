@@ -28,10 +28,21 @@ Preferred communication style: Simple, everyday language.
 - **Schema Management**: Drizzle migrations
 - **Session Storage**: PostgreSQL
 - **Database Pool**: @neondatabase/serverless
-- **Storage Layer**: All CRUD operations use database queries with Drizzle ORM
-  - **User CRUD**: `createUser` uses `db.insert(users).returning()` for database persistence (October 2025)
-  - **Spot Listings**: Migrated from in-memory Map to database persistence
-  - **Hybrid Approach**: Database-first with in-memory cache for backwards compatibility
+- **Storage Architecture**: Database-first with optional in-memory cache for performance (October 2025)
+  - **Storage Pattern**: All entities query PostgreSQL as primary source of truth, memory Maps serve only as optional performance cache
+  - **Fully Migrated Entities (19 methods verified)**:
+    - Users: All CRUD operations persist to database
+    - Parking Spots: All read/write operations database-first (including enrichment helpers)
+    - Spot Listings: All queries and mutations database-first
+    - Bookings: All operations including payment tracking database-first
+    - Waiting List: All operations including assignment tracking database-first
+    - Vehicles: All CRUD operations database-first
+    - Payment Preferences: All CRUD operations database-first (previously memory-only)
+    - Notification Preferences: All operations database-first
+    - In-App Notifications: All operations database-first
+  - **Cache Strategy**: Memory cache updated AFTER successful database operations, never used as primary data source
+  - **Data Persistence Guarantee**: All critical data survives server restarts, works across different systems and users
+  - **Seed Data**: 195 parking spots initialized into PostgreSQL database on first startup
 
 ### Authentication & Authorization
 - **User Management**: Multi-role access control (admin, owner, renter) with dynamic role assignment based on spot ownership.
