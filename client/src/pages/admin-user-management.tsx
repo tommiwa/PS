@@ -1334,29 +1334,29 @@ export default function AdminUserManagement() {
           />
 
           {/* Users Table */}
-          <Card>
-            <CardContent>
-              {isLoadingUsers ? (
+          {isLoadingUsers ? (
+            <Card>
+              <CardContent>
                 <div className="space-y-4">
                   {[...Array(5)].map((_, i) => (
                     <Skeleton key={i} className="h-16 w-full" />
                   ))}
                 </div>
-              ) : (
-                <AdminUsersTable 
-                  users={sortedUsers} 
-                  isLoading={isLoadingUsers}
-                  sortState={sortState}
-                  onSort={handleSort}
-                  onEditUser={handleEditUser}
-                  onDeleteUser={handleDeleteUser}
-                  onSuspendUser={handleSuspendUser}
-                  onAssignSpot={handleAssignSpot}
-                  onSendNotification={handleSendNotification}
-                />
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          ) : (
+            <AdminUsersTable 
+              users={sortedUsers} 
+              isLoading={isLoadingUsers}
+              sortState={sortState}
+              onSort={handleSort}
+              onEditUser={handleEditUser}
+              onDeleteUser={handleDeleteUser}
+              onSuspendUser={handleSuspendUser}
+              onAssignSpot={handleAssignSpot}
+              onSendNotification={handleSendNotification}
+            />
+          )}
 
           {/* Bulk Actions */}
           {showBulkActions && (
