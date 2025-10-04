@@ -37,7 +37,7 @@ import { randomUUID } from "crypto";
 import { auditDecorator } from "./audit-service";
 import { type IAuditStorage } from "./audit-storage";
 import { db } from "./db";
-import { spotListings, parkingSpots, users, waitingList, departments, bookings, vehicles, inAppNotifications } from "@shared/schema";
+import { spotListings, parkingSpots, users, waitingList, departments, bookings, vehicles, inAppNotifications, notificationPreferences } from "@shared/schema";
 import { eq, or, ilike, asc, and, notExists, sql as sqlOp, count, desc } from "drizzle-orm";
 
 // Storage interface with comprehensive CRUD methods
@@ -1730,27 +1730,27 @@ export class MemStorage implements IStorage {
     newUsersThisWeek: number;
     mostActiveDepartment: string;
   }> {
-    const users = Array.from(this.users.values());
+    const allUsers = await db.select().from(users);
     
     // Calculate total users
-    const totalUsers = users.length;
+    const totalUsers = allUsers.length;
     
     // Calculate active users (those with recent login within 30 days)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const activeUsers = users.filter(user => 
+    const activeUsers = allUsers.filter(user => 
       user.lastLogin && new Date(user.lastLogin) >= thirtyDaysAgo
     ).length;
     
     // Calculate new users this week
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    const newUsersThisWeek = users.filter(user => 
+    const newUsersThisWeek = allUsers.filter(user => 
       user.createdAt && new Date(user.createdAt) >= oneWeekAgo
     ).length;
     
     // Calculate most active department
-    const departmentCounts = users.reduce((acc, user) => {
+    const departmentCounts = allUsers.reduce((acc, user) => {
       if (user.department) {
         acc[user.department] = (acc[user.department] || 0) + 1;
       }
@@ -1785,8 +1785,8 @@ export class MemStorage implements IStorage {
     // Get today's date in YYYY-MM-DD format
     const today = format(new Date(), 'yyyy-MM-dd');
     
-    // 1. Calculate Today's Occupancy
-    const allBookings = Array.from(this.bookings.values());
+    // 1. Get today's bookings from database
+    const allBookings = await db.select().from(bookings);
     const todaysBookings = allBookings.filter(
       booking => booking.bookingDate === today && booking.status === 'confirmed'
     );
@@ -1795,8 +1795,8 @@ export class MemStorage implements IStorage {
     const uniqueSpotIds = new Set(todaysBookings.map(booking => booking.spotId));
     const occupiedSpots = uniqueSpotIds.size;
     
-    // Get total bookable spots
-    const allSpots = Array.from(this.parkingSpots.values());
+    // 2. Get total bookable spots from database
+    const allSpots = await db.select().from(parkingSpots);
     const totalBookableSpots = allSpots.filter(spot => spot.isBookable === true).length;
     
     // Calculate utilization percentage (clamped 0-100)
@@ -1806,13 +1806,13 @@ export class MemStorage implements IStorage {
       utilizationPercent = Math.max(0, Math.min(100, utilizationPercent)); // Clamp to 0-100
     }
     
-    // 2. Calculate Pending Issues (active waiting list with priority === 1)
-    const waitingListEntries = Array.from(this.waitingList.values());
+    // 3. Get waiting list entries from database
+    const waitingListEntries = await db.select().from(waitingList);
     const pendingIssues = waitingListEntries.filter(
       entry => entry.status === 'active' && entry.priority === 1
     ).length;
     
-    // 3. Calculate Revenue Today (bookings with today's date AND paymentReceived === true)
+    // 4. Calculate Revenue Today (bookings with today's date AND paymentReceived === true)
     const revenueToday = todaysBookings
       .filter(booking => booking.paymentReceived === true)
       .reduce((sum, booking) => {
@@ -1820,9 +1820,9 @@ export class MemStorage implements IStorage {
         return sum + (isNaN(amount) ? 0 : amount);
       }, 0);
     
-    // 4. Calculate New Registrations (users created in last 7 days)
+    // 5. Get new registrations from database
     const sevenDaysAgo = subDays(new Date(), 7);
-    const allUsers = Array.from(this.users.values());
+    const allUsers = await db.select().from(users);
     const newRegistrations = allUsers.filter(user => {
       if (!user.createdAt) return false;
       const userCreatedDate = new Date(user.createdAt);
@@ -1843,13 +1843,14 @@ export class MemStorage implements IStorage {
 
   // Notification Preferences operations
   async getNotificationPreferences(userId: string): Promise<NotificationPreferences | undefined> {
-    // Return existing preferences or create default ones
-    let preferences = this.notificationPreferences.get(userId);
+    const result = await db.select()
+      .from(notificationPreferences)
+      .where(eq(notificationPreferences.userId, userId))
+      .limit(1);
     
-    if (!preferences) {
+    if (result.length === 0) {
       // Create default preferences for user
-      const defaultPreferences: NotificationPreferences = {
-        id: randomUUID(),
+      const [newPrefs] = await db.insert(notificationPreferences).values({
         userId,
         emailNotifications: true,
         bookingConfirmations: true,
@@ -1859,45 +1860,38 @@ export class MemStorage implements IStorage {
         systemMaintenance: true,
         createdAt: new Date(),
         updatedAt: new Date()
-      };
+      }).returning();
       
-      this.notificationPreferences.set(userId, defaultPreferences);
-      preferences = defaultPreferences;
+      // Update memory cache
+      this.notificationPreferences.set(userId, newPrefs);
+      return newPrefs;
     }
     
-    return preferences;
+    // Update memory cache
+    this.notificationPreferences.set(userId, result[0]);
+    return result[0];
   }
 
   async updateNotificationPreferences(userId: string, updates: UpdateNotificationPreferences): Promise<NotificationPreferences> {
-    // Get existing preferences or create defaults
-    let existingPreferences = await this.getNotificationPreferences(userId);
+    // Get existing preferences or create defaults (this will also create in database if not exists)
+    const existingPreferences = await this.getNotificationPreferences(userId);
     
     if (!existingPreferences) {
-      // This shouldn't happen due to getNotificationPreferences creating defaults,
-      // but handle it just in case
-      existingPreferences = {
-        id: randomUUID(),
-        userId,
-        emailNotifications: true,
-        bookingConfirmations: true,
-        paymentReminders: true,
-        spotAvailability: true,
-        weeklyReports: true,
-        systemMaintenance: true,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
+      throw new Error('Failed to get or create notification preferences');
     }
     
-    // Update with provided changes
-    const updatedPreferences: NotificationPreferences = {
-      ...existingPreferences,
-      ...updates,
-      updatedAt: new Date()
-    };
+    // Update in database
+    const [updated] = await db.update(notificationPreferences)
+      .set({
+        ...updates,
+        updatedAt: new Date()
+      })
+      .where(eq(notificationPreferences.userId, userId))
+      .returning();
     
-    this.notificationPreferences.set(userId, updatedPreferences);
-    return updatedPreferences;
+    // Update memory cache
+    this.notificationPreferences.set(userId, updated);
+    return updated;
   }
 
   // In-App Notifications operations
