@@ -192,7 +192,21 @@ export default function AdminUserManagement() {
 
   // Fetch all users for admin management
   const { data: allUsers = [], isLoading: isLoadingUsers, error: usersError, refetch: refetchUsers } = useQuery<User[]>({
-    queryKey: ["/api/admin/users"],
+    queryKey: ["/api/admin/users", filterValues.status],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (filterValues.status && filterValues.status !== 'all') {
+        params.append('status', filterValues.status);
+      }
+      const url = `/api/admin/users${params.toString() ? `?${params.toString()}` : ''}`;
+      const response = await fetch(url, {
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch users');
+      }
+      return response.json();
+    }
   });
 
   // Query for user analytics
