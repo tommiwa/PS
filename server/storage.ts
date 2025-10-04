@@ -1250,14 +1250,11 @@ export class MemStorage implements IStorage {
     const id = randomUUID();
     const now = new Date();
     
-    const newPreferences: PaymentPreferences = {
-      id,
-      userId,
-      ...preferences,
-      createdAt: now,
-      updatedAt: now,
-    };
+    const [newPreferences] = await db.insert(paymentPreferences).values({
+      id, userId, ...preferences, createdAt: now, updatedAt: now
+    }).returning();
     
+    // Update memory cache for performance
     this.paymentPreferences.set(id, newPreferences);
     return newPreferences;
   }
@@ -1275,12 +1272,12 @@ export class MemStorage implements IStorage {
       return this.createPaymentPreferences(userId, defaultPreferences);
     }
     
-    const updatedPreferences: PaymentPreferences = {
-      ...existing,
-      ...updates,
-      updatedAt: new Date(),
-    };
+    const [updatedPreferences] = await db.update(paymentPreferences)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(paymentPreferences.id, existing.id))
+      .returning();
     
+    // Update memory cache for performance
     this.paymentPreferences.set(existing.id, updatedPreferences);
     return updatedPreferences;
   }
@@ -1289,7 +1286,9 @@ export class MemStorage implements IStorage {
     const existing = await this.getPaymentPreferences(userId);
     if (!existing) return false;
     
-    return this.paymentPreferences.delete(existing.id);
+    await db.delete(paymentPreferences).where(eq(paymentPreferences.id, existing.id));
+    this.paymentPreferences.delete(existing.id);
+    return true;
   }
 
   // Department operations
