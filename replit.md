@@ -84,6 +84,7 @@ Preferred communication style: Simple, everyday language.
   - **User Creation/Editing**: Form validation (name 2-50 chars, letters/spaces/hyphens/apostrophes only; email max 100 chars; phone optional 10 digits with auto-formatting), duplicate email prevention (backend 409 Conflict, frontend double-click protection), department dropdown from database
   - **User Status Management**: Three status types (Active, Suspended, Deleted), soft delete implementation preserving user data for audit trails, status filter dropdown, suspend/activate functionality in edit form
   - **Soft Delete**: Users marked as deleted (status="deleted", deletedAt timestamp) remain in database but are excluded from default queries, can be viewed by filtering for "Deleted" status
+  - **User Restoration**: Deleted users can be restored to Active status by admins via PATCH /api/admin/users/:id/restore endpoint, restore button appears only for deleted users in UI, restoration clears deletedAt timestamp and sets status to "active", all user data preserved during soft delete/restore cycle
   - **Phone Formatting**: Display format "(123) 456-7890", storage format "1234567890" (digits only)
   - **Assigned Spots Display**: Full location format "Victoria - 750 Pandora Ave, Parking Level 1 - Spot A-101", spot type badges in sentence case
 - **Notification System**: Real-time alerts and confirmations (email/in-app).
