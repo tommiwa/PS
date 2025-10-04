@@ -232,6 +232,11 @@ export interface IStorage {
     earnings: number;
     averageRate: number;
   }[]>;
+  getWeeklyTrendsData(): Promise<{
+    dayOfWeek: string;
+    bookings: number;
+    utilization: number;
+  }[]>;
   getUserAnalytics(): Promise<{
     totalUsers: number;
     activeUsers: number;
@@ -1891,6 +1896,58 @@ export class MemStorage implements IStorage {
       averageRate: stats.bookings > 0 ? Math.round((stats.totalRates / stats.bookings) * 100) / 100 : 0
     }))
     .sort((a, b) => b.earnings - a.earnings);
+  }
+
+  async getWeeklyTrendsData(): Promise<{
+    dayOfWeek: string;
+    bookings: number;
+    utilization: number;
+  }[]> {
+    const allBookings = await db.select().from(bookings);
+    const allSpots = await db.select().from(parkingSpots);
+    const totalBookableSpots = allSpots.filter(spot => spot.isBookable).length;
+    
+    // Get bookings from the last 4 weeks
+    const fourWeeksAgo = new Date();
+    fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+    
+    const recentBookings = allBookings.filter(booking => {
+      const bookingDate = new Date(booking.bookingDate);
+      return bookingDate >= fourWeeksAgo;
+    });
+    
+    // Group bookings by day of week
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayStats = new Map<number, { bookings: number; count: number }>();
+    
+    // Initialize all days
+    for (let i = 0; i < 7; i++) {
+      dayStats.set(i, { bookings: 0, count: 0 });
+    }
+    
+    // Count bookings per day of week
+    recentBookings.forEach(booking => {
+      const bookingDate = new Date(booking.bookingDate);
+      const dayOfWeek = bookingDate.getDay();
+      const stats = dayStats.get(dayOfWeek)!;
+      stats.bookings += 1;
+      stats.count += 1;
+    });
+    
+    // Calculate averages and utilization for each day
+    return dayNames.map((dayName, index) => {
+      const stats = dayStats.get(index)!;
+      const averageBookings = stats.count > 0 ? Math.round(stats.bookings / 4) : 0; // Average over 4 weeks
+      const utilization = totalBookableSpots > 0 
+        ? Math.round((averageBookings / totalBookableSpots) * 100)
+        : 0;
+      
+      return {
+        dayOfWeek: dayName,
+        bookings: averageBookings,
+        utilization: Math.min(100, utilization)
+      };
+    });
   }
 
   async getUserAnalytics(): Promise<{

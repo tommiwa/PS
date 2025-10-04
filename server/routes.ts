@@ -1576,21 +1576,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/admin/analytics-usage", requireAdmin, async (req, res) => {
     try {
-      const [peakHours, locationPerformance] = await Promise.all([
+      const [peakHours, locationPerformance, weeklyTrends] = await Promise.all([
         storage.getPeakHoursData(),
-        storage.getLocationPerformanceData()
+        storage.getLocationPerformanceData(),
+        storage.getWeeklyTrendsData()
       ]);
-      
-      // Generate weekly trends (simplified for now)
-      const weeklyTrends = [
-        { dayOfWeek: 'Monday', bookings: 45, utilization: 85 },
-        { dayOfWeek: 'Tuesday', bookings: 52, utilization: 92 },
-        { dayOfWeek: 'Wednesday', bookings: 48, utilization: 87 },
-        { dayOfWeek: 'Thursday', bookings: 51, utilization: 90 },
-        { dayOfWeek: 'Friday', bookings: 41, utilization: 79 },
-        { dayOfWeek: 'Saturday', bookings: 23, utilization: 45 },
-        { dayOfWeek: 'Sunday', bookings: 18, utilization: 35 }
-      ];
       
       res.json({
         peakHours,
