@@ -87,6 +87,13 @@ Preferred communication style: Simple, everyday language.
   - **User Restoration**: Deleted users can be restored to Active status by admins via PATCH /api/admin/users/:id/restore endpoint, restore button appears only for deleted users in UI, restoration clears deletedAt timestamp and sets status to "active", all user data preserved during soft delete/restore cycle
   - **Phone Formatting**: Display format "(123) 456-7890", storage format "1234567890" (digits only)
   - **Assigned Spots Display**: Full location format "Victoria - 750 Pandora Ave, Parking Level 1 - Spot A-101", spot type badges in sentence case
+  - **Data Management** (October 2025): Tabbed interface for managing reference data
+    - **Departments Tab**: Manage department names (used in user profiles)
+    - **Locations Tab**: Manage parking locations (campus, building, level, address, timezone) - reference data for future integration
+    - **Spot Types Tab**: Manage spot type definitions (name, slug, description) - reference data for future integration
+    - **Note**: Locations and Spot Types tables created as managed reference data but not yet integrated with parking_spots table (parking spots still use text fields for location and spotType)
+    - **API Endpoints**: Full CRUD operations for all three entities with admin-only mutations
+    - **UI Features**: React Query integration, form validation, loading states, toast notifications, confirmation dialogs, data persistence across tabs
 - **Notification System**: Real-time alerts and confirmations (email/in-app).
 - **Spot Listing Creation**: Owners can list spots with single day, period, or recurring options.
 - **Admin Dashboard Metrics**: Real-time, server-side calculated metrics (occupancy, revenue, registrations).
