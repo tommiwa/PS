@@ -417,9 +417,12 @@ export class MemStorage implements IStorage {
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.email === email,
-    );
+    const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    if (result.length === 0) return undefined;
+    
+    // Update memory cache
+    this.users.set(result[0].id, result[0]);
+    return result[0];
   }
 
   // (IMPORTANT) Required for Replit Auth
@@ -429,53 +432,73 @@ export class MemStorage implements IStorage {
       throw new Error('User ID is required for upsert operation');
     }
     
-    const existingUser = this.users.get(userData.id);
+    // Check if user exists in database
+    const existing = await db.select().from(users).where(eq(users.id, userData.id)).limit(1);
     const now = new Date();
     
-    // Dynamic role assignment based on spot ownership and admin list
-    let assignedRoles: UserRole[];
-    
-    // Hardcoded admin emails
-    const adminEmails = ['colleen.norcross@bci.ca', 'lijin.joseji@bci.ca', 'thuyan.nhung@bci.ca'];
-    
-    if (existingUser?.roles) {
-      // Preserve existing roles if user already exists
-      assignedRoles = existingUser.roles;
-    } else if (userData.email && adminEmails.includes(userData.email.toLowerCase())) {
-      // Admin role for hardcoded emails
-      assignedRoles = ["admin"] as UserRole[];
-    } else {
-      // Check if user owns any parking spot
-      const userSpots = Array.from(this.parkingSpots.values()).filter(
-        spot => spot.ownerId === userData.id
-      );
+    if (existing.length === 0) {
+      // INSERT new user
+      // Dynamic role assignment based on spot ownership and admin list
+      let assignedRoles: UserRole[];
       
-      assignedRoles = userSpots.length > 0 ? (["owner"] as UserRole[]) : (["renter"] as UserRole[]);
+      // Hardcoded admin emails
+      const adminEmails = ['colleen.norcross@bci.ca', 'lijin.joseji@bci.ca', 'thuyan.nhung@bci.ca'];
+      
+      if (userData.email && adminEmails.includes(userData.email.toLowerCase())) {
+        // Admin role for hardcoded emails
+        assignedRoles = ["admin"] as UserRole[];
+      } else {
+        // Check if user owns any parking spot
+        const ownedSpots = await db.select().from(parkingSpots).where(eq(parkingSpots.ownerId, userData.id));
+        assignedRoles = ownedSpots.length > 0 ? ["owner"] as UserRole[] : ["renter"] as UserRole[];
+      }
+      
+      const [newUser] = await db.insert(users).values({
+        id: userData.id,
+        email: userData.email ?? null,
+        firstName: userData.firstName ?? null,
+        lastName: userData.lastName ?? null,
+        profileImageUrl: userData.profileImageUrl ?? null,
+        roles: assignedRoles,
+        phone: null,
+        department: null,
+        memberSince: null,
+        lastLogin: now,
+        createdAt: now,
+        updatedAt: now
+      }).returning();
+      
+      // Update memory cache
+      this.users.set(userData.id, newUser);
+      return newUser;
+    } else {
+      // UPDATE existing user
+      const existingUser = existing[0];
+      
+      const [updated] = await db.update(users)
+        .set({
+          email: userData.email ?? existingUser.email,
+          firstName: userData.firstName ?? existingUser.firstName,
+          lastName: userData.lastName ?? existingUser.lastName,
+          profileImageUrl: userData.profileImageUrl ?? existingUser.profileImageUrl,
+          lastLogin: now,
+          updatedAt: now
+        })
+        .where(eq(users.id, userData.id))
+        .returning();
+      
+      // Update memory cache
+      this.users.set(userData.id, updated);
+      return updated;
     }
-    
-    const user: User = {
-      ...existingUser,
-      ...userData,
-      id: userData.id, // Ensure id is properly typed as string
-      email: userData.email ?? null, // Convert undefined to null for schema compatibility
-      firstName: userData.firstName ?? null, // Convert undefined to null for schema compatibility
-      lastName: userData.lastName ?? null, // Convert undefined to null for schema compatibility
-      profileImageUrl: userData.profileImageUrl ?? null, // Convert undefined to null for schema compatibility
-      roles: assignedRoles, // Dynamically assigned roles
-      phone: existingUser?.phone || null,
-      department: existingUser?.department || null,
-      memberSince: existingUser?.memberSince || null,
-      lastLogin: now,
-      updatedAt: now,
-      createdAt: existingUser?.createdAt || now,
-    };
-    
-    this.users.set(userData.id, user);
-    return user;
   }
 
   async getAllUsers(): Promise<User[]> {
-    return Array.from(this.users.values());
+    const allUsers = await db.select().from(users);
+    
+    // Update memory cache
+    allUsers.forEach(user => this.users.set(user.id, user));
+    return allUsers;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
@@ -535,7 +558,12 @@ export class MemStorage implements IStorage {
   }
 
   async deleteUser(id: string): Promise<boolean> {
-    return this.users.delete(id);
+    const deleted = await db.delete(users).where(eq(users.id, id));
+    
+    // Also delete from memory cache
+    this.users.delete(id);
+    
+    return deleted.rowCount !== undefined && deleted.rowCount > 0;
   }
 
   // Role management helpers
