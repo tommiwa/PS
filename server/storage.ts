@@ -1187,21 +1187,28 @@ export class MemStorage implements IStorage {
   }
 
   async updateVehicle(id: string, updates: Partial<InsertVehicle>): Promise<Vehicle | undefined> {
-    const vehicle = this.vehicles.get(id);
-    if (!vehicle) return undefined;
-    
-    const updatedVehicle: Vehicle = {
-      ...vehicle,
-      ...updates,
-      updatedAt: new Date(),
-    };
-    
+    // Query database first
+    const existing = await db.select().from(vehicles).where(eq(vehicles.id, id)).limit(1);
+    if (existing.length === 0) return undefined;
+
+    // Update database
+    const [updatedVehicle] = await db.update(vehicles)
+      .set(updates)
+      .where(eq(vehicles.id, id))
+      .returning();
+
+    // Update memory cache for performance
     this.vehicles.set(id, updatedVehicle);
     return updatedVehicle;
   }
 
   async deleteVehicle(id: string): Promise<boolean> {
-    return this.vehicles.delete(id);
+    // Delete from database first
+    await db.delete(vehicles).where(eq(vehicles.id, id));
+    
+    // Delete from memory cache
+    this.vehicles.delete(id);
+    return true;
   }
 
   // Bookability control operations
