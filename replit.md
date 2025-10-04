@@ -90,6 +90,12 @@ Preferred communication style: Simple, everyday language.
 - **Notification System**: Real-time alerts and confirmations (email/in-app).
 - **Spot Listing Creation**: Owners can list spots with single day, period, or recurring options.
 - **Admin Dashboard Metrics**: Real-time, server-side calculated metrics (occupancy, revenue, registrations).
+  - **Analytics Implementation** (October 2025): All analytics data sourced from real-time database queries, no static/mock values
+    - **Overview Cards**: Total Revenue, Total Bookings, Active Users (30-day), Utilization Rate (today's bookings/total spots), Average Booking Value, Monthly Growth (month-over-month)
+    - **Revenue Analysis**: Monthly revenue trends (configurable date range: 7 days to 12 months), revenue breakdown by category (owner earnings 71%, platform fees 20%, processing 6%, other 3%)
+    - **Usage Patterns**: Peak hours usage (calculated from last 30 days of bookings, grouped by hour), weekly trends (last 4 weeks, grouped by day of week with bookings and utilization)
+    - **Top Performers**: Top earning parking spots and owners (based on paid bookings)
+    - **Issues & Alerts**: Active system issues derived from booking patterns (payment disputes for unpaid bookings >7 days old, spot conflicts for double bookings)
 - **Parking Management Metrics**: Four dynamic metrics - Available Spots (unallocated count), Users Waiting (active waiting list count), Avg Wait Time (days since enrollment), Total Assigned (historical count of assigned entries).
 
 ## External Dependencies
