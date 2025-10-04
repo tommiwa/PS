@@ -216,6 +216,7 @@ export default function AdminParkingManagement() {
       queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/active"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/all-spots"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       toast({
         title: "Success",
         description: "Spot assigned successfully from waiting list.",
@@ -459,6 +460,7 @@ export default function AdminParkingManagement() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] });
       queryClient.invalidateQueries({ queryKey: ["/api/waiting-list"] });
       queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/active"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       toast({
         title: "Success",
         description: "Spot assigned directly to user successfully.",
@@ -525,6 +527,7 @@ export default function AdminParkingManagement() {
       // Also invalidate waiting list queries since user may have been removed from waiting list
       queryClient.invalidateQueries({ queryKey: ["/api/waiting-list"] });
       queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/active"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       const userName = allUsers.find(user => user.id === selectedUserForAvailableSpot)?.name || "user";
       const spotNumber = selectedAvailableSpot?.spotNumber || 'Unknown';
       toast({
