@@ -37,8 +37,8 @@ import { randomUUID } from "crypto";
 import { auditDecorator } from "./audit-service";
 import { type IAuditStorage } from "./audit-storage";
 import { db } from "./db";
-import { spotListings, parkingSpots, users, waitingList, departments, bookings, vehicles } from "@shared/schema";
-import { eq, or, ilike, asc, and, notExists, sql as sqlOp } from "drizzle-orm";
+import { spotListings, parkingSpots, users, waitingList, departments, bookings, vehicles, inAppNotifications } from "@shared/schema";
+import { eq, or, ilike, asc, and, notExists, sql as sqlOp, count, desc } from "drizzle-orm";
 
 // Storage interface with comprehensive CRUD methods
 export interface IStorage {
@@ -1903,72 +1903,85 @@ export class MemStorage implements IStorage {
   // In-App Notifications operations
   async createInAppNotification(insertNotification: InsertInAppNotification): Promise<InAppNotification> {
     const id = randomUUID();
-    const notification: InAppNotification = {
-      ...insertNotification,
-      type: insertNotification.type as NotificationType,
+    
+    const [notification] = await db.insert(inAppNotifications).values({
       id,
-      read: insertNotification.read ?? false,
+      userId: insertNotification.userId,
+      type: insertNotification.type,
+      title: insertNotification.title,
+      message: insertNotification.message,
       data: insertNotification.data ?? null,
+      read: insertNotification.read ?? false,
       expiresAt: insertNotification.expiresAt ?? null,
       createdAt: new Date()
-    };
+    }).returning();
+    
+    // Update memory cache
     this.inAppNotifications.set(id, notification);
     return notification;
   }
 
   async getInAppNotifications(userId: string, includeRead: boolean = false): Promise<InAppNotification[]> {
-    const notifications = Array.from(this.inAppNotifications.values())
-      .filter(notification => {
-        if (notification.userId !== userId) return false;
-        if (!includeRead && notification.read) return false;
-        return true;
-      })
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    let query = db.select().from(inAppNotifications).where(eq(inAppNotifications.userId, userId));
     
+    if (!includeRead) {
+      query = query.where(eq(inAppNotifications.read, false)) as any;
+    }
+    
+    const notifications = await query.orderBy(desc(inAppNotifications.createdAt));
+    
+    // Update memory cache
+    notifications.forEach(notification => this.inAppNotifications.set(notification.id, notification));
     return notifications;
   }
 
   async markNotificationAsRead(notificationId: string): Promise<InAppNotification> {
-    const notification = this.inAppNotifications.get(notificationId);
-    if (!notification) {
+    const existing = await db.select().from(inAppNotifications).where(eq(inAppNotifications.id, notificationId)).limit(1);
+    if (existing.length === 0) {
       throw new Error(`Notification ${notificationId} not found`);
     }
     
-    const updatedNotification: InAppNotification = {
-      ...notification,
-      read: true
-    };
+    const [updated] = await db.update(inAppNotifications)
+      .set({ read: true })
+      .where(eq(inAppNotifications.id, notificationId))
+      .returning();
     
-    this.inAppNotifications.set(notificationId, updatedNotification);
-    return updatedNotification;
+    // Update memory cache
+    this.inAppNotifications.set(notificationId, updated);
+    return updated;
   }
 
   async markAllNotificationsAsRead(userId: string): Promise<void> {
-    const userNotifications = Array.from(this.inAppNotifications.entries())
-      .filter(([_, notification]) => notification.userId === userId && !notification.read);
+    await db.update(inAppNotifications)
+      .set({ read: true })
+      .where(and(
+        eq(inAppNotifications.userId, userId),
+        eq(inAppNotifications.read, false)
+      ));
     
-    for (const [id, notification] of userNotifications) {
-      const updatedNotification: InAppNotification = {
-        ...notification,
-        read: true
-      };
-      this.inAppNotifications.set(id, updatedNotification);
-    }
+    // Clear memory cache for this user's notifications to force reload
+    const userNotificationIds = Array.from(this.inAppNotifications.entries())
+      .filter(([_, notif]) => notif.userId === userId)
+      .map(([id]) => id);
+    userNotificationIds.forEach(id => this.inAppNotifications.delete(id));
   }
 
   async deleteInAppNotification(notificationId: string): Promise<void> {
-    const deleted = this.inAppNotifications.delete(notificationId);
-    if (!deleted) {
-      throw new Error(`Notification ${notificationId} not found`);
-    }
+    await db.delete(inAppNotifications).where(eq(inAppNotifications.id, notificationId));
+    
+    // Also delete from memory cache
+    this.inAppNotifications.delete(notificationId);
   }
 
   async getUnreadNotificationCount(userId: string): Promise<number> {
-    const unreadCount = Array.from(this.inAppNotifications.values())
-      .filter(notification => notification.userId === userId && !notification.read)
-      .length;
+    const result = await db.select({ count: count() })
+      .from(inAppNotifications)
+      .where(and(
+        eq(inAppNotifications.userId, userId),
+        eq(inAppNotifications.read, false)
+      ));
     
-    return unreadCount;
+    return Number(result[0]?.count ?? 0);
   }
 
   // Audit decorators will be applied via server initialization
