@@ -1029,14 +1029,11 @@ export default function AdminUserManagement() {
                                 </div>
                                 <div>
                                   <div className="font-medium" data-testid={`spot-number-${spot.id}`}>
-                                    Spot {spot.spotNumber}
-                                  </div>
-                                  <div className="text-sm text-muted-foreground" data-testid={`spot-location-${spot.id}`}>
-                                    {spot.location}
+                                    {spot.location} - Spot {spot.spotNumber}
                                   </div>
                                   {spot.spotType && (
                                     <Badge variant="outline" className="text-xs mt-1">
-                                      {spot.spotType}
+                                      {spot.spotType.charAt(0).toUpperCase() + spot.spotType.slice(1)}
                                     </Badge>
                                   )}
                                 </div>
