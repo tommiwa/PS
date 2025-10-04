@@ -601,15 +601,32 @@ export class MemStorage implements IStorage {
   // Parking Spot operations
   async getParkingSpot(id: string): Promise<ParkingSpot | undefined> {
     const spots = await db.select().from(parkingSpots).where(eq(parkingSpots.id, id));
-    return spots[0];
+    const spot = spots[0];
+    
+    // Update memory cache for performance
+    if (spot) {
+      this.parkingSpots.set(spot.id, spot);
+    }
+    
+    return spot;
   }
 
   async getParkingSpotsByOwner(ownerId: string): Promise<ParkingSpot[]> {
-    return await db.select().from(parkingSpots).where(eq(parkingSpots.ownerId, ownerId));
+    const spots = await db.select().from(parkingSpots).where(eq(parkingSpots.ownerId, ownerId));
+    
+    // Update memory cache for performance
+    spots.forEach(spot => this.parkingSpots.set(spot.id, spot));
+    
+    return spots;
   }
 
   async getAllParkingSpots(): Promise<ParkingSpot[]> {
-    return await db.select().from(parkingSpots);
+    const spots = await db.select().from(parkingSpots);
+    
+    // Update memory cache for performance
+    spots.forEach(spot => this.parkingSpots.set(spot.id, spot));
+    
+    return spots;
   }
 
   // Enriched parking spot methods with user information
