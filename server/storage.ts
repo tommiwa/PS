@@ -1113,26 +1113,35 @@ export class MemStorage implements IStorage {
   }
 
   async getWaitingListById(id: string): Promise<WaitingList | undefined> {
-    return this.waitingList.get(id);
+    const result = await db.select().from(waitingList).where(eq(waitingList.id, id)).limit(1);
+    if (result.length === 0) return undefined;
+    
+    // Update memory cache for performance
+    this.waitingList.set(result[0].id, result[0]);
+    return result[0];
   }
 
   async assignWaitingListUser(waitingListId: string, spotId: string): Promise<WaitingList | undefined> {
-    const entry = this.waitingList.get(waitingListId);
-    if (!entry) return undefined;
+    // Query database first
+    const existing = await db.select().from(waitingList).where(eq(waitingList.id, waitingListId)).limit(1);
+    if (existing.length === 0) return undefined;
 
-    // Create the final entry record for audit purposes
-    const finalEntry: WaitingList = {
-      ...entry,
-      status: 'assigned',
-      assignedDate: new Date(),
-      assignedSpotId: spotId,
-      updatedAt: new Date()
-    };
+    const now = new Date();
     
-    // Remove the user from waiting list since they now have a spot
-    this.waitingList.delete(waitingListId);
-    
-    return finalEntry;
+    // Update database
+    const [updated] = await db.update(waitingList)
+      .set({
+        status: 'assigned',
+        assignedSpotId: spotId,
+        assignedDate: now,
+        updatedAt: now
+      })
+      .where(eq(waitingList.id, waitingListId))
+      .returning();
+
+    // Update memory cache for performance
+    this.waitingList.set(waitingListId, updated);
+    return updated;
   }
 
   // Vehicle operations
