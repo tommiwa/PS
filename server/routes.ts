@@ -413,6 +413,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Restore deleted user (Admin only)
+  app.patch("/api/admin/users/:id/restore", requireAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Get existing user to check if they're deleted
+      const existingUser = await storage.getUser(id);
+      if (!existingUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      // Check if user is actually deleted
+      if (existingUser.status !== "deleted") {
+        return res.status(400).json({ 
+          error: "User is not deleted",
+          details: `User status is '${existingUser.status}'`
+        });
+      }
+      
+      // Reactivate the user
+      const restoredUser = await storage.reactivateUser(id);
+      if (!restoredUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      // Audit the restoration
+      await auditService.logAction("UPDATE", "user", {
+        entityId: id,
+        message: `Restored user ${restoredUser.firstName} ${restoredUser.lastName} (${restoredUser.email})`,
+        before: existingUser,
+        after: restoredUser
+      });
+      
+      res.json(restoredUser);
+    } catch (error) {
+      console.error("Error restoring user:", error);
+      res.status(500).json({ error: "Failed to restore user" });
+    }
+  });
+
   // Suspend/Unsuspend user (Admin only)
   app.patch("/api/users/:id/suspend", requireAdmin, async (req: any, res) => {
     try {
