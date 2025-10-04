@@ -1119,7 +1119,12 @@ export class MemStorage implements IStorage {
 
   // Vehicle operations
   async getVehicle(id: string): Promise<Vehicle | undefined> {
-    return this.vehicles.get(id);
+    const result = await db.select().from(vehicles).where(eq(vehicles.id, id)).limit(1);
+    if (result.length === 0) return undefined;
+    
+    // Update memory cache for performance
+    this.vehicles.set(result[0].id, result[0]);
+    return result[0];
   }
 
   async getVehiclesByUser(userId: string): Promise<Vehicle[]> {
