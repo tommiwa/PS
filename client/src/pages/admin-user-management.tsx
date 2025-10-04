@@ -24,7 +24,7 @@ import { useTableSort } from "@/hooks/use-table-sort"
 import { useCardsVisibility } from "@/hooks/use-cards-visibility"
 import { useLanguage } from "@/hooks/use-language"
 import { apiRequest, queryClient } from "@/lib/queryClient"
-import { insertUserSchema, type InsertUser, type User, type ParkingSpot } from "@shared/schema"
+import { insertUserSchema, type InsertUser, type User, type ParkingSpot, type Department } from "@shared/schema"
 import { quickExportUsersPDF, quickExportUsersExcel } from "@/utils/export-utils"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { z } from "zod"
@@ -174,6 +174,11 @@ export default function AdminUserManagement() {
     queryKey: ['/api/admin/user-analytics'],
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
+  });
+
+  // Fetch departments for dropdown selects
+  const { data: departments = [], isLoading: isDepartmentsLoading } = useQuery<Department[]>({
+    queryKey: ["/api/departments"],
   });
 
   // Create user mutation
@@ -711,9 +716,24 @@ export default function AdminUserManagement() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Department</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Engineering" {...field} value={field.value || ''} data-testid="input-department" />
-                          </FormControl>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            value={field.value || ""} 
+                            disabled={isDepartmentsLoading}
+                          >
+                            <FormControl>
+                              <SelectTrigger data-testid="select-department">
+                                <SelectValue placeholder={isDepartmentsLoading ? "Loading departments..." : "Select department"} />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {departments.map(dept => (
+                                <SelectItem key={dept.id} value={dept.name}>
+                                  {dept.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -862,19 +882,28 @@ export default function AdminUserManagement() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>{t("profile.department")}</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value ?? ""} value={field.value ?? ""}>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            value={field.value ?? ""} 
+                            disabled={isDepartmentsLoading}
+                          >
                             <FormControl>
                               <SelectTrigger data-testid="select-edit-department">
-                                <SelectValue placeholder="Select department" />
+                                <SelectValue placeholder={isDepartmentsLoading ? "Loading departments..." : "Select department"} />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="Engineering">Engineering</SelectItem>
-                              <SelectItem value="Marketing">Marketing</SelectItem>
-                              <SelectItem value="Sales">Sales</SelectItem>
-                              <SelectItem value="HR">HR</SelectItem>
-                              <SelectItem value="Finance">Finance</SelectItem>
-                              <SelectItem value="Operations">Operations</SelectItem>
+                              {/* Show current value if it's not in the departments list (backwards compatibility) */}
+                              {field.value && !departments.some(dept => dept.name === field.value) && (
+                                <SelectItem value={field.value}>
+                                  {field.value} (legacy)
+                                </SelectItem>
+                              )}
+                              {departments.map(dept => (
+                                <SelectItem key={dept.id} value={dept.name}>
+                                  {dept.name}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                           <FormMessage />

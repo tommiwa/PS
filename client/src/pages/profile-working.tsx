@@ -47,7 +47,7 @@ import {
 import { useAuth } from "@/contexts/auth-context"
 import { useTheme } from "@/contexts/theme-context"
 import { useLanguage } from "@/hooks/use-language"
-import type { Vehicle, WaitingList, NotificationPreferences, UpdateNotificationPreferences, PaymentPreferences, UpdatePaymentPreferences, ParkingSpot } from "@shared/schema"
+import type { Vehicle, WaitingList, NotificationPreferences, UpdateNotificationPreferences, PaymentPreferences, UpdatePaymentPreferences, ParkingSpot, Department } from "@shared/schema"
 import { insertPaymentPreferencesSchema } from "@shared/schema"
 
 // Vehicle form validation schema
@@ -166,6 +166,11 @@ export default function Profile() {
   const { data: assignedSpots = [], isLoading: isLoadingAssignedSpots } = useQuery<ParkingSpot[]>({
     queryKey: ["/api/users", user?.id, "assigned-spots"],
     enabled: !!user?.id
+  });
+
+  // Fetch departments for dropdown select
+  const { data: departments = [], isLoading: isDepartmentsLoading } = useQuery<Department[]>({
+    queryKey: ["/api/departments"],
   });
 
   // Update payment form when payment preferences are loaded
@@ -1776,9 +1781,30 @@ export default function Profile() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{t("profile.department")}</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter your department" {...field} data-testid="input-profile-department" />
-                      </FormControl>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        value={field.value || ""} 
+                        disabled={isDepartmentsLoading}
+                      >
+                        <FormControl>
+                          <SelectTrigger data-testid="select-profile-department">
+                            <SelectValue placeholder={isDepartmentsLoading ? "Loading departments..." : "Select department"} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {/* Show current value if it's not in the departments list (backwards compatibility) */}
+                          {field.value && !departments.some(dept => dept.name === field.value) && (
+                            <SelectItem value={field.value}>
+                              {field.value} (legacy)
+                            </SelectItem>
+                          )}
+                          {departments.map(dept => (
+                            <SelectItem key={dept.id} value={dept.name}>
+                              {dept.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
