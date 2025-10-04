@@ -58,11 +58,44 @@ import {
   Info
 } from "lucide-react"
 
+// Format phone number for display: 1234567890 -> (123) 456-7890
+const formatPhoneNumber = (value: string): string => {
+  if (!value) return value;
+  const phoneNumber = value.replace(/[^\d]/g, '');
+  const phoneNumberLength = phoneNumber.length;
+  if (phoneNumberLength < 4) return phoneNumber;
+  if (phoneNumberLength < 7) {
+    return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3)}`;
+  }
+  return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
+};
+
+// Remove formatting for storage: (123) 456-7890 -> 1234567890
+const unformatPhoneNumber = (value: string): string => {
+  return value.replace(/[^\d]/g, '');
+};
+
 // Extend shared schema with UI validation refinements
 const createUserFormSchema = insertUserSchema.extend({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  email: z.string().min(1, "Email is required").email("Please enter a valid email address"),
+  firstName: z.string()
+    .min(1, "First name is required")
+    .min(2, "First name must be at least 2 characters")
+    .max(50, "First name must not exceed 50 characters")
+    .regex(/^[a-zA-Z\s\-']+$/, "First name can only contain letters, spaces, hyphens, and apostrophes"),
+  lastName: z.string()
+    .min(1, "Last name is required")
+    .min(2, "Last name must be at least 2 characters")
+    .max(50, "Last name must not exceed 50 characters")
+    .regex(/^[a-zA-Z\s\-']+$/, "Last name can only contain letters, spaces, hyphens, and apostrophes"),
+  email: z.string()
+    .min(1, "Email is required")
+    .email("Please enter a valid email address")
+    .max(100, "Email must not exceed 100 characters"),
+  phone: z.string()
+    .optional()
+    .refine((val) => !val || /^\d{10}$/.test(val), {
+      message: "Phone number must be 10 digits"
+    }),
   department: z.string().min(1, "Department is required"),
 }).omit({
   roles: true // Remove roles from schema since we'll use 'role' (singular) in the form
@@ -676,7 +709,7 @@ export default function AdminUserManagement() {
                         <FormItem>
                           <FormLabel>First Name</FormLabel>
                           <FormControl>
-                            <Input placeholder="John" {...field} value={field.value || ''} data-testid="input-first-name" />
+                            <Input placeholder="John" {...field} value={field.value || ''} data-testid="input-first-name" maxLength={50} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -689,7 +722,7 @@ export default function AdminUserManagement() {
                         <FormItem>
                           <FormLabel>Last Name</FormLabel>
                           <FormControl>
-                            <Input placeholder="Doe" {...field} value={field.value || ''} data-testid="input-last-name" />
+                            <Input placeholder="Doe" {...field} value={field.value || ''} data-testid="input-last-name" maxLength={50} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -704,7 +737,7 @@ export default function AdminUserManagement() {
                         <FormItem>
                           <FormLabel>Email Address</FormLabel>
                           <FormControl>
-                            <Input placeholder="john.doe@bci.ca" {...field} value={field.value || ''} data-testid="input-email" />
+                            <Input type="email" placeholder="john.doe@bci.ca" {...field} value={field.value || ''} data-testid="input-email" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -776,7 +809,17 @@ export default function AdminUserManagement() {
                         <FormItem>
                           <FormLabel>Phone Number</FormLabel>
                           <FormControl>
-                            <Input placeholder="(555) 123-4567" {...field} value={field.value || ''} data-testid="input-phone" />
+                            <Input 
+                              type="tel"
+                              placeholder="(555) 123-4567" 
+                              value={formatPhoneNumber(field.value || '')}
+                              onChange={(e) => {
+                                const unformatted = unformatPhoneNumber(e.target.value);
+                                field.onChange(unformatted);
+                              }}
+                              data-testid="input-phone"
+                              maxLength={14}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -825,7 +868,7 @@ export default function AdminUserManagement() {
                         <FormItem>
                           <FormLabel>{t("profile.firstName")}</FormLabel>
                           <FormControl>
-                            <Input data-testid="input-edit-first-name" placeholder="First name" {...field} value={field.value ?? ""} />
+                            <Input data-testid="input-edit-first-name" placeholder="First name" {...field} value={field.value ?? ""} maxLength={50} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -838,7 +881,7 @@ export default function AdminUserManagement() {
                         <FormItem>
                           <FormLabel>{t("profile.lastName")}</FormLabel>
                           <FormControl>
-                            <Input data-testid="input-edit-last-name" placeholder="Last name" {...field} value={field.value ?? ""} />
+                            <Input data-testid="input-edit-last-name" placeholder="Last name" {...field} value={field.value ?? ""} maxLength={50} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -867,7 +910,17 @@ export default function AdminUserManagement() {
                         <FormItem>
                           <FormLabel>{t("profile.phoneNumber")}</FormLabel>
                           <FormControl>
-                            <Input data-testid="input-edit-phone" placeholder="+1 (555) 123-4567" {...field} value={field.value ?? ""} />
+                            <Input 
+                              type="tel"
+                              data-testid="input-edit-phone" 
+                              placeholder="(555) 123-4567" 
+                              value={formatPhoneNumber(field.value ?? "")}
+                              onChange={(e) => {
+                                const unformatted = unformatPhoneNumber(e.target.value);
+                                field.onChange(unformatted);
+                              }}
+                              maxLength={14}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
