@@ -12,7 +12,8 @@ import {
   ParkingCircle,
   Bell,
   CalendarCheck,
-  FileText
+  FileText,
+  Database
 } from "lucide-react"
 import { Link, useLocation, useRoute } from "wouter"
 import {
@@ -89,6 +90,13 @@ const adminMenuItems = [
     icon: CalendarCheck,
     roles: ["admin"],
     tooltip: "Booking Management"
+  },
+  {
+    title: "Data Management",
+    url: "/admin/data-management",
+    icon: Database,
+    roles: ["admin"],
+    tooltip: "Data Management"
   },
   {
     title: "Audit Logs",
