@@ -37,7 +37,7 @@ import { randomUUID } from "crypto";
 import { auditDecorator } from "./audit-service";
 import { type IAuditStorage } from "./audit-storage";
 import { db } from "./db";
-import { spotListings, parkingSpots, users, waitingList, departments } from "@shared/schema";
+import { spotListings, parkingSpots, users, waitingList, departments, bookings, vehicles } from "@shared/schema";
 import { eq, or, ilike, asc, and, notExists, sql as sqlOp } from "drizzle-orm";
 
 // Storage interface with comprehensive CRUD methods
@@ -693,19 +693,26 @@ export class MemStorage implements IStorage {
 
   async createParkingSpot(insertSpot: InsertParkingSpot): Promise<ParkingSpot> {
     const id = randomUUID();
-    const spot: ParkingSpot = { 
-      ...insertSpot,
-      ownerId: insertSpot.ownerId ?? null, // Convert undefined to null for schema compatibility
-      isBookable: insertSpot.isBookable ?? true, // Convert undefined to default true for schema compatibility
-      spotType: insertSpot.spotType as SpotType,
-      description: insertSpot.description ?? null,
-      isIndoor: insertSpot.isIndoor ?? false,
-      isActive: insertSpot.isActive ?? true,
+    
+    // Insert into database
+    const [createdSpot] = await db.insert(parkingSpots).values({
       id,
+      spotNumber: insertSpot.spotNumber,
+      location: insertSpot.location,
+      spotType: insertSpot.spotType as SpotType,
+      isIndoor: insertSpot.isIndoor ?? false,
+      ownerId: insertSpot.ownerId ?? null,
+      description: insertSpot.description ?? null,
+      isActive: insertSpot.isActive ?? true,
+      isBookable: insertSpot.isBookable ?? true,
+      isBciManaged: insertSpot.isBciManaged ?? false,
       createdAt: new Date()
-    };
-    this.parkingSpots.set(id, spot);
-    return spot;
+    }).returning();
+    
+    // Also update in-memory cache for backwards compatibility
+    this.parkingSpots.set(id, createdSpot);
+    
+    return createdSpot;
   }
 
   async updateParkingSpot(id: string, updates: Partial<InsertParkingSpot>): Promise<ParkingSpot | undefined> {
@@ -834,17 +841,29 @@ export class MemStorage implements IStorage {
 
   async createBooking(insertBooking: InsertBooking): Promise<Booking> {
     const id = randomUUID();
-    const booking: Booking = { 
-      ...insertBooking,
+    const now = new Date();
+    
+    // Insert into database
+    const [createdBooking] = await db.insert(bookings).values({
+      id,
+      listingId: insertBooking.listingId,
+      spotId: insertBooking.spotId,
+      renterId: insertBooking.renterId,
+      ownerId: insertBooking.ownerId,
+      bookingDate: insertBooking.bookingDate,
+      dailyRate: insertBooking.dailyRate,
+      totalAmount: insertBooking.totalAmount,
       status: (insertBooking.status as BookingStatus) ?? "confirmed",
       paymentReceived: insertBooking.paymentReceived ?? false,
       notes: insertBooking.notes ?? null,
-      id,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    this.bookings.set(id, booking);
-    return booking;
+      createdAt: now,
+      updatedAt: now
+    }).returning();
+    
+    // Also update in-memory cache for backwards compatibility
+    this.bookings.set(id, createdBooking);
+    
+    return createdBooking;
   }
 
   async updateBooking(id: string, updates: Partial<InsertBooking>): Promise<Booking | undefined> {
@@ -982,30 +1001,32 @@ export class MemStorage implements IStorage {
 
   async createWaitingListEntry(insertEntry: InsertWaitingList): Promise<WaitingList> {
     const id = randomUUID();
-    const entry: WaitingList = {
-      ...insertEntry,
-      id,
-      status: insertEntry.status || 'active',
-      priority: insertEntry.priority || 1,
-      enrolledBy: insertEntry.enrolledBy || 'user',
-      enrolledDate: new Date(),
-      assignedDate: insertEntry.assignedDate || null,
-      assignedSpotId: insertEntry.assignedSpotId || null,
-      adminNotes: insertEntry.adminNotes || null,
-      reason: insertEntry.reason || null,
-      preferredSpotType: (insertEntry.preferredSpotType as SpotType) || null,
-      preferredBuilding: insertEntry.preferredBuilding || null,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
+    const now = new Date();
     
     // Insert into database
-    await db.insert(waitingList).values(entry);
+    const [createdEntry] = await db.insert(waitingList).values({
+      id,
+      userId: insertEntry.userId,
+      userName: insertEntry.userName,
+      userEmail: insertEntry.userEmail,
+      userDepartment: insertEntry.userDepartment,
+      preferredSpotType: insertEntry.preferredSpotType ? (insertEntry.preferredSpotType as SpotType) : null,
+      preferredBuilding: insertEntry.preferredBuilding ?? null,
+      priority: insertEntry.priority ?? 1,
+      status: insertEntry.status ?? 'active',
+      reason: insertEntry.reason ?? null,
+      assignedDate: insertEntry.assignedDate ?? null,
+      assignedSpotId: insertEntry.assignedSpotId ?? null,
+      enrolledBy: insertEntry.enrolledBy ?? 'user',
+      adminNotes: insertEntry.adminNotes ?? null,
+      createdAt: now,
+      updatedAt: now
+    }).returning();
     
-    // Also cache in memory
-    this.waitingList.set(id, entry);
+    // Also update in-memory cache for backwards compatibility
+    this.waitingList.set(id, createdEntry);
     
-    return entry;
+    return createdEntry;
   }
 
   async updateWaitingListEntry(id: string, updates: Partial<InsertWaitingList>): Promise<WaitingList | undefined> {
@@ -1092,16 +1113,25 @@ export class MemStorage implements IStorage {
     const id = randomUUID();
     const now = new Date();
     
-    const newVehicle: Vehicle = {
+    // Insert into database
+    const [createdVehicle] = await db.insert(vehicles).values({
       id,
       userId,
-      ...vehicle,
+      make: vehicle.make,
+      model: vehicle.model,
+      year: vehicle.year,
+      licensePlate: vehicle.licensePlate,
+      color: vehicle.color ?? null,
+      isElectric: vehicle.isElectric ?? false,
+      isDefault: vehicle.isDefault ?? false,
       createdAt: now,
-      updatedAt: now,
-    };
+      updatedAt: now
+    }).returning();
     
-    this.vehicles.set(id, newVehicle);
-    return newVehicle;
+    // Also update in-memory cache for backwards compatibility
+    this.vehicles.set(id, createdVehicle);
+    
+    return createdVehicle;
   }
 
   async updateVehicle(id: string, updates: Partial<InsertVehicle>): Promise<Vehicle | undefined> {
