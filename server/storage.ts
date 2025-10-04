@@ -29,13 +29,15 @@ import {
   type ListingStatus,
   type BookingStatus,
   type AuditLog,
-  type InsertAuditLog
+  type InsertAuditLog,
+  type Department,
+  type InsertDepartment
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { auditDecorator } from "./audit-service";
 import { type IAuditStorage } from "./audit-storage";
 import { db } from "./db";
-import { spotListings, parkingSpots, users, waitingList } from "@shared/schema";
+import { spotListings, parkingSpots, users, waitingList, departments } from "@shared/schema";
 import { eq, or, ilike, asc, and, notExists, sql as sqlOp } from "drizzle-orm";
 
 // Storage interface with comprehensive CRUD methods
@@ -149,6 +151,13 @@ export interface IStorage {
   createPaymentPreferences(userId: string, preferences: InsertPaymentPreferences): Promise<PaymentPreferences>;
   updatePaymentPreferences(userId: string, updates: UpdatePaymentPreferences): Promise<PaymentPreferences>;
   deletePaymentPreferences(userId: string): Promise<boolean>;
+  
+  // Department operations
+  getDepartments(): Promise<Department[]>;
+  getDepartment(id: number): Promise<Department | undefined>;
+  createDepartment(name: string): Promise<Department>;
+  updateDepartment(id: number, name: string): Promise<Department | undefined>;
+  deleteDepartment(id: number): Promise<boolean>;
   
   // Audit storage operations (delegated to audit storage)
   createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
@@ -1203,6 +1212,39 @@ export class MemStorage implements IStorage {
     if (!existing) return false;
     
     return this.paymentPreferences.delete(existing.id);
+  }
+
+  // Department operations
+  async getDepartments(): Promise<Department[]> {
+    return await db.select().from(departments);
+  }
+
+  async getDepartment(id: number): Promise<Department | undefined> {
+    const result = await db.select().from(departments).where(eq(departments.id, id));
+    return result[0];
+  }
+
+  async createDepartment(name: string): Promise<Department> {
+    const result = await db.insert(departments).values({ name }).returning();
+    return result[0];
+  }
+
+  async updateDepartment(id: number, name: string): Promise<Department | undefined> {
+    const result = await db.update(departments)
+      .set({ name, updatedAt: new Date() })
+      .where(eq(departments.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteDepartment(id: number): Promise<boolean> {
+    const usersWithDepartment = await db.select().from(users).where(eq(users.department, String(id)));
+    if (usersWithDepartment.length > 0) {
+      throw new Error("Cannot delete department that is in use by users");
+    }
+    
+    const result = await db.delete(departments).where(eq(departments.id, id)).returning();
+    return result.length > 0;
   }
 
   // Audit storage delegation methods

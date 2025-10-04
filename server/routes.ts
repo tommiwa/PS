@@ -1551,6 +1551,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Department endpoints
+  // GET /api/departments - Get all departments (authenticated users)
+  app.get("/api/departments", isAuthenticated, async (req, res) => {
+    try {
+      const departments = await storage.getDepartments();
+      res.json(departments);
+    } catch (error) {
+      console.error("Error fetching departments:", error);
+      res.status(500).json({ error: "Failed to fetch departments" });
+    }
+  });
+
+  // POST /api/admin/departments - Create department (admin only)
+  app.post("/api/admin/departments", requireAdmin, async (req, res) => {
+    try {
+      const { name } = req.body;
+      
+      if (!name || typeof name !== 'string' || name.trim().length === 0) {
+        return res.status(400).json({ error: "Department name is required" });
+      }
+      
+      const department = await storage.createDepartment(name.trim());
+      res.status(201).json(department);
+    } catch (error: any) {
+      console.error("Error creating department:", error);
+      if (error.message?.includes('unique') || error.code === '23505') {
+        return res.status(409).json({ error: "Department with this name already exists" });
+      }
+      res.status(500).json({ error: "Failed to create department" });
+    }
+  });
+
+  // PATCH /api/admin/departments/:id - Update department (admin only)
+  app.patch("/api/admin/departments/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { name } = req.body;
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid department ID" });
+      }
+      
+      if (!name || typeof name !== 'string' || name.trim().length === 0) {
+        return res.status(400).json({ error: "Department name is required" });
+      }
+      
+      const department = await storage.updateDepartment(id, name.trim());
+      
+      if (!department) {
+        return res.status(404).json({ error: "Department not found" });
+      }
+      
+      res.json(department);
+    } catch (error: any) {
+      console.error("Error updating department:", error);
+      if (error.message?.includes('unique') || error.code === '23505') {
+        return res.status(409).json({ error: "Department with this name already exists" });
+      }
+      res.status(500).json({ error: "Failed to update department" });
+    }
+  });
+
+  // DELETE /api/admin/departments/:id - Delete department (admin only)
+  app.delete("/api/admin/departments/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid department ID" });
+      }
+      
+      const deleted = await storage.deleteDepartment(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Department not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error: any) {
+      console.error("Error deleting department:", error);
+      if (error.message?.includes('in use')) {
+        return res.status(409).json({ error: "Cannot delete department that is in use by users" });
+      }
+      res.status(500).json({ error: "Failed to delete department" });
+    }
+  });
+
   // Assign a parking spot to a user (Admin only)
   app.post("/api/admin/assign-spot", requireAdmin, async (req, res) => {
     try {

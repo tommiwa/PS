@@ -85,6 +85,42 @@ app.use((req, res, next) => {
     auditStorage.markAsSeeded();
   }
   
+  // Seed departments if table is empty
+  const seedDepartments = async () => {
+    try {
+      const { storage } = await import("./storage");
+      const existingDepartments = await storage.getDepartments();
+      
+      if (existingDepartments.length === 0) {
+        const departmentNames = [
+          "Legal Affairs",
+          "Finance",
+          "Infrastructure & Renewable Resources",
+          "Human Resources",
+          "Corporate Data & Operations",
+          "Office of the CEO/CIO",
+          "Office of the COO",
+          "Capital Markets & Credit Investments",
+          "Investment Strategy & Risk",
+          "Investment Operations",
+          "Technology",
+          "Private Equity"
+        ];
+        
+        for (const name of departmentNames) {
+          await storage.createDepartment(name);
+        }
+        
+        log(`Seeded ${departmentNames.length} departments`);
+      }
+    } catch (error) {
+      console.error("Error seeding departments:", error);
+    }
+  };
+  
+  // Seed departments on startup
+  await seedDepartments();
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
