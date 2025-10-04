@@ -728,16 +728,28 @@ export class MemStorage implements IStorage {
 
   // Spot Listing operations
   async getSpotListing(id: string): Promise<SpotListing | undefined> {
-    const listings = await db.select().from(spotListings).where(eq(spotListings.id, id));
-    return listings[0];
+    const result = await db.select().from(spotListings).where(eq(spotListings.id, id)).limit(1);
+    if (result.length === 0) return undefined;
+    
+    // Update memory cache for performance
+    this.spotListings.set(result[0].id, result[0]);
+    return result[0];
   }
 
   async getSpotListingsByOwner(ownerId: string): Promise<SpotListing[]> {
-    return await db.select().from(spotListings).where(eq(spotListings.ownerId, ownerId));
+    const listings = await db.select().from(spotListings).where(eq(spotListings.ownerId, ownerId));
+    
+    // Update memory cache for performance
+    listings.forEach(listing => this.spotListings.set(listing.id, listing));
+    return listings;
   }
 
   async getSpotListingsBySpot(spotId: string): Promise<SpotListing[]> {
-    return await db.select().from(spotListings).where(eq(spotListings.spotId, spotId));
+    const listings = await db.select().from(spotListings).where(eq(spotListings.spotId, spotId));
+    
+    // Update memory cache for performance
+    listings.forEach(listing => this.spotListings.set(listing.id, listing));
+    return listings;
   }
 
   async getAllSpotListings(): Promise<SpotListing[]> {
