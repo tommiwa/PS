@@ -347,6 +347,44 @@ export async function setupAuth(app: Express) {
             return res.redirect("/api/login");
           }
           
+          // Check if user is suspended or deleted
+          if (dbUser.status === "suspended" || dbUser.status === "deleted") {
+            console.error(`Login blocked: User ${userId} has status '${dbUser.status}'`);
+            
+            // Log failed authentication due to status
+            auditService.auditAuth(
+              "LOGIN",
+              userId,
+              userEmail || "unknown",
+              false,
+              `Login blocked: User account is ${dbUser.status}`
+            ).catch(error => {
+              console.error("Failed to log authentication failure:", error);
+            });
+            
+            // Logout user first (clears req.user)
+            req.logout((logoutErr) => {
+              if (logoutErr) {
+                console.error("Logout error during status check:", logoutErr);
+              }
+              
+              // Destroy the session completely and redirect only after completion
+              req.session.destroy((destroyErr) => {
+                if (destroyErr) {
+                  console.error("Session destruction error:", destroyErr);
+                }
+                
+                // Clear the cookie
+                res.clearCookie('connect.sid');
+                
+                // Redirect to login with error message in query parameter (only after session is fully destroyed)
+                return res.redirect(`/login?error=${dbUser.status === "suspended" ? "account_suspended" : "account_deleted"}`);
+              });
+            });
+            
+            return; // Prevent execution from continuing
+          }
+          
           // Log successful authentication
           auditService.auditAuth(
             "LOGIN",

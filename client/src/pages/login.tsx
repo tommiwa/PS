@@ -1,9 +1,30 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { BCIHeroLogo } from "@/components/bci-logo";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useEffect, useState } from "react";
+import { useLocation } from "wouter";
 
 export default function Login() {
+  const [location] = useLocation();
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Parse error parameter from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const error = urlParams.get('error');
+
+    if (error === 'account_suspended') {
+      setErrorMessage('Your account has been suspended. Please contact your administrator for assistance.');
+    } else if (error === 'account_deleted') {
+      setErrorMessage('Your account has been deleted. Please contact your administrator for assistance.');
+    } else {
+      // Reset error message when no error parameter is present
+      setErrorMessage(null);
+    }
+  }, [location]);
+
   const handleLogin = () => {
     window.location.href = "/api/login";
   };
@@ -24,6 +45,16 @@ export default function Login() {
                 Sign in to access your dashboard
               </p>
             </div>
+
+            {/* Error Alert */}
+            {errorMessage && (
+              <Alert variant="destructive" data-testid="alert-login-error">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription data-testid="text-login-error">
+                  {errorMessage}
+                </AlertDescription>
+              </Alert>
+            )}
 
             {/* Login Button */}
             <Button 

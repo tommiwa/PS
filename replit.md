@@ -49,6 +49,7 @@ Preferred communication style: Simple, everyday language.
 - **Authentication**: Server-side session management, Replit OIDC.
 - **Employee Integration**: Designed for company employee login.
 - **Permission System**: Route and component-level checking with support for users having multiple roles simultaneously.
+- **Login Prevention**: Suspended and deleted users are blocked from logging in at the authentication callback, session is destroyed, and appropriate error message is displayed on login page.
 - **Role Assignment Logic**: 
   - First-time login: Users default to "renter" role
   - Automatic promotion: Users with assigned parking spots automatically receive "owner" role
