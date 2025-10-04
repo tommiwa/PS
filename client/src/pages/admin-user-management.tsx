@@ -1133,6 +1133,53 @@ export default function AdminUserManagement() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card 
               className={`cursor-pointer hover-elevate ${
+                !filterValues.role || filterValues.role === 'all' ? 'ring-2 ring-primary' : ''
+              }`}
+              onClick={() => handleRoleCardClick('all')}
+              data-testid="card-filter-all"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleRoleCardClick('all');
+                }
+              }}
+              aria-describedby="all-users-card-description"
+            >
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">All Users</CardTitle>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className="rounded-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label="All users filter information"
+                        tabIndex={0}
+                      >
+                        <Users className="h-5 w-5 text-gray-600" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Show all users regardless of role
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {isLoadingUsers ? "..." : allUsers.length}
+                </div>
+                <Badge variant="outline" className="text-xs bg-gray-50 text-gray-700 border-gray-200">All users</Badge>
+              </CardContent>
+              <div id="all-users-card-description" className="sr-only">
+                Show all users in the system regardless of their role
+              </div>
+            </Card>
+            
+            <Card 
+              className={`cursor-pointer hover-elevate ${
                 filterValues.role === 'admin' ? 'ring-2 ring-primary' : ''
               }`}
               onClick={() => handleRoleCardClick('admin')}
@@ -1269,53 +1316,6 @@ export default function AdminUserManagement() {
               </CardContent>
               <div id="renter-card-description" className="sr-only">
                 Filter to show only renters who book parking spaces but don't own spots
-              </div>
-            </Card>
-            
-            <Card 
-              className={`cursor-pointer hover-elevate ${
-                !filterValues.role || filterValues.role === 'all' ? 'ring-2 ring-primary' : ''
-              }`}
-              onClick={() => handleRoleCardClick('all')}
-              data-testid="card-filter-all"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  handleRoleCardClick('all');
-                }
-              }}
-              aria-describedby="all-users-card-description"
-            >
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">All Users</CardTitle>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        className="rounded-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
-                        onClick={(e) => e.stopPropagation()}
-                        aria-label="All users filter information"
-                        tabIndex={0}
-                      >
-                        <Users className="h-5 w-5 text-gray-600" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      Show all users regardless of role
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {isLoadingUsers ? "..." : allUsers.length}
-                </div>
-                <Badge variant="outline" className="text-xs bg-gray-50 text-gray-700 border-gray-200">All users</Badge>
-              </CardContent>
-              <div id="all-users-card-description" className="sr-only">
-                Show all users in the system regardless of their role
               </div>
             </Card>
             </div>
