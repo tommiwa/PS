@@ -51,6 +51,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
   deleteUser(id: string): Promise<boolean>;
+  reactivateUser(id: string): Promise<User | undefined>;
 
   // Role management helpers
   addUserRole(userId: string, role: UserRole): Promise<User | undefined>;
@@ -548,6 +549,30 @@ export class MemStorage implements IStorage {
     this.users.set(id, result[0]);
     
     return true;
+  }
+
+  async reactivateUser(id: string): Promise<User | undefined> {
+    // Reactivate user: set status to 'active' and clear deletedAt timestamp
+    const now = new Date();
+    
+    const result = await db
+      .update(users)
+      .set({
+        status: "active",
+        deletedAt: null,
+        updatedAt: now,
+      })
+      .where(eq(users.id, id))
+      .returning();
+    
+    if (result.length === 0) {
+      return undefined;
+    }
+    
+    // Update memory cache with the reactivated user
+    this.users.set(id, result[0]);
+    
+    return result[0];
   }
 
   // Role management helpers
