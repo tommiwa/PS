@@ -696,3 +696,45 @@ export const insertDepartmentSchema = createInsertSchema(departments).omit({
 
 export type InsertDepartment = z.infer<typeof insertDepartmentSchema>;
 export type Department = typeof departments.$inferSelect;
+
+// Locations Table
+export const locations = pgTable("locations", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  campus: text("campus").notNull(),
+  building: text("building").notNull(),
+  level: text("level").notNull(),
+  address: text("address"),
+  timezone: text("timezone").notNull().default("America/Vancouver"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertLocationSchema = createInsertSchema(locations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertLocation = z.infer<typeof insertLocationSchema>;
+export type Location = typeof locations.$inferSelect;
+
+// Spot Types Table
+export const spotTypesTable = pgTable("spot_types", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  name: text("name").notNull().unique(),
+  slug: text("slug").notNull().unique(),
+  description: text("description"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertSpotTypeSchema = createInsertSchema(spotTypesTable).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertSpotType = z.infer<typeof insertSpotTypeSchema>;
+export type SpotTypeTable = typeof spotTypesTable.$inferSelect;
