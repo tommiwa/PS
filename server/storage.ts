@@ -31,13 +31,17 @@ import {
   type AuditLog,
   type InsertAuditLog,
   type Department,
-  type InsertDepartment
+  type InsertDepartment,
+  type Location,
+  type InsertLocation,
+  type SpotTypeTable,
+  type InsertSpotType
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { auditDecorator } from "./audit-service";
 import { type IAuditStorage } from "./audit-storage";
 import { db } from "./db";
-import { spotListings, parkingSpots, users, waitingList, departments, bookings, vehicles, inAppNotifications, notificationPreferences, paymentPreferences } from "@shared/schema";
+import { spotListings, parkingSpots, users, waitingList, departments, bookings, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, locations, spotTypesTable } from "@shared/schema";
 import { eq, or, ilike, asc, and, notExists, sql as sqlOp, count, desc } from "drizzle-orm";
 
 // Storage interface with comprehensive CRUD methods
@@ -159,6 +163,20 @@ export interface IStorage {
   createDepartment(name: string): Promise<Department>;
   updateDepartment(id: number, name: string): Promise<Department | undefined>;
   deleteDepartment(id: number): Promise<boolean>;
+  
+  // Location operations
+  getLocations(): Promise<Location[]>;
+  getLocation(id: number): Promise<Location | undefined>;
+  createLocation(location: InsertLocation): Promise<Location>;
+  updateLocation(id: number, updates: Partial<InsertLocation>): Promise<Location | undefined>;
+  deleteLocation(id: number): Promise<boolean>;
+  
+  // Spot Type operations
+  getSpotTypes(): Promise<SpotTypeTable[]>;
+  getSpotType(id: number): Promise<SpotTypeTable | undefined>;
+  createSpotType(spotType: InsertSpotType): Promise<SpotTypeTable>;
+  updateSpotType(id: number, updates: Partial<InsertSpotType>): Promise<SpotTypeTable | undefined>;
+  deleteSpotType(id: number): Promise<boolean>;
   
   // Audit storage operations (delegated to audit storage)
   createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
@@ -1447,6 +1465,62 @@ export class MemStorage implements IStorage {
     }
     
     const result = await db.delete(departments).where(eq(departments.id, id)).returning();
+    return result.length > 0;
+  }
+
+  // Location operations
+  async getLocations(): Promise<Location[]> {
+    return await db.select().from(locations).where(eq(locations.isActive, true));
+  }
+
+  async getLocation(id: number): Promise<Location | undefined> {
+    const result = await db.select().from(locations).where(eq(locations.id, id));
+    return result[0];
+  }
+
+  async createLocation(location: InsertLocation): Promise<Location> {
+    const result = await db.insert(locations).values(location).returning();
+    return result[0];
+  }
+
+  async updateLocation(id: number, updates: Partial<InsertLocation>): Promise<Location | undefined> {
+    const result = await db.update(locations)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(locations.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteLocation(id: number): Promise<boolean> {
+    const result = await db.delete(locations).where(eq(locations.id, id)).returning();
+    return result.length > 0;
+  }
+
+  // Spot Type operations
+  async getSpotTypes(): Promise<SpotTypeTable[]> {
+    return await db.select().from(spotTypesTable).where(eq(spotTypesTable.isActive, true));
+  }
+
+  async getSpotType(id: number): Promise<SpotTypeTable | undefined> {
+    const result = await db.select().from(spotTypesTable).where(eq(spotTypesTable.id, id));
+    return result[0];
+  }
+
+  async createSpotType(spotType: InsertSpotType): Promise<SpotTypeTable> {
+    const result = await db.insert(spotTypesTable).values(spotType).returning();
+    return result[0];
+  }
+
+  async updateSpotType(id: number, updates: Partial<InsertSpotType>): Promise<SpotTypeTable | undefined> {
+    const result = await db.update(spotTypesTable)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(spotTypesTable.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteSpotType(id: number): Promise<boolean> {
+    const result = await db.delete(spotTypesTable).where(eq(spotTypesTable.id, id)).returning();
     return result.length > 0;
   }
 
