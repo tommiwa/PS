@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Search, Edit, Trash2, Users, Car, Clock, FileText, Download } from "lucide-react"
+import { Search, Edit, Trash2, Undo2, Users, Car, Clock, FileText, Download } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { quickExportUsersPDF, quickExportUsersExcel } from "@/utils/export-utils"
 import { useConfirm, confirmations } from "@/hooks/use-confirm"
@@ -37,6 +37,7 @@ interface AdminUsersTableProps {
   onClearFilters?: () => void
   onEditUser?: (userId: string) => void
   onDeleteUser?: (userId: string) => void
+  onRestoreUser?: (userId: string) => void
   onSuspendUser?: (userId: string) => void
   onAssignSpot?: (userId: string) => void
   onSendNotification?: (userId: string) => void
@@ -54,6 +55,7 @@ export function AdminUsersTable({
   onClearFilters,
   onEditUser, 
   onDeleteUser, 
+  onRestoreUser,
   onSuspendUser,
   onAssignSpot,
   onSendNotification 
@@ -264,6 +266,11 @@ export function AdminUsersTable({
     }
   }
 
+  const handleRestore = (userId: string) => {
+    console.log('Restore user:', userId)
+    onRestoreUser?.(userId)
+  }
+
   const handleAssignSpot = (userId: string) => {
     console.log('Assign spot to user:', userId)
     onAssignSpot?.(userId)
@@ -448,22 +455,35 @@ export function AdminUsersTable({
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleEdit(user.id)}
-                        data-testid={`button-edit-${user.id}`}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleDelete(user.id)}
-                        data-testid={`button-delete-${user.id}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {(user as any).status === 'deleted' ? (
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleRestore(user.id)}
+                          data-testid={`button-restore-${user.id}`}
+                        >
+                          <Undo2 className="h-4 w-4" />
+                        </Button>
+                      ) : (
+                        <>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleEdit(user.id)}
+                            data-testid={`button-edit-${user.id}`}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleDelete(user.id)}
+                            data-testid={`button-delete-${user.id}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>

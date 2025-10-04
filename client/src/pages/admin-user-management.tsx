@@ -504,7 +504,7 @@ export default function AdminUserManagement() {
       phone: user.phone ?? "",
       department: user.department ?? "",
       role: user.roles?.[0] ?? "renter", // Convert roles array to single role for form
-      status: user.status ?? "active",
+      status: user.status === "deleted" ? "active" : (user.status ?? "active"), // Default deleted to active for editing
       memberSince: user.memberSince ?? new Date().toISOString().split('T')[0]
     })
     setShowEditUser(true)
@@ -514,6 +514,78 @@ export default function AdminUserManagement() {
     // No need for confirmation here as AdminUsersTable already handles it
     console.log('Delete user:', userId)
     deleteUserMutation.mutate(userId);
+  }
+
+  // Restore user mutation
+  const restoreUserMutation = useMutation({
+    mutationFn: async (userId: string): Promise<User> => {
+      const response = await apiRequest(`/api/admin/users/${userId}/restore`, { method: 'PATCH' });
+      return await response.json();
+    },
+    onSuccess: (restoredUser: User, userId: string) => {
+      // Invalidate and refetch user data
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/user-analytics"] });
+      const userName = [restoredUser.firstName, restoredUser.lastName].filter(Boolean).join(' ') || restoredUser.email || 'Unknown User';
+      toast({
+        title: "User Restored",
+        description: `Successfully restored user ${userName}`,
+      });
+    },
+    onError: (error: any) => {
+      console.error('Error restoring user:', error);
+      let errorMessage = "Failed to restore user. Please try again.";
+      
+      // Parse the error message to extract details
+      if (error.message) {
+        const message = error.message;
+        
+        if (message.includes('401') || message.includes('Unauthorized')) {
+          errorMessage = "You need administrator privileges to restore users.";
+        } else if (message.includes('400')) {
+          // Extract the JSON error details from the error message
+          try {
+            const jsonStart = message.indexOf('{');
+            if (jsonStart !== -1) {
+              const jsonPart = message.substring(jsonStart);
+              const errorData = JSON.parse(jsonPart);
+              errorMessage = errorData.details || errorData.error || errorMessage;
+            }
+          } catch (e) {
+            // If JSON parsing fails, check if error message contains the details
+            if (message.includes('not deleted')) {
+              errorMessage = "This user is not deleted and cannot be restored.";
+            }
+          }
+        } else if (message.includes('404')) {
+          errorMessage = "User not found.";
+        }
+      }
+      
+      toast({
+        variant: "destructive",
+        title: "Cannot Restore User",
+        description: errorMessage,
+      });
+    }
+  });
+
+  const handleRestoreUser = async (userId: string) => {
+    const user = displayUsers.find(u => u.id === userId)
+    if (!user) return
+
+    const confirmed = await confirm({
+      title: "Restore User",
+      description: `Are you sure you want to restore ${user.name}? They will regain access to the parking system with Active status.`,
+      confirmText: "Restore User",
+      cancelText: "Cancel",
+      variant: "default"
+    })
+    
+    if (confirmed) {
+      console.log('Restore user:', userId)
+      restoreUserMutation.mutate(userId);
+    }
   }
 
   const handleSuspendUser = async (userId: string) => {
@@ -1385,6 +1457,7 @@ export default function AdminUserManagement() {
               onSort={handleSort}
               onEditUser={handleEditUser}
               onDeleteUser={handleDeleteUser}
+              onRestoreUser={handleRestoreUser}
               onSuspendUser={handleSuspendUser}
               onAssignSpot={handleAssignSpot}
               onSendNotification={handleSendNotification}
