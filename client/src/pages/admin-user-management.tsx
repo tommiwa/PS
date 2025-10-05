@@ -1250,193 +1250,177 @@ export default function AdminUserManagement() {
           {/* Role Filter Cards */}
           {cardsVisible && (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card 
-              className={`cursor-pointer hover-elevate ${
-                !filterValues.role || filterValues.role === 'all' ? 'ring-2 ring-primary' : ''
-              }`}
-              onClick={() => handleRoleCardClick('all')}
-              data-testid="card-filter-all"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  handleRoleCardClick('all');
-                }
-              }}
-              aria-describedby="all-users-card-description"
-            >
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">All Users</CardTitle>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        className="rounded-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
-                        onClick={(e) => e.stopPropagation()}
-                        aria-label="All users filter information"
-                        tabIndex={0}
-                      >
-                        <Users className="h-5 w-5 text-gray-600" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      Show all users regardless of role
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {isLoadingUsers ? "..." : allUsers.length}
-                </div>
-                <Badge variant="outline" className="text-xs bg-gray-50 text-gray-700 border-gray-200">All users</Badge>
-              </CardContent>
-              <div id="all-users-card-description" className="sr-only">
-                Show all users in the system regardless of their role
-              </div>
-            </Card>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Card 
+                  className={`cursor-pointer hover-elevate ${
+                    !filterValues.role || filterValues.role === 'all' ? 'ring-2 ring-primary' : ''
+                  }`}
+                  onClick={() => handleRoleCardClick('all')}
+                  data-testid="card-filter-all"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleRoleCardClick('all');
+                    }
+                  }}
+                  aria-label="All users filter information"
+                  aria-describedby="all-users-card-description"
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        {isLoadingUsers ? (
+                          <Skeleton className="h-8 w-16 mb-1" />
+                        ) : (
+                          <div className="text-2xl font-bold text-gray-600">{allUsers.length}</div>
+                        )}
+                        <div className="text-sm text-muted-foreground">All Users</div>
+                      </div>
+                      <div className="bg-gray-500 text-white rounded-lg p-2 w-10 h-10 flex items-center justify-center">
+                        <Users className="h-5 w-5" />
+                      </div>
+                    </div>
+                  </CardContent>
+                  <div id="all-users-card-description" className="sr-only">
+                    Show all users in the system regardless of their role
+                  </div>
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent>
+                Show all users regardless of role
+              </TooltipContent>
+            </Tooltip>
             
-            <Card 
-              className={`cursor-pointer hover-elevate ${
-                filterValues.role === 'admin' ? 'ring-2 ring-primary' : ''
-              }`}
-              onClick={() => handleRoleCardClick('admin')}
-              data-testid="card-filter-admin"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  handleRoleCardClick('admin');
-                }
-              }}
-              aria-describedby="admin-card-description"
-            >
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">{t("admin.userManagement.administrators")}</CardTitle>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        className="rounded-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                        onClick={(e) => e.stopPropagation()}
-                        aria-label="Administrator filter information"
-                        tabIndex={0}
-                      >
-                        <Shield className="h-5 w-5 text-blue-600" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      Filter users with full system access and management privileges
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {isLoadingUsers ? "..." : roleStats.admin}
-                </div>
-                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">{t("admin.userManagement.systemAccess")}</Badge>
-              </CardContent>
-              <div id="admin-card-description" className="sr-only">
-                Filter to show only administrators with full system access and user management privileges
-              </div>
-            </Card>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Card 
+                  className={`cursor-pointer hover-elevate ${
+                    filterValues.role === 'admin' ? 'ring-2 ring-primary' : ''
+                  }`}
+                  onClick={() => handleRoleCardClick('admin')}
+                  data-testid="card-filter-admin"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleRoleCardClick('admin');
+                    }
+                  }}
+                  aria-label="Administrator filter information"
+                  aria-describedby="admin-card-description"
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        {isLoadingUsers ? (
+                          <Skeleton className="h-8 w-16 mb-1" />
+                        ) : (
+                          <div className="text-2xl font-bold text-blue-600">{roleStats.admin}</div>
+                        )}
+                        <div className="text-sm text-muted-foreground">{t("admin.userManagement.administrators")}</div>
+                      </div>
+                      <div className="bg-blue-500 text-white rounded-lg p-2 w-10 h-10 flex items-center justify-center">
+                        <Shield className="h-5 w-5" />
+                      </div>
+                    </div>
+                  </CardContent>
+                  <div id="admin-card-description" className="sr-only">
+                    Filter to show only administrators with full system access and user management privileges
+                  </div>
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent>
+                Filter users with full system access and management privileges
+              </TooltipContent>
+            </Tooltip>
             
-            <Card 
-              className={`cursor-pointer hover-elevate ${
-                filterValues.role === 'owner' ? 'ring-2 ring-primary' : ''
-              }`}
-              onClick={() => handleRoleCardClick('owner')}
-              data-testid="card-filter-owner"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  handleRoleCardClick('owner');
-                }
-              }}
-              aria-describedby="owner-card-description"
-            >
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">{t("admin.userManagement.spotOwners")}</CardTitle>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        className="rounded-sm focus:outline-none focus:ring-2 focus:ring-green-400"
-                        onClick={(e) => e.stopPropagation()}
-                        aria-label="Spot owner filter information"
-                        tabIndex={0}
-                      >
-                        <Car className="h-5 w-5 text-green-600" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      Filter users who can list parking spaces for rental
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {isLoadingUsers ? "..." : roleStats.owner}
-                </div>
-                <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">{t("admin.userManagement.revenueGenerators")}</Badge>
-              </CardContent>
-              <div id="owner-card-description" className="sr-only">
-                Filter to show only spot owners who can list parking spaces for rental and earn revenue
-              </div>
-            </Card>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Card 
+                  className={`cursor-pointer hover-elevate ${
+                    filterValues.role === 'owner' ? 'ring-2 ring-primary' : ''
+                  }`}
+                  onClick={() => handleRoleCardClick('owner')}
+                  data-testid="card-filter-owner"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleRoleCardClick('owner');
+                    }
+                  }}
+                  aria-label="Spot owner filter information"
+                  aria-describedby="owner-card-description"
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        {isLoadingUsers ? (
+                          <Skeleton className="h-8 w-16 mb-1" />
+                        ) : (
+                          <div className="text-2xl font-bold text-green-600">{roleStats.owner}</div>
+                        )}
+                        <div className="text-sm text-muted-foreground">{t("admin.userManagement.spotOwners")}</div>
+                      </div>
+                      <div className="bg-green-500 text-white rounded-lg p-2 w-10 h-10 flex items-center justify-center">
+                        <Car className="h-5 w-5" />
+                      </div>
+                    </div>
+                  </CardContent>
+                  <div id="owner-card-description" className="sr-only">
+                    Filter to show only spot owners who can list parking spaces for rental and earn revenue
+                  </div>
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent>
+                Filter users who can list parking spaces for rental
+              </TooltipContent>
+            </Tooltip>
             
-            <Card 
-              className={`cursor-pointer hover-elevate ${
-                filterValues.role === 'renter' ? 'ring-2 ring-primary' : ''
-              }`}
-              onClick={() => handleRoleCardClick('renter')}
-              data-testid="card-filter-renter"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  handleRoleCardClick('renter');
-                }
-              }}
-              aria-describedby="renter-card-description"
-            >
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">{t("admin.userManagement.renters")}</CardTitle>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        className="rounded-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-                        onClick={(e) => e.stopPropagation()}
-                        aria-label="Renter filter information"
-                        tabIndex={0}
-                      >
-                        <UserCheck className="h-5 w-5 text-purple-600" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      Filter users who book parking spaces
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {isLoadingUsers ? "..." : roleStats.renter}
-                </div>
-                <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">{t("admin.userManagement.regularUsers")}</Badge>
-              </CardContent>
-              <div id="renter-card-description" className="sr-only">
-                Filter to show only renters who book parking spaces but don't own spots
-              </div>
-            </Card>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Card 
+                  className={`cursor-pointer hover-elevate ${
+                    filterValues.role === 'renter' ? 'ring-2 ring-primary' : ''
+                  }`}
+                  onClick={() => handleRoleCardClick('renter')}
+                  data-testid="card-filter-renter"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleRoleCardClick('renter');
+                    }
+                  }}
+                  aria-label="Renter filter information"
+                  aria-describedby="renter-card-description"
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        {isLoadingUsers ? (
+                          <Skeleton className="h-8 w-16 mb-1" />
+                        ) : (
+                          <div className="text-2xl font-bold text-purple-600">{roleStats.renter}</div>
+                        )}
+                        <div className="text-sm text-muted-foreground">{t("admin.userManagement.renters")}</div>
+                      </div>
+                      <div className="bg-purple-500 text-white rounded-lg p-2 w-10 h-10 flex items-center justify-center">
+                        <UserCheck className="h-5 w-5" />
+                      </div>
+                    </div>
+                  </CardContent>
+                  <div id="renter-card-description" className="sr-only">
+                    Filter to show only renters who book parking spaces but don't own spots
+                  </div>
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent>
+                Filter users who book parking spaces
+              </TooltipContent>
+            </Tooltip>
             </div>
           )}
 
