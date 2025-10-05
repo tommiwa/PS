@@ -707,6 +707,42 @@ export class MemStorage implements IStorage {
     return spots;
   }
 
+  // Enrich spot with location and spot type info (for user profile display)
+  async getParkingSpotsByOwnerEnriched(ownerId: string): Promise<any[]> {
+    const spots = await db.select().from(parkingSpots).where(eq(parkingSpots.ownerId, ownerId));
+    
+    return Promise.all(spots.map(async (spot) => {
+      // Get location info
+      const locationResult = await db
+        .select({ 
+          office: locations.office,
+          building: locations.building,
+          level: locations.level
+        })
+        .from(locations)
+        .where(eq(locations.id, spot.locationId))
+        .limit(1);
+      
+      // Get spot type info
+      const spotTypeResult = await db
+        .select({ 
+          name: spotTypesTable.name,
+          slug: spotTypesTable.slug
+        })
+        .from(spotTypesTable)
+        .where(eq(spotTypesTable.id, spot.spotTypeId))
+        .limit(1);
+      
+      return {
+        ...spot,
+        location: locationResult.length > 0 
+          ? `${locationResult[0].office} - ${locationResult[0].building}, ${locationResult[0].level}`
+          : undefined,
+        spotType: spotTypeResult.length > 0 ? spotTypeResult[0].slug : undefined
+      };
+    }));
+  }
+
   async getAllParkingSpots(): Promise<ParkingSpot[]> {
     const spots = await db.select().from(parkingSpots);
     

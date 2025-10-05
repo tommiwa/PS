@@ -515,7 +515,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Access denied" });
       }
       
-      const assignedSpots = await storage.getParkingSpotsByOwner(userId);
+      const assignedSpots = await storage.getParkingSpotsByOwnerEnriched(userId);
       res.json(assignedSpots);
     } catch (error) {
       console.error("Error fetching assigned spots:", error);
