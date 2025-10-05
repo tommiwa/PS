@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useConfirm } from "@/hooks/use-confirm"
 import { useToast } from "@/hooks/use-toast"
 import { useLanguage } from "@/hooks/use-language"
+import { useCardsVisibility } from "@/hooks/use-cards-visibility"
 import { apiRequest, queryClient } from "@/lib/queryClient"
 import { 
   insertDepartmentSchema, 
@@ -27,13 +28,20 @@ import {
   type SpotTypeTable
 } from "@shared/schema"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Tooltip as UITooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { z } from "zod"
 import { 
   Database,
   Plus,
   Edit,
   Trash2,
-  RefreshCw
+  RefreshCw,
+  MapPin,
+  Tag,
+  Building2,
+  Eye,
+  EyeOff,
+  Loader2
 } from "lucide-react"
 
 // Department form schema
@@ -71,6 +79,7 @@ export default function AdminDataManagement() {
   const { confirm } = useConfirm()
   const { toast } = useToast()
   const { t } = useLanguage()
+  const { cardsVisible, toggleCards } = useCardsVisibility('data-management')
 
   // Departments state
   const [showAddDepartmentDialog, setShowAddDepartmentDialog] = useState(false)
@@ -508,6 +517,15 @@ export default function AdminDataManagement() {
     queryClient.invalidateQueries({ queryKey: ["/api/spot-types"] });
   };
 
+  const isLoading = isLoadingDepartments || isLoadingLocations || isLoadingSpotTypes;
+
+  const totalDepartments = departments.length;
+  const totalLocations = locations.length;
+  const totalSpotTypes = spotTypes.length;
+  const activeLocations = locations.filter(l => l.isActive).length;
+  const activeSpotTypes = spotTypes.filter(st => st.isActive).length;
+  const inactiveLocations = locations.filter(l => !l.isActive).length;
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -520,15 +538,192 @@ export default function AdminDataManagement() {
             Manage departments, locations, and spot types
           </p>
         </div>
-        <Button 
-          onClick={handleRefresh} 
-          variant="outline" 
-          size="icon"
-          data-testid="button-refresh"
-        >
-          <RefreshCw className="h-4 w-4" />
-        </Button>
+        <div className="flex gap-2">
+          <UITooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={toggleCards}
+                data-testid="button-toggle-cards"
+              >
+                {cardsVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {cardsVisible ? 'Hide Cards' : 'Show Cards'}
+            </TooltipContent>
+          </UITooltip>
+          <UITooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                onClick={handleRefresh} 
+                variant="outline"
+                disabled={isLoading}
+                data-testid="button-refresh"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                )}
+                Refresh
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              Refresh all data
+            </TooltipContent>
+          </UITooltip>
+        </div>
       </div>
+
+      {cardsVisible && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4" data-testid="data-management-cards">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <Building2 className="h-4 w-4" />
+                Total Departments
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoadingDepartments ? (
+                <>
+                  <Skeleton className="h-8 w-16 mb-2" />
+                  <Skeleton className="h-4 w-20" />
+                </>
+              ) : (
+                <>
+                  <div className="text-2xl font-bold" data-testid="text-total-departments">
+                    {totalDepartments}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Departments</p>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                Total Locations
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoadingLocations ? (
+                <>
+                  <Skeleton className="h-8 w-16 mb-2" />
+                  <Skeleton className="h-4 w-20" />
+                </>
+              ) : (
+                <>
+                  <div className="text-2xl font-bold" data-testid="text-total-locations">
+                    {totalLocations}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Locations</p>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <Tag className="h-4 w-4" />
+                Total Spot Types
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoadingSpotTypes ? (
+                <>
+                  <Skeleton className="h-8 w-16 mb-2" />
+                  <Skeleton className="h-4 w-20" />
+                </>
+              ) : (
+                <>
+                  <div className="text-2xl font-bold" data-testid="text-total-spot-types">
+                    {totalSpotTypes}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Spot Types</p>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                Active Locations
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoadingLocations ? (
+                <>
+                  <Skeleton className="h-8 w-16 mb-2" />
+                  <Skeleton className="h-4 w-20" />
+                </>
+              ) : (
+                <>
+                  <div className="text-2xl font-bold" data-testid="text-active-locations">
+                    {activeLocations}
+                  </div>
+                  <p className="text-xs text-green-600">Active</p>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <Tag className="h-4 w-4" />
+                Active Spot Types
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoadingSpotTypes ? (
+                <>
+                  <Skeleton className="h-8 w-16 mb-2" />
+                  <Skeleton className="h-4 w-20" />
+                </>
+              ) : (
+                <>
+                  <div className="text-2xl font-bold" data-testid="text-active-spot-types">
+                    {activeSpotTypes}
+                  </div>
+                  <p className="text-xs text-green-600">Active</p>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                Inactive Locations
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoadingLocations ? (
+                <>
+                  <Skeleton className="h-8 w-16 mb-2" />
+                  <Skeleton className="h-4 w-20" />
+                </>
+              ) : (
+                <>
+                  <div className="text-2xl font-bold" data-testid="text-inactive-locations">
+                    {inactiveLocations}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Inactive</p>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <Tabs defaultValue="departments" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
