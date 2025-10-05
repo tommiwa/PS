@@ -31,8 +31,7 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   // Custom fields for parking app
   phone: text("phone"),
-  department: text("department"), // DEPRECATED: Use departmentId instead
-  departmentId: integer("department_id"), // Foreign key to departments.id
+  departmentId: integer("department_id").notNull(), // Foreign key to departments.id
   roles: text("roles").array().notNull().default(sql`ARRAY['renter']::text[]`),
   status: text("status").notNull().$type<UserStatus>().default("active"),
   memberSince: text("member_since"),
@@ -133,10 +132,8 @@ export type SpotType = z.infer<typeof spotTypes>;
 export const parkingSpots = pgTable("parking_spots", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   spotNumber: text("spot_number").notNull(),
-  location: text("location"), // DEPRECATED: Use locationId instead
-  locationId: integer("location_id"), // Foreign key to locations.id
-  spotType: text("spot_type"), // DEPRECATED: Use spotTypeId instead
-  spotTypeId: integer("spot_type_id"), // Foreign key to spot_types.id
+  locationId: integer("location_id").notNull(), // Foreign key to locations.id
+  spotTypeId: integer("spot_type_id").notNull(), // Foreign key to spot_types.id
   isIndoor: boolean("is_indoor").notNull().default(false),
   ownerId: varchar("owner_id"), // References users.id - nullable for unallocated spots
   description: text("description"),
@@ -149,8 +146,6 @@ export const parkingSpots = pgTable("parking_spots", {
 export const insertParkingSpotSchema = createInsertSchema(parkingSpots).omit({
   id: true,
   createdAt: true,
-  location: true, // DEPRECATED: Use locationId
-  spotType: true, // DEPRECATED: Use spotTypeId
 }).extend({
   locationId: z.number().int().positive(),
   spotTypeId: z.number().int().positive(),
@@ -164,6 +159,8 @@ export interface ParkingSpotWithUser extends ParkingSpot {
   assignedUserName?: string;
   assignedUserEmail?: string;
   assignedUserDepartment?: string;
+  locationName?: string;
+  spotTypeName?: string;
 }
 
 // Safe parking spot type for non-admin endpoints (excludes sensitive user data)
@@ -254,11 +251,8 @@ export const waitingList = pgTable("waiting_list", {
   userId: varchar("user_id").notNull(), // References users.id
   userName: text("user_name").notNull(),
   userEmail: text("user_email").notNull(),
-  userDepartment: text("user_department"), // DEPRECATED: Derive from users.department
-  preferredSpotType: text("preferred_spot_type"), // DEPRECATED: Use preferredSpotTypeId
-  preferredSpotTypeId: integer("preferred_spot_type_id"), // Foreign key to spot_types.id
-  preferredBuilding: text("preferred_building"), // DEPRECATED: Use preferredLocationId
-  preferredLocationId: integer("preferred_location_id"), // Foreign key to locations.id
+  preferredSpotTypeId: integer("preferred_spot_type_id"), // Foreign key to spot_types.id (nullable - "any type")
+  preferredLocationId: integer("preferred_location_id"), // Foreign key to locations.id (nullable - "any location")
   priority: integer("priority").notNull().default(1), // 1 = highest priority
   status: text("status").notNull().default("active"), // active, assigned, cancelled
   reason: text("reason"), // Why they need parking
@@ -276,9 +270,6 @@ export const insertWaitingListSchema = createInsertSchema(waitingList).omit({
   createdAt: true,
   updatedAt: true,
   enrolledDate: true,
-  userDepartment: true, // DEPRECATED: Derive from users
-  preferredSpotType: true, // DEPRECATED: Use preferredSpotTypeId
-  preferredBuilding: true, // DEPRECATED: Use preferredLocationId
 });
 
 export type InsertWaitingList = z.infer<typeof insertWaitingListSchema>;

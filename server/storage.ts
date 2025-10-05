@@ -718,6 +718,28 @@ export class MemStorage implements IStorage {
   private async enrichSpotWithUserInfo(spot: ParkingSpot): Promise<ParkingSpotWithUser> {
     const enrichedSpot: ParkingSpotWithUser = { ...spot };
     
+    // Join location name
+    const locationResult = await db
+      .select({ name: locations.name })
+      .from(locations)
+      .where(eq(locations.id, spot.locationId))
+      .limit(1);
+    
+    if (locationResult.length > 0) {
+      enrichedSpot.locationName = locationResult[0].name;
+    }
+    
+    // Join spot type name
+    const spotTypeResult = await db
+      .select({ name: spotTypesTable.name })
+      .from(spotTypesTable)
+      .where(eq(spotTypesTable.id, spot.spotTypeId))
+      .limit(1);
+    
+    if (spotTypeResult.length > 0) {
+      enrichedSpot.spotTypeName = spotTypeResult[0].name;
+    }
+    
     if (spot.ownerId) {
       // Query database for user with department join
       const userResult = await db

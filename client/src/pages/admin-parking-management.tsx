@@ -209,7 +209,10 @@ export default function AdminParkingManagement() {
     const matchesSearch = item.userName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.userEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.reason?.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesType = unallocatedFilterType === "all" || item.preferredSpotType === unallocatedFilterType
+    const preferredSpotTypeName = item.preferredSpotTypeId 
+      ? spotTypes.find(st => st.id === item.preferredSpotTypeId)?.name 
+      : null;
+    const matchesType = unallocatedFilterType === "all" || preferredSpotTypeName === unallocatedFilterType
     return matchesSearch && matchesType
   }) || []
 
@@ -686,18 +689,18 @@ export default function AdminParkingManagement() {
     if (searchTerm.trim()) {
       const searchLower = searchTerm.toLowerCase()
       const matchesSearch = spot.spotNumber.toLowerCase().includes(searchLower) ||
-                           (spot.location?.toLowerCase().includes(searchLower) ?? false)
+                           (spot.locationName?.toLowerCase().includes(searchLower) ?? false)
       if (!matchesSearch) return false
     }
     
     // Spot type filter
     if (filterValues.spotType && filterValues.spotType !== "all") {
-      if (spot.spotType !== filterValues.spotType) return false
+      if (spot.spotTypeName !== filterValues.spotType) return false
     }
     
     // Location filter - exact match since dropdown has all actual values
     if (filterValues.location && filterValues.location !== "all") {
-      if (spot.location !== filterValues.location) {
+      if (spot.locationName !== filterValues.location) {
         return false
       }
     }
@@ -732,18 +735,18 @@ export default function AdminParkingManagement() {
     if (availableSpotsSearchTerm.trim()) {
       const searchLower = availableSpotsSearchTerm.toLowerCase()
       const matchesSearch = spot.spotNumber.toLowerCase().includes(searchLower) ||
-                           (spot.location?.toLowerCase().includes(searchLower) ?? false)
+                           (spot.locationName?.toLowerCase().includes(searchLower) ?? false)
       if (!matchesSearch) return false
     }
     
     // Spot type filter
     if (availableSpotsFilterValues.spotType && availableSpotsFilterValues.spotType !== "all") {
-      if (spot.spotType !== availableSpotsFilterValues.spotType) return false
+      if (spot.spotTypeName !== availableSpotsFilterValues.spotType) return false
     }
     
     // Location filter - exact match since dropdown has all actual values
     if (availableSpotsFilterValues.location && availableSpotsFilterValues.location !== "all") {
-      if (spot.location !== availableSpotsFilterValues.location) {
+      if (spot.locationName !== availableSpotsFilterValues.location) {
         return false
       }
     }
@@ -783,7 +786,10 @@ export default function AdminParkingManagement() {
     
     // Preferred spot type filter
     if (waitingListFilterValues.preferredSpotType && waitingListFilterValues.preferredSpotType !== "all") {
-      if (item.preferredSpotType !== waitingListFilterValues.preferredSpotType) return false
+      const preferredSpotTypeName = item.preferredSpotTypeId 
+        ? spotTypes.find(st => st.id === item.preferredSpotTypeId)?.name 
+        : null;
+      if (preferredSpotTypeName !== waitingListFilterValues.preferredSpotType) return false
     }
     
     // Status filter
@@ -963,7 +969,7 @@ export default function AdminParkingManagement() {
     }
   };
 
-  const getSpotTypeBadge = (spotType: SpotType | string | null) => {
+  const getSpotTypeBadge = (spotType: SpotType | string | null | undefined) => {
     if (!spotType) {
       return <Badge variant="secondary" data-testid="badge-spot-type-unknown">Unknown</Badge>;
     }
@@ -1412,11 +1418,11 @@ export default function AdminParkingManagement() {
                               {spot.spotNumber}
                             </TableCell>
                             <TableCell data-testid={`text-spot-location-${spot.id}`}>
-                              {spot.location}
+                              {spot.locationName}
                               {spot.isIndoor && <Badge variant="outline" className="ml-2">{t("admin.parkingManagement.indoor")}</Badge>}
                             </TableCell>
                             <TableCell data-testid={`text-spot-type-${spot.id}`}>
-                              {getSpotTypeBadge(spot.spotType)}
+                              {getSpotTypeBadge(spot.spotTypeName)}
                             </TableCell>
                             <TableCell data-testid={`text-spot-status-${spot.id}`}>
                               <div className="flex gap-2">
@@ -1746,11 +1752,11 @@ export default function AdminParkingManagement() {
                             {spot.spotNumber}
                           </TableCell>
                           <TableCell data-testid={`text-unallocated-spot-location-${spot.id}`}>
-                            {spot.location}
+                            {spot.locationName}
                             {spot.isIndoor && <Badge variant="outline" className="ml-2">Indoor</Badge>}
                           </TableCell>
                           <TableCell data-testid={`text-unallocated-spot-type-${spot.id}`}>
-                            {getSpotTypeBadge(spot.spotType)}
+                            {getSpotTypeBadge(spot.spotTypeName)}
                           </TableCell>
                           <TableCell data-testid={`text-unallocated-spot-status-${spot.id}`}>
                             <div className="flex gap-2">
@@ -1992,7 +1998,7 @@ export default function AdminParkingManagement() {
                             {getPriorityBadge(item.priority)}
                           </TableCell>
                           <TableCell data-testid={`text-waiting-type-${item.id}`}>
-                            {item.preferredSpotType ? getSpotTypeBadge(item.preferredSpotType) : <Badge variant="outline">Any</Badge>}
+                            {item.preferredSpotTypeId ? getSpotTypeBadge(spotTypes.find(st => st.id === item.preferredSpotTypeId)?.name) : <Badge variant="outline">Any</Badge>}
                           </TableCell>
                           <TableCell data-testid={`text-waiting-status-${item.id}`}>
                             <Badge 
@@ -2351,7 +2357,7 @@ export default function AdminParkingManagement() {
                 <SelectContent>
                   {unallocatedSpots.map((spot) => (
                     <SelectItem key={spot.id} value={spot.id}>
-                      {spot.spotNumber} - {spot.location} ({getSpotTypeBadge(spot.spotType)})
+                      {spot.spotNumber} - {spot.locationName} ({getSpotTypeBadge(spot.spotTypeName)})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -2362,8 +2368,8 @@ export default function AdminParkingManagement() {
                 <h4 className="font-medium mb-2">Assignment Summary</h4>
                 <div className="text-sm space-y-1">
                   <div>User: {filteredWaitingList.find(w => w.id === selectedWaitingListItem)?.userName}</div>
-                  <div>Spot: {selectedSpotForAssign.spotNumber} - {selectedSpotForAssign.location}</div>
-                  <div>Type: {getSpotTypeBadge(selectedSpotForAssign.spotType)}</div>
+                  <div>Spot: {selectedSpotForAssign.spotNumber} - {selectedSpotForAssign.locationName}</div>
+                  <div>Type: {getSpotTypeBadge(selectedSpotForAssign.spotTypeName)}</div>
                 </div>
               </div>
             )}
@@ -2529,8 +2535,8 @@ export default function AdminParkingManagement() {
                 <h4 className="font-medium mb-2">Spot Details</h4>
                 <div className="text-sm space-y-1">
                   <div>Spot: {selectedSpotForAssign.spotNumber}</div>
-                  <div>Location: {selectedSpotForAssign.location}</div>
-                  <div>Type: {getSpotTypeBadge(selectedSpotForAssign.spotType)}</div>
+                  <div>Location: {selectedSpotForAssign.locationName}</div>
+                  <div>Type: {getSpotTypeBadge(selectedSpotForAssign.spotTypeName)}</div>
                 </div>
               </div>
             )}
@@ -2746,7 +2752,7 @@ export default function AdminParkingManagement() {
           <div className="space-y-4">
             {selectedAvailableSpot && (
               <>
-                <p>Assigning parking spot <strong>{selectedAvailableSpot.spotNumber}</strong> at {selectedAvailableSpot.location}</p>
+                <p>Assigning parking spot <strong>{selectedAvailableSpot.spotNumber}</strong> at {selectedAvailableSpot.locationName}</p>
                 <div>
                   <label className="text-sm font-medium">Select User</label>
                   <Select 
