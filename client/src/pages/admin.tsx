@@ -338,7 +338,7 @@ export default function Admin() {
     activeWaitingList: activeWaitingList.length,
     totalWaitingList: allWaitingList.length,
     recentBookingsCount: recentBookings.length,
-    pendingRequests: activeWaitingList.filter(item => item.priority === 1).length // High priority items
+    pendingRequests: activeWaitingList.length // Total active waiting list entries
   }
 
   // Quick action items for admin navigation
@@ -639,7 +639,7 @@ export default function Admin() {
               </Link>
             </TooltipTrigger>
             <TooltipContent>
-              Click to view waiting list - high-priority waiting list requests requiring immediate attention
+              Click to view waiting list - total active waiting list requests
             </TooltipContent>
           </Tooltip>
         </div>
