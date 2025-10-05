@@ -540,7 +540,7 @@ export default function AdminAnalytics() {
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle>{t('analytics.peakHoursUsage')}</CardTitle>
+                <CardTitle>Booking Duration Distribution</CardTitle>
               </CardHeader>
               <CardContent>
                 {usageQuery.isLoading ? (
@@ -548,33 +548,35 @@ export default function AdminAnalytics() {
                     <Loader2 className="h-8 w-8 animate-spin" />
                   </div>
                 ) : usageQuery.error ? (
-                  <SectionError title="Peak Hours" onRetry={() => queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-usage'] })} />
+                  <SectionError title="Booking Duration" onRetry={() => queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-usage'] })} />
                 ) : (
                   <div className="h-[300px]">
                     <BarChart 
-                      data={usageQuery.data?.peakHours || []}
+                      data={usageQuery.data?.bookingDuration || []}
                       width={533}
                       height={300}
                     >
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis 
-                        dataKey="time" 
+                        dataKey="duration" 
                         tick={{ fontSize: 12 }}
                       />
                       <YAxis 
                         tick={{ fontSize: 12 }}
-                        tickFormatter={(value) => `${value}%`}
                       />
                       <RechartsTooltip 
-                        formatter={(value: number) => [`${value}%`, 'Usage']}
-                        labelFormatter={(label) => `Time: ${label}`}
+                        formatter={(value: number, name: string) => [
+                          name === 'count' ? `${value} bookings` : `${value}%`,
+                          name === 'count' ? 'Bookings' : 'Percentage'
+                        ]}
+                        labelFormatter={(label) => `Duration: ${label}`}
                       />
                       <Legend />
                       <Bar 
-                        dataKey="usage" 
+                        dataKey="count" 
                         fill={'hsl(var(--chart-1))'}
                         radius={[4, 4, 0, 0]}
-                        name="Usage Percentage"
+                        name="Booking Count"
                       />
                     </BarChart>
                   </div>

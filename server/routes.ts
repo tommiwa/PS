@@ -1576,14 +1576,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/admin/analytics-usage", requireAdmin, async (req, res) => {
     try {
-      const [peakHours, locationPerformance, weeklyTrends] = await Promise.all([
-        storage.getPeakHoursData(),
+      const [bookingDuration, locationPerformance, weeklyTrends] = await Promise.all([
+        storage.getBookingDurationData(),
         storage.getLocationPerformanceData(),
         storage.getWeeklyTrendsData()
       ]);
       
       res.json({
-        peakHours,
+        bookingDuration,
         locationPerformance,
         weeklyTrends,
         generatedAt: new Date().toISOString()

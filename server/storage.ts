@@ -237,11 +237,10 @@ export interface IStorage {
     entityId?: string;
     entityType?: string;
   }[]>;
-  getPeakHoursData(): Promise<{
-    hour: number;
-    time: string;
-    usage: number;
-    label: string;
+  getBookingDurationData(): Promise<{
+    duration: string;
+    count: number;
+    percentage: number;
   }[]>;
   getLocationPerformanceData(): Promise<{
     location: string;
@@ -1855,70 +1854,91 @@ export class MemStorage implements IStorage {
     return issues.slice(0, 10); // Limit to 10 most recent issues
   }
 
-  async getPeakHoursData(): Promise<{
-    hour: number;
-    time: string;
-    usage: number;
-    label: string;
+  async getBookingDurationData(): Promise<{
+    duration: string;
+    count: number;
+    percentage: number;
   }[]> {
-    // Get all bookings from database
+    // Get all spot listings and bookings from database
+    const allListings = await db.select().from(spotListings);
     const allBookings = await db.select().from(bookings);
-    const allSpots = await db.select().from(parkingSpots);
-    const totalBookableSpots = allSpots.filter(spot => spot.isBookable).length;
     
-    // Define the hours we want to track
-    const trackedHours = [
-      { hour: 8, label: "Morning Rush" },
-      { hour: 12, label: "Lunch Break" },
-      { hour: 17, label: "Evening Rush" },
-      { hour: 21, label: "Night" }
-    ];
+    // Initialize duration categories
+    const durationCategories = {
+      "1 Day": 0,
+      "2-3 Days": 0,
+      "4-7 Days": 0,
+      "1-2 Weeks": 0,
+      "2-4 Weeks": 0,
+      "1+ Months": 0
+    };
     
-    // Count bookings per hour based on booking dates (using recent 30 days)
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    // Track which bookings we've already processed to avoid double counting
+    const processedBookings = new Set<string>();
     
-    const recentBookings = allBookings.filter(booking => {
-      const bookingDate = new Date(booking.bookingDate);
-      return bookingDate >= thirtyDaysAgo;
+    // Process bookings grouped by listing
+    const bookingsByListing = new Map<string, typeof allBookings>();
+    allBookings.forEach(booking => {
+      const listingBookings = bookingsByListing.get(booking.listingId) || [];
+      listingBookings.push(booking);
+      bookingsByListing.set(booking.listingId, listingBookings);
     });
     
-    // Calculate usage for each hour based on booking patterns
-    // Estimate based on total bookings (simplified: distribute evenly then adjust)
-    const totalRecentBookings = recentBookings.length;
-    const averageBookingsPerHour = totalBookableSpots > 0 && totalRecentBookings > 0
-      ? (totalRecentBookings / 30) / 24 // Average per hour per day over 30 days
-      : 0;
-    
-    return trackedHours.map(({ hour, label }) => {
-      // Calculate usage percentage based on booking patterns
-      // Morning (8am) and evening (5pm) typically have higher usage
-      let usageFactor = 1.0;
-      if (hour === 8 || hour === 17) {
-        usageFactor = 1.3; // 30% more during peak hours
-      } else if (hour === 12) {
-        usageFactor = 1.1; // 10% more during lunch
-      } else if (hour === 21) {
-        usageFactor = 0.4; // 60% less at night
+    // For each listing, calculate duration and categorize
+    allListings.forEach(listing => {
+      const listingBookings = bookingsByListing.get(listing.id) || [];
+      
+      // Skip if no bookings for this listing
+      if (listingBookings.length === 0) {
+        return;
       }
       
-      const usage = totalBookableSpots > 0
-        ? Math.min(100, Math.round((averageBookingsPerHour * usageFactor / totalBookableSpots) * 100))
-        : 0;
+      let durationDays = 1; // Default to 1 day
       
-      const timeLabel = hour < 12 
-        ? `${hour}:00 AM`
-        : hour === 12 
-          ? "12:00 PM" 
-          : `${hour - 12}:00 PM`;
+      // Calculate duration based on listing type
+      if (listing.listingType === 'period' && listing.periodStartDate && listing.periodEndDate) {
+        const startDate = new Date(listing.periodStartDate);
+        const endDate = new Date(listing.periodEndDate);
+        durationDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      } else if (listing.listingType === 'recurring' && listing.recurringStartDate && listing.recurringEndDate) {
+        const startDate = new Date(listing.recurringStartDate);
+        const endDate = new Date(listing.recurringEndDate);
+        const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        const daysOfWeek = listing.daysOfWeek?.length || 7;
+        durationDays = Math.ceil((totalDays / 7) * daysOfWeek);
+      }
+      // For 'single' type or others, durationDays remains 1
       
-      return {
-        hour,
-        time: timeLabel,
-        usage,
-        label
-      };
+      // Categorize based on duration
+      let category: keyof typeof durationCategories;
+      if (durationDays === 1) {
+        category = "1 Day";
+      } else if (durationDays >= 2 && durationDays <= 3) {
+        category = "2-3 Days";
+      } else if (durationDays >= 4 && durationDays <= 7) {
+        category = "4-7 Days";
+      } else if (durationDays >= 8 && durationDays <= 14) {
+        category = "1-2 Weeks";
+      } else if (durationDays >= 15 && durationDays <= 28) {
+        category = "2-4 Weeks";
+      } else {
+        category = "1+ Months";
+      }
+      
+      // Count each renter's booking in this listing once
+      const uniqueRenters = new Set(listingBookings.map(b => b.renterId));
+      durationCategories[category] += uniqueRenters.size;
     });
+    
+    // Calculate total count
+    const totalCount = Object.values(durationCategories).reduce((sum, count) => sum + count, 0);
+    
+    // Convert to array with percentages
+    return Object.entries(durationCategories).map(([duration, count]) => ({
+      duration,
+      count,
+      percentage: totalCount > 0 ? Math.round((count / totalCount) * 100 * 10) / 10 : 0
+    }));
   }
 
   async getLocationPerformanceData(): Promise<{

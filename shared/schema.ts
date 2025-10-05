@@ -599,11 +599,10 @@ export interface AnalyticsIssuesResponse {
   generatedAt: string;
 }
 
-export interface PeakHourData {
-  hour: number;
-  time: string;
-  usage: number;
-  label: string;
+export interface BookingDurationData {
+  duration: string;
+  count: number;
+  percentage: number;
 }
 
 export interface LocationPerformanceData {
@@ -615,7 +614,7 @@ export interface LocationPerformanceData {
 }
 
 export interface AnalyticsUsageResponse {
-  peakHours: PeakHourData[];
+  bookingDuration: BookingDurationData[];
   locationPerformance: LocationPerformanceData[];
   weeklyTrends: {
     dayOfWeek: string;
