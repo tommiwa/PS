@@ -313,9 +313,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/users/:id", isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
+      const currentUserId = getAuthenticatedUserId(req);
       
       // Users can only edit their own profile (unless admin)
-      if (req.user?.id !== id && !req.user?.roles?.includes('admin')) {
+      const currentUser = await storage.getUser(currentUserId || '');
+      const isAdmin = currentUser?.roles?.includes('admin');
+      
+      if (currentUserId !== id && !isAdmin) {
         return res.status(403).json({ error: "You can only edit your own profile" });
       }
       

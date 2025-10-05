@@ -482,10 +482,51 @@ export default function Profile() {
     memberSince: user.memberSince || t("common.recently")
   }
 
+  // Profile update mutation
+  const updateProfileMutation = useMutation({
+    mutationFn: async (data: { fullName?: string; phone?: string }) => {
+      if (!user) throw new Error("User not found");
+      
+      // Split full name into first and last name
+      const names = data.fullName?.trim().split(' ') || [];
+      const firstName = names[0] || user.firstName || '';
+      const lastName = names.slice(1).join(' ') || user.lastName || '';
+      
+      return apiRequest(`/api/users/${user.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          firstName,
+          lastName,
+          phone: data.phone
+        })
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been successfully updated.",
+        variant: "success",
+      });
+      setEditDialogOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update profile",
+        variant: "destructive",
+      });
+    }
+  });
+
   const handleSaveProfile = () => {
-    console.log('Save profile changes')
-    setEditDialogOpen(false)
-    // Handle profile update
+    const fullNameInput = document.getElementById('full-name') as HTMLInputElement;
+    const phoneInput = document.getElementById('phone') as HTMLInputElement;
+    
+    updateProfileMutation.mutate({
+      fullName: fullNameInput?.value,
+      phone: phoneInput?.value
+    });
   }
 
   const handleChangePassword = () => {
@@ -1746,8 +1787,15 @@ export default function Profile() {
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button onClick={handleSaveProfile} data-testid="button-save-profile">
-                    {t("profile.saveChanges")}
+                  <Button onClick={handleSaveProfile} disabled={updateProfileMutation.isPending} data-testid="button-save-profile">
+                    {updateProfileMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      t("profile.saveChanges")
+                    )}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
