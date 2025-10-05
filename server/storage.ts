@@ -1338,6 +1338,13 @@ export class MemStorage implements IStorage {
     const id = randomUUID();
     const now = new Date();
     
+    // If this vehicle is being set as default, clear the default flag from all other vehicles for this user
+    if (vehicle.isDefault) {
+      await db.update(vehicles)
+        .set({ isDefault: false })
+        .where(eq(vehicles.userId, userId));
+    }
+    
     // Insert into database
     const [createdVehicle] = await db.insert(vehicles).values({
       id,
@@ -1363,6 +1370,15 @@ export class MemStorage implements IStorage {
     // Query database first
     const existing = await db.select().from(vehicles).where(eq(vehicles.id, id)).limit(1);
     if (existing.length === 0) return undefined;
+
+    const vehicle = existing[0];
+    
+    // If this vehicle is being set as default, clear the default flag from all other vehicles for this user
+    if (updates.isDefault === true) {
+      await db.update(vehicles)
+        .set({ isDefault: false })
+        .where(eq(vehicles.userId, vehicle.userId));
+    }
 
     // Update database
     const [updatedVehicle] = await db.update(vehicles)
