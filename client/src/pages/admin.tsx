@@ -188,10 +188,8 @@ export default function Admin() {
       // Add Revenue Breakdown
       if (revenueQuery.data?.revenueBreakdown) {
         allData.push({ section: "REVENUE BREAKDOWN" });
-        allData.push({ category: "Owner Earnings", amount: `$${revenueQuery.data.revenueBreakdown.ownerEarnings.toLocaleString()}` });
-        allData.push({ category: "Platform Fees", amount: `$${revenueQuery.data.revenueBreakdown.platformFees.toLocaleString()}` });
-        allData.push({ category: "Processing Fees", amount: `$${revenueQuery.data.revenueBreakdown.processingFees.toLocaleString()}` });
-        allData.push({ category: "Other Revenue", amount: `$${revenueQuery.data.revenueBreakdown.otherRevenue.toLocaleString()}` });
+        allData.push({ category: "Spot Owner Earnings", amount: `$${revenueQuery.data.revenueBreakdown.ownerEarnings.toLocaleString()}` });
+        allData.push({ category: "BCI Revenue", amount: `$${revenueQuery.data.revenueBreakdown.platformFees.toLocaleString()}` });
         allData.push({});
       }
 
