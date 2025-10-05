@@ -465,16 +465,16 @@ export default function AdminAudits() {
               <TooltipTrigger asChild>
                 <Button
                   variant="outline"
+                  size="icon"
                   onClick={handleClearFilters}
                   data-testid="button-clear-filters"
                   aria-label="Clear all filters"
                 >
-                  <X className="h-4 w-4 mr-2" />
-                  Clear Filters
+                  <X className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                Reset all search filters
+                Clear Filters
               </TooltipContent>
             </Tooltip>
           </div>
