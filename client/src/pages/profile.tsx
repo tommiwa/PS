@@ -839,7 +839,7 @@ export default function Profile() {
                     <div className="flex items-center justify-center p-8">
                       <div className="text-sm text-muted-foreground">{t("common.loading")}</div>
                     </div>
-                  ) : assignedSpots.some(spot => spot.isBciManaged) ? (
+                  ) : assignedSpots.some((spot: any) => spot.isBciManaged || spot.is_bci_managed) ? (
                     <Alert data-testid="alert-bci-managed-spot-tab">
                       <Info className="h-4 w-4" />
                       <AlertDescription>
@@ -1318,7 +1318,7 @@ export default function Profile() {
                   <Loader2 className="h-4 w-4 animate-spin" />
                   <span className="ml-2 text-sm">{t("common.loading")}</span>
                 </div>
-              ) : assignedSpots.some(spot => spot.isBciManaged) ? (
+              ) : assignedSpots.some((spot: any) => spot.isBciManaged || spot.is_bci_managed) ? (
                 <Alert data-testid="alert-bci-managed-spot">
                   <Info className="h-4 w-4" />
                   <AlertDescription>
