@@ -683,10 +683,8 @@ export const departments = pgTable("departments", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const insertDepartmentSchema = createInsertSchema(departments).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
+export const insertDepartmentSchema = createInsertSchema(departments).pick({
+  name: true,
 });
 
 export type InsertDepartment = z.infer<typeof insertDepartmentSchema>;
@@ -705,10 +703,13 @@ export const locations = pgTable("locations", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const insertLocationSchema = createInsertSchema(locations).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
+export const insertLocationSchema = createInsertSchema(locations).pick({
+  campus: true,
+  building: true,
+  level: true,
+  address: true,
+  timezone: true,
+  isActive: true,
 });
 
 export type InsertLocation = z.infer<typeof insertLocationSchema>;
@@ -725,10 +726,11 @@ export const spotTypesTable = pgTable("spot_types", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const insertSpotTypeSchema = createInsertSchema(spotTypesTable).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
+export const insertSpotTypeSchema = createInsertSchema(spotTypesTable).pick({
+  name: true,
+  slug: true,
+  description: true,
+  isActive: true,
 });
 
 export type InsertSpotType = z.infer<typeof insertSpotTypeSchema>;
