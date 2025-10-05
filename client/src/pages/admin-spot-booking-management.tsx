@@ -868,133 +868,97 @@ export default function AdminSpotBookingManagement() {
       {/* Quick Analytics Cards */}
       {cardsVisible && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="hover-elevate">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-sm font-medium">Active Bookings</CardTitle>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-4 w-4 p-0"
-                    aria-label="Active bookings information"
-                  >
-                    <Info className="h-3 w-3 text-muted-foreground" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  View confirmed bookings currently in progress
-                </TooltipContent>
-              </Tooltip>
-            </div>
-            <CalendarCheck className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" data-testid="stat-active-bookings">
-              {displayAnalytics.totalActiveBookings}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Currently in progress
-            </p>
-          </CardContent>
-        </Card>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card className="hover-elevate">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-2xl font-bold text-blue-600" data-testid="stat-active-bookings">
+                        {displayAnalytics.totalActiveBookings}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Active Bookings</div>
+                    </div>
+                    <div className="bg-blue-500 text-white rounded-lg p-2 w-10 h-10 flex items-center justify-center">
+                      <CalendarCheck className="h-5 w-5" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent>
+              View confirmed bookings currently in progress
+            </TooltipContent>
+          </Tooltip>
 
-        <Card className="hover-elevate">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-sm font-medium">Daily Revenue</CardTitle>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-4 w-4 p-0"
-                    aria-label="Daily revenue information"
-                  >
-                    <Info className="h-3 w-3 text-muted-foreground" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  View total revenue generated today from confirmed bookings
-                </TooltipContent>
-              </Tooltip>
-            </div>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" data-testid="stat-daily-revenue">
-              ${displayAnalytics.totalDailyRevenue.toFixed(2)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              From {displayAnalytics.todayBookings} bookings today
-            </p>
-          </CardContent>
-        </Card>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card className="hover-elevate">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-2xl font-bold text-green-600" data-testid="stat-daily-revenue">
+                        ${displayAnalytics.totalDailyRevenue.toFixed(2)}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Daily Revenue</div>
+                    </div>
+                    <div className="bg-green-500 text-white rounded-lg p-2 w-10 h-10 flex items-center justify-center">
+                      <DollarSign className="h-5 w-5" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent>
+              View total revenue generated today from confirmed bookings
+            </TooltipContent>
+          </Tooltip>
 
-        <Card className="hover-elevate">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-4 w-4 p-0"
-                    aria-label="Pending requests information"
-                  >
-                    <Info className="h-3 w-3 text-muted-foreground" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  View booking requests awaiting admin approval
-                </TooltipContent>
-              </Tooltip>
-            </div>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" data-testid="stat-pending-requests">
-              {displayAnalytics.pendingRequests}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Require admin attention
-            </p>
-          </CardContent>
-        </Card>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card className="hover-elevate">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-2xl font-bold text-orange-600" data-testid="stat-pending-requests">
+                        {displayAnalytics.pendingRequests}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Pending Requests</div>
+                    </div>
+                    <div className="bg-orange-500 text-white rounded-lg p-2 w-10 h-10 flex items-center justify-center">
+                      <Clock className="h-5 w-5" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent>
+              View booking requests awaiting admin approval
+            </TooltipContent>
+          </Tooltip>
 
-        <Card className="hover-elevate">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-sm font-medium">Occupancy Rate</CardTitle>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-4 w-4 p-0"
-                    aria-label="Occupancy rate information"
-                  >
-                    <Info className="h-3 w-3 text-muted-foreground" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  View percentage of spots currently booked vs available
-                </TooltipContent>
-              </Tooltip>
-            </div>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" data-testid="stat-occupancy-rate">
-              {displayAnalytics.occupancyRate}%
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Average utilization
-            </p>
-          </CardContent>
-        </Card>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card className="hover-elevate">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-2xl font-bold text-purple-600" data-testid="stat-occupancy-rate">
+                        {displayAnalytics.occupancyRate}%
+                      </div>
+                      <div className="text-sm text-muted-foreground">Occupancy Rate</div>
+                    </div>
+                    <div className="bg-purple-500 text-white rounded-lg p-2 w-10 h-10 flex items-center justify-center">
+                      <TrendingUp className="h-5 w-5" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent>
+              View percentage of spots currently booked vs available
+            </TooltipContent>
+          </Tooltip>
         </div>
       )}
 
