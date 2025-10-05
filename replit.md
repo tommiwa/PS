@@ -74,11 +74,16 @@ Preferred communication style: Simple, everyday language.
 - **Layout System**: Tailwind's 8-point grid system.
 - **Component Library**: Custom components for parking functionality.
 - **Location Format**: All parking spot locations follow the standardized format: "Victoria - 750 Pandora Ave, Parking Level 1" or "Victoria - 750 Pandora Ave, Parking Level 2" (Building - Address, then Parking Level X)
-- **Admin Card Pattern** (October 2025): Consistent stat card styling across all admin pages
-  - Layout: Icon in colored square box (w-10 h-10, rounded-lg, p-2) positioned in top-right corner
-  - Content: Number/value on left with title below
-  - Structure: CardContent only (no CardHeader), p-4 padding
-  - Tooltips: Entire card wrapped in Tooltip component
+- **Admin Card Pattern** (October 2025): Two distinct stat card styles for different admin pages
+  - **Management Pages Style** (User Management, Parking Management, Spot Booking Management):
+    - CardHeader: Title left (text-sm font-medium), icon in circle outline right (rounded-full, border-2, p-2, h-4 w-4 icon, no background)
+    - CardContent: Large number (text-2xl font-bold), colored subtitle below (text-xs)
+    - Circle colors: gray (all/total), blue (admin/active), green (owner/revenue), purple (renter/metrics), orange (pending)
+  - **Admin Dashboard Style** (Overview page only):
+    - Layout: Icon in colored square box (w-10 h-10, rounded-lg, p-2) in top-right corner
+    - Content: Number/value on left with title below
+    - Structure: CardContent only (no CardHeader), p-4 padding
+  - Tooltips: Entire card wrapped in Tooltip component across all admin pages
   - Color Scheme: Blue (primary metrics), Green (positive/growth), Purple (secondary metrics), Orange (pending/waiting), Gray (neutral/all)
 
 ### Key Features
