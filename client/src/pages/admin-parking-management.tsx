@@ -30,7 +30,7 @@ import {
   Trash2, Edit, UserMinus, UserCheck, Download, FileText,
   Eye, EyeOff, Layers, Sparkles
 } from "lucide-react"
-import type { WaitingList, ParkingSpot, ParkingSpotWithUser, SpotType } from "@shared/schema"
+import type { WaitingList, ParkingSpot, ParkingSpotWithUser, SpotType, Location, SpotTypeTable } from "@shared/schema"
 import { quickExportParkingSpotsPDF, quickExportParkingSpotsExcel, quickExportWaitingListPDF, quickExportWaitingListExcel } from "@/utils/export-utils"
 
 // Standard parking locations (preferred for new spots)
@@ -168,11 +168,11 @@ export default function AdminParkingManagement() {
   });
 
   // Fetch lookup data for form dropdowns
-  const { data: locations = [], isLoading: isLoadingLocations } = useQuery<Array<{ id: number; name: string }>>({
+  const { data: locations = [], isLoading: isLoadingLocations } = useQuery<Location[]>({
     queryKey: ["/api/locations"],
   });
 
-  const { data: spotTypes = [], isLoading: isLoadingSpotTypes } = useQuery<Array<{ id: number; name: string }>>({
+  const { data: spotTypes = [], isLoading: isLoadingSpotTypes } = useQuery<SpotTypeTable[]>({
     queryKey: ["/api/spot-types"],
   });
 
@@ -2100,7 +2100,7 @@ export default function AdminParkingManagement() {
                 <SelectContent>
                   {locations.map(loc => (
                     <SelectItem key={loc.id} value={loc.id.toString()}>
-                      {loc.name}
+                      {loc.office} - {loc.building}, {loc.level}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -2223,7 +2223,7 @@ export default function AdminParkingManagement() {
                 <SelectContent>
                   {locations.map(loc => (
                     <SelectItem key={loc.id} value={loc.id.toString()}>
-                      {loc.name}
+                      {loc.office} - {loc.building}, {loc.level}
                     </SelectItem>
                   ))}
                 </SelectContent>
