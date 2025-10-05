@@ -1070,18 +1070,17 @@ export default function AdminParkingManagement() {
         <Tooltip>
           <TooltipTrigger asChild>
             <Card data-testid="card-total-spots" className="hover-elevate">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-2xl font-bold text-blue-600" data-testid="stat-available-spots">
-                      {unallocatedSpots.length}
-                    </div>
-                    <div className="text-sm text-muted-foreground">{t("admin.parkingManagement.availableSpots")}</div>
-                  </div>
-                  <div className="bg-blue-500 text-white rounded-lg p-2 w-10 h-10 flex items-center justify-center">
-                    <Car className="h-5 w-5" />
-                  </div>
+              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{t("admin.parkingManagement.availableSpots")}</CardTitle>
+                <div className="rounded-full border-2 border-blue-400 p-2">
+                  <Car className="h-4 w-4 text-blue-600" />
                 </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold" data-testid="stat-available-spots">
+                  {unallocatedSpots.length}
+                </div>
+                <p className="text-xs text-blue-600">Unassigned spots</p>
               </CardContent>
             </Card>
           </TooltipTrigger>
@@ -1093,18 +1092,17 @@ export default function AdminParkingManagement() {
         <Tooltip>
           <TooltipTrigger asChild>
             <Card data-testid="card-waiting-users" className="hover-elevate">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-2xl font-bold text-green-600" data-testid="stat-waiting-users">
-                      {waitingListMetrics.active}
-                    </div>
-                    <div className="text-sm text-muted-foreground">{t("admin.parkingManagement.usersWaiting")}</div>
-                  </div>
-                  <div className="bg-green-500 text-white rounded-lg p-2 w-10 h-10 flex items-center justify-center">
-                    <Users className="h-5 w-5" />
-                  </div>
+              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{t("admin.parkingManagement.usersWaiting")}</CardTitle>
+                <div className="rounded-full border-2 border-green-400 p-2">
+                  <Users className="h-4 w-4 text-green-600" />
                 </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold" data-testid="stat-waiting-users">
+                  {waitingListMetrics.active}
+                </div>
+                <p className="text-xs text-green-600">Active waiting list</p>
               </CardContent>
             </Card>
           </TooltipTrigger>
@@ -1116,18 +1114,17 @@ export default function AdminParkingManagement() {
         <Tooltip>
           <TooltipTrigger asChild>
             <Card data-testid="card-avg-wait" className="hover-elevate">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-2xl font-bold text-purple-600" data-testid="stat-avg-wait-time">
-                      {waitingListMetrics.averageWaitTime}
-                    </div>
-                    <div className="text-sm text-muted-foreground">{t("admin.parkingManagement.avgWaitTime")}</div>
-                  </div>
-                  <div className="bg-purple-500 text-white rounded-lg p-2 w-10 h-10 flex items-center justify-center">
-                    <Timer className="h-5 w-5" />
-                  </div>
+              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{t("admin.parkingManagement.avgWaitTime")}</CardTitle>
+                <div className="rounded-full border-2 border-purple-400 p-2">
+                  <Timer className="h-4 w-4 text-purple-600" />
                 </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold" data-testid="stat-avg-wait-time">
+                  {waitingListMetrics.averageWaitTime}
+                </div>
+                <p className="text-xs text-purple-600">Days average wait</p>
               </CardContent>
             </Card>
           </TooltipTrigger>
@@ -1139,18 +1136,17 @@ export default function AdminParkingManagement() {
         <Tooltip>
           <TooltipTrigger asChild>
             <Card data-testid="card-assignments" className="hover-elevate">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-2xl font-bold text-orange-600" data-testid="stat-total-assigned">
-                      {waitingListMetrics.assigned}
-                    </div>
-                    <div className="text-sm text-muted-foreground">{t("admin.parkingManagement.totalAssigned")}</div>
-                  </div>
-                  <div className="bg-orange-500 text-white rounded-lg p-2 w-10 h-10 flex items-center justify-center">
-                    <Target className="h-5 w-5" />
-                  </div>
+              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{t("admin.parkingManagement.totalAssigned")}</CardTitle>
+                <div className="rounded-full border-2 border-orange-400 p-2">
+                  <Target className="h-4 w-4 text-orange-600" />
                 </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold" data-testid="stat-total-assigned">
+                  {waitingListMetrics.assigned}
+                </div>
+                <p className="text-xs text-orange-600">Successfully assigned</p>
               </CardContent>
             </Card>
           </TooltipTrigger>

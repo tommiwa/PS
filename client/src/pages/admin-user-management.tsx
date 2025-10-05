@@ -1268,20 +1268,19 @@ export default function AdminUserManagement() {
                   aria-label="All users filter information"
                   aria-describedby="all-users-card-description"
                 >
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        {isLoadingUsers ? (
-                          <Skeleton className="h-8 w-16 mb-1" />
-                        ) : (
-                          <div className="text-2xl font-bold text-gray-600">{allUsers.length}</div>
-                        )}
-                        <div className="text-sm text-muted-foreground">All Users</div>
-                      </div>
-                      <div className="bg-gray-500 text-white rounded-lg p-2 w-10 h-10 flex items-center justify-center">
-                        <Users className="h-5 w-5" />
-                      </div>
+                  <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">All Users</CardTitle>
+                    <div className="rounded-full border-2 border-gray-400 p-2">
+                      <Users className="h-4 w-4 text-gray-600" />
                     </div>
+                  </CardHeader>
+                  <CardContent>
+                    {isLoadingUsers ? (
+                      <Skeleton className="h-8 w-16 mb-1" />
+                    ) : (
+                      <div className="text-2xl font-bold">{allUsers.length}</div>
+                    )}
+                    <p className="text-xs text-muted-foreground">Total registered users</p>
                   </CardContent>
                   <div id="all-users-card-description" className="sr-only">
                     Show all users in the system regardless of their role
@@ -1311,20 +1310,19 @@ export default function AdminUserManagement() {
                   aria-label="Administrator filter information"
                   aria-describedby="admin-card-description"
                 >
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        {isLoadingUsers ? (
-                          <Skeleton className="h-8 w-16 mb-1" />
-                        ) : (
-                          <div className="text-2xl font-bold text-blue-600">{roleStats.admin}</div>
-                        )}
-                        <div className="text-sm text-muted-foreground">{t("admin.userManagement.administrators")}</div>
-                      </div>
-                      <div className="bg-blue-500 text-white rounded-lg p-2 w-10 h-10 flex items-center justify-center">
-                        <Shield className="h-5 w-5" />
-                      </div>
+                  <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">{t("admin.userManagement.administrators")}</CardTitle>
+                    <div className="rounded-full border-2 border-blue-400 p-2">
+                      <Shield className="h-4 w-4 text-blue-600" />
                     </div>
+                  </CardHeader>
+                  <CardContent>
+                    {isLoadingUsers ? (
+                      <Skeleton className="h-8 w-16 mb-1" />
+                    ) : (
+                      <div className="text-2xl font-bold">{roleStats.admin}</div>
+                    )}
+                    <p className="text-xs text-blue-600">System access</p>
                   </CardContent>
                   <div id="admin-card-description" className="sr-only">
                     Filter to show only administrators with full system access and user management privileges
@@ -1354,20 +1352,19 @@ export default function AdminUserManagement() {
                   aria-label="Spot owner filter information"
                   aria-describedby="owner-card-description"
                 >
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        {isLoadingUsers ? (
-                          <Skeleton className="h-8 w-16 mb-1" />
-                        ) : (
-                          <div className="text-2xl font-bold text-green-600">{roleStats.owner}</div>
-                        )}
-                        <div className="text-sm text-muted-foreground">{t("admin.userManagement.spotOwners")}</div>
-                      </div>
-                      <div className="bg-green-500 text-white rounded-lg p-2 w-10 h-10 flex items-center justify-center">
-                        <Car className="h-5 w-5" />
-                      </div>
+                  <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">{t("admin.userManagement.spotOwners")}</CardTitle>
+                    <div className="rounded-full border-2 border-green-400 p-2">
+                      <Car className="h-4 w-4 text-green-600" />
                     </div>
+                  </CardHeader>
+                  <CardContent>
+                    {isLoadingUsers ? (
+                      <Skeleton className="h-8 w-16 mb-1" />
+                    ) : (
+                      <div className="text-2xl font-bold">{roleStats.owner}</div>
+                    )}
+                    <p className="text-xs text-green-600">Revenue generators</p>
                   </CardContent>
                   <div id="owner-card-description" className="sr-only">
                     Filter to show only spot owners who can list parking spaces for rental and earn revenue
@@ -1397,20 +1394,19 @@ export default function AdminUserManagement() {
                   aria-label="Renter filter information"
                   aria-describedby="renter-card-description"
                 >
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        {isLoadingUsers ? (
-                          <Skeleton className="h-8 w-16 mb-1" />
-                        ) : (
-                          <div className="text-2xl font-bold text-purple-600">{roleStats.renter}</div>
-                        )}
-                        <div className="text-sm text-muted-foreground">{t("admin.userManagement.renters")}</div>
-                      </div>
-                      <div className="bg-purple-500 text-white rounded-lg p-2 w-10 h-10 flex items-center justify-center">
-                        <UserCheck className="h-5 w-5" />
-                      </div>
+                  <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">{t("admin.userManagement.renters")}</CardTitle>
+                    <div className="rounded-full border-2 border-purple-400 p-2">
+                      <UserCheck className="h-4 w-4 text-purple-600" />
                     </div>
+                  </CardHeader>
+                  <CardContent>
+                    {isLoadingUsers ? (
+                      <Skeleton className="h-8 w-16 mb-1" />
+                    ) : (
+                      <div className="text-2xl font-bold">{roleStats.renter}</div>
+                    )}
+                    <p className="text-xs text-purple-600">Regular users</p>
                   </CardContent>
                   <div id="renter-card-description" className="sr-only">
                     Filter to show only renters who book parking spaces but don't own spots

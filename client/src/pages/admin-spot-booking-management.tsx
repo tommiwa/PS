@@ -871,18 +871,17 @@ export default function AdminSpotBookingManagement() {
           <Tooltip>
             <TooltipTrigger asChild>
               <Card className="hover-elevate">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-2xl font-bold text-blue-600" data-testid="stat-active-bookings">
-                        {displayAnalytics.totalActiveBookings}
-                      </div>
-                      <div className="text-sm text-muted-foreground">Active Bookings</div>
-                    </div>
-                    <div className="bg-blue-500 text-white rounded-lg p-2 w-10 h-10 flex items-center justify-center">
-                      <CalendarCheck className="h-5 w-5" />
-                    </div>
+                <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Active Bookings</CardTitle>
+                  <div className="rounded-full border-2 border-blue-400 p-2">
+                    <CalendarCheck className="h-4 w-4 text-blue-600" />
                   </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold" data-testid="stat-active-bookings">
+                    {displayAnalytics.totalActiveBookings}
+                  </div>
+                  <p className="text-xs text-blue-600">Currently in progress</p>
                 </CardContent>
               </Card>
             </TooltipTrigger>
@@ -894,18 +893,17 @@ export default function AdminSpotBookingManagement() {
           <Tooltip>
             <TooltipTrigger asChild>
               <Card className="hover-elevate">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-2xl font-bold text-green-600" data-testid="stat-daily-revenue">
-                        ${displayAnalytics.totalDailyRevenue.toFixed(2)}
-                      </div>
-                      <div className="text-sm text-muted-foreground">Daily Revenue</div>
-                    </div>
-                    <div className="bg-green-500 text-white rounded-lg p-2 w-10 h-10 flex items-center justify-center">
-                      <DollarSign className="h-5 w-5" />
-                    </div>
+                <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Daily Revenue</CardTitle>
+                  <div className="rounded-full border-2 border-green-400 p-2">
+                    <DollarSign className="h-4 w-4 text-green-600" />
                   </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold" data-testid="stat-daily-revenue">
+                    ${displayAnalytics.totalDailyRevenue.toFixed(2)}
+                  </div>
+                  <p className="text-xs text-green-600">Generated today</p>
                 </CardContent>
               </Card>
             </TooltipTrigger>
@@ -917,18 +915,17 @@ export default function AdminSpotBookingManagement() {
           <Tooltip>
             <TooltipTrigger asChild>
               <Card className="hover-elevate">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-2xl font-bold text-orange-600" data-testid="stat-pending-requests">
-                        {displayAnalytics.pendingRequests}
-                      </div>
-                      <div className="text-sm text-muted-foreground">Pending Requests</div>
-                    </div>
-                    <div className="bg-orange-500 text-white rounded-lg p-2 w-10 h-10 flex items-center justify-center">
-                      <Clock className="h-5 w-5" />
-                    </div>
+                <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
+                  <div className="rounded-full border-2 border-orange-400 p-2">
+                    <Clock className="h-4 w-4 text-orange-600" />
                   </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold" data-testid="stat-pending-requests">
+                    {displayAnalytics.pendingRequests}
+                  </div>
+                  <p className="text-xs text-orange-600">Awaiting approval</p>
                 </CardContent>
               </Card>
             </TooltipTrigger>
@@ -940,18 +937,17 @@ export default function AdminSpotBookingManagement() {
           <Tooltip>
             <TooltipTrigger asChild>
               <Card className="hover-elevate">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-2xl font-bold text-purple-600" data-testid="stat-occupancy-rate">
-                        {displayAnalytics.occupancyRate}%
-                      </div>
-                      <div className="text-sm text-muted-foreground">Occupancy Rate</div>
-                    </div>
-                    <div className="bg-purple-500 text-white rounded-lg p-2 w-10 h-10 flex items-center justify-center">
-                      <TrendingUp className="h-5 w-5" />
-                    </div>
+                <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Occupancy Rate</CardTitle>
+                  <div className="rounded-full border-2 border-purple-400 p-2">
+                    <TrendingUp className="h-4 w-4 text-purple-600" />
                   </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold" data-testid="stat-occupancy-rate">
+                    {displayAnalytics.occupancyRate}%
+                  </div>
+                  <p className="text-xs text-purple-600">Spots utilization</p>
                 </CardContent>
               </Card>
             </TooltipTrigger>
