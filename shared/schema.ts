@@ -697,7 +697,7 @@ export type Department = typeof departments.$inferSelect;
 // Locations Table
 export const locations = pgTable("locations", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-  campus: text("campus").notNull(),
+  office: text("office").notNull(),
   building: text("building").notNull(),
   level: text("level").notNull(),
   address: text("address"),
@@ -708,7 +708,7 @@ export const locations = pgTable("locations", {
 });
 
 export const insertLocationSchema = createInsertSchema(locations).pick({
-  campus: true,
+  office: true,
   building: true,
   level: true,
   address: true,
