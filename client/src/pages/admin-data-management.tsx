@@ -523,8 +523,6 @@ export default function AdminDataManagement() {
   const totalLocations = locations.length;
   const totalSpotTypes = spotTypes.length;
   const activeLocations = locations.filter(l => l.isActive).length;
-  const activeSpotTypes = spotTypes.filter(st => st.isActive).length;
-  const inactiveLocations = locations.filter(l => !l.isActive).length;
 
   return (
     <div className="p-6 space-y-6">
@@ -578,7 +576,7 @@ export default function AdminDataManagement() {
       </div>
 
       {cardsVisible && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4" data-testid="data-management-cards">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="data-management-cards">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
@@ -670,54 +668,6 @@ export default function AdminDataManagement() {
                     {activeLocations}
                   </div>
                   <p className="text-xs text-green-600">Active</p>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <Tag className="h-4 w-4" />
-                Active Spot Types
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoadingSpotTypes ? (
-                <>
-                  <Skeleton className="h-8 w-16 mb-2" />
-                  <Skeleton className="h-4 w-20" />
-                </>
-              ) : (
-                <>
-                  <div className="text-2xl font-bold" data-testid="text-active-spot-types">
-                    {activeSpotTypes}
-                  </div>
-                  <p className="text-xs text-green-600">Active</p>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
-                Inactive Locations
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoadingLocations ? (
-                <>
-                  <Skeleton className="h-8 w-16 mb-2" />
-                  <Skeleton className="h-4 w-20" />
-                </>
-              ) : (
-                <>
-                  <div className="text-2xl font-bold" data-testid="text-inactive-locations">
-                    {inactiveLocations}
-                  </div>
-                  <p className="text-xs text-muted-foreground">Inactive</p>
                 </>
               )}
             </CardContent>
