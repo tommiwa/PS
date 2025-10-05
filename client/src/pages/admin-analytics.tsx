@@ -500,9 +500,26 @@ export default function AdminAnalytics() {
                         ]}
                         cx="50%"
                         cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
-                        outerRadius={80}
+                        labelLine={true}
+                        label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+                          const RADIAN = Math.PI / 180;
+                          const radius = outerRadius + 25;
+                          const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                          const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                          return (
+                            <text 
+                              x={x} 
+                              y={y} 
+                              fill="currentColor" 
+                              textAnchor={x > cx ? 'start' : 'end'} 
+                              dominantBaseline="central"
+                              className="text-sm font-medium"
+                            >
+                              {`${(percent * 100).toFixed(1)}%`}
+                            </text>
+                          );
+                        }}
+                        outerRadius={70}
                         fill="#8884d8"
                         dataKey="value"
                       >
