@@ -1220,19 +1220,6 @@ export default function Admin() {
           </TabsContent>
         </Tabs>
       </div>
-
-      {/* Recent Activity Alert */}
-      {systemMetrics.pendingRequests > 0 && (
-        <Alert className="border-orange-200 dark:border-orange-800">
-          <AlertTriangle className="h-4 w-4 text-orange-600" />
-          <AlertDescription>
-            You have {systemMetrics.pendingRequests} high-priority requests in the waiting list that need attention.
-            <Link href="/admin/parking" className="ml-2 underline font-medium">
-              Review now
-            </Link>
-          </AlertDescription>
-        </Alert>
-      )}
     </div>
   )
 }
