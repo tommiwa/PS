@@ -55,7 +55,7 @@ type DepartmentFormData = z.infer<typeof departmentFormSchema>;
 
 // Location form schema
 const locationFormSchema = insertLocationSchema.extend({
-  campus: z.string().min(1, "Campus is required"),
+  office: z.string().min(1, "Office is required"),
   building: z.string().min(1, "Building is required"),
   level: z.string().min(1, "Level is required"),
   address: z.string().optional(),
@@ -115,7 +115,7 @@ export default function AdminDataManagement() {
   const addLocationForm = useForm<LocationFormData>({
     resolver: zodResolver(locationFormSchema),
     defaultValues: {
-      campus: "",
+      office: "",
       building: "",
       level: "",
       address: "",
@@ -127,7 +127,7 @@ export default function AdminDataManagement() {
   const editLocationForm = useForm<LocationFormData>({
     resolver: zodResolver(locationFormSchema),
     defaultValues: {
-      campus: "",
+      office: "",
       building: "",
       level: "",
       address: "",
@@ -467,7 +467,7 @@ export default function AdminDataManagement() {
   const openEditLocationDialog = (location: Location) => {
     setEditingLocation(location);
     editLocationForm.reset({
-      campus: location.campus,
+      office: location.office,
       building: location.building,
       level: location.level,
       address: location.address || "",
@@ -882,15 +882,15 @@ export default function AdminDataManagement() {
                       <form onSubmit={addLocationForm.handleSubmit(handleAddLocation)} className="space-y-4">
                         <FormField
                           control={addLocationForm.control}
-                          name="campus"
+                          name="office"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Campus</FormLabel>
+                              <FormLabel>Office</FormLabel>
                               <FormControl>
                                 <Input 
-                                  placeholder="Enter campus name" 
+                                  placeholder="Enter office name" 
                                   {...field} 
-                                  data-testid="input-location-campus"
+                                  data-testid="input-location-office"
                                 />
                               </FormControl>
                               <FormMessage />
@@ -1017,7 +1017,7 @@ export default function AdminDataManagement() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Campus</TableHead>
+                      <TableHead>Office</TableHead>
                       <TableHead>Building</TableHead>
                       <TableHead>Level</TableHead>
                       <TableHead>Status</TableHead>
@@ -1035,8 +1035,8 @@ export default function AdminDataManagement() {
                     ) : (
                       locations.map((location) => (
                         <TableRow key={location.id} data-testid={`row-location-${location.id}`}>
-                          <TableCell className="font-medium" data-testid={`text-location-campus-${location.id}`}>
-                            {location.campus}
+                          <TableCell className="font-medium" data-testid={`text-location-office-${location.id}`}>
+                            {location.office}
                           </TableCell>
                           <TableCell data-testid={`text-location-building-${location.id}`}>
                             {location.building}
@@ -1331,15 +1331,15 @@ export default function AdminDataManagement() {
             <form onSubmit={editLocationForm.handleSubmit(handleEditLocation)} className="space-y-4">
               <FormField
                 control={editLocationForm.control}
-                name="campus"
+                name="office"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Campus</FormLabel>
+                    <FormLabel>Office</FormLabel>
                     <FormControl>
                       <Input 
-                        placeholder="Enter campus name" 
+                        placeholder="Enter office name" 
                         {...field} 
-                        data-testid="input-edit-location-campus"
+                        data-testid="input-edit-location-office"
                       />
                     </FormControl>
                     <FormMessage />
