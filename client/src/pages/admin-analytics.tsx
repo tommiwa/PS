@@ -148,17 +148,9 @@ export default function AdminAnalytics() {
       label: "Owner Earnings",
       color: "hsl(var(--chart-1))",
     },
-    platformFees: {
-      label: "Platform Fees",
+    bciRevenue: {
+      label: "BCI Revenue",
       color: "hsl(var(--chart-2))",
-    },
-    processingFees: {
-      label: "Processing Fees",
-      color: "hsl(var(--chart-3))",
-    },
-    otherRevenue: {
-      label: "Other Revenue",
-      color: "hsl(var(--chart-4))",
     },
     usage: {
       label: "Usage",
@@ -522,7 +514,12 @@ export default function AdminAnalytics() {
                         ))}
                       </Pie>
                       <RechartsTooltip formatter={(value: number) => [`$${value.toLocaleString()}`, 'Amount']} />
-                      <Legend />
+                      <Legend 
+                        payload={[
+                          { value: t('analytics.ownerEarnings'), type: 'square', color: 'hsl(var(--chart-1))' },
+                          { value: t('analytics.bciRevenue'), type: 'square', color: 'hsl(var(--chart-2))' }
+                        ]}
+                      />
                     </PieChart>
                   </div>
                 )}
