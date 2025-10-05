@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -41,7 +41,10 @@ import {
   Building2,
   Eye,
   EyeOff,
-  Loader2
+  Loader2,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from "lucide-react"
 
 // Department form schema
@@ -75,6 +78,8 @@ const spotTypeFormSchema = insertSpotTypeSchema.extend({
 
 type SpotTypeFormData = z.infer<typeof spotTypeFormSchema>;
 
+type SortDirection = 'asc' | 'desc' | null;
+
 export default function AdminDataManagement() {
   const { confirm } = useConfirm()
   const { toast } = useToast()
@@ -85,16 +90,30 @@ export default function AdminDataManagement() {
   const [showAddDepartmentDialog, setShowAddDepartmentDialog] = useState(false)
   const [showEditDepartmentDialog, setShowEditDepartmentDialog] = useState(false)
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null)
+  const [departmentNameFilter, setDepartmentNameFilter] = useState("")
+  const [departmentSortField, setDepartmentSortField] = useState<'name' | 'createdAt' | null>(null)
+  const [departmentSortDirection, setDepartmentSortDirection] = useState<SortDirection>(null)
 
   // Locations state
   const [showAddLocationDialog, setShowAddLocationDialog] = useState(false)
   const [showEditLocationDialog, setShowEditLocationDialog] = useState(false)
   const [editingLocation, setEditingLocation] = useState<Location | null>(null)
+  const [locationOfficeFilter, setLocationOfficeFilter] = useState("")
+  const [locationBuildingFilter, setLocationBuildingFilter] = useState("")
+  const [locationLevelFilter, setLocationLevelFilter] = useState("")
+  const [locationStatusFilter, setLocationStatusFilter] = useState<string>("")
+  const [locationSortField, setLocationSortField] = useState<'office' | 'building' | 'level' | 'isActive' | 'createdAt' | null>(null)
+  const [locationSortDirection, setLocationSortDirection] = useState<SortDirection>(null)
 
   // Spot Types state
   const [showAddSpotTypeDialog, setShowAddSpotTypeDialog] = useState(false)
   const [showEditSpotTypeDialog, setShowEditSpotTypeDialog] = useState(false)
   const [editingSpotType, setEditingSpotType] = useState<SpotTypeTable | null>(null)
+  const [spotTypeNameFilter, setSpotTypeNameFilter] = useState("")
+  const [spotTypeSlugFilter, setSpotTypeSlugFilter] = useState("")
+  const [spotTypeStatusFilter, setSpotTypeStatusFilter] = useState<string>("")
+  const [spotTypeSortField, setSpotTypeSortField] = useState<'name' | 'slug' | 'isActive' | 'createdAt' | null>(null)
+  const [spotTypeSortDirection, setSpotTypeSortDirection] = useState<SortDirection>(null)
 
   // Department forms
   const addDepartmentForm = useForm<DepartmentFormData>({
@@ -169,6 +188,107 @@ export default function AdminDataManagement() {
   const { data: spotTypes = [], isLoading: isLoadingSpotTypes } = useQuery<SpotTypeTable[]>({
     queryKey: ["/api/spot-types"],
   });
+
+  // Filtered and sorted data
+  const filteredAndSortedDepartments = useMemo(() => {
+    let filtered = departments.filter(dept =>
+      dept.name.toLowerCase().includes(departmentNameFilter.toLowerCase())
+    );
+
+    if (departmentSortField && departmentSortDirection) {
+      filtered.sort((a, b) => {
+        let aVal: any = a[departmentSortField];
+        let bVal: any = b[departmentSortField];
+
+        if (departmentSortField === 'createdAt') {
+          aVal = new Date(aVal).getTime();
+          bVal = new Date(bVal).getTime();
+        } else {
+          aVal = aVal?.toString().toLowerCase() || '';
+          bVal = bVal?.toString().toLowerCase() || '';
+        }
+
+        if (aVal < bVal) return departmentSortDirection === 'asc' ? -1 : 1;
+        if (aVal > bVal) return departmentSortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return filtered;
+  }, [departments, departmentNameFilter, departmentSortField, departmentSortDirection]);
+
+  const filteredAndSortedLocations = useMemo(() => {
+    let filtered = locations.filter(loc => {
+      const matchesOffice = loc.office.toLowerCase().includes(locationOfficeFilter.toLowerCase());
+      const matchesBuilding = loc.building.toLowerCase().includes(locationBuildingFilter.toLowerCase());
+      const matchesLevel = loc.level.toLowerCase().includes(locationLevelFilter.toLowerCase());
+      const matchesStatus = locationStatusFilter === "" || 
+        (locationStatusFilter === "active" && loc.isActive) || 
+        (locationStatusFilter === "inactive" && !loc.isActive);
+      
+      return matchesOffice && matchesBuilding && matchesLevel && matchesStatus;
+    });
+
+    if (locationSortField && locationSortDirection) {
+      filtered.sort((a, b) => {
+        let aVal: any = a[locationSortField];
+        let bVal: any = b[locationSortField];
+
+        if (locationSortField === 'createdAt') {
+          aVal = new Date(aVal).getTime();
+          bVal = new Date(bVal).getTime();
+        } else if (locationSortField === 'isActive') {
+          aVal = aVal ? 1 : 0;
+          bVal = bVal ? 1 : 0;
+        } else {
+          aVal = aVal?.toString().toLowerCase() || '';
+          bVal = bVal?.toString().toLowerCase() || '';
+        }
+
+        if (aVal < bVal) return locationSortDirection === 'asc' ? -1 : 1;
+        if (aVal > bVal) return locationSortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return filtered;
+  }, [locations, locationOfficeFilter, locationBuildingFilter, locationLevelFilter, locationStatusFilter, locationSortField, locationSortDirection]);
+
+  const filteredAndSortedSpotTypes = useMemo(() => {
+    let filtered = spotTypes.filter(st => {
+      const matchesName = st.name.toLowerCase().includes(spotTypeNameFilter.toLowerCase());
+      const matchesSlug = st.slug.toLowerCase().includes(spotTypeSlugFilter.toLowerCase());
+      const matchesStatus = spotTypeStatusFilter === "" || 
+        (spotTypeStatusFilter === "active" && st.isActive) || 
+        (spotTypeStatusFilter === "inactive" && !st.isActive);
+      
+      return matchesName && matchesSlug && matchesStatus;
+    });
+
+    if (spotTypeSortField && spotTypeSortDirection) {
+      filtered.sort((a, b) => {
+        let aVal: any = a[spotTypeSortField];
+        let bVal: any = b[spotTypeSortField];
+
+        if (spotTypeSortField === 'createdAt') {
+          aVal = new Date(aVal).getTime();
+          bVal = new Date(bVal).getTime();
+        } else if (spotTypeSortField === 'isActive') {
+          aVal = aVal ? 1 : 0;
+          bVal = bVal ? 1 : 0;
+        } else {
+          aVal = aVal?.toString().toLowerCase() || '';
+          bVal = bVal?.toString().toLowerCase() || '';
+        }
+
+        if (aVal < bVal) return spotTypeSortDirection === 'asc' ? -1 : 1;
+        if (aVal > bVal) return spotTypeSortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return filtered;
+  }, [spotTypes, spotTypeNameFilter, spotTypeSlugFilter, spotTypeStatusFilter, spotTypeSortField, spotTypeSortDirection]);
 
   // Department mutations
   const createDepartmentMutation = useMutation({
@@ -327,7 +447,6 @@ export default function AdminDataManagement() {
   // Spot Type mutations
   const createSpotTypeMutation = useMutation({
     mutationFn: async (spotTypeData: SpotTypeFormData): Promise<SpotTypeTable> => {
-      // Auto-lowercase the slug
       const dataWithLowercaseSlug = {
         ...spotTypeData,
         slug: spotTypeData.slug.toLowerCase()
@@ -359,7 +478,6 @@ export default function AdminDataManagement() {
 
   const updateSpotTypeMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: SpotTypeFormData }): Promise<SpotTypeTable> => {
-      // Auto-lowercase the slug
       const dataWithLowercaseSlug = {
         ...data,
         slug: data.slug.toLowerCase()
@@ -410,6 +528,56 @@ export default function AdminDataManagement() {
       });
     }
   });
+
+  // Sort handlers
+  const handleDepartmentSort = (field: 'name' | 'createdAt') => {
+    if (departmentSortField === field) {
+      if (departmentSortDirection === 'asc') {
+        setDepartmentSortDirection('desc');
+      } else if (departmentSortDirection === 'desc') {
+        setDepartmentSortDirection(null);
+        setDepartmentSortField(null);
+      }
+    } else {
+      setDepartmentSortField(field);
+      setDepartmentSortDirection('asc');
+    }
+  };
+
+  const handleLocationSort = (field: 'office' | 'building' | 'level' | 'isActive' | 'createdAt') => {
+    if (locationSortField === field) {
+      if (locationSortDirection === 'asc') {
+        setLocationSortDirection('desc');
+      } else if (locationSortDirection === 'desc') {
+        setLocationSortDirection(null);
+        setLocationSortField(null);
+      }
+    } else {
+      setLocationSortField(field);
+      setLocationSortDirection('asc');
+    }
+  };
+
+  const handleSpotTypeSort = (field: 'name' | 'slug' | 'isActive' | 'createdAt') => {
+    if (spotTypeSortField === field) {
+      if (spotTypeSortDirection === 'asc') {
+        setSpotTypeSortDirection('desc');
+      } else if (spotTypeSortDirection === 'desc') {
+        setSpotTypeSortDirection(null);
+        setSpotTypeSortField(null);
+      }
+    } else {
+      setSpotTypeSortField(field);
+      setSpotTypeSortDirection('asc');
+    }
+  };
+
+  const getSortIcon = (field: string, currentField: string | null, direction: SortDirection) => {
+    if (field !== currentField) return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    if (direction === 'asc') return <ArrowUp className="ml-2 h-4 w-4" />;
+    if (direction === 'desc') return <ArrowDown className="ml-2 h-4 w-4" />;
+    return <ArrowUpDown className="ml-2 h-4 w-4" />;
+  };
 
   // Handlers
   const handleAddDepartment = async (data: DepartmentFormData) => {
@@ -667,7 +835,7 @@ export default function AdminDataManagement() {
                   <div className="text-2xl font-bold" data-testid="text-active-locations">
                     {activeLocations}
                   </div>
-                  <p className="text-xs text-green-600">Active</p>
+                  <p className="text-xs text-muted-foreground">Active</p>
                 </>
               )}
             </CardContent>
@@ -745,6 +913,17 @@ export default function AdminDataManagement() {
               </div>
             </CardHeader>
             <CardContent>
+              {/* Filters */}
+              <div className="mb-4 flex gap-2">
+                <Input
+                  placeholder="Filter by name..."
+                  value={departmentNameFilter}
+                  onChange={(e) => setDepartmentNameFilter(e.target.value)}
+                  className="max-w-sm"
+                  data-testid="filter-department-name"
+                />
+              </div>
+
               {isLoadingDepartments ? (
                 <div className="space-y-2">
                   {[...Array(5)].map((_, i) => (
@@ -755,20 +934,40 @@ export default function AdminDataManagement() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Department Name</TableHead>
-                      <TableHead>Created Date</TableHead>
+                      <TableHead>
+                        <Button 
+                          variant="ghost" 
+                          onClick={() => handleDepartmentSort('name')}
+                          className="hover-elevate"
+                          data-testid="sort-department-name"
+                        >
+                          Department Name
+                          {getSortIcon('name', departmentSortField, departmentSortDirection)}
+                        </Button>
+                      </TableHead>
+                      <TableHead>
+                        <Button 
+                          variant="ghost" 
+                          onClick={() => handleDepartmentSort('createdAt')}
+                          className="hover-elevate"
+                          data-testid="sort-department-date"
+                        >
+                          Created Date
+                          {getSortIcon('createdAt', departmentSortField, departmentSortDirection)}
+                        </Button>
+                      </TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {departments.length === 0 ? (
+                    {filteredAndSortedDepartments.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
-                          No departments found. Create your first department to get started.
+                          No departments found. {departmentNameFilter ? "Try adjusting your filters." : "Create your first department to get started."}
                         </TableCell>
                       </TableRow>
                     ) : (
-                      departments.map((department) => (
+                      filteredAndSortedDepartments.map((department) => (
                         <TableRow key={department.id} data-testid={`row-department-${department.id}`}>
                           <TableCell className="font-medium" data-testid={`text-department-name-${department.id}`}>
                             {department.name}
@@ -957,6 +1156,38 @@ export default function AdminDataManagement() {
               </div>
             </CardHeader>
             <CardContent>
+              {/* Filters */}
+              <div className="mb-4 grid grid-cols-1 md:grid-cols-4 gap-2">
+                <Input
+                  placeholder="Filter by office..."
+                  value={locationOfficeFilter}
+                  onChange={(e) => setLocationOfficeFilter(e.target.value)}
+                  data-testid="filter-location-office"
+                />
+                <Input
+                  placeholder="Filter by building..."
+                  value={locationBuildingFilter}
+                  onChange={(e) => setLocationBuildingFilter(e.target.value)}
+                  data-testid="filter-location-building"
+                />
+                <Input
+                  placeholder="Filter by level..."
+                  value={locationLevelFilter}
+                  onChange={(e) => setLocationLevelFilter(e.target.value)}
+                  data-testid="filter-location-level"
+                />
+                <select
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  value={locationStatusFilter}
+                  onChange={(e) => setLocationStatusFilter(e.target.value)}
+                  data-testid="filter-location-status"
+                >
+                  <option value="">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+
               {isLoadingLocations ? (
                 <div className="space-y-2">
                   {[...Array(5)].map((_, i) => (
@@ -967,23 +1198,73 @@ export default function AdminDataManagement() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Office</TableHead>
-                      <TableHead>Building</TableHead>
-                      <TableHead>Level</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Created Date</TableHead>
+                      <TableHead>
+                        <Button 
+                          variant="ghost" 
+                          onClick={() => handleLocationSort('office')}
+                          className="hover-elevate"
+                          data-testid="sort-location-office"
+                        >
+                          Office
+                          {getSortIcon('office', locationSortField, locationSortDirection)}
+                        </Button>
+                      </TableHead>
+                      <TableHead>
+                        <Button 
+                          variant="ghost" 
+                          onClick={() => handleLocationSort('building')}
+                          className="hover-elevate"
+                          data-testid="sort-location-building"
+                        >
+                          Building
+                          {getSortIcon('building', locationSortField, locationSortDirection)}
+                        </Button>
+                      </TableHead>
+                      <TableHead>
+                        <Button 
+                          variant="ghost" 
+                          onClick={() => handleLocationSort('level')}
+                          className="hover-elevate"
+                          data-testid="sort-location-level"
+                        >
+                          Level
+                          {getSortIcon('level', locationSortField, locationSortDirection)}
+                        </Button>
+                      </TableHead>
+                      <TableHead>
+                        <Button 
+                          variant="ghost" 
+                          onClick={() => handleLocationSort('isActive')}
+                          className="hover-elevate"
+                          data-testid="sort-location-status"
+                        >
+                          Status
+                          {getSortIcon('isActive', locationSortField, locationSortDirection)}
+                        </Button>
+                      </TableHead>
+                      <TableHead>
+                        <Button 
+                          variant="ghost" 
+                          onClick={() => handleLocationSort('createdAt')}
+                          className="hover-elevate"
+                          data-testid="sort-location-date"
+                        >
+                          Created Date
+                          {getSortIcon('createdAt', locationSortField, locationSortDirection)}
+                        </Button>
+                      </TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {locations.length === 0 ? (
+                    {filteredAndSortedLocations.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                          No locations found. Create your first location to get started.
+                          No locations found. {(locationOfficeFilter || locationBuildingFilter || locationLevelFilter || locationStatusFilter) ? "Try adjusting your filters." : "Create your first location to get started."}
                         </TableCell>
                       </TableRow>
                     ) : (
-                      locations.map((location) => (
+                      filteredAndSortedLocations.map((location) => (
                         <TableRow key={location.id} data-testid={`row-location-${location.id}`}>
                           <TableCell className="font-medium" data-testid={`text-location-office-${location.id}`}>
                             {location.office}
@@ -1148,6 +1429,32 @@ export default function AdminDataManagement() {
               </div>
             </CardHeader>
             <CardContent>
+              {/* Filters */}
+              <div className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-2">
+                <Input
+                  placeholder="Filter by name..."
+                  value={spotTypeNameFilter}
+                  onChange={(e) => setSpotTypeNameFilter(e.target.value)}
+                  data-testid="filter-spot-type-name"
+                />
+                <Input
+                  placeholder="Filter by slug..."
+                  value={spotTypeSlugFilter}
+                  onChange={(e) => setSpotTypeSlugFilter(e.target.value)}
+                  data-testid="filter-spot-type-slug"
+                />
+                <select
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  value={spotTypeStatusFilter}
+                  onChange={(e) => setSpotTypeStatusFilter(e.target.value)}
+                  data-testid="filter-spot-type-status"
+                >
+                  <option value="">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+
               {isLoadingSpotTypes ? (
                 <div className="space-y-2">
                   {[...Array(5)].map((_, i) => (
@@ -1158,23 +1465,63 @@ export default function AdminDataManagement() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Slug</TableHead>
+                      <TableHead>
+                        <Button 
+                          variant="ghost" 
+                          onClick={() => handleSpotTypeSort('name')}
+                          className="hover-elevate"
+                          data-testid="sort-spot-type-name"
+                        >
+                          Name
+                          {getSortIcon('name', spotTypeSortField, spotTypeSortDirection)}
+                        </Button>
+                      </TableHead>
+                      <TableHead>
+                        <Button 
+                          variant="ghost" 
+                          onClick={() => handleSpotTypeSort('slug')}
+                          className="hover-elevate"
+                          data-testid="sort-spot-type-slug"
+                        >
+                          Slug
+                          {getSortIcon('slug', spotTypeSortField, spotTypeSortDirection)}
+                        </Button>
+                      </TableHead>
                       <TableHead>Description</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Created Date</TableHead>
+                      <TableHead>
+                        <Button 
+                          variant="ghost" 
+                          onClick={() => handleSpotTypeSort('isActive')}
+                          className="hover-elevate"
+                          data-testid="sort-spot-type-status"
+                        >
+                          Status
+                          {getSortIcon('isActive', spotTypeSortField, spotTypeSortDirection)}
+                        </Button>
+                      </TableHead>
+                      <TableHead>
+                        <Button 
+                          variant="ghost" 
+                          onClick={() => handleSpotTypeSort('createdAt')}
+                          className="hover-elevate"
+                          data-testid="sort-spot-type-date"
+                        >
+                          Created Date
+                          {getSortIcon('createdAt', spotTypeSortField, spotTypeSortDirection)}
+                        </Button>
+                      </TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {spotTypes.length === 0 ? (
+                    {filteredAndSortedSpotTypes.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                          No spot types found. Create your first spot type to get started.
+                          No spot types found. {(spotTypeNameFilter || spotTypeSlugFilter || spotTypeStatusFilter) ? "Try adjusting your filters." : "Create your first spot type to get started."}
                         </TableCell>
                       </TableRow>
                     ) : (
-                      spotTypes.map((spotType) => (
+                      filteredAndSortedSpotTypes.map((spotType) => (
                         <TableRow key={spotType.id} data-testid={`row-spot-type-${spotType.id}`}>
                           <TableCell className="font-medium" data-testid={`text-spot-type-name-${spotType.id}`}>
                             {spotType.name}
