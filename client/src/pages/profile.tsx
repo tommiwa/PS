@@ -843,7 +843,7 @@ export default function Profile() {
                     <Alert data-testid="alert-bci-managed-spot-tab">
                       <Info className="h-4 w-4" />
                       <AlertDescription>
-                        You already have a BCI-assigned spot and cannot enroll in the waiting list. Only users without BCI-managed spots can join the waiting list.
+                        You already have a BCI-assigned spot. Users with BCI-managed spots cannot join the waiting list.
                       </AlertDescription>
                     </Alert>
                   ) : waitingListEntry ? (
@@ -1322,7 +1322,7 @@ export default function Profile() {
                 <Alert data-testid="alert-bci-managed-spot">
                   <Info className="h-4 w-4" />
                   <AlertDescription>
-                    You already have a BCI-assigned spot and cannot enroll in the waiting list. Only users without BCI-managed spots can join the waiting list.
+                    You already have a BCI-assigned spot. Users with BCI-managed spots cannot join the waiting list.
                   </AlertDescription>
                 </Alert>
               ) : waitingListEntry?.status === "active" ? (
