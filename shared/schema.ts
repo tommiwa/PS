@@ -31,7 +31,7 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   // Custom fields for parking app
   phone: text("phone"),
-  departmentId: integer("department_id").notNull(), // Foreign key to departments.id
+  departmentId: integer("department_id").notNull().references(() => departments.id, { onDelete: "restrict" }),
   roles: text("roles").array().notNull().default(sql`ARRAY['renter']::text[]`),
   status: text("status").notNull().$type<UserStatus>().default("active"),
   memberSince: text("member_since"),
@@ -132,8 +132,8 @@ export type SpotType = z.infer<typeof spotTypes>;
 export const parkingSpots = pgTable("parking_spots", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   spotNumber: text("spot_number").notNull(),
-  locationId: integer("location_id").notNull(), // Foreign key to locations.id
-  spotTypeId: integer("spot_type_id").notNull(), // Foreign key to spot_types.id
+  locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "restrict" }),
+  spotTypeId: integer("spot_type_id").notNull().references(() => spotTypesTable.id, { onDelete: "restrict" }),
   isIndoor: boolean("is_indoor").notNull().default(false),
   ownerId: varchar("owner_id"), // References users.id - nullable for unallocated spots
   description: text("description"),
@@ -251,8 +251,8 @@ export const waitingList = pgTable("waiting_list", {
   userId: varchar("user_id").notNull(), // References users.id
   userName: text("user_name").notNull(),
   userEmail: text("user_email").notNull(),
-  preferredSpotTypeId: integer("preferred_spot_type_id"), // Foreign key to spot_types.id (nullable - "any type")
-  preferredLocationId: integer("preferred_location_id"), // Foreign key to locations.id (nullable - "any location")
+  preferredSpotTypeId: integer("preferred_spot_type_id").references(() => spotTypesTable.id, { onDelete: "set null" }),
+  preferredLocationId: integer("preferred_location_id").references(() => locations.id, { onDelete: "set null" }),
   priority: integer("priority").notNull().default(1), // 1 = highest priority
   status: text("status").notNull().default("active"), // active, assigned, cancelled
   reason: text("reason"), // Why they need parking
