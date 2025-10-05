@@ -31,7 +31,8 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   // Custom fields for parking app
   phone: text("phone"),
-  department: text("department"),
+  department: text("department"), // DEPRECATED: Use departmentId instead
+  departmentId: integer("department_id"), // Foreign key to departments.id
   roles: text("roles").array().notNull().default(sql`ARRAY['renter']::text[]`),
   status: text("status").notNull().$type<UserStatus>().default("active"),
   memberSince: text("member_since"),
@@ -132,8 +133,10 @@ export type SpotType = z.infer<typeof spotTypes>;
 export const parkingSpots = pgTable("parking_spots", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   spotNumber: text("spot_number").notNull(),
-  location: text("location").notNull(), // Building/Floor/Section
-  spotType: text("spot_type").notNull().$type<SpotType>(),
+  location: text("location"), // DEPRECATED: Use locationId instead
+  locationId: integer("location_id"), // Foreign key to locations.id
+  spotType: text("spot_type"), // DEPRECATED: Use spotTypeId instead
+  spotTypeId: integer("spot_type_id"), // Foreign key to spot_types.id
   isIndoor: boolean("is_indoor").notNull().default(false),
   ownerId: varchar("owner_id"), // References users.id - nullable for unallocated spots
   description: text("description"),
@@ -246,9 +249,11 @@ export const waitingList = pgTable("waiting_list", {
   userId: varchar("user_id").notNull(), // References users.id
   userName: text("user_name").notNull(),
   userEmail: text("user_email").notNull(),
-  userDepartment: text("user_department").notNull(),
-  preferredSpotType: text("preferred_spot_type").$type<SpotType>(),
-  preferredBuilding: text("preferred_building"),
+  userDepartment: text("user_department"), // DEPRECATED: Derive from users.department
+  preferredSpotType: text("preferred_spot_type"), // DEPRECATED: Use preferredSpotTypeId
+  preferredSpotTypeId: integer("preferred_spot_type_id"), // Foreign key to spot_types.id
+  preferredBuilding: text("preferred_building"), // DEPRECATED: Use preferredLocationId
+  preferredLocationId: integer("preferred_location_id"), // Foreign key to locations.id
   priority: integer("priority").notNull().default(1), // 1 = highest priority
   status: text("status").notNull().default("active"), // active, assigned, cancelled
   reason: text("reason"), // Why they need parking
