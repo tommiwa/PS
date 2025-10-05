@@ -1067,133 +1067,97 @@ export default function AdminParkingManagement() {
       {/* Quick Analytics Cards */}
       {cardsVisible && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card data-testid="card-total-spots" className="hover-elevate">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-sm font-medium">{t("admin.parkingManagement.availableSpots")}</CardTitle>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    className="rounded-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    aria-label="Available spots information"
-                    tabIndex={0}
-                  >
-                    <Car className="h-5 w-5 text-blue-600" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  View spots currently unassigned and available for rental
-                </TooltipContent>
-              </Tooltip>
-            </div>
-            <Car className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" data-testid="stat-available-spots">
-              {unallocatedSpots.length}
-            </div>
-            <p className="text-xs text-muted-foreground">
-{t("admin.parkingManagement.readyForAssignment")}
-            </p>
-          </CardContent>
-        </Card>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Card data-testid="card-total-spots" className="hover-elevate">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-2xl font-bold text-blue-600" data-testid="stat-available-spots">
+                      {unallocatedSpots.length}
+                    </div>
+                    <div className="text-sm text-muted-foreground">{t("admin.parkingManagement.availableSpots")}</div>
+                  </div>
+                  <div className="bg-blue-500 text-white rounded-lg p-2 w-10 h-10 flex items-center justify-center">
+                    <Car className="h-5 w-5" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent>
+            View spots currently unassigned and available for rental
+          </TooltipContent>
+        </Tooltip>
 
-        <Card data-testid="card-waiting-users" className="hover-elevate">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-sm font-medium">{t("admin.parkingManagement.usersWaiting")}</CardTitle>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    className="rounded-sm focus:outline-none focus:ring-2 focus:ring-green-400"
-                    aria-label="Users waiting information"
-                    tabIndex={0}
-                  >
-                    <Users className="h-5 w-5 text-green-600" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  View users actively waiting for spot assignments
-                </TooltipContent>
-              </Tooltip>
-            </div>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" data-testid="stat-waiting-users">
-              {waitingListMetrics.active}
-            </div>
-            <p className="text-xs text-muted-foreground">
-{t("admin.parkingManagement.activeWaitingListEntries")}
-            </p>
-          </CardContent>
-        </Card>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Card data-testid="card-waiting-users" className="hover-elevate">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-2xl font-bold text-green-600" data-testid="stat-waiting-users">
+                      {waitingListMetrics.active}
+                    </div>
+                    <div className="text-sm text-muted-foreground">{t("admin.parkingManagement.usersWaiting")}</div>
+                  </div>
+                  <div className="bg-green-500 text-white rounded-lg p-2 w-10 h-10 flex items-center justify-center">
+                    <Users className="h-5 w-5" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent>
+            View users actively waiting for spot assignments
+          </TooltipContent>
+        </Tooltip>
 
-        <Card data-testid="card-avg-wait" className="hover-elevate">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-sm font-medium">{t("admin.parkingManagement.avgWaitTime")}</CardTitle>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    className="rounded-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-                    aria-label="Average wait time information"
-                    tabIndex={0}
-                  >
-                    <Timer className="h-5 w-5 text-purple-600" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  View average days users wait before getting assigned
-                </TooltipContent>
-              </Tooltip>
-            </div>
-            <Timer className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" data-testid="stat-avg-wait-time">
-              {waitingListMetrics.averageWaitTime}
-            </div>
-            <p className="text-xs text-muted-foreground">
-{t("admin.parkingManagement.daysOnWaitingList")}
-            </p>
-          </CardContent>
-        </Card>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Card data-testid="card-avg-wait" className="hover-elevate">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-2xl font-bold text-purple-600" data-testid="stat-avg-wait-time">
+                      {waitingListMetrics.averageWaitTime}
+                    </div>
+                    <div className="text-sm text-muted-foreground">{t("admin.parkingManagement.avgWaitTime")}</div>
+                  </div>
+                  <div className="bg-purple-500 text-white rounded-lg p-2 w-10 h-10 flex items-center justify-center">
+                    <Timer className="h-5 w-5" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent>
+            View average days users wait before getting assigned
+          </TooltipContent>
+        </Tooltip>
 
-        <Card data-testid="card-assignments" className="hover-elevate">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-sm font-medium">{t("admin.parkingManagement.totalAssigned")}</CardTitle>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    className="rounded-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                    aria-label="Total assigned information"
-                    tabIndex={0}
-                  >
-                    <Target className="h-5 w-5 text-orange-600" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  View total spots successfully assigned from waiting list
-                </TooltipContent>
-              </Tooltip>
-            </div>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" data-testid="stat-total-assigned">
-              {waitingListMetrics.assigned}
-            </div>
-            <p className="text-xs text-muted-foreground">
-{t("admin.parkingManagement.spotsSuccessfullyAssigned")}
-            </p>
-          </CardContent>
-        </Card>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Card data-testid="card-assignments" className="hover-elevate">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-2xl font-bold text-orange-600" data-testid="stat-total-assigned">
+                      {waitingListMetrics.assigned}
+                    </div>
+                    <div className="text-sm text-muted-foreground">{t("admin.parkingManagement.totalAssigned")}</div>
+                  </div>
+                  <div className="bg-orange-500 text-white rounded-lg p-2 w-10 h-10 flex items-center justify-center">
+                    <Target className="h-5 w-5" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent>
+            View total spots successfully assigned from waiting list
+          </TooltipContent>
+        </Tooltip>
         </div>
       )}
 
