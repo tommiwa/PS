@@ -47,7 +47,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
   firstName: true,
   lastName: true,
   phone: true,
-  department: true,
+  departmentId: true,
   roles: true,
   memberSince: true,
 });
@@ -149,6 +149,11 @@ export const parkingSpots = pgTable("parking_spots", {
 export const insertParkingSpotSchema = createInsertSchema(parkingSpots).omit({
   id: true,
   createdAt: true,
+  location: true, // DEPRECATED: Use locationId
+  spotType: true, // DEPRECATED: Use spotTypeId
+}).extend({
+  locationId: z.number().int().positive(),
+  spotTypeId: z.number().int().positive(),
 });
 
 export type InsertParkingSpot = z.infer<typeof insertParkingSpotSchema>;
@@ -271,6 +276,9 @@ export const insertWaitingListSchema = createInsertSchema(waitingList).omit({
   createdAt: true,
   updatedAt: true,
   enrolledDate: true,
+  userDepartment: true, // DEPRECATED: Derive from users
+  preferredSpotType: true, // DEPRECATED: Use preferredSpotTypeId
+  preferredBuilding: true, // DEPRECATED: Use preferredLocationId
 });
 
 export type InsertWaitingList = z.infer<typeof insertWaitingListSchema>;
