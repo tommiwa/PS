@@ -1743,14 +1743,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/admin/locations - Create location (admin only)
   app.post("/api/admin/locations", requireAdmin, async (req, res) => {
     try {
-      const { campus, building, level, address, timezone, isActive } = req.body;
+      const { office, building, level, address, timezone, isActive } = req.body;
       
-      if (!campus || !building || !level) {
-        return res.status(400).json({ error: "Campus, building, and level are required" });
+      if (!office || !building || !level) {
+        return res.status(400).json({ error: "Office, building, and level are required" });
       }
       
       const location = await storage.createLocation({
-        campus: campus.trim(),
+        office: office.trim(),
         building: building.trim(),
         level: level.trim(),
         address: address?.trim(),
@@ -1771,14 +1771,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/admin/locations/:id", requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const { campus, building, level, address, timezone, isActive } = req.body;
+      const { office, building, level, address, timezone, isActive } = req.body;
       
       if (isNaN(id)) {
         return res.status(400).json({ error: "Invalid location ID" });
       }
       
       const updates: any = {};
-      if (campus !== undefined) updates.campus = campus.trim();
+      if (office !== undefined) updates.office = office.trim();
       if (building !== undefined) updates.building = building.trim();
       if (level !== undefined) updates.level = level.trim();
       if (address !== undefined) updates.address = address?.trim();
