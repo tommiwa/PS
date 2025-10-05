@@ -461,6 +461,22 @@ export default function AdminAudits() {
                 Search audit logs by usernames and actions
               </TooltipContent>
             </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  onClick={handleClearFilters}
+                  data-testid="button-clear-filters"
+                  aria-label="Clear all filters"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Clear Filters
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                Reset all search filters
+              </TooltipContent>
+            </Tooltip>
           </div>
 
           {/* Filter Controls */}
@@ -558,26 +574,6 @@ export default function AdminAudits() {
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          {/* Clear Filters Button */}
-          <div className="flex justify-end">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  onClick={handleClearFilters}
-                  data-testid="button-clear-filters"
-                  aria-label="Clear all filters"
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Clear Filters
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                Reset all search terms and filters to default values
-              </TooltipContent>
-            </Tooltip>
           </div>
         </CardContent>
       </Card>
