@@ -23,7 +23,8 @@ import {
   Users,
   RefreshCw,
   Shield,
-  Info
+  Info,
+  X
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -141,6 +142,13 @@ export default function AdminAudits() {
   // Handle filter change
   const handleFilterChange = (key: keyof AuditFilters, value: any) => {
     setFilters(prev => ({ ...prev, [key]: value === "" ? undefined : value }));
+    setPage(1);
+  };
+
+  // Handle clear filters
+  const handleClearFilters = () => {
+    setFilters({});
+    setSearchTerm("");
     setPage(1);
   };
 
@@ -550,6 +558,26 @@ export default function AdminAudits() {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* Clear Filters Button */}
+          <div className="flex justify-end">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  onClick={handleClearFilters}
+                  data-testid="button-clear-filters"
+                  aria-label="Clear all filters"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Clear Filters
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                Reset all search terms and filters to default values
+              </TooltipContent>
+            </Tooltip>
           </div>
         </CardContent>
       </Card>
