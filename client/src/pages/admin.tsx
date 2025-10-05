@@ -253,13 +253,16 @@ export default function Admin() {
         allData.push({});
       }
 
-      // Add Usage Patterns - Peak Hours
-      if (usageQuery.data?.peakHours && usageQuery.data.peakHours.length > 0) {
-        allData.push({ section: "PEAK HOURS USAGE" });
-        usageQuery.data.peakHours.forEach(item => {
+      // Add Usage Patterns - Location Performance
+      if (usageQuery.data?.locationPerformance && usageQuery.data.locationPerformance.length > 0) {
+        allData.push({ section: "LOCATION PERFORMANCE" });
+        usageQuery.data.locationPerformance.forEach(item => {
           allData.push({
-            time: item.time,
-            usage: `${item.usage}%`
+            location: item.location,
+            spotsCount: item.spotsCount,
+            utilization: `${item.utilization}%`,
+            earnings: `$${item.earnings.toLocaleString()}`,
+            averageRate: `$${item.averageRate.toFixed(2)}`
           });
         });
         allData.push({});
