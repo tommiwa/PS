@@ -11,6 +11,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useToast } from "@/hooks/use-toast"
+import { exportToExcel, type ExportData } from "@/utils/export-utils"
 import { 
   Users, Car, CalendarCheck, BarChart3, FileText, Shield,
   TrendingUp, Clock, MapPin, AlertTriangle, ArrowRight,
@@ -53,6 +55,7 @@ export default function Admin() {
   const [dateRange, setDateRange] = useState("last-30-days")
   const { cardsVisible, toggleCards } = useCardsVisibility('analytics')
   const { t } = useLanguage()
+  const { toast } = useToast()
 
   // Fetch system metrics data
   const { data: allUsers = [], isLoading: isLoadingUsers, refetch: refetchUsers } = useQuery<User[]>({
@@ -141,6 +144,185 @@ export default function Admin() {
       refetchRecentBookings()
     ]);
     handleRefreshAnalytics();
+  };
+
+  // Handle export analytics report
+  const handleExportReport = () => {
+    try {
+      // Check if data is available
+      if (isLoadingAnalytics) {
+        toast({
+          title: "Please wait",
+          description: "Analytics data is still loading. Please try again in a moment.",
+          variant: "default"
+        });
+        return;
+      }
+
+      // Prepare comprehensive export data with all analytics sections
+      const allData: any[] = [];
+
+      // Add Summary Section with system metrics
+      allData.push({ section: "SYSTEM METRICS" });
+      allData.push({ metric: "Total Users", value: systemMetrics.totalUsers });
+      allData.push({ metric: "Total Spots", value: systemMetrics.totalSpots });
+      allData.push({ metric: "Allocated Spots", value: systemMetrics.allocatedSpots });
+      allData.push({ metric: "Available Spots", value: systemMetrics.availableSpots });
+      allData.push({ metric: "Utilization Rate", value: `${systemMetrics.utilizationRate}%` });
+      allData.push({ metric: "Active Waiting List", value: systemMetrics.activeWaitingList });
+      allData.push({ metric: "Recent Bookings", value: systemMetrics.recentBookingsCount });
+      allData.push({});
+
+      // Add Overview Metrics
+      if (overviewQuery.data) {
+        allData.push({ section: "OVERVIEW METRICS" });
+        allData.push({ metric: "Total Revenue", value: `$${overviewQuery.data.totalRevenue.toLocaleString()}` });
+        allData.push({ metric: "Total Bookings", value: overviewQuery.data.totalBookings.toLocaleString() });
+        allData.push({ metric: "Active Users", value: overviewQuery.data.activeUsers });
+        allData.push({ metric: "Utilization Rate", value: `${overviewQuery.data.utilizationRate}%` });
+        allData.push({ metric: "Average Booking Value", value: `$${overviewQuery.data.averageBookingValue}` });
+        allData.push({ metric: "Monthly Growth", value: `${overviewQuery.data.monthlyGrowth}%` });
+        allData.push({});
+      }
+
+      // Add Revenue Breakdown
+      if (revenueQuery.data?.revenueBreakdown) {
+        allData.push({ section: "REVENUE BREAKDOWN" });
+        allData.push({ category: "Owner Earnings", amount: `$${revenueQuery.data.revenueBreakdown.ownerEarnings.toLocaleString()}` });
+        allData.push({ category: "Platform Fees", amount: `$${revenueQuery.data.revenueBreakdown.platformFees.toLocaleString()}` });
+        allData.push({ category: "Processing Fees", amount: `$${revenueQuery.data.revenueBreakdown.processingFees.toLocaleString()}` });
+        allData.push({ category: "Other Revenue", amount: `$${revenueQuery.data.revenueBreakdown.otherRevenue.toLocaleString()}` });
+        allData.push({});
+      }
+
+      // Add Monthly Revenue Data
+      if (revenueQuery.data?.monthlyData && revenueQuery.data.monthlyData.length > 0) {
+        allData.push({ section: "MONTHLY REVENUE TREND" });
+        revenueQuery.data.monthlyData.forEach(item => {
+          allData.push({
+            month: item.month,
+            revenue: `$${item.revenue.toLocaleString()}`,
+            bookings: item.bookings
+          });
+        });
+        allData.push({});
+      }
+
+      // Add Top Performing Spots
+      if (topPerformersQuery.data?.topSpots && topPerformersQuery.data.topSpots.length > 0) {
+        allData.push({ section: "TOP PERFORMING SPOTS" });
+        topPerformersQuery.data.topSpots.forEach(spot => {
+          allData.push({
+            spotNumber: spot.spotNumber,
+            earnings: `$${spot.earnings.toLocaleString()}`,
+            bookingsCount: spot.bookingsCount,
+            utilization: `${spot.utilization}%`
+          });
+        });
+        allData.push({});
+      }
+
+      // Add Top Earning Owners
+      if (topPerformersQuery.data?.topOwners && topPerformersQuery.data.topOwners.length > 0) {
+        allData.push({ section: "TOP EARNING OWNERS" });
+        topPerformersQuery.data.topOwners.forEach(owner => {
+          allData.push({
+            name: owner.name,
+            earnings: `$${owner.earnings.toLocaleString()}`,
+            spotsCount: owner.spotsCount,
+            bookingsCount: owner.bookingsCount,
+            averageRating: owner.averageRating
+          });
+        });
+        allData.push({});
+      }
+
+      // Add System Issues
+      if (issuesQuery.data?.activeIssues && issuesQuery.data.activeIssues.length > 0) {
+        allData.push({ section: "ACTIVE SYSTEM ISSUES" });
+        issuesQuery.data.activeIssues.forEach(issue => {
+          allData.push({
+            priority: issue.priority,
+            type: issue.type,
+            status: issue.status,
+            description: issue.description,
+            assignee: issue.assignee,
+            created: issue.created
+          });
+        });
+        allData.push({});
+      }
+
+      // Add Usage Patterns - Peak Hours
+      if (usageQuery.data?.peakHours && usageQuery.data.peakHours.length > 0) {
+        allData.push({ section: "PEAK HOURS USAGE" });
+        usageQuery.data.peakHours.forEach(item => {
+          allData.push({
+            time: item.time,
+            usage: `${item.usage}%`
+          });
+        });
+        allData.push({});
+      }
+
+      // Add Usage Patterns - Weekly Trends
+      if (usageQuery.data?.weeklyTrends && usageQuery.data.weeklyTrends.length > 0) {
+        allData.push({ section: "WEEKLY USAGE TRENDS" });
+        usageQuery.data.weeklyTrends.forEach(item => {
+          allData.push({
+            dayOfWeek: item.dayOfWeek,
+            bookings: item.bookings,
+            utilization: `${item.utilization}%`
+          });
+        });
+        allData.push({});
+      }
+
+      // Guard: Check if we have any data to export
+      if (allData.length <= 1) {
+        toast({
+          title: "No Data Available",
+          description: "There is no analytics data available to export. Please wait for data to load or check your filters.",
+          variant: "default"
+        });
+        return;
+      }
+
+      // Collect all unique keys across all data rows to ensure comprehensive columns
+      const allKeys = new Set<string>();
+      allData.forEach(row => {
+        Object.keys(row).forEach(key => allKeys.add(key));
+      });
+
+      // Generate columns from all unique keys
+      const columns = Array.from(allKeys).map(key => ({
+        header: key === 'section' ? 'Section' : key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1'),
+        dataKey: key
+      }));
+
+      const exportData: ExportData = {
+        title: "Analytics & Reports - Comprehensive Dashboard",
+        subtitle: `Date Range: ${dateRange} | Generated on ${new Date().toLocaleDateString()}`,
+        data: allData,
+        columns: columns,
+        filename: `analytics-report-${dateRange}-${new Date().toISOString().split('T')[0]}`
+      };
+
+      exportToExcel(exportData);
+
+      toast({
+        title: "Export Successful",
+        description: "Analytics report has been exported successfully.",
+        variant: "default"
+      });
+    } catch (error) {
+      console.error('Error exporting report:', error);
+      toast({
+        title: "Export Failed",
+        description: "Failed to export analytics report. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   // Calculate system metrics
@@ -612,7 +794,12 @@ export default function Admin() {
             </Select>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="outline" disabled={isLoadingAnalytics} data-testid="button-export-report">
+                <Button 
+                  variant="outline" 
+                  disabled={isLoadingAnalytics} 
+                  onClick={handleExportReport}
+                  data-testid="button-export-report"
+                >
                   <Download className="h-4 w-4 mr-2" />
                   {t('common.exportReport')}
                 </Button>
