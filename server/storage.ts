@@ -318,6 +318,30 @@ export class MemStorage implements IStorage {
       
       console.log('Initializing seed parking spot data...');
       
+      // Get location IDs from database
+      const level1Location = await db.select().from(locations).where(eq(locations.level, 'Parking Level 1')).limit(1);
+      const level2Location = await db.select().from(locations).where(eq(locations.level, 'Parking Level 2')).limit(1);
+      
+      if (level1Location.length === 0 || level2Location.length === 0) {
+        console.log('Required locations not found, skipping seed data');
+        return;
+      }
+      
+      const level1LocationId = level1Location[0].id;
+      const level2LocationId = level2Location[0].id;
+      
+      // Get spot type IDs from database
+      const regularType = await db.select().from(spotTypesTable).where(eq(spotTypesTable.slug, 'regular')).limit(1);
+      const evChargersType = await db.select().from(spotTypesTable).where(eq(spotTypesTable.slug, 'ev-chargers')).limit(1);
+      
+      if (regularType.length === 0 || evChargersType.length === 0) {
+        console.log('Required spot types not found, skipping seed data');
+        return;
+      }
+      
+      const regularTypeId = regularType[0].id;
+      const evChargersTypeId = evChargersType[0].id;
+      
       // Create all the spot definitions
       const level1Spots = Array.from({ length: 100 }, (_, i) => 101 + i); // 101-200
       const level2Spots = Array.from({ length: 95 }, (_, i) => 201 + i);  // 201-295
@@ -327,11 +351,10 @@ export class MemStorage implements IStorage {
       
       // Create Level 1 spots (P1) - ALL UNALLOCATED
       level1Spots.forEach(spotNum => {
-        const buildingLocation = "Victoria - 750 Pandora Ave, Parking Level 1";
         parkingSpotsData.push({
           spotNumber: spotNum.toString(),
-          location: buildingLocation,
-          spotType: "regular",
+          locationId: level1LocationId,
+          spotTypeId: regularTypeId,
           description: "General parking stall",
           isIndoor: true,
           isActive: true,
@@ -343,22 +366,21 @@ export class MemStorage implements IStorage {
       
       // Create Level 2 spots (P2) - ALL UNALLOCATED
       level2Spots.forEach(spotNum => {
-        let spotType: SpotType;
+        let spotTypeId: number;
         let description: string;
         
         if (regularEvSpots.includes(spotNum)) {
-          spotType = "electric";
+          spotTypeId = evChargersTypeId;
           description = "Electric vehicle charging station";
         } else {
-          spotType = "regular";
+          spotTypeId = regularTypeId;
           description = "General parking stall";
         }
         
-        const buildingLocation = "Victoria - 750 Pandora Ave, Parking Level 2";
         parkingSpotsData.push({
           spotNumber: spotNum.toString(),
-          location: buildingLocation,
-          spotType,
+          locationId: level2LocationId,
+          spotTypeId,
           description,
           isIndoor: true,
           isActive: true,
