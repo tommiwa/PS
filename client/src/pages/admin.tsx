@@ -531,7 +531,9 @@ export default function Admin() {
                         )}
                         <div className="text-sm text-muted-foreground">Total Users</div>
                       </div>
-                      <Users className="h-8 w-8 text-blue-600 opacity-80" />
+                      <div className="bg-blue-500 text-white rounded-lg p-2 w-10 h-10 flex items-center justify-center">
+                        <Users className="h-5 w-5" />
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -562,7 +564,9 @@ export default function Admin() {
                         )}
                         <div className="text-sm text-muted-foreground">Parking Utilization</div>
                       </div>
-                      <Car className="h-8 w-8 text-green-600 opacity-80" />
+                      <div className="bg-green-500 text-white rounded-lg p-2 w-10 h-10 flex items-center justify-center">
+                        <Car className="h-5 w-5" />
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -593,7 +597,9 @@ export default function Admin() {
                         )}
                         <div className="text-sm text-muted-foreground">Recent Bookings</div>
                       </div>
-                      <CalendarCheck className="h-8 w-8 text-purple-600 opacity-80" />
+                      <div className="bg-purple-500 text-white rounded-lg p-2 w-10 h-10 flex items-center justify-center">
+                        <CalendarCheck className="h-5 w-5" />
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -624,7 +630,9 @@ export default function Admin() {
                         )}
                         <div className="text-sm text-muted-foreground">Waiting List Requests</div>
                       </div>
-                      <AlertTriangle className="h-8 w-8 text-orange-600 opacity-80" />
+                      <div className="bg-orange-500 text-white rounded-lg p-2 w-10 h-10 flex items-center justify-center">
+                        <AlertTriangle className="h-5 w-5" />
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
