@@ -100,7 +100,7 @@ Preferred communication style: Simple, everyday language.
   - **Assigned Spots Display**: Full location format "Victoria - 750 Pandora Ave, Parking Level 1 - Spot A-101", spot type badges in sentence case
   - **Data Management** (October 2025): Tabbed interface for managing reference data
     - **Departments Tab**: Manage department names (used in user profiles)
-    - **Locations Tab**: Manage parking locations (campus, building, level, address, timezone) - reference data for future integration
+    - **Locations Tab**: Manage parking locations (office, building, level, address, timezone) - reference data for future integration
     - **Spot Types Tab**: Manage spot type definitions (name, slug, description) - reference data for future integration
     - **Note**: Locations and Spot Types tables created as managed reference data but not yet integrated with parking_spots table (parking spots still use text fields for location and spotType)
     - **API Endpoints**: Full CRUD operations for all three entities with admin-only mutations
