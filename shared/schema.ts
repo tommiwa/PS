@@ -538,13 +538,9 @@ export interface AnalyticsRevenueResponse {
   monthlyData: MonthlyRevenueData[];
   revenueBreakdown: {
     ownerEarnings: number;
-    platformFees: number;
-    processingFees: number;
-    otherRevenue: number;
+    bciRevenue: number;
     ownerEarningsPercentage: number;
-    platformFeesPercentage: number;
-    processingFeesPercentage: number;
-    otherRevenuePercentage: number;
+    bciRevenuePercentage: number;
   };
   generatedAt: string;
 }

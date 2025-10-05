@@ -200,13 +200,9 @@ export interface IStorage {
   }[]>;
   getRevenueBreakdown(): Promise<{
     ownerEarnings: number;
-    platformFees: number;
-    processingFees: number;
-    otherRevenue: number;
+    bciRevenue: number;
     ownerEarningsPercentage: number;
-    platformFeesPercentage: number;
-    processingFeesPercentage: number;
-    otherRevenuePercentage: number;
+    bciRevenuePercentage: number;
   }>;
   getTopPerformingSpots(limit?: number): Promise<{
     id: string;
@@ -1641,13 +1637,9 @@ export class MemStorage implements IStorage {
 
   async getRevenueBreakdown(): Promise<{
     ownerEarnings: number;
-    platformFees: number;
-    processingFees: number;
-    otherRevenue: number;
+    bciRevenue: number;
     ownerEarningsPercentage: number;
-    platformFeesPercentage: number;
-    processingFeesPercentage: number;
-    otherRevenuePercentage: number;
+    bciRevenuePercentage: number;
   }> {
     const allBookings = await db.select().from(bookings);
     const paidBookings = allBookings.filter(b => b.paymentReceived);
@@ -1656,21 +1648,17 @@ export class MemStorage implements IStorage {
       sum + parseFloat(booking.totalAmount.toString()), 0
     );
     
-    // Simulate revenue breakdown (typical parking app percentages)
-    const ownerEarnings = totalRevenue * 0.71; // 71% to owners
-    const platformFees = totalRevenue * 0.20; // 20% platform fee
-    const processingFees = totalRevenue * 0.06; // 6% processing
-    const otherRevenue = totalRevenue * 0.03; // 3% other
+    // Calculate revenue split based on business model
+    // Owner Earnings: 71% to spot owners
+    // BCI Revenue: 29% platform revenue (includes platform fees, processing, and other revenue)
+    const ownerEarnings = totalRevenue * 0.71;
+    const bciRevenue = totalRevenue * 0.29;
     
     return {
       ownerEarnings: Math.round(ownerEarnings),
-      platformFees: Math.round(platformFees),
-      processingFees: Math.round(processingFees),
-      otherRevenue: Math.round(otherRevenue),
+      bciRevenue: Math.round(bciRevenue),
       ownerEarningsPercentage: 71,
-      platformFeesPercentage: 20,
-      processingFeesPercentage: 6,
-      otherRevenuePercentage: 3
+      bciRevenuePercentage: 29
     };
   }
 

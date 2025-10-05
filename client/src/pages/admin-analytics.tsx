@@ -504,9 +504,7 @@ export default function AdminAnalytics() {
                       <Pie
                         data={[
                           { name: t('analytics.ownerEarnings'), value: revenueQuery.data?.revenueBreakdown.ownerEarnings || 0, color: 'hsl(var(--chart-1))' },
-                          { name: t('analytics.platformFees'), value: revenueQuery.data?.revenueBreakdown.platformFees || 0, color: 'hsl(var(--chart-2))' },
-                          { name: t('analytics.processingFees'), value: revenueQuery.data?.revenueBreakdown.processingFees || 0, color: 'hsl(var(--chart-3))' },
-                          { name: t('analytics.otherRevenue'), value: revenueQuery.data?.revenueBreakdown.otherRevenue || 0, color: 'hsl(var(--chart-4))' }
+                          { name: t('analytics.bciRevenue'), value: revenueQuery.data?.revenueBreakdown.bciRevenue || 0, color: 'hsl(var(--chart-2))' }
                         ]}
                         cx="50%"
                         cy="50%"
@@ -518,9 +516,7 @@ export default function AdminAnalytics() {
                       >
                         {[
                           { name: t('analytics.ownerEarnings'), value: revenueQuery.data?.revenueBreakdown.ownerEarnings || 0, color: 'hsl(var(--chart-1))' },
-                          { name: t('analytics.platformFees'), value: revenueQuery.data?.revenueBreakdown.platformFees || 0, color: 'hsl(var(--chart-2))' },
-                          { name: t('analytics.processingFees'), value: revenueQuery.data?.revenueBreakdown.processingFees || 0, color: 'hsl(var(--chart-3))' },
-                          { name: t('analytics.otherRevenue'), value: revenueQuery.data?.revenueBreakdown.otherRevenue || 0, color: 'hsl(var(--chart-4))' }
+                          { name: t('analytics.bciRevenue'), value: revenueQuery.data?.revenueBreakdown.bciRevenue || 0, color: 'hsl(var(--chart-2))' }
                         ].map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
