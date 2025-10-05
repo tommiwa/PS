@@ -1516,7 +1516,7 @@ export class MemStorage implements IStorage {
   }
 
   async deleteDepartment(id: number): Promise<boolean> {
-    const usersWithDepartment = await db.select().from(users).where(eq(users.department, String(id)));
+    const usersWithDepartment = await db.select().from(users).where(eq(users.departmentId, id));
     if (usersWithDepartment.length > 0) {
       throw new Error("Cannot delete department that is in use by users");
     }
