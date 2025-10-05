@@ -1819,6 +1819,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error: any) {
       console.error("Error deleting location:", error);
+      if (error.code === '23503') {
+        return res.status(409).json({ error: "Cannot delete location that is in use by parking spots" });
+      }
       res.status(500).json({ error: "Failed to delete location" });
     }
   });
@@ -1910,6 +1913,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error: any) {
       console.error("Error deleting spot type:", error);
+      if (error.code === '23503') {
+        return res.status(409).json({ error: "Cannot delete spot type that is in use by parking spots" });
+      }
       res.status(500).json({ error: "Failed to delete spot type" });
     }
   });
