@@ -31,7 +31,7 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   // Custom fields for parking app
   phone: text("phone"),
-  departmentId: integer("department_id").notNull().references(() => departments.id, { onDelete: "restrict" }),
+  departmentId: integer("department_id").references(() => departments.id, { onDelete: "restrict" }),
   roles: text("roles").array().notNull().default(sql`ARRAY['renter']::text[]`),
   status: text("status").notNull().$type<UserStatus>().default("active"),
   memberSince: text("member_since"),
