@@ -493,13 +493,13 @@ export class MemStorage implements IStorage {
     const id = randomUUID();
     const now = new Date();
     
-    // Insert user into database
+    // Insert user into database using departmentId
     const [createdUser] = await db.insert(users).values({
       id,
       email: insertUser.email ?? null,
       roles: insertUser.roles || ['renter'],
       phone: insertUser.phone ?? null,
-      department: insertUser.department ?? null,
+      departmentId: insertUser.departmentId ?? null,
       memberSince: insertUser.memberSince ?? null,
       firstName: insertUser.firstName ?? null,
       lastName: insertUser.lastName ?? null,
@@ -719,15 +719,24 @@ export class MemStorage implements IStorage {
     const enrichedSpot: ParkingSpotWithUser = { ...spot };
     
     if (spot.ownerId) {
-      // Query database for user instead of memory
-      const userResult = await db.select().from(users).where(eq(users.id, spot.ownerId)).limit(1);
+      // Query database for user with department join
+      const userResult = await db
+        .select({
+          user: users,
+          department: departments
+        })
+        .from(users)
+        .leftJoin(departments, eq(users.departmentId, departments.id))
+        .where(eq(users.id, spot.ownerId))
+        .limit(1);
+      
       if (userResult.length > 0) {
-        const user = userResult[0];
+        const { user, department } = userResult[0];
         enrichedSpot.assignedUserName = user.firstName && user.lastName 
           ? `${user.firstName} ${user.lastName}` 
           : user.firstName || user.lastName || user.email;
         enrichedSpot.assignedUserEmail = user.email;
-        enrichedSpot.assignedUserDepartment = user.department || undefined;
+        enrichedSpot.assignedUserDepartment = department?.name || undefined;
         // Update user cache
         this.users.set(user.id, user);
       }
@@ -761,14 +770,23 @@ export class MemStorage implements IStorage {
     const enrichedSpot: ParkingSpotWithSafeUserData = { ...spot };
     
     if (spot.ownerId) {
-      // Query database for user instead of memory
-      const userResult = await db.select().from(users).where(eq(users.id, spot.ownerId)).limit(1);
+      // Query database for user with department join
+      const userResult = await db
+        .select({
+          user: users,
+          department: departments
+        })
+        .from(users)
+        .leftJoin(departments, eq(users.departmentId, departments.id))
+        .where(eq(users.id, spot.ownerId))
+        .limit(1);
+      
       if (userResult.length > 0) {
-        const user = userResult[0];
+        const { user, department } = userResult[0];
         enrichedSpot.assignedUserName = user.firstName && user.lastName 
           ? `${user.firstName} ${user.lastName}` 
           : user.firstName || user.lastName || user.email;
-        enrichedSpot.assignedUserDepartment = user.department || undefined;
+        enrichedSpot.assignedUserDepartment = department?.name || undefined;
         // Update user cache
         this.users.set(user.id, user);
         // Intentionally NOT including assignedUserEmail for data security
@@ -781,12 +799,12 @@ export class MemStorage implements IStorage {
   async createParkingSpot(insertSpot: InsertParkingSpot): Promise<ParkingSpot> {
     const id = randomUUID();
     
-    // Insert into database
+    // Insert into database using FK IDs
     const [createdSpot] = await db.insert(parkingSpots).values({
       id,
       spotNumber: insertSpot.spotNumber,
-      location: insertSpot.location,
-      spotType: insertSpot.spotType as SpotType,
+      locationId: insertSpot.locationId,
+      spotTypeId: insertSpot.spotTypeId,
       isIndoor: insertSpot.isIndoor ?? false,
       ownerId: insertSpot.ownerId ?? null,
       description: insertSpot.description ?? null,

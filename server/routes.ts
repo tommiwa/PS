@@ -274,7 +274,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastName: parseResult.lastName,
         email: parseResult.email,
         phone: parseResult.phone,
-        department: parseResult.department,
+        departmentId: parseResult.departmentId,
         memberSince: parseResult.memberSince,
         ...(parseResult.roles && Array.isArray(parseResult.roles) && { 
           roles: parseResult.roles as UserRole[] 
@@ -331,7 +331,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastName: z.string().min(1).optional(),
         email: z.string().email().optional(),
         phone: z.string().min(1).optional(),
-        department: z.string().min(1).optional()
+        departmentId: z.number().int().positive().optional()
       });
 
       // Validate request body
@@ -2912,8 +2912,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         userId: userId,
         userName: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.firstName || user.lastName || user.email,
-        userEmail: user.email || '',
-        userDepartment: user.department || 'Unknown'
+        userEmail: user.email || ''
       });
       
       const entry = await storage.createWaitingListEntry(waitingListData);
@@ -2956,7 +2955,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: userId,
         userName: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.firstName || user.lastName || user.email,
         userEmail: user.email || '',
-        userDepartment: user.department || 'Unknown',
         status: 'active'
       });
       

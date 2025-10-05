@@ -73,7 +73,8 @@ export default function AdminParkingManagement() {
   // Form state for add to waiting list dialog
   const [waitingListFormData, setWaitingListFormData] = useState({
     userId: "",
-    preferredSpotType: "regular" as SpotType,
+    preferredSpotTypeId: undefined as number | undefined,
+    preferredLocationId: undefined as number | undefined,
     priority: 2, // 1=high, 2=medium, 3=low
     reason: ""
   })
@@ -119,8 +120,8 @@ export default function AdminParkingManagement() {
   // Form state for edit dialog
   const [editFormData, setEditFormData] = useState({
     spotNumber: "",
-    location: "",
-    spotType: "regular" as SpotType,
+    locationId: undefined as number | undefined,
+    spotTypeId: undefined as number | undefined,
     isIndoor: false,
     isActive: true,
     isBookable: true,
@@ -132,8 +133,8 @@ export default function AdminParkingManagement() {
   // Form state for add spot dialog
   const [addSpotFormData, setAddSpotFormData] = useState({
     spotNumber: "",
-    location: "",
-    spotType: "regular" as SpotType,
+    locationId: undefined as number | undefined,
+    spotTypeId: undefined as number | undefined,
     isIndoor: false,
     isBciManaged: false,
     description: ""
@@ -164,6 +165,15 @@ export default function AdminParkingManagement() {
   // Fetch all users for dropdown selection
   const { data: allUsers = [], isLoading: isLoadingUsers, error: usersError } = useQuery<any[]>({
     queryKey: ["/api/admin/users"],
+  });
+
+  // Fetch lookup data for form dropdowns
+  const { data: locations = [], isLoading: isLoadingLocations } = useQuery<Array<{ id: number; name: string }>>({
+    queryKey: ["/api/locations"],
+  });
+
+  const { data: spotTypes = [], isLoading: isLoadingSpotTypes } = useQuery<Array<{ id: number; name: string }>>({
+    queryKey: ["/api/spot-types"],
   });
 
   // Search users for direct assignment (only triggers when query >= 3 chars)
@@ -346,8 +356,8 @@ export default function AdminParkingManagement() {
       setShowAddSpotDialog(false);
       setAddSpotFormData({
         spotNumber: "",
-        location: "",
-        spotType: "regular",
+        locationId: undefined,
+        spotTypeId: undefined,
         isIndoor: false,
         isBciManaged: false,
         description: ""
@@ -433,7 +443,8 @@ export default function AdminParkingManagement() {
       setShowAddToWaitingDialog(false);
       setWaitingListFormData({
         userId: "",
-        preferredSpotType: "regular",
+        preferredSpotTypeId: undefined,
+        preferredLocationId: undefined,
         priority: 2,
         reason: ""
       });
@@ -556,8 +567,8 @@ export default function AdminParkingManagement() {
     setSelectedSpot(spot);
     setEditFormData({
       spotNumber: spot.spotNumber,
-      location: spot.location,
-      spotType: spot.spotType,
+      locationId: spot.locationId ?? undefined,
+      spotTypeId: spot.spotTypeId ?? undefined,
       isIndoor: spot.isIndoor || false,
       isActive: spot.isActive !== false,
       isBookable: spot.isBookable !== false,
@@ -675,7 +686,7 @@ export default function AdminParkingManagement() {
     if (searchTerm.trim()) {
       const searchLower = searchTerm.toLowerCase()
       const matchesSearch = spot.spotNumber.toLowerCase().includes(searchLower) ||
-                           spot.location.toLowerCase().includes(searchLower)
+                           (spot.location?.toLowerCase().includes(searchLower) ?? false)
       if (!matchesSearch) return false
     }
     
@@ -721,7 +732,7 @@ export default function AdminParkingManagement() {
     if (availableSpotsSearchTerm.trim()) {
       const searchLower = availableSpotsSearchTerm.toLowerCase()
       const matchesSearch = spot.spotNumber.toLowerCase().includes(searchLower) ||
-                           spot.location.toLowerCase().includes(searchLower)
+                           (spot.location?.toLowerCase().includes(searchLower) ?? false)
       if (!matchesSearch) return false
     }
     
@@ -952,8 +963,12 @@ export default function AdminParkingManagement() {
     }
   };
 
-  const getSpotTypeBadge = (spotType: SpotType) => {
-    const badgeConfigs: Record<SpotType, { className: string; label: string }> = {
+  const getSpotTypeBadge = (spotType: SpotType | string | null) => {
+    if (!spotType) {
+      return <Badge variant="secondary" data-testid="badge-spot-type-unknown">Unknown</Badge>;
+    }
+    
+    const badgeConfigs: Record<string, { className: string; label: string }> = {
       regular: { 
         className: "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100", 
         label: "Regular" 
@@ -2069,16 +2084,17 @@ export default function AdminParkingManagement() {
             <div>
               <label className="text-sm font-medium">Location</label>
               <Select
-                value={addSpotFormData.location}
-                onValueChange={(value) => setAddSpotFormData(prev => ({ ...prev, location: value }))}
+                value={addSpotFormData.locationId?.toString() || ""}
+                onValueChange={(value) => setAddSpotFormData(prev => ({ ...prev, locationId: parseInt(value) }))}
+                disabled={isLoadingLocations}
               >
                 <SelectTrigger data-testid="select-add-spot-location">
-                  <SelectValue placeholder="Select location" />
+                  <SelectValue placeholder={isLoadingLocations ? "Loading locations..." : "Select location"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {allLocationOptions.map(loc => (
-                    <SelectItem key={loc.value} value={loc.value}>
-                      {loc.label}
+                  {locations.map(loc => (
+                    <SelectItem key={loc.id} value={loc.id.toString()}>
+                      {loc.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -2087,18 +2103,19 @@ export default function AdminParkingManagement() {
             <div>
               <label className="text-sm font-medium">Spot Type</label>
               <Select 
-                value={addSpotFormData.spotType} 
-                onValueChange={(value: SpotType) => setAddSpotFormData(prev => ({ ...prev, spotType: value }))}
+                value={addSpotFormData.spotTypeId?.toString() || ""}
+                onValueChange={(value) => setAddSpotFormData(prev => ({ ...prev, spotTypeId: parseInt(value) }))}
+                disabled={isLoadingSpotTypes}
               >
                 <SelectTrigger data-testid="select-add-spot-type">
-                  <SelectValue />
+                  <SelectValue placeholder={isLoadingSpotTypes ? "Loading spot types..." : "Select spot type"} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="regular">Regular</SelectItem>
-                  <SelectItem value="ev">EV</SelectItem>
-                  <SelectItem value="tesla_ev">Tesla EV</SelectItem>
-                  <SelectItem value="accessible">Accessible</SelectItem>
-                  <SelectItem value="reserved">Reserved</SelectItem>
+                  {spotTypes.map(type => (
+                    <SelectItem key={type.id} value={type.id.toString()}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -2153,7 +2170,7 @@ export default function AdminParkingManagement() {
             <div className="flex gap-2 pt-4">
               <Button
                 onClick={() => addSpotMutation.mutate(addSpotFormData)}
-                disabled={addSpotMutation.isPending || !addSpotFormData.spotNumber || !addSpotFormData.location}
+                disabled={addSpotMutation.isPending || !addSpotFormData.spotNumber || !addSpotFormData.locationId || !addSpotFormData.spotTypeId}
                 className="flex-1"
                 data-testid="button-confirm-add-spot"
               >
@@ -2190,16 +2207,17 @@ export default function AdminParkingManagement() {
             <div>
               <label className="text-sm font-medium">Location</label>
               <Select
-                value={editFormData.location}
-                onValueChange={(value) => setEditFormData(prev => ({ ...prev, location: value }))}
+                value={editFormData.locationId?.toString() || ""}
+                onValueChange={(value) => setEditFormData(prev => ({ ...prev, locationId: parseInt(value) }))}
+                disabled={isLoadingLocations}
               >
                 <SelectTrigger data-testid="select-edit-spot-location">
-                  <SelectValue placeholder="Select location" />
+                  <SelectValue placeholder={isLoadingLocations ? "Loading locations..." : "Select location"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {allLocationOptions.map(loc => (
-                    <SelectItem key={loc.value} value={loc.value}>
-                      {loc.label}
+                  {locations.map(loc => (
+                    <SelectItem key={loc.id} value={loc.id.toString()}>
+                      {loc.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -2208,18 +2226,19 @@ export default function AdminParkingManagement() {
             <div>
               <label className="text-sm font-medium">Spot Type</label>
               <Select 
-                value={editFormData.spotType} 
-                onValueChange={(value: SpotType) => setEditFormData(prev => ({ ...prev, spotType: value }))}
+                value={editFormData.spotTypeId?.toString() || ""}
+                onValueChange={(value) => setEditFormData(prev => ({ ...prev, spotTypeId: parseInt(value) }))}
+                disabled={isLoadingSpotTypes}
               >
                 <SelectTrigger data-testid="select-edit-spot-type">
-                  <SelectValue />
+                  <SelectValue placeholder={isLoadingSpotTypes ? "Loading spot types..." : "Select spot type"} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="regular">Regular</SelectItem>
-                  <SelectItem value="ev">EV</SelectItem>
-                  <SelectItem value="tesla_ev">Tesla EV</SelectItem>
-                  <SelectItem value="accessible">Accessible</SelectItem>
-                  <SelectItem value="reserved">Reserved</SelectItem>
+                  {spotTypes.map(type => (
+                    <SelectItem key={type.id} value={type.id.toString()}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -2291,7 +2310,7 @@ export default function AdminParkingManagement() {
                   spotId: selectedSpot.id, 
                   spotData: editFormData 
                 })}
-                disabled={editSpotMutation.isPending || !editFormData.spotNumber || !editFormData.location}
+                disabled={editSpotMutation.isPending || !editFormData.spotNumber || !editFormData.locationId || !editFormData.spotTypeId}
                 className="flex-1"
                 data-testid="button-confirm-edit-spot"
               >
@@ -2412,20 +2431,42 @@ export default function AdminParkingManagement() {
               )}
             </div>
             <div>
-              <label className="text-sm font-medium">Preferred Spot Type</label>
+              <label className="text-sm font-medium">Preferred Location (Optional)</label>
               <Select 
-                value={waitingListFormData.preferredSpotType} 
-                onValueChange={(value: SpotType) => setWaitingListFormData(prev => ({ ...prev, preferredSpotType: value }))}
+                value={waitingListFormData.preferredLocationId?.toString() || ""}
+                onValueChange={(value) => setWaitingListFormData(prev => ({ ...prev, preferredLocationId: value ? parseInt(value) : undefined }))}
+                disabled={isLoadingLocations}
               >
-                <SelectTrigger data-testid="select-waiting-spot-type">
-                  <SelectValue />
+                <SelectTrigger data-testid="select-waiting-location">
+                  <SelectValue placeholder={isLoadingLocations ? "Loading locations..." : "Any location"} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="regular">Regular</SelectItem>
-                  <SelectItem value="ev">EV</SelectItem>
-                  <SelectItem value="tesla_ev">Tesla EV</SelectItem>
-                  <SelectItem value="accessible">Accessible</SelectItem>
-                  <SelectItem value="reserved">Reserved</SelectItem>
+                  <SelectItem value="">Any location</SelectItem>
+                  {locations.map(loc => (
+                    <SelectItem key={loc.id} value={loc.id.toString()}>
+                      {loc.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Preferred Spot Type (Optional)</label>
+              <Select 
+                value={waitingListFormData.preferredSpotTypeId?.toString() || ""}
+                onValueChange={(value) => setWaitingListFormData(prev => ({ ...prev, preferredSpotTypeId: value ? parseInt(value) : undefined }))}
+                disabled={isLoadingSpotTypes}
+              >
+                <SelectTrigger data-testid="select-waiting-spot-type">
+                  <SelectValue placeholder={isLoadingSpotTypes ? "Loading spot types..." : "Any spot type"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Any spot type</SelectItem>
+                  {spotTypes.map(type => (
+                    <SelectItem key={type.id} value={type.id.toString()}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

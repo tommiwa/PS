@@ -96,7 +96,7 @@ const createUserFormSchema = insertUserSchema.extend({
     .refine((val) => !val || /^\d{10}$/.test(val), {
       message: "Phone number must be 10 digits"
     }),
-  department: z.string().min(1, "Department is required"),
+  departmentId: z.number().int().positive("Department is required"),
 }).omit({
   roles: true // Remove roles from schema since we'll use 'role' (singular) in the form
 }).extend({
@@ -170,7 +170,7 @@ export default function AdminUserManagement() {
       lastName: "",
       email: "",
       phone: "",
-      department: "",
+      departmentId: undefined,
       role: "renter",
       memberSince: new Date().toISOString().split('T')[0]
     }
@@ -184,7 +184,7 @@ export default function AdminUserManagement() {
       lastName: "",
       email: "",
       phone: "",
-      department: "",
+      departmentId: undefined,
       role: "renter",
       memberSince: new Date().toISOString().split('T')[0]
     }
@@ -516,7 +516,7 @@ export default function AdminUserManagement() {
       lastName: user.lastName ?? "",
       email: user.email ?? "",
       phone: user.phone ?? "",
-      department: user.department ?? "",
+      departmentId: user.departmentId ?? undefined,
       role: user.roles?.[0] ?? "renter", // Convert roles array to single role for form
       status: user.status === "deleted" ? "active" : (user.status ?? "active"), // Default deleted to active for editing
       memberSince: user.memberSince ?? new Date().toISOString().split('T')[0]
@@ -867,13 +867,13 @@ export default function AdminUserManagement() {
                     />
                     <FormField
                       control={form.control}
-                      name="department"
+                      name="departmentId"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Department</FormLabel>
                           <Select 
-                            onValueChange={field.onChange} 
-                            value={field.value || ""} 
+                            onValueChange={(value) => field.onChange(parseInt(value))} 
+                            value={field.value?.toString() || ""} 
                             disabled={isDepartmentsLoading}
                           >
                             <FormControl>
@@ -883,7 +883,7 @@ export default function AdminUserManagement() {
                             </FormControl>
                             <SelectContent>
                               {departments.map(dept => (
-                                <SelectItem key={dept.id} value={dept.name}>
+                                <SelectItem key={dept.id} value={dept.id.toString()}>
                                   {dept.name}
                                 </SelectItem>
                               ))}
@@ -1053,13 +1053,13 @@ export default function AdminUserManagement() {
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={editForm.control}
-                      name="department"
+                      name="departmentId"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>{t("profile.department")}</FormLabel>
                           <Select 
-                            onValueChange={field.onChange} 
-                            value={field.value ?? ""} 
+                            onValueChange={(value) => field.onChange(parseInt(value))} 
+                            value={field.value?.toString() ?? ""} 
                             disabled={isDepartmentsLoading}
                           >
                             <FormControl>
@@ -1068,14 +1068,8 @@ export default function AdminUserManagement() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {/* Show current value if it's not in the departments list (backwards compatibility) */}
-                              {field.value && !departments.some(dept => dept.name === field.value) && (
-                                <SelectItem value={field.value}>
-                                  {field.value} (legacy)
-                                </SelectItem>
-                              )}
                               {departments.map(dept => (
-                                <SelectItem key={dept.id} value={dept.name}>
+                                <SelectItem key={dept.id} value={dept.id.toString()}>
                                   {dept.name}
                                 </SelectItem>
                               ))}
