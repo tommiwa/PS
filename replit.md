@@ -105,7 +105,7 @@ Preferred communication style: Simple, everyday language.
 - **Admin Dashboard Metrics**: Real-time, server-side calculated metrics (occupancy, revenue, registrations).
   - **Analytics Implementation** (October 2025): All analytics data sourced from real-time database queries, no static/mock values
     - **Overview Cards**: Total Revenue, Total Bookings, Active Users (30-day), Utilization Rate (today's bookings/total spots), Average Booking Value, Monthly Growth (month-over-month)
-    - **Revenue Analysis**: Monthly revenue trends (configurable date range: 7 days to 12 months), revenue breakdown by category (owner earnings 71%, platform fees 20%, processing 6%, other 3%)
+    - **Revenue Analysis**: Monthly revenue trends (configurable date range: 7 days to 12 months), revenue breakdown by category (owner earnings 71%, BCI revenue 29%)
     - **Usage Patterns**: Booking duration distribution (groups bookings into 6 categories: 1 Day, 2-3 Days, 4-7 Days, 1-2 Weeks, 2-4 Weeks, 1+ Months based on listing periods), weekly trends (last 4 weeks, grouped by day of week with bookings and utilization), location performance (utilization and earnings by location)
     - **Top Performers**: Top earning parking spots and owners (based on paid bookings)
     - **Issues & Alerts**: Active system issues derived from booking patterns (payment disputes for unpaid bookings >7 days old, spot conflicts for double bookings)
