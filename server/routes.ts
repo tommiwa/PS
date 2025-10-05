@@ -315,11 +315,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const currentUserId = getAuthenticatedUserId(req);
       
+      console.log(`[PROFILE UPDATE] Route param id: ${id}`);
+      console.log(`[PROFILE UPDATE] Current user ID from token: ${currentUserId}`);
+      console.log(`[PROFILE UPDATE] IDs match: ${currentUserId === id}`);
+      
       // Users can only edit their own profile (unless admin)
       const currentUser = await storage.getUser(currentUserId || '');
       const isAdmin = currentUser?.roles?.includes('admin');
       
+      console.log(`[PROFILE UPDATE] Current user roles: ${JSON.stringify(currentUser?.roles)}`);
+      console.log(`[PROFILE UPDATE] Is admin: ${isAdmin}`);
+      
       if (currentUserId !== id && !isAdmin) {
+        console.log(`[PROFILE UPDATE] AUTHORIZATION FAILED - currentUserId (${currentUserId}) !== id (${id}) and not admin`);
         return res.status(403).json({ error: "You can only edit your own profile" });
       }
       
