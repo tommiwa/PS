@@ -1139,45 +1139,45 @@ export default function AdminParkingManagement() {
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Card data-testid="card-waiting-users" className="hover-elevate">
+            <Card data-testid="card-bci-managed-total" className="hover-elevate">
               <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t("admin.parkingManagement.usersWaiting")}</CardTitle>
+                <CardTitle className="text-sm font-medium">Total BCI Managed Spots</CardTitle>
                 <div className="rounded-full border-2 border-purple-400 p-2">
-                  <Users className="h-4 w-4 text-purple-600" />
+                  <Building className="h-4 w-4 text-purple-600" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold" data-testid="stat-waiting-users">
-                  {waitingListMetrics.active}
+                <div className="text-2xl font-bold" data-testid="stat-bci-managed-total">
+                  {allSpots.filter(spot => spot.isBciManaged).length}
                 </div>
-                <p className="text-xs text-purple-600">Active waiting list</p>
+                <p className="text-xs text-purple-600">BCI managed spots</p>
               </CardContent>
             </Card>
           </TooltipTrigger>
           <TooltipContent>
-            View users actively waiting for spot assignments
+            View total number of BCI managed parking spots
           </TooltipContent>
         </Tooltip>
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Card data-testid="card-avg-wait" className="hover-elevate">
+            <Card data-testid="card-bci-managed-available" className="hover-elevate">
               <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t("admin.parkingManagement.avgWaitTime")}</CardTitle>
+                <CardTitle className="text-sm font-medium">Available BCI Managed Spots</CardTitle>
                 <div className="rounded-full border-2 border-orange-400 p-2">
-                  <Timer className="h-4 w-4 text-orange-600" />
+                  <Sparkles className="h-4 w-4 text-orange-600" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold" data-testid="stat-avg-wait-time">
-                  {waitingListMetrics.averageWaitTime}
+                <div className="text-2xl font-bold" data-testid="stat-bci-managed-available">
+                  {unallocatedSpots.filter(spot => spot.isBciManaged).length}
                 </div>
-                <p className="text-xs text-orange-600">Days average wait</p>
+                <p className="text-xs text-orange-600">Unassigned BCI spots</p>
               </CardContent>
             </Card>
           </TooltipTrigger>
           <TooltipContent>
-            View average days users wait before getting assigned
+            View BCI managed spots currently available for assignment
           </TooltipContent>
         </Tooltip>
         </div>
