@@ -105,11 +105,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
         : 'Recently';
       
+      // Enrich with department name if departmentId exists
+      let departmentName = null;
+      if (user.departmentId) {
+        const department = await storage.getDepartment(user.departmentId);
+        departmentName = department?.name || null;
+      }
+      
       // Add computed fields for compatibility
       const userWithName = {
         ...user,
         name: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.firstName || user.lastName || user.email,
-        memberSince
+        memberSince,
+        department: departmentName
       };
       
       res.json(userWithName);
