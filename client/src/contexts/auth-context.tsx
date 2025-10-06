@@ -6,6 +6,11 @@ interface AuthUser {
   email: string;
   firstName?: string;
   lastName?: string;
+  name?: string;
+  phone?: string;
+  department?: string;
+  departmentId?: number;
+  memberSince?: string;
   roles: UserRole[];
   profileImageUrl?: string;
 }

@@ -487,6 +487,20 @@ export default function Profile() {
     mutationFn: async (data: { fullName?: string; phone?: string }) => {
       if (!user) throw new Error("User not found");
       
+      // Validate phone number format if provided
+      if (data.phone && data.phone.trim()) {
+        const phoneRegex = /^[\d\s\-\(\)\+]+$/;
+        const cleanPhone = data.phone.replace(/[\s\-\(\)]/g, '');
+        
+        if (!phoneRegex.test(data.phone)) {
+          throw new Error("Phone number can only contain digits, spaces, hyphens, parentheses, and plus sign");
+        }
+        
+        if (cleanPhone.length < 10 || cleanPhone.length > 15) {
+          throw new Error("Phone number must be between 10 and 15 digits");
+        }
+      }
+      
       // Split full name into first and last name
       const names = data.fullName?.trim().split(' ') || [];
       const firstName = names[0] || user.firstName || '';
