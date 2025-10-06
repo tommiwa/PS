@@ -7,6 +7,7 @@ import { AdminUsersTable } from "@/components/admin-users-table"
 import { UserActivityList } from "@/components/user-activity-list"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { EnhancedFilters, type FilterConfig, type FilterValues } from "@/components/ui/enhanced-filters"
+import { TablePagination } from "@/components/shared/TablePagination"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -145,6 +146,8 @@ export default function AdminUserManagement() {
   const [activeTab, setActiveTab] = useState("users")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [userPageIndex, setUserPageIndex] = useState(0)
+  const [userPageSize, setUserPageSize] = useState(25)
   
   // Cards visibility toggle hook
   const { cardsVisible, toggleCards } = useCardsVisibility("user-management")
@@ -392,6 +395,26 @@ export default function AdminUserManagement() {
     "name", // Default sort by name
     "asc" // Alphabetical order
   )
+
+  // Apply pagination to sorted users
+  const paginatedUsers = useMemo(() => {
+    const startIndex = userPageIndex * userPageSize
+    const endIndex = startIndex + userPageSize
+    return sortedUsers.slice(startIndex, endIndex)
+  }, [sortedUsers, userPageIndex, userPageSize])
+
+  // Clamp page index when filtered data changes
+  useEffect(() => {
+    const maxPage = Math.max(0, Math.ceil(filteredUsers.length / userPageSize) - 1)
+    if (userPageIndex > maxPage) {
+      setUserPageIndex(maxPage)
+    }
+  }, [filteredUsers.length, userPageSize, userPageIndex])
+
+  // Reset page when search/filters change
+  useEffect(() => {
+    setUserPageIndex(0)
+  }, [searchTerm, filterValues])
 
   // Fetch user's assigned spots when editing
   const { data: userAssignedSpots = [], isLoading: isLoadingSpots, refetch: refetchUserSpots } = useQuery<ParkingSpot[]>({
@@ -1411,18 +1434,30 @@ export default function AdminUserManagement() {
               </CardContent>
             </Card>
           ) : (
-            <AdminUsersTable 
-              users={sortedUsers} 
-              isLoading={isLoadingUsers}
-              sortState={sortState}
-              onSort={handleSort}
-              onEditUser={handleEditUser}
-              onDeleteUser={handleDeleteUser}
-              onRestoreUser={handleRestoreUser}
-              onSuspendUser={handleSuspendUser}
-              onAssignSpot={handleAssignSpot}
-              onSendNotification={handleSendNotification}
-            />
+            <>
+              <AdminUsersTable 
+                users={paginatedUsers} 
+                isLoading={isLoadingUsers}
+                sortState={sortState}
+                onSort={handleSort}
+                onEditUser={handleEditUser}
+                onDeleteUser={handleDeleteUser}
+                onRestoreUser={handleRestoreUser}
+                onSuspendUser={handleSuspendUser}
+                onAssignSpot={handleAssignSpot}
+                onSendNotification={handleSendNotification}
+              />
+              <TablePagination
+                totalCount={filteredUsers.length}
+                pageSize={userPageSize}
+                pageIndex={userPageIndex}
+                onPageSizeChange={(size) => {
+                  setUserPageSize(size)
+                  setUserPageIndex(0)
+                }}
+                onPageIndexChange={setUserPageIndex}
+              />
+            </>
           )}
 
           {/* Bulk Actions */}
