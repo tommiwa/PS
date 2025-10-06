@@ -1202,6 +1202,69 @@ export default function AdminParkingManagement() {
 
         {/* All Spots and Unallocated Spots Tab */}
         <TabsContent value="all" className="space-y-4">
+          {/* Metrics Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Card data-testid="card-total-spots-tab" className="hover-elevate">
+              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Spots</CardTitle>
+                <div className="rounded-full border-2 border-blue-400 p-2">
+                  <Car className="h-4 w-4 text-blue-600" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold" data-testid="stat-total-spots-tab">
+                  {allSpots.length}
+                </div>
+                <p className="text-xs text-blue-600">All parking spots</p>
+              </CardContent>
+            </Card>
+
+            <Card data-testid="card-available-spots-tab" className="hover-elevate">
+              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{t("admin.parkingManagement.availableSpots")}</CardTitle>
+                <div className="rounded-full border-2 border-green-400 p-2">
+                  <Sparkles className="h-4 w-4 text-green-600" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold" data-testid="stat-available-spots-tab">
+                  {unallocatedSpots.length}
+                </div>
+                <p className="text-xs text-green-600">Unassigned spots</p>
+              </CardContent>
+            </Card>
+
+            <Card data-testid="card-bci-managed-total-tab" className="hover-elevate">
+              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total BCI Managed Spots</CardTitle>
+                <div className="rounded-full border-2 border-purple-400 p-2">
+                  <Building className="h-4 w-4 text-purple-600" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold" data-testid="stat-bci-managed-total-tab">
+                  {allSpots.filter(spot => spot.isBciManaged).length}
+                </div>
+                <p className="text-xs text-purple-600">BCI managed spots</p>
+              </CardContent>
+            </Card>
+
+            <Card data-testid="card-bci-managed-available-tab" className="hover-elevate">
+              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Available BCI Managed Spots</CardTitle>
+                <div className="rounded-full border-2 border-orange-400 p-2">
+                  <Sparkles className="h-4 w-4 text-orange-600" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold" data-testid="stat-bci-managed-available-tab">
+                  {unallocatedSpots.filter(spot => spot.isBciManaged).length}
+                </div>
+                <p className="text-xs text-orange-600">Unassigned BCI spots</p>
+              </CardContent>
+            </Card>
+          </div>
+
           {/* Enhanced Filters */}
           <EnhancedFilters
             searchValue={searchTerm}
@@ -1536,6 +1599,97 @@ export default function AdminParkingManagement() {
 
         {/* Unallocated Spots Tab */}
         <TabsContent value="unallocated" className="space-y-4">
+          {/* Metrics Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Card data-testid="card-total-spots-unallocated-tab" className="hover-elevate">
+                  <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Spots</CardTitle>
+                    <div className="rounded-full border-2 border-blue-400 p-2">
+                      <Car className="h-4 w-4 text-blue-600" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {allSpots.length}
+                    </div>
+                    <p className="text-xs text-blue-600">All parking spots</p>
+                  </CardContent>
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent>
+                View total number of parking spots in the system
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Card data-testid="card-available-spots-unallocated-tab" className="hover-elevate">
+                  <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">{t("admin.parkingManagement.availableSpots")}</CardTitle>
+                    <div className="rounded-full border-2 border-green-400 p-2">
+                      <Sparkles className="h-4 w-4 text-green-600" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {unallocatedSpots.length}
+                    </div>
+                    <p className="text-xs text-green-600">Unassigned spots</p>
+                  </CardContent>
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent>
+                View spots currently unassigned and available for rental
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Card data-testid="card-bci-managed-total-unallocated-tab" className="hover-elevate">
+                  <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total BCI Managed Spots</CardTitle>
+                    <div className="rounded-full border-2 border-purple-400 p-2">
+                      <Building className="h-4 w-4 text-purple-600" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {allSpots.filter(spot => spot.isBciManaged).length}
+                    </div>
+                    <p className="text-xs text-purple-600">BCI managed spots</p>
+                  </CardContent>
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent>
+                View total number of BCI managed parking spots
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Card data-testid="card-bci-managed-available-unallocated-tab" className="hover-elevate">
+                  <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Available BCI Managed Spots</CardTitle>
+                    <div className="rounded-full border-2 border-orange-400 p-2">
+                      <Sparkles className="h-4 w-4 text-orange-600" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {unallocatedSpots.filter(spot => spot.isBciManaged).length}
+                    </div>
+                    <p className="text-xs text-orange-600">Unassigned BCI spots</p>
+                  </CardContent>
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent>
+                View BCI managed spots currently available for assignment
+              </TooltipContent>
+            </Tooltip>
+          </div>
+
           {/* Enhanced Filters for Available Spots */}
           <EnhancedFilters
             searchValue={availableSpotsSearchTerm}
@@ -1847,6 +2001,97 @@ export default function AdminParkingManagement() {
 
         {/* Waiting List Tab */}
         <TabsContent value="waiting" className="space-y-4">
+          {/* Metrics Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Card data-testid="card-total-spots-waiting-tab" className="hover-elevate">
+                  <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Spots</CardTitle>
+                    <div className="rounded-full border-2 border-blue-400 p-2">
+                      <Car className="h-4 w-4 text-blue-600" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {allSpots.length}
+                    </div>
+                    <p className="text-xs text-blue-600">All parking spots</p>
+                  </CardContent>
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent>
+                View total number of parking spots in the system
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Card data-testid="card-available-spots-waiting-tab" className="hover-elevate">
+                  <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">{t("admin.parkingManagement.availableSpots")}</CardTitle>
+                    <div className="rounded-full border-2 border-green-400 p-2">
+                      <Sparkles className="h-4 w-4 text-green-600" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {unallocatedSpots.length}
+                    </div>
+                    <p className="text-xs text-green-600">Unassigned spots</p>
+                  </CardContent>
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent>
+                View spots currently unassigned and available for rental
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Card data-testid="card-bci-managed-total-waiting-tab" className="hover-elevate">
+                  <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total BCI Managed Spots</CardTitle>
+                    <div className="rounded-full border-2 border-purple-400 p-2">
+                      <Building className="h-4 w-4 text-purple-600" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {allSpots.filter(spot => spot.isBciManaged).length}
+                    </div>
+                    <p className="text-xs text-purple-600">BCI managed spots</p>
+                  </CardContent>
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent>
+                View total number of BCI managed parking spots
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Card data-testid="card-bci-managed-available-waiting-tab" className="hover-elevate">
+                  <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Available BCI Managed Spots</CardTitle>
+                    <div className="rounded-full border-2 border-orange-400 p-2">
+                      <Sparkles className="h-4 w-4 text-orange-600" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {unallocatedSpots.filter(spot => spot.isBciManaged).length}
+                    </div>
+                    <p className="text-xs text-orange-600">Unassigned BCI spots</p>
+                  </CardContent>
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent>
+                View BCI managed spots currently available for assignment
+              </TooltipContent>
+            </Tooltip>
+          </div>
+
           {/* Enhanced Filters for Waiting List */}
           <EnhancedFilters
             searchValue={waitingListSearchTerm}
