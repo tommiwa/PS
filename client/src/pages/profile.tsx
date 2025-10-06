@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useLocation } from "wouter"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -113,6 +113,21 @@ export default function Profile() {
     isDefault: z.boolean().default(false)
   });
 
+  // Profile edit form schema
+  const profileEditSchema = z.object({
+    fullName: z.string().min(1, "Name is required"),
+    phone: z.string()
+      .max(20, "Phone number must be 20 characters or less")
+      .regex(/^[\d\s\-\(\)\+]*$/, "Phone can only contain digits, spaces, hyphens, parentheses, and plus sign")
+      .refine((val) => {
+        if (!val) return true; // Optional
+        const cleaned = val.replace(/[\s\-\(\)\+]/g, '');
+        return cleaned.length >= 10 && cleaned.length <= 15;
+      }, "Phone must be between 10-15 digits")
+      .optional()
+      .or(z.literal(''))
+  });
+
   // Priority levels with translations
   const priorityLevels = {
     "1": { label: `${t("priority.high.label")} (1)`, description: t("priority.high.description") },
@@ -163,6 +178,25 @@ export default function Profile() {
       isDefault: false
     }
   });
+
+  // Profile edit form
+  const profileEditForm = useForm<z.infer<typeof profileEditSchema>>({
+    resolver: zodResolver(profileEditSchema),
+    defaultValues: {
+      fullName: user?.name || "",
+      phone: user?.phone || ""
+    }
+  });
+
+  // Update form when user data changes
+  useEffect(() => {
+    if (user) {
+      profileEditForm.reset({
+        fullName: user.name || "",
+        phone: user.phone || ""
+      });
+    }
+  }, [user]);
 
   // Query user's waiting list status  
   const { data: waitingListEntry, isLoading: isLoadingWaitingList, refetch: refetchWaitingList } = useQuery<WaitingList | null>({
@@ -484,41 +518,25 @@ export default function Profile() {
 
   // Profile update mutation
   const updateProfileMutation = useMutation({
-    mutationFn: async (data: { fullName?: string; phone?: string }) => {
+    mutationFn: async (data: z.infer<typeof profileEditSchema>) => {
       if (!user) throw new Error("User not found");
       
-      // Validate phone number format if provided
-      if (data.phone && data.phone.trim()) {
-        const phoneRegex = /^[\d\s\-\(\)\+]+$/;
-        const cleanPhone = data.phone.replace(/[\s\-\(\)]/g, '');
-        
-        if (!phoneRegex.test(data.phone)) {
-          throw new Error("Phone number can only contain digits, spaces, hyphens, parentheses, and plus sign");
-        }
-        
-        if (cleanPhone.length < 10 || cleanPhone.length > 15) {
-          throw new Error("Phone number must be between 10 and 15 digits");
-        }
-      }
-      
       // Split full name into first and last name
-      const names = data.fullName?.trim().split(' ') || [];
-      const firstName = names[0] || user.firstName || '';
-      const lastName = names.slice(1).join(' ') || user.lastName || '';
+      const names = data.fullName.trim().split(' ');
+      const firstName = names[0] || '';
+      const lastName = names.slice(1).join(' ') || '';
       
       return apiRequest(`/api/users/${user.id}`, {
         method: "PATCH",
         body: JSON.stringify({
           firstName,
           lastName,
-          phone: data.phone
+          phone: data.phone || null
         })
       });
     },
     onSuccess: async () => {
-      // Refetch user data to get the updated profile
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
       
       toast({
         title: "Profile Updated",
@@ -536,15 +554,9 @@ export default function Profile() {
     }
   });
 
-  const handleSaveProfile = () => {
-    const fullNameInput = document.getElementById('full-name') as HTMLInputElement;
-    const phoneInput = document.getElementById('phone') as HTMLInputElement;
-    
-    updateProfileMutation.mutate({
-      fullName: fullNameInput?.value,
-      phone: phoneInput?.value
-    });
-  }
+  const handleSaveProfile = profileEditForm.handleSubmit((data) => {
+    updateProfileMutation.mutate(data);
+  });
 
   const handleChangePassword = () => {
     console.log('Change password')
@@ -1691,158 +1703,121 @@ export default function Profile() {
 
       {/* Profile Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />
               {t("profile.editProfile")}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-6">
-            <div className="flex items-center gap-6">
-              <Avatar className="h-20 w-20">
-                <AvatarFallback className="text-lg">
-                  {getInitials(user?.name || 'User')}
-                </AvatarFallback>
-              </Avatar>
-              <div className="space-y-2">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="outline" size="sm" data-testid="button-change-photo">
-                      {t("profile.changePhoto")}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{t("tooltip.profile.changePhoto")}</p>
-                  </TooltipContent>
-                </Tooltip>
-                <p className="text-xs text-muted-foreground">
-                  {t("profile.photoFormat")}
-                </p>
+          <Form {...profileEditForm}>
+            <form onSubmit={handleSaveProfile} className="space-y-6">
+              <div className="flex items-center gap-6">
+                <Avatar className="h-20 w-20">
+                  <AvatarFallback className="text-lg">
+                    {getInitials(user?.name || 'User')}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="space-y-2">
+                  <Button type="button" variant="outline" size="sm" data-testid="button-change-photo">
+                    {t("profile.changePhoto")}
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    {t("profile.photoFormat")}
+                  </p>
+                </div>
               </div>
-            </div>
-            
-            <Separator />
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="full-name">{t("profile.fullName")}</Label>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Input id="full-name" defaultValue={user?.name} data-testid="input-full-name" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{t("tooltip.profile.fullName")}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <div>
-                <Label htmlFor="email">{t("profile.emailAddress")}</Label>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Input id="email" defaultValue={user?.email} disabled data-testid="input-email" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{t("tooltip.profile.email")}</p>
-                  </TooltipContent>
-                </Tooltip>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {t("profile.managedByIT")}
-                </p>
-              </div>
-              <div>
-                <Label htmlFor="phone">{t("profile.phoneNumber")}</Label>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Input 
-                      id="phone" 
-                      type="tel"
-                      defaultValue={user?.phone || ""} 
-                      maxLength={20}
-                      placeholder="(555) 123-4567"
-                      data-testid="input-phone"
-                      onInput={(e) => {
-                        const target = e.target as HTMLInputElement;
-                        if (target.value.length > 20) {
-                          target.value = target.value.slice(0, 20);
-                        }
-                      }}
-                      onKeyPress={(e) => {
-                        const target = e.target as HTMLInputElement;
-                        if (target.value.length >= 20) {
-                          e.preventDefault();
-                        }
-                      }}
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{t("tooltip.profile.phone")}</p>
-                  </TooltipContent>
-                </Tooltip>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Maximum 20 characters
-                </p>
-              </div>
-              <div>
-                <Label htmlFor="department">{t("profile.department")}</Label>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Input id="department" defaultValue={user?.department || "Unknown"} disabled data-testid="input-department" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{t("tooltip.profile.department")}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-            </div>
-            
-            <div>
-              <Label htmlFor="bio">{t("profile.bio")}</Label>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Textarea 
-                    id="bio" 
-                    placeholder={t("profile.bioPlaceholder")}
-                    className="mt-1"
-                    data-testid="textarea-bio"
+              
+              <Separator />
+              
+              <div className="grid grid-cols-1 gap-4">
+                <FormField
+                  control={profileEditForm.control}
+                  name="fullName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("profile.fullName")}</FormLabel>
+                      <FormControl>
+                        <Input {...field} data-testid="input-full-name" placeholder="John Doe" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={profileEditForm.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("profile.phoneNumber")}</FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field}
+                          type="tel"
+                          maxLength={20}
+                          placeholder="(555) 123-4567"
+                          data-testid="input-phone"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                      <p className="text-xs text-muted-foreground">
+                        Maximum 20 characters
+                      </p>
+                    </FormItem>
+                  )}
+                />
+
+                <div>
+                  <Label>{t("profile.emailAddress")}</Label>
+                  <Input 
+                    value={user?.email || ""} 
+                    disabled 
+                    data-testid="input-email"
+                    className="bg-muted"
                   />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{t("tooltip.profile.bio")}</p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
-            
-            <div className="flex justify-end gap-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" onClick={() => setEditDialogOpen(false)} data-testid="button-cancel-profile-edit">
-                    {t("common.cancel")}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{t("tooltip.profile.editCancel")}</p>
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button onClick={handleSaveProfile} disabled={updateProfileMutation.isPending} data-testid="button-save-profile">
-                    {updateProfileMutation.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      t("profile.saveChanges")
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{t("tooltip.profile.editSave")}</p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {t("profile.managedByIT")}
+                  </p>
+                </div>
+
+                <div>
+                  <Label>{t("profile.department")}</Label>
+                  <Input 
+                    value={user?.department || "Unknown"} 
+                    disabled 
+                    data-testid="input-department"
+                    className="bg-muted"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-2 pt-4">
+                <Button 
+                  type="button"
+                  variant="outline" 
+                  onClick={() => setEditDialogOpen(false)} 
+                  data-testid="button-cancel-profile-edit"
+                >
+                  {t("common.cancel")}
+                </Button>
+                <Button 
+                  type="submit"
+                  disabled={updateProfileMutation.isPending} 
+                  data-testid="button-save-profile"
+                >
+                  {updateProfileMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    t("profile.saveChanges")
+                  )}
+                </Button>
+              </div>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
 
