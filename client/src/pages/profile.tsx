@@ -717,11 +717,11 @@ export default function Profile() {
     setIsRefreshing(true)
     try {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/user", user?.id] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "assigned-spots"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "vehicles"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "notification-preferences"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "payment-preferences"] })
+        queryClient.refetchQueries({ queryKey: ["/api/waiting-list/user", user?.id] }),
+        queryClient.refetchQueries({ queryKey: ["/api/users", user?.id, "assigned-spots"] }),
+        queryClient.refetchQueries({ queryKey: ["/api/users", user?.id, "vehicles"] }),
+        queryClient.refetchQueries({ queryKey: ["/api/users", user?.id, "notification-preferences"] }),
+        queryClient.refetchQueries({ queryKey: ["/api/users", user?.id, "payment-preferences"] })
       ])
       toast({
         title: t("toast.refreshSuccess.title") || "Refreshed",
