@@ -1149,11 +1149,11 @@ export default function AdminUserManagement() {
                                 </div>
                                 <div>
                                   <div className="font-medium" data-testid={`spot-number-${spot.id}`}>
-                                    {spot.location} - Spot {spot.spotNumber}
+                                    Spot {spot.spotNumber}
                                   </div>
-                                  {spot.spotType && (
+                                  {spot.isActive && (
                                     <Badge variant="outline" className="text-xs mt-1">
-                                      {spot.spotType.charAt(0).toUpperCase() + spot.spotType.slice(1)}
+                                      Active
                                     </Badge>
                                   )}
                                 </div>

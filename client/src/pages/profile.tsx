@@ -247,12 +247,12 @@ export default function Profile() {
     mutationFn: async (data: WaitingListForm) => {
       if (!user) throw new Error("User not found");
       
+      // Note: preferredSpotTypeId and preferredLocationId should be sent as numbers
+      // For now, we're omitting these until proper ID mapping is implemented
       const waitingListData: Partial<InsertWaitingList> = {
         userId: user.id,
         userName: user.name,
         userEmail: user.email,
-        preferredSpotType: data.preferredSpotType as SpotType,
-        preferredBuilding: data.preferredBuilding,
         priority: parseInt(data.priority),
         reason: data.reason,
         status: "active",
@@ -309,9 +309,9 @@ export default function Profile() {
     mutationFn: async (data: WaitingListForm) => {
       if (!waitingListEntry?.id) throw new Error("Waiting list entry not found");
       
+      // Note: preferredSpotTypeId and preferredLocationId should be sent as numbers
+      // For now, we're omitting these until proper ID mapping is implemented
       const updateData = {
-        preferredSpotType: data.preferredSpotType as SpotType,
-        preferredBuilding: data.preferredBuilding,
         priority: parseInt(data.priority),
         reason: data.reason
       };
@@ -1481,10 +1481,6 @@ export default function Profile() {
                           </div>
                         </div>
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        <p><strong>{t("waitingList.spotType")}:</strong> {waitingListEntry?.preferredSpotType}</p>
-                        <p><strong>{t("waitingList.building")}:</strong> {waitingListEntry?.preferredBuilding}</p>
-                      </div>
                       <div className="flex gap-1">
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -1495,8 +1491,8 @@ export default function Profile() {
                               onClick={() => {
                                 setEditWaitingListMode(true);
                                 waitingListForm.reset({
-                                  preferredSpotType: waitingListEntry?.preferredSpotType as any,
-                                  preferredBuilding: waitingListEntry?.preferredBuilding || "",
+                                  preferredSpotType: "regular",
+                                  preferredBuilding: "",
                                   priority: waitingListEntry?.priority?.toString() as any,
                                   reason: waitingListEntry?.reason || ""
                                 });

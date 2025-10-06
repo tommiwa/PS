@@ -19,8 +19,8 @@ export interface Vehicle {
 export interface AssignedSpot {
   id: string
   spotNumber: string
-  location: string
-  spotType: 'regular' | 'electric' | 'accessible' | 'tesla_ev' | 'reserved'
+  locationId: number
+  spotTypeId: number
   isIndoor: boolean
   ownerId: string | null
   description: string | null
@@ -186,17 +186,10 @@ export function UserProfileCard({
                   data-testid={`assigned-spot-${index}`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`w-3 h-3 rounded-full ${
-                      spot.spotType === 'electric' || spot.spotType === 'tesla_ev' ? 'bg-green-500' :
-                      spot.spotType === 'accessible' ? 'bg-blue-500' : 
-                      spot.spotType === 'reserved' ? 'bg-purple-500' : 'bg-gray-500'
-                    }`} />
+                    <div className="w-3 h-3 rounded-full bg-blue-500" />
                     <div>
                       <div className="text-sm font-medium">
                         {t("profile.spotNumber", { number: spot.spotNumber })}
-                        <Badge variant="outline" className="ml-2 capitalize">
-                          {spot.spotType === 'tesla_ev' ? t("spotType.teslaEv") : t(`spotType.${spot.spotType}`)}
-                        </Badge>
                         {spot.isBciManaged && (
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -219,9 +212,8 @@ export function UserProfileCard({
                         )}
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        {spot.location}
-                        {spot.isIndoor && ` • ${t('common.indoor')}`}
-                        {spot.isBookable && ` • ${t('common.availableForSharing')}`}
+                        {spot.isIndoor && `${t('common.indoor')}`}
+                        {spot.isBookable && (spot.isIndoor ? ` • ` : '') + t('common.availableForSharing')}
                       </div>
                       {spot.description && (
                         <div className="text-xs text-muted-foreground mt-1">
