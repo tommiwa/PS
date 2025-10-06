@@ -66,6 +66,23 @@ import { useLanguage } from "@/hooks/use-language"
 import { spotTypes, type SpotType, type WaitingList, type InsertWaitingList, type ParkingSpot, type NotificationPreferences, type UpdateNotificationPreferences } from "@shared/schema"
 import { getErrorMessage } from "@/lib/error-utils"
 
+// Format phone number for display: 1234567890 -> (123) 456-7890
+const formatPhoneNumber = (value: string): string => {
+  if (!value) return value;
+  const phoneNumber = value.replace(/[^\d]/g, '');
+  const phoneNumberLength = phoneNumber.length;
+  if (phoneNumberLength < 4) return phoneNumber;
+  if (phoneNumberLength < 7) {
+    return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3)}`;
+  }
+  return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
+};
+
+// Remove formatting for storage: (123) 456-7890 -> 1234567890
+const unformatPhoneNumber = (value: string): string => {
+  return value.replace(/[^\d]/g, '');
+};
+
 // Type definitions for forms
 type WaitingListForm = {
   preferredSpotType: "regular" | "electric" | "accessible";
@@ -119,15 +136,10 @@ export default function Profile() {
   const profileEditSchema = z.object({
     fullName: z.string().min(1, "Name is required"),
     phone: z.string()
-      .max(20, "Phone number must be 20 characters or less")
-      .regex(/^[\d\s\-\(\)\+]*$/, "Phone can only contain digits, spaces, hyphens, parentheses, and plus sign")
-      .refine((val) => {
-        if (!val) return true; // Optional
-        const cleaned = val.replace(/[\s\-\(\)\+]/g, '');
-        return cleaned.length >= 10 && cleaned.length <= 15;
-      }, "Phone must be between 10-15 digits")
       .optional()
-      .or(z.literal(''))
+      .refine((val) => !val || /^\d{10}$/.test(unformatPhoneNumber(val)), {
+        message: "Phone number must be exactly 10 digits"
+      })
   });
 
   // Priority levels with translations
@@ -186,7 +198,7 @@ export default function Profile() {
     resolver: zodResolver(profileEditSchema),
     defaultValues: {
       fullName: user?.name || "",
-      phone: user?.phone || ""
+      phone: user?.phone ? formatPhoneNumber(user.phone) : ""
     }
   });
 
@@ -195,7 +207,7 @@ export default function Profile() {
     if (user) {
       profileEditForm.reset({
         fullName: user.name || "",
-        phone: user.phone || ""
+        phone: user.phone ? formatPhoneNumber(user.phone) : ""
       });
     }
   }, [user]);
@@ -528,12 +540,15 @@ export default function Profile() {
       const firstName = names[0] || '';
       const lastName = names.slice(1).join(' ') || '';
       
+      // Unformat phone number before sending to backend
+      const unformattedPhone = data.phone ? unformatPhoneNumber(data.phone) : null;
+      
       return apiRequest(`/api/users/${user.id}`, {
         method: "PATCH",
         body: JSON.stringify({
           firstName,
           lastName,
-          phone: data.phone || null
+          phone: unformattedPhone
         })
       });
     },
@@ -1803,14 +1818,18 @@ export default function Profile() {
                         <Input 
                           {...field}
                           type="tel"
-                          maxLength={20}
+                          maxLength={14}
                           placeholder="(555) 123-4567"
                           data-testid="input-phone"
+                          onChange={(e) => {
+                            const formatted = formatPhoneNumber(e.target.value);
+                            field.onChange(formatted);
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
                       <p className="text-xs text-muted-foreground">
-                        Maximum 20 characters
+                        10 digits required: (555) 123-4567
                       </p>
                     </FormItem>
                   )}
