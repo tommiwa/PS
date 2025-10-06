@@ -1103,7 +1103,11 @@ export default function AdminParkingManagement() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Tooltip>
           <TooltipTrigger asChild>
-            <Card data-testid="card-total-spots" className="hover-elevate">
+            <Card 
+              data-testid="card-total-spots" 
+              className="hover-elevate cursor-pointer active-elevate-2"
+              onClick={() => setActiveSpotTab("bci-managed")}
+            >
               <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Spots</CardTitle>
                 <div className="rounded-full border-2 border-blue-400 p-2">
@@ -1119,13 +1123,17 @@ export default function AdminParkingManagement() {
             </Card>
           </TooltipTrigger>
           <TooltipContent>
-            View total number of parking spots in the system
+            Click to view all BCI managed parking spots
           </TooltipContent>
         </Tooltip>
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Card data-testid="card-available-spots" className="hover-elevate">
+            <Card 
+              data-testid="card-available-spots" 
+              className="hover-elevate cursor-pointer active-elevate-2"
+              onClick={() => setActiveSpotTab("bci-available")}
+            >
               <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">{t("admin.parkingManagement.availableSpots")}</CardTitle>
                 <div className="rounded-full border-2 border-green-400 p-2">
@@ -1141,13 +1149,17 @@ export default function AdminParkingManagement() {
             </Card>
           </TooltipTrigger>
           <TooltipContent>
-            View spots currently unassigned and available for rental
+            Click to view available BCI managed spots
           </TooltipContent>
         </Tooltip>
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Card data-testid="card-bci-managed-total" className="hover-elevate">
+            <Card 
+              data-testid="card-bci-managed-total" 
+              className="hover-elevate cursor-pointer active-elevate-2"
+              onClick={() => setActiveSpotTab("bci-managed")}
+            >
               <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total BCI Managed Spots</CardTitle>
                 <div className="rounded-full border-2 border-purple-400 p-2">
@@ -1163,13 +1175,17 @@ export default function AdminParkingManagement() {
             </Card>
           </TooltipTrigger>
           <TooltipContent>
-            View total number of BCI managed parking spots
+            Click to view all BCI managed parking spots
           </TooltipContent>
         </Tooltip>
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Card data-testid="card-bci-managed-available" className="hover-elevate">
+            <Card 
+              data-testid="card-bci-managed-available" 
+              className="hover-elevate cursor-pointer active-elevate-2"
+              onClick={() => setActiveSpotTab("bci-available")}
+            >
               <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Available BCI Managed Spots</CardTitle>
                 <div className="rounded-full border-2 border-orange-400 p-2">
@@ -1185,7 +1201,7 @@ export default function AdminParkingManagement() {
             </Card>
           </TooltipTrigger>
           <TooltipContent>
-            View BCI managed spots currently available for assignment
+            Click to view available BCI managed spots
           </TooltipContent>
         </Tooltip>
         </div>

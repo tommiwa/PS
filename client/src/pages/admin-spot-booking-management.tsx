@@ -870,7 +870,10 @@ export default function AdminSpotBookingManagement() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Card className="hover-elevate">
+              <Card 
+                className="hover-elevate cursor-pointer active-elevate-2"
+                onClick={() => setActiveTab("active")}
+              >
                 <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Active Bookings</CardTitle>
                   <div className="rounded-full border-2 border-blue-400 p-2">
@@ -886,7 +889,7 @@ export default function AdminSpotBookingManagement() {
               </Card>
             </TooltipTrigger>
             <TooltipContent>
-              View confirmed bookings currently in progress
+              Click to view confirmed bookings currently in progress
             </TooltipContent>
           </Tooltip>
 
@@ -914,7 +917,10 @@ export default function AdminSpotBookingManagement() {
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Card className="hover-elevate">
+              <Card 
+                className="hover-elevate cursor-pointer active-elevate-2"
+                onClick={() => setActiveTab("requests")}
+              >
                 <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
                   <div className="rounded-full border-2 border-orange-400 p-2">
@@ -930,7 +936,7 @@ export default function AdminSpotBookingManagement() {
               </Card>
             </TooltipTrigger>
             <TooltipContent>
-              View booking requests awaiting admin approval
+              Click to view booking requests awaiting admin approval
             </TooltipContent>
           </Tooltip>
 
