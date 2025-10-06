@@ -2737,15 +2737,15 @@ export default function AdminParkingManagement() {
             <div>
               <label className="text-sm font-medium">Preferred Location (Optional)</label>
               <Select 
-                value={waitingListFormData.preferredLocationId?.toString() || ""}
-                onValueChange={(value) => setWaitingListFormData(prev => ({ ...prev, preferredLocationId: value ? parseInt(value) : undefined }))}
+                value={waitingListFormData.preferredLocationId?.toString() || "any"}
+                onValueChange={(value) => setWaitingListFormData(prev => ({ ...prev, preferredLocationId: value === "any" ? undefined : parseInt(value) }))}
                 disabled={isLoadingLocations}
               >
                 <SelectTrigger data-testid="select-waiting-location">
                   <SelectValue placeholder={isLoadingLocations ? "Loading locations..." : "Any location"} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Any location</SelectItem>
+                  <SelectItem value="any">Any location</SelectItem>
                   {locations.map(loc => (
                     <SelectItem key={loc.id} value={loc.id.toString()}>
                       {loc.office} - {loc.building}, {loc.level}
@@ -2757,15 +2757,15 @@ export default function AdminParkingManagement() {
             <div>
               <label className="text-sm font-medium">Preferred Spot Type (Optional)</label>
               <Select 
-                value={waitingListFormData.preferredSpotTypeId?.toString() || ""}
-                onValueChange={(value) => setWaitingListFormData(prev => ({ ...prev, preferredSpotTypeId: value ? parseInt(value) : undefined }))}
+                value={waitingListFormData.preferredSpotTypeId?.toString() || "any"}
+                onValueChange={(value) => setWaitingListFormData(prev => ({ ...prev, preferredSpotTypeId: value === "any" ? undefined : parseInt(value) }))}
                 disabled={isLoadingSpotTypes}
               >
                 <SelectTrigger data-testid="select-waiting-spot-type">
                   <SelectValue placeholder={isLoadingSpotTypes ? "Loading spot types..." : "Any spot type"} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Any spot type</SelectItem>
+                  <SelectItem value="any">Any spot type</SelectItem>
                   {spotTypes.map(type => (
                     <SelectItem key={type.id} value={type.id.toString()}>
                       {type.name}

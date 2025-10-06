@@ -709,9 +709,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const newVehicle = await storage.createVehicle(userId, vehicleData);
       
-      // Audit the vehicle creation
-      await auditService.logAction("CREATE", "vehicle", {
-        entityId: newVehicle.id,
+      // Audit the vehicle creation (logged as user entity since vehicle is not a separate entity type)
+      await auditService.logAction("CREATE", "user", {
+        entityId: userId,
         message: `Created vehicle ${newVehicle.year} ${newVehicle.make} ${newVehicle.model} for user ${userId}`,
         after: newVehicle
       });
@@ -764,9 +764,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Vehicle not found" });
       }
       
-      // Audit the vehicle update
-      await auditService.logAction("UPDATE", "vehicle", {
-        entityId: vehicleId,
+      // Audit the vehicle update (logged as user entity since vehicle is not a separate entity type)
+      await auditService.logAction("UPDATE", "user", {
+        entityId: userId,
         message: `Updated vehicle ${updatedVehicle.year} ${updatedVehicle.make} ${updatedVehicle.model}`,
         before: existingVehicle,
         after: updatedVehicle
@@ -817,9 +817,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Vehicle not found" });
       }
       
-      // Audit the vehicle deletion
-      await auditService.logAction("DELETE", "vehicle", {
-        entityId: vehicleId,
+      // Audit the vehicle deletion (logged as user entity since vehicle is not a separate entity type)
+      await auditService.logAction("DELETE", "user", {
+        entityId: userId,
         message: `Deleted vehicle ${existingVehicle.year} ${existingVehicle.make} ${existingVehicle.model}`,
         before: existingVehicle
       });
@@ -875,7 +875,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Audit the parking spot creation
       await auditService.logAction("CREATE", "parking_spot", {
         entityId: newSpot.id,
-        message: `Created parking spot ${newSpot.spotNumber} at ${newSpot.location}`,
+        message: `Created parking spot ${newSpot.spotNumber}`,
         after: newSpot
       });
       
@@ -920,7 +920,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Audit the parking spot update
       await auditService.logAction("UPDATE", "parking_spot", {
         entityId: updatedSpot.id,
-        message: `Updated parking spot ${updatedSpot.spotNumber} at ${updatedSpot.location}`,
+        message: `Updated parking spot ${updatedSpot.spotNumber}`,
         before: existingSpot,
         after: updatedSpot
       });
@@ -962,7 +962,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Audit the parking spot deletion
       await auditService.logAction("DELETE", "parking_spot", {
         entityId: id,
-        message: `Deleted parking spot ${existingSpot.spotNumber} at ${existingSpot.location}`,
+        message: `Deleted parking spot ${existingSpot.spotNumber}`,
         before: existingSpot
       });
       
@@ -1039,10 +1039,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const waitingListEntries = await storage.getAllWaitingList();
             const interestedUsers = waitingListEntries.filter(entry => {
               // Match users who prefer this spot type or have no preference (null)
-              const matchesSpotType = !entry.preferredSpotType || entry.preferredSpotType === spot.spotType;
-              // Match users who prefer this building/location or have no preference (null)
-              const matchesLocation = !entry.preferredBuilding || 
-                                    spot.location.toLowerCase().includes(entry.preferredBuilding.toLowerCase());
+              const matchesSpotType = !entry.preferredSpotTypeId || entry.preferredSpotTypeId === spot.spotTypeId;
+              // Match users who prefer this location or have no preference (null)
+              const matchesLocation = !entry.preferredLocationId || entry.preferredLocationId === spot.locationId;
               return matchesSpotType && matchesLocation;
             });
 
@@ -1062,15 +1061,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   // Prepare spot details for email (single spot in array)
                   const availableSpots = [{
                     spotNumber: spot.spotNumber,
-                    location: spot.location || 'BCI Campus',
-                    building: spot.location || 'BCI Campus', // Use location as building
-                    type: spot.spotType || 'Standard',
+                    location: 'BCI Campus',
+                    building: 'BCI Campus',
+                    type: 'Parking Spot',
                     rate: Number(newListing.dailyRate) // Convert decimal to number
                   }];
 
                   // Send spot availability notification
                   await sendSpotAvailabilityNotification(
-                    { name: displayName, email: user.email, id: user.id },
+                    { name: displayName, email: user.email || '', id: user.id },
                     availableSpots,
                     notificationPreferences || {}
                   );
@@ -1379,8 +1378,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const bookingDetails = {
               id: newBooking.id,
               spotNumber: spot.spotNumber,
-              location: spot.location || 'BCI Campus',
-              building: spot.location || 'BCI Campus', // Use location as building since building field doesn't exist
+              location: 'BCI Campus',
+              building: 'BCI Campus',
               startDate: new Date(newBooking.bookingDate), // Use bookingDate as start date
               endDate: new Date(newBooking.bookingDate), // Same day booking
               rate: Number(newBooking.dailyRate), // Convert decimal to number
@@ -1389,7 +1388,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
             // Send the notification asynchronously
             await sendBookingConfirmationNotification(
-              { name: displayName, email: user.email, id: user.id },
+              { name: displayName, email: user.email || '', id: user.id },
               bookingDetails,
               notificationPreferences || {}
             );
@@ -2091,7 +2090,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId,
           assignedCount: updatedSpots.length,
           totalRequested: spotIds.length,
-          assignedSpots: updatedSpots.map(s => ({ id: s.id, spotNumber: s.spotNumber, location: s.location }))
+          assignedSpots: updatedSpots.map(s => ({ id: s.id, spotNumber: s.spotNumber, locationId: s.locationId }))
         }
       });
       
@@ -2130,7 +2129,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Audit the admin spot creation
       await auditService.logAction("CREATE", "parking_spot", {
         entityId: newSpot.id,
-        message: `Admin created parking spot ${newSpot.spotNumber} at ${newSpot.location}${newSpot.ownerId ? ` (assigned to ${newSpot.ownerId})` : ' (unallocated)'}`,
+        message: `Admin created parking spot ${newSpot.spotNumber}${newSpot.ownerId ? ` (assigned to ${newSpot.ownerId})` : ' (unallocated)'}`,
         after: newSpot
       });
       
@@ -2192,7 +2191,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           spotsOwned: userSpots.length,
           bookingsCount: userBookings.length,
           lastLogin: user.lastLogin ? (user.lastLogin instanceof Date ? user.lastLogin.toISOString() : user.lastLogin) : new Date().toISOString(),
-          memberSince: user.memberSince ? (user.memberSince instanceof Date ? user.memberSince.toISOString() : user.memberSince) : user.createdAt ? (user.createdAt instanceof Date ? user.createdAt.toISOString() : user.createdAt) : new Date().toISOString()
+          memberSince: user.memberSince || (user.createdAt ? (user.createdAt instanceof Date ? user.createdAt.toISOString() : user.createdAt) : new Date().toISOString())
         };
       });
       
@@ -2274,7 +2273,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Audit the spot unassignment
       await auditService.logAction("UNASSIGN", "parking_spot", {
         entityId: spotId,
-        message: `Admin unassigned parking spot ${updatedSpot.spotNumber} at ${updatedSpot.location}${formerOwner ? ` from ${formerOwner.firstName} ${formerOwner.lastName} (${formerOwner.email})` : ''}`,
+        message: `Admin unassigned parking spot ${updatedSpot.spotNumber}${formerOwner ? ` from ${formerOwner.firstName} ${formerOwner.lastName} (${formerOwner.email})` : ''}`,
         before: existingSpot,
         after: updatedSpot
       });
@@ -2316,7 +2315,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Audit the admin spot update
       await auditService.logAction("UPDATE", "parking_spot", {
         entityId: updatedSpot.id,
-        message: `Admin updated parking spot ${updatedSpot.spotNumber} at ${updatedSpot.location}`,
+        message: `Admin updated parking spot ${updatedSpot.spotNumber}`,
         before: existingSpot,
         after: updatedSpot
       });
@@ -2350,7 +2349,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Audit the admin spot deletion
       await auditService.logAction("DELETE", "parking_spot", {
         entityId: id,
-        message: `Admin deleted parking spot ${existingSpot.spotNumber} at ${existingSpot.location}`,
+        message: `Admin deleted parking spot ${existingSpot.spotNumber}`,
         before: existingSpot
       });
       
@@ -2516,8 +2515,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ...assignment,
             spotDetails: spot ? {
               spotNumber: spot.spotNumber,
-              location: spot.location,
-              spotType: spot.spotType,
+              locationId: spot.locationId,
+              spotTypeId: spot.spotTypeId,
               isIndoor: spot.isIndoor
             } : null
           };
@@ -2952,7 +2951,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Audit the waiting list entry creation
       await auditService.logAction("CREATE", "waiting_list", {
         entityId: entry.id,
-        message: `Created waiting list entry for ${entry.userName} (${entry.userEmail}) - ${entry.preferredSpotType || 'any'} preference`,
+        message: `Created waiting list entry for ${entry.userName} (${entry.userEmail})`,
         after: entry
       });
       
@@ -2995,7 +2994,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Audit the waiting list entry creation
       await auditService.logAction("CREATE", "waiting_list", {
         entityId: entry.id,
-        message: `Admin added ${entry.userName} (${entry.userEmail}) to waiting list - ${entry.preferredSpotType || 'any'} preference`,
+        message: `Admin added ${entry.userName} (${entry.userEmail}) to waiting list`,
         after: entry
       });
       
@@ -3328,9 +3327,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId,
         userName,
         userEmail,
-        userDepartment: "Unknown",
-        preferredSpotType: (waitingListEntry.spotPreferences?.spotType as SpotType) || null,
-        preferredBuilding: waitingListEntry.spotPreferences?.building || null,
+        preferredSpotTypeId: null,
+        preferredLocationId: null,
         priority: waitingListEntry.position,
         status: "active",
         reason: `Position ${waitingListEntry.position} on waiting list`,
@@ -3410,7 +3408,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 setImmediate(async () => {
                   try {
                     const result = await sendPaymentReminderNotification(
-                      { name: displayName, email: user.email, id: user.id },
+                      { name: displayName, email: user.email || '', id: user.id },
                       paymentDetails,
                       notificationPreferences || {}
                     );
