@@ -1184,11 +1184,26 @@ export default function AdminSpotBookingManagement() {
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="availability" data-testid="tab-booking-availability">Booking Availability</TabsTrigger>
-          <TabsTrigger value="active" data-testid="tab-active-bookings">Active Bookings</TabsTrigger>
-          <TabsTrigger value="pending-payments" data-testid="tab-pending-payments">Pending Payments</TabsTrigger>
-          <TabsTrigger value="past" data-testid="tab-past-bookings">Past Bookings</TabsTrigger>
-          <TabsTrigger value="activity" data-testid="tab-recent-activity">Recent Activity</TabsTrigger>
+          <TabsTrigger value="availability" data-testid="tab-booking-availability" className="gap-2">
+            <CalendarCheck className="h-4 w-4 text-green-600" />
+            Booking Availability
+          </TabsTrigger>
+          <TabsTrigger value="active" data-testid="tab-active-bookings" className="gap-2">
+            <CheckCircle2 className="h-4 w-4 text-blue-600" />
+            Active Bookings
+          </TabsTrigger>
+          <TabsTrigger value="pending-payments" data-testid="tab-pending-payments" className="gap-2">
+            <DollarSign className="h-4 w-4 text-orange-600" />
+            Pending Payments
+          </TabsTrigger>
+          <TabsTrigger value="past" data-testid="tab-past-bookings" className="gap-2">
+            <Calendar className="h-4 w-4 text-slate-600" />
+            Past Bookings
+          </TabsTrigger>
+          <TabsTrigger value="activity" data-testid="tab-recent-activity" className="gap-2">
+            <Activity className="h-4 w-4 text-purple-600" />
+            Recent Activity
+          </TabsTrigger>
         </TabsList>
 
         {/* Booking Availability Tab */}

@@ -50,6 +50,7 @@ import {
   MapPin,
   Tag,
   Building2,
+  Layers,
   Eye,
   EyeOff,
   Loader2,
@@ -938,9 +939,18 @@ export default function AdminDataManagement() {
 
       <Tabs defaultValue="departments" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="departments" data-testid="tab-departments">Departments</TabsTrigger>
-          <TabsTrigger value="locations" data-testid="tab-locations">Locations</TabsTrigger>
-          <TabsTrigger value="spot-types" data-testid="tab-spot-types">Spot Types</TabsTrigger>
+          <TabsTrigger value="departments" data-testid="tab-departments" className="gap-2">
+            <Building2 className="h-4 w-4 text-blue-600" />
+            Departments
+          </TabsTrigger>
+          <TabsTrigger value="locations" data-testid="tab-locations" className="gap-2">
+            <MapPin className="h-4 w-4 text-green-600" />
+            Locations
+          </TabsTrigger>
+          <TabsTrigger value="spot-types" data-testid="tab-spot-types" className="gap-2">
+            <Layers className="h-4 w-4 text-purple-600" />
+            Spot Types
+          </TabsTrigger>
         </TabsList>
 
         {/* Departments Tab */}
