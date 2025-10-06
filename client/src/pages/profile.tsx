@@ -63,6 +63,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { useTheme } from "@/contexts/theme-context"
 import { useLanguage } from "@/hooks/use-language"
 import { spotTypes, type SpotType, type WaitingList, type InsertWaitingList, type ParkingSpot, type NotificationPreferences, type UpdateNotificationPreferences } from "@shared/schema"
+import { getErrorMessage } from "@/lib/error-utils"
 
 // Type definitions for forms
 type WaitingListForm = {
@@ -243,7 +244,7 @@ export default function Profile() {
     onError: (error) => {
       toast({
         title: t("toast.enrollFailed.title"),
-        description: error instanceof Error ? error.message : t("toast.enrollFailed.description"),
+        description: getErrorMessage(error, t("toast.enrollFailed.description")),
         variant: "destructive"
       });
     }
@@ -276,7 +277,7 @@ export default function Profile() {
     onError: (error) => {
       toast({
         title: t("toast.updateFailed.title"),
-        description: error instanceof Error ? error.message : t("toast.updateFailed.description"),
+        description: getErrorMessage(error, t("toast.updateFailed.description")),
         variant: "destructive"
       });
     }
@@ -303,7 +304,7 @@ export default function Profile() {
     onError: (error) => {
       toast({
         title: t("toast.cancellationFailed.title"),
-        description: error instanceof Error ? error.message : t("toast.cancellationFailed.description"),
+        description: getErrorMessage(error, t("toast.cancellationFailed.description")),
         variant: "destructive"
       });
     }
@@ -332,7 +333,7 @@ export default function Profile() {
     onError: (error) => {
       toast({
         title: t("toast.vehicleAddFailed.title"),
-        description: error instanceof Error ? error.message : t("toast.vehicleAddFailed.description"),
+        description: getErrorMessage(error, t("toast.vehicleAddFailed.description")),
         variant: "destructive"
       });
     }
@@ -361,7 +362,7 @@ export default function Profile() {
     onError: (error) => {
       toast({
         title: t("toast.vehicleUpdateFailed.title"),
-        description: error instanceof Error ? error.message : t("toast.vehicleUpdateFailed.description"),
+        description: getErrorMessage(error, t("toast.vehicleUpdateFailed.description")),
         variant: "destructive"
       });
     }
@@ -385,7 +386,7 @@ export default function Profile() {
     onError: (error) => {
       toast({
         title: t("toast.vehicleDeleteFailed.title"),
-        description: error instanceof Error ? error.message : t("toast.vehicleDeleteFailed.description"),
+        description: getErrorMessage(error, t("toast.vehicleDeleteFailed.description")),
         variant: "destructive"
       });
     }
@@ -529,7 +530,7 @@ export default function Profile() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to update profile",
+        description: getErrorMessage(error, "Failed to update profile"),
         variant: "destructive",
       });
     }

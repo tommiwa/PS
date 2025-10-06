@@ -25,6 +25,7 @@ import { useCardsVisibility } from "@/hooks/use-cards-visibility"
 import { useLanguage } from "@/hooks/use-language"
 import { apiRequest, queryClient } from "@/lib/queryClient"
 import { insertUserSchema, type InsertUser, type User, type ParkingSpot, type Department } from "@shared/schema"
+import { getErrorMessage } from "@/lib/error-utils"
 import { quickExportUsersPDF, quickExportUsersExcel } from "@/utils/export-utils"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { z } from "zod"
@@ -241,33 +242,8 @@ export default function AdminUserManagement() {
       // Remove the singular 'role' field
       delete (apiData as any).role;
       
-      try {
-        const response = await apiRequest('/api/users', { method: 'POST', body: apiData });
-        return await response.json();
-      } catch (error: any) {
-        // apiRequest throws errors with format "statusCode: responseText"
-        // Try to extract a user-friendly message from the JSON response
-        const errorMessage = error.message || '';
-        
-        // Extract the response text after the status code (format: "409: {json}")
-        const match = errorMessage.match(/\d+:\s*(.+)/);
-        if (match) {
-          const responseText = match[1].trim();
-          try {
-            // Try to parse as JSON
-            const errorData = JSON.parse(responseText);
-            // Use the message field if available, otherwise use error field
-            const friendlyMessage = errorData.message || errorData.error || 'Failed to create user';
-            throw new Error(friendlyMessage);
-          } catch (parseError) {
-            // If JSON parsing fails, use the raw response text
-            throw new Error(responseText);
-          }
-        }
-        
-        // Re-throw the original error if we can't parse it
-        throw error;
-      }
+      const response = await apiRequest('/api/users', { method: 'POST', body: apiData });
+      return await response.json();
     },
     onSuccess: (newUser: User) => {
       // Invalidate and refetch user data
@@ -288,7 +264,7 @@ export default function AdminUserManagement() {
       toast({
         variant: "destructive",
         title: "Error Creating User",
-        description: error.message || "Failed to create user. Please try again.",
+        description: getErrorMessage(error, "Failed to create user. Please try again."),
       });
     }
   });
@@ -404,7 +380,7 @@ export default function AdminUserManagement() {
       toast({
         variant: "destructive",
         title: "Error Unassigning Spot",
-        description: error.message || "Failed to unassign parking spot. Please try again.",
+        description: getErrorMessage(error, "Failed to unassign parking spot. Please try again."),
       });
     }
   });
@@ -438,13 +414,14 @@ export default function AdminUserManagement() {
     },
     onError: (error: any) => {
       console.error('Error updating user:', error);
-      const isUnauthorized = error.message?.includes('Unauthorized') || error.status === 401;
+      const errorMsg = getErrorMessage(error, "Failed to update user. Please try again.");
+      const isUnauthorized = errorMsg.includes('Unauthorized') || errorMsg.includes('401');
       toast({
         variant: "destructive",
         title: "Error Updating User",
         description: isUnauthorized 
           ? "You need administrator privileges to edit users. Please contact an admin or use the 'Promote to Admin' button below for testing."
-          : error.message || "Failed to update user. Please try again.",
+          : errorMsg,
       });
     }
   });
@@ -468,37 +445,15 @@ export default function AdminUserManagement() {
     },
     onError: (error: any) => {
       console.error('Error deleting user:', error);
-      let errorMessage = "Failed to delete user. Please try again.";
-      
-      // Parse the error message to extract details
-      if (error.message) {
-        const message = error.message;
-        
-        if (message.includes('401') || message.includes('Unauthorized')) {
-          errorMessage = "You need administrator privileges to delete users.";
-        } else if (message.includes('400')) {
-          // Extract the JSON error details from the error message
-          try {
-            const jsonStart = message.indexOf('{');
-            if (jsonStart !== -1) {
-              const jsonStr = message.substring(jsonStart);
-              const errorData = JSON.parse(jsonStr);
-              errorMessage = errorData.details || errorData.error || message;
-            } else {
-              errorMessage = message;
-            }
-          } catch (e) {
-            errorMessage = message;
-          }
-        } else {
-          errorMessage = message;
-        }
-      }
+      const errorMsg = getErrorMessage(error, "Failed to delete user. Please try again.");
+      const isUnauthorized = errorMsg.includes('Unauthorized') || errorMsg.includes('401');
       
       toast({
         variant: "destructive",
         title: "Cannot Delete User",
-        description: errorMessage,
+        description: isUnauthorized 
+          ? "You need administrator privileges to delete users."
+          : errorMsg,
       });
     }
   });
@@ -548,38 +503,15 @@ export default function AdminUserManagement() {
     },
     onError: (error: any) => {
       console.error('Error restoring user:', error);
-      let errorMessage = "Failed to restore user. Please try again.";
-      
-      // Parse the error message to extract details
-      if (error.message) {
-        const message = error.message;
-        
-        if (message.includes('401') || message.includes('Unauthorized')) {
-          errorMessage = "You need administrator privileges to restore users.";
-        } else if (message.includes('400')) {
-          // Extract the JSON error details from the error message
-          try {
-            const jsonStart = message.indexOf('{');
-            if (jsonStart !== -1) {
-              const jsonPart = message.substring(jsonStart);
-              const errorData = JSON.parse(jsonPart);
-              errorMessage = errorData.details || errorData.error || errorMessage;
-            }
-          } catch (e) {
-            // If JSON parsing fails, check if error message contains the details
-            if (message.includes('not deleted')) {
-              errorMessage = "This user is not deleted and cannot be restored.";
-            }
-          }
-        } else if (message.includes('404')) {
-          errorMessage = "User not found.";
-        }
-      }
+      const errorMsg = getErrorMessage(error, "Failed to restore user. Please try again.");
+      const isUnauthorized = errorMsg.includes('Unauthorized') || errorMsg.includes('401');
       
       toast({
         variant: "destructive",
         title: "Cannot Restore User",
-        description: errorMessage,
+        description: isUnauthorized 
+          ? "You need administrator privileges to restore users."
+          : errorMsg,
       });
     }
   });
