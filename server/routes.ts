@@ -348,7 +348,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         firstName: z.string().min(1).optional(),
         lastName: z.string().min(1).optional(),
         email: z.string().email().optional(),
-        phone: z.string().min(1).optional(),
+        phone: z.string().min(1).optional().nullable(),
         departmentId: z.number().int().positive().optional()
       });
 
@@ -361,7 +361,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (parseResult.lastName !== undefined) updateData.lastName = parseResult.lastName;
       if (parseResult.email !== undefined) updateData.email = parseResult.email;
       if (parseResult.phone !== undefined) updateData.phone = parseResult.phone;
-      if (parseResult.department !== undefined) updateData.department = parseResult.department;
+      if (parseResult.departmentId !== undefined) updateData.departmentId = parseResult.departmentId;
       
       const updatedUser = await storage.updateUser(id, updateData);
       if (!updatedUser) {
