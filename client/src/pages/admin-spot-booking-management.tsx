@@ -56,7 +56,7 @@ import {
   Info
 } from "lucide-react"
 import type { Booking, BookingStatus, ParkingSpot } from "@shared/schema"
-import { quickExportBookingsPDF, quickExportBookingsExcel, quickExportBookingRequestsPDF, quickExportBookingRequestsExcel, quickExportBookingActivityPDF, quickExportBookingActivityExcel } from "@/utils/export-utils"
+import { quickExportBookingsPDF, quickExportBookingsExcel, quickExportBookingActivityPDF, quickExportBookingActivityExcel } from "@/utils/export-utils"
 
 // Admin-specific interfaces for extended booking data
 interface AdminBookingData {
@@ -79,19 +79,6 @@ interface AdminBookingData {
   notes: string;
   createdAt: string;
   lastActivity: string;
-}
-
-interface BookingRequest {
-  id: string;
-  type: 'cancellation' | 'dispute' | 'modification';
-  submittedBy: string;
-  email: string;
-  bookingId: string;
-  spotNumber: string;
-  reason: string;
-  requestDate: string;
-  urgency: 'high' | 'medium' | 'low';
-  status: 'pending' | 'resolved' | 'rejected';
 }
 
 interface BookingActivity {
@@ -166,8 +153,6 @@ export default function AdminSpotBookingManagement() {
   
   const [searchTerm, setSearchTerm] = useState("")
   const [filterValues, setFilterValues] = useState<FilterValues>({})
-  const [requestsSearchTerm, setRequestsSearchTerm] = useState("")
-  const [requestsFilterValues, setRequestsFilterValues] = useState<FilterValues>({})
   const [activitySearchTerm, setActivitySearchTerm] = useState("")
   const [activityFilterValues, setActivityFilterValues] = useState<FilterValues>({})
   const [pastBookingsSearchTerm, setPastBookingsSearchTerm] = useState("")
@@ -177,23 +162,19 @@ export default function AdminSpotBookingManagement() {
   const [pendingPaymentsSearchTerm, setPendingPaymentsSearchTerm] = useState("")
   const [pendingPaymentsFilterValues, setPendingPaymentsFilterValues] = useState<FilterValues>({})
   const [selectedBooking, setSelectedBooking] = useState<AdminBookingData | null>(null)
-  const [selectedRequest, setSelectedRequest] = useState<BookingRequest | null>(null)
+  const [selectedAvailabilityListing, setSelectedAvailabilityListing] = useState<BookingAvailabilityData | null>(null)
   const [showBookingDetails, setShowBookingDetails] = useState(false)
+  const [showAvailabilityDetailsDialog, setShowAvailabilityDetailsDialog] = useState(false)
   const [showCancelDialog, setShowCancelDialog] = useState(false)
-  const [showDisputeDialog, setShowDisputeDialog] = useState(false)
   const [showContactDialog, setShowContactDialog] = useState(false)
+  const [showMarkPaidConfirmDialog, setShowMarkPaidConfirmDialog] = useState(false)
   const [cancelReason, setCancelReason] = useState("")
-  const [disputeResolution, setDisputeResolution] = useState("")
   const [contactMessage, setContactMessage] = useState("")
   const [activeTab, setActiveTab] = useState("availability")
   
   // Pagination state for Active Bookings
   const [activeBookingsPageIndex, setActiveBookingsPageIndex] = useState(0)
   const [activeBookingsPageSize, setActiveBookingsPageSize] = useState(10)
-
-  // Pagination state for Booking Requests
-  const [bookingRequestsPageIndex, setBookingRequestsPageIndex] = useState(0)
-  const [bookingRequestsPageSize, setBookingRequestsPageSize] = useState(10)
 
   // Pagination state for Past Bookings
   const [pastBookingsPageIndex, setPastBookingsPageIndex] = useState(0)
@@ -227,7 +208,6 @@ export default function AdminSpotBookingManagement() {
         queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-payments"] }),
         queryClient.invalidateQueries({ queryKey: ["/api/admin/past-bookings"] }),
         queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-activity"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-requests"] }),
         queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-analytics"] })
       ])
       toast({
@@ -272,11 +252,6 @@ export default function AdminSpotBookingManagement() {
     queryKey: ["/api/admin/active-bookings"],
   });
 
-  // Fetch booking requests that need attention
-  const { data: bookingRequests = [], isLoading: isLoadingRequests } = useQuery<BookingRequest[]>({
-    queryKey: ["/api/admin/booking-requests"],
-  });
-
   // Fetch booking activity data
   const { data: bookingActivity, isLoading: isLoadingActivity } = useQuery({
     queryKey: ["/api/admin/booking-activity", { pageSize: 100 }],
@@ -308,7 +283,6 @@ export default function AdminSpotBookingManagement() {
 
   // Use API data directly - show real data or empty states
   const displayActiveBookings = activeBookings || [];
-  const displayBookingRequests = bookingRequests || [];
   
   // Default empty analytics when no data is available
   const defaultAnalytics: BookingAnalytics = {
@@ -401,43 +375,6 @@ export default function AdminSpotBookingManagement() {
   const { sortState, sortedData: sortedActiveBookings, handleSort } = useTableSort(
     filteredActiveBookings,
     "bookingDate", // Default sort by booking date
-    "desc" // Most recent first
-  );
-
-  // Enhanced filtering for booking requests
-  const filteredBookingRequests = useMemo(() => displayBookingRequests.filter(request => {
-    // Search filter
-    if (requestsSearchTerm.trim()) {
-      const searchLower = requestsSearchTerm.toLowerCase()
-      const matchesSearch = request.submittedBy?.toLowerCase().includes(searchLower) ||
-                           request.email?.toLowerCase().includes(searchLower) ||
-                           request.spotNumber?.toLowerCase().includes(searchLower) ||
-                           request.reason?.toLowerCase().includes(searchLower)
-      if (!matchesSearch) return false
-    }
-    
-    // Type filter
-    if (requestsFilterValues.type && requestsFilterValues.type !== "all") {
-      if (request.type !== requestsFilterValues.type) return false
-    }
-    
-    // Urgency filter
-    if (requestsFilterValues.urgency && requestsFilterValues.urgency !== "all") {
-      if (request.urgency !== requestsFilterValues.urgency) return false
-    }
-    
-    // Status filter
-    if (requestsFilterValues.status && requestsFilterValues.status !== "all") {
-      if (request.status !== requestsFilterValues.status) return false
-    }
-    
-    return true
-  }), [displayBookingRequests, requestsSearchTerm, requestsFilterValues]);
-
-  // Sorting functionality for booking requests
-  const { sortState: requestsSortState, sortedData: sortedBookingRequests, handleSort: handleRequestsSort } = useTableSort(
-    filteredBookingRequests,
-    "requestDate", // Default sort by request date
     "desc" // Most recent first
   );
 
@@ -607,11 +544,6 @@ export default function AdminSpotBookingManagement() {
     return sortedActiveBookings.slice(startIndex, endIndex)
   }, [sortedActiveBookings, activeBookingsPageIndex, activeBookingsPageSize])
 
-  const paginatedBookingRequests = useMemo(() => {
-    const startIndex = bookingRequestsPageIndex * bookingRequestsPageSize
-    const endIndex = startIndex + bookingRequestsPageSize
-    return sortedBookingRequests.slice(startIndex, endIndex)
-  }, [sortedBookingRequests, bookingRequestsPageIndex, bookingRequestsPageSize])
 
   const paginatedPastBookings = useMemo(() => {
     const startIndex = pastBookingsPageIndex * pastBookingsPageSize
@@ -677,40 +609,6 @@ export default function AdminSpotBookingManagement() {
       type: "dateRange"
     }
   ];
-
-  // Filter configuration for booking requests
-  const requestsFilterConfigs: FilterConfig[] = [
-    {
-      key: "type",
-      label: "Request Type",
-      type: "select",
-      options: [
-        { value: "cancellation", label: "Cancellation" },
-        { value: "dispute", label: "Dispute" },
-        { value: "modification", label: "Modification" }
-      ]
-    },
-    {
-      key: "urgency",
-      label: "Urgency",
-      type: "select",
-      options: [
-        { value: "high", label: "High" },
-        { value: "medium", label: "Medium" },
-        { value: "low", label: "Low" }
-      ]
-    },
-    {
-      key: "status",
-      label: "Status",
-      type: "select",
-      options: [
-        { value: "pending", label: "Pending" },
-        { value: "resolved", label: "Resolved" },
-        { value: "rejected", label: "Rejected" }
-      ]
-    }
-  ]
 
   // Filter configuration for booking activity
   const activityFilterConfigs: FilterConfig[] = [
@@ -834,20 +732,6 @@ export default function AdminSpotBookingManagement() {
     setFilterValues({})
   }
 
-  // Handle requests filter changes
-  const handleRequestsFilterChange = (key: string, value: string | undefined) => {
-    setRequestsFilterValues(prev => ({
-      ...prev,
-      [key]: value
-    }))
-  }
-  
-  // Clear requests filters
-  const handleClearRequestsFilters = () => {
-    setRequestsSearchTerm("")
-    setRequestsFilterValues({})
-  }
-
   // Handle activity filter changes
   const handleActivityFilterChange = (key: string, value: string | undefined) => {
     setActivityFilterValues(prev => ({
@@ -912,12 +796,6 @@ export default function AdminSpotBookingManagement() {
     }
   }, [sortedActiveBookings.length, activeBookingsPageSize, activeBookingsPageIndex])
 
-  useEffect(() => {
-    const maxPage = Math.max(0, Math.ceil(sortedBookingRequests.length / bookingRequestsPageSize) - 1)
-    if (bookingRequestsPageIndex > maxPage) {
-      setBookingRequestsPageIndex(maxPage)
-    }
-  }, [sortedBookingRequests.length, bookingRequestsPageSize, bookingRequestsPageIndex])
 
   useEffect(() => {
     const maxPage = Math.max(0, Math.ceil(sortedPastBookings.length / pastBookingsPageSize) - 1)
@@ -951,10 +829,6 @@ export default function AdminSpotBookingManagement() {
   useEffect(() => {
     setActiveBookingsPageIndex(0)
   }, [searchTerm, filterValues])
-
-  useEffect(() => {
-    setBookingRequestsPageIndex(0)
-  }, [requestsSearchTerm, requestsFilterValues])
 
   useEffect(() => {
     setPastBookingsPageIndex(0)
@@ -1005,33 +879,33 @@ export default function AdminSpotBookingManagement() {
     }
   });
 
-  // Resolve dispute mutation
-  const resolveDisputeMutation = useMutation({
-    mutationFn: async ({ requestId, resolution }: { requestId: string; resolution: string }) => {
-      const response = await apiRequest("/api/admin/resolve-dispute", { method: 'POST', body: {
-        requestId,
-        resolution,
-        resolvedBy: "admin"
-      }});
+  // Mark payment as received mutation
+  const markPaidMutation = useMutation({
+    mutationFn: async (bookingId: string) => {
+      const response = await apiRequest(`/api/admin/bookings/${bookingId}/payment`, { 
+        method: 'PATCH', 
+        body: { paymentReceived: true }
+      });
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-payments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/active-bookings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-activity"] });
       
       toast({
-        title: "Dispute Resolved",
-        description: "The dispute has been resolved and users have been notified of the decision.",
+        title: "Payment Marked as Received",
+        description: "The payment has been successfully marked as received.",
         variant: "default"
       });
       
-      setShowDisputeDialog(false);
-      setDisputeResolution("");
+      setShowMarkPaidConfirmDialog(false);
+      setSelectedBooking(null);
     },
     onError: (error) => {
       toast({
-        title: "Resolution Failed",
-        description: error instanceof Error ? error.message : "Failed to resolve dispute. Please try again.",
+        title: "Update Failed",
+        description: error instanceof Error ? error.message : "Failed to mark payment as received. Please try again.",
         variant: "destructive"
       });
     }
@@ -1043,15 +917,6 @@ export default function AdminSpotBookingManagement() {
     cancelBookingMutation.mutate({
       bookingId: selectedBooking.id,
       reason: cancelReason
-    });
-  };
-
-  const handleResolveDispute = (request: BookingRequest) => {
-    if (!disputeResolution.trim()) return;
-    
-    resolveDisputeMutation.mutate({
-      requestId: request.id,
-      resolution: disputeResolution
     });
   };
 
@@ -1463,10 +1328,8 @@ export default function AdminSpotBookingManagement() {
                               variant="ghost"
                               size="sm"
                               onClick={() => {
-                                toast({
-                                  title: "Spot Details",
-                                  description: `Viewing details for ${listing.spotNumber}`,
-                                });
+                                setSelectedAvailabilityListing(listing);
+                                setShowAvailabilityDetailsDialog(true);
                               }}
                               data-testid={`button-view-details-${listing.id}`}
                             >
@@ -1867,10 +1730,28 @@ export default function AdminSpotBookingManagement() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => {
-                                  toast({
-                                    title: "Contact Renter",
-                                    description: `Contacting ${payment.renterName} about payment...`,
-                                  });
+                                  setSelectedBooking({
+                                    id: payment.id,
+                                    spotNumber: payment.spotNumber,
+                                    spotLocation: payment.spotLocation,
+                                    renterName: payment.renterName,
+                                    renterEmail: payment.renterEmail,
+                                    renterDepartment: '',
+                                    ownerName: payment.ownerName,
+                                    ownerEmail: payment.ownerEmail,
+                                    ownerDepartment: '',
+                                    bookingDate: payment.bookingDate,
+                                    dailyRate: payment.totalAmount,
+                                    totalAmount: payment.totalAmount,
+                                    status: payment.status,
+                                    paymentReceived: false,
+                                    startTime: '',
+                                    endTime: '',
+                                    notes: '',
+                                    createdAt: '',
+                                    lastActivity: ''
+                                  } as AdminBookingData);
+                                  setShowContactDialog(true);
                                 }}
                                 data-testid={`button-contact-renter-${payment.id}`}
                               >
@@ -1880,10 +1761,28 @@ export default function AdminSpotBookingManagement() {
                                 variant="default"
                                 size="sm"
                                 onClick={() => {
-                                  toast({
-                                    title: "Payment Marked as Paid",
-                                    description: `Payment for ${payment.spotNumber} has been marked as paid.`,
-                                  });
+                                  setSelectedBooking({
+                                    id: payment.id,
+                                    spotNumber: payment.spotNumber,
+                                    spotLocation: payment.spotLocation,
+                                    renterName: payment.renterName,
+                                    renterEmail: payment.renterEmail,
+                                    renterDepartment: '',
+                                    ownerName: payment.ownerName,
+                                    ownerEmail: payment.ownerEmail,
+                                    ownerDepartment: '',
+                                    bookingDate: payment.bookingDate,
+                                    dailyRate: payment.totalAmount,
+                                    totalAmount: payment.totalAmount,
+                                    status: payment.status,
+                                    paymentReceived: false,
+                                    startTime: '',
+                                    endTime: '',
+                                    notes: '',
+                                    createdAt: '',
+                                    lastActivity: ''
+                                  } as AdminBookingData);
+                                  setShowMarkPaidConfirmDialog(true);
                                 }}
                                 data-testid={`button-mark-paid-${payment.id}`}
                               >
@@ -2440,46 +2339,6 @@ export default function AdminSpotBookingManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* Resolve Dispute Dialog */}
-      <Dialog open={showDisputeDialog} onOpenChange={setShowDisputeDialog}>
-        <DialogContent data-testid="dialog-resolve-dispute">
-          <DialogHeader>
-            <DialogTitle>Resolve Dispute</DialogTitle>
-            <DialogDescription>
-              Provide your resolution to this dispute. Both users will be notified of your decision.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="dispute-resolution">Resolution</Label>
-              <Textarea
-                id="dispute-resolution"
-                placeholder="Describe how this dispute has been resolved..."
-                value={disputeResolution}
-                onChange={(e) => setDisputeResolution(e.target.value)}
-                data-testid="textarea-dispute-resolution"
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowDisputeDialog(false)}
-                data-testid="button-cancel-dispute"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={() => selectedRequest && handleResolveDispute(selectedRequest)}
-                disabled={!disputeResolution.trim() || resolveDisputeMutation.isPending}
-                data-testid="button-confirm-resolution"
-              >
-                {resolveDisputeMutation.isPending ? "Resolving..." : "Resolve Dispute"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       {/* Contact Users Dialog */}
       <Dialog open={showContactDialog} onOpenChange={setShowContactDialog}>
         <DialogContent data-testid="dialog-contact-users">
@@ -2520,6 +2379,146 @@ export default function AdminSpotBookingManagement() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Availability Details Dialog */}
+      <Dialog open={showAvailabilityDetailsDialog} onOpenChange={setShowAvailabilityDetailsDialog}>
+        <DialogContent className="max-w-2xl" data-testid="dialog-availability-details">
+          <DialogHeader>
+            <DialogTitle>Listing Details</DialogTitle>
+            <DialogDescription>
+              View complete information about this parking spot listing
+            </DialogDescription>
+          </DialogHeader>
+          {selectedAvailabilityListing && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Spot Number</Label>
+                  <p className="font-medium">{selectedAvailabilityListing.spotNumber}</p>
+                </div>
+                <div>
+                  <Label>Location</Label>
+                  <p className="font-medium">{selectedAvailabilityListing.locationName}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Spot Type</Label>
+                  <Badge variant="outline">{selectedAvailabilityListing.spotTypeName}</Badge>
+                </div>
+                <div>
+                  <Label>Owner</Label>
+                  <p className="font-medium">{selectedAvailabilityListing.ownerName}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Daily Rate</Label>
+                  <p className="font-medium text-lg">${selectedAvailabilityListing.dailyRate}</p>
+                </div>
+                <div>
+                  <Label>Listing Type</Label>
+                  <Badge variant="secondary">
+                    {selectedAvailabilityListing.listingType === 'single' ? 'Single Day' : 
+                     selectedAvailabilityListing.listingType === 'period' ? 'Period' : 'Recurring'}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Availability</Label>
+                {selectedAvailabilityListing.listingType === 'single' && selectedAvailabilityListing.singleDate && (
+                  <p className="text-sm">Single Day: {formatDate(selectedAvailabilityListing.singleDate)}</p>
+                )}
+                {selectedAvailabilityListing.listingType === 'period' && (
+                  <p className="text-sm">
+                    Period: {formatDate(selectedAvailabilityListing.periodStartDate || '')} - {formatDate(selectedAvailabilityListing.periodEndDate || '')}
+                  </p>
+                )}
+                {selectedAvailabilityListing.listingType === 'recurring' && (
+                  <div className="space-y-1">
+                    <p className="text-sm">
+                      Recurring: {formatDate(selectedAvailabilityListing.recurringStartDate || '')} - {formatDate(selectedAvailabilityListing.recurringEndDate || '')}
+                    </p>
+                    {selectedAvailabilityListing.daysOfWeek && selectedAvailabilityListing.daysOfWeek.length > 0 && (
+                      <div className="flex gap-1 flex-wrap">
+                        {selectedAvailabilityListing.daysOfWeek.map(day => (
+                          <Badge key={day} variant="outline" className="text-xs">{day}</Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowAvailabilityDetailsDialog(false)}
+                  data-testid="button-close-availability-details"
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Mark as Paid Confirmation Dialog */}
+      <Dialog open={showMarkPaidConfirmDialog} onOpenChange={setShowMarkPaidConfirmDialog}>
+        <DialogContent data-testid="dialog-mark-paid-confirm">
+          <DialogHeader>
+            <DialogTitle>Confirm Payment Received</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to mark this payment as received? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedBooking && (
+            <div className="space-y-4">
+              <div className="p-4 bg-muted rounded-lg space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Spot:</span>
+                  <span className="font-medium">{selectedBooking.spotNumber}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Renter:</span>
+                  <span className="font-medium">{selectedBooking.renterName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Amount:</span>
+                  <span className="font-medium">${selectedBooking.totalAmount}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Date:</span>
+                  <span className="font-medium">{formatDate(selectedBooking.bookingDate)}</span>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowMarkPaidConfirmDialog(false);
+                    setSelectedBooking(null);
+                  }}
+                  data-testid="button-cancel-mark-paid"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => selectedBooking && markPaidMutation.mutate(selectedBooking.id)}
+                  disabled={markPaidMutation.isPending}
+                  data-testid="button-confirm-mark-paid"
+                >
+                  {markPaidMutation.isPending ? "Marking as Paid..." : "Confirm Payment Received"}
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

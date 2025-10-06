@@ -1702,6 +1702,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update booking payment status (Admin only)
+  app.patch("/api/admin/bookings/:id/payment", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Verify booking exists
+      const booking = await storage.getBooking(id);
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      // Mark payment as received
+      const updatedBooking = await storage.markPaymentReceived(id, true);
+      
+      if (!updatedBooking) {
+        return res.status(500).json({ error: "Failed to update payment status" });
+      }
+
+      res.json(updatedBooking);
+    } catch (error) {
+      console.error("Error updating payment status:", error);
+      res.status(500).json({ error: "Failed to update payment status" });
+    }
+  });
+
   // Department endpoints
   // GET /api/departments - Get all departments (authenticated users)
   app.get("/api/departments", isAuthenticated, async (req, res) => {
