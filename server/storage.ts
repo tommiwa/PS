@@ -20,6 +20,7 @@ import {
   type PaymentPreferences,
   type InsertPaymentPreferences,
   type UpdatePaymentPreferences,
+  type PaymentType,
   type InAppNotification,
   type InsertInAppNotification,
   type NotificationType,
@@ -268,6 +269,12 @@ export interface IStorage {
     revenueToday: number;
     newRegistrations: number;
   }>;
+  
+  // Spot Booking Management methods
+  getBookingAvailability(): Promise<Array<SpotListing & { spot: ParkingSpot }>>;
+  getPendingPaymentBookings(): Promise<Array<Booking & { spot: ParkingSpot; user: User }>>;
+  getActiveBookings(): Promise<Array<Booking & { spot: ParkingSpot; user: User }>>;
+  getPastBookings(): Promise<Array<Booking & { spot: ParkingSpot; user: User }>>;
 }
 
 export class MemStorage implements IStorage {
@@ -464,7 +471,7 @@ export class MemStorage implements IStorage {
         profileImageUrl: userData.profileImageUrl ?? null,
         roles: assignedRoles,
         phone: null,
-        department: null,
+        departmentId: null,
         memberSince: null,
         lastLogin: now,
         createdAt: now,
@@ -819,8 +826,8 @@ export class MemStorage implements IStorage {
         const { user, department } = userResult[0];
         enrichedSpot.assignedUserName = user.firstName && user.lastName 
           ? `${user.firstName} ${user.lastName}` 
-          : user.firstName || user.lastName || user.email;
-        enrichedSpot.assignedUserEmail = user.email;
+          : user.firstName || user.lastName || user.email || undefined;
+        enrichedSpot.assignedUserEmail = user.email || undefined;
         enrichedSpot.assignedUserDepartment = department?.name || undefined;
         // Update user cache
         this.users.set(user.id, user);
@@ -870,7 +877,7 @@ export class MemStorage implements IStorage {
         const { user, department } = userResult[0];
         enrichedSpot.assignedUserName = user.firstName && user.lastName 
           ? `${user.firstName} ${user.lastName}` 
-          : user.firstName || user.lastName || user.email;
+          : user.firstName || user.lastName || user.email || undefined;
         enrichedSpot.assignedUserDepartment = department?.name || undefined;
         // Update user cache
         this.users.set(user.id, user);
@@ -1111,7 +1118,7 @@ export class MemStorage implements IStorage {
     // Also delete from memory cache
     this.bookings.delete(id);
     
-    return deleted.rowCount !== undefined && deleted.rowCount > 0;
+    return (deleted.rowCount ?? 0) > 0;
   }
 
   // Alias methods for API endpoints
@@ -1239,18 +1246,15 @@ export class MemStorage implements IStorage {
   }
 
   async createWaitingListEntry(insertEntry: InsertWaitingList): Promise<WaitingList> {
-    const id = randomUUID();
     const now = new Date();
     
     // Insert into database
     const [createdEntry] = await db.insert(waitingList).values({
-      id,
       userId: insertEntry.userId,
       userName: insertEntry.userName,
       userEmail: insertEntry.userEmail,
-      userDepartment: insertEntry.userDepartment,
-      preferredSpotType: insertEntry.preferredSpotType ? (insertEntry.preferredSpotType as SpotType) : null,
-      preferredBuilding: insertEntry.preferredBuilding ?? null,
+      preferredSpotTypeId: insertEntry.preferredSpotTypeId ?? null,
+      preferredLocationId: insertEntry.preferredLocationId ?? null,
       priority: insertEntry.priority ?? 1,
       status: insertEntry.status ?? 'active',
       reason: insertEntry.reason ?? null,
@@ -1258,12 +1262,11 @@ export class MemStorage implements IStorage {
       assignedSpotId: insertEntry.assignedSpotId ?? null,
       enrolledBy: insertEntry.enrolledBy ?? 'user',
       adminNotes: insertEntry.adminNotes ?? null,
-      createdAt: now,
       updatedAt: now
     }).returning();
     
     // Also update in-memory cache for backwards compatibility
-    this.waitingList.set(id, createdEntry);
+    this.waitingList.set(createdEntry.id, createdEntry);
     
     return createdEntry;
   }
@@ -1274,7 +1277,6 @@ export class MemStorage implements IStorage {
         .update(waitingList)
         .set({
           ...updates,
-          preferredSpotType: updates.preferredSpotType ? (updates.preferredSpotType as SpotType) : undefined,
           updatedAt: new Date()
         })
         .where(eq(waitingList.id, id))
@@ -1505,15 +1507,16 @@ export class MemStorage implements IStorage {
   }
 
   async createPaymentPreferences(userId: string, preferences: InsertPaymentPreferences): Promise<PaymentPreferences> {
-    const id = randomUUID();
-    const now = new Date();
+    const insertData = {
+      userId,
+      paymentType: (preferences.paymentType ?? "interac_transfer") as PaymentType,
+      paymentInstructions: preferences.paymentInstructions ?? null
+    };
     
-    const [newPreferences] = await db.insert(paymentPreferences).values({
-      id, userId, ...preferences, createdAt: now, updatedAt: now
-    }).returning();
+    const [newPreferences] = await db.insert(paymentPreferences).values(insertData).returning();
     
     // Update memory cache for performance
-    this.paymentPreferences.set(id, newPreferences);
+    this.paymentPreferences.set(newPreferences.id, newPreferences);
     return newPreferences;
   }
 
@@ -1523,15 +1526,23 @@ export class MemStorage implements IStorage {
     if (!existing) {
       // Create new preferences if none exist
       const defaultPreferences: InsertPaymentPreferences = {
-        paymentType: "interac_transfer",
-        paymentInstructions: undefined,
-        ...updates
+        paymentType: (updates.paymentType as PaymentType | undefined) ?? "interac_transfer",
+        paymentInstructions: updates.paymentInstructions,
       };
       return this.createPaymentPreferences(userId, defaultPreferences);
     }
     
+    const updateData: Partial<typeof paymentPreferences.$inferInsert> = {};
+    if (updates.paymentType !== undefined) {
+      updateData.paymentType = updates.paymentType as PaymentType;
+    }
+    if (updates.paymentInstructions !== undefined) {
+      updateData.paymentInstructions = updates.paymentInstructions;
+    }
+    updateData.updatedAt = new Date();
+    
     const [updatedPreferences] = await db.update(paymentPreferences)
-      .set({ ...updates, updatedAt: new Date() })
+      .set(updateData)
       .where(eq(paymentPreferences.id, existing.id))
       .returning();
     
@@ -1794,6 +1805,10 @@ export class MemStorage implements IStorage {
     const paidBookings = allBookings.filter(b => b.paymentReceived);
     const allSpots = await db.select().from(parkingSpots);
     const allUsers = await db.select().from(users);
+    const allLocations = await db.select().from(locations);
+    
+    // Create location map
+    const locationMap = new Map(allLocations.map(loc => [loc.id, `${loc.office} - ${loc.building}, ${loc.level}`]));
     
     // Group bookings by spot
     const spotEarnings = new Map<string, { earnings: number; bookingsCount: number }>();
@@ -1813,7 +1828,7 @@ export class MemStorage implements IStorage {
       return {
         id: spot.id,
         spotNumber: spot.spotNumber,
-        location: spot.location,
+        location: locationMap.get(spot.locationId) || 'Unknown',
         earnings: earnings ? Math.round(earnings.earnings) : 0,
         utilization: earnings ? Math.min(100, Math.round((earnings.bookingsCount / 30) * 100)) : 0, // Assume 30 days max
         bookingsCount: earnings ? earnings.bookingsCount : 0,
@@ -2058,6 +2073,10 @@ export class MemStorage implements IStorage {
     const allSpots = await db.select().from(parkingSpots);
     const allBookings = await db.select().from(bookings);
     const paidBookings = allBookings.filter(b => b.paymentReceived);
+    const allLocations = await db.select().from(locations);
+    
+    // Create location map
+    const locationMap = new Map(allLocations.map(loc => [loc.id, `${loc.office} - ${loc.building}, ${loc.level}`]));
     
     // Group by location
     const locationStats = new Map<string, {
@@ -2069,22 +2088,24 @@ export class MemStorage implements IStorage {
     
     // Count spots by location
     allSpots.forEach(spot => {
-      const current = locationStats.get(spot.location) || {
+      const locationName = locationMap.get(spot.locationId) || 'Unknown';
+      const current = locationStats.get(locationName) || {
         spots: 0, bookings: 0, earnings: 0, totalRates: 0
       };
       current.spots += 1;
-      locationStats.set(spot.location, current);
+      locationStats.set(locationName, current);
     });
     
     // Add booking data
     paidBookings.forEach(booking => {
       const spot = allSpots.find(s => s.id === booking.spotId);
       if (spot) {
-        const current = locationStats.get(spot.location)!;
+        const locationName = locationMap.get(spot.locationId) || 'Unknown';
+        const current = locationStats.get(locationName)!;
         current.bookings += 1;
         current.earnings += parseFloat(booking.totalAmount.toString());
         current.totalRates += parseFloat(booking.dailyRate.toString());
-        locationStats.set(spot.location, current);
+        locationStats.set(locationName, current);
       }
     });
     
@@ -2158,6 +2179,10 @@ export class MemStorage implements IStorage {
     mostActiveDepartment: string;
   }> {
     const allUsers = await db.select().from(users);
+    const allDepartments = await db.select().from(departments);
+    
+    // Create department map
+    const departmentMap = new Map(allDepartments.map(dept => [dept.id, dept.name]));
     
     // Calculate total users
     const totalUsers = allUsers.length;
@@ -2178,8 +2203,9 @@ export class MemStorage implements IStorage {
     
     // Calculate most active department
     const departmentCounts = allUsers.reduce((acc, user) => {
-      if (user.department) {
-        acc[user.department] = (acc[user.department] || 0) + 1;
+      if (user.departmentId) {
+        const deptName = departmentMap.get(user.departmentId) || 'Unknown';
+        acc[deptName] = (acc[deptName] || 0) + 1;
       }
       return acc;
     }, {} as Record<string, number>);
@@ -2323,33 +2349,40 @@ export class MemStorage implements IStorage {
 
   // In-App Notifications operations
   async createInAppNotification(insertNotification: InsertInAppNotification): Promise<InAppNotification> {
-    const id = randomUUID();
-    
-    const [notification] = await db.insert(inAppNotifications).values({
-      id,
+    const insertData = {
       userId: insertNotification.userId,
-      type: insertNotification.type,
+      type: insertNotification.type as NotificationType,
       title: insertNotification.title,
       message: insertNotification.message,
-      data: insertNotification.data ?? null,
-      read: insertNotification.read ?? false,
-      expiresAt: insertNotification.expiresAt ?? null,
-      createdAt: new Date()
-    }).returning();
+      ...(insertNotification.data !== undefined && { data: insertNotification.data }),
+      ...(insertNotification.read !== undefined && { read: insertNotification.read }),
+      ...(insertNotification.expiresAt !== undefined && { expiresAt: insertNotification.expiresAt })
+    };
+    
+    const [notification] = await db.insert(inAppNotifications).values(insertData).returning();
     
     // Update memory cache
-    this.inAppNotifications.set(id, notification);
+    this.inAppNotifications.set(notification.id, notification);
     return notification;
   }
 
   async getInAppNotifications(userId: string, includeRead: boolean = false): Promise<InAppNotification[]> {
-    let query = db.select().from(inAppNotifications).where(eq(inAppNotifications.userId, userId));
+    let notifications;
     
     if (!includeRead) {
-      query = query.where(eq(inAppNotifications.read, false)) as any;
+      notifications = await db.select()
+        .from(inAppNotifications)
+        .where(and(
+          eq(inAppNotifications.userId, userId),
+          eq(inAppNotifications.read, false)
+        ))
+        .orderBy(desc(inAppNotifications.createdAt));
+    } else {
+      notifications = await db.select()
+        .from(inAppNotifications)
+        .where(eq(inAppNotifications.userId, userId))
+        .orderBy(desc(inAppNotifications.createdAt));
     }
-    
-    const notifications = await query.orderBy(desc(inAppNotifications.createdAt));
     
     // Update memory cache
     notifications.forEach(notification => this.inAppNotifications.set(notification.id, notification));
@@ -2403,6 +2436,114 @@ export class MemStorage implements IStorage {
       ));
     
     return Number(result[0]?.count ?? 0);
+  }
+
+  // Spot Booking Management methods
+  async getBookingAvailability(): Promise<Array<SpotListing & { spot: ParkingSpot }>> {
+    const today = new Date().toISOString().split('T')[0];
+    
+    const availableListings = await db
+      .select()
+      .from(spotListings)
+      .where(
+        and(
+          eq(spotListings.status, 'active'),
+          or(
+            sqlOp`${spotListings.periodEndDate} >= ${today}`,
+            sqlOp`${spotListings.recurringEndDate} >= ${today}`,
+            sqlOp`${spotListings.singleDate} >= ${today}`
+          )
+        )
+      )
+      .orderBy(
+        sqlOp`COALESCE(${spotListings.periodStartDate}, ${spotListings.recurringStartDate}, ${spotListings.singleDate})`
+      );
+    
+    const enrichedListings = await Promise.all(
+      availableListings.map(async (listing) => {
+        const [spot] = await db.select().from(parkingSpots).where(eq(parkingSpots.id, listing.spotId)).limit(1);
+        return { ...listing, spot: spot! };
+      })
+    );
+    
+    return enrichedListings;
+  }
+
+  async getPendingPaymentBookings(): Promise<Array<Booking & { spot: ParkingSpot; user: User }>> {
+    const pendingBookings = await db
+      .select()
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.paymentReceived, false),
+          sqlOp`${bookings.status} != 'cancelled'`
+        )
+      )
+      .orderBy(desc(bookings.createdAt));
+    
+    const enrichedBookings = await Promise.all(
+      pendingBookings.map(async (booking) => {
+        const [spot] = await db.select().from(parkingSpots).where(eq(parkingSpots.id, booking.spotId)).limit(1);
+        const [user] = await db.select().from(users).where(eq(users.id, booking.renterId)).limit(1);
+        return { ...booking, spot: spot!, user: user! };
+      })
+    );
+    
+    return enrichedBookings;
+  }
+
+  async getActiveBookings(): Promise<Array<Booking & { spot: ParkingSpot; user: User }>> {
+    const today = new Date().toISOString().split('T')[0];
+    
+    const activeBookings = await db
+      .select()
+      .from(bookings)
+      .where(
+        and(
+          or(
+            eq(bookings.status, 'confirmed'),
+            eq(bookings.status, 'pending')
+          ),
+          sqlOp`${bookings.bookingDate} >= ${today}`
+        )
+      )
+      .orderBy(asc(bookings.bookingDate));
+    
+    const enrichedBookings = await Promise.all(
+      activeBookings.map(async (booking) => {
+        const [spot] = await db.select().from(parkingSpots).where(eq(parkingSpots.id, booking.spotId)).limit(1);
+        const [user] = await db.select().from(users).where(eq(users.id, booking.renterId)).limit(1);
+        return { ...booking, spot: spot!, user: user! };
+      })
+    );
+    
+    return enrichedBookings;
+  }
+
+  async getPastBookings(): Promise<Array<Booking & { spot: ParkingSpot; user: User }>> {
+    const today = new Date().toISOString().split('T')[0];
+    
+    const pastBookings = await db
+      .select()
+      .from(bookings)
+      .where(
+        or(
+          sqlOp`${bookings.bookingDate} < ${today}`,
+          eq(bookings.status, 'completed'),
+          eq(bookings.status, 'cancelled')
+        )
+      )
+      .orderBy(desc(bookings.bookingDate));
+    
+    const enrichedBookings = await Promise.all(
+      pastBookings.map(async (booking) => {
+        const [spot] = await db.select().from(parkingSpots).where(eq(parkingSpots.id, booking.spotId)).limit(1);
+        const [user] = await db.select().from(users).where(eq(users.id, booking.renterId)).limit(1);
+        return { ...booking, spot: spot!, user: user! };
+      })
+    );
+    
+    return enrichedBookings;
   }
 
   // Audit decorators will be applied via server initialization

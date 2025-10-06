@@ -1658,6 +1658,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get available spot listings for booking management (Admin only)
+  app.get("/api/admin/booking-availability", requireAdmin, async (req, res) => {
+    try {
+      const availability = await storage.getBookingAvailability();
+      res.json(availability);
+    } catch (error) {
+      console.error("Error fetching booking availability:", error);
+      res.status(500).json({ error: "Failed to fetch booking availability" });
+    }
+  });
+
+  // Get bookings with pending payments (Admin only)
+  app.get("/api/admin/pending-payments", requireAdmin, async (req, res) => {
+    try {
+      const pendingPayments = await storage.getPendingPaymentBookings();
+      res.json(pendingPayments);
+    } catch (error) {
+      console.error("Error fetching pending payments:", error);
+      res.status(500).json({ error: "Failed to fetch pending payments" });
+    }
+  });
+
+  // Get active bookings (confirmed/pending, future dates) (Admin only)
+  app.get("/api/admin/active-bookings", requireAdmin, async (req, res) => {
+    try {
+      const activeBookings = await storage.getActiveBookings();
+      res.json(activeBookings);
+    } catch (error) {
+      console.error("Error fetching active bookings:", error);
+      res.status(500).json({ error: "Failed to fetch active bookings" });
+    }
+  });
+
+  // Get past bookings (completed/cancelled or past dates) (Admin only)
+  app.get("/api/admin/past-bookings", requireAdmin, async (req, res) => {
+    try {
+      const pastBookings = await storage.getPastBookings();
+      res.json(pastBookings);
+    } catch (error) {
+      console.error("Error fetching past bookings:", error);
+      res.status(500).json({ error: "Failed to fetch past bookings" });
+    }
+  });
+
   // Department endpoints
   // GET /api/departments - Get all departments (authenticated users)
   app.get("/api/departments", isAuthenticated, async (req, res) => {
