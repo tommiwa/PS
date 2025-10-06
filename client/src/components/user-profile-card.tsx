@@ -86,12 +86,9 @@ export function UserProfileCard({
             </AvatarFallback>
           </Avatar>
           <div className="flex-1">
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="text-xl font-semibold" data-testid="text-user-name">
-                {user.name}
-              </h3>
-              {getRoleBadge()}
-            </div>
+            <h3 className="text-xl font-semibold" data-testid="text-user-name">
+              {user.name}
+            </h3>
             <p className="text-muted-foreground">{user.department}</p>
             {user.spotCount && (
               <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
@@ -230,10 +227,6 @@ export function UserProfileCard({
               <p className="text-xs">{t("profile.contactAdmin")}</p>
             </div>
           )}
-        </div>
-        
-        <div className="text-xs text-muted-foreground">
-          {t("profile.memberSince", { date: user.memberSince })}
         </div>
       </CardContent>
     </Card>
