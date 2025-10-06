@@ -1089,12 +1089,37 @@ export default function AdminSpotBookingManagement() {
             <TooltipTrigger asChild>
               <Card 
                 className="hover-elevate cursor-pointer active-elevate-2"
+                onClick={() => setActiveTab("availability")}
+              >
+                <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Booking Availability</CardTitle>
+                  <div className="rounded-full border-2 border-green-400 p-2">
+                    <CalendarCheck className="h-4 w-4 text-green-600" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold" data-testid="stat-booking-availability">
+                    {displayAnalytics.totalActiveBookings}
+                  </div>
+                  <p className="text-xs text-green-600">Available spots</p>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent>
+              Click to view available spots for booking
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card 
+                className="hover-elevate cursor-pointer active-elevate-2"
                 onClick={() => setActiveTab("active")}
               >
                 <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Active Bookings</CardTitle>
                   <div className="rounded-full border-2 border-blue-400 p-2">
-                    <CalendarCheck className="h-4 w-4 text-blue-600" />
+                    <CheckCircle2 className="h-4 w-4 text-blue-600" />
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -1112,23 +1137,26 @@ export default function AdminSpotBookingManagement() {
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Card className="hover-elevate">
+              <Card 
+                className="hover-elevate cursor-pointer active-elevate-2"
+                onClick={() => setActiveTab("pending-payments")}
+              >
                 <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Daily Revenue</CardTitle>
-                  <div className="rounded-full border-2 border-green-400 p-2">
-                    <DollarSign className="h-4 w-4 text-green-600" />
+                  <CardTitle className="text-sm font-medium">Pending Payments</CardTitle>
+                  <div className="rounded-full border-2 border-orange-400 p-2">
+                    <DollarSign className="h-4 w-4 text-orange-600" />
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold" data-testid="stat-daily-revenue">
-                    ${displayAnalytics.totalDailyRevenue.toFixed(2)}
+                  <div className="text-2xl font-bold" data-testid="stat-pending-payments">
+                    {displayAnalytics.pendingRequests}
                   </div>
-                  <p className="text-xs text-green-600">Generated today</p>
+                  <p className="text-xs text-orange-600">Awaiting payment</p>
                 </CardContent>
               </Card>
             </TooltipTrigger>
             <TooltipContent>
-              View total revenue generated today from confirmed bookings
+              Click to view bookings with pending payments
             </TooltipContent>
           </Tooltip>
 
@@ -1136,46 +1164,24 @@ export default function AdminSpotBookingManagement() {
             <TooltipTrigger asChild>
               <Card 
                 className="hover-elevate cursor-pointer active-elevate-2"
-                onClick={() => setActiveTab("requests")}
+                onClick={() => setActiveTab("activity")}
               >
                 <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
-                  <div className="rounded-full border-2 border-orange-400 p-2">
-                    <Clock className="h-4 w-4 text-orange-600" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold" data-testid="stat-pending-requests">
-                    {displayAnalytics.pendingRequests}
-                  </div>
-                  <p className="text-xs text-orange-600">Awaiting approval</p>
-                </CardContent>
-              </Card>
-            </TooltipTrigger>
-            <TooltipContent>
-              Click to view booking requests awaiting admin approval
-            </TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Card className="hover-elevate">
-                <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Occupancy Rate</CardTitle>
+                  <CardTitle className="text-sm font-medium">Recent Activity</CardTitle>
                   <div className="rounded-full border-2 border-purple-400 p-2">
-                    <TrendingUp className="h-4 w-4 text-purple-600" />
+                    <Activity className="h-4 w-4 text-purple-600" />
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold" data-testid="stat-occupancy-rate">
+                  <div className="text-2xl font-bold" data-testid="stat-recent-activity">
                     {displayAnalytics.occupancyRate}%
                   </div>
-                  <p className="text-xs text-purple-600">Spots utilization</p>
+                  <p className="text-xs text-purple-600">Recent changes</p>
                 </CardContent>
               </Card>
             </TooltipTrigger>
             <TooltipContent>
-              View percentage of spots currently booked vs available
+              Click to view recent booking activity and changes
             </TooltipContent>
           </Tooltip>
         </div>
