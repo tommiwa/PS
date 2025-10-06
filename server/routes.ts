@@ -1757,6 +1757,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/locations - Create location for Personal Spots (authenticated users)
+  app.post("/api/locations", isAuthenticated, async (req: any, res) => {
+    try {
+      const { office, building, level, address } = req.body;
+      
+      if (!office || !building || !level) {
+        return res.status(400).json({ error: "Office, building, and level are required" });
+      }
+      
+      // Regular users can create locations for Personal spots
+      const location = await storage.createLocation({
+        office: office.trim(),
+        building: building.trim(),
+        level: level.trim(),
+        address: address?.trim(),
+        timezone: "America/Vancouver", // Default timezone
+        isActive: true // Always active for user-created locations
+      });
+      res.status(201).json(location);
+    } catch (error: any) {
+      console.error("Error creating location:", error);
+      if (error.message?.includes('unique') || error.code === '23505') {
+        return res.status(409).json({ error: "Location with this configuration already exists" });
+      }
+      res.status(500).json({ error: "Failed to create location" });
+    }
+  });
+
   // POST /api/admin/locations - Create location (admin only)
   app.post("/api/admin/locations", requireAdmin, async (req, res) => {
     try {

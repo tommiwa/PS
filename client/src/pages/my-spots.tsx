@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { apiRequest, queryClient } from "@/lib/queryClient"
-import type { ParkingSpot as DBParkingSpot, InsertParkingSpot, InsertSpotListing } from "@shared/schema"
+import type { ParkingSpot as DBParkingSpot, InsertParkingSpot, InsertSpotListing, Location, SpotTypeTable } from "@shared/schema"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -35,10 +35,19 @@ export default function MySpots() {
   // Removed activeTab state as calendar functionality moved to MyBookings
   const [newSpotData, setNewSpotData] = useState({
     spotNumber: "",
-    location: "",
-    spotType: "regular" as const,
+    locationId: undefined as number | undefined,
+    spotTypeId: undefined as number | undefined,
     isIndoor: false,
     description: ""
+  })
+
+  // Custom location state
+  const [isCreatingCustomLocation, setIsCreatingCustomLocation] = useState(false)
+  const [customLocationData, setCustomLocationData] = useState({
+    office: "",
+    building: "",
+    level: "",
+    address: ""
   })
 
   const [listingFormData, setListingFormData] = useState({
@@ -65,6 +74,40 @@ export default function MySpots() {
     enabled: true
   })
 
+  // Fetch locations for dropdown selection
+  const { data: locations = [], isLoading: isLoadingLocations } = useQuery<Location[]>({
+    queryKey: ["/api/locations"],
+  })
+
+  // Fetch spot types for dropdown selection
+  const { data: spotTypes = [], isLoading: isLoadingSpotTypes } = useQuery<SpotTypeTable[]>({
+    queryKey: ["/api/spot-types"],
+  })
+
+  // Mutation to create custom location (for Personal spots)
+  const createLocationMutation = useMutation({
+    mutationFn: async (locationData: typeof customLocationData) => {
+      return await apiRequest(`/api/locations`, {
+        method: "POST",
+        body: locationData,
+      })
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/locations"] })
+      toast({
+        title: "Success",
+        description: "Custom location created successfully.",
+      })
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create custom location.",
+        variant: "destructive",
+      })
+    },
+  })
+
   // Create spot mutation
   const createSpotMutation = useMutation({
     mutationFn: async (spotData: InsertParkingSpot) => {
@@ -79,7 +122,20 @@ export default function MySpots() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/my-spots'] })
       setShowAddSpot(false)
-      setNewSpotData({ spotNumber: "", location: "", spotType: "regular", isIndoor: false, description: "" })
+      setNewSpotData({ 
+        spotNumber: "", 
+        locationId: undefined, 
+        spotTypeId: undefined, 
+        isIndoor: false, 
+        description: "" 
+      })
+      setIsCreatingCustomLocation(false)
+      setCustomLocationData({
+        office: "",
+        building: "",
+        level: "",
+        address: ""
+      })
     }
   })
 
@@ -237,17 +293,52 @@ export default function MySpots() {
     setShowAddSpot(true)
   }
 
-  const handleCreateSpot = () => {
-    if (!newSpotData.spotNumber || !newSpotData.location) return
-    
-    createSpotMutation.mutate({
-      spotNumber: newSpotData.spotNumber,
-      location: newSpotData.location,
-      spotType: newSpotData.spotType,
-      isIndoor: newSpotData.isIndoor,
-      description: newSpotData.description || undefined,
-      ownerId: "mock-user-id" // This would come from auth context in real app
-    })
+  // Handler to create spot with custom location if needed
+  const handleCreateSpotWithCustomLocation = async () => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to create a spot",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      let locationIdToUse = newSpotData.locationId
+
+      // If creating custom location for Personal spots, create it first
+      if (isCreatingCustomLocation) {
+        // Validate custom location fields
+        if (!customLocationData.office || !customLocationData.building || !customLocationData.level) {
+          toast({
+            title: "Validation Error",
+            description: "Office, building, and level are required for custom locations.",
+            variant: "destructive",
+          })
+          return
+        }
+
+        // Create the custom location
+        const locationResponse = await createLocationMutation.mutateAsync(customLocationData)
+        locationIdToUse = locationResponse.id
+      }
+
+      // Now create the spot with the location ID
+      if (locationIdToUse && newSpotData.spotTypeId) {
+        await createSpotMutation.mutateAsync({
+          spotNumber: newSpotData.spotNumber,
+          locationId: locationIdToUse,
+          spotTypeId: newSpotData.spotTypeId,
+          isIndoor: newSpotData.isIndoor,
+          description: newSpotData.description || undefined,
+          ownerId: user.id,
+          isBciManaged: false, // Personal spots are always non-BCI-managed
+        })
+      }
+    } catch (error: any) {
+      console.error("Error adding spot with custom location:", error)
+    }
   }
 
   const handleEditSpot = (spot: DBParkingSpot) => {
@@ -644,83 +735,161 @@ export default function MySpots() {
 
       {/* Add New Spot Dialog */}
       <Dialog open={showAddSpot} onOpenChange={setShowAddSpot}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-md" data-testid="dialog-add-spot">
           <DialogHeader>
             <DialogTitle>Add New Parking Spot</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="spot-number">Spot Number</Label>
-                <Input 
-                  id="spot-number" 
-                  placeholder="e.g., A-15" 
-                  value={newSpotData.spotNumber}
-                  onChange={(e) => setNewSpotData(prev => ({ ...prev, spotNumber: e.target.value }))}
-                  data-testid="input-new-spot-number"
-                />
-              </div>
-              <div>
-                <Label htmlFor="location">Location</Label>
-                <Select value={newSpotData.location} onValueChange={(value) => setNewSpotData(prev => ({ ...prev, location: value }))}>
-                  <SelectTrigger data-testid="select-new-spot-location">
-                    <SelectValue placeholder="Select location" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Main Building - Level 1">Main Building - Level 1</SelectItem>
-                    <SelectItem value="Main Building - Level 2">Main Building - Level 2</SelectItem>
-                    <SelectItem value="Main Building - Level 3">Main Building - Level 3</SelectItem>
-                    <SelectItem value="North Parking Lot">North Parking Lot</SelectItem>
-                    <SelectItem value="South Parking Lot">South Parking Lot</SelectItem>
-                    <SelectItem value="West Parking Lot">West Parking Lot</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 gap-4">
-              <div>
-                <Label htmlFor="spot-type">Spot Type</Label>
-                <Select value={newSpotData.spotType} onValueChange={(value) => setNewSpotData(prev => ({ ...prev, spotType: value as any }))}>
-                  <SelectTrigger data-testid="select-new-spot-type">
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="regular">Regular</SelectItem>
-                    <SelectItem value="electric">Electric Vehicle</SelectItem>
-                    <SelectItem value="accessible">Accessible</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Spot Number</label>
+              <Input
+                value={newSpotData.spotNumber}
+                onChange={(e) => setNewSpotData(prev => ({ ...prev, spotNumber: e.target.value }))}
+                placeholder="e.g., A-101"
+                data-testid="input-new-spot-number"
+              />
             </div>
             <div>
-              <Label htmlFor="description">Description (Optional)</Label>
-              <Textarea 
-                id="description" 
-                placeholder="Describe your parking spot..."
-                value={newSpotData.description}
-                onChange={(e) => setNewSpotData(prev => ({ ...prev, description: e.target.value }))}
-                data-testid="textarea-new-spot-description"
-              />
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium">Location</label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsCreatingCustomLocation(!isCreatingCustomLocation)}
+                  data-testid="button-toggle-custom-location"
+                >
+                  {isCreatingCustomLocation ? "Select Existing" : "+ Custom Location"}
+                </Button>
+              </div>
+              
+              {isCreatingCustomLocation ? (
+                <div className="space-y-3 p-3 border rounded-md">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Office *</label>
+                    <Input
+                      value={customLocationData.office}
+                      onChange={(e) => setCustomLocationData(prev => ({ ...prev, office: e.target.value }))}
+                      placeholder="e.g., Victoria"
+                      data-testid="input-custom-office"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Building *</label>
+                    <Input
+                      value={customLocationData.building}
+                      onChange={(e) => setCustomLocationData(prev => ({ ...prev, building: e.target.value }))}
+                      placeholder="e.g., 750 Pandora Ave"
+                      data-testid="input-custom-building"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Level *</label>
+                    <Input
+                      value={customLocationData.level}
+                      onChange={(e) => setCustomLocationData(prev => ({ ...prev, level: e.target.value }))}
+                      placeholder="e.g., Parking Level 1"
+                      data-testid="input-custom-level"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Full Address (Optional)</label>
+                    <Input
+                      value={customLocationData.address}
+                      onChange={(e) => setCustomLocationData(prev => ({ ...prev, address: e.target.value }))}
+                      placeholder="e.g., 750 Pandora Ave, Victoria, BC V8W 1N8"
+                      data-testid="input-custom-address"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <Select
+                  value={newSpotData.locationId?.toString() || ""}
+                  onValueChange={(value) => setNewSpotData(prev => ({ ...prev, locationId: parseInt(value) }))}
+                  disabled={isLoadingLocations}
+                >
+                  <SelectTrigger data-testid="select-new-spot-location">
+                    <SelectValue placeholder={isLoadingLocations ? "Loading locations..." : "Select location"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {locations.map(loc => (
+                      <SelectItem key={loc.id} value={loc.id.toString()}>
+                        {loc.office} - {loc.building}, {loc.level}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+            <div>
+              <label className="text-sm font-medium">Spot Type</label>
+              <Select 
+                value={newSpotData.spotTypeId?.toString() || ""}
+                onValueChange={(value) => setNewSpotData(prev => ({ ...prev, spotTypeId: parseInt(value) }))}
+                disabled={isLoadingSpotTypes}
+              >
+                <SelectTrigger data-testid="select-new-spot-type">
+                  <SelectValue placeholder={isLoadingSpotTypes ? "Loading spot types..." : "Select spot type"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {spotTypes.map(type => (
+                    <SelectItem key={type.id} value={type.id.toString()}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex items-center space-x-2">
-              <Switch 
-                id="is-indoor" 
+              <Checkbox
+                id="indoor"
                 checked={newSpotData.isIndoor}
-                onCheckedChange={(checked) => setNewSpotData(prev => ({ ...prev, isIndoor: !!checked }))}
-                data-testid="switch-new-spot-indoor"
+                onCheckedChange={(checked) => setNewSpotData(prev => ({ ...prev, isIndoor: checked as boolean }))}
+                data-testid="checkbox-new-spot-indoor"
               />
-              <Label htmlFor="is-indoor">Indoor parking</Label>
+              <label htmlFor="indoor" className="text-sm font-medium">Indoor Spot</label>
             </div>
-            <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" onClick={() => setShowAddSpot(false)} data-testid="button-cancel-new-spot">
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleCreateSpot}
-                disabled={createSpotMutation.isPending || !newSpotData.spotNumber || !newSpotData.location}
+            <div>
+              <label className="text-sm font-medium">Description (Optional)</label>
+              <Input
+                value={newSpotData.description}
+                onChange={(e) => setNewSpotData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Additional details..."
+                data-testid="input-new-spot-description"
+              />
+            </div>
+            <div className="flex gap-2 pt-4">
+              <Button
+                onClick={handleCreateSpotWithCustomLocation}
+                disabled={
+                  createSpotMutation.isPending || 
+                  createLocationMutation.isPending ||
+                  !newSpotData.spotNumber || 
+                  !newSpotData.spotTypeId ||
+                  (!isCreatingCustomLocation && !newSpotData.locationId) ||
+                  (isCreatingCustomLocation && (!customLocationData.office || !customLocationData.building || !customLocationData.level))
+                }
+                className="flex-1"
                 data-testid="button-create-spot"
               >
-                {createSpotMutation.isPending ? "Creating..." : "Add Spot"}
+                {createSpotMutation.isPending || createLocationMutation.isPending ? "Adding..." : "Add Spot"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowAddSpot(false)
+                  setIsCreatingCustomLocation(false)
+                  setCustomLocationData({
+                    office: "",
+                    building: "",
+                    level: "",
+                    address: ""
+                  })
+                }}
+                className="flex-1"
+                data-testid="button-cancel-new-spot"
+              >
+                Cancel
               </Button>
             </div>
           </div>

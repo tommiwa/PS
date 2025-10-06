@@ -139,6 +139,15 @@ export default function AdminParkingManagement() {
     isBciManaged: false,
     description: ""
   })
+
+  // Custom location state
+  const [isCreatingCustomLocation, setIsCreatingCustomLocation] = useState(false)
+  const [customLocationData, setCustomLocationData] = useState({
+    office: "",
+    building: "",
+    level: "",
+    address: ""
+  })
   
   // Fetch waiting list data for metrics
   const { data: allWaitingList, isLoading: isLoadingWaitingList } = useQuery<WaitingList[]>({
@@ -340,6 +349,50 @@ export default function AdminParkingManagement() {
     },
   });
 
+  // Handler to create spot with custom location if needed
+  const handleAddSpotWithCustomLocation = async () => {
+    try {
+      let locationIdToUse = addSpotFormData.locationId;
+      
+      // If creating custom location for Personal spots, create it first
+      if (isCreatingCustomLocation && !addSpotFormData.isBciManaged) {
+        // Validate custom location fields
+        if (!customLocationData.office || !customLocationData.building || !customLocationData.level) {
+          toast({
+            title: "Validation Error",
+            description: "Office, building, and level are required for custom locations.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        // Create the custom location
+        const locationResponse = await createLocationMutation.mutateAsync(customLocationData);
+        locationIdToUse = locationResponse.id;
+      }
+      
+      // Now create the spot with the location ID
+      if (locationIdToUse) {
+        await addSpotMutation.mutateAsync({
+          ...addSpotFormData,
+          locationId: locationIdToUse,
+          ownerId: addSpotFormData.isBciManaged ? null : undefined // BCI spots have null owner, Personal spots will be unassigned
+        });
+        
+        // Reset custom location state
+        setIsCreatingCustomLocation(false);
+        setCustomLocationData({
+          office: "",
+          building: "",
+          level: "",
+          address: ""
+        });
+      }
+    } catch (error: any) {
+      console.error("Error adding spot with custom location:", error);
+    }
+  };
+
   // Mutation to add a new spot
   const addSpotMutation = useMutation({
     mutationFn: async (spotData: typeof addSpotFormData) => {
@@ -457,6 +510,30 @@ export default function AdminParkingManagement() {
         title: "Error",
         description: error.message || "Failed to add user to waiting list.",
         variant: "error",
+      });
+    },
+  });
+
+  // Mutation to create custom location
+  const createLocationMutation = useMutation({
+    mutationFn: async (locationData: typeof customLocationData) => {
+      return await apiRequest(`/api/admin/locations`, {
+        method: "POST",
+        body: locationData,
+      });
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/locations"] });
+      toast({
+        title: "Success",
+        description: "Custom location created successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create location.",
+        variant: "destructive",
       });
     },
   });
@@ -2402,23 +2479,78 @@ export default function AdminParkingManagement() {
               />
             </div>
             <div>
-              <label className="text-sm font-medium">Location</label>
-              <Select
-                value={addSpotFormData.locationId?.toString() || ""}
-                onValueChange={(value) => setAddSpotFormData(prev => ({ ...prev, locationId: parseInt(value) }))}
-                disabled={isLoadingLocations}
-              >
-                <SelectTrigger data-testid="select-add-spot-location">
-                  <SelectValue placeholder={isLoadingLocations ? "Loading locations..." : "Select location"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {locations.map(loc => (
-                    <SelectItem key={loc.id} value={loc.id.toString()}>
-                      {loc.office} - {loc.building}, {loc.level}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium">Location</label>
+                {!addSpotFormData.isBciManaged && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsCreatingCustomLocation(!isCreatingCustomLocation)}
+                    data-testid="button-toggle-custom-location"
+                  >
+                    {isCreatingCustomLocation ? "Select Existing" : "+ Custom Location"}
+                  </Button>
+                )}
+              </div>
+              
+              {isCreatingCustomLocation && !addSpotFormData.isBciManaged ? (
+                <div className="space-y-3 p-3 border rounded-md">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Office *</label>
+                    <Input
+                      value={customLocationData.office}
+                      onChange={(e) => setCustomLocationData(prev => ({ ...prev, office: e.target.value }))}
+                      placeholder="e.g., Victoria"
+                      data-testid="input-custom-office"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Building *</label>
+                    <Input
+                      value={customLocationData.building}
+                      onChange={(e) => setCustomLocationData(prev => ({ ...prev, building: e.target.value }))}
+                      placeholder="e.g., 750 Pandora Ave"
+                      data-testid="input-custom-building"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Level *</label>
+                    <Input
+                      value={customLocationData.level}
+                      onChange={(e) => setCustomLocationData(prev => ({ ...prev, level: e.target.value }))}
+                      placeholder="e.g., Parking Level 1"
+                      data-testid="input-custom-level"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Full Address (Optional)</label>
+                    <Input
+                      value={customLocationData.address}
+                      onChange={(e) => setCustomLocationData(prev => ({ ...prev, address: e.target.value }))}
+                      placeholder="e.g., 750 Pandora Ave, Victoria, BC V8W 1N8"
+                      data-testid="input-custom-address"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <Select
+                  value={addSpotFormData.locationId?.toString() || ""}
+                  onValueChange={(value) => setAddSpotFormData(prev => ({ ...prev, locationId: parseInt(value) }))}
+                  disabled={isLoadingLocations}
+                >
+                  <SelectTrigger data-testid="select-add-spot-location">
+                    <SelectValue placeholder={isLoadingLocations ? "Loading locations..." : "Select location"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {locations.map(loc => (
+                      <SelectItem key={loc.id} value={loc.id.toString()}>
+                        {loc.office} - {loc.building}, {loc.level}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div>
               <label className="text-sm font-medium">Spot Type</label>
@@ -2489,16 +2621,32 @@ export default function AdminParkingManagement() {
             </div>
             <div className="flex gap-2 pt-4">
               <Button
-                onClick={() => addSpotMutation.mutate(addSpotFormData)}
-                disabled={addSpotMutation.isPending || !addSpotFormData.spotNumber || !addSpotFormData.locationId || !addSpotFormData.spotTypeId}
+                onClick={handleAddSpotWithCustomLocation}
+                disabled={
+                  addSpotMutation.isPending || 
+                  createLocationMutation.isPending ||
+                  !addSpotFormData.spotNumber || 
+                  !addSpotFormData.spotTypeId ||
+                  (!isCreatingCustomLocation && !addSpotFormData.locationId) ||
+                  (isCreatingCustomLocation && (!customLocationData.office || !customLocationData.building || !customLocationData.level))
+                }
                 className="flex-1"
                 data-testid="button-confirm-add-spot"
               >
-                {addSpotMutation.isPending ? "Adding..." : "Add Spot"}
+                {addSpotMutation.isPending || createLocationMutation.isPending ? "Adding..." : "Add Spot"}
               </Button>
               <Button
                 variant="outline"
-                onClick={() => setShowAddSpotDialog(false)}
+                onClick={() => {
+                  setShowAddSpotDialog(false);
+                  setIsCreatingCustomLocation(false);
+                  setCustomLocationData({
+                    office: "",
+                    building: "",
+                    level: "",
+                    address: ""
+                  });
+                }}
                 className="flex-1"
                 data-testid="button-cancel-add-spot"
               >
