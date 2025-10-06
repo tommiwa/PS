@@ -7,6 +7,7 @@ import { useTableSort } from "@/hooks/use-table-sort"
 import { useCardsVisibility } from "@/hooks/use-cards-visibility"
 import { useLanguage } from "@/hooks/use-language"
 import { BookingActivityList } from "@/components/booking-activity-list"
+import { TablePagination } from "@/components/shared/TablePagination"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -149,6 +150,22 @@ export default function AdminSpotBookingManagement() {
   const [disputeResolution, setDisputeResolution] = useState("")
   const [contactMessage, setContactMessage] = useState("")
   const [activeTab, setActiveTab] = useState("active")
+  
+  // Pagination state for Active Bookings
+  const [activeBookingsPageIndex, setActiveBookingsPageIndex] = useState(0)
+  const [activeBookingsPageSize, setActiveBookingsPageSize] = useState(10)
+
+  // Pagination state for Booking Requests
+  const [bookingRequestsPageIndex, setBookingRequestsPageIndex] = useState(0)
+  const [bookingRequestsPageSize, setBookingRequestsPageSize] = useState(10)
+
+  // Pagination state for Past Bookings
+  const [pastBookingsPageIndex, setPastBookingsPageIndex] = useState(0)
+  const [pastBookingsPageSize, setPastBookingsPageSize] = useState(50)
+
+  // Pagination state for Booking Activity
+  const [bookingActivityPageIndex, setBookingActivityPageIndex] = useState(0)
+  const [bookingActivityPageSize, setBookingActivityPageSize] = useState(25)
   
   // Cards visibility toggle hook
   const { cardsVisible, toggleCards } = useCardsVisibility("spot-booking-management")
@@ -452,6 +469,31 @@ export default function AdminSpotBookingManagement() {
     "desc" // Most recent first
   );
 
+  // Create paginated data arrays
+  const paginatedActiveBookings = useMemo(() => {
+    const startIndex = activeBookingsPageIndex * activeBookingsPageSize
+    const endIndex = startIndex + activeBookingsPageSize
+    return sortedActiveBookings.slice(startIndex, endIndex)
+  }, [sortedActiveBookings, activeBookingsPageIndex, activeBookingsPageSize])
+
+  const paginatedBookingRequests = useMemo(() => {
+    const startIndex = bookingRequestsPageIndex * bookingRequestsPageSize
+    const endIndex = startIndex + bookingRequestsPageSize
+    return sortedBookingRequests.slice(startIndex, endIndex)
+  }, [sortedBookingRequests, bookingRequestsPageIndex, bookingRequestsPageSize])
+
+  const paginatedPastBookings = useMemo(() => {
+    const startIndex = pastBookingsPageIndex * pastBookingsPageSize
+    const endIndex = startIndex + pastBookingsPageSize
+    return sortedPastBookings.slice(startIndex, endIndex)
+  }, [sortedPastBookings, pastBookingsPageIndex, pastBookingsPageSize])
+
+  const paginatedBookingActivity = useMemo(() => {
+    const startIndex = bookingActivityPageIndex * bookingActivityPageSize
+    const endIndex = startIndex + bookingActivityPageSize
+    return sortedBookingActivity.slice(startIndex, endIndex)
+  }, [sortedBookingActivity, bookingActivityPageIndex, bookingActivityPageSize])
+
   // Filter configuration for spot booking management
   const bookingFilterConfigs: FilterConfig[] = [
     {
@@ -640,6 +682,52 @@ export default function AdminSpotBookingManagement() {
     setPastBookingsSearchTerm("")
     setPastBookingsFilterValues({})
   }
+
+  // Page clamping useEffects - ensure page index doesn't exceed max pages
+  useEffect(() => {
+    const maxPage = Math.max(0, Math.ceil(sortedActiveBookings.length / activeBookingsPageSize) - 1)
+    if (activeBookingsPageIndex > maxPage) {
+      setActiveBookingsPageIndex(maxPage)
+    }
+  }, [sortedActiveBookings.length, activeBookingsPageSize, activeBookingsPageIndex])
+
+  useEffect(() => {
+    const maxPage = Math.max(0, Math.ceil(sortedBookingRequests.length / bookingRequestsPageSize) - 1)
+    if (bookingRequestsPageIndex > maxPage) {
+      setBookingRequestsPageIndex(maxPage)
+    }
+  }, [sortedBookingRequests.length, bookingRequestsPageSize, bookingRequestsPageIndex])
+
+  useEffect(() => {
+    const maxPage = Math.max(0, Math.ceil(sortedPastBookings.length / pastBookingsPageSize) - 1)
+    if (pastBookingsPageIndex > maxPage) {
+      setPastBookingsPageIndex(maxPage)
+    }
+  }, [sortedPastBookings.length, pastBookingsPageSize, pastBookingsPageIndex])
+
+  useEffect(() => {
+    const maxPage = Math.max(0, Math.ceil(sortedBookingActivity.length / bookingActivityPageSize) - 1)
+    if (bookingActivityPageIndex > maxPage) {
+      setBookingActivityPageIndex(maxPage)
+    }
+  }, [sortedBookingActivity.length, bookingActivityPageSize, bookingActivityPageIndex])
+
+  // Reset page when filters/search change
+  useEffect(() => {
+    setActiveBookingsPageIndex(0)
+  }, [searchTerm, filterValues])
+
+  useEffect(() => {
+    setBookingRequestsPageIndex(0)
+  }, [requestsSearchTerm, requestsFilterValues])
+
+  useEffect(() => {
+    setPastBookingsPageIndex(0)
+  }, [pastBookingsSearchTerm, pastBookingsFilterValues])
+
+  useEffect(() => {
+    setBookingActivityPageIndex(0)
+  }, [activitySearchTerm, activityFilterValues])
 
   // Cancel booking mutation
   const cancelBookingMutation = useMutation({
@@ -1150,7 +1238,7 @@ export default function AdminSpotBookingManagement() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {sortedBookingRequests.map((request) => (
+                      {paginatedBookingRequests.map((request) => (
                         <TableRow key={request.id} data-testid={`row-request-${request.id}`}>
                           <TableCell data-testid={`text-requester-${request.id}`}>
                             <div>
@@ -1209,6 +1297,16 @@ export default function AdminSpotBookingManagement() {
                       ))}
                     </TableBody>
                   </Table>
+                  <TablePagination
+                    totalCount={sortedBookingRequests.length}
+                    pageSize={bookingRequestsPageSize}
+                    pageIndex={bookingRequestsPageIndex}
+                    onPageSizeChange={(size) => {
+                      setBookingRequestsPageSize(size)
+                      setBookingRequestsPageIndex(0)
+                    }}
+                    onPageIndexChange={setBookingRequestsPageIndex}
+                  />
                 </div>
               )}
             </CardContent>
@@ -1293,8 +1391,9 @@ export default function AdminSpotBookingManagement() {
                   ))}
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
+                <>
+                  <Table>
+                    <TableHeader>
                     <TableRow>
                       <SortableTableHeader
                         column="spotNumber"
@@ -1357,7 +1456,7 @@ export default function AdminSpotBookingManagement() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {sortedActiveBookings.map((booking) => (
+                    {paginatedActiveBookings.map((booking) => (
                       <TableRow key={booking.id} data-testid={`booking-row-${booking.id}`}>
                         <TableCell>
                           <div>
@@ -1436,7 +1535,18 @@ export default function AdminSpotBookingManagement() {
                       </TableRow>
                     ))}
                   </TableBody>
-                </Table>
+                  </Table>
+                  <TablePagination
+                    totalCount={sortedActiveBookings.length}
+                    pageSize={activeBookingsPageSize}
+                    pageIndex={activeBookingsPageIndex}
+                    onPageSizeChange={(size) => {
+                      setActiveBookingsPageSize(size)
+                      setActiveBookingsPageIndex(0)
+                    }}
+                    onPageIndexChange={setActiveBookingsPageIndex}
+                  />
+                </>
               )}
             </CardContent>
           </Card>
@@ -1582,7 +1692,7 @@ export default function AdminSpotBookingManagement() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {sortedPastBookings.map((booking) => (
+                      {paginatedPastBookings.map((booking) => (
                         <TableRow key={booking.id} data-testid={`row-past-booking-${booking.id}`}>
                           <TableCell className="font-medium" data-testid={`text-spot-${booking.id}`}>
                             <div>
@@ -1635,6 +1745,16 @@ export default function AdminSpotBookingManagement() {
                       ))}
                     </TableBody>
                   </Table>
+                  <TablePagination
+                    totalCount={sortedPastBookings.length}
+                    pageSize={pastBookingsPageSize}
+                    pageIndex={pastBookingsPageIndex}
+                    onPageSizeChange={(size) => {
+                      setPastBookingsPageSize(size)
+                      setPastBookingsPageIndex(0)
+                    }}
+                    onPageIndexChange={setPastBookingsPageIndex}
+                  />
                 </div>
               )}
             </CardContent>
@@ -1775,7 +1895,7 @@ export default function AdminSpotBookingManagement() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {sortedBookingActivity.map((activity: any, index) => (
+                      {paginatedBookingActivity.map((activity: any, index) => (
                         <TableRow key={activity.id || index} data-testid={`row-activity-${activity.id || index}`}>
                           <TableCell data-testid={`text-activity-type-${activity.id || index}`}>
                             <div className="flex items-center gap-2">
@@ -1808,6 +1928,16 @@ export default function AdminSpotBookingManagement() {
                       ))}
                     </TableBody>
                   </Table>
+                  <TablePagination
+                    totalCount={sortedBookingActivity.length}
+                    pageSize={bookingActivityPageSize}
+                    pageIndex={bookingActivityPageIndex}
+                    onPageSizeChange={(size) => {
+                      setBookingActivityPageSize(size)
+                      setBookingActivityPageIndex(0)
+                    }}
+                    onPageIndexChange={setBookingActivityPageIndex}
+                  />
                 </div>
               )}
             </CardContent>
