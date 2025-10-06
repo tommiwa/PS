@@ -83,7 +83,7 @@ type VehicleForm = {
 };
 
 export default function Profile() {
-  const { user, isOwner, isRenter, isAdmin } = useAuth()
+  const { user, isOwner, isRenter, isAdmin, effectiveRole } = useAuth()
   const [, setLocation] = useLocation()
   const { toast } = useToast()
   const { theme, setTheme } = useTheme()
@@ -475,7 +475,7 @@ export default function Profile() {
     email: user.email,
     phone: user.phone || "(555) 000-0000",
     department: user.department || t("profile.department"),
-    role: user.role,
+    role: effectiveRole || "renter", // Use effectiveRole from auth context (priority: admin > owner > renter)
     vehicles: userVehicles,
     assignedSpots: assignedSpots,
     spotCount: assignedSpots.length || 0,
