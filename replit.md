@@ -120,7 +120,7 @@ Preferred communication style: Simple, everyday language.
   - **Shared Component**: `client/src/components/shared/TablePagination.tsx` - Reusable component with Shadcn Pagination and Select primitives
   - **UI Elements**: Page size selector ("Rows:" label), page navigation (Previous/Next/Numbers), "Showing X-Y of Z" display, smart ellipsis for many pages
   - **User Management**: Users table (default 25 rows/page)
-  - **Parking Management**: All BCI Managed Spots (10), Available BCI Managed Spots (10), Waiting List (25)
+  - **Parking Management**: All BCI Managed Spots (10), Available BCI Managed Spots (10), All Personal Spots (10), Waiting List (25)
   - **Spot Booking Management**: Active Bookings (10), Booking Requests (10), Past Bookings (50), Booking Activity (25)
   - **Data Management**: Departments (10), Locations (10), Spot Types (10)
   - **Features**: Independent pagination state per list, configurable page sizes (10/25/50/100), automatic page clamping when data changes, reset to page 1 on filter/search changes, client-side slicing via useMemo

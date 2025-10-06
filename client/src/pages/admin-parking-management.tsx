@@ -117,6 +117,10 @@ export default function AdminParkingManagement() {
   // Pagination state for Waiting List
   const [waitingListPageIndex, setWaitingListPageIndex] = useState(0)
   const [waitingListPageSize, setWaitingListPageSize] = useState(25)
+
+  // Pagination state for Personal Spots
+  const [personalSpotsPageIndex, setPersonalSpotsPageIndex] = useState(0)
+  const [personalSpotsPageSize, setPersonalSpotsPageSize] = useState(10)
   
   // Cards visibility hook
   const { cardsVisible, toggleCards } = useCardsVisibility("parking-management")
@@ -900,6 +904,13 @@ export default function AdminParkingManagement() {
     return sortedAvailableSpots.slice(startIndex, endIndex)
   }, [sortedAvailableSpots, availableSpotsPageIndex, availableSpotsPageSize])
 
+  // Paginated data for Personal Spots
+  const paginatedPersonalSpots = useMemo(() => {
+    const startIndex = personalSpotsPageIndex * personalSpotsPageSize
+    const endIndex = startIndex + personalSpotsPageSize
+    return sortedSpots.slice(startIndex, endIndex)
+  }, [sortedSpots, personalSpotsPageIndex, personalSpotsPageSize])
+
   // Enhanced filtering for waiting list
   const filteredWaitingListEnhanced = allWaitingList?.filter(item => {
     // Search filter
@@ -976,10 +987,26 @@ export default function AdminParkingManagement() {
     }
   }, [sortedWaitingList.length, waitingListPageSize, waitingListPageIndex])
 
+  // Clamp Personal Spots page
+  useEffect(() => {
+    // Only clamp when on personal tab
+    if (activeSpotTab === 'personal') {
+      const maxPage = Math.max(0, Math.ceil(sortedSpots.length / personalSpotsPageSize) - 1)
+      if (personalSpotsPageIndex > maxPage) {
+        setPersonalSpotsPageIndex(maxPage)
+      }
+    }
+  }, [sortedSpots.length, personalSpotsPageSize, personalSpotsPageIndex, activeSpotTab])
+
   // Reset page to 0 when filters or search terms change
   // Reset All Spots page on filter/search change
   useEffect(() => {
     setAllSpotsPageIndex(0)
+  }, [searchTerm, filterValues])
+
+  // Reset Personal Spots page on filter/search change
+  useEffect(() => {
+    setPersonalSpotsPageIndex(0)
   }, [searchTerm, filterValues])
 
   // Reset Available Spots page on filter/search change
@@ -2263,7 +2290,7 @@ export default function AdminParkingManagement() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {sortedSpots.map((spot) => (
+                      {paginatedPersonalSpots.map((spot) => (
                         <TableRow key={spot.id} data-testid={`row-personal-spot-${spot.id}`}>
                           <TableCell>
                             <Checkbox
@@ -2342,6 +2369,18 @@ export default function AdminParkingManagement() {
                     </TableBody>
                   </Table>
                 </div>
+              )}
+              {sortedSpots.length > 0 && (
+                <TablePagination
+                  totalCount={sortedSpots.length}
+                  pageSize={personalSpotsPageSize}
+                  pageIndex={personalSpotsPageIndex}
+                  onPageSizeChange={(size) => {
+                    setPersonalSpotsPageSize(size)
+                    setPersonalSpotsPageIndex(0)
+                  }}
+                  onPageIndexChange={setPersonalSpotsPageIndex}
+                />
               )}
             </CardContent>
           </Card>
