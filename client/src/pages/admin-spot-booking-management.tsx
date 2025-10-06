@@ -127,6 +127,38 @@ interface BookingAnalytics {
   userActivity: UserActivity;
 }
 
+interface BookingAvailabilityData {
+  id: string;
+  spotNumber: string;
+  locationName: string;
+  spotTypeName: string;
+  ownerName: string;
+  dailyRate: number;
+  listingType: 'single' | 'period' | 'recurring';
+  availableFrom: string;
+  availableTo: string;
+  singleDate?: string;
+  periodStartDate?: string;
+  periodEndDate?: string;
+  recurringStartDate?: string;
+  recurringEndDate?: string;
+  daysOfWeek?: string[];
+}
+
+interface PendingPaymentData {
+  id: string;
+  spotNumber: string;
+  spotLocation: string;
+  renterName: string;
+  renterEmail: string;
+  ownerName: string;
+  ownerEmail: string;
+  bookingDate: string;
+  totalAmount: number;
+  daysOverdue: number;
+  status: BookingStatus;
+}
+
 export default function AdminSpotBookingManagement() {
   const { toast } = useToast()
   const { confirm } = useConfirm()
@@ -140,6 +172,10 @@ export default function AdminSpotBookingManagement() {
   const [activityFilterValues, setActivityFilterValues] = useState<FilterValues>({})
   const [pastBookingsSearchTerm, setPastBookingsSearchTerm] = useState("")
   const [pastBookingsFilterValues, setPastBookingsFilterValues] = useState<FilterValues>({})
+  const [availabilitySearchTerm, setAvailabilitySearchTerm] = useState("")
+  const [availabilityFilterValues, setAvailabilityFilterValues] = useState<FilterValues>({})
+  const [pendingPaymentsSearchTerm, setPendingPaymentsSearchTerm] = useState("")
+  const [pendingPaymentsFilterValues, setPendingPaymentsFilterValues] = useState<FilterValues>({})
   const [selectedBooking, setSelectedBooking] = useState<AdminBookingData | null>(null)
   const [selectedRequest, setSelectedRequest] = useState<BookingRequest | null>(null)
   const [showBookingDetails, setShowBookingDetails] = useState(false)
@@ -149,7 +185,7 @@ export default function AdminSpotBookingManagement() {
   const [cancelReason, setCancelReason] = useState("")
   const [disputeResolution, setDisputeResolution] = useState("")
   const [contactMessage, setContactMessage] = useState("")
-  const [activeTab, setActiveTab] = useState("active")
+  const [activeTab, setActiveTab] = useState("availability")
   
   // Pagination state for Active Bookings
   const [activeBookingsPageIndex, setActiveBookingsPageIndex] = useState(0)
@@ -166,6 +202,14 @@ export default function AdminSpotBookingManagement() {
   // Pagination state for Booking Activity
   const [bookingActivityPageIndex, setBookingActivityPageIndex] = useState(0)
   const [bookingActivityPageSize, setBookingActivityPageSize] = useState(25)
+
+  // Pagination state for Booking Availability
+  const [availabilityPageIndex, setAvailabilityPageIndex] = useState(0)
+  const [availabilityPageSize, setAvailabilityPageSize] = useState(10)
+
+  // Pagination state for Pending Payments
+  const [pendingPaymentsPageIndex, setPendingPaymentsPageIndex] = useState(0)
+  const [pendingPaymentsPageSize, setPendingPaymentsPageSize] = useState(10)
   
   // Cards visibility toggle hook
   const { cardsVisible, toggleCards } = useCardsVisibility("spot-booking-management")
@@ -178,11 +222,13 @@ export default function AdminSpotBookingManagement() {
     setIsRefreshing(true)
     try {
       await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-availability"] }),
         queryClient.invalidateQueries({ queryKey: ["/api/admin/active-bookings"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-requests"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-analytics"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-payments"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/past-bookings"] }),
         queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-activity"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/past-bookings"] })
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-requests"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-analytics"] })
       ])
       toast({
         title: "Refreshed",
@@ -203,17 +249,20 @@ export default function AdminSpotBookingManagement() {
   useEffect(() => {
     // Invalidate relevant queries based on the active tab
     switch (activeTab) {
+      case "availability":
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-availability"] })
+        break
       case "active":
         queryClient.invalidateQueries({ queryKey: ["/api/admin/active-bookings"] })
         break
-      case "requests":
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-requests"] })
+      case "pending-payments":
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-payments"] })
+        break
+      case "past":
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/past-bookings"] })
         break
       case "activity":
         queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-activity"] })
-        break
-      case "analytics":
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/past-bookings"] })
         break
     }
   }, [activeTab])
@@ -238,6 +287,15 @@ export default function AdminSpotBookingManagement() {
     queryKey: ["/api/admin/past-bookings"],
   });
 
+  // Fetch booking availability
+  const { data: bookingAvailability = [], isLoading: isLoadingAvailability } = useQuery<BookingAvailabilityData[]>({
+    queryKey: ["/api/admin/booking-availability"],
+  });
+
+  // Fetch pending payments
+  const { data: pendingPayments = [], isLoading: isLoadingPendingPayments } = useQuery<PendingPaymentData[]>({
+    queryKey: ["/api/admin/pending-payments"],
+  });
 
   // Fetch booking analytics
   const { data: bookingAnalytics, isLoading: isLoadingAnalytics } = useQuery<BookingAnalytics>({
@@ -469,6 +527,79 @@ export default function AdminSpotBookingManagement() {
     "desc" // Most recent first
   );
 
+  // Enhanced filtering for booking availability
+  const filteredAvailability = useMemo(() => bookingAvailability.filter(listing => {
+    // Search filter
+    if (availabilitySearchTerm.trim()) {
+      const searchLower = availabilitySearchTerm.toLowerCase()
+      const matchesSearch = listing.spotNumber?.toLowerCase().includes(searchLower) ||
+                           listing.locationName?.toLowerCase().includes(searchLower) ||
+                           listing.spotTypeName?.toLowerCase().includes(searchLower) ||
+                           listing.ownerName?.toLowerCase().includes(searchLower)
+      if (!matchesSearch) return false
+    }
+    
+    // Listing type filter
+    if (availabilityFilterValues.listingType && availabilityFilterValues.listingType !== "all") {
+      if (listing.listingType !== availabilityFilterValues.listingType) return false
+    }
+    
+    // Location filter
+    if (availabilityFilterValues.location && availabilityFilterValues.location !== "all") {
+      if (!listing.locationName?.toLowerCase().includes(availabilityFilterValues.location.toLowerCase())) {
+        return false
+      }
+    }
+    
+    return true
+  }), [bookingAvailability, availabilitySearchTerm, availabilityFilterValues]);
+
+  // Sorting functionality for booking availability
+  const { sortState: availabilitySortState, sortedData: sortedAvailability, handleSort: handleAvailabilitySort } = useTableSort(
+    filteredAvailability,
+    "spotNumber",
+    "asc"
+  );
+
+  // Enhanced filtering for pending payments
+  const filteredPendingPayments = useMemo(() => pendingPayments.filter(payment => {
+    // Search filter
+    if (pendingPaymentsSearchTerm.trim()) {
+      const searchLower = pendingPaymentsSearchTerm.toLowerCase()
+      const matchesSearch = payment.spotNumber?.toLowerCase().includes(searchLower) ||
+                           payment.renterName?.toLowerCase().includes(searchLower) ||
+                           payment.renterEmail?.toLowerCase().includes(searchLower) ||
+                           payment.ownerName?.toLowerCase().includes(searchLower) ||
+                           payment.ownerEmail?.toLowerCase().includes(searchLower)
+      if (!matchesSearch) return false
+    }
+    
+    // Days overdue filter
+    if (pendingPaymentsFilterValues.daysOverdue && pendingPaymentsFilterValues.daysOverdue !== "all") {
+      const days = payment.daysOverdue || 0
+      const range = pendingPaymentsFilterValues.daysOverdue
+      if (range === "0-7" && (days < 0 || days > 7)) return false
+      if (range === "8-30" && (days < 8 || days > 30)) return false
+      if (range === "30+" && days < 30) return false
+    }
+    
+    // Location filter
+    if (pendingPaymentsFilterValues.location && pendingPaymentsFilterValues.location !== "all") {
+      if (!payment.spotLocation?.toLowerCase().includes(pendingPaymentsFilterValues.location.toLowerCase())) {
+        return false
+      }
+    }
+    
+    return true
+  }), [pendingPayments, pendingPaymentsSearchTerm, pendingPaymentsFilterValues]);
+
+  // Sorting functionality for pending payments
+  const { sortState: pendingPaymentsSortState, sortedData: sortedPendingPayments, handleSort: handlePendingPaymentsSort } = useTableSort(
+    filteredPendingPayments,
+    "daysOverdue",
+    "desc"
+  );
+
   // Create paginated data arrays
   const paginatedActiveBookings = useMemo(() => {
     const startIndex = activeBookingsPageIndex * activeBookingsPageSize
@@ -493,6 +624,18 @@ export default function AdminSpotBookingManagement() {
     const endIndex = startIndex + bookingActivityPageSize
     return sortedBookingActivity.slice(startIndex, endIndex)
   }, [sortedBookingActivity, bookingActivityPageIndex, bookingActivityPageSize])
+
+  const paginatedAvailability = useMemo(() => {
+    const startIndex = availabilityPageIndex * availabilityPageSize
+    const endIndex = startIndex + availabilityPageSize
+    return sortedAvailability.slice(startIndex, endIndex)
+  }, [sortedAvailability, availabilityPageIndex, availabilityPageSize])
+
+  const paginatedPendingPayments = useMemo(() => {
+    const startIndex = pendingPaymentsPageIndex * pendingPaymentsPageSize
+    const endIndex = startIndex + pendingPaymentsPageSize
+    return sortedPendingPayments.slice(startIndex, endIndex)
+  }, [sortedPendingPayments, pendingPaymentsPageIndex, pendingPaymentsPageSize])
 
   // Filter configuration for spot booking management
   const bookingFilterConfigs: FilterConfig[] = [
@@ -627,6 +770,56 @@ export default function AdminSpotBookingManagement() {
     }
   ]
 
+  // Filter configuration for booking availability
+  const availabilityFilterConfigs: FilterConfig[] = [
+    {
+      key: "listingType",
+      label: "Listing Type",
+      type: "select",
+      options: [
+        { value: "single", label: "Single Day" },
+        { value: "period", label: "Period" },
+        { value: "recurring", label: "Recurring" }
+      ]
+    },
+    {
+      key: "location",
+      label: "Location",
+      type: "select",
+      options: [
+        { value: "building-a", label: "Building A" },
+        { value: "building-b", label: "Building B" },
+        { value: "parking-garage", label: "Parking Garage" },
+        { value: "outdoor-lot", label: "Outdoor Lot" }
+      ]
+    }
+  ]
+
+  // Filter configuration for pending payments
+  const pendingPaymentsFilterConfigs: FilterConfig[] = [
+    {
+      key: "daysOverdue",
+      label: "Days Overdue",
+      type: "select",
+      options: [
+        { value: "0-7", label: "0-7 days" },
+        { value: "8-30", label: "8-30 days" },
+        { value: "30+", label: "30+ days" }
+      ]
+    },
+    {
+      key: "location",
+      label: "Location",
+      type: "select",
+      options: [
+        { value: "building-a", label: "Building A" },
+        { value: "building-b", label: "Building B" },
+        { value: "parking-garage", label: "Parking Garage" },
+        { value: "outdoor-lot", label: "Outdoor Lot" }
+      ]
+    }
+  ]
+
   // Handle filter changes
   const handleFilterChange = (key: string, value: string | undefined) => {
     setFilterValues(prev => ({
@@ -683,6 +876,34 @@ export default function AdminSpotBookingManagement() {
     setPastBookingsFilterValues({})
   }
 
+  // Handle availability filter changes
+  const handleAvailabilityFilterChange = (key: string, value: string | undefined) => {
+    setAvailabilityFilterValues(prev => ({
+      ...prev,
+      [key]: value
+    }))
+  }
+  
+  // Clear availability filters
+  const handleClearAvailabilityFilters = () => {
+    setAvailabilitySearchTerm("")
+    setAvailabilityFilterValues({})
+  }
+
+  // Handle pending payments filter changes
+  const handlePendingPaymentsFilterChange = (key: string, value: string | undefined) => {
+    setPendingPaymentsFilterValues(prev => ({
+      ...prev,
+      [key]: value
+    }))
+  }
+  
+  // Clear pending payments filters
+  const handleClearPendingPaymentsFilters = () => {
+    setPendingPaymentsSearchTerm("")
+    setPendingPaymentsFilterValues({})
+  }
+
   // Page clamping useEffects - ensure page index doesn't exceed max pages
   useEffect(() => {
     const maxPage = Math.max(0, Math.ceil(sortedActiveBookings.length / activeBookingsPageSize) - 1)
@@ -712,6 +933,20 @@ export default function AdminSpotBookingManagement() {
     }
   }, [sortedBookingActivity.length, bookingActivityPageSize, bookingActivityPageIndex])
 
+  useEffect(() => {
+    const maxPage = Math.max(0, Math.ceil(sortedAvailability.length / availabilityPageSize) - 1)
+    if (availabilityPageIndex > maxPage) {
+      setAvailabilityPageIndex(maxPage)
+    }
+  }, [sortedAvailability.length, availabilityPageSize, availabilityPageIndex])
+
+  useEffect(() => {
+    const maxPage = Math.max(0, Math.ceil(sortedPendingPayments.length / pendingPaymentsPageSize) - 1)
+    if (pendingPaymentsPageIndex > maxPage) {
+      setPendingPaymentsPageIndex(maxPage)
+    }
+  }, [sortedPendingPayments.length, pendingPaymentsPageSize, pendingPaymentsPageIndex])
+
   // Reset page when filters/search change
   useEffect(() => {
     setActiveBookingsPageIndex(0)
@@ -728,6 +963,14 @@ export default function AdminSpotBookingManagement() {
   useEffect(() => {
     setBookingActivityPageIndex(0)
   }, [activitySearchTerm, activityFilterValues])
+
+  useEffect(() => {
+    setAvailabilityPageIndex(0)
+  }, [availabilitySearchTerm, availabilityFilterValues])
+
+  useEffect(() => {
+    setPendingPaymentsPageIndex(0)
+  }, [pendingPaymentsSearchTerm, pendingPaymentsFilterValues])
 
   // Cancel booking mutation
   const cancelBookingMutation = useMutation({
@@ -1075,237 +1318,174 @@ export default function AdminSpotBookingManagement() {
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="requests" data-testid="tab-booking-requests">{t('admin.spotBookingManagement.bookingRequests')}</TabsTrigger>
-          <TabsTrigger value="active" data-testid="tab-active-bookings">{t('admin.spotBookingManagement.activeBookings')}</TabsTrigger>
-          <TabsTrigger value="analytics" data-testid="tab-past-bookings">{t('admin.spotBookingManagement.pastBookings')}</TabsTrigger>
-          <TabsTrigger value="activity" data-testid="tab-recent-activity">{t('admin.spotBookingManagement.recentActivity')}</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="availability" data-testid="tab-booking-availability">Booking Availability</TabsTrigger>
+          <TabsTrigger value="active" data-testid="tab-active-bookings">Active Bookings</TabsTrigger>
+          <TabsTrigger value="pending-payments" data-testid="tab-pending-payments">Pending Payments</TabsTrigger>
+          <TabsTrigger value="past" data-testid="tab-past-bookings">Past Bookings</TabsTrigger>
+          <TabsTrigger value="activity" data-testid="tab-recent-activity">Recent Activity</TabsTrigger>
         </TabsList>
 
-        {/* Booking Requests Tab */}
-        <TabsContent value="requests" className="space-y-4">
-          {/* Enhanced Filters for Booking Requests */}
+        {/* Booking Availability Tab */}
+        <TabsContent value="availability" className="space-y-4">
           <EnhancedFilters
-            searchValue={requestsSearchTerm}
-            onSearchChange={setRequestsSearchTerm}
-            filterConfigs={requestsFilterConfigs}
-            filterValues={requestsFilterValues}
-            onFilterChange={handleRequestsFilterChange}
-            onClearFilters={handleClearRequestsFilters}
-            searchPlaceholder="Search requests by user, email, spot number, or reason..."
+            searchValue={availabilitySearchTerm}
+            onSearchChange={setAvailabilitySearchTerm}
+            filterConfigs={availabilityFilterConfigs}
+            filterValues={availabilityFilterValues}
+            onFilterChange={handleAvailabilityFilterChange}
+            onClearFilters={handleClearAvailabilityFilters}
+            searchPlaceholder="Search by spot number, location, owner, or spot type..."
             className="hover-elevate"
           />
           
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Pending Requests ({sortedBookingRequests.length})</CardTitle>
-                <div className="flex gap-2">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button 
-                        size="sm"
-                        variant="outline" 
-                        disabled={sortedBookingRequests.length === 0}
-                        onClick={() => {
-                          const success = quickExportBookingRequestsPDF(sortedBookingRequests, 'Booking Requests Report', (errorMessage) => {
-                            toast({
-                              variant: "destructive",
-                              title: "Export Failed",
-                              description: errorMessage
-                            })
-                          })
-                          if (success) {
-                            toast({
-                              title: "Export Successful",
-                              description: "PDF report has been downloaded successfully"
-                            })
-                          }
-                        }}
-                        data-testid="button-export-requests-pdf"
-                        aria-label="Export booking requests to PDF"
-                      >
-                        <FileText className="h-4 w-4 mr-2" />
-                        PDF
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      Export booking requests data to PDF report
-                    </TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button 
-                        size="sm"
-                        variant="outline" 
-                        disabled={sortedBookingRequests.length === 0}
-                        onClick={() => {
-                          const success = quickExportBookingRequestsExcel(sortedBookingRequests, 'Booking Requests Report', (errorMessage) => {
-                            toast({
-                              variant: "destructive",
-                              title: "Export Failed",
-                              description: errorMessage
-                            })
-                          })
-                          if (success) {
-                            toast({
-                              title: "Export Successful",
-                              description: "Excel report has been downloaded successfully"
-                            })
-                          }
-                        }}
-                        data-testid="button-export-requests-excel"
-                        aria-label="Export booking requests to Excel"
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        Excel
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      Export booking requests data to Excel spreadsheet
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-              </div>
+              <CardTitle>Available Spots ({sortedAvailability.length})</CardTitle>
             </CardHeader>
             <CardContent>
-              {isLoadingRequests ? (
+              {isLoadingAvailability ? (
                 <div className="space-y-4">
-                  {[...Array(3)].map((_, i) => (
-                    <Skeleton key={i} className="h-24 w-full" />
+                  {[...Array(5)].map((_, i) => (
+                    <Skeleton key={i} className="h-16 w-full" />
                   ))}
                 </div>
-              ) : sortedBookingRequests.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground" data-testid="empty-booking-requests">
-                  <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No pending requests found</p>
-                  <p className="text-sm">User requests for bookings will appear here when submitted.</p>
+              ) : sortedAvailability.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground" data-testid="empty-availability">
+                  <Car className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No available spots found</p>
+                  <p className="text-sm">Spot availability listings will appear here.</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <Table data-testid="table-booking-requests">
+                  <Table data-testid="table-availability">
                     <TableHeader>
                       <TableRow>
                         <SortableTableHeader
-                          column="submittedBy"
-                          currentSortColumn={requestsSortState.column}
-                          currentSortDirection={requestsSortState.direction}
-                          onSort={handleRequestsSort}
-                        >
-                          Submitted By
-                        </SortableTableHeader>
-                        <SortableTableHeader
-                          column="type"
-                          currentSortColumn={requestsSortState.column}
-                          currentSortDirection={requestsSortState.direction}
-                          onSort={handleRequestsSort}
-                        >
-                          Type
-                        </SortableTableHeader>
-                        <SortableTableHeader
                           column="spotNumber"
-                          currentSortColumn={requestsSortState.column}
-                          currentSortDirection={requestsSortState.direction}
-                          onSort={handleRequestsSort}
+                          currentSortColumn={availabilitySortState.column}
+                          currentSortDirection={availabilitySortState.direction}
+                          onSort={handleAvailabilitySort}
                         >
                           Spot Number
                         </SortableTableHeader>
                         <SortableTableHeader
-                          column="urgency"
-                          currentSortColumn={requestsSortState.column}
-                          currentSortDirection={requestsSortState.direction}
-                          onSort={handleRequestsSort}
+                          column="locationName"
+                          currentSortColumn={availabilitySortState.column}
+                          currentSortDirection={availabilitySortState.direction}
+                          onSort={handleAvailabilitySort}
                         >
-                          Urgency
+                          Location
                         </SortableTableHeader>
                         <SortableTableHeader
-                          column="status"
-                          currentSortColumn={requestsSortState.column}
-                          currentSortDirection={requestsSortState.direction}
-                          onSort={handleRequestsSort}
+                          column="spotTypeName"
+                          currentSortColumn={availabilitySortState.column}
+                          currentSortDirection={availabilitySortState.direction}
+                          onSort={handleAvailabilitySort}
                         >
-                          Status
+                          Spot Type
                         </SortableTableHeader>
                         <SortableTableHeader
-                          column="requestDate"
-                          currentSortColumn={requestsSortState.column}
-                          currentSortDirection={requestsSortState.direction}
-                          onSort={handleRequestsSort}
+                          column="ownerName"
+                          currentSortColumn={availabilitySortState.column}
+                          currentSortDirection={availabilitySortState.direction}
+                          onSort={handleAvailabilitySort}
                         >
-                          Request Date
+                          Owner
+                        </SortableTableHeader>
+                        <SortableTableHeader
+                          column="dailyRate"
+                          currentSortColumn={availabilitySortState.column}
+                          currentSortDirection={availabilitySortState.direction}
+                          onSort={handleAvailabilitySort}
+                        >
+                          Daily Rate
+                        </SortableTableHeader>
+                        <SortableTableHeader
+                          column="availableFrom"
+                          currentSortColumn={availabilitySortState.column}
+                          currentSortDirection={availabilitySortState.direction}
+                          onSort={handleAvailabilitySort}
+                        >
+                          Available From
+                        </SortableTableHeader>
+                        <SortableTableHeader
+                          column="availableTo"
+                          currentSortColumn={availabilitySortState.column}
+                          currentSortDirection={availabilitySortState.direction}
+                          onSort={handleAvailabilitySort}
+                        >
+                          Available To
+                        </SortableTableHeader>
+                        <SortableTableHeader
+                          column="listingType"
+                          currentSortColumn={availabilitySortState.column}
+                          currentSortDirection={availabilitySortState.direction}
+                          onSort={handleAvailabilitySort}
+                        >
+                          Listing Type
                         </SortableTableHeader>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {paginatedBookingRequests.map((request) => (
-                        <TableRow key={request.id} data-testid={`row-request-${request.id}`}>
-                          <TableCell data-testid={`text-requester-${request.id}`}>
-                            <div>
-                              <p className="font-medium">{request.submittedBy}</p>
-                              <p className="text-sm text-muted-foreground">{request.email}</p>
-                            </div>
+                      {paginatedAvailability.map((listing) => (
+                        <TableRow key={listing.id} data-testid={`row-availability-${listing.id}`}>
+                          <TableCell className="font-medium" data-testid={`text-spot-${listing.id}`}>
+                            {listing.spotNumber}
                           </TableCell>
-                          <TableCell data-testid={`badge-request-type-${request.id}`}>
-                            <Badge variant="outline">{request.type.toUpperCase()}</Badge>
+                          <TableCell data-testid={`text-location-${listing.id}`}>
+                            {listing.locationName}
                           </TableCell>
-                          <TableCell className="font-medium" data-testid={`text-spot-${request.id}`}>
-                            {request.spotNumber}
+                          <TableCell data-testid={`badge-spot-type-${listing.id}`}>
+                            <Badge variant="outline">{listing.spotTypeName}</Badge>
                           </TableCell>
-                          <TableCell data-testid={`badge-urgency-${request.id}`}>
-                            {getUrgencyBadge(request.urgency)}
+                          <TableCell data-testid={`text-owner-${listing.id}`}>
+                            {listing.ownerName}
                           </TableCell>
-                          <TableCell data-testid={`badge-status-${request.id}`}>
-                            <Badge 
-                              variant={request.status === 'pending' ? 'secondary' : request.status === 'resolved' ? 'default' : 'destructive'}
-                            >
-                              {request.status?.toUpperCase()}
+                          <TableCell className="font-medium" data-testid={`text-rate-${listing.id}`}>
+                            ${listing.dailyRate}
+                          </TableCell>
+                          <TableCell data-testid={`text-from-${listing.id}`}>
+                            {formatDate(listing.availableFrom)}
+                          </TableCell>
+                          <TableCell data-testid={`text-to-${listing.id}`}>
+                            {formatDate(listing.availableTo)}
+                          </TableCell>
+                          <TableCell data-testid={`badge-listing-type-${listing.id}`}>
+                            <Badge variant="secondary">
+                              {listing.listingType === 'single' ? 'Single Day' : 
+                               listing.listingType === 'period' ? 'Period' : 'Recurring'}
                             </Badge>
                           </TableCell>
-                          <TableCell data-testid={`text-date-${request.id}`}>
-                            {formatDate(request.requestDate)}
-                          </TableCell>
                           <TableCell>
-                            <div className="flex gap-2">
-                              {request.type === "dispute" && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedRequest(request);
-                                    setShowDisputeDialog(true);
-                                  }}
-                                  data-testid={`button-resolve-dispute-${request.id}`}
-                                >
-                                  Resolve
-                                </Button>
-                              )}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setContactMessage(`Regarding your ${request.type} request for spot ${request.spotNumber}...`);
-                                  setShowContactDialog(true);
-                                }}
-                                data-testid={`button-contact-requester-${request.id}`}
-                              >
-                                <MessageSquare className="h-4 w-4" />
-                              </Button>
-                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                toast({
+                                  title: "Spot Details",
+                                  description: `Viewing details for ${listing.spotNumber}`,
+                                });
+                              }}
+                              data-testid={`button-view-details-${listing.id}`}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
                   <TablePagination
-                    totalCount={sortedBookingRequests.length}
-                    pageSize={bookingRequestsPageSize}
-                    pageIndex={bookingRequestsPageIndex}
+                    totalCount={sortedAvailability.length}
+                    pageSize={availabilityPageSize}
+                    pageIndex={availabilityPageIndex}
                     onPageSizeChange={(size) => {
-                      setBookingRequestsPageSize(size)
-                      setBookingRequestsPageIndex(0)
+                      setAvailabilityPageSize(size)
+                      setAvailabilityPageIndex(0)
                     }}
-                    onPageIndexChange={setBookingRequestsPageIndex}
+                    onPageIndexChange={setAvailabilityPageIndex}
                   />
                 </div>
               )}
@@ -1552,8 +1732,187 @@ export default function AdminSpotBookingManagement() {
           </Card>
         </TabsContent>
 
+        {/* Pending Payments Tab */}
+        <TabsContent value="pending-payments" className="space-y-4">
+          <EnhancedFilters
+            searchValue={pendingPaymentsSearchTerm}
+            onSearchChange={setPendingPaymentsSearchTerm}
+            filterConfigs={pendingPaymentsFilterConfigs}
+            filterValues={pendingPaymentsFilterValues}
+            onFilterChange={handlePendingPaymentsFilterChange}
+            onClearFilters={handleClearPendingPaymentsFilters}
+            searchPlaceholder="Search by spot number, renter, owner, or location..."
+            className="hover-elevate"
+          />
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Pending Payments ({sortedPendingPayments.length})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoadingPendingPayments ? (
+                <div className="space-y-4">
+                  {[...Array(5)].map((_, i) => (
+                    <Skeleton key={i} className="h-16 w-full" />
+                  ))}
+                </div>
+              ) : sortedPendingPayments.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground" data-testid="empty-pending-payments">
+                  <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No pending payments found</p>
+                  <p className="text-sm">Bookings with pending payments will appear here.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table data-testid="table-pending-payments">
+                    <TableHeader>
+                      <TableRow>
+                        <SortableTableHeader
+                          column="spotNumber"
+                          currentSortColumn={pendingPaymentsSortState.column}
+                          currentSortDirection={pendingPaymentsSortState.direction}
+                          onSort={handlePendingPaymentsSort}
+                        >
+                          Spot Number
+                        </SortableTableHeader>
+                        <SortableTableHeader
+                          column="renterName"
+                          currentSortColumn={pendingPaymentsSortState.column}
+                          currentSortDirection={pendingPaymentsSortState.direction}
+                          onSort={handlePendingPaymentsSort}
+                        >
+                          Renter
+                        </SortableTableHeader>
+                        <SortableTableHeader
+                          column="ownerName"
+                          currentSortColumn={pendingPaymentsSortState.column}
+                          currentSortDirection={pendingPaymentsSortState.direction}
+                          onSort={handlePendingPaymentsSort}
+                        >
+                          Owner
+                        </SortableTableHeader>
+                        <SortableTableHeader
+                          column="bookingDate"
+                          currentSortColumn={pendingPaymentsSortState.column}
+                          currentSortDirection={pendingPaymentsSortState.direction}
+                          onSort={handlePendingPaymentsSort}
+                        >
+                          Booking Date
+                        </SortableTableHeader>
+                        <SortableTableHeader
+                          column="totalAmount"
+                          currentSortColumn={pendingPaymentsSortState.column}
+                          currentSortDirection={pendingPaymentsSortState.direction}
+                          onSort={handlePendingPaymentsSort}
+                        >
+                          Amount
+                        </SortableTableHeader>
+                        <SortableTableHeader
+                          column="daysOverdue"
+                          currentSortColumn={pendingPaymentsSortState.column}
+                          currentSortDirection={pendingPaymentsSortState.direction}
+                          onSort={handlePendingPaymentsSort}
+                        >
+                          Days Overdue
+                        </SortableTableHeader>
+                        <SortableTableHeader
+                          column="status"
+                          currentSortColumn={pendingPaymentsSortState.column}
+                          currentSortDirection={pendingPaymentsSortState.direction}
+                          onSort={handlePendingPaymentsSort}
+                        >
+                          Status
+                        </SortableTableHeader>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedPendingPayments.map((payment) => (
+                        <TableRow key={payment.id} data-testid={`row-pending-payment-${payment.id}`}>
+                          <TableCell className="font-medium" data-testid={`text-spot-${payment.id}`}>
+                            <div>
+                              <p>{payment.spotNumber}</p>
+                              <p className="text-sm text-muted-foreground">{payment.spotLocation}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell data-testid={`text-renter-${payment.id}`}>
+                            <div>
+                              <p className="font-medium">{payment.renterName}</p>
+                              <p className="text-sm text-muted-foreground">{payment.renterEmail}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell data-testid={`text-owner-${payment.id}`}>
+                            <div>
+                              <p className="font-medium">{payment.ownerName}</p>
+                              <p className="text-sm text-muted-foreground">{payment.ownerEmail}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell data-testid={`text-booking-date-${payment.id}`}>
+                            {formatDate(payment.bookingDate)}
+                          </TableCell>
+                          <TableCell className="font-medium" data-testid={`text-amount-${payment.id}`}>
+                            ${payment.totalAmount}
+                          </TableCell>
+                          <TableCell data-testid={`text-days-overdue-${payment.id}`}>
+                            <Badge variant={payment.daysOverdue > 30 ? 'destructive' : payment.daysOverdue > 7 ? 'secondary' : 'outline'}>
+                              {payment.daysOverdue} days
+                            </Badge>
+                          </TableCell>
+                          <TableCell data-testid={`badge-status-${payment.id}`}>
+                            {getStatusBadge(payment.status)}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  toast({
+                                    title: "Contact Renter",
+                                    description: `Contacting ${payment.renterName} about payment...`,
+                                  });
+                                }}
+                                data-testid={`button-contact-renter-${payment.id}`}
+                              >
+                                Contact
+                              </Button>
+                              <Button
+                                variant="default"
+                                size="sm"
+                                onClick={() => {
+                                  toast({
+                                    title: "Payment Marked as Paid",
+                                    description: `Payment for ${payment.spotNumber} has been marked as paid.`,
+                                  });
+                                }}
+                                data-testid={`button-mark-paid-${payment.id}`}
+                              >
+                                Mark Paid
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  <TablePagination
+                    totalCount={sortedPendingPayments.length}
+                    pageSize={pendingPaymentsPageSize}
+                    pageIndex={pendingPaymentsPageIndex}
+                    onPageSizeChange={(size) => {
+                      setPendingPaymentsPageSize(size)
+                      setPendingPaymentsPageIndex(0)
+                    }}
+                    onPageIndexChange={setPendingPaymentsPageIndex}
+                  />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* Past Bookings Tab */}
-        <TabsContent value="analytics" className="space-y-4">
+        <TabsContent value="past" className="space-y-4">
           {/* Enhanced Filters for Past Bookings */}
           <EnhancedFilters
             searchValue={pastBookingsSearchTerm}
