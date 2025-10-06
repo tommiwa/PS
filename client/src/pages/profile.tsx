@@ -1759,7 +1759,13 @@ export default function Profile() {
                       defaultValue={user?.phone || "(555) 000-0000"} 
                       maxLength={20}
                       placeholder="(555) 123-4567"
-                      data-testid="input-phone" 
+                      data-testid="input-phone"
+                      onInput={(e) => {
+                        const target = e.target as HTMLInputElement;
+                        if (target.value.length > 20) {
+                          target.value = target.value.slice(0, 20);
+                        }
+                      }}
                     />
                   </TooltipTrigger>
                   <TooltipContent>
