@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react"
+import { useLocation } from "wouter"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -134,6 +135,7 @@ export default function AdminUserManagement() {
   const { confirm } = useConfirm()
   const { toast } = useToast()
   const { t } = useLanguage()
+  const [location] = useLocation()
   const [searchTerm, setSearchTerm] = useState("")
   const [filterValues, setFilterValues] = useState<FilterValues>({})
   const [showAddUser, setShowAddUser] = useState(false)
@@ -142,6 +144,7 @@ export default function AdminUserManagement() {
   const [showBulkActions, setShowBulkActions] = useState(false)
   const [activeTab, setActiveTab] = useState("users")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   
   // Cards visibility toggle hook
   const { cardsVisible, toggleCards } = useCardsVisibility("user-management")
@@ -162,6 +165,44 @@ export default function AdminUserManagement() {
       });
     }
   }, [activeTab])
+
+  // Auto-refresh when navigating to page via navbar
+  useEffect(() => {
+    if (location === '/admin/users') {
+      const timer = setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] })
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/user-analytics"] })
+        queryClient.invalidateQueries({ queryKey: ["/api/departments"] })
+      }, 100)
+      
+      return () => clearTimeout(timer)
+    }
+  }, [location])
+
+  // Refresh function for manual refresh button
+  const handleRefreshAllData = async () => {
+    setIsRefreshing(true)
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/user-analytics"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/departments"] })
+      ])
+      toast({
+        title: t("toast.refreshSuccess.title") || "Refreshed",
+        description: t("toast.refreshSuccess.description") || "User data has been refreshed",
+        variant: "default"
+      })
+    } catch (error) {
+      toast({
+        title: t("toast.refreshError.title") || "Error",
+        description: getErrorMessage(error),
+        variant: "destructive"
+      })
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
 
   // Form setup for creating users
   const form = useForm<CreateUserFormData>({
@@ -722,12 +763,12 @@ export default function AdminUserManagement() {
             <TooltipTrigger asChild>
               <Button 
                 variant="outline" 
-                onClick={() => refetchUsers()}
-                disabled={isLoadingUsers}
+                onClick={handleRefreshAllData}
+                disabled={isRefreshing || isLoadingUsers}
                 data-testid="button-refresh-users"
                 aria-label="Refresh all user data"
               >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingUsers ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing || isLoadingUsers ? 'animate-spin' : ''}`} />
                 {t("common.refresh")}
               </Button>
             </TooltipTrigger>
