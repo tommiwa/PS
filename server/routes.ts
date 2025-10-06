@@ -2157,6 +2157,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allUsers = await storage.getAllUsers?.(includeDeleted) || [];
       const allSpots = await storage.getAllParkingSpots?.() || [];
       const allBookings = await storage.getAllBookings?.() || [];
+      const allDepartments = await storage.getDepartments?.() || [];
+      
+      // Create a map for quick department lookups
+      const departmentMap = new Map(allDepartments.map((dept: any) => [dept.id, dept.name]));
       
       // Apply status filter if specified
       let filteredUsers = allUsers;
@@ -2171,6 +2175,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           booking.renterId === user.id || booking.ownerId === user.id
         );
         
+        // Get department name from department ID
+        const departmentName = user.departmentId ? departmentMap.get(user.departmentId) : undefined;
+        
         return {
           id: user.id,
           firstName: user.firstName || "",
@@ -2178,7 +2185,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           name: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.firstName || user.lastName || user.email,
           email: user.email,
           phone: user.phone || "",
-          department: user.department || "Unknown",
+          departmentId: user.departmentId,
+          department: departmentName || "Unknown",
           roles: user.roles,
           status: user.status || "active",
           spotsOwned: userSpots.length,
