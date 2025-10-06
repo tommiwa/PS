@@ -794,7 +794,12 @@ export default function AdminParkingManagement() {
     
     // Status filter
     if (waitingListFilterValues.status && waitingListFilterValues.status !== "all") {
+      // If a specific status is selected, show only that status
       if (item.status !== waitingListFilterValues.status) return false
+    } else {
+      // By default (when no status filter is selected), exclude "assigned" entries
+      // since those users have already received their parking spots
+      if (item.status === "assigned") return false
     }
     
     return true
