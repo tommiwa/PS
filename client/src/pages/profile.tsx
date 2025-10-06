@@ -196,7 +196,6 @@ export default function Profile() {
         userId: user.id,
         userName: user.name,
         userEmail: user.email,
-        userDepartment: user.department || "Unknown",
         preferredSpotType: data.preferredSpotType as SpotType,
         preferredBuilding: data.preferredBuilding,
         priority: parseInt(data.priority),
