@@ -105,6 +105,7 @@ Preferred communication style: Simple, everyday language.
     - **Note**: Locations and Spot Types tables created as managed reference data but not yet integrated with parking_spots table (parking spots still use text fields for location and spotType)
     - **API Endpoints**: Full CRUD operations for all three entities with admin-only mutations
     - **UI Features**: React Query integration, form validation, loading states, toast notifications, confirmation dialogs, data persistence across tabs
+    - **Pagination**: Client-side pagination for all three tabs (Departments, Locations, Spot Types) with configurable page size (10, 25, 50, 100), page navigation controls, "Showing X-Y of Z" display, independent state per tab, automatic clamping when data changes
 - **Notification System**: Real-time alerts and confirmations (email/in-app).
 - **Spot Listing Creation**: Owners can list spots with single day, period, or recurring options.
 - **Admin Dashboard Metrics**: Real-time, server-side calculated metrics (occupancy, revenue, registrations).
