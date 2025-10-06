@@ -22,6 +22,7 @@ import { SortableTableHeader } from "@/components/ui/sortable-table-header"
 import { EnhancedFilters, type FilterConfig, type FilterValues } from "@/components/ui/enhanced-filters"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { TablePagination } from "@/components/shared/TablePagination"
 import { 
   Users, Car, Clock, AlertTriangle, TrendingUp, Plus, 
   ListOrdered, CalendarDays, UserPlus, ArrowRight,
@@ -104,6 +105,18 @@ export default function AdminParkingManagement() {
   // Bookability control state
   const [selectedSpots, setSelectedSpots] = useState<Set<string>>(new Set())
   const [isSelectAllChecked, setIsSelectAllChecked] = useState(false)
+  
+  // Pagination state for All BCI Managed Spots
+  const [allSpotsPageIndex, setAllSpotsPageIndex] = useState(0)
+  const [allSpotsPageSize, setAllSpotsPageSize] = useState(10)
+
+  // Pagination state for Available BCI Managed Spots
+  const [availableSpotsPageIndex, setAvailableSpotsPageIndex] = useState(0)
+  const [availableSpotsPageSize, setAvailableSpotsPageSize] = useState(10)
+
+  // Pagination state for Waiting List
+  const [waitingListPageIndex, setWaitingListPageIndex] = useState(0)
+  const [waitingListPageSize, setWaitingListPageSize] = useState(25)
   
   // Cards visibility hook
   const { cardsVisible, toggleCards } = useCardsVisibility("parking-management")
@@ -831,6 +844,13 @@ export default function AdminParkingManagement() {
     "asc" // Ascending order
   )
 
+  // Paginated data for All BCI Managed Spots
+  const paginatedAllSpots = useMemo(() => {
+    const startIndex = allSpotsPageIndex * allSpotsPageSize
+    const endIndex = startIndex + allSpotsPageSize
+    return sortedSpots.slice(startIndex, endIndex)
+  }, [sortedSpots, allSpotsPageIndex, allSpotsPageSize])
+
   // Enhanced filtering for available BCI managed spots
   const filteredAvailableSpots = unallocatedSpots.filter(spot => {
     // Filter for BCI managed spots only
@@ -872,6 +892,13 @@ export default function AdminParkingManagement() {
     "spotNumber", // Default sort by spot number
     "asc" // Ascending order
   )
+
+  // Paginated data for Available BCI Managed Spots
+  const paginatedAvailableSpots = useMemo(() => {
+    const startIndex = availableSpotsPageIndex * availableSpotsPageSize
+    const endIndex = startIndex + availableSpotsPageSize
+    return sortedAvailableSpots.slice(startIndex, endIndex)
+  }, [sortedAvailableSpots, availableSpotsPageIndex, availableSpotsPageSize])
 
   // Enhanced filtering for waiting list
   const filteredWaitingListEnhanced = allWaitingList?.filter(item => {
@@ -916,6 +943,54 @@ export default function AdminParkingManagement() {
     "enrolledDate", // Default sort by enrolled date
     "desc" // Descending order (newest first)
   )
+
+  // Paginated data for Waiting List
+  const paginatedWaitingList = useMemo(() => {
+    const startIndex = waitingListPageIndex * waitingListPageSize
+    const endIndex = startIndex + waitingListPageSize
+    return sortedWaitingList.slice(startIndex, endIndex)
+  }, [sortedWaitingList, waitingListPageIndex, waitingListPageSize])
+
+  // Page clamping useEffects to prevent invalid page indices
+  // Clamp All Spots page
+  useEffect(() => {
+    const maxPage = Math.max(0, Math.ceil(sortedSpots.length / allSpotsPageSize) - 1)
+    if (allSpotsPageIndex > maxPage) {
+      setAllSpotsPageIndex(maxPage)
+    }
+  }, [sortedSpots.length, allSpotsPageSize, allSpotsPageIndex])
+
+  // Clamp Available Spots page
+  useEffect(() => {
+    const maxPage = Math.max(0, Math.ceil(sortedAvailableSpots.length / availableSpotsPageSize) - 1)
+    if (availableSpotsPageIndex > maxPage) {
+      setAvailableSpotsPageIndex(maxPage)
+    }
+  }, [sortedAvailableSpots.length, availableSpotsPageSize, availableSpotsPageIndex])
+
+  // Clamp Waiting List page
+  useEffect(() => {
+    const maxPage = Math.max(0, Math.ceil(sortedWaitingList.length / waitingListPageSize) - 1)
+    if (waitingListPageIndex > maxPage) {
+      setWaitingListPageIndex(maxPage)
+    }
+  }, [sortedWaitingList.length, waitingListPageSize, waitingListPageIndex])
+
+  // Reset page to 0 when filters or search terms change
+  // Reset All Spots page on filter/search change
+  useEffect(() => {
+    setAllSpotsPageIndex(0)
+  }, [searchTerm, filterValues])
+
+  // Reset Available Spots page on filter/search change
+  useEffect(() => {
+    setAvailableSpotsPageIndex(0)
+  }, [availableSpotsSearchTerm, availableSpotsFilterValues])
+
+  // Reset Waiting List page on filter/search change
+  useEffect(() => {
+    setWaitingListPageIndex(0)
+  }, [waitingListSearchTerm, waitingListFilterValues])
   
   // Filter configuration for parking management
   const parkingFilterConfigs: FilterConfig[] = [
@@ -1536,7 +1611,7 @@ export default function AdminParkingManagement() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {sortedSpots.map((spot) => (
+                        {paginatedAllSpots.map((spot) => (
                           <TableRow key={spot.id} data-testid={`row-spot-${spot.id}`}>
                             <TableCell>
                               <Checkbox
@@ -1654,6 +1729,16 @@ export default function AdminParkingManagement() {
                         ))}
                       </TableBody>
                     </Table>
+                    <TablePagination
+                      totalCount={sortedSpots.length}
+                      pageSize={allSpotsPageSize}
+                      pageIndex={allSpotsPageIndex}
+                      onPageSizeChange={(size) => {
+                        setAllSpotsPageSize(size)
+                        setAllSpotsPageIndex(0)
+                      }}
+                      onPageIndexChange={setAllSpotsPageIndex}
+                    />
                   </div>
                 )}
               </CardContent>
@@ -1869,7 +1954,7 @@ export default function AdminParkingManagement() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {sortedAvailableSpots.map((spot) => (
+                      {paginatedAvailableSpots.map((spot) => (
                         <TableRow key={spot.id} data-testid={`row-unallocated-spot-${spot.id}`}>
                           <TableCell>
                             <Checkbox
@@ -1964,6 +2049,16 @@ export default function AdminParkingManagement() {
                       ))}
                     </TableBody>
                   </Table>
+                  <TablePagination
+                    totalCount={sortedAvailableSpots.length}
+                    pageSize={availableSpotsPageSize}
+                    pageIndex={availableSpotsPageIndex}
+                    onPageSizeChange={(size) => {
+                      setAvailableSpotsPageSize(size)
+                      setAvailableSpotsPageIndex(0)
+                    }}
+                    onPageIndexChange={setAvailableSpotsPageIndex}
+                  />
                 </div>
                 </>
               )}
@@ -2396,7 +2491,7 @@ export default function AdminParkingManagement() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {sortedWaitingList.map((item) => {
+                    {paginatedWaitingList.map((item) => {
                       const waitingDays = Math.floor((Date.now() - new Date(item.enrolledDate).getTime()) / (1000 * 60 * 60 * 24));
                       return (
                         <TableRow key={item.id} data-testid={`row-waiting-${item.id}`}>
@@ -2476,6 +2571,16 @@ export default function AdminParkingManagement() {
                     })}
                   </TableBody>
                 </Table>
+                <TablePagination
+                  totalCount={sortedWaitingList.length}
+                  pageSize={waitingListPageSize}
+                  pageIndex={waitingListPageIndex}
+                  onPageSizeChange={(size) => {
+                    setWaitingListPageSize(size)
+                    setWaitingListPageIndex(0)
+                  }}
+                  onPageIndexChange={setWaitingListPageIndex}
+                />
               </div>
             )}
         </CardContent>
