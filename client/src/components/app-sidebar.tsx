@@ -13,8 +13,7 @@ import {
   Bell,
   CalendarCheck,
   FileText,
-  Database,
-  RefreshCw
+  Database
 } from "lucide-react"
 import { Link, useLocation, useRoute } from "wouter"
 import {
@@ -247,30 +246,6 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
     },
   };
 
-  const handleRefresh = async (url: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    const refreshFn = refreshFunctions[url];
-    if (!refreshFn) return;
-
-    setRefreshing(url);
-    try {
-      await refreshFn();
-      toast({
-        title: "Refreshed",
-        description: "Data has been updated successfully",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to refresh data",
-        variant: "destructive",
-      });
-    } finally {
-      setRefreshing(null);
-    }
-  };
 
   // Function to refresh profile data (kept for compatibility)
   const refreshProfileData = async () => {
@@ -317,6 +292,33 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
     return "";
   };
 
+  const handleNavItemClick = async (url: string, e: React.MouseEvent) => {
+    // If already on this page, refresh the data
+    if (location === url) {
+      e.preventDefault();
+      const refreshFn = refreshFunctions[url];
+      if (refreshFn) {
+        setRefreshing(url);
+        try {
+          await refreshFn();
+          toast({
+            title: "Refreshed",
+            description: "Data has been updated successfully",
+          });
+        } catch (error) {
+          toast({
+            title: "Error",
+            description: "Failed to refresh data",
+            variant: "destructive",
+          });
+        } finally {
+          setRefreshing(null);
+        }
+      }
+    }
+    // Otherwise, navigate normally (Link component handles this)
+  };
+
   const renderMenuItems = (items: typeof mainMenuItems) => {
     return items.map((item) => {
       const effectiveRole = getEffectiveRole();
@@ -352,54 +354,33 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
       
       const tooltipText = getTooltipText(item);
       
-      // Check if this page has a refresh function
-      const hasRefresh = refreshFunctions[itemUrl] !== undefined;
-      
       return (
         <SidebarMenuItem key={item.title}>
-          <div className="flex items-center gap-1 w-full">
-            <SidebarMenuButton 
-              asChild 
-              isActive={isActive}
-              tooltip={tooltipText}
-              className="flex-1"
-            >
-              {item.title === "Profile" ? (
-                <button 
-                  onClick={handleProfileClick}
-                  data-testid={`link-${displayTitle.toLowerCase().replace(/\s+/g, '-')}`}
-                  className="flex items-center gap-2 w-full text-left"
-                >
-                  <item.icon />
-                  <span>{displayTitle}</span>
-                </button>
-              ) : (
-                <Link href={itemUrl} data-testid={`link-${displayTitle.toLowerCase().replace(/\s+/g, '-')}`}>
-                  <item.icon />
-                  <span>{displayTitle}</span>
-                </Link>
-              )}
-            </SidebarMenuButton>
-            {hasRefresh && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 shrink-0"
-                    onClick={(e) => handleRefresh(itemUrl, e)}
-                    disabled={refreshing === itemUrl}
-                    data-testid={`button-refresh-${displayTitle.toLowerCase().replace(/\s+/g, '-')}`}
-                  >
-                    <RefreshCw className={`h-4 w-4 ${refreshing === itemUrl ? 'animate-spin' : ''}`} />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Refresh data</p>
-                </TooltipContent>
-              </Tooltip>
+          <SidebarMenuButton 
+            asChild 
+            isActive={isActive}
+            tooltip={tooltipText}
+          >
+            {item.title === "Profile" ? (
+              <button 
+                onClick={handleProfileClick}
+                data-testid={`link-${displayTitle.toLowerCase().replace(/\s+/g, '-')}`}
+                className="flex items-center gap-2 w-full text-left"
+              >
+                <item.icon />
+                <span>{displayTitle}</span>
+              </button>
+            ) : (
+              <Link 
+                href={itemUrl} 
+                onClick={(e) => handleNavItemClick(itemUrl, e)}
+                data-testid={`link-${displayTitle.toLowerCase().replace(/\s+/g, '-')}`}
+              >
+                <item.icon />
+                <span>{displayTitle}</span>
+              </Link>
             )}
-          </div>
+          </SidebarMenuButton>
         </SidebarMenuItem>
       );
     });
