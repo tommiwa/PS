@@ -404,7 +404,7 @@ export default function AdminParkingManagement() {
         }
         
         // Create the custom location
-        const locationResponse = await createLocationMutation.mutateAsync(customLocationData);
+        const locationResponse: any = await createLocationMutation.mutateAsync(customLocationData);
         locationIdToUse = locationResponse.id;
       }
       
@@ -432,7 +432,7 @@ export default function AdminParkingManagement() {
 
   // Mutation to add a new spot
   const addSpotMutation = useMutation({
-    mutationFn: async (spotData: typeof addSpotFormData) => {
+    mutationFn: async (spotData: typeof addSpotFormData & { ownerId?: string | null }) => {
       return await apiRequest(`/api/admin/spots`, {
         method: "POST",
         body: spotData,
@@ -1411,19 +1411,19 @@ export default function AdminParkingManagement() {
       <Tabs value={activeSpotTab} onValueChange={setActiveSpotTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="bci-managed" data-testid="tab-bci-managed-spots" className="gap-2">
-            <Building className="h-4 w-4 text-purple-600" />
+            <Building className="h-4 w-4 !text-purple-600" />
             All BCI Managed ({allSpots.filter(spot => spot.isBciManaged).length})
           </TabsTrigger>
           <TabsTrigger value="bci-available" data-testid="tab-bci-available-spots" className="gap-2">
-            <Sparkles className="h-4 w-4 text-green-600" />
+            <Sparkles className="h-4 w-4 !text-green-600" />
             Available BCI ({unallocatedSpots.filter(spot => spot.isBciManaged).length})
           </TabsTrigger>
           <TabsTrigger value="personal" data-testid="tab-personal-spots" className="gap-2">
-            <Users className="h-4 w-4 text-blue-600" />
+            <Users className="h-4 w-4 !text-blue-600" />
             All Personal ({allSpots.filter(spot => !spot.isBciManaged).length})
           </TabsTrigger>
           <TabsTrigger value="waiting" data-testid="tab-waiting-list" className="gap-2">
-            <Clock className="h-4 w-4 text-orange-600" />
+            <Clock className="h-4 w-4 !text-orange-600" />
             {t("admin.parkingManagement.waiting")} ({waitingListMetrics.active})
           </TabsTrigger>
         </TabsList>

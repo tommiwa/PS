@@ -781,7 +781,7 @@ export default function Profile() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <TabsTrigger value="notifications" data-testid="tab-notifications" className="gap-2">
-                    <Bell className="h-4 w-4 text-blue-600" />
+                    <Bell className="h-4 w-4 !text-blue-600" />
                     {t("profile.tabs.notifications")}
                   </TabsTrigger>
                 </TooltipTrigger>
@@ -792,7 +792,7 @@ export default function Profile() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <TabsTrigger value="waitingList" data-testid="tab-waiting-list" className="gap-2">
-                    <Clock className="h-4 w-4 text-orange-600" />
+                    <Clock className="h-4 w-4 !text-orange-600" />
                     {t("profile.tabs.waitingList")}
                   </TabsTrigger>
                 </TooltipTrigger>
@@ -803,7 +803,7 @@ export default function Profile() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <TabsTrigger value="vehicles" data-testid="tab-vehicles" className="gap-2">
-                    <CarIcon className="h-4 w-4 text-green-600" />
+                    <CarIcon className="h-4 w-4 !text-green-600" />
                     {t("profile.tabs.vehicles")}
                   </TabsTrigger>
                 </TooltipTrigger>
@@ -814,7 +814,7 @@ export default function Profile() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <TabsTrigger value="appSettings" data-testid="tab-app-settings" className="gap-2">
-                    <Settings className="h-4 w-4 text-purple-600" />
+                    <Settings className="h-4 w-4 !text-purple-600" />
                     {t("profile.tabs.appSettings")}
                   </TabsTrigger>
                 </TooltipTrigger>
