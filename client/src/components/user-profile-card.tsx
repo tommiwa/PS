@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { useLanguage } from "@/hooks/use-language"
-import { Mail, Phone, Car, Settings, MapPin, Plus, Edit3, Trash2 } from "lucide-react"
+import { Mail, Phone, Car, Settings, MapPin, Plus, Edit3, Trash2, RefreshCw } from "lucide-react"
 
 export interface Vehicle {
   id: string
@@ -46,13 +46,17 @@ export interface UserProfile {
 interface UserProfileCardProps {
   user: UserProfile
   onEditProfile?: () => void
+  onRefresh?: () => void
   showEditButton?: boolean
+  isRefreshing?: boolean
 }
 
 export function UserProfileCard({ 
   user, 
   onEditProfile, 
-  showEditButton = true 
+  onRefresh,
+  showEditButton = true,
+  isRefreshing = false
 }: UserProfileCardProps) {
   const { t } = useLanguage()
   const getRoleBadge = () => {
@@ -98,22 +102,41 @@ export function UserProfileCard({
             )}
           </div>
           {showEditButton && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleEdit}
-                  data-testid="button-edit-profile"
-                >
-                  <Settings className="h-4 w-4" />
-                  {t("common.edit")}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{t("tooltip.profile.editSave")}</p>
-              </TooltipContent>
-            </Tooltip>
+            <div className="flex gap-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={onRefresh}
+                    disabled={isRefreshing}
+                    data-testid="button-refresh-profile"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                    {t("common.refresh")}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t("tooltip.profile.refresh")}</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleEdit}
+                    data-testid="button-edit-profile"
+                  >
+                    <Settings className="h-4 w-4" />
+                    {t("common.edit")}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t("tooltip.profile.editSave")}</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
           )}
         </div>
       </CardHeader>

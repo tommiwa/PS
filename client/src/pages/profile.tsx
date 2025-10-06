@@ -57,7 +57,8 @@ import {
   Loader2,
   Info,
   Plus,
-  Calendar
+  Calendar,
+  RefreshCw
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useTheme } from "@/contexts/theme-context"
@@ -85,11 +86,12 @@ type VehicleForm = {
 
 export default function Profile() {
   const { user, isOwner, isRenter, isAdmin, effectiveRole, getCurrentViewRole } = useAuth()
-  const [, setLocation] = useLocation()
+  const [location, setLocation] = useLocation()
   const { toast } = useToast()
   const { theme, setTheme } = useTheme()
   const { language, setLanguage, t } = useLanguage()
   const { confirm } = useConfirm()
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   // Schemas with translation support
   const waitingListSchema = z.object({
@@ -689,6 +691,50 @@ export default function Profile() {
     })
   }
 
+  // Refresh all profile data
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/user", user?.id] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "assigned-spots"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "vehicles"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "notification-preferences"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "payment-preferences"] })
+      ])
+      toast({
+        title: t("toast.refreshSuccess.title") || "Refreshed",
+        description: t("toast.refreshSuccess.description") || "Profile data has been refreshed",
+        variant: "default"
+      })
+    } catch (error) {
+      toast({
+        title: t("toast.refreshError.title") || "Error",
+        description: getErrorMessage(error),
+        variant: "destructive"
+      })
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
+
+  // Refresh data when navigating to profile page
+  useEffect(() => {
+    // Only refresh if we're on the profile page
+    if (location === '/profile' && user?.id) {
+      // Small delay to ensure component is mounted
+      const timer = setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/user", user.id] })
+        queryClient.invalidateQueries({ queryKey: ["/api/users", user.id, "assigned-spots"] })
+        queryClient.invalidateQueries({ queryKey: ["/api/users", user.id, "vehicles"] })
+        queryClient.invalidateQueries({ queryKey: ["/api/users", user.id, "notification-preferences"] })
+        queryClient.invalidateQueries({ queryKey: ["/api/users", user.id, "payment-preferences"] })
+      }, 100)
+      
+      return () => clearTimeout(timer)
+    }
+  }, [location, user?.id])
+
   return (
     <div className="p-6 space-y-6" data-testid="page-profile">
       <div className="flex items-center justify-between">
@@ -705,6 +751,8 @@ export default function Profile() {
           <UserProfileCard 
             user={userProfile} 
             onEditProfile={handleEditProfile}
+            onRefresh={handleRefresh}
+            isRefreshing={isRefreshing}
           />
           
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
