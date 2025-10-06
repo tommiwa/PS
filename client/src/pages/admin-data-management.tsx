@@ -85,6 +85,9 @@ export default function AdminDataManagement() {
   const { toast } = useToast()
   const { t } = useLanguage()
   const { cardsVisible, toggleCards } = useCardsVisibility('data-management')
+  
+  // Refresh state
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   // Departments state
   const [showAddDepartmentDialog, setShowAddDepartmentDialog] = useState(false)
@@ -679,10 +682,27 @@ export default function AdminDataManagement() {
     setShowEditSpotTypeDialog(true);
   };
 
-  const handleRefresh = () => {
-    queryClient.invalidateQueries({ queryKey: ["/api/departments"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/locations"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/spot-types"] });
+  const handleRefreshAll = async () => {
+    setIsRefreshing(true)
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/departments"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/locations"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/spot-types"] })
+      ])
+      toast({
+        title: "Refreshed",
+        description: "Data management data has been refreshed",
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to refresh data",
+        variant: "destructive",
+      })
+    } finally {
+      setIsRefreshing(false)
+    }
   };
 
   const isLoading = isLoadingDepartments || isLoadingLocations || isLoadingSpotTypes;
@@ -723,16 +743,12 @@ export default function AdminDataManagement() {
           <UITooltip>
             <TooltipTrigger asChild>
               <Button 
-                onClick={handleRefresh} 
+                onClick={handleRefreshAll} 
                 variant="outline"
-                disabled={isLoading}
+                disabled={isRefreshing || isLoading}
                 data-testid="button-refresh"
               >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                )}
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing || isLoading ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
             </TooltipTrigger>

@@ -153,13 +153,33 @@ export default function AdminSpotBookingManagement() {
   // Cards visibility toggle hook
   const { cardsVisible, toggleCards } = useCardsVisibility("spot-booking-management")
 
+  // Refresh state
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
   // Refresh all data handler
-  const handleRefreshAll = () => {
-    queryClient.invalidateQueries({ queryKey: ["/api/admin/active-bookings"] })
-    queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-requests"] })
-    queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-analytics"] })
-    queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-activity"] })
-    queryClient.invalidateQueries({ queryKey: ["/api/admin/past-bookings"] })
+  const handleRefreshAll = async () => {
+    setIsRefreshing(true)
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/active-bookings"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-requests"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-analytics"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-activity"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/past-bookings"] })
+      ])
+      toast({
+        title: "Refreshed",
+        description: "Spot booking management data has been refreshed",
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to refresh data",
+        variant: "destructive",
+      })
+    } finally {
+      setIsRefreshing(false)
+    }
   }
 
   // Refresh data when tab changes
@@ -789,10 +809,11 @@ export default function AdminSpotBookingManagement() {
               <Button 
                 variant="outline" 
                 onClick={handleRefreshAll}
+                disabled={isRefreshing}
                 data-testid="button-refresh-data"
                 aria-label="Refresh all booking data"
               >
-                <RefreshCw className="h-4 w-4 mr-2" />
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
                 {t('admin.spotBookingManagement.refreshData')}
               </Button>
             </TooltipTrigger>

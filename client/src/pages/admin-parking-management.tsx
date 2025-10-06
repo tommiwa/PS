@@ -108,13 +108,33 @@ export default function AdminParkingManagement() {
   // Cards visibility hook
   const { cardsVisible, toggleCards } = useCardsVisibility("parking-management")
   
+  // Refresh state
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  
   // Refresh all data handler
-  const handleRefreshAll = () => {
-    queryClient.invalidateQueries({ queryKey: ["/api/admin/all-spots"] })
-    queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] })
-    queryClient.invalidateQueries({ queryKey: ["/api/waiting-list"] })
-    queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/active"] })
-    queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] })
+  const handleRefreshAll = async () => {
+    setIsRefreshing(true)
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/all-spots"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/waiting-list"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/active"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] })
+      ])
+      toast({
+        title: "Refreshed",
+        description: "Parking management data has been refreshed",
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to refresh data",
+        variant: "destructive",
+      })
+    } finally {
+      setIsRefreshing(false)
+    }
   }
 
   // Form state for edit dialog
@@ -1130,10 +1150,11 @@ export default function AdminParkingManagement() {
               <Button 
                 variant="outline"
                 onClick={handleRefreshAll}
+                disabled={isRefreshing}
                 data-testid="button-refresh-data"
                 aria-label="Refresh all parking data"
               >
-                <RefreshCw className="h-4 w-4 mr-2" />
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
                 {t("admin.parkingManagement.refreshData")}
               </Button>
             </TooltipTrigger>
