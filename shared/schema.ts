@@ -703,6 +703,12 @@ export const locations = pgTable("locations", {
   address: text("address"),
   timezone: text("timezone").notNull().default("America/Vancouver"),
   isActive: boolean("is_active").notNull().default(true),
+  // Geocoding fields for address validation
+  placeId: text("place_id").unique(),
+  latitude: decimal("latitude", { precision: 10, scale: 7 }),
+  longitude: decimal("longitude", { precision: 10, scale: 7 }),
+  formattedAddress: text("formatted_address"),
+  isVerified: boolean("is_verified").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -714,6 +720,11 @@ export const insertLocationSchema = createInsertSchema(locations).pick({
   address: true,
   timezone: true,
   isActive: true,
+  placeId: true,
+  latitude: true,
+  longitude: true,
+  formattedAddress: true,
+  isVerified: true,
 });
 
 export type InsertLocation = z.infer<typeof insertLocationSchema>;
