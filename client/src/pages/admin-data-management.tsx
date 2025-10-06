@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -11,6 +11,16 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { 
+  Pagination, 
+  PaginationContent, 
+  PaginationEllipsis, 
+  PaginationItem, 
+  PaginationLink, 
+  PaginationNext, 
+  PaginationPrevious 
+} from "@/components/ui/pagination"
 import { useConfirm } from "@/hooks/use-confirm"
 import { useToast } from "@/hooks/use-toast"
 import { useLanguage } from "@/hooks/use-language"
@@ -80,6 +90,135 @@ type SpotTypeFormData = z.infer<typeof spotTypeFormSchema>;
 
 type SortDirection = 'asc' | 'desc' | null;
 
+// TablePagination Component
+interface TablePaginationProps {
+  totalCount: number;
+  pageSize: number;
+  pageIndex: number;
+  onPageSizeChange: (size: number) => void;
+  onPageIndexChange: (index: number) => void;
+}
+
+function TablePagination({ 
+  totalCount, 
+  pageSize, 
+  pageIndex, 
+  onPageSizeChange, 
+  onPageIndexChange 
+}: TablePaginationProps) {
+  const totalPages = Math.ceil(totalCount / pageSize);
+  const startIndex = pageIndex * pageSize + 1;
+  const endIndex = Math.min((pageIndex + 1) * pageSize, totalCount);
+
+  const getPageNumbers = () => {
+    const pages: (number | 'ellipsis')[] = [];
+    const maxVisible = 5;
+    
+    if (totalPages <= maxVisible) {
+      for (let i = 0; i < totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (pageIndex < 3) {
+        for (let i = 0; i < 3; i++) {
+          pages.push(i);
+        }
+        pages.push('ellipsis');
+        pages.push(totalPages - 1);
+      } else if (pageIndex > totalPages - 4) {
+        pages.push(0);
+        pages.push('ellipsis');
+        for (let i = totalPages - 3; i < totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        pages.push(0);
+        pages.push('ellipsis');
+        pages.push(pageIndex - 1);
+        pages.push(pageIndex);
+        pages.push(pageIndex + 1);
+        pages.push('ellipsis');
+        pages.push(totalPages - 1);
+      }
+    }
+    
+    return pages;
+  };
+
+  return (
+    <div className="flex items-center justify-between px-2 py-4" data-testid="table-pagination">
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-muted-foreground" data-testid="pagination-info">
+          {totalCount === 0 ? (
+            "No results"
+          ) : (
+            `Showing ${startIndex}-${endIndex} of ${totalCount}`
+          )}
+        </span>
+      </div>
+      
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Rows per page:</span>
+          <Select
+            value={pageSize.toString()}
+            onValueChange={(value) => onPageSizeChange(Number(value))}
+          >
+            <SelectTrigger className="h-8 w-[70px]" data-testid="select-page-size">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="25">25</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+              <SelectItem value="100">100</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious 
+                onClick={() => pageIndex > 0 && onPageIndexChange(pageIndex - 1)}
+                className={pageIndex === 0 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                data-testid="pagination-previous"
+              />
+            </PaginationItem>
+            
+            {getPageNumbers().map((page, idx) => (
+              page === 'ellipsis' ? (
+                <PaginationItem key={`ellipsis-${idx}`}>
+                  <PaginationEllipsis />
+                </PaginationItem>
+              ) : (
+                <PaginationItem key={page}>
+                  <PaginationLink
+                    onClick={() => onPageIndexChange(page)}
+                    isActive={pageIndex === page}
+                    className="cursor-pointer"
+                    data-testid={`pagination-page-${page}`}
+                  >
+                    {page + 1}
+                  </PaginationLink>
+                </PaginationItem>
+              )
+            ))}
+            
+            <PaginationItem>
+              <PaginationNext 
+                onClick={() => pageIndex < totalPages - 1 && onPageIndexChange(pageIndex + 1)}
+                className={pageIndex >= totalPages - 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                data-testid="pagination-next"
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminDataManagement() {
   const { confirm } = useConfirm()
   const { toast } = useToast()
@@ -117,6 +256,18 @@ export default function AdminDataManagement() {
   const [spotTypeStatusFilter, setSpotTypeStatusFilter] = useState<string>("")
   const [spotTypeSortField, setSpotTypeSortField] = useState<'name' | 'slug' | 'isActive' | 'createdAt' | null>(null)
   const [spotTypeSortDirection, setSpotTypeSortDirection] = useState<SortDirection>(null)
+
+  // Pagination state - Departments
+  const [departmentPageIndex, setDepartmentPageIndex] = useState(0)
+  const [departmentPageSize, setDepartmentPageSize] = useState(10)
+
+  // Pagination state - Locations
+  const [locationPageIndex, setLocationPageIndex] = useState(0)
+  const [locationPageSize, setLocationPageSize] = useState(10)
+
+  // Pagination state - Spot Types
+  const [spotTypePageIndex, setSpotTypePageIndex] = useState(0)
+  const [spotTypePageSize, setSpotTypePageSize] = useState(10)
 
   // Department forms
   const addDepartmentForm = useForm<DepartmentFormData>({
@@ -292,6 +443,60 @@ export default function AdminDataManagement() {
 
     return filtered;
   }, [spotTypes, spotTypeNameFilter, spotTypeSlugFilter, spotTypeStatusFilter, spotTypeSortField, spotTypeSortDirection]);
+
+  // Paginated data
+  const paginatedDepartments = useMemo(() => {
+    const startIndex = departmentPageIndex * departmentPageSize;
+    const endIndex = startIndex + departmentPageSize;
+    return filteredAndSortedDepartments.slice(startIndex, endIndex);
+  }, [filteredAndSortedDepartments, departmentPageIndex, departmentPageSize]);
+
+  const paginatedLocations = useMemo(() => {
+    const startIndex = locationPageIndex * locationPageSize;
+    const endIndex = startIndex + locationPageSize;
+    return filteredAndSortedLocations.slice(startIndex, endIndex);
+  }, [filteredAndSortedLocations, locationPageIndex, locationPageSize]);
+
+  const paginatedSpotTypes = useMemo(() => {
+    const startIndex = spotTypePageIndex * spotTypePageSize;
+    const endIndex = startIndex + spotTypePageSize;
+    return filteredAndSortedSpotTypes.slice(startIndex, endIndex);
+  }, [filteredAndSortedSpotTypes, spotTypePageIndex, spotTypePageSize]);
+
+  // Reset pagination when filters/sorting changes
+  useEffect(() => {
+    setDepartmentPageIndex(0);
+  }, [departmentNameFilter, departmentSortField, departmentSortDirection]);
+
+  useEffect(() => {
+    setLocationPageIndex(0);
+  }, [locationOfficeFilter, locationBuildingFilter, locationLevelFilter, locationStatusFilter, locationSortField, locationSortDirection]);
+
+  useEffect(() => {
+    setSpotTypePageIndex(0);
+  }, [spotTypeNameFilter, spotTypeSlugFilter, spotTypeStatusFilter, spotTypeSortField, spotTypeSortDirection]);
+
+  // Clamp page index when filtered data changes (e.g., after deletions)
+  useEffect(() => {
+    const maxPage = Math.max(0, Math.ceil(filteredAndSortedDepartments.length / departmentPageSize) - 1);
+    if (departmentPageIndex > maxPage) {
+      setDepartmentPageIndex(maxPage);
+    }
+  }, [filteredAndSortedDepartments.length, departmentPageSize, departmentPageIndex]);
+
+  useEffect(() => {
+    const maxPage = Math.max(0, Math.ceil(filteredAndSortedLocations.length / locationPageSize) - 1);
+    if (locationPageIndex > maxPage) {
+      setLocationPageIndex(maxPage);
+    }
+  }, [filteredAndSortedLocations.length, locationPageSize, locationPageIndex]);
+
+  useEffect(() => {
+    const maxPage = Math.max(0, Math.ceil(filteredAndSortedSpotTypes.length / spotTypePageSize) - 1);
+    if (spotTypePageIndex > maxPage) {
+      setSpotTypePageIndex(maxPage);
+    }
+  }, [filteredAndSortedSpotTypes.length, spotTypePageSize, spotTypePageIndex]);
 
   // Department mutations
   const createDepartmentMutation = useMutation({
@@ -983,7 +1188,7 @@ export default function AdminDataManagement() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredAndSortedDepartments.map((department) => (
+                      paginatedDepartments.map((department) => (
                         <TableRow key={department.id} data-testid={`row-department-${department.id}`}>
                           <TableCell className="font-medium" data-testid={`text-department-name-${department.id}`}>
                             {department.name}
@@ -1018,6 +1223,19 @@ export default function AdminDataManagement() {
                     )}
                   </TableBody>
                 </Table>
+              )}
+              
+              {filteredAndSortedDepartments.length > 0 && (
+                <TablePagination
+                  totalCount={filteredAndSortedDepartments.length}
+                  pageSize={departmentPageSize}
+                  pageIndex={departmentPageIndex}
+                  onPageSizeChange={(size) => {
+                    setDepartmentPageSize(size);
+                    setDepartmentPageIndex(0);
+                  }}
+                  onPageIndexChange={setDepartmentPageIndex}
+                />
               )}
             </CardContent>
           </Card>
@@ -1280,7 +1498,7 @@ export default function AdminDataManagement() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredAndSortedLocations.map((location) => (
+                      paginatedLocations.map((location) => (
                         <TableRow key={location.id} data-testid={`row-location-${location.id}`}>
                           <TableCell className="font-medium" data-testid={`text-location-office-${location.id}`}>
                             {location.office}
@@ -1324,6 +1542,19 @@ export default function AdminDataManagement() {
                     )}
                   </TableBody>
                 </Table>
+              )}
+              
+              {filteredAndSortedLocations.length > 0 && (
+                <TablePagination
+                  totalCount={filteredAndSortedLocations.length}
+                  pageSize={locationPageSize}
+                  pageIndex={locationPageIndex}
+                  onPageSizeChange={(size) => {
+                    setLocationPageSize(size);
+                    setLocationPageIndex(0);
+                  }}
+                  onPageIndexChange={setLocationPageIndex}
+                />
               )}
             </CardContent>
           </Card>
@@ -1537,7 +1768,7 @@ export default function AdminDataManagement() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredAndSortedSpotTypes.map((spotType) => (
+                      paginatedSpotTypes.map((spotType) => (
                         <TableRow key={spotType.id} data-testid={`row-spot-type-${spotType.id}`}>
                           <TableCell className="font-medium" data-testid={`text-spot-type-name-${spotType.id}`}>
                             {spotType.name}
@@ -1581,6 +1812,19 @@ export default function AdminDataManagement() {
                     )}
                   </TableBody>
                 </Table>
+              )}
+              
+              {filteredAndSortedSpotTypes.length > 0 && (
+                <TablePagination
+                  totalCount={filteredAndSortedSpotTypes.length}
+                  pageSize={spotTypePageSize}
+                  pageIndex={spotTypePageIndex}
+                  onPageSizeChange={(size) => {
+                    setSpotTypePageSize(size);
+                    setSpotTypePageIndex(0);
+                  }}
+                  onPageIndexChange={setSpotTypePageIndex}
+                />
               )}
             </CardContent>
           </Card>
