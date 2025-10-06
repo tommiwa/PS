@@ -754,10 +754,11 @@ export default function MySpots() {
                 <label className="text-sm font-medium">Location</label>
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="secondary"
                   size="sm"
                   onClick={() => setIsCreatingCustomLocation(!isCreatingCustomLocation)}
                   data-testid="button-toggle-custom-location"
+                  className="bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950 dark:hover:bg-blue-900 dark:text-blue-300"
                 >
                   {isCreatingCustomLocation ? "Select Existing" : "+ Custom Location"}
                 </Button>
@@ -765,6 +766,18 @@ export default function MySpots() {
               
               {isCreatingCustomLocation ? (
                 <div className="space-y-3 p-3 border rounded-md">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Address Search *</label>
+                    <Input
+                      value={customLocationData.address}
+                      onChange={(e) => setCustomLocationData(prev => ({ ...prev, address: e.target.value }))}
+                      placeholder="Search for an address..."
+                      data-testid="input-custom-address-search"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Enter a full address to auto-fill location details
+                    </p>
+                  </div>
                   <div>
                     <label className="text-xs font-medium text-muted-foreground">Office *</label>
                     <Input
