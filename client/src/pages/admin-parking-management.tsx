@@ -67,7 +67,7 @@ export default function AdminParkingManagement() {
   const [assignAvailableSpotFormData, setAssignAvailableSpotFormData] = useState({
     isBciManaged: true
   })
-  const [activeSpotTab, setActiveSpotTab] = useState("all")
+  const [activeSpotTab, setActiveSpotTab] = useState("bci-managed")
   const [unallocatedFilterType, setUnallocatedFilterType] = useState("all")
   
   // Form state for add to waiting list dialog
@@ -681,9 +681,14 @@ export default function AdminParkingManagement() {
 
   // Enhanced filtering for parking spots
   const filteredSpots = allSpots.filter(spot => {
-    const matchesTab = activeSpotTab === "all" || 
-                     (activeSpotTab === "unallocated" && !spot.ownerId) ||
-                     (activeSpotTab === "allocated" && spot.ownerId);
+    const matchesTab = activeSpotTab === "bci-managed" ? spot.isBciManaged :
+                     activeSpotTab === "personal" ? !spot.isBciManaged :
+                     false; // Don't use this filter for bci-available or waiting tabs
+    
+    // If the tab doesn't use this filter, skip this spot
+    if (activeSpotTab === "bci-managed" || activeSpotTab === "personal") {
+      if (!matchesTab) return false;
+    }
     
     // Search filter
     if (searchTerm.trim()) {
@@ -719,7 +724,7 @@ export default function AdminParkingManagement() {
       if (filterValues.enableStatus === "disabled" && isEnabled) return false
     }
     
-    return matchesTab
+    return true
   });
   
   // Sorting functionality for parking spots
@@ -729,8 +734,11 @@ export default function AdminParkingManagement() {
     "asc" // Ascending order
   )
 
-  // Enhanced filtering for available spots
+  // Enhanced filtering for available BCI managed spots
   const filteredAvailableSpots = unallocatedSpots.filter(spot => {
+    // Filter for BCI managed spots only
+    if (!spot.isBciManaged) return false;
+    
     // Search filter
     if (availableSpotsSearchTerm.trim()) {
       const searchLower = availableSpotsSearchTerm.toLowerCase()
@@ -1185,14 +1193,18 @@ export default function AdminParkingManagement() {
 
       {/* Main Content Tabs */}
       <Tabs value={activeSpotTab} onValueChange={setActiveSpotTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="all" data-testid="tab-all-spots" className="gap-2">
-            <Layers className="h-4 w-4 text-blue-600" />
-            {t("admin.parkingManagement.allSpots")}
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="bci-managed" data-testid="tab-bci-managed-spots" className="gap-2">
+            <Building className="h-4 w-4 text-purple-600" />
+            All BCI Managed ({allSpots.filter(spot => spot.isBciManaged).length})
           </TabsTrigger>
-          <TabsTrigger value="unallocated" data-testid="tab-available-spots" className="gap-2">
+          <TabsTrigger value="bci-available" data-testid="tab-bci-available-spots" className="gap-2">
             <Sparkles className="h-4 w-4 text-green-600" />
-            {t("admin.parkingManagement.available")} ({unallocatedSpots.length})
+            Available BCI ({unallocatedSpots.filter(spot => spot.isBciManaged).length})
+          </TabsTrigger>
+          <TabsTrigger value="personal" data-testid="tab-personal-spots" className="gap-2">
+            <Users className="h-4 w-4 text-blue-600" />
+            All Personal ({allSpots.filter(spot => !spot.isBciManaged).length})
           </TabsTrigger>
           <TabsTrigger value="waiting" data-testid="tab-waiting-list" className="gap-2">
             <Clock className="h-4 w-4 text-orange-600" />
@@ -1200,71 +1212,8 @@ export default function AdminParkingManagement() {
           </TabsTrigger>
         </TabsList>
 
-        {/* All Spots and Unallocated Spots Tab */}
-        <TabsContent value="all" className="space-y-4">
-          {/* Metrics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card data-testid="card-total-spots-tab" className="hover-elevate">
-              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Spots</CardTitle>
-                <div className="rounded-full border-2 border-blue-400 p-2">
-                  <Car className="h-4 w-4 text-blue-600" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold" data-testid="stat-total-spots-tab">
-                  {allSpots.length}
-                </div>
-                <p className="text-xs text-blue-600">All parking spots</p>
-              </CardContent>
-            </Card>
-
-            <Card data-testid="card-available-spots-tab" className="hover-elevate">
-              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t("admin.parkingManagement.availableSpots")}</CardTitle>
-                <div className="rounded-full border-2 border-green-400 p-2">
-                  <Sparkles className="h-4 w-4 text-green-600" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold" data-testid="stat-available-spots-tab">
-                  {unallocatedSpots.length}
-                </div>
-                <p className="text-xs text-green-600">Unassigned spots</p>
-              </CardContent>
-            </Card>
-
-            <Card data-testid="card-bci-managed-total-tab" className="hover-elevate">
-              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total BCI Managed Spots</CardTitle>
-                <div className="rounded-full border-2 border-purple-400 p-2">
-                  <Building className="h-4 w-4 text-purple-600" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold" data-testid="stat-bci-managed-total-tab">
-                  {allSpots.filter(spot => spot.isBciManaged).length}
-                </div>
-                <p className="text-xs text-purple-600">BCI managed spots</p>
-              </CardContent>
-            </Card>
-
-            <Card data-testid="card-bci-managed-available-tab" className="hover-elevate">
-              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Available BCI Managed Spots</CardTitle>
-                <div className="rounded-full border-2 border-orange-400 p-2">
-                  <Sparkles className="h-4 w-4 text-orange-600" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold" data-testid="stat-bci-managed-available-tab">
-                  {unallocatedSpots.filter(spot => spot.isBciManaged).length}
-                </div>
-                <p className="text-xs text-orange-600">Unassigned BCI spots</p>
-              </CardContent>
-            </Card>
-          </div>
-
+        {/* All BCI Managed Spots Tab */}
+        <TabsContent value="bci-managed" className="space-y-4">
           {/* Enhanced Filters */}
           <EnhancedFilters
             searchValue={searchTerm}
@@ -1280,7 +1229,7 @@ export default function AdminParkingManagement() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>{t("admin.parkingManagement.parkingSpots")} ({sortedSpots.length})</CardTitle>
+                <CardTitle>All BCI Managed Spots ({sortedSpots.length})</CardTitle>
                 <div className="flex gap-2">
                   {selectedSpots.size > 0 && (
                     <>
@@ -1597,99 +1546,8 @@ export default function AdminParkingManagement() {
             </Card>
         </TabsContent>
 
-        {/* Unallocated Spots Tab */}
-        <TabsContent value="unallocated" className="space-y-4">
-          {/* Metrics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Card data-testid="card-total-spots-unallocated-tab" className="hover-elevate">
-                  <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Spots</CardTitle>
-                    <div className="rounded-full border-2 border-blue-400 p-2">
-                      <Car className="h-4 w-4 text-blue-600" />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">
-                      {allSpots.length}
-                    </div>
-                    <p className="text-xs text-blue-600">All parking spots</p>
-                  </CardContent>
-                </Card>
-              </TooltipTrigger>
-              <TooltipContent>
-                View total number of parking spots in the system
-              </TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Card data-testid="card-available-spots-unallocated-tab" className="hover-elevate">
-                  <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">{t("admin.parkingManagement.availableSpots")}</CardTitle>
-                    <div className="rounded-full border-2 border-green-400 p-2">
-                      <Sparkles className="h-4 w-4 text-green-600" />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">
-                      {unallocatedSpots.length}
-                    </div>
-                    <p className="text-xs text-green-600">Unassigned spots</p>
-                  </CardContent>
-                </Card>
-              </TooltipTrigger>
-              <TooltipContent>
-                View spots currently unassigned and available for rental
-              </TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Card data-testid="card-bci-managed-total-unallocated-tab" className="hover-elevate">
-                  <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total BCI Managed Spots</CardTitle>
-                    <div className="rounded-full border-2 border-purple-400 p-2">
-                      <Building className="h-4 w-4 text-purple-600" />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">
-                      {allSpots.filter(spot => spot.isBciManaged).length}
-                    </div>
-                    <p className="text-xs text-purple-600">BCI managed spots</p>
-                  </CardContent>
-                </Card>
-              </TooltipTrigger>
-              <TooltipContent>
-                View total number of BCI managed parking spots
-              </TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Card data-testid="card-bci-managed-available-unallocated-tab" className="hover-elevate">
-                  <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Available BCI Managed Spots</CardTitle>
-                    <div className="rounded-full border-2 border-orange-400 p-2">
-                      <Sparkles className="h-4 w-4 text-orange-600" />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">
-                      {unallocatedSpots.filter(spot => spot.isBciManaged).length}
-                    </div>
-                    <p className="text-xs text-orange-600">Unassigned BCI spots</p>
-                  </CardContent>
-                </Card>
-              </TooltipTrigger>
-              <TooltipContent>
-                View BCI managed spots currently available for assignment
-              </TooltipContent>
-            </Tooltip>
-          </div>
-
+        {/* Available BCI Managed Spots Tab */}
+        <TabsContent value="bci-available" className="space-y-4">
           {/* Enhanced Filters for Available Spots */}
           <EnhancedFilters
             searchValue={availableSpotsSearchTerm}
@@ -1705,7 +1563,7 @@ export default function AdminParkingManagement() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>{t("admin.parkingManagement.availableSpotsTitle")} ({sortedAvailableSpots.length})</CardTitle>
+                <CardTitle>Available BCI Managed Spots ({sortedAvailableSpots.length})</CardTitle>
                 <div className="flex gap-2">
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -1999,99 +1857,289 @@ export default function AdminParkingManagement() {
           </Card>
         </TabsContent>
 
+        {/* All Personal Spots Tab */}
+        <TabsContent value="personal" className="space-y-4">
+          {/* Enhanced Filters */}
+          <EnhancedFilters
+            searchValue={searchTerm}
+            onSearchChange={setSearchTerm}
+            filterConfigs={parkingFilterConfigs}
+            filterValues={filterValues}
+            onFilterChange={handleFilterChange}
+            onClearFilters={handleClearFilters}
+            searchPlaceholder="Search personal spots by number or location..."
+            className="hover-elevate"
+          />
+          
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>All Personal Spots ({sortedSpots.length})</CardTitle>
+                <div className="flex gap-2">
+                  {selectedSpots.size > 0 && (
+                    <>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => toggleSpotBookabilityMutation.mutate({ 
+                              spotIds: Array.from(selectedSpots), 
+                              isBookable: true 
+                            })}
+                            disabled={toggleSpotBookabilityMutation.isPending}
+                            data-testid="button-enable-personal-spots"
+                            aria-label="Enable selected personal spots for booking"
+                          >
+                            <CheckCircle2 className="w-4 h-4 mr-2" />
+                            {t("admin.parkingManagement.enable")} ({selectedSpots.size})
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          Enable selected personal spots for booking and rental
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => toggleSpotBookabilityMutation.mutate({ 
+                              spotIds: Array.from(selectedSpots), 
+                              isBookable: false 
+                            })}
+                            disabled={toggleSpotBookabilityMutation.isPending}
+                            data-testid="button-disable-personal-spots"
+                            aria-label="Disable selected personal spots from booking"
+                          >
+                            <AlertTriangle className="w-4 h-4 mr-2" />
+                            {t("admin.parkingManagement.disable")} ({selectedSpots.size})
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          Disable selected personal spots from booking (maintenance)
+                        </TooltipContent>
+                      </Tooltip>
+                    </>
+                  )}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        size="sm"
+                        variant="outline" 
+                        disabled={sortedSpots.length === 0}
+                        onClick={() => {
+                          const success = quickExportParkingSpotsPDF(sortedSpots, 'Personal Spots Report', (errorMessage) => {
+                            toast({
+                              variant: "destructive",
+                              title: "Export Failed",
+                              description: errorMessage
+                            })
+                          })
+                          if (success) {
+                            toast({
+                              title: "Export Successful",
+                              description: "PDF report has been downloaded successfully"
+                            })
+                          }
+                        }}
+                        data-testid="button-export-personal-spots-pdf"
+                        aria-label="Export personal spots to PDF"
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        PDF
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Export personal spots data to PDF report
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        size="sm"
+                        variant="outline" 
+                        disabled={sortedSpots.length === 0}
+                        onClick={() => {
+                          const success = quickExportParkingSpotsExcel(sortedSpots, 'Personal Spots Report', (errorMessage) => {
+                            toast({
+                              variant: "destructive",
+                              title: "Export Failed",
+                              description: errorMessage
+                            })
+                          })
+                          if (success) {
+                            toast({
+                              title: "Export Successful",
+                              description: "Excel report has been downloaded successfully"
+                            })
+                          }
+                        }}
+                        data-testid="button-export-personal-spots-excel"
+                        aria-label="Export personal spots to Excel"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Excel
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Export personal spots data to Excel report
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        size="sm"
+                        onClick={() => setShowAddSpotDialog(true)}
+                        data-testid="button-add-personal-spot"
+                        aria-label="Add new personal spot"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Spot
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Add a new personal parking spot to the system
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {sortedSpots.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Car className="mx-auto h-12 w-12 mb-4 opacity-50" />
+                  <p>No personal spots found</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12">
+                          <Checkbox
+                            checked={isSelectAllChecked}
+                            onCheckedChange={handleSelectAllSpots}
+                            data-testid="checkbox-select-all-personal"
+                            aria-label="Select all personal spots"
+                          />
+                        </TableHead>
+                        <SortableTableHeader
+                          column="spotNumber"
+                          currentSortColumn={sortState.column}
+                          currentSortDirection={sortState.direction}
+                          onSort={handleSort}
+                        >
+                          Spot #
+                        </SortableTableHeader>
+                        <SortableTableHeader
+                          column="locationName"
+                          currentSortColumn={sortState.column}
+                          currentSortDirection={sortState.direction}
+                          onSort={handleSort}
+                        >
+                          Location
+                        </SortableTableHeader>
+                        <SortableTableHeader
+                          column="spotTypeName"
+                          currentSortColumn={sortState.column}
+                          currentSortDirection={sortState.direction}
+                          onSort={handleSort}
+                        >
+                          Type
+                        </SortableTableHeader>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Assigned To</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sortedSpots.map((spot) => (
+                        <TableRow key={spot.id} data-testid={`row-personal-spot-${spot.id}`}>
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedSpots.has(spot.id)}
+                              onCheckedChange={() => handleToggleSpotSelection(spot.id)}
+                              data-testid={`checkbox-select-personal-spot-${spot.id}`}
+                              aria-label={`Select personal spot ${spot.spotNumber}`}
+                            />
+                          </TableCell>
+                          <TableCell className="font-medium" data-testid={`text-spot-number-${spot.id}`}>
+                            {spot.spotNumber}
+                          </TableCell>
+                          <TableCell data-testid={`text-location-${spot.id}`}>
+                            {spot.locationName}
+                          </TableCell>
+                          <TableCell data-testid={`text-type-${spot.id}`}>
+                            {spot.spotTypeName}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-1">
+                              <Badge 
+                                variant={spot.isActive ? "default" : "secondary"}
+                                data-testid={`badge-active-status-${spot.id}`}
+                              >
+                                {spot.isActive ? "Enabled" : "Disabled"}
+                              </Badge>
+                              {spot.ownerId && (
+                                <Badge variant="outline" data-testid={`badge-assigned-${spot.id}`}>
+                                  Assigned
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell data-testid={`text-owner-${spot.id}`}>
+                            {spot.ownerId ? (
+                              allUsers.find(user => user.id === spot.ownerId)?.name || 
+                              `${allUsers.find(user => user.id === spot.ownerId)?.firstName || ''} ${allUsers.find(user => user.id === spot.ownerId)?.lastName || ''}`.trim() || 
+                              'Assigned User'
+                            ) : "-"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditSpot(spot)}
+                                data-testid={`button-edit-personal-spot-${spot.id}`}
+                                title="Edit Spot"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              {spot.ownerId && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleReleaseSpot(spot)}
+                                  data-testid={`button-release-personal-spot-${spot.id}`}
+                                  title="Release Spot"
+                                >
+                                  <UserMinus className="h-4 w-4" />
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteSpot(spot.id)}
+                                data-testid={`button-delete-personal-spot-${spot.id}`}
+                                title="Delete Spot"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* Waiting List Tab */}
         <TabsContent value="waiting" className="space-y-4">
-          {/* Metrics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Card data-testid="card-total-spots-waiting-tab" className="hover-elevate">
-                  <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Spots</CardTitle>
-                    <div className="rounded-full border-2 border-blue-400 p-2">
-                      <Car className="h-4 w-4 text-blue-600" />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">
-                      {allSpots.length}
-                    </div>
-                    <p className="text-xs text-blue-600">All parking spots</p>
-                  </CardContent>
-                </Card>
-              </TooltipTrigger>
-              <TooltipContent>
-                View total number of parking spots in the system
-              </TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Card data-testid="card-available-spots-waiting-tab" className="hover-elevate">
-                  <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">{t("admin.parkingManagement.availableSpots")}</CardTitle>
-                    <div className="rounded-full border-2 border-green-400 p-2">
-                      <Sparkles className="h-4 w-4 text-green-600" />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">
-                      {unallocatedSpots.length}
-                    </div>
-                    <p className="text-xs text-green-600">Unassigned spots</p>
-                  </CardContent>
-                </Card>
-              </TooltipTrigger>
-              <TooltipContent>
-                View spots currently unassigned and available for rental
-              </TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Card data-testid="card-bci-managed-total-waiting-tab" className="hover-elevate">
-                  <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total BCI Managed Spots</CardTitle>
-                    <div className="rounded-full border-2 border-purple-400 p-2">
-                      <Building className="h-4 w-4 text-purple-600" />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">
-                      {allSpots.filter(spot => spot.isBciManaged).length}
-                    </div>
-                    <p className="text-xs text-purple-600">BCI managed spots</p>
-                  </CardContent>
-                </Card>
-              </TooltipTrigger>
-              <TooltipContent>
-                View total number of BCI managed parking spots
-              </TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Card data-testid="card-bci-managed-available-waiting-tab" className="hover-elevate">
-                  <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Available BCI Managed Spots</CardTitle>
-                    <div className="rounded-full border-2 border-orange-400 p-2">
-                      <Sparkles className="h-4 w-4 text-orange-600" />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">
-                      {unallocatedSpots.filter(spot => spot.isBciManaged).length}
-                    </div>
-                    <p className="text-xs text-orange-600">Unassigned BCI spots</p>
-                  </CardContent>
-                </Card>
-              </TooltipTrigger>
-              <TooltipContent>
-                View BCI managed spots currently available for assignment
-              </TooltipContent>
-            </Tooltip>
-          </div>
-
           {/* Enhanced Filters for Waiting List */}
           <EnhancedFilters
             searchValue={waitingListSearchTerm}
@@ -2700,7 +2748,7 @@ export default function AdminParkingManagement() {
                   <SelectItem value="">Any location</SelectItem>
                   {locations.map(loc => (
                     <SelectItem key={loc.id} value={loc.id.toString()}>
-                      {loc.name}
+                      {loc.office} - {loc.building}, {loc.level}
                     </SelectItem>
                   ))}
                 </SelectContent>
