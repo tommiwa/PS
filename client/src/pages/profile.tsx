@@ -1756,7 +1756,8 @@ export default function Profile() {
                   <TooltipTrigger asChild>
                     <Input 
                       id="phone" 
-                      defaultValue={user?.phone || "(555) 000-0000"} 
+                      type="tel"
+                      defaultValue={user?.phone || ""} 
                       maxLength={20}
                       placeholder="(555) 123-4567"
                       data-testid="input-phone"
@@ -1766,12 +1767,21 @@ export default function Profile() {
                           target.value = target.value.slice(0, 20);
                         }
                       }}
+                      onKeyPress={(e) => {
+                        const target = e.target as HTMLInputElement;
+                        if (target.value.length >= 20) {
+                          e.preventDefault();
+                        }
+                      }}
                     />
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>{t("tooltip.profile.phone")}</p>
                   </TooltipContent>
                 </Tooltip>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Maximum 20 characters
+                </p>
               </div>
               <div>
                 <Label htmlFor="department">{t("profile.department")}</Label>
