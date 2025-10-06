@@ -306,6 +306,10 @@ const translations: Record<Language, Translations> = {
     "toast.alertsEnabled.description": "You'll get instant notifications when your preferred spots become available. Never miss out!",
     "toast.reportsAvailable.title": "Reports Available",
     "toast.reportsAvailable.description": "View your booking history and parking analytics.",
+    "toast.refreshSuccess.title": "Refreshed",
+    "toast.refreshSuccess.description": "User data has been refreshed",
+    "toast.refreshError.title": "Error",
+    "toast.refreshError.description": "Failed to refresh data",
 
     // Info tooltips for icons
     "tooltip.info.profileVisibility": "Click for more information about profile visibility settings",
@@ -910,6 +914,10 @@ const translations: Record<Language, Translations> = {
     "toast.alertsEnabled.description": "Vous recevrez des notifications instantanées lorsque vos places préférées deviennent disponibles. Ne ratez rien!",
     "toast.reportsAvailable.title": "Rapports Disponibles",
     "toast.reportsAvailable.description": "Consultez votre historique de réservations et analyses de parking.",
+    "toast.refreshSuccess.title": "Actualisé",
+    "toast.refreshSuccess.description": "Les données utilisateur ont été actualisées",
+    "toast.refreshError.title": "Erreur",
+    "toast.refreshError.description": "Échec de l'actualisation des données",
 
     // Info tooltips for icons
     "tooltip.info.profileVisibility": "Cliquez pour plus d'informations sur les paramètres de visibilité du profil",
