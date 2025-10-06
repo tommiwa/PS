@@ -84,7 +84,7 @@ type VehicleForm = {
 };
 
 export default function Profile() {
-  const { user, isOwner, isRenter, isAdmin, effectiveRole } = useAuth()
+  const { user, isOwner, isRenter, isAdmin, effectiveRole, getCurrentViewRole } = useAuth()
   const [, setLocation] = useLocation()
   const { toast } = useToast()
   const { theme, setTheme } = useTheme()
@@ -475,7 +475,7 @@ export default function Profile() {
     email: user.email,
     phone: user.phone || "(555) 000-0000",
     department: user.department || t("profile.department"),
-    role: effectiveRole || "renter", // Use effectiveRole from auth context (priority: admin > owner > renter)
+    role: getCurrentViewRole() || effectiveRole || "renter", // Use current view role (what admin is viewing as) or fallback to effective role
     vehicles: userVehicles,
     assignedSpots: assignedSpots,
     spotCount: assignedSpots.length || 0,
@@ -1754,7 +1754,13 @@ export default function Profile() {
                 <Label htmlFor="phone">{t("profile.phoneNumber")}</Label>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Input id="phone" defaultValue={user?.phone || "(555) 000-0000"} data-testid="input-phone" />
+                    <Input 
+                      id="phone" 
+                      defaultValue={user?.phone || "(555) 000-0000"} 
+                      maxLength={20}
+                      placeholder="(555) 123-4567"
+                      data-testid="input-phone" 
+                    />
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>{t("tooltip.profile.phone")}</p>
