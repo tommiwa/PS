@@ -135,11 +135,17 @@ export default function Profile() {
   // Profile edit form schema
   const profileEditSchema = z.object({
     fullName: z.string().min(1, "Name is required"),
-    phone: z.string()
-      .optional()
-      .refine((val) => !val || /^\d{10}$/.test(unformatPhoneNumber(val)), {
-        message: "Phone number must be exactly 10 digits"
-      })
+    phone: z.preprocess(
+      (val) => {
+        if (!val || typeof val !== 'string') return val;
+        return unformatPhoneNumber(val);
+      },
+      z.string()
+        .optional()
+        .refine((val) => !val || /^\d{10}$/.test(val), {
+          message: "Phone number must be exactly 10 digits"
+        })
+    )
   });
 
   // Priority levels with translations
