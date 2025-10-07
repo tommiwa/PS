@@ -52,6 +52,7 @@ Preferred communication style: Simple, everyday language.
 - **Admin Management**:
     - **User Management**: Comprehensive user creation/editing with form validation, duplicate prevention, status management (Active, Suspended, Deleted with soft delete and restoration), phone formatting, and assigned spot display.
     - **Bulk Spot Management**: Assign, unassign, update status, enhanced filtering.
+    - **Streamlined Spot Availability**: Single "Create Availability" button replaces redundant controls, featuring date selection dialog (single day or date range) with daily rate input and comprehensive validation.
     - **Waiting List Management**: Direct assignment and historical tracking.
     - **Data Management**: Tabbed interface for managing reference data including Departments, Locations, and Spot Types with full CRUD operations, pagination, and UI features.
 - **Notification System**: Real-time alerts via email and in-app notifications.
