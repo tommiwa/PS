@@ -551,11 +551,11 @@ export default function Profile() {
       
       return apiRequest(`/api/users/${user.id}`, {
         method: "PATCH",
-        body: JSON.stringify({
+        body: {
           firstName,
           lastName,
           phone: unformattedPhone
-        })
+        }
       });
     },
     onSuccess: async () => {
@@ -564,7 +564,7 @@ export default function Profile() {
       toast({
         title: "Profile Updated",
         description: "Your profile has been successfully updated.",
-        variant: "success",
+        variant: "default",
       });
       setEditDialogOpen(false);
     },
