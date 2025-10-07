@@ -325,8 +325,28 @@ export default function AdminSpotBookingManagement() {
     queryFn: () => fetch(`/api/admin/booking-analytics?scope=${scope}`).then(r => r.json())
   });
 
+  // Fetch locations for filter options
+  const { data: locations = [] } = useQuery<Array<{
+    id: number;
+    office: string;
+    building: string;
+    level: string;
+    isActive: boolean;
+  }>>({
+    queryKey: ["/api/locations"],
+    queryFn: () => fetch("/api/locations").then(r => r.json())
+  });
 
-
+  // Transform locations into filter options
+  const locationFilterOptions = useMemo(() => {
+    return locations
+      .filter(loc => loc.isActive)
+      .map(loc => ({
+        value: `${loc.building} - ${loc.level}`,
+        label: `${loc.building} - ${loc.level}`
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [locations]);
 
 
   // Use API data directly - show real data or empty states
@@ -618,7 +638,7 @@ export default function AdminSpotBookingManagement() {
   }, [sortedPendingPayments, pendingPaymentsPageIndex, pendingPaymentsPageSize])
 
   // Filter configuration for spot booking management
-  const bookingFilterConfigs: FilterConfig[] = [
+  const bookingFilterConfigs: FilterConfig[] = useMemo(() => [
     {
       key: "status",
       label: "Status",
@@ -643,20 +663,14 @@ export default function AdminSpotBookingManagement() {
       key: "location",
       label: "Location",
       type: "select",
-      options: [
-        // These would ideally come from the API
-        { value: "building-a", label: "Building A" },
-        { value: "building-b", label: "Building B" },
-        { value: "parking-garage", label: "Parking Garage" },
-        { value: "outdoor-lot", label: "Outdoor Lot" }
-      ]
+      options: locationFilterOptions
     },
     {
       key: "dateRange",
       label: "Booking Date Range",
       type: "dateRange"
     }
-  ];
+  ], [locationFilterOptions]);
 
   // Filter configuration for booking activity
   const activityFilterConfigs: FilterConfig[] = [
@@ -687,7 +701,7 @@ export default function AdminSpotBookingManagement() {
   ]
 
   // Filter configuration for past bookings
-  const pastBookingsFilterConfigs: FilterConfig[] = [
+  const pastBookingsFilterConfigs: FilterConfig[] = useMemo(() => [
     {
       key: "status",
       label: "Status",
@@ -702,22 +716,17 @@ export default function AdminSpotBookingManagement() {
       key: "location",
       label: "Location",
       type: "select",
-      options: [
-        { value: "building-a", label: "Building A" },
-        { value: "building-b", label: "Building B" },
-        { value: "parking-garage", label: "Parking Garage" },
-        { value: "outdoor-lot", label: "Outdoor Lot" }
-      ]
+      options: locationFilterOptions
     },
     {
       key: "dateRange",
       label: "Booking Date Range",
       type: "dateRange"
     }
-  ]
+  ], [locationFilterOptions])
 
   // Filter configuration for booking availability
-  const availabilityFilterConfigs: FilterConfig[] = [
+  const availabilityFilterConfigs: FilterConfig[] = useMemo(() => [
     {
       key: "listingType",
       label: "Listing Type",
@@ -732,17 +741,12 @@ export default function AdminSpotBookingManagement() {
       key: "location",
       label: "Location",
       type: "select",
-      options: [
-        { value: "building-a", label: "Building A" },
-        { value: "building-b", label: "Building B" },
-        { value: "parking-garage", label: "Parking Garage" },
-        { value: "outdoor-lot", label: "Outdoor Lot" }
-      ]
+      options: locationFilterOptions
     }
-  ]
+  ], [locationFilterOptions])
 
   // Filter configuration for pending payments
-  const pendingPaymentsFilterConfigs: FilterConfig[] = [
+  const pendingPaymentsFilterConfigs: FilterConfig[] = useMemo(() => [
     {
       key: "daysOverdue",
       label: "Days Overdue",
@@ -757,14 +761,9 @@ export default function AdminSpotBookingManagement() {
       key: "location",
       label: "Location",
       type: "select",
-      options: [
-        { value: "building-a", label: "Building A" },
-        { value: "building-b", label: "Building B" },
-        { value: "parking-garage", label: "Parking Garage" },
-        { value: "outdoor-lot", label: "Outdoor Lot" }
-      ]
+      options: locationFilterOptions
     }
-  ]
+  ], [locationFilterOptions])
 
   // Handle filter changes
   const handleFilterChange = (key: string, value: string | undefined) => {
