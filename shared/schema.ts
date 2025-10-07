@@ -217,6 +217,16 @@ export const insertSpotListingSchema = createInsertSchema(spotListings).omit({
 export type InsertSpotListing = z.infer<typeof insertSpotListingSchema>;
 export type SpotListing = typeof spotListings.$inferSelect;
 
+// Enriched booking availability type that includes spot and owner information (admin-only)
+export interface BookingAvailabilityData extends SpotListing {
+  spotNumber: string;
+  locationName: string;
+  spotTypeName: string;
+  ownerName: string;
+  availableFrom: string;
+  availableTo: string;
+}
+
 // Bookings Table
 export const bookingStatuses = z.enum(["confirmed", "pending", "cancelled", "completed"]);
 export type BookingStatus = z.infer<typeof bookingStatuses>;
