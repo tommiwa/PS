@@ -1831,13 +1831,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .sort((a, b) => b.bookings - a.bookings)
         .slice(0, 5);
       
-      // User activity - count active renters and owners from filtered bookings
-      const activeRenterIds = new Set(activeBookings.map(b => b.renterId));
-      const activeOwnerIds = new Set<string>();
-      for (const booking of activeBookings) {
-        const spot = await storage.getParkingSpot(booking.spotId);
-        if (spot?.ownerId) activeOwnerIds.add(spot.ownerId);
-      }
+      // User activity - count active renters and owners from enriched bookings
+      const activeRenterIds = new Set(activeBookings.map(b => b.renterEmail).filter(Boolean));
+      const activeOwnerIds = new Set(activeBookings.map(b => b.ownerEmail).filter(Boolean));
       
       // New signups in the last 7 days
       const sevenDaysAgo = new Date();

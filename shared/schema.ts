@@ -794,3 +794,41 @@ export const insertSpotTypeSchema = createInsertSchema(spotTypesTable).pick({
 
 export type InsertSpotType = z.infer<typeof insertSpotTypeSchema>;
 export type SpotTypeTable = typeof spotTypesTable.$inferSelect;
+
+// Admin-specific flattened booking data interface
+export interface AdminBookingData {
+  id: string;
+  spotNumber: string;
+  spotLocation: string;
+  renterName: string;
+  renterEmail: string;
+  renterDepartment: string;
+  ownerName: string;
+  ownerEmail: string;
+  ownerDepartment: string;
+  bookingDate: string;
+  dailyRate: number;
+  totalAmount: number;
+  status: BookingStatus;
+  paymentReceived: boolean;
+  startTime: string;
+  endTime: string;
+  notes: string;
+  createdAt: string;
+  lastActivity: string;
+}
+
+// Admin-specific flattened pending payment data interface
+export interface PendingPaymentData {
+  id: string;
+  spotNumber: string;
+  spotLocation: string;
+  renterName: string;
+  renterEmail: string;
+  ownerName: string;
+  ownerEmail: string;
+  bookingDate: string;
+  totalAmount: number;
+  daysOverdue: number;
+  status: BookingStatus;
+}

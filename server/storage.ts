@@ -9,6 +9,8 @@ import {
   type SpotListing,
   type InsertSpotListing,
   type BookingAvailabilityData,
+  type AdminBookingData,
+  type PendingPaymentData,
   type Booking,
   type InsertBooking,
   type WaitingList,
@@ -277,9 +279,9 @@ export interface IStorage {
   
   // Spot Booking Management methods
   getBookingAvailability(isBciOnly?: boolean): Promise<BookingAvailabilityData[]>;
-  getPendingPaymentBookings(isBciOnly?: boolean): Promise<Array<Booking & { spot: ParkingSpot; user: User }>>;
-  getActiveBookings(isBciOnly?: boolean): Promise<Array<Booking & { spot: ParkingSpot; user: User }>>;
-  getPastBookings(isBciOnly?: boolean): Promise<Array<Booking & { spot: ParkingSpot; user: User }>>;
+  getPendingPaymentBookings(isBciOnly?: boolean): Promise<PendingPaymentData[]>;
+  getActiveBookings(isBciOnly?: boolean): Promise<AdminBookingData[]>;
+  getPastBookings(isBciOnly?: boolean): Promise<AdminBookingData[]>;
   
   // Dispute operations
   createDispute(dispute: InsertDispute): Promise<Dispute>;
@@ -2579,96 +2581,195 @@ export class MemStorage implements IStorage {
     return validListings.map(item => item.enrichedData);
   }
 
-  async getPendingPaymentBookings(isBciOnly?: boolean): Promise<Array<Booking & { spot: ParkingSpot; user: User }>> {
-    const pendingBookings = await db
-      .select()
-      .from(bookings)
-      .where(
-        and(
-          eq(bookings.paymentReceived, false),
-          sqlOp`${bookings.status} != 'cancelled'`
-        )
-      )
-      .orderBy(desc(bookings.createdAt));
+  async getPendingPaymentBookings(isBciOnly?: boolean): Promise<PendingPaymentData[]> {
+    // Build raw SQL query with proper table aliases and joins to avoid N+1
+    const query = `
+      SELECT 
+        b.*,
+        ps.spot_number, ps.location_id, ps.is_bci_managed,
+        l.building, l.level,
+        renter.id as renter_id, renter.first_name as renter_first_name, 
+        renter.last_name as renter_last_name, renter.email as renter_email,
+        owner.id as owner_id, owner.first_name as owner_first_name, 
+        owner.last_name as owner_last_name, owner.email as owner_email
+      FROM bookings b
+      LEFT JOIN parking_spots ps ON b.spot_id = ps.id
+      LEFT JOIN locations l ON ps.location_id = l.id
+      LEFT JOIN users renter ON b.renter_id = renter.id
+      LEFT JOIN users owner ON b.owner_id = owner.id
+      WHERE 
+        b.payment_received = false
+        AND b.status != 'cancelled'
+        ${isBciOnly ? 'AND ps.is_bci_managed = true' : ''}
+      ORDER BY b.created_at DESC
+    `;
     
-    const enrichedBookings = await Promise.all(
-      pendingBookings.map(async (booking) => {
-        const [spot] = await db.select().from(parkingSpots).where(eq(parkingSpots.id, booking.spotId)).limit(1);
-        const [user] = await db.select().from(users).where(eq(users.id, booking.renterId)).limit(1);
-        return { ...booking, spot: spot!, user: user! };
-      })
-    );
+    const results = await db.execute(sqlOp`${sqlOp.raw(query)}`);
     
-    // Filter by BCI-managed spots if requested
-    if (isBciOnly) {
-      return enrichedBookings.filter(booking => booking.spot.isBciManaged);
-    }
-    
-    return enrichedBookings;
+    return (results as any).map((row: any) => {
+      const renterName = row.renter_first_name && row.renter_last_name 
+        ? `${row.renter_first_name} ${row.renter_last_name}`
+        : row.renter_email || 'Unknown';
+      const ownerName = row.owner_first_name && row.owner_last_name 
+        ? `${row.owner_first_name} ${row.owner_last_name}`
+        : row.owner_email || 'Unknown';
+      
+      const spotLocation = row.building && row.level
+        ? `${row.building} - ${row.level}`
+        : 'Unknown Location';
+      
+      // Calculate days overdue
+      const bookingDate = new Date(row.booking_date);
+      const today = new Date();
+      const daysOverdue = Math.max(0, Math.floor((today.getTime() - bookingDate.getTime()) / (1000 * 60 * 60 * 24)));
+      
+      return {
+        id: row.id,
+        spotNumber: row.spot_number || 'N/A',
+        spotLocation,
+        renterName,
+        renterEmail: row.renter_email || '',
+        ownerName,
+        ownerEmail: row.owner_email || '',
+        bookingDate: row.booking_date,
+        totalAmount: Number(row.total_amount),
+        daysOverdue,
+        status: row.status
+      };
+    });
   }
 
-  async getActiveBookings(isBciOnly?: boolean): Promise<Array<Booking & { spot: ParkingSpot; user: User }>> {
+  async getActiveBookings(isBciOnly?: boolean): Promise<AdminBookingData[]> {
     const today = new Date().toISOString().split('T')[0];
     
-    const activeBookings = await db
-      .select()
-      .from(bookings)
-      .where(
-        and(
-          or(
-            eq(bookings.status, 'confirmed'),
-            eq(bookings.status, 'pending')
-          ),
-          sqlOp`${bookings.bookingDate} >= ${today}`
-        )
-      )
-      .orderBy(asc(bookings.bookingDate));
+    // Build raw SQL query with proper table aliases and joins to avoid N+1
+    const query = `
+      SELECT 
+        b.*,
+        ps.spot_number, ps.location_id, ps.is_bci_managed,
+        l.building, l.level,
+        renter.id as renter_id, renter.first_name as renter_first_name, 
+        renter.last_name as renter_last_name, renter.email as renter_email,
+        owner.id as owner_id, owner.first_name as owner_first_name, 
+        owner.last_name as owner_last_name, owner.email as owner_email,
+        renter_dept.name as renter_department,
+        owner_dept.name as owner_department
+      FROM bookings b
+      LEFT JOIN parking_spots ps ON b.spot_id = ps.id
+      LEFT JOIN locations l ON ps.location_id = l.id
+      LEFT JOIN users renter ON b.renter_id = renter.id
+      LEFT JOIN users owner ON b.owner_id = owner.id
+      LEFT JOIN departments renter_dept ON renter.department_id = renter_dept.id
+      LEFT JOIN departments owner_dept ON owner.department_id = owner_dept.id
+      WHERE 
+        (b.status = 'confirmed' OR b.status = 'pending')
+        AND b.booking_date >= $1
+        ${isBciOnly ? 'AND ps.is_bci_managed = true' : ''}
+      ORDER BY b.booking_date ASC
+    `;
     
-    const enrichedBookings = await Promise.all(
-      activeBookings.map(async (booking) => {
-        const [spot] = await db.select().from(parkingSpots).where(eq(parkingSpots.id, booking.spotId)).limit(1);
-        const [user] = await db.select().from(users).where(eq(users.id, booking.renterId)).limit(1);
-        return { ...booking, spot: spot!, user: user! };
-      })
-    );
+    const results = await db.execute(sqlOp`${sqlOp.raw(query.replace('$1', `'${today}'`))}`);
     
-    // Filter by BCI-managed spots if requested
-    if (isBciOnly) {
-      return enrichedBookings.filter(booking => booking.spot.isBciManaged);
-    }
-    
-    return enrichedBookings;
+    return (results as any).map((row: any) => {
+      const renterName = row.renter_first_name && row.renter_last_name 
+        ? `${row.renter_first_name} ${row.renter_last_name}`
+        : row.renter_email || 'Unknown';
+      const ownerName = row.owner_first_name && row.owner_last_name 
+        ? `${row.owner_first_name} ${row.owner_last_name}`
+        : row.owner_email || 'Unknown';
+      
+      const spotLocation = row.building && row.level
+        ? `${row.building} - ${row.level}`
+        : 'Unknown Location';
+      
+      return {
+        id: row.id,
+        spotNumber: row.spot_number || 'N/A',
+        spotLocation,
+        renterName,
+        renterEmail: row.renter_email || '',
+        renterDepartment: row.renter_department || '',
+        ownerName,
+        ownerEmail: row.owner_email || '',
+        ownerDepartment: row.owner_department || '',
+        bookingDate: row.booking_date,
+        dailyRate: Number(row.daily_rate),
+        totalAmount: Number(row.total_amount),
+        status: row.status,
+        paymentReceived: row.payment_received,
+        startTime: '08:00',
+        endTime: '18:00',
+        notes: row.notes || '',
+        createdAt: new Date(row.created_at).toISOString(),
+        lastActivity: new Date(row.updated_at).toISOString()
+      };
+    });
   }
 
-  async getPastBookings(isBciOnly?: boolean): Promise<Array<Booking & { spot: ParkingSpot; user: User }>> {
+  async getPastBookings(isBciOnly?: boolean): Promise<AdminBookingData[]> {
     const today = new Date().toISOString().split('T')[0];
     
-    const pastBookings = await db
-      .select()
-      .from(bookings)
-      .where(
-        or(
-          sqlOp`${bookings.bookingDate} < ${today}`,
-          eq(bookings.status, 'completed'),
-          eq(bookings.status, 'cancelled')
-        )
-      )
-      .orderBy(desc(bookings.bookingDate));
+    // Build raw SQL query with proper table aliases and joins to avoid N+1
+    const query = `
+      SELECT 
+        b.*,
+        ps.spot_number, ps.location_id, ps.is_bci_managed,
+        l.building, l.level,
+        renter.id as renter_id, renter.first_name as renter_first_name, 
+        renter.last_name as renter_last_name, renter.email as renter_email,
+        owner.id as owner_id, owner.first_name as owner_first_name, 
+        owner.last_name as owner_last_name, owner.email as owner_email,
+        renter_dept.name as renter_department,
+        owner_dept.name as owner_department
+      FROM bookings b
+      LEFT JOIN parking_spots ps ON b.spot_id = ps.id
+      LEFT JOIN locations l ON ps.location_id = l.id
+      LEFT JOIN users renter ON b.renter_id = renter.id
+      LEFT JOIN users owner ON b.owner_id = owner.id
+      LEFT JOIN departments renter_dept ON renter.department_id = renter_dept.id
+      LEFT JOIN departments owner_dept ON owner.department_id = owner_dept.id
+      WHERE 
+        (b.booking_date < $1 OR b.status = 'completed' OR b.status = 'cancelled')
+        ${isBciOnly ? 'AND ps.is_bci_managed = true' : ''}
+      ORDER BY b.booking_date DESC
+    `;
     
-    const enrichedBookings = await Promise.all(
-      pastBookings.map(async (booking) => {
-        const [spot] = await db.select().from(parkingSpots).where(eq(parkingSpots.id, booking.spotId)).limit(1);
-        const [user] = await db.select().from(users).where(eq(users.id, booking.renterId)).limit(1);
-        return { ...booking, spot: spot!, user: user! };
-      })
-    );
+    const results = await db.execute(sqlOp`${sqlOp.raw(query.replace('$1', `'${today}'`))}`);
     
-    // Filter by BCI-managed spots if requested
-    if (isBciOnly) {
-      return enrichedBookings.filter(booking => booking.spot.isBciManaged);
-    }
-    
-    return enrichedBookings;
+    return (results as any).map((row: any) => {
+      const renterName = row.renter_first_name && row.renter_last_name 
+        ? `${row.renter_first_name} ${row.renter_last_name}`
+        : row.renter_email || 'Unknown';
+      const ownerName = row.owner_first_name && row.owner_last_name 
+        ? `${row.owner_first_name} ${row.owner_last_name}`
+        : row.owner_email || 'Unknown';
+      
+      const spotLocation = row.building && row.level
+        ? `${row.building} - ${row.level}`
+        : 'Unknown Location';
+      
+      return {
+        id: row.id,
+        spotNumber: row.spot_number || 'N/A',
+        spotLocation,
+        renterName,
+        renterEmail: row.renter_email || '',
+        renterDepartment: row.renter_department || '',
+        ownerName,
+        ownerEmail: row.owner_email || '',
+        ownerDepartment: row.owner_department || '',
+        bookingDate: row.booking_date,
+        dailyRate: Number(row.daily_rate),
+        totalAmount: Number(row.total_amount),
+        status: row.status,
+        paymentReceived: row.payment_received,
+        startTime: '08:00',
+        endTime: '18:00',
+        notes: row.notes || '',
+        createdAt: new Date(row.created_at).toISOString(),
+        lastActivity: new Date(row.updated_at).toISOString()
+      };
+    });
   }
 
   // Dispute operations
