@@ -2046,7 +2046,7 @@ export default function AdminSpotBookingManagement() {
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button
-                                    variant="outline"
+                                    variant="ghost"
                                     size="sm"
                                     onClick={() => {
                                       setSelectedBooking({
@@ -2074,7 +2074,7 @@ export default function AdminSpotBookingManagement() {
                                     }}
                                     data-testid={`button-contact-renter-${payment.id}`}
                                   >
-                                    Contact
+                                    <Mail className="h-4 w-4" />
                                   </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>Contact Renter</TooltipContent>
@@ -2082,7 +2082,7 @@ export default function AdminSpotBookingManagement() {
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button
-                                    variant="default"
+                                    variant="ghost"
                                     size="sm"
                                     onClick={() => {
                                       setSelectedBooking({
@@ -2110,7 +2110,7 @@ export default function AdminSpotBookingManagement() {
                                     }}
                                     data-testid={`button-mark-paid-${payment.id}`}
                                   >
-                                    Mark Paid
+                                    <CheckCircle2 className="h-4 w-4" />
                                   </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>Mark as Paid</TooltipContent>
