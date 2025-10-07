@@ -8,6 +8,7 @@ import {
   type InsertParkingSpot,
   type SpotListing,
   type InsertSpotListing,
+  type BookingAvailabilityData,
   type Booking,
   type InsertBooking,
   type WaitingList,
@@ -275,7 +276,7 @@ export interface IStorage {
   }>;
   
   // Spot Booking Management methods
-  getBookingAvailability(isBciOnly?: boolean): Promise<Array<SpotListing & { spot: ParkingSpot }>>;
+  getBookingAvailability(isBciOnly?: boolean): Promise<BookingAvailabilityData[]>;
   getPendingPaymentBookings(isBciOnly?: boolean): Promise<Array<Booking & { spot: ParkingSpot; user: User }>>;
   getActiveBookings(isBciOnly?: boolean): Promise<Array<Booking & { spot: ParkingSpot; user: User }>>;
   getPastBookings(isBciOnly?: boolean): Promise<Array<Booking & { spot: ParkingSpot; user: User }>>;
@@ -2491,7 +2492,7 @@ export class MemStorage implements IStorage {
   }
 
   // Spot Booking Management methods
-  async getBookingAvailability(isBciOnly?: boolean): Promise<Array<SpotListing & { spot: ParkingSpot }>> {
+  async getBookingAvailability(isBciOnly?: boolean): Promise<BookingAvailabilityData[]> {
     const today = new Date().toISOString().split('T')[0];
     
     const availableListings = await db
@@ -2513,17 +2514,69 @@ export class MemStorage implements IStorage {
     
     const enrichedListings = await Promise.all(
       availableListings.map(async (listing) => {
+        // Fetch related data
         const [spot] = await db.select().from(parkingSpots).where(eq(parkingSpots.id, listing.spotId)).limit(1);
-        return { ...listing, spot: spot! };
+        
+        // Early null check for spot
+        if (!spot) {
+          return null;
+        }
+        
+        const [location] = await db.select().from(locations).where(eq(locations.id, spot.locationId)).limit(1);
+        const [spotType] = await db.select().from(spotTypesTable).where(eq(spotTypesTable.id, spot.spotTypeId)).limit(1);
+        const [owner] = await db.select().from(users).where(eq(users.id, listing.ownerId)).limit(1);
+        
+        // Construct location name from location data
+        const locationName = location ? `${location.building} - ${location.level}` : 'Unknown';
+        
+        // Get spot type name
+        const spotTypeName = spotType?.name || 'Unknown';
+        
+        // Construct owner name
+        const ownerName = owner ? `${owner.firstName || ''} ${owner.lastName || ''}`.trim() || owner.email : 'Unknown';
+        
+        // Calculate availableFrom and availableTo based on listing type
+        let availableFrom = '';
+        let availableTo = '';
+        
+        if (listing.listingType === 'single' && listing.singleDate) {
+          availableFrom = listing.singleDate;
+          availableTo = listing.singleDate;
+        } else if (listing.listingType === 'period') {
+          availableFrom = listing.periodStartDate || '';
+          availableTo = listing.periodEndDate || '';
+        } else if (listing.listingType === 'recurring') {
+          availableFrom = listing.recurringStartDate || '';
+          availableTo = listing.recurringEndDate || 'Ongoing';
+        }
+        
+        return {
+          listing,
+          spot,
+          enrichedData: {
+            ...listing,
+            spotNumber: spot.spotNumber,
+            locationName,
+            spotTypeName,
+            ownerName,
+            availableFrom,
+            availableTo
+          } as BookingAvailabilityData
+        };
       })
     );
     
-    // Filter by BCI-managed spots if requested
+    // Filter out null entries (where spot was not found)
+    const validListings = enrichedListings.filter((item): item is NonNullable<typeof item> => item !== null);
+    
+    // Filter by BCI-managed spots if requested (reuse spot from first fetch)
     if (isBciOnly) {
-      return enrichedListings.filter(listing => listing.spot.isBciManaged);
+      return validListings
+        .filter(item => item.spot.isBciManaged)
+        .map(item => item.enrichedData);
     }
     
-    return enrichedListings;
+    return validListings.map(item => item.enrichedData);
   }
 
   async getPendingPaymentBookings(isBciOnly?: boolean): Promise<Array<Booking & { spot: ParkingSpot; user: User }>> {
