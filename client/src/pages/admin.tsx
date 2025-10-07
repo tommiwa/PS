@@ -508,26 +508,6 @@ export default function Admin() {
                 {cardsVisible ? t('tooltip.analytics.hideCards') : t('tooltip.analytics.toggleCards')}
               </TooltipContent>
             </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  onClick={handleRefreshAnalytics}
-                  disabled={isLoadingAnalytics}
-                  data-testid="button-refresh-analytics"
-                >
-                  {isLoadingAnalytics ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                  )}
-                  {t('common.refresh')}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                {t('tooltip.analytics.refreshData')}
-              </TooltipContent>
-            </Tooltip>
             <Select value={dateRange} onValueChange={setDateRange}>
               <Tooltip>
                 <TooltipTrigger asChild>
