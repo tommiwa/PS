@@ -27,7 +27,7 @@ Preferred communication style: Simple, everyday language.
 - **Primary Database**: PostgreSQL (Neon Database)
 - **Schema Management**: Drizzle migrations
 - **Session Storage**: PostgreSQL
-- **Storage Architecture**: Database-first, with in-memory caching for performance. All entities (Users, Parking Spots, Spot Listings, Bookings, Waiting List, Vehicles, Payment Preferences, Notification Preferences, In-App Notifications) persist to the database as the primary source of truth.
+- **Storage Architecture**: Database-first, with in-memory caching for performance. All entities (Users, Parking Spots, Spot Listings, Bookings, Waiting List, Vehicles, Payment Preferences, Notification Preferences, In-App Notifications, Disputes) persist to the database as the primary source of truth.
 - **Data Persistence**: All critical data survives server restarts and is accessible across systems.
 
 ### Authentication & Authorization
@@ -59,6 +59,17 @@ Preferred communication style: Simple, everyday language.
 - **Admin Dashboard Metrics**: Real-time, server-side calculated metrics for occupancy, revenue, registrations, monthly trends, usage patterns, top performers, and issue alerts.
 - **Parking Management Metrics**: Dynamic metrics for available spots, users waiting, average wait time, and total assigned.
 - **Spot Booking Management**: Five-tab interface (Booking Availability, Active Bookings, Pending Payments, Past Bookings, Recent Activity) with detailed views, filters, and actions. Tabs feature colorful icons for visual clarity (green calendar, blue checkmark, orange dollar, slate calendar, purple activity).
+- **Peer-to-Peer Booking Management**: Comprehensive admin tools for managing peer-to-peer bookings:
+    - **Booking Actions**: Update status, modify dates/pricing, cancel with reason, mark paid/refunded
+    - **Spot Listing Controls**: Update availability status, add admin notes, cancel listings
+    - **Payment Management**: Mark payments as paid/refunded, issue partial refunds, aging badges for overdue payments
+    - **Audit Trail**: Unified activity timeline tracking all booking modifications and admin actions
+- **Dispute Resolution System**: Full dispute lifecycle management integrated into booking workflow:
+    - **Dispute Creation**: Flag disputes from Active Bookings with target user selection and reason documentation
+    - **Dispute Tracking**: Monitor dispute status (open, investigating, resolved, closed) with resolution notes
+    - **Refund Processing**: Issue full or partial refunds directly from disputes or pending payments
+    - **Audit Snapshots**: JSON audit trail capturing booking state at dispute creation for historical reference
+- **Enhanced Database Schema**: Admin metadata fields on bookings (adminNotes, cancellationReason, paymentRefundedAt, refundAmount) and spot listings (adminNotes); dedicated disputes table with comprehensive tracking
 - **Pagination System**: Comprehensive client-side pagination across all admin pages using a reusable component with configurable page sizes and independent state.
 - **Tab Icons**: Colorful icons across all admin pages (Parking Management, Spot Booking Management, Data Management) and Profile page for improved visual navigation and user experience.
 
