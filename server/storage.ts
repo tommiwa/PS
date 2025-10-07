@@ -2676,9 +2676,12 @@ export class MemStorage implements IStorage {
     const id = randomUUID();
     const now = new Date();
     
+    const { status, ...disputeData } = insertDispute;
+    
     const [dispute] = await db.insert(disputes).values({
       id,
-      ...insertDispute,
+      ...disputeData,
+      status: (status || 'open') as DisputeStatus,
       createdAt: now,
       updatedAt: now
     }).returning();
@@ -2713,9 +2716,12 @@ export class MemStorage implements IStorage {
     const existing = await db.select().from(disputes).where(eq(disputes.id, id));
     if (existing.length === 0) return undefined;
     
+    const { status, ...otherUpdates } = updates;
+    
     const updated = await db.update(disputes)
       .set({
-        ...updates,
+        ...otherUpdates,
+        ...(status ? { status: status as DisputeStatus } : {}),
         updatedAt: new Date()
       })
       .where(eq(disputes.id, id))

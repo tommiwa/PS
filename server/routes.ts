@@ -4468,6 +4468,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/admin/seed-sample-bookings - Create sample bookings for testing (Admin only)
+  app.post("/api/admin/seed-sample-bookings", requireAdmin, async (req, res) => {
+    try {
+      // Get some parking spots and users for sample bookings
+      const spots = await storage.getAllParkingSpots();
+      const users = await storage.getAllUsers();
+      
+      if (spots.length === 0 || users.length < 2) {
+        return res.status(400).json({ 
+          error: "Not enough data to create sample bookings. Need at least some parking spots and 2 users." 
+        });
+      }
+      
+      // Find or use sample users
+      const renter = users.find(u => u.roles?.includes('renter')) || users[0];
+      const owner = users.find(u => u.roles?.includes('owner')) || users[1] || users[0];
+      
+      // Use first few spots
+      const sampleSpots = spots.slice(0, 5);
+      
+      const createdBookings = [];
+      const createdListings = [];
+      
+      // Helper to get dates
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const nextWeek = new Date(today);
+      nextWeek.setDate(nextWeek.getDate() + 7);
+      const lastWeek = new Date(today);
+      lastWeek.setDate(lastWeek.getDate() - 7);
+      
+      const formatDate = (date: Date) => date.toISOString().split('T')[0];
+      
+      // Create listings for each spot
+      for (let i = 0; i < sampleSpots.length; i++) {
+        const spot = sampleSpots[i];
+        
+        // Create a listing for this spot
+        const listing = await storage.createSpotListing({
+          spotId: spot.id,
+          ownerId: owner.id,
+          listingType: 'single',
+          singleDate: i === 0 ? formatDate(yesterday) : 
+                      i === 1 ? formatDate(today) : 
+                      i === 2 ? formatDate(tomorrow) :
+                      i === 3 ? formatDate(nextWeek) :
+                      formatDate(lastWeek),
+          dailyRate: (25 + i * 5).toString(),
+          status: 'active'
+        });
+        
+        createdListings.push(listing);
+        
+        // Create a booking for each listing with different statuses
+        let bookingStatus: 'confirmed' | 'pending' | 'cancelled' | 'completed';
+        let paymentReceived = false;
+        let bookingDate = listing.singleDate!;
+        
+        switch (i) {
+          case 0:
+            // Past confirmed booking with payment
+            bookingStatus = 'completed';
+            paymentReceived = true;
+            break;
+          case 1:
+            // Today's confirmed booking, no payment yet
+            bookingStatus = 'confirmed';
+            paymentReceived = false;
+            break;
+          case 2:
+            // Future pending booking
+            bookingStatus = 'pending';
+            paymentReceived = false;
+            break;
+          case 3:
+            // Future confirmed booking with payment
+            bookingStatus = 'confirmed';
+            paymentReceived = true;
+            break;
+          case 4:
+            // Past cancelled booking
+            bookingStatus = 'cancelled';
+            paymentReceived = false;
+            break;
+          default:
+            bookingStatus = 'confirmed';
+            paymentReceived = false;
+        }
+        
+        const booking = await storage.createBooking({
+          listingId: listing.id,
+          spotId: spot.id,
+          renterId: renter.id,
+          ownerId: owner.id,
+          bookingDate,
+          dailyRate: listing.dailyRate,
+          totalAmount: listing.dailyRate,
+          status: bookingStatus,
+          paymentReceived,
+          notes: `Sample booking ${i + 1} - Status: ${bookingStatus}`,
+          ...(bookingStatus === 'cancelled' ? { cancellationReason: 'Sample cancellation for testing' } : {})
+        });
+        
+        createdBookings.push(booking);
+      }
+      
+      res.json({
+        success: true,
+        message: `Created ${createdBookings.length} sample bookings with various statuses`,
+        bookings: createdBookings.map(b => ({
+          id: b.id,
+          status: b.status,
+          bookingDate: b.bookingDate,
+          paymentReceived: b.paymentReceived,
+          spotId: b.spotId
+        })),
+        listings: createdListings.map(l => ({
+          id: l.id,
+          spotId: l.spotId,
+          singleDate: l.singleDate
+        }))
+      });
+      
+    } catch (error) {
+      console.error('Failed to create sample bookings:', error);
+      res.status(500).json({ error: "Failed to create sample bookings" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
