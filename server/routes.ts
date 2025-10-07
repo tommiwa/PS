@@ -3031,11 +3031,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Bulk create spot listings (Admin only)
-  app.post("/api/admin/bulk-create-listings", requireAdmin, async (req, res) => {
+  app.post("/api/admin/bulk-create-listings", requireAdmin, async (req: any, res) => {
     try {
       // Validate request body with Zod
       const validatedData = bulkCreateListingsSchema.parse(req.body);
       const { spotIds, listingType, singleDate, periodStartDate, periodEndDate, dailyRate } = validatedData;
+      
+      // Get admin user ID for listings ownership
+      const adminUserId = getAuthenticatedUserId(req);
+      if (!adminUserId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
       
       // Create the listing data object
       const listingData: any = {
@@ -3051,8 +3057,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         listingData.periodEndDate = periodEndDate;
       }
 
-      // Create listings for all selected spots
-      const createdListings = await storage.bulkCreateSpotListings(spotIds, listingData);
+      // Create listings for all selected spots with admin as owner
+      const createdListings = await storage.bulkCreateSpotListings(spotIds, listingData, adminUserId);
       
       // Audit the bulk creation
       const dateDescription = listingType === "single" 

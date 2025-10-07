@@ -94,7 +94,7 @@ export interface IStorage {
   getAllSpotListings(): Promise<SpotListing[]>;
   getActiveSpotListings(): Promise<SpotListing[]>;
   createSpotListing(listing: InsertSpotListing): Promise<SpotListing>;
-  bulkCreateSpotListings(spotIds: string[], listingData: Omit<InsertSpotListing, 'spotId' | 'ownerId'>): Promise<SpotListing[]>;
+  bulkCreateSpotListings(spotIds: string[], listingData: Omit<InsertSpotListing, 'spotId' | 'ownerId'>, ownerId: string): Promise<SpotListing[]>;
   updateSpotListing(id: string, updates: Partial<InsertSpotListing>): Promise<SpotListing | undefined>;
   deleteSpotListing(id: string): Promise<boolean>;
   // Alias methods for API endpoints
@@ -1008,19 +1008,16 @@ export class MemStorage implements IStorage {
     return listing;
   }
 
-  async bulkCreateSpotListings(spotIds: string[], listingData: Omit<InsertSpotListing, 'spotId' | 'ownerId'>): Promise<SpotListing[]> {
+  async bulkCreateSpotListings(spotIds: string[], listingData: Omit<InsertSpotListing, 'spotId' | 'ownerId'>, ownerId: string): Promise<SpotListing[]> {
     if (spotIds.length === 0) return [];
 
     const createdListings: SpotListing[] = [];
-
-    // Get spot information to determine owner
-    const spots = await db.select().from(parkingSpots).where(inArray(parkingSpots.id, spotIds));
     
-    // Create listings for each spot
-    for (const spot of spots) {
+    // Create listings for each spot using the provided ownerId (typically admin for BCI-managed spots)
+    for (const spotId of spotIds) {
       const listing = await db.insert(spotListings).values({
-        spotId: spot.id,
-        ownerId: spot.ownerId!, // Use the spot's owner
+        spotId: spotId,
+        ownerId: ownerId, // Use the provided ownerId (admin user for BCI-managed spots)
         listingType: listingData.listingType as ListingType,
         singleDate: listingData.singleDate ?? null,
         periodStartDate: listingData.periodStartDate ?? null,
