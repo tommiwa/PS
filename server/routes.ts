@@ -1239,6 +1239,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Failed to update payment status" });
       }
       
+      // If payment is marked as received, also mark booking as completed
+      if (paymentReceived) {
+        await storage.updateBooking(id, { status: 'completed' });
+      }
+      
       // Audit the payment status update
       await auditService.logAction("UPDATE", "booking", {
         entityId: updatedBooking.id,
@@ -1849,7 +1854,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: "Failed to update payment status" });
       }
 
-      res.json(updatedBooking);
+      // Also mark booking as completed when payment is received
+      const completedBooking = await storage.updateBooking(id, { status: 'completed' });
+
+      res.json(completedBooking || updatedBooking);
     } catch (error) {
       console.error("Error updating payment status:", error);
       res.status(500).json({ error: "Failed to update payment status" });
