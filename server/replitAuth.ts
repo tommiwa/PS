@@ -42,15 +42,18 @@ export function getSession() {
     ttl: sessionTtl,
     tableName: "sessions",
   });
+  
+  const isDevelopment = process.env.NODE_ENV !== 'production';
+  
   return session({
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
-    resave: false,
+    resave: true, // Force session save on every request to help with OIDC flow
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: true,
-      sameSite: 'lax',
+      secure: !isDevelopment, // Allow insecure cookies in development for testing
+      sameSite: isDevelopment ? 'lax' : 'lax', // Keep lax for OIDC compatibility
       maxAge: sessionTtl,
     },
   });
