@@ -471,7 +471,7 @@ export default function Admin() {
               System overview and administrative controls
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button 
@@ -488,35 +488,6 @@ export default function Admin() {
                 Refresh all dashboard data including users, spots, bookings, and system metrics
               </TooltipContent>
             </Tooltip>
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-              <Avatar className="h-10 w-10">
-                <AvatarFallback className="text-sm bg-primary text-primary-foreground">
-                  {getInitials(user?.firstName, user?.lastName)}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="font-medium text-sm" data-testid="text-admin-welcome">
-                  Welcome, {user?.firstName || 'Admin'}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  System Administrator
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Analytics & Reports Section - Moved up per user request */}
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-semibold">Analytics & Reports</h2>
-            <p className="text-muted-foreground">
-              Comprehensive analytics and system insights
-            </p>
-          </div>
-          <div className="flex gap-2">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -586,10 +557,27 @@ export default function Admin() {
                 {t('tooltip.analytics.exportReport')}
               </TooltipContent>
             </Tooltip>
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+              <Avatar className="h-10 w-10">
+                <AvatarFallback className="text-sm bg-primary text-primary-foreground">
+                  {getInitials(user?.firstName, user?.lastName)}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="font-medium text-sm" data-testid="text-admin-welcome">
+                  Welcome, {user?.firstName || 'Admin'}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  System Administrator
+                </p>
+              </div>
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Key Metrics Overview */}
+      {/* Key Metrics Overview */}
+      <div className="space-y-6">
         {cardsVisible && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4" data-testid="analytics-cards">
             <Card>
