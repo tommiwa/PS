@@ -9,8 +9,8 @@ import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
 import { auditService } from "./audit-service";
 import { db } from "./db";
-import { users, parkingSpots, type User } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { users, parkingSpots, termsVersions, type User } from "@shared/schema";
+import { eq, desc } from "drizzle-orm";
 
 // Extend Express Session to include viewAsRole
 declare module 'express-session' {
@@ -239,40 +239,72 @@ export async function setupAuth(app: Express) {
   };
 
   app.get("/api/login", (req, res, next) => {
-    // Log login attempt
-    const loginAttemptTime = Date.now();
-    const originalEnd = res.end;
-    
-    res.end = function(chunk?: any, encoding?: any) {
-      const success = res.statusCode >= 200 && res.statusCode < 400;
+    // Check if user accepted terms (passed as query param from frontend)
+    // Store in session for callback to use
+    if (req.query.acceptTerms === 'true') {
+      // Generate a secure random nonce
+      const nonce = Math.random().toString(36).substring(2) + Date.now().toString(36);
       
-      // Extract user info if available
-      let actorId: string | undefined;
-      let actorEmail: string | undefined;
+      // Store both flag and nonce in session
+      (req.session as any).termsAcceptanceNonce = nonce;
+      (req.session as any).pendingTermsAcceptance = true;
       
-      if (req.user && (req.user as any).claims) {
-        actorId = (req.user as any).claims.sub;
-        actorEmail = (req.user as any).claims.email;
-      }
+      console.log('[TERMS] Setting pendingTermsAcceptance in session:', req.sessionID);
       
-      // Log authentication event
-      auditService.auditAuth(
-        "LOGIN",
-        actorId || "unknown",
-        actorEmail || "unknown",
-        success,
-        success ? "Login initiated successfully" : `Login failed with status ${res.statusCode}`
-      ).catch(error => {
-        console.error("Failed to log login event:", error);
+      // Save session before redirecting to OIDC
+      req.session.save((saveErr) => {
+        if (saveErr) {
+          console.error("Failed to save session before OIDC:", saveErr);
+        } else {
+          console.log('[TERMS] Session saved successfully before OIDC redirect');
+        }
+        
+        // Continue with authentication even if save fails
+        proceedWithAuth();
       });
       
-      return originalEnd.call(this, chunk, encoding);
-    };
+      return; // Wait for session save
+    }
     
-    const domain = getDomainForRequest(req);
-    passport.authenticate(`replitauth:${domain}`, {
-      scope: ["openid", "email", "profile", "offline_access"],
-    })(req, res, next);
+    // If no terms acceptance, proceed immediately
+    proceedWithAuth();
+    
+    function proceedWithAuth() {
+      // Log login attempt
+      const loginAttemptTime = Date.now();
+      const originalEnd = res.end;
+      
+      res.end = function(chunk?: any, encoding?: any) {
+        const success = res.statusCode >= 200 && res.statusCode < 400;
+        
+        // Extract user info if available
+        let actorId: string | undefined;
+        let actorEmail: string | undefined;
+        
+        if (req.user && (req.user as any).claims) {
+          actorId = (req.user as any).claims.sub;
+          actorEmail = (req.user as any).claims.email;
+        }
+        
+        // Log authentication event
+        auditService.auditAuth(
+          "LOGIN",
+          actorId || "unknown",
+          actorEmail || "unknown",
+          success,
+          success ? "Login initiated successfully" : `Login failed with status ${res.statusCode}`
+        ).catch(error => {
+          console.error("Failed to log login event:", error);
+        });
+        
+        return originalEnd.call(this, chunk, encoding);
+      };
+      
+      const domain = getDomainForRequest(req);
+      passport.authenticate(`replitauth:${domain}`, {
+        scope: ["openid", "email", "profile", "offline_access"],
+      })(req, res, next);
+    }
   });
 
   app.get("/api/callback", (req, res, next) => {
@@ -395,6 +427,49 @@ export async function setupAuth(app: Express) {
           ).catch(error => {
             console.error("Failed to log authentication success:", error);
           });
+          
+          // Check if user accepted terms during login
+          console.log('[TERMS] Checking for pendingTermsAcceptance in callback session:', req.sessionID);
+          console.log('[TERMS] pendingTermsAcceptance value:', (req.session as any).pendingTermsAcceptance);
+          
+          if ((req.session as any).pendingTermsAcceptance) {
+            console.log('[TERMS] Found pendingTermsAcceptance flag, auto-accepting terms for user:', userId);
+            try {
+              // Get latest terms version
+              const latestTerms = await db
+                .select()
+                .from(termsVersions)
+                .where(eq(termsVersions.isActive, true))
+                .orderBy(desc(termsVersions.version))
+                .limit(1)
+                .then(rows => rows[0]);
+              
+              if (latestTerms) {
+                // Auto-accept terms for the user
+                await db
+                  .update(users)
+                  .set({
+                    acceptedTermsVersion: latestTerms.version,
+                    acceptedTermsAt: new Date(),
+                  })
+                  .where(eq(users.id, userId));
+                
+                console.log(`[TERMS] Auto-accepted terms version ${latestTerms.version} for user ${userId}`);
+              } else {
+                console.log('[TERMS] No active terms found in database');
+              }
+            } catch (termsError) {
+              console.error("[TERMS] Error auto-accepting terms:", termsError);
+              // Continue with login even if terms acceptance fails
+            }
+            
+            // Clear the flag from session
+            delete (req.session as any).pendingTermsAcceptance;
+            delete (req.session as any).termsAcceptanceNonce;
+            console.log('[TERMS] Cleared pendingTermsAcceptance from session');
+          } else {
+            console.log('[TERMS] No pendingTermsAcceptance flag found in callback session');
+          }
           
           // Redirect based on user roles
           let redirectUrl = "/search"; // Default redirect for renters
