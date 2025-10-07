@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Link } from "wouter"
 import { useAuth } from "@/contexts/auth-context"
@@ -53,9 +53,14 @@ export default function Admin() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const [dateRange, setDateRange] = useState("last-30-days")
-  const { cardsVisible, toggleCards } = useCardsVisibility('analytics')
+  const { cardsVisible, toggleCards, setCardsVisible } = useCardsVisibility('analytics')
   const { t } = useLanguage()
   const { toast } = useToast()
+
+  // Ensure analytics cards are visible by default on Admin Dashboard
+  useEffect(() => {
+    setCardsVisible(true)
+  }, [setCardsVisible])
 
   // Fetch system metrics data
   const { data: allUsers = [], isLoading: isLoadingUsers, refetch: refetchUsers } = useQuery<User[]>({
