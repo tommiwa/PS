@@ -186,7 +186,7 @@ export function UserProfileCard({
                   data-testid={`assigned-spot-${index}`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 rounded-full bg-blue-500" />
+                    <div className={`w-3 h-3 rounded-full ${spot.isBciManaged ? 'bg-blue-500' : 'bg-green-500'}`} />
                     <div>
                       <div className="text-sm font-medium">
                         {t("profile.spotNumber", { number: spot.spotNumber })}
