@@ -56,6 +56,19 @@ export default function Login() {
               </Alert>
             )}
 
+            {/* Terms and Conditions Link */}
+            <div className="text-center">
+              <a 
+                href="/terms" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-sm text-muted-foreground hover:text-foreground underline"
+                data-testid="link-login-terms"
+              >
+                View Terms and Conditions
+              </a>
+            </div>
+
             {/* Login Button */}
             <Button 
               onClick={handleLogin}
