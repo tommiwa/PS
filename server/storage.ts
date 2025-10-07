@@ -2610,7 +2610,7 @@ export class MemStorage implements IStorage {
     
     const results = await db.execute(sqlOp`${sqlOp.raw(query)}`);
     
-    return (results as any).map((row: any) => {
+    return ((results as any).rows || []).map((row: any) => {
       const renterName = row.renter_first_name && row.renter_last_name 
         ? `${row.renter_first_name} ${row.renter_last_name}`
         : row.renter_email || 'Unknown';
@@ -2674,7 +2674,7 @@ export class MemStorage implements IStorage {
     
     const results = await db.execute(sqlOp`${sqlOp.raw(query.replace('$1', `'${today}'`))}`);
     
-    return (results as any).map((row: any) => {
+    return ((results as any).rows || []).map((row: any) => {
       const renterName = row.renter_first_name && row.renter_last_name 
         ? `${row.renter_first_name} ${row.renter_last_name}`
         : row.renter_email || 'Unknown';
@@ -2740,7 +2740,7 @@ export class MemStorage implements IStorage {
     
     const results = await db.execute(sqlOp`${sqlOp.raw(query.replace('$1', `'${today}'`))}`);
     
-    return (results as any).map((row: any) => {
+    return ((results as any).rows || []).map((row: any) => {
       const renterName = row.renter_first_name && row.renter_last_name 
         ? `${row.renter_first_name} ${row.renter_last_name}`
         : row.renter_email || 'Unknown';
