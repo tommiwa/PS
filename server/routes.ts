@@ -25,6 +25,7 @@ import {
   insertUserSchema,
   insertPaymentPreferencesSchema,
   updatePaymentPreferencesSchema,
+  insertTermsVersionSchema,
   type User,
   type WaitingList,
   type Vehicle,
@@ -33,6 +34,7 @@ import {
   type AuditAction,
   type EntityType,
   type UserRole,
+  type TermsVersion,
   auditActions,
   entityTypes,
   userRoles
@@ -261,6 +263,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error clearing view-as role:", error);
       res.status(500).json({ error: "Failed to clear view-as role" });
+    }
+  });
+
+  // Legal/Terms and Conditions routes
+  // GET /api/legal/terms - Get active terms version or all versions
+  app.get("/api/legal/terms", async (req, res) => {
+    try {
+      const includeHistory = req.query.includeHistory === 'true';
+      
+      if (includeHistory) {
+        const allVersions = await storage.getAllTermsVersions();
+        res.json({ versions: allVersions });
+      } else {
+        const activeVersion = await storage.getActiveTermsVersion();
+        if (!activeVersion) {
+          return res.status(404).json({ error: "No active terms version found" });
+        }
+        res.json(activeVersion);
+      }
+    } catch (error) {
+      console.error("Error fetching terms:", error);
+      res.status(500).json({ error: "Failed to fetch terms" });
+    }
+  });
+
+  // POST /api/legal/terms/accept - Accept the current active terms (Authenticated users only)
+  app.post("/api/legal/terms/accept", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      const activeTerms = await storage.getActiveTermsVersion();
+      if (!activeTerms) {
+        return res.status(404).json({ error: "No active terms version found" });
+      }
+
+      const updatedUser = await storage.acceptTerms(userId, activeTerms.version);
+      
+      if (!updatedUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      await auditService.logAction("UPDATE", "user", {
+        entityId: userId,
+        message: `User accepted terms and conditions version ${activeTerms.version}`,
+        after: {
+          acceptedTermsVersion: activeTerms.version,
+          acceptedTermsAt: updatedUser.acceptedTermsAt
+        }
+      });
+
+      res.json({ 
+        success: true, 
+        acceptedVersion: activeTerms.version,
+        acceptedAt: updatedUser.acceptedTermsAt
+      });
+    } catch (error) {
+      console.error("Error accepting terms:", error);
+      res.status(500).json({ error: "Failed to accept terms" });
+    }
+  });
+
+  // POST /api/admin/legal/terms - Create new terms version (Admin only)
+  app.post("/api/admin/legal/terms", requireAdmin, async (req: any, res) => {
+    try {
+      const validatedData = insertTermsVersionSchema.parse(req.body);
+      
+      const newTermsVersion = await storage.createTermsVersion(validatedData);
+      
+      await auditService.logAction("CREATE", "system", {
+        entityId: newTermsVersion.id.toString(),
+        message: `Created terms and conditions version ${newTermsVersion.version}`,
+        after: newTermsVersion
+      });
+      
+      res.json(newTermsVersion);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input data", details: error.errors });
+      }
+      console.error("Error creating terms version:", error);
+      res.status(500).json({ error: "Failed to create terms version" });
     }
   });
 

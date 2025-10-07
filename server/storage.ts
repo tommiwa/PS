@@ -42,13 +42,15 @@ import {
   type Location,
   type InsertLocation,
   type SpotTypeTable,
-  type InsertSpotType
+  type InsertSpotType,
+  type TermsVersion,
+  type InsertTermsVersion
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { auditDecorator } from "./audit-service";
 import { type IAuditStorage } from "./audit-storage";
 import { db } from "./db";
-import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, locations, spotTypesTable } from "@shared/schema";
+import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, locations, spotTypesTable, termsVersions } from "@shared/schema";
 import { eq, or, ilike, asc, and, notExists, sql as sqlOp, count, desc, inArray } from "drizzle-orm";
 
 // Storage interface with comprehensive CRUD methods
@@ -185,6 +187,12 @@ export interface IStorage {
   createSpotType(spotType: InsertSpotType): Promise<SpotTypeTable>;
   updateSpotType(id: number, updates: Partial<InsertSpotType>): Promise<SpotTypeTable | undefined>;
   deleteSpotType(id: number): Promise<boolean>;
+  
+  // Terms and Conditions operations
+  getActiveTermsVersion(): Promise<TermsVersion | undefined>;
+  getAllTermsVersions(): Promise<TermsVersion[]>;
+  createTermsVersion(termsVersion: InsertTermsVersion): Promise<TermsVersion>;
+  acceptTerms(userId: string, version: number): Promise<User | undefined>;
   
   // Audit storage operations (delegated to audit storage)
   createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
@@ -1706,6 +1714,44 @@ export class MemStorage implements IStorage {
   async deleteSpotType(id: number): Promise<boolean> {
     const result = await db.delete(spotTypesTable).where(eq(spotTypesTable.id, id)).returning();
     return result.length > 0;
+  }
+
+  // Terms and Conditions operations
+  async getActiveTermsVersion(): Promise<TermsVersion | undefined> {
+    const result = await db
+      .select()
+      .from(termsVersions)
+      .where(eq(termsVersions.isActive, true))
+      .limit(1);
+    return result[0];
+  }
+
+  async getAllTermsVersions(): Promise<TermsVersion[]> {
+    return await db
+      .select()
+      .from(termsVersions)
+      .orderBy(desc(termsVersions.version));
+  }
+
+  async createTermsVersion(termsVersion: InsertTermsVersion): Promise<TermsVersion> {
+    const result = await db
+      .insert(termsVersions)
+      .values(termsVersion)
+      .returning();
+    return result[0];
+  }
+
+  async acceptTerms(userId: string, version: number): Promise<User | undefined> {
+    const result = await db
+      .update(users)
+      .set({
+        acceptedTermsVersion: version,
+        acceptedTermsAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return result[0];
   }
 
   // Audit storage delegation methods
