@@ -436,6 +436,18 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
                   BCI is not responsible for payment arrangements between users. 
                   Please ensure payment details are confirmed directly with the spot owner.
                 </p>
+                <p className="text-yellow-700 dark:text-yellow-300 mt-2">
+                  By booking, you agree to our{" "}
+                  <a 
+                    href="/terms" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="underline hover:text-yellow-900 dark:hover:text-yellow-100"
+                    data-testid="link-terms-conditions"
+                  >
+                    Terms and Conditions
+                  </a>.
+                </p>
               </div>
             </div>
           </div>

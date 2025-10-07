@@ -32,21 +32,31 @@ import AdminAudits from "@/pages/admin-audits";
 import AdminParkingManagement from "@/pages/admin-parking-management";
 import AdminDataManagement from "@/pages/admin-data-management";
 import Login from "@/pages/login";
+import Terms from "@/pages/terms";
+import TermsConsent from "@/pages/terms-consent";
 import NotFound from "@/pages/not-found";
 
 // Protected Router that handles authentication
 function ProtectedRouter() {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, hasAcceptedTerms } = useAuth();
   const [location, setLocation] = useLocation();
 
   // Redirect to login if not authenticated, or away from login if authenticated
   useEffect(() => {
+    // Allow public access to /terms page
+    if (location === "/terms") {
+      return;
+    }
+    
     if (!isLoading && !isAuthenticated && location !== "/login") {
       setLocation("/login");
     } else if (isAuthenticated && location === "/login") {
       setLocation("/"); // Move away from /login to let LandingPageRedirect handle role-based routing
+    } else if (isAuthenticated && !hasAcceptedTerms() && location !== "/terms-consent") {
+      // Redirect to terms consent if user hasn't accepted terms
+      setLocation("/terms-consent");
     }
-  }, [isAuthenticated, isLoading, location, setLocation]);
+  }, [isAuthenticated, isLoading, location, setLocation, hasAcceptedTerms]);
 
   // Show loading screen while checking authentication
   if (isLoading) {
@@ -60,9 +70,19 @@ function ProtectedRouter() {
     );
   }
 
+  // Show terms page publicly if on /terms route
+  if (location === "/terms") {
+    return <Terms />;
+  }
+
   // Show login page if not authenticated
   if (!isAuthenticated) {
     return <Login />;
+  }
+
+  // Show terms consent page if user hasn't accepted terms
+  if (location === "/terms-consent") {
+    return <TermsConsent />;
   }
 
   // Render authenticated app with layout
@@ -285,6 +305,21 @@ function AuthenticatedApp() {
               <Route path="(.*)" component={NotFound} />
             </Switch>
           </main>
+          <footer className="border-t bg-background p-4">
+            <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
+              <a 
+                href="/terms" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="hover:text-foreground underline"
+                data-testid="link-footer-terms"
+              >
+                Terms and Conditions
+              </a>
+              <span>•</span>
+              <span>BCI Parking Spot Sharing Platform</span>
+            </div>
+          </footer>
         </div>
       </div>
     </SidebarProvider>

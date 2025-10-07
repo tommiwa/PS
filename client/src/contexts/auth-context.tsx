@@ -13,6 +13,8 @@ interface AuthUser {
   memberSince?: string;
   roles: UserRole[];
   profileImageUrl?: string;
+  acceptedTermsVersion?: number | null;
+  acceptedTermsAt?: string | null;
 }
 
 interface AuthContextType {
@@ -33,6 +35,8 @@ interface AuthContextType {
   isViewingAs: (role: UserRole) => boolean;
   refreshUser: () => Promise<void>;
   effectiveRole: UserRole | null;
+  // Terms and Conditions
+  hasAcceptedTerms: () => boolean;
 }
 
 // Create a default context value to prevent HMR issues
@@ -53,6 +57,7 @@ const defaultAuthContextValue: AuthContextType = {
   isViewingAs: () => false,
   refreshUser: async () => { throw new Error("AuthProvider not initialized") },
   effectiveRole: null,
+  hasAcceptedTerms: () => false,
 };
 
 const AuthContext = createContext<AuthContextType>(defaultAuthContextValue);
@@ -194,6 +199,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     await fetchUser();
   };
 
+  const hasAcceptedTerms = (): boolean => {
+    return !!user?.acceptedTermsVersion;
+  };
+
   const value: AuthContextType = {
     user,
     isAuthenticated: !!user,
@@ -211,6 +220,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isViewingAs,
     refreshUser,
     effectiveRole: getEffectiveRole(),
+    hasAcceptedTerms,
   };
 
   return (
