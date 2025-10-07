@@ -201,6 +201,7 @@ export const spotListings = pgTable("spot_listings", {
   dailyRate: decimal("daily_rate", { precision: 10, scale: 2 }).notNull(),
   status: text("status").notNull().$type<ListingStatus>().default("active"),
   notes: text("notes"),
+  adminNotes: text("admin_notes"), // Admin-only notes
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -232,6 +233,10 @@ export const bookings = pgTable("bookings", {
   status: text("status").notNull().$type<BookingStatus>().default("confirmed"),
   paymentReceived: boolean("payment_received").notNull().default(false), // Track payment status
   notes: text("notes"),
+  adminNotes: text("admin_notes"), // Admin-only notes
+  cancellationReason: text("cancellation_reason"), // Reason for cancellation
+  paymentRefundedAt: timestamp("payment_refunded_at"), // When payment was refunded
+  refundAmount: decimal("refund_amount", { precision: 10, scale: 2 }), // Amount refunded
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -244,6 +249,35 @@ export const insertBookingSchema = createInsertSchema(bookings).omit({
 
 export type InsertBooking = z.infer<typeof insertBookingSchema>;
 export type Booking = typeof bookings.$inferSelect;
+
+// Disputes Table
+export const disputeStatuses = z.enum(["open", "investigating", "resolved", "closed"]);
+export type DisputeStatus = z.infer<typeof disputeStatuses>;
+
+export const disputes = pgTable("disputes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  bookingId: varchar("booking_id").notNull(), // References bookings.id
+  reporterId: varchar("reporter_id").notNull(), // User who reported the dispute (renter or owner)
+  targetUserId: varchar("target_user_id").notNull(), // User the dispute is against
+  reason: text("reason").notNull(), // Dispute reason/description
+  status: text("status").notNull().$type<DisputeStatus>().default("open"),
+  resolutionNotes: text("resolution_notes"), // Admin resolution notes
+  refundAmount: decimal("refund_amount", { precision: 10, scale: 2 }), // Refund amount if applicable
+  resolvedAt: timestamp("resolved_at"), // When dispute was resolved
+  resolvedBy: varchar("resolved_by"), // Admin who resolved it
+  auditTrail: text("audit_trail"), // JSON string of audit snapshots
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertDisputeSchema = createInsertSchema(disputes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertDispute = z.infer<typeof insertDisputeSchema>;
+export type Dispute = typeof disputes.$inferSelect;
 
 // Waiting List Schema
 export const waitingList = pgTable("waiting_list", {
