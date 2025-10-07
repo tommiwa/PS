@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react"
 import { useQuery, useMutation } from "@tanstack/react-query"
+import { useLocation, useSearch } from "wouter"
 import { queryClient, apiRequest } from "@/lib/queryClient"
 import { useToast } from "@/hooks/use-toast"
 import { useConfirm, confirmations } from "@/hooks/use-confirm"
@@ -57,6 +58,9 @@ import {
 } from "lucide-react"
 import type { Booking, BookingStatus, ParkingSpot } from "@shared/schema"
 import { quickExportBookingsPDF, quickExportBookingsExcel, quickExportBookingActivityPDF, quickExportBookingActivityExcel } from "@/utils/export-utils"
+
+// Define BookingScope type
+type BookingScope = 'all' | 'bci';
 
 // Admin-specific interfaces for extended booking data
 interface AdminBookingData {
@@ -150,6 +154,29 @@ export default function AdminSpotBookingManagement() {
   const { toast } = useToast()
   const { confirm } = useConfirm()
   const { t } = useLanguage()
+  const [location, setLocation] = useLocation()
+  const searchParams = useSearch()
+  
+  // Initialize scope from URL parameter, defaulting to 'all' if not specified
+  const urlScope = new URLSearchParams(searchParams).get('scope') as BookingScope | null
+  const [scope, setScope] = useState<BookingScope>(
+    urlScope === 'bci' ? 'bci' : 'all'
+  )
+  
+  // Update URL when scope changes (without page reload)
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams)
+    if (scope === 'all') {
+      params.delete('scope')
+    } else {
+      params.set('scope', scope)
+    }
+    const newSearch = params.toString()
+    const newPath = location + (newSearch ? `?${newSearch}` : '')
+    if (newPath !== location + searchParams) {
+      setLocation(newPath)
+    }
+  }, [scope])
   
   const [searchTerm, setSearchTerm] = useState("")
   const [filterValues, setFilterValues] = useState<FilterValues>({})
@@ -217,12 +244,12 @@ export default function AdminSpotBookingManagement() {
     setIsRefreshing(true)
     try {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-availability"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/active-bookings"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-payments"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/past-bookings"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-activity"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-analytics"] })
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-availability", scope] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/active-bookings", scope] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-payments", scope] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/past-bookings", scope] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-activity", scope] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-analytics", scope] })
       ])
       toast({
         title: "Refreshed",
@@ -244,51 +271,57 @@ export default function AdminSpotBookingManagement() {
     // Invalidate relevant queries based on the active tab
     switch (activeTab) {
       case "availability":
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-availability"] })
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-availability", scope] })
         break
       case "active":
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/active-bookings"] })
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/active-bookings", scope] })
         break
       case "pending-payments":
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-payments"] })
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-payments", scope] })
         break
       case "past":
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/past-bookings"] })
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/past-bookings", scope] })
         break
       case "activity":
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-activity"] })
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-activity", scope] })
         break
     }
-  }, [activeTab])
+  }, [activeTab, scope])
 
   // Fetch active bookings
   const { data: activeBookings = [], isLoading: isLoadingActive } = useQuery<AdminBookingData[]>({
-    queryKey: ["/api/admin/active-bookings"],
+    queryKey: ["/api/admin/active-bookings", scope],
+    queryFn: () => fetch(`/api/admin/active-bookings?scope=${scope}`).then(r => r.json())
   });
 
   // Fetch booking activity data
   const { data: bookingActivity, isLoading: isLoadingActivity } = useQuery({
-    queryKey: ["/api/admin/booking-activity", { pageSize: 100 }],
+    queryKey: ["/api/admin/booking-activity", scope],
+    queryFn: () => fetch(`/api/admin/booking-activity?scope=${scope}&pageSize=100`).then(r => r.json())
   });
 
   // Fetch past bookings (completed, cancelled, expired)
   const { data: pastBookings = [], isLoading: isLoadingPastBookings } = useQuery<AdminBookingData[]>({
-    queryKey: ["/api/admin/past-bookings"],
+    queryKey: ["/api/admin/past-bookings", scope],
+    queryFn: () => fetch(`/api/admin/past-bookings?scope=${scope}`).then(r => r.json())
   });
 
   // Fetch booking availability
   const { data: bookingAvailability = [], isLoading: isLoadingAvailability } = useQuery<BookingAvailabilityData[]>({
-    queryKey: ["/api/admin/booking-availability"],
+    queryKey: ["/api/admin/booking-availability", scope],
+    queryFn: () => fetch(`/api/admin/booking-availability?scope=${scope}`).then(r => r.json())
   });
 
   // Fetch pending payments
   const { data: pendingPayments = [], isLoading: isLoadingPendingPayments } = useQuery<PendingPaymentData[]>({
-    queryKey: ["/api/admin/pending-payments"],
+    queryKey: ["/api/admin/pending-payments", scope],
+    queryFn: () => fetch(`/api/admin/pending-payments?scope=${scope}`).then(r => r.json())
   });
 
   // Fetch booking analytics
   const { data: bookingAnalytics, isLoading: isLoadingAnalytics } = useQuery<BookingAnalytics>({
-    queryKey: ["/api/admin/booking-analytics"],
+    queryKey: ["/api/admin/booking-analytics", scope],
+    queryFn: () => fetch(`/api/admin/booking-analytics?scope=${scope}`).then(r => r.json())
   });
 
 
@@ -871,8 +904,8 @@ export default function AdminSpotBookingManagement() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/active-bookings"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-activity"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/active-bookings", scope] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-activity", scope] });
       
       toast({
         title: "Booking Cancelled",
@@ -903,9 +936,9 @@ export default function AdminSpotBookingManagement() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-payments"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/active-bookings"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-activity"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-payments", scope] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/active-bookings", scope] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-activity", scope] });
       
       toast({
         title: "Payment Marked as Received",
@@ -941,8 +974,8 @@ export default function AdminSpotBookingManagement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/disputes"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/active-bookings"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-payments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/active-bookings", scope] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-payments", scope] });
       toast({
         title: "Dispute Created",
         description: "The dispute has been successfully flagged and is now under investigation.",
@@ -972,9 +1005,9 @@ export default function AdminSpotBookingManagement() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-payments"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/past-bookings"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-activity"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-payments", scope] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/past-bookings", scope] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-activity", scope] });
       toast({
         title: "Refund Processed",
         description: "The refund has been successfully processed and recorded.",
@@ -1003,9 +1036,9 @@ export default function AdminSpotBookingManagement() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/active-bookings"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-payments"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/past-bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/active-bookings", scope] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-payments", scope] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/past-bookings", scope] });
       toast({
         title: "Admin Notes Saved",
         description: "Admin notes have been successfully saved to the booking.",
@@ -1142,7 +1175,7 @@ export default function AdminSpotBookingManagement() {
                       title: "Export Failed",
                       description: errorMessage
                     })
-                  })
+                  }, scope)
                   if (success) {
                     toast({
                       title: "Export Successful",
@@ -1173,7 +1206,7 @@ export default function AdminSpotBookingManagement() {
                       title: "Export Failed",
                       description: errorMessage
                     })
-                  })
+                  }, scope)
                   if (success) {
                     toast({
                       title: "Export Successful",
@@ -1195,6 +1228,40 @@ export default function AdminSpotBookingManagement() {
         </div>
       </div>
 
+      {/* Scope Selector - BCI vs All Spots */}
+      <div className="bg-muted/50 rounded-lg p-4 border" data-testid="scope-selector">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex-1">
+            <h3 className="text-sm font-semibold mb-1">Viewing Context</h3>
+            <p className="text-xs text-muted-foreground">
+              {scope === 'bci' 
+                ? 'Showing only BCI-managed parking spots and bookings' 
+                : 'Showing all parking spots and bookings in the system'}
+            </p>
+          </div>
+          <Tabs value={scope} onValueChange={(value) => setScope(value as BookingScope)} className="w-auto">
+            <TabsList className="grid w-[320px] grid-cols-2">
+              <TabsTrigger value="all" data-testid="scope-tab-all" className="gap-2">
+                <MapPin className="h-4 w-4" />
+                All Spots
+              </TabsTrigger>
+              <TabsTrigger value="bci" data-testid="scope-tab-bci" className="gap-2">
+                <Settings className="h-4 w-4" />
+                BCI Managed Spots
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+        {scope === 'bci' && (
+          <Alert className="mt-3">
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              You are viewing only BCI-managed parking spots. Switch to "All Spots" to see the complete system.
+            </AlertDescription>
+          </Alert>
+        )}
+      </div>
+
       {/* Quick Analytics Cards */}
       {cardsVisible && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -1202,35 +1269,10 @@ export default function AdminSpotBookingManagement() {
             <TooltipTrigger asChild>
               <Card 
                 className="hover-elevate cursor-pointer active-elevate-2"
-                onClick={() => setActiveTab("availability")}
-              >
-                <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Booking Availability</CardTitle>
-                  <div className="rounded-full border-2 border-green-400 p-2">
-                    <CalendarCheck className="h-4 w-4 text-green-600" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold" data-testid="stat-booking-availability">
-                    {displayAnalytics.totalActiveBookings}
-                  </div>
-                  <p className="text-xs text-green-600">Available spots</p>
-                </CardContent>
-              </Card>
-            </TooltipTrigger>
-            <TooltipContent>
-              Click to view available spots for booking
-            </TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Card 
-                className="hover-elevate cursor-pointer active-elevate-2"
                 onClick={() => setActiveTab("active")}
               >
                 <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Active Bookings</CardTitle>
+                  <CardTitle className="text-sm font-medium">Total Active Bookings</CardTitle>
                   <div className="rounded-full border-2 border-blue-400 p-2">
                     <CheckCircle2 className="h-4 w-4 text-blue-600" />
                   </div>
@@ -1252,24 +1294,49 @@ export default function AdminSpotBookingManagement() {
             <TooltipTrigger asChild>
               <Card 
                 className="hover-elevate cursor-pointer active-elevate-2"
-                onClick={() => setActiveTab("pending-payments")}
+                onClick={() => setActiveTab("active")}
               >
                 <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Pending Payments</CardTitle>
-                  <div className="rounded-full border-2 border-orange-400 p-2">
-                    <DollarSign className="h-4 w-4 text-orange-600" />
+                  <CardTitle className="text-sm font-medium">Daily Revenue</CardTitle>
+                  <div className="rounded-full border-2 border-green-400 p-2">
+                    <DollarSign className="h-4 w-4 text-green-600" />
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold" data-testid="stat-pending-payments">
-                    {displayAnalytics.pendingRequests}
+                  <div className="text-2xl font-bold" data-testid="stat-daily-revenue">
+                    ${displayAnalytics.totalDailyRevenue?.toLocaleString() || 0}
                   </div>
-                  <p className="text-xs text-orange-600">Awaiting payment</p>
+                  <p className="text-xs text-green-600">Today's revenue</p>
                 </CardContent>
               </Card>
             </TooltipTrigger>
             <TooltipContent>
-              Click to view bookings with pending payments
+              View total daily revenue from bookings
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card 
+                className="hover-elevate cursor-pointer active-elevate-2"
+                onClick={() => setActiveTab("pending-payments")}
+              >
+                <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
+                  <div className="rounded-full border-2 border-orange-400 p-2">
+                    <AlertCircle className="h-4 w-4 text-orange-600" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold" data-testid="stat-pending-requests">
+                    {displayAnalytics.pendingRequests}
+                  </div>
+                  <p className="text-xs text-orange-600">Awaiting action</p>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent>
+              Click to view pending booking requests
             </TooltipContent>
           </Tooltip>
 
@@ -1280,21 +1347,21 @@ export default function AdminSpotBookingManagement() {
                 onClick={() => setActiveTab("activity")}
               >
                 <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Recent Activity</CardTitle>
+                  <CardTitle className="text-sm font-medium">Resolved Disputes</CardTitle>
                   <div className="rounded-full border-2 border-purple-400 p-2">
                     <Activity className="h-4 w-4 text-purple-600" />
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold" data-testid="stat-recent-activity">
-                    {displayAnalytics.occupancyRate}%
+                  <div className="text-2xl font-bold" data-testid="stat-resolved-disputes">
+                    {displayAnalytics.resolvedDisputes}
                   </div>
-                  <p className="text-xs text-purple-600">Recent changes</p>
+                  <p className="text-xs text-purple-600">Successfully resolved</p>
                 </CardContent>
               </Card>
             </TooltipTrigger>
             <TooltipContent>
-              Click to view recent booking activity and changes
+              Click to view resolved dispute statistics
             </TooltipContent>
           </Tooltip>
         </div>
@@ -1353,7 +1420,11 @@ export default function AdminSpotBookingManagement() {
                 <div className="text-center py-8 text-muted-foreground" data-testid="empty-availability">
                   <Car className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>No available spots found</p>
-                  <p className="text-sm">Spot availability listings will appear here.</p>
+                  <p className="text-sm">
+                    {scope === 'bci' 
+                      ? 'No BCI-managed spot availability listings found. Switch to "All Spots" to see system-wide availability.' 
+                      : 'Spot availability listings will appear here.'}
+                  </p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -1567,6 +1638,16 @@ export default function AdminSpotBookingManagement() {
                     <Skeleton key={i} className="h-16 w-full" />
                   ))}
                 </div>
+              ) : sortedActiveBookings.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground" data-testid="empty-active-bookings">
+                  <CheckCircle2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No active bookings found</p>
+                  <p className="text-sm">
+                    {scope === 'bci' 
+                      ? 'No active BCI-managed bookings found. Switch to "All Spots" to see all active bookings in the system.' 
+                      : 'Active bookings will appear here.'}
+                  </p>
+                </div>
               ) : (
                 <>
                   <Table>
@@ -1773,7 +1854,11 @@ export default function AdminSpotBookingManagement() {
                 <div className="text-center py-8 text-muted-foreground" data-testid="empty-pending-payments">
                   <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>No pending payments found</p>
-                  <p className="text-sm">Bookings with pending payments will appear here.</p>
+                  <p className="text-sm">
+                    {scope === 'bci' 
+                      ? 'No pending payments for BCI-managed bookings. Switch to "All Spots" to see all pending payments.' 
+                      : 'Bookings with pending payments will appear here.'}
+                  </p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -2022,7 +2107,7 @@ export default function AdminSpotBookingManagement() {
                           title: "Export Failed",
                           description: errorMessage
                         })
-                      })
+                      }, scope)
                       if (success) {
                         toast({
                           title: "Export Successful",
@@ -2046,7 +2131,7 @@ export default function AdminSpotBookingManagement() {
                           title: "Export Failed",
                           description: errorMessage
                         })
-                      })
+                      }, scope)
                       if (success) {
                         toast({
                           title: "Export Successful",
@@ -2073,7 +2158,11 @@ export default function AdminSpotBookingManagement() {
                 <div className="text-center py-8 text-muted-foreground" data-testid="empty-past-bookings">
                   <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>No past bookings found</p>
-                  <p className="text-sm">Completed, cancelled, and expired bookings will appear here.</p>
+                  <p className="text-sm">
+                    {scope === 'bci' 
+                      ? 'No past BCI-managed bookings found. Switch to "All Spots" to see all past bookings in the system.' 
+                      : 'Completed, cancelled, and expired bookings will appear here.'}
+                  </p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -2234,7 +2323,7 @@ export default function AdminSpotBookingManagement() {
                           title: "Export Failed",
                           description: errorMessage
                         })
-                      })
+                      }, scope)
                       if (success) {
                         toast({
                           title: "Export Successful",
@@ -2258,7 +2347,7 @@ export default function AdminSpotBookingManagement() {
                           title: "Export Failed",
                           description: errorMessage
                         })
-                      })
+                      }, scope)
                       if (success) {
                         toast({
                           title: "Export Successful",
@@ -2285,7 +2374,11 @@ export default function AdminSpotBookingManagement() {
                 <div className="text-center py-8 text-muted-foreground" data-testid="empty-booking-activity">
                   <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>No booking activity found</p>
-                  <p className="text-sm">Booking activity will appear here as users interact with the system.</p>
+                  <p className="text-sm">
+                    {scope === 'bci' 
+                      ? 'No activity found for BCI-managed bookings. Switch to "All Spots" to see all booking activity.' 
+                      : 'Booking activity will appear here as users interact with the system.'}
+                  </p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">

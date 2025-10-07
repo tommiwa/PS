@@ -274,10 +274,10 @@ export interface IStorage {
   }>;
   
   // Spot Booking Management methods
-  getBookingAvailability(): Promise<Array<SpotListing & { spot: ParkingSpot }>>;
-  getPendingPaymentBookings(): Promise<Array<Booking & { spot: ParkingSpot; user: User }>>;
-  getActiveBookings(): Promise<Array<Booking & { spot: ParkingSpot; user: User }>>;
-  getPastBookings(): Promise<Array<Booking & { spot: ParkingSpot; user: User }>>;
+  getBookingAvailability(isBciOnly?: boolean): Promise<Array<SpotListing & { spot: ParkingSpot }>>;
+  getPendingPaymentBookings(isBciOnly?: boolean): Promise<Array<Booking & { spot: ParkingSpot; user: User }>>;
+  getActiveBookings(isBciOnly?: boolean): Promise<Array<Booking & { spot: ParkingSpot; user: User }>>;
+  getPastBookings(isBciOnly?: boolean): Promise<Array<Booking & { spot: ParkingSpot; user: User }>>;
   
   // Dispute operations
   createDispute(dispute: InsertDispute): Promise<Dispute>;
@@ -2460,7 +2460,7 @@ export class MemStorage implements IStorage {
   }
 
   // Spot Booking Management methods
-  async getBookingAvailability(): Promise<Array<SpotListing & { spot: ParkingSpot }>> {
+  async getBookingAvailability(isBciOnly?: boolean): Promise<Array<SpotListing & { spot: ParkingSpot }>> {
     const today = new Date().toISOString().split('T')[0];
     
     const availableListings = await db
@@ -2487,10 +2487,15 @@ export class MemStorage implements IStorage {
       })
     );
     
+    // Filter by BCI-managed spots if requested
+    if (isBciOnly) {
+      return enrichedListings.filter(listing => listing.spot.isBciManaged);
+    }
+    
     return enrichedListings;
   }
 
-  async getPendingPaymentBookings(): Promise<Array<Booking & { spot: ParkingSpot; user: User }>> {
+  async getPendingPaymentBookings(isBciOnly?: boolean): Promise<Array<Booking & { spot: ParkingSpot; user: User }>> {
     const pendingBookings = await db
       .select()
       .from(bookings)
@@ -2510,10 +2515,15 @@ export class MemStorage implements IStorage {
       })
     );
     
+    // Filter by BCI-managed spots if requested
+    if (isBciOnly) {
+      return enrichedBookings.filter(booking => booking.spot.isBciManaged);
+    }
+    
     return enrichedBookings;
   }
 
-  async getActiveBookings(): Promise<Array<Booking & { spot: ParkingSpot; user: User }>> {
+  async getActiveBookings(isBciOnly?: boolean): Promise<Array<Booking & { spot: ParkingSpot; user: User }>> {
     const today = new Date().toISOString().split('T')[0];
     
     const activeBookings = await db
@@ -2538,10 +2548,15 @@ export class MemStorage implements IStorage {
       })
     );
     
+    // Filter by BCI-managed spots if requested
+    if (isBciOnly) {
+      return enrichedBookings.filter(booking => booking.spot.isBciManaged);
+    }
+    
     return enrichedBookings;
   }
 
-  async getPastBookings(): Promise<Array<Booking & { spot: ParkingSpot; user: User }>> {
+  async getPastBookings(isBciOnly?: boolean): Promise<Array<Booking & { spot: ParkingSpot; user: User }>> {
     const today = new Date().toISOString().split('T')[0];
     
     const pastBookings = await db
@@ -2563,6 +2578,11 @@ export class MemStorage implements IStorage {
         return { ...booking, spot: spot!, user: user! };
       })
     );
+    
+    // Filter by BCI-managed spots if requested
+    if (isBciOnly) {
+      return enrichedBookings.filter(booking => booking.spot.isBciManaged);
+    }
     
     return enrichedBookings;
   }

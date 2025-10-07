@@ -316,7 +316,7 @@ export class ExcelExporter {
 }
 
 // Convenience functions for common export scenarios
-export const exportBookingsData = (bookings: any[], title: string = 'Booking Report') => {
+export const exportBookingsData = (bookings: any[], title: string = 'Booking Report', scope?: string) => {
   const columns: ExportColumn[] = [
     { header: 'Booking ID', dataKey: 'id', width: 15 },
     { header: 'Spot Number', dataKey: 'spotNumber', width: 12 },
@@ -332,12 +332,15 @@ export const exportBookingsData = (bookings: any[], title: string = 'Booking Rep
     { header: 'Payment Status', dataKey: 'paymentReceived', width: 15, formatter: (received) => received ? 'Received' : 'Pending' }
   ]
 
+  const scopeSuffix = scope === 'bci' ? '-bci-managed' : scope === 'all' ? '-all' : ''
+  const filename = `bookings-report${scopeSuffix}-${new Date().toISOString().split('T')[0]}`
+
   const exportData: ExportData = {
     title,
-    subtitle: 'Active Bookings Management Report',
+    subtitle: scope === 'bci' ? 'BCI-Managed Bookings Report' : 'Active Bookings Management Report',
     data: bookings,
     columns,
-    filename: `bookings-report-${new Date().toISOString().split('T')[0]}`,
+    filename,
     summary: {
       totalRecords: bookings.length,
       additionalStats: [
@@ -435,14 +438,14 @@ export const exportToExcel = (exportData: ExportData) => {
 }
 
 // Quick export functions for admin pages with error handling and empty data guards
-export const quickExportBookingsPDF = (bookings: any[], title?: string, onError?: (message: string) => void) => {
+export const quickExportBookingsPDF = (bookings: any[], title?: string, onError?: (message: string) => void, scope?: string) => {
   try {
     if (!bookings || bookings.length === 0) {
       const message = 'No booking data available to export'
       if (onError) onError(message)
       return false
     }
-    const exportData = exportBookingsData(bookings, title)
+    const exportData = exportBookingsData(bookings, title, scope)
     exportToPDF(exportData)
     return true
   } catch (error) {
@@ -453,14 +456,14 @@ export const quickExportBookingsPDF = (bookings: any[], title?: string, onError?
   }
 }
 
-export const quickExportBookingsExcel = (bookings: any[], title?: string, onError?: (message: string) => void) => {
+export const quickExportBookingsExcel = (bookings: any[], title?: string, onError?: (message: string) => void, scope?: string) => {
   try {
     if (!bookings || bookings.length === 0) {
       const message = 'No booking data available to export'
       if (onError) onError(message)
       return false
     }
-    const exportData = exportBookingsData(bookings, title)
+    const exportData = exportBookingsData(bookings, title, scope)
     exportToExcel(exportData)
     return true
   } catch (error) {
@@ -697,7 +700,7 @@ export const quickExportBookingRequestsExcel = (requests: any[], title?: string,
 }
 
 // Export functions for booking activity
-export const exportBookingActivityData = (activities: any[], title: string = 'Booking Activity Report') => {
+export const exportBookingActivityData = (activities: any[], title: string = 'Booking Activity Report', scope?: string) => {
   const columns: ExportColumn[] = [
     { header: 'ID', dataKey: 'id', width: 15 },
     { header: 'Activity Type', dataKey: 'type', width: 20, formatter: (type) => {
@@ -720,12 +723,15 @@ export const exportBookingActivityData = (activities: any[], title: string = 'Bo
     { header: 'Details', dataKey: 'details', width: 50 }
   ]
 
+  const scopeSuffix = scope === 'bci' ? '-bci-managed' : scope === 'all' ? '-all' : ''
+  const filename = `booking-activity-report${scopeSuffix}-${new Date().toISOString().split('T')[0]}`
+
   const exportData: ExportData = {
     title,
-    subtitle: 'Booking Activity Log Report',
+    subtitle: scope === 'bci' ? 'BCI-Managed Booking Activity Log' : 'Booking Activity Log Report',
     data: activities,
     columns,
-    filename: `booking-activity-report-${new Date().toISOString().split('T')[0]}`,
+    filename,
     summary: {
       totalRecords: activities.length,
       additionalStats: [
@@ -742,14 +748,14 @@ export const exportBookingActivityData = (activities: any[], title: string = 'Bo
   return exportData
 }
 
-export const quickExportBookingActivityPDF = (activities: any[], title?: string, onError?: (message: string) => void) => {
+export const quickExportBookingActivityPDF = (activities: any[], title?: string, onError?: (message: string) => void, scope?: string) => {
   try {
     if (!activities || activities.length === 0) {
       const message = 'No booking activity data available to export'
       if (onError) onError(message)
       return false
     }
-    const exportData = exportBookingActivityData(activities, title)
+    const exportData = exportBookingActivityData(activities, title, scope)
     exportToPDF(exportData)
     return true
   } catch (error) {
@@ -760,14 +766,14 @@ export const quickExportBookingActivityPDF = (activities: any[], title?: string,
   }
 }
 
-export const quickExportBookingActivityExcel = (activities: any[], title?: string, onError?: (message: string) => void) => {
+export const quickExportBookingActivityExcel = (activities: any[], title?: string, onError?: (message: string) => void, scope?: string) => {
   try {
     if (!activities || activities.length === 0) {
       const message = 'No booking activity data available to export'
       if (onError) onError(message)
       return false
     }
-    const exportData = exportBookingActivityData(activities, title)
+    const exportData = exportBookingActivityData(activities, title, scope)
     exportToExcel(exportData)
     return true
   } catch (error) {

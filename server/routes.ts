@@ -1661,7 +1661,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get available spot listings for booking management (Admin only)
   app.get("/api/admin/booking-availability", requireAdmin, async (req, res) => {
     try {
-      const availability = await storage.getBookingAvailability();
+      const scope = req.query.scope as string | undefined;
+      const isBciOnly = scope === 'bci';
+      const availability = await storage.getBookingAvailability(isBciOnly);
       res.json(availability);
     } catch (error) {
       console.error("Error fetching booking availability:", error);
@@ -1672,7 +1674,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get bookings with pending payments (Admin only)
   app.get("/api/admin/pending-payments", requireAdmin, async (req, res) => {
     try {
-      const pendingPayments = await storage.getPendingPaymentBookings();
+      const scope = req.query.scope as string | undefined;
+      const isBciOnly = scope === 'bci';
+      const pendingPayments = await storage.getPendingPaymentBookings(isBciOnly);
       res.json(pendingPayments);
     } catch (error) {
       console.error("Error fetching pending payments:", error);
@@ -1683,7 +1687,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get active bookings (confirmed/pending, future dates) (Admin only)
   app.get("/api/admin/active-bookings", requireAdmin, async (req, res) => {
     try {
-      const activeBookings = await storage.getActiveBookings();
+      const scope = req.query.scope as string | undefined;
+      const isBciOnly = scope === 'bci';
+      const activeBookings = await storage.getActiveBookings(isBciOnly);
       res.json(activeBookings);
     } catch (error) {
       console.error("Error fetching active bookings:", error);
@@ -1694,11 +1700,134 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get past bookings (completed/cancelled or past dates) (Admin only)
   app.get("/api/admin/past-bookings", requireAdmin, async (req, res) => {
     try {
-      const pastBookings = await storage.getPastBookings();
+      const scope = req.query.scope as string | undefined;
+      const isBciOnly = scope === 'bci';
+      const pastBookings = await storage.getPastBookings(isBciOnly);
       res.json(pastBookings);
     } catch (error) {
       console.error("Error fetching past bookings:", error);
       res.status(500).json({ error: "Failed to fetch past bookings" });
+    }
+  });
+
+  // Get booking analytics (Admin only)
+  app.get("/api/admin/booking-analytics", requireAdmin, async (req, res) => {
+    try {
+      const scope = req.query.scope as string | undefined;
+      const isBciOnly = scope === 'bci';
+      
+      // Fetch data with scope filtering
+      const activeBookings = await storage.getActiveBookings(isBciOnly);
+      const pendingPayments = await storage.getPendingPaymentBookings(isBciOnly);
+      const allBookings = await storage.getAllBookings();
+      
+      // Filter all bookings by BCI if needed
+      const filteredBookings = isBciOnly 
+        ? await Promise.all(
+            allBookings.map(async (booking) => {
+              const spot = await storage.getParkingSpot(booking.spotId);
+              return spot?.isBciManaged ? booking : null;
+            })
+          ).then(results => results.filter(b => b !== null))
+        : allBookings;
+      
+      // Get today's date for filtering
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayStr = today.toISOString().split('T')[0];
+      
+      // Calculate this week's start date (Monday)
+      const thisWeekStart = new Date(today);
+      thisWeekStart.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1));
+      const thisWeekStartStr = thisWeekStart.toISOString().split('T')[0];
+      
+      // Calculate analytics
+      const totalActiveBookings = activeBookings.length;
+      const pendingRequests = pendingPayments.length;
+      
+      // Today's bookings
+      const todayBookings = filteredBookings.filter(b => b.bookingDate === todayStr).length;
+      
+      // This week's bookings
+      const thisWeekBookings = filteredBookings.filter(b => b.bookingDate >= thisWeekStartStr).length;
+      
+      // Total daily revenue (from today's bookings)
+      const totalDailyRevenue = filteredBookings
+        .filter(b => b.bookingDate === todayStr)
+        .reduce((sum, b) => sum + Number(b.totalAmount || 0), 0);
+      
+      // Average booking value
+      const averageBookingValue = filteredBookings.length > 0
+        ? filteredBookings.reduce((sum, b) => sum + Number(b.totalAmount || 0), 0) / filteredBookings.length
+        : 0;
+      
+      // Occupancy rate - calculate based on BCI spots if filtered
+      const allSpots = await storage.getAllParkingSpots();
+      const totalBookableSpots = isBciOnly
+        ? allSpots.filter(s => s.isBookable && s.isBciManaged).length
+        : allSpots.filter(s => s.isBookable).length;
+      
+      const occupancyRate = totalBookableSpots > 0
+        ? (activeBookings.length / totalBookableSpots) * 100
+        : 0;
+      
+      // Get disputes (no BCI filtering needed, but we can add if required)
+      const disputes = await storage.getDisputes({ status: 'resolved' });
+      const resolvedDisputes = disputes.length;
+      
+      // Popular spots - top 5 by booking count
+      const spotBookingCounts = new Map<string, { count: number; spotNumber: string }>();
+      for (const booking of filteredBookings) {
+        const spot = await storage.getParkingSpot(booking.spotId);
+        if (spot) {
+          const current = spotBookingCounts.get(booking.spotId) || { count: 0, spotNumber: spot.spotNumber };
+          spotBookingCounts.set(booking.spotId, { count: current.count + 1, spotNumber: spot.spotNumber });
+        }
+      }
+      
+      const popularSpots = Array.from(spotBookingCounts.entries())
+        .map(([id, data]) => ({ id, spotNumber: data.spotNumber, bookings: data.count }))
+        .sort((a, b) => b.bookings - a.bookings)
+        .slice(0, 5);
+      
+      // User activity - count active renters and owners from filtered bookings
+      const activeRenterIds = new Set(activeBookings.map(b => b.renterId));
+      const activeOwnerIds = new Set<string>();
+      for (const booking of activeBookings) {
+        const spot = await storage.getParkingSpot(booking.spotId);
+        if (spot?.ownerId) activeOwnerIds.add(spot.ownerId);
+      }
+      
+      // New signups in the last 7 days
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const allUsers = await storage.getAllUsers();
+      const newSignups = allUsers.filter(u => {
+        const createdAt = u.createdAt ? new Date(u.createdAt) : null;
+        return createdAt && createdAt >= sevenDaysAgo;
+      }).length;
+      
+      const analytics = {
+        totalActiveBookings,
+        totalDailyRevenue,
+        pendingRequests,
+        resolvedDisputes,
+        averageBookingValue,
+        occupancyRate,
+        todayBookings,
+        thisWeekBookings,
+        popularSpots,
+        userActivity: {
+          activeRenters: activeRenterIds.size,
+          activeOwners: activeOwnerIds.size,
+          newSignups
+        }
+      };
+      
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching booking analytics:", error);
+      res.status(500).json({ error: "Failed to fetch booking analytics" });
     }
   });
 
@@ -3139,6 +3268,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         pageSize = "25"
       } = validatedQuery;
 
+      // Get scope parameter
+      const scope = req.query.scope as string | undefined;
+      const isBciOnly = scope === 'bci';
+
       // Build audit query filters for booking-related activities
       const filters: AuditQueryFilters = {
         actions: ["CREATE", "UPDATE", "CANCEL", "COMPLETE"],
@@ -3203,13 +3336,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         });
       
+      // Filter by BCI-managed spots if requested
+      let filteredActivityItems = activityItems;
+      if (isBciOnly) {
+        filteredActivityItems = await Promise.all(
+          activityItems.map(async (item) => {
+            if (!item.relatedEntity) return null;
+            
+            try {
+              if (item.relatedEntity.type === 'booking') {
+                const booking = await storage.getBooking(item.relatedEntity.id);
+                if (!booking) return null;
+                const spot = await storage.getParkingSpot(booking.spotId);
+                return spot?.isBciManaged ? item : null;
+              } else if (item.relatedEntity.type === 'spot_listing') {
+                const listing = await storage.getSpotListing(item.relatedEntity.id);
+                if (!listing) return null;
+                const spot = await storage.getParkingSpot(listing.spotId);
+                return spot?.isBciManaged ? item : null;
+              } else if (item.relatedEntity.type === 'parking_spot') {
+                const spot = await storage.getParkingSpot(item.relatedEntity.id);
+                return spot?.isBciManaged ? item : null;
+              }
+              return null;
+            } catch (error) {
+              console.error(`Error filtering activity item ${item.id}:`, error);
+              return null;
+            }
+          })
+        ).then(results => results.filter(item => item !== null));
+      }
+      
       // Return data in expected format
       res.json({
-        items: activityItems,
-        total: activityItems.length, // Use filtered count
+        items: filteredActivityItems,
+        total: filteredActivityItems.length, // Use filtered count
         page: result.page,
         pageSize: result.limit,
-        totalPages: Math.ceil(activityItems.length / result.limit)
+        totalPages: Math.ceil(filteredActivityItems.length / result.limit)
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
