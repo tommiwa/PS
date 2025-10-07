@@ -37,6 +37,7 @@ Preferred communication style: Simple, everyday language.
 - **Role Assignment Logic**: Default "renter" on first login, "owner" for users with assigned spots, "admin" via hardcoded emails or manual assignment. Email-based matching preserves manually assigned roles during OIDC login.
 - **Landing Pages**: Role-specific dashboards (Admin → `/admin`, Owner → `/my-spots`, Renter → `/search`).
 - **"View As" Functionality**: Admin-only session-based role impersonation for testing and support.
+- **Terms & Conditions**: Mandatory one-time acceptance system with versioned legal terms. New users must accept T&C before accessing the platform. Terms are simplified with emojis and clear sections for readability. Public access to terms available on login page and throughout the app.
 
 ### Design System
 - **Color Palette**: Professional blue (#2563eb), neutral grays, semantic colors.
