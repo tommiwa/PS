@@ -142,7 +142,7 @@ async function upsertUser(
       lastName: userData.lastName || existingEmailUser.lastName,
       profileImageUrl: userData.profileImageUrl,
       phone: existingEmailUser.phone,
-      department: existingEmailUser.department,
+      departmentId: existingEmailUser.departmentId,
       memberSince: existingEmailUser.memberSince,
       roles: finalRoles,
       lastLogin: now,
@@ -609,7 +609,11 @@ export async function getAuthenticatedUserBaseRole(req: any): Promise<string | n
   
   try {
     const user = await storage.getUser(userId);
-    // Return the primary role (first one in the array) for backward compatibility
+    // If user has admin role anywhere in their roles array, return 'admin'
+    // Otherwise return the primary role (first one in the array) for backward compatibility
+    if (user?.roles?.includes('admin')) {
+      return 'admin';
+    }
     return user?.roles?.[0] || null;
   } catch (error) {
     console.error("Error getting user base role:", error);
