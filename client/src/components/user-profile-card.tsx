@@ -189,7 +189,7 @@ export function UserProfileCard({
                     <div className={`w-3 h-3 rounded-full ${spot.isBciManaged ? 'bg-blue-500' : 'bg-green-500'}`} />
                     <div>
                       <div className="text-sm font-medium">
-                        {t("profile.spotNumber", { number: spot.spotNumber })}
+                        Spot {spot.spotNumber}
                         {spot.isBciManaged && (
                           <Tooltip>
                             <TooltipTrigger asChild>
