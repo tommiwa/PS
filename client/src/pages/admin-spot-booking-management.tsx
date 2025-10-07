@@ -1592,17 +1592,22 @@ export default function AdminSpotBookingManagement() {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedAvailabilityListing(listing);
-                                setShowAvailabilityDetailsDialog(true);
-                              }}
-                              data-testid={`button-view-details-${listing.id}`}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedAvailabilityListing(listing);
+                                    setShowAvailabilityDetailsDialog(true);
+                                  }}
+                                  data-testid={`button-view-details-${listing.id}`}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>View Details</TooltipContent>
+                            </Tooltip>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1818,39 +1823,54 @@ export default function AdminSpotBookingManagement() {
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedBooking(booking);
-                                setShowBookingDetails(true);
-                              }}
-                              data-testid={`button-view-booking-${booking.id}`}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedBooking(booking);
-                                setShowCancelDialog(true);
-                              }}
-                              data-testid={`button-cancel-booking-${booking.id}`}
-                            >
-                              <Ban className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedBooking(booking);
-                                setShowContactDialog(true);
-                              }}
-                              data-testid={`button-contact-users-${booking.id}`}
-                            >
-                              <MessageSquare className="h-4 w-4" />
-                            </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedBooking(booking);
+                                    setShowBookingDetails(true);
+                                  }}
+                                  data-testid={`button-view-booking-${booking.id}`}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>View Details</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedBooking(booking);
+                                    setShowCancelDialog(true);
+                                  }}
+                                  data-testid={`button-cancel-booking-${booking.id}`}
+                                >
+                                  <Ban className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Cancel Booking</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedBooking(booking);
+                                    setShowContactDialog(true);
+                                  }}
+                                  data-testid={`button-contact-users-${booking.id}`}
+                                >
+                                  <MessageSquare className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Contact Users</TooltipContent>
+                            </Tooltip>
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button
@@ -2024,68 +2044,78 @@ export default function AdminSpotBookingManagement() {
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-1">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedBooking({
-                                    id: payment.id,
-                                    spotNumber: payment.spotNumber,
-                                    spotLocation: payment.spotLocation,
-                                    renterName: payment.renterName,
-                                    renterEmail: payment.renterEmail,
-                                    renterDepartment: '',
-                                    ownerName: payment.ownerName,
-                                    ownerEmail: payment.ownerEmail,
-                                    ownerDepartment: '',
-                                    bookingDate: payment.bookingDate,
-                                    dailyRate: payment.totalAmount,
-                                    totalAmount: payment.totalAmount,
-                                    status: payment.status,
-                                    paymentReceived: false,
-                                    startTime: '',
-                                    endTime: '',
-                                    notes: '',
-                                    createdAt: '',
-                                    lastActivity: ''
-                                  } as AdminBookingData);
-                                  setShowContactDialog(true);
-                                }}
-                                data-testid={`button-contact-renter-${payment.id}`}
-                              >
-                                Contact
-                              </Button>
-                              <Button
-                                variant="default"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedBooking({
-                                    id: payment.id,
-                                    spotNumber: payment.spotNumber,
-                                    spotLocation: payment.spotLocation,
-                                    renterName: payment.renterName,
-                                    renterEmail: payment.renterEmail,
-                                    renterDepartment: '',
-                                    ownerName: payment.ownerName,
-                                    ownerEmail: payment.ownerEmail,
-                                    ownerDepartment: '',
-                                    bookingDate: payment.bookingDate,
-                                    dailyRate: payment.totalAmount,
-                                    totalAmount: payment.totalAmount,
-                                    status: payment.status,
-                                    paymentReceived: false,
-                                    startTime: '',
-                                    endTime: '',
-                                    notes: '',
-                                    createdAt: '',
-                                    lastActivity: ''
-                                  } as AdminBookingData);
-                                  setShowMarkPaidConfirmDialog(true);
-                                }}
-                                data-testid={`button-mark-paid-${payment.id}`}
-                              >
-                                Mark Paid
-                              </Button>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedBooking({
+                                        id: payment.id,
+                                        spotNumber: payment.spotNumber,
+                                        spotLocation: payment.spotLocation,
+                                        renterName: payment.renterName,
+                                        renterEmail: payment.renterEmail,
+                                        renterDepartment: '',
+                                        ownerName: payment.ownerName,
+                                        ownerEmail: payment.ownerEmail,
+                                        ownerDepartment: '',
+                                        bookingDate: payment.bookingDate,
+                                        dailyRate: payment.totalAmount,
+                                        totalAmount: payment.totalAmount,
+                                        status: payment.status,
+                                        paymentReceived: false,
+                                        startTime: '',
+                                        endTime: '',
+                                        notes: '',
+                                        createdAt: '',
+                                        lastActivity: ''
+                                      } as AdminBookingData);
+                                      setShowContactDialog(true);
+                                    }}
+                                    data-testid={`button-contact-renter-${payment.id}`}
+                                  >
+                                    Contact
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Contact Renter</TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedBooking({
+                                        id: payment.id,
+                                        spotNumber: payment.spotNumber,
+                                        spotLocation: payment.spotLocation,
+                                        renterName: payment.renterName,
+                                        renterEmail: payment.renterEmail,
+                                        renterDepartment: '',
+                                        ownerName: payment.ownerName,
+                                        ownerEmail: payment.ownerEmail,
+                                        ownerDepartment: '',
+                                        bookingDate: payment.bookingDate,
+                                        dailyRate: payment.totalAmount,
+                                        totalAmount: payment.totalAmount,
+                                        status: payment.status,
+                                        paymentReceived: false,
+                                        startTime: '',
+                                        endTime: '',
+                                        notes: '',
+                                        createdAt: '',
+                                        lastActivity: ''
+                                      } as AdminBookingData);
+                                      setShowMarkPaidConfirmDialog(true);
+                                    }}
+                                    data-testid={`button-mark-paid-${payment.id}`}
+                                  >
+                                    Mark Paid
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Mark as Paid</TooltipContent>
+                              </Tooltip>
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button
@@ -2321,17 +2351,22 @@ export default function AdminSpotBookingManagement() {
                             ${booking.totalAmount}
                           </TableCell>
                           <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedBooking(booking);
-                                setShowBookingDetails(true);
-                              }}
-                              data-testid={`button-view-details-${booking.id}`}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedBooking(booking);
+                                    setShowBookingDetails(true);
+                                  }}
+                                  data-testid={`button-view-details-${booking.id}`}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>View Details</TooltipContent>
+                            </Tooltip>
                           </TableCell>
                         </TableRow>
                       ))}
