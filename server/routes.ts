@@ -66,6 +66,37 @@ const bulkUpdateSpotsSchema = z.object({
   })
 });
 
+const bulkCreateListingsSchema = z.object({
+  spotIds: z.array(z.string().min(1, "spotId is required")).min(1, "At least one spotId is required"),
+  listingType: z.enum(["single", "period"]),
+  singleDate: z.string().optional(),
+  periodStartDate: z.string().optional(),
+  periodEndDate: z.string().optional(),
+  dailyRate: z.number().positive("Daily rate must be positive")
+}).refine(
+  data => {
+    if (data.listingType === "single") {
+      return !!data.singleDate;
+    } else {
+      return !!data.periodStartDate && !!data.periodEndDate;
+    }
+  },
+  {
+    message: "Single listings require singleDate; period listings require periodStartDate and periodEndDate"
+  }
+).refine(
+  (data) => {
+    if (data.listingType === 'period' && data.periodStartDate && data.periodEndDate) {
+      return new Date(data.periodStartDate) <= new Date(data.periodEndDate);
+    }
+    return true;
+  },
+  {
+    message: "End date must be on or after start date",
+    path: ["periodEndDate"]
+  }
+);
+
 // Zod schemas for audit endpoints
 const auditQuerySchema = z.object({
   from: z.string().optional().refine(val => !val || !isNaN(Date.parse(val)), "Invalid from date"),
@@ -2117,6 +2148,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Dispute not found" });
       }
 
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
       const resolvedDispute = await storage.resolveDispute(id, userId, resolutionNotes, refundAmount);
       
       await auditService.logAction("UPDATE", "booking", {
@@ -2992,6 +3027,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error bulk updating spots:", error);
       res.status(500).json({ error: "Failed to bulk update spots" });
+    }
+  });
+
+  // Bulk create spot listings (Admin only)
+  app.post("/api/admin/bulk-create-listings", requireAdmin, async (req, res) => {
+    try {
+      // Validate request body with Zod
+      const validatedData = bulkCreateListingsSchema.parse(req.body);
+      const { spotIds, listingType, singleDate, periodStartDate, periodEndDate, dailyRate } = validatedData;
+      
+      // Create the listing data object
+      const listingData: any = {
+        listingType,
+        dailyRate: dailyRate.toString(),
+        status: "active"
+      };
+
+      if (listingType === "single" && singleDate) {
+        listingData.singleDate = singleDate;
+      } else if (listingType === "period" && periodStartDate && periodEndDate) {
+        listingData.periodStartDate = periodStartDate;
+        listingData.periodEndDate = periodEndDate;
+      }
+
+      // Create listings for all selected spots
+      const createdListings = await storage.bulkCreateSpotListings(spotIds, listingData);
+      
+      // Audit the bulk creation
+      const dateDescription = listingType === "single" 
+        ? `for ${singleDate}`
+        : `from ${periodStartDate} to ${periodEndDate}`;
+      
+      await auditService.logAction("CREATE", "spot_listing", {
+        entityId: spotIds.join(","),
+        message: `Bulk created ${createdListings.length} spot listings ${dateDescription} at $${dailyRate}/day`,
+        after: { 
+          spotIds, 
+          listingType,
+          singleDate,
+          periodStartDate,
+          periodEndDate,
+          dailyRate,
+          count: createdListings.length,
+          createdListings: createdListings.map(l => ({ 
+            id: l.id, 
+            spotId: l.spotId, 
+            dailyRate: l.dailyRate,
+            listingType: l.listingType
+          }))
+        }
+      });
+      
+      res.json({ 
+        success: true, 
+        createdListings,
+        count: createdListings.length,
+        message: `Successfully created ${createdListings.length} spot listings` 
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input data", details: error.errors });
+      }
+      console.error("Error bulk creating spot listings:", error);
+      res.status(500).json({ error: "Failed to bulk create spot listings" });
     }
   });
 

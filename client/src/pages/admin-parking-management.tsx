@@ -17,6 +17,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Label } from "@/components/ui/label"
+import { Calendar } from "@/components/ui/calendar"
+import { format } from "date-fns"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { SortableTableHeader } from "@/components/ui/sortable-table-header"
 import { EnhancedFilters, type FilterConfig, type FilterValues } from "@/components/ui/enhanced-filters"
@@ -58,6 +62,7 @@ export default function AdminParkingManagement() {
   const [showDirectAssignDialog, setShowDirectAssignDialog] = useState(false)
   const [showReleaseSpotDialog, setShowReleaseSpotDialog] = useState(false)
   const [showAssignAvailableSpotDialog, setShowAssignAvailableSpotDialog] = useState(false)
+  const [showCreateAvailabilityDialog, setShowCreateAvailabilityDialog] = useState(false)
   const [selectedSpot, setSelectedSpot] = useState<ParkingSpotWithUser | null>(null)
   const [selectedSpotForAssign, setSelectedSpotForAssign] = useState<ParkingSpotWithUser | null>(null)
   const [selectedSpotForRelease, setSelectedSpotForRelease] = useState<ParkingSpotWithUser | null>(null)
@@ -184,6 +189,15 @@ export default function AdminParkingManagement() {
     building: "",
     level: "",
     address: ""
+  })
+  
+  // Form state for create availability dialog
+  const [createAvailabilityFormData, setCreateAvailabilityFormData] = useState({
+    listingType: "single" as "single" | "period",
+    singleDate: undefined as Date | undefined,
+    periodStartDate: undefined as Date | undefined,
+    periodEndDate: undefined as Date | undefined,
+    dailyRate: ""
   })
   
   // Fetch waiting list data for metrics
@@ -381,6 +395,54 @@ export default function AdminParkingManagement() {
       toast({
         title: "Error",
         description: error.message || "Failed to update spots.",
+        variant: "error",
+      });
+    },
+  });
+
+  // Mutation for bulk creating spot listings
+  const bulkCreateListingsMutation = useMutation({
+    mutationFn: async (data: {
+      spotIds: string[];
+      listingType: "single" | "period";
+      singleDate?: string;
+      periodStartDate?: string;
+      periodEndDate?: string;
+      dailyRate: number;
+    }) => {
+      return await apiRequest(`/api/admin/bulk-create-listings`, {
+        method: "POST",
+        body: data,
+      });
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/all-spots"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] });
+      
+      const dateDescription = variables.listingType === "single" 
+        ? `for ${variables.singleDate}`
+        : `from ${variables.periodStartDate} to ${variables.periodEndDate}`;
+      
+      toast({
+        title: "Success",
+        description: `Created ${variables.spotIds.length} spot listing(s) ${dateDescription} at $${variables.dailyRate}/day.`,
+        variant: "success",
+      });
+      
+      setShowCreateAvailabilityDialog(false);
+      setCreateAvailabilityFormData({
+        listingType: "single",
+        singleDate: undefined,
+        periodStartDate: undefined,
+        periodEndDate: undefined,
+        dailyRate: ""
+      });
+      handleClearSelection();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create spot listings.",
         variant: "error",
       });
     },
@@ -1874,28 +1936,11 @@ export default function AdminParkingManagement() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => bulkUpdateSpotsMutation.mutate({
-                              spotIds: Array.from(selectedSpots),
-                              updates: { isActive: true }
-                            })}
-                            disabled={bulkUpdateSpotsMutation.isPending}
-                            data-testid="button-make-available"
+                            onClick={() => setShowCreateAvailabilityDialog(true)}
+                            data-testid="button-create-availability"
                           >
-                            <CheckCircle2 className="h-4 w-4 mr-2" />
-                            Make Available
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => bulkUpdateSpotsMutation.mutate({
-                              spotIds: Array.from(selectedSpots),
-                              updates: { isBookable: true }
-                            })}
-                            disabled={bulkUpdateSpotsMutation.isPending}
-                            data-testid="button-make-bookable"
-                          >
-                            <Zap className="h-4 w-4 mr-2" />
-                            Make Bookable
+                            <CalendarDays className="h-4 w-4 mr-2" />
+                            Create Availability
                           </Button>
                           <Button
                             size="sm"
@@ -3469,6 +3514,225 @@ export default function AdminParkingManagement() {
                 </div>
               </>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Availability Dialog */}
+      <Dialog open={showCreateAvailabilityDialog} onOpenChange={setShowCreateAvailabilityDialog}>
+        <DialogContent className="max-w-md" data-testid="dialog-create-availability">
+          <DialogHeader>
+            <DialogTitle>Create Availability</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label>Listing Type</Label>
+              <RadioGroup
+                value={createAvailabilityFormData.listingType}
+                onValueChange={(value: "single" | "period") => 
+                  setCreateAvailabilityFormData({ ...createAvailabilityFormData, listingType: value })
+                }
+                data-testid="radiogroup-listing-type"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="single" id="single" data-testid="radio-single-day" />
+                  <Label htmlFor="single" className="font-normal cursor-pointer">Single Day</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="period" id="period" data-testid="radio-date-range" />
+                  <Label htmlFor="period" className="font-normal cursor-pointer">Date Range</Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            {createAvailabilityFormData.listingType === "single" ? (
+              <div className="space-y-2">
+                <Label>Select Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal"
+                      data-testid="button-select-single-date"
+                    >
+                      <CalendarDays className="mr-2 h-4 w-4" />
+                      {createAvailabilityFormData.singleDate 
+                        ? format(createAvailabilityFormData.singleDate, "PPP")
+                        : "Pick a date"
+                      }
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={createAvailabilityFormData.singleDate}
+                      onSelect={(date) => 
+                        setCreateAvailabilityFormData({ ...createAvailabilityFormData, singleDate: date })
+                      }
+                      disabled={(date) => date < new Date()}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Start Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal"
+                        data-testid="button-select-start-date"
+                      >
+                        <CalendarDays className="mr-2 h-4 w-4" />
+                        {createAvailabilityFormData.periodStartDate 
+                          ? format(createAvailabilityFormData.periodStartDate, "PPP")
+                          : "Pick start date"
+                        }
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={createAvailabilityFormData.periodStartDate}
+                        onSelect={(date) => 
+                          setCreateAvailabilityFormData({ ...createAvailabilityFormData, periodStartDate: date })
+                        }
+                        disabled={(date) => date < new Date()}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>End Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal"
+                        data-testid="button-select-end-date"
+                      >
+                        <CalendarDays className="mr-2 h-4 w-4" />
+                        {createAvailabilityFormData.periodEndDate 
+                          ? format(createAvailabilityFormData.periodEndDate, "PPP")
+                          : "Pick end date"
+                        }
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={createAvailabilityFormData.periodEndDate}
+                        onSelect={(date) => 
+                          setCreateAvailabilityFormData({ ...createAvailabilityFormData, periodEndDate: date })
+                        }
+                        disabled={(date) => {
+                          if (date < new Date()) return true;
+                          if (createAvailabilityFormData.periodStartDate && date < createAvailabilityFormData.periodStartDate) return true;
+                          return false;
+                        }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="dailyRate">Daily Rate ($)</Label>
+              <Input
+                id="dailyRate"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="Enter daily rate"
+                value={createAvailabilityFormData.dailyRate}
+                onChange={(e) => 
+                  setCreateAvailabilityFormData({ ...createAvailabilityFormData, dailyRate: e.target.value })
+                }
+                data-testid="input-daily-rate"
+              />
+            </div>
+
+            <div className="flex gap-2 pt-4">
+              <Button
+                onClick={() => {
+                  const dailyRate = parseFloat(createAvailabilityFormData.dailyRate);
+                  
+                  // Validation
+                  if (!dailyRate || dailyRate <= 0) {
+                    toast({
+                      title: "Validation Error",
+                      description: "Please enter a valid daily rate greater than 0.",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+
+                  if (createAvailabilityFormData.listingType === "single") {
+                    if (!createAvailabilityFormData.singleDate) {
+                      toast({
+                        title: "Validation Error",
+                        description: "Please select a date.",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    
+                    bulkCreateListingsMutation.mutate({
+                      spotIds: Array.from(selectedSpots),
+                      listingType: "single",
+                      singleDate: format(createAvailabilityFormData.singleDate, "yyyy-MM-dd"),
+                      dailyRate
+                    });
+                  } else {
+                    if (!createAvailabilityFormData.periodStartDate || !createAvailabilityFormData.periodEndDate) {
+                      toast({
+                        title: "Validation Error",
+                        description: "Both start and end dates are required for date range",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    
+                    if (createAvailabilityFormData.periodEndDate < createAvailabilityFormData.periodStartDate) {
+                      toast({
+                        title: "Validation Error",
+                        description: "End date must be on or after start date",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    
+                    bulkCreateListingsMutation.mutate({
+                      spotIds: Array.from(selectedSpots),
+                      listingType: "period",
+                      periodStartDate: format(createAvailabilityFormData.periodStartDate, "yyyy-MM-dd"),
+                      periodEndDate: format(createAvailabilityFormData.periodEndDate, "yyyy-MM-dd"),
+                      dailyRate
+                    });
+                  }
+                }}
+                disabled={bulkCreateListingsMutation.isPending}
+                className="flex-1"
+                data-testid="button-submit-create-availability"
+              >
+                {bulkCreateListingsMutation.isPending ? "Creating..." : "Create Listings"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowCreateAvailabilityDialog(false)}
+                className="flex-1"
+                data-testid="button-cancel-create-availability"
+              >
+                Cancel
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

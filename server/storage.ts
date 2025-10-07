@@ -46,7 +46,7 @@ import { auditDecorator } from "./audit-service";
 import { type IAuditStorage } from "./audit-storage";
 import { db } from "./db";
 import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, locations, spotTypesTable } from "@shared/schema";
-import { eq, or, ilike, asc, and, notExists, sql as sqlOp, count, desc } from "drizzle-orm";
+import { eq, or, ilike, asc, and, notExists, sql as sqlOp, count, desc, inArray } from "drizzle-orm";
 
 // Storage interface with comprehensive CRUD methods
 export interface IStorage {
@@ -94,6 +94,7 @@ export interface IStorage {
   getAllSpotListings(): Promise<SpotListing[]>;
   getActiveSpotListings(): Promise<SpotListing[]>;
   createSpotListing(listing: InsertSpotListing): Promise<SpotListing>;
+  bulkCreateSpotListings(spotIds: string[], listingData: Omit<InsertSpotListing, 'spotId' | 'ownerId'>): Promise<SpotListing[]>;
   updateSpotListing(id: string, updates: Partial<InsertSpotListing>): Promise<SpotListing | undefined>;
   deleteSpotListing(id: string): Promise<boolean>;
   // Alias methods for API endpoints
@@ -1005,6 +1006,39 @@ export class MemStorage implements IStorage {
     }).returning();
     
     return listing;
+  }
+
+  async bulkCreateSpotListings(spotIds: string[], listingData: Omit<InsertSpotListing, 'spotId' | 'ownerId'>): Promise<SpotListing[]> {
+    if (spotIds.length === 0) return [];
+
+    const createdListings: SpotListing[] = [];
+
+    // Get spot information to determine owner
+    const spots = await db.select().from(parkingSpots).where(inArray(parkingSpots.id, spotIds));
+    
+    // Create listings for each spot
+    for (const spot of spots) {
+      const listing = await db.insert(spotListings).values({
+        spotId: spot.id,
+        ownerId: spot.ownerId!, // Use the spot's owner
+        listingType: listingData.listingType as ListingType,
+        singleDate: listingData.singleDate ?? null,
+        periodStartDate: listingData.periodStartDate ?? null,
+        periodEndDate: listingData.periodEndDate ?? null,
+        recurringStartDate: listingData.recurringStartDate ?? null,
+        recurringEndDate: listingData.recurringEndDate ?? null,
+        daysOfWeek: listingData.daysOfWeek ?? null,
+        dailyRate: listingData.dailyRate,
+        status: (listingData.status as ListingStatus) ?? "active",
+        notes: listingData.notes ?? null,
+      }).returning();
+
+      if (listing[0]) {
+        createdListings.push(listing[0]);
+      }
+    }
+
+    return createdListings;
   }
 
   async updateSpotListing(id: string, updates: Partial<InsertSpotListing>): Promise<SpotListing | undefined> {
