@@ -29,6 +29,9 @@ import {
   type ListingType,
   type ListingStatus,
   type BookingStatus,
+  type Dispute,
+  type InsertDispute,
+  type DisputeStatus,
   type AuditLog,
   type InsertAuditLog,
   type Department,
@@ -42,7 +45,7 @@ import { randomUUID } from "crypto";
 import { auditDecorator } from "./audit-service";
 import { type IAuditStorage } from "./audit-storage";
 import { db } from "./db";
-import { spotListings, parkingSpots, users, waitingList, departments, bookings, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, locations, spotTypesTable } from "@shared/schema";
+import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, locations, spotTypesTable } from "@shared/schema";
 import { eq, or, ilike, asc, and, notExists, sql as sqlOp, count, desc } from "drizzle-orm";
 
 // Storage interface with comprehensive CRUD methods
@@ -275,6 +278,24 @@ export interface IStorage {
   getPendingPaymentBookings(): Promise<Array<Booking & { spot: ParkingSpot; user: User }>>;
   getActiveBookings(): Promise<Array<Booking & { spot: ParkingSpot; user: User }>>;
   getPastBookings(): Promise<Array<Booking & { spot: ParkingSpot; user: User }>>;
+  
+  // Dispute operations
+  createDispute(dispute: InsertDispute): Promise<Dispute>;
+  getDisputes(filters?: { status?: DisputeStatus; bookingId?: string }): Promise<Dispute[]>;
+  getDisputeById(id: string): Promise<Dispute | undefined>;
+  updateDispute(id: string, updates: Partial<InsertDispute>): Promise<Dispute | undefined>;
+  resolveDispute(id: string, resolvedBy: string, resolutionNotes: string, refundAmount?: string): Promise<Dispute | undefined>;
+  
+  // Spot Listing Admin operations
+  updateSpotListingStatus(id: string, status: ListingStatus): Promise<SpotListing | undefined>;
+  cancelSpotListing(id: string, reason: string): Promise<SpotListing | undefined>;
+  addSpotListingAdminNotes(id: string, notes: string): Promise<SpotListing | undefined>;
+  
+  // Booking Admin operations
+  updateBookingStatus(id: string, status: BookingStatus): Promise<Booking | undefined>;
+  cancelBookingWithReason(id: string, reason: string): Promise<Booking | undefined>;
+  markPaymentRefunded(id: string, refundAmount: string): Promise<Booking | undefined>;
+  addBookingAdminNotes(id: string, notes: string): Promise<Booking | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -2544,6 +2565,192 @@ export class MemStorage implements IStorage {
     );
     
     return enrichedBookings;
+  }
+
+  // Dispute operations
+  async createDispute(insertDispute: InsertDispute): Promise<Dispute> {
+    const id = randomUUID();
+    const now = new Date();
+    
+    const [dispute] = await db.insert(disputes).values({
+      id,
+      ...insertDispute,
+      createdAt: now,
+      updatedAt: now
+    }).returning();
+    
+    return dispute;
+  }
+
+  async getDisputes(filters?: { status?: DisputeStatus; bookingId?: string }): Promise<Dispute[]> {
+    let query = db.select().from(disputes);
+    
+    const conditions = [];
+    if (filters?.status) {
+      conditions.push(eq(disputes.status, filters.status));
+    }
+    if (filters?.bookingId) {
+      conditions.push(eq(disputes.bookingId, filters.bookingId));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    return await query.orderBy(desc(disputes.createdAt));
+  }
+
+  async getDisputeById(id: string): Promise<Dispute | undefined> {
+    const result = await db.select().from(disputes).where(eq(disputes.id, id)).limit(1);
+    return result[0];
+  }
+
+  async updateDispute(id: string, updates: Partial<InsertDispute>): Promise<Dispute | undefined> {
+    const existing = await db.select().from(disputes).where(eq(disputes.id, id));
+    if (existing.length === 0) return undefined;
+    
+    const updated = await db.update(disputes)
+      .set({
+        ...updates,
+        updatedAt: new Date()
+      })
+      .where(eq(disputes.id, id))
+      .returning();
+    
+    return updated[0];
+  }
+
+  async resolveDispute(id: string, resolvedBy: string, resolutionNotes: string, refundAmount?: string): Promise<Dispute | undefined> {
+    const existing = await db.select().from(disputes).where(eq(disputes.id, id));
+    if (existing.length === 0) return undefined;
+    
+    const now = new Date();
+    
+    const updated = await db.update(disputes)
+      .set({
+        status: 'resolved' as DisputeStatus,
+        resolvedBy,
+        resolutionNotes,
+        refundAmount: refundAmount || null,
+        resolvedAt: now,
+        updatedAt: now
+      })
+      .where(eq(disputes.id, id))
+      .returning();
+    
+    return updated[0];
+  }
+
+  // Spot Listing Admin operations
+  async updateSpotListingStatus(id: string, status: ListingStatus): Promise<SpotListing | undefined> {
+    const existing = await db.select().from(spotListings).where(eq(spotListings.id, id));
+    if (existing.length === 0) return undefined;
+    
+    const updated = await db.update(spotListings)
+      .set({
+        status,
+        updatedAt: new Date()
+      })
+      .where(eq(spotListings.id, id))
+      .returning();
+    
+    return updated[0];
+  }
+
+  async cancelSpotListing(id: string, reason: string): Promise<SpotListing | undefined> {
+    const existing = await db.select().from(spotListings).where(eq(spotListings.id, id));
+    if (existing.length === 0) return undefined;
+    
+    const updated = await db.update(spotListings)
+      .set({
+        status: 'cancelled' as ListingStatus,
+        adminNotes: reason,
+        updatedAt: new Date()
+      })
+      .where(eq(spotListings.id, id))
+      .returning();
+    
+    return updated[0];
+  }
+
+  async addSpotListingAdminNotes(id: string, notes: string): Promise<SpotListing | undefined> {
+    const existing = await db.select().from(spotListings).where(eq(spotListings.id, id));
+    if (existing.length === 0) return undefined;
+    
+    const updated = await db.update(spotListings)
+      .set({
+        adminNotes: notes,
+        updatedAt: new Date()
+      })
+      .where(eq(spotListings.id, id))
+      .returning();
+    
+    return updated[0];
+  }
+
+  // Booking Admin operations
+  async updateBookingStatus(id: string, status: BookingStatus): Promise<Booking | undefined> {
+    const existing = await db.select().from(bookings).where(eq(bookings.id, id));
+    if (existing.length === 0) return undefined;
+    
+    const updated = await db.update(bookings)
+      .set({
+        status,
+        updatedAt: new Date()
+      })
+      .where(eq(bookings.id, id))
+      .returning();
+    
+    return updated[0];
+  }
+
+  async cancelBookingWithReason(id: string, reason: string): Promise<Booking | undefined> {
+    const existing = await db.select().from(bookings).where(eq(bookings.id, id));
+    if (existing.length === 0) return undefined;
+    
+    const updated = await db.update(bookings)
+      .set({
+        status: 'cancelled' as BookingStatus,
+        cancellationReason: reason,
+        updatedAt: new Date()
+      })
+      .where(eq(bookings.id, id))
+      .returning();
+    
+    return updated[0];
+  }
+
+  async markPaymentRefunded(id: string, refundAmount: string): Promise<Booking | undefined> {
+    const existing = await db.select().from(bookings).where(eq(bookings.id, id));
+    if (existing.length === 0) return undefined;
+    
+    const now = new Date();
+    
+    const updated = await db.update(bookings)
+      .set({
+        paymentRefundedAt: now,
+        refundAmount,
+        updatedAt: now
+      })
+      .where(eq(bookings.id, id))
+      .returning();
+    
+    return updated[0];
+  }
+
+  async addBookingAdminNotes(id: string, notes: string): Promise<Booking | undefined> {
+    const existing = await db.select().from(bookings).where(eq(bookings.id, id));
+    if (existing.length === 0) return undefined;
+    
+    const updated = await db.update(bookings)
+      .set({
+        adminNotes: notes,
+        updatedAt: new Date()
+      })
+      .where(eq(bookings.id, id))
+      .returning();
+    
+    return updated[0];
   }
 
   // Audit decorators will be applied via server initialization

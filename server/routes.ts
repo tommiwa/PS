@@ -1727,6 +1727,275 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/admin/spot-listings - List all spot listings with filters (Admin only)
+  app.get("/api/admin/spot-listings", requireAdmin, async (req, res) => {
+    try {
+      const listings = await storage.getAllSpotListings();
+      res.json(listings);
+    } catch (error) {
+      console.error("Error fetching spot listings:", error);
+      res.status(500).json({ error: "Failed to fetch spot listings" });
+    }
+  });
+
+  // PATCH /api/admin/spot-listings/:id - Update listing (Admin only)
+  app.patch("/api/admin/spot-listings/:id", requireAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      const listing = await storage.getSpotListing(id);
+      if (!listing) {
+        return res.status(404).json({ error: "Spot listing not found" });
+      }
+
+      const updatedListing = await storage.updateSpotListing(id, updates);
+      
+      await auditService.logAction("UPDATE", "spot_listing", {
+        entityId: id,
+        message: `Spot listing ${id} updated by admin`,
+        before: listing,
+        after: updatedListing
+      });
+
+      res.json(updatedListing);
+    } catch (error) {
+      console.error("Error updating spot listing:", error);
+      res.status(500).json({ error: "Failed to update spot listing" });
+    }
+  });
+
+  // POST /api/admin/spot-listings/:id/cancel - Cancel listing (Admin only)
+  app.post("/api/admin/spot-listings/:id/cancel", requireAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { reason } = req.body;
+      
+      if (!reason) {
+        return res.status(400).json({ error: "Cancellation reason is required" });
+      }
+
+      const listing = await storage.getSpotListing(id);
+      if (!listing) {
+        return res.status(404).json({ error: "Spot listing not found" });
+      }
+
+      const cancelledListing = await storage.cancelSpotListing(id, reason);
+      
+      await auditService.logAction("CANCEL", "spot_listing", {
+        entityId: id,
+        message: `Spot listing ${id} cancelled by admin: ${reason}`,
+        before: listing,
+        after: cancelledListing
+      });
+
+      res.json(cancelledListing);
+    } catch (error) {
+      console.error("Error cancelling spot listing:", error);
+      res.status(500).json({ error: "Failed to cancel spot listing" });
+    }
+  });
+
+  // GET /api/admin/bookings/all - Enhanced booking list with all filters (Admin only)
+  app.get("/api/admin/bookings/all", requireAdmin, async (req, res) => {
+    try {
+      const bookings = await storage.getAllBookings();
+      res.json(bookings);
+    } catch (error) {
+      console.error("Error fetching all bookings:", error);
+      res.status(500).json({ error: "Failed to fetch bookings" });
+    }
+  });
+
+  // PATCH /api/admin/bookings/:id - Update booking (Admin only)
+  app.patch("/api/admin/bookings/:id", requireAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      const booking = await storage.getBooking(id);
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      const updatedBooking = await storage.updateBooking(id, updates);
+      
+      await auditService.logAction("UPDATE", "booking", {
+        entityId: id,
+        message: `Booking ${id} updated by admin`,
+        before: booking,
+        after: updatedBooking
+      });
+
+      res.json(updatedBooking);
+    } catch (error) {
+      console.error("Error updating booking:", error);
+      res.status(500).json({ error: "Failed to update booking" });
+    }
+  });
+
+  // POST /api/admin/bookings/:id/cancel - Cancel with reason (Admin only)
+  app.post("/api/admin/bookings/:id/cancel", requireAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { reason } = req.body;
+      
+      if (!reason) {
+        return res.status(400).json({ error: "Cancellation reason is required" });
+      }
+
+      const booking = await storage.getBooking(id);
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      const cancelledBooking = await storage.cancelBookingWithReason(id, reason);
+      
+      await auditService.logAction("CANCEL", "booking", {
+        entityId: id,
+        message: `Booking ${id} cancelled by admin: ${reason}`,
+        before: booking,
+        after: cancelledBooking
+      });
+
+      res.json(cancelledBooking);
+    } catch (error) {
+      console.error("Error cancelling booking:", error);
+      res.status(500).json({ error: "Failed to cancel booking" });
+    }
+  });
+
+  // POST /api/admin/bookings/:id/refund - Mark payment refunded (Admin only)
+  app.post("/api/admin/bookings/:id/refund", requireAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { refundAmount } = req.body;
+      
+      if (!refundAmount) {
+        return res.status(400).json({ error: "Refund amount is required" });
+      }
+
+      const booking = await storage.getBooking(id);
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      const refundedBooking = await storage.markPaymentRefunded(id, refundAmount);
+      
+      await auditService.logAction("UPDATE", "booking", {
+        entityId: id,
+        message: `Payment refunded for booking ${id}: ${refundAmount}`,
+        before: booking,
+        after: refundedBooking
+      });
+
+      res.json(refundedBooking);
+    } catch (error) {
+      console.error("Error processing refund:", error);
+      res.status(500).json({ error: "Failed to process refund" });
+    }
+  });
+
+  // GET /api/admin/disputes - List disputes with filters (Admin only)
+  app.get("/api/admin/disputes", requireAdmin, async (req, res) => {
+    try {
+      const { status, bookingId } = req.query;
+      
+      const filters: any = {};
+      if (status) filters.status = status;
+      if (bookingId) filters.bookingId = bookingId;
+      
+      const disputes = await storage.getDisputes(filters);
+      res.json(disputes);
+    } catch (error) {
+      console.error("Error fetching disputes:", error);
+      res.status(500).json({ error: "Failed to fetch disputes" });
+    }
+  });
+
+  // POST /api/admin/disputes - Create dispute (Admin only)
+  app.post("/api/admin/disputes", requireAdmin, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      const disputeData = {
+        ...req.body,
+        reporterId: userId
+      };
+      
+      const dispute = await storage.createDispute(disputeData);
+      
+      await auditService.logAction("CREATE", "booking", {
+        entityId: dispute.id,
+        message: `Dispute created for booking ${dispute.bookingId}`,
+        after: dispute
+      });
+
+      res.status(201).json(dispute);
+    } catch (error) {
+      console.error("Error creating dispute:", error);
+      res.status(500).json({ error: "Failed to create dispute" });
+    }
+  });
+
+  // PATCH /api/admin/disputes/:id - Update dispute status (Admin only)
+  app.patch("/api/admin/disputes/:id", requireAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      const dispute = await storage.getDisputeById(id);
+      if (!dispute) {
+        return res.status(404).json({ error: "Dispute not found" });
+      }
+
+      const updatedDispute = await storage.updateDispute(id, updates);
+      
+      await auditService.logAction("UPDATE", "booking", {
+        entityId: id,
+        message: `Dispute ${id} updated`,
+        before: dispute,
+        after: updatedDispute
+      });
+
+      res.json(updatedDispute);
+    } catch (error) {
+      console.error("Error updating dispute:", error);
+      res.status(500).json({ error: "Failed to update dispute" });
+    }
+  });
+
+  // POST /api/admin/disputes/:id/resolve - Resolve dispute with notes (Admin only)
+  app.post("/api/admin/disputes/:id/resolve", requireAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { resolutionNotes, refundAmount } = req.body;
+      const userId = getAuthenticatedUserId(req);
+      
+      if (!resolutionNotes) {
+        return res.status(400).json({ error: "Resolution notes are required" });
+      }
+
+      const dispute = await storage.getDisputeById(id);
+      if (!dispute) {
+        return res.status(404).json({ error: "Dispute not found" });
+      }
+
+      const resolvedDispute = await storage.resolveDispute(id, userId, resolutionNotes, refundAmount);
+      
+      await auditService.logAction("UPDATE", "booking", {
+        entityId: id,
+        message: `Dispute ${id} resolved by admin`,
+        before: dispute,
+        after: resolvedDispute
+      });
+
+      res.json(resolvedDispute);
+    } catch (error) {
+      console.error("Error resolving dispute:", error);
+      res.status(500).json({ error: "Failed to resolve dispute" });
+    }
+  });
+
   // Department endpoints
   // GET /api/departments - Get all departments (authenticated users)
   app.get("/api/departments", isAuthenticated, async (req, res) => {

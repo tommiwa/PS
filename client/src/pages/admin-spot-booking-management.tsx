@@ -172,6 +172,20 @@ export default function AdminSpotBookingManagement() {
   const [contactMessage, setContactMessage] = useState("")
   const [activeTab, setActiveTab] = useState("availability")
   
+  // Dispute-related state
+  const [showDisputeDialog, setShowDisputeDialog] = useState(false)
+  const [showResolveDisputeDialog, setShowResolveDisputeDialog] = useState(false)
+  const [selectedDisputeBookingId, setSelectedDisputeBookingId] = useState<string | null>(null)
+  const [disputeReason, setDisputeReason] = useState("")
+  const [disputeTargetUserId, setDisputeTargetUserId] = useState("")
+  const [resolutionNotes, setResolutionNotes] = useState("")
+  const [refundAmount, setRefundAmount] = useState("")
+  const [showRefundDialog, setShowRefundDialog] = useState(false)
+  const [selectedRefundBookingId, setSelectedRefundBookingId] = useState<string | null>(null)
+  const [showAdminNotesDialog, setShowAdminNotesDialog] = useState(false)
+  const [adminNotes, setAdminNotes] = useState("")
+  const [selectedAdminNotesBookingId, setSelectedAdminNotesBookingId] = useState<string | null>(null)
+  
   // Pagination state for Active Bookings
   const [activeBookingsPageIndex, setActiveBookingsPageIndex] = useState(0)
   const [activeBookingsPageSize, setActiveBookingsPageSize] = useState(10)
@@ -911,6 +925,105 @@ export default function AdminSpotBookingManagement() {
     }
   });
 
+  // Create dispute mutation
+  const createDisputeMutation = useMutation({
+    mutationFn: async (disputeData: { bookingId: string; targetUserId: string; reason: string }) => {
+      const response = await apiRequest('/api/admin/disputes', {
+        method: 'POST',
+        body: {
+          bookingId: disputeData.bookingId,
+          targetUserId: disputeData.targetUserId,
+          reason: disputeData.reason,
+          status: 'open'
+        }
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/disputes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/active-bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-payments"] });
+      toast({
+        title: "Dispute Created",
+        description: "The dispute has been successfully flagged and is now under investigation.",
+        variant: "default"
+      });
+      setShowDisputeDialog(false);
+      setDisputeReason("");
+      setDisputeTargetUserId("");
+      setSelectedDisputeBookingId(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to Create Dispute",
+        description: error instanceof Error ? error.message : "Failed to create dispute. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Issue refund mutation
+  const issueRefundMutation = useMutation({
+    mutationFn: async (refundData: { bookingId: string; refundAmount: string }) => {
+      const response = await apiRequest(`/api/admin/bookings/${refundData.bookingId}/refund`, {
+        method: 'POST',
+        body: { refundAmount: refundData.refundAmount }
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-payments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/past-bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-activity"] });
+      toast({
+        title: "Refund Processed",
+        description: "The refund has been successfully processed and recorded.",
+        variant: "default"
+      });
+      setShowRefundDialog(false);
+      setRefundAmount("");
+      setSelectedRefundBookingId(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Refund Failed",
+        description: error instanceof Error ? error.message : "Failed to process refund. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Add admin notes mutation
+  const addAdminNotesMutation = useMutation({
+    mutationFn: async (notesData: { bookingId: string; notes: string }) => {
+      const response = await apiRequest(`/api/admin/bookings/${notesData.bookingId}`, {
+        method: 'PATCH',
+        body: { adminNotes: notesData.notes }
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/active-bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-payments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/past-bookings"] });
+      toast({
+        title: "Admin Notes Saved",
+        description: "Admin notes have been successfully saved to the booking.",
+        variant: "default"
+      });
+      setShowAdminNotesDialog(false);
+      setAdminNotes("");
+      setSelectedAdminNotesBookingId(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to Save Notes",
+        description: error instanceof Error ? error.message : "Failed to save admin notes. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
   const handleCancelBooking = () => {
     if (!selectedBooking || !cancelReason.trim()) return;
     
@@ -1594,6 +1707,22 @@ export default function AdminSpotBookingManagement() {
                             >
                               <MessageSquare className="h-4 w-4" />
                             </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedDisputeBookingId(booking.id);
+                                    setShowDisputeDialog(true);
+                                  }}
+                                  data-testid={`button-flag-dispute-${booking.id}`}
+                                >
+                                  <AlertTriangle className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Flag Dispute</TooltipContent>
+                            </Tooltip>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -1809,6 +1938,38 @@ export default function AdminSpotBookingManagement() {
                               >
                                 Mark Paid
                               </Button>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedRefundBookingId(payment.id);
+                                      setShowRefundDialog(true);
+                                    }}
+                                    data-testid={`button-issue-refund-${payment.id}`}
+                                  >
+                                    <DollarSign className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Issue Refund</TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedDisputeBookingId(payment.id);
+                                      setShowDisputeDialog(true);
+                                    }}
+                                    data-testid={`button-flag-dispute-payment-${payment.id}`}
+                                  >
+                                    <AlertTriangle className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Flag Dispute</TooltipContent>
+                              </Tooltip>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -2540,6 +2701,181 @@ export default function AdminSpotBookingManagement() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Flag Dispute Dialog */}
+      <Dialog open={showDisputeDialog} onOpenChange={setShowDisputeDialog}>
+        <DialogContent data-testid="dialog-flag-dispute">
+          <DialogHeader>
+            <DialogTitle>Flag Dispute</DialogTitle>
+            <DialogDescription>
+              Create a dispute for this booking to investigate issues and potential resolution.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="dispute-target-user">Target User</Label>
+              <Select value={disputeTargetUserId} onValueChange={setDisputeTargetUserId}>
+                <SelectTrigger id="dispute-target-user" data-testid="select-dispute-target-user">
+                  <SelectValue placeholder="Select user to flag" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="renter">Renter</SelectItem>
+                  <SelectItem value="owner">Owner</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="dispute-reason">Dispute Reason</Label>
+              <Textarea
+                id="dispute-reason"
+                placeholder="Describe the dispute reason in detail..."
+                value={disputeReason}
+                onChange={(e) => setDisputeReason(e.target.value)}
+                rows={4}
+                data-testid="textarea-dispute-reason"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowDisputeDialog(false);
+                  setDisputeReason("");
+                  setDisputeTargetUserId("");
+                  setSelectedDisputeBookingId(null);
+                }}
+                data-testid="button-cancel-dispute"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (!selectedDisputeBookingId || !disputeReason.trim() || !disputeTargetUserId) return;
+                  createDisputeMutation.mutate({
+                    bookingId: selectedDisputeBookingId,
+                    targetUserId: disputeTargetUserId,
+                    reason: disputeReason
+                  });
+                }}
+                disabled={!disputeReason.trim() || !disputeTargetUserId || createDisputeMutation.isPending}
+                data-testid="button-submit-dispute"
+              >
+                {createDisputeMutation.isPending ? "Creating Dispute..." : "Create Dispute"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Issue Refund Dialog */}
+      <Dialog open={showRefundDialog} onOpenChange={setShowRefundDialog}>
+        <DialogContent data-testid="dialog-issue-refund">
+          <DialogHeader>
+            <DialogTitle>Issue Refund</DialogTitle>
+            <DialogDescription>
+              Process a refund for this booking. This will mark the payment as refunded in the system.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="refund-amount">Refund Amount ($)</Label>
+              <Input
+                id="refund-amount"
+                type="number"
+                placeholder="Enter refund amount"
+                value={refundAmount}
+                onChange={(e) => setRefundAmount(e.target.value)}
+                step="0.01"
+                min="0"
+                data-testid="input-refund-amount"
+              />
+            </div>
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                This will mark the payment as refunded. Make sure the actual refund has been processed in your payment system.
+              </AlertDescription>
+            </Alert>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowRefundDialog(false);
+                  setRefundAmount("");
+                  setSelectedRefundBookingId(null);
+                }}
+                data-testid="button-cancel-refund"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (!selectedRefundBookingId || !refundAmount) return;
+                  issueRefundMutation.mutate({
+                    bookingId: selectedRefundBookingId,
+                    refundAmount: refundAmount
+                  });
+                }}
+                disabled={!refundAmount || issueRefundMutation.isPending}
+                data-testid="button-confirm-refund"
+              >
+                {issueRefundMutation.isPending ? "Processing..." : "Issue Refund"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Admin Notes Dialog */}
+      <Dialog open={showAdminNotesDialog} onOpenChange={setShowAdminNotesDialog}>
+        <DialogContent data-testid="dialog-admin-notes">
+          <DialogHeader>
+            <DialogTitle>Add Admin Notes</DialogTitle>
+            <DialogDescription>
+              Add internal notes to this booking. These notes are only visible to administrators.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="admin-notes">Notes</Label>
+              <Textarea
+                id="admin-notes"
+                placeholder="Enter admin notes here..."
+                value={adminNotes}
+                onChange={(e) => setAdminNotes(e.target.value)}
+                rows={6}
+                data-testid="textarea-admin-notes"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowAdminNotesDialog(false);
+                  setAdminNotes("");
+                  setSelectedAdminNotesBookingId(null);
+                }}
+                data-testid="button-cancel-admin-notes"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (!selectedAdminNotesBookingId || !adminNotes.trim()) return;
+                  addAdminNotesMutation.mutate({
+                    bookingId: selectedAdminNotesBookingId,
+                    notes: adminNotes
+                  });
+                }}
+                disabled={!adminNotes.trim() || addAdminNotesMutation.isPending}
+                data-testid="button-save-admin-notes"
+              >
+                {addAdminNotesMutation.isPending ? "Saving..." : "Save Notes"}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
