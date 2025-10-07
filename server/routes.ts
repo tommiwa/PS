@@ -186,6 +186,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Geoapify API Key endpoint
+  app.get('/api/config/geoapify-key', isAuthenticated, (req, res) => {
+    res.json({ apiKey: process.env.GEOAPIFY_API_KEY || '' });
+  });
+
   // View-as endpoints for admin role impersonation
   // POST /api/auth/view-as - Set view-as role (Admin only)
   app.post('/api/auth/view-as', requireAdmin, async (req: any, res) => {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { queryClient, apiRequest } from "@/lib/queryClient"
 import { useToast } from "@/hooks/use-toast"
@@ -6,6 +6,8 @@ import { useConfirm, confirmations } from "@/hooks/use-confirm"
 import { useTableSort } from "@/hooks/use-table-sort"
 import { useCardsVisibility } from "@/hooks/use-cards-visibility"
 import { useLanguage } from "@/hooks/use-language"
+import { GeocoderAutocomplete } from '@geoapify/geocoder-autocomplete'
+import '@geoapify/geocoder-autocomplete/styles/minimal.css'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -190,6 +192,88 @@ export default function AdminParkingManagement() {
     level: "",
     address: ""
   })
+
+  // Geoapify autocomplete ref and API key
+  const autocompleteContainerRef = useRef<HTMLDivElement>(null)
+  const autocompleteInstanceRef = useRef<any>(null)
+
+  // Fetch Geoapify API key from backend
+  const { data: geoapifyConfig } = useQuery<{ apiKey: string }>({
+    queryKey: ['/api/config/geoapify-key'],
+  })
+
+  // Initialize Geoapify autocomplete when custom location is shown and API key is available
+  useEffect(() => {
+    if (isCreatingCustomLocation && autocompleteContainerRef.current && geoapifyConfig?.apiKey) {
+      // Clean up existing instance if any
+      if (autocompleteInstanceRef.current) {
+        autocompleteInstanceRef.current = null
+      }
+
+      // Clear the container
+      autocompleteContainerRef.current.innerHTML = ''
+
+      try {
+        // Initialize Geoapify autocomplete
+        const autocomplete = new GeocoderAutocomplete(
+          autocompleteContainerRef.current,
+          geoapifyConfig.apiKey,
+          {
+            placeholder: 'Enter a full address to auto-fill location details',
+            type: 'street',
+            lang: 'en'
+          }
+        )
+
+        // Listen to select event
+        autocomplete.on('select', (location: any) => {
+          if (location) {
+            // Extract address components
+            const properties = location.properties
+            
+            // Auto-fill Office (city)
+            const city = properties.city || properties.county || properties.state || ''
+            
+            // Auto-fill Building (street address)
+            const street = properties.street || properties.address_line1 || ''
+            const houseNumber = properties.housenumber || ''
+            const building = houseNumber ? `${houseNumber} ${street}` : street
+            
+            // Auto-fill Full Address (formatted address)
+            const fullAddress = properties.formatted || ''
+            
+            // Update custom location data
+            setCustomLocationData(prev => ({
+              ...prev,
+              office: city,
+              building: building,
+              level: prev.level, // Keep existing level or leave empty
+              address: fullAddress
+            }))
+          }
+        })
+
+        autocompleteInstanceRef.current = autocomplete
+      } catch (error) {
+        console.error('Error initializing Geoapify autocomplete:', error)
+        toast({
+          title: "Autocomplete Error",
+          description: "Failed to load address autocomplete. Please enter address manually.",
+          variant: "destructive",
+        })
+      }
+    }
+
+    // Cleanup on unmount or when custom location is closed
+    return () => {
+      if (autocompleteInstanceRef.current) {
+        autocompleteInstanceRef.current = null
+      }
+      if (autocompleteContainerRef.current) {
+        autocompleteContainerRef.current.innerHTML = ''
+      }
+    }
+  }, [isCreatingCustomLocation, geoapifyConfig?.apiKey, toast])
   
   // Form state for create availability dialog
   const [createAvailabilityFormData, setCreateAvailabilityFormData] = useState({
@@ -2709,11 +2793,11 @@ export default function AdminParkingManagement() {
                 <div className="space-y-3 p-3 border rounded-md">
                   <div>
                     <label className="text-xs font-medium text-muted-foreground">Address Search *</label>
-                    <Input
-                      value={customLocationData.address}
-                      onChange={(e) => setCustomLocationData(prev => ({ ...prev, address: e.target.value }))}
-                      placeholder="Search for an address..."
-                      data-testid="input-custom-address-search"
+                    <div 
+                      ref={autocompleteContainerRef} 
+                      id="geoapify-autocomplete-container-admin"
+                      data-testid="container-address-autocomplete-admin"
+                      className="w-full"
                     />
                     <p className="text-xs text-muted-foreground mt-1">
                       Enter a full address to auto-fill location details

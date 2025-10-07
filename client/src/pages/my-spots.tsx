@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { apiRequest, queryClient } from "@/lib/queryClient"
 import type { ParkingSpot as DBParkingSpot, InsertParkingSpot, InsertSpotListing, Location, SpotTypeTable } from "@shared/schema"
@@ -18,6 +18,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useConfirm, confirmations } from "@/hooks/use-confirm"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
+import { GeocoderAutocomplete } from '@geoapify/geocoder-autocomplete'
+import '@geoapify/geocoder-autocomplete/styles/minimal.css'
 
 // Use the database type directly since we're fetching real data now
 // type ParkingSpot = DBParkingSpot
@@ -49,6 +51,88 @@ export default function MySpots() {
     level: "",
     address: ""
   })
+
+  // Geoapify autocomplete ref and API key
+  const autocompleteContainerRef = useRef<HTMLDivElement>(null)
+  const autocompleteInstanceRef = useRef<any>(null)
+
+  // Fetch Geoapify API key from backend
+  const { data: geoapifyConfig } = useQuery<{ apiKey: string }>({
+    queryKey: ['/api/config/geoapify-key'],
+  })
+
+  // Initialize Geoapify autocomplete when custom location is shown and API key is available
+  useEffect(() => {
+    if (isCreatingCustomLocation && autocompleteContainerRef.current && geoapifyConfig?.apiKey) {
+      // Clean up existing instance if any
+      if (autocompleteInstanceRef.current) {
+        autocompleteInstanceRef.current = null
+      }
+
+      // Clear the container
+      autocompleteContainerRef.current.innerHTML = ''
+
+      try {
+        // Initialize Geoapify autocomplete
+        const autocomplete = new GeocoderAutocomplete(
+          autocompleteContainerRef.current,
+          geoapifyConfig.apiKey,
+          {
+            placeholder: 'Enter a full address to auto-fill location details',
+            type: 'street',
+            lang: 'en'
+          }
+        )
+
+        // Listen to select event
+        autocomplete.on('select', (location: any) => {
+          if (location) {
+            // Extract address components
+            const properties = location.properties
+            
+            // Auto-fill Office (city)
+            const city = properties.city || properties.county || properties.state || ''
+            
+            // Auto-fill Building (street address)
+            const street = properties.street || properties.address_line1 || ''
+            const houseNumber = properties.housenumber || ''
+            const building = houseNumber ? `${houseNumber} ${street}` : street
+            
+            // Auto-fill Full Address (formatted address)
+            const fullAddress = properties.formatted || ''
+            
+            // Update custom location data
+            setCustomLocationData(prev => ({
+              ...prev,
+              office: city,
+              building: building,
+              level: prev.level, // Keep existing level or leave empty
+              address: fullAddress
+            }))
+          }
+        })
+
+        autocompleteInstanceRef.current = autocomplete
+      } catch (error) {
+        console.error('Error initializing Geoapify autocomplete:', error)
+        toast({
+          title: "Autocomplete Error",
+          description: "Failed to load address autocomplete. Please enter address manually.",
+          variant: "destructive",
+        })
+      }
+    }
+
+    // Cleanup on unmount or when custom location is closed
+    return () => {
+      if (autocompleteInstanceRef.current) {
+        autocompleteInstanceRef.current = null
+      }
+      if (autocompleteContainerRef.current) {
+        autocompleteContainerRef.current.innerHTML = ''
+      }
+    }
+  }, [isCreatingCustomLocation, geoapifyConfig?.apiKey, toast])
 
   const [listingFormData, setListingFormData] = useState({
     listingType: "single" as "single" | "period" | "recurring",
@@ -84,13 +168,26 @@ export default function MySpots() {
     queryKey: ["/api/spot-types"],
   })
 
+  // Helper functions to lookup location and spot type data
+  const getLocationById = (locationId: number) => {
+    const location = locations.find(loc => loc.id === locationId)
+    if (!location) return "Unknown Location"
+    return `${location.office} - ${location.building} - ${location.level}`
+  }
+
+  const getSpotTypeById = (spotTypeId: number) => {
+    const spotType = spotTypes.find(type => type.id === spotTypeId)
+    return spotType?.name || "unknown"
+  }
+
   // Mutation to create custom location (for Personal spots)
   const createLocationMutation = useMutation({
-    mutationFn: async (locationData: typeof customLocationData) => {
-      return await apiRequest(`/api/locations`, {
+    mutationFn: async (locationData: typeof customLocationData): Promise<Location> => {
+      const response = await apiRequest(`/api/locations`, {
         method: "POST",
         body: locationData,
       })
+      return await response.json()
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/locations"] })
@@ -216,21 +313,24 @@ export default function MySpots() {
     }
   })
 
-  const mockSpots = userSpots.length > 0 ? userSpots.map(spot => ({
-    id: spot.id,
-    spotNumber: spot.spotNumber,
-    location: spot.location,
-    type: spot.spotType,
-    isInside: spot.isIndoor,
-    basePrice: null, // Price is set when creating listings, not spots
-    isActive: spot.isActive,
-    monthlyEarnings: 0, // Will be calculated from bookings
-    totalBookings: 0, // Will be calculated from bookings
-    rating: 0, // Will be calculated from reviews
-    description: spot.description || "",
-    amenities: spot.spotType === "electric" ? ["EV Charging"] : spot.spotType === "accessible" ? ["Accessible"] : [],
-    currentBooking: undefined // Will be populated from actual booking data
-  })) : []
+  const mockSpots = userSpots.length > 0 ? userSpots.map(spot => {
+    const spotTypeName = getSpotTypeById(spot.spotTypeId)
+    return {
+      id: spot.id,
+      spotNumber: spot.spotNumber,
+      location: getLocationById(spot.locationId),
+      type: spotTypeName,
+      isInside: spot.isIndoor,
+      basePrice: null, // Price is set when creating listings, not spots
+      isActive: spot.isActive,
+      monthlyEarnings: 0, // Will be calculated from bookings
+      totalBookings: 0, // Will be calculated from bookings
+      rating: 0, // Will be calculated from reviews
+      description: spot.description || "",
+      amenities: spotTypeName === "electric" ? ["EV Charging"] : spotTypeName === "accessible" ? ["Accessible"] : [],
+      currentBooking: undefined // Will be populated from actual booking data
+    }
+  }) : []
 
   // Legacy mock data for empty state (keep some for demo)
   const defaultMockSpots = [
@@ -599,12 +699,12 @@ export default function MySpots() {
             <CardContent className="p-6">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="text-2xl">{getSpotTypeIcon(spot.spotType)}</div>
+                  <div className="text-2xl">{getSpotTypeIcon(getSpotTypeById(spot.spotTypeId))}</div>
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="text-xl font-semibold">Spot {spot.spotNumber}</h3>
-                      <Badge className={getSpotTypeColor(spot.spotType)}>
-                        {spot.spotType}
+                      <Badge className={getSpotTypeColor(getSpotTypeById(spot.spotTypeId))}>
+                        {getSpotTypeById(spot.spotTypeId)}
                       </Badge>
                       {spot.isIndoor && (
                         <Badge variant="outline">Indoor</Badge>
@@ -630,7 +730,7 @@ export default function MySpots() {
                     </div>
                     <p className="text-muted-foreground flex items-center gap-1">
                       <MapPin className="h-4 w-4" />
-                      {spot.location}
+                      {getLocationById(spot.locationId)}
                     </p>
                   </div>
                 </div>
@@ -768,11 +868,11 @@ export default function MySpots() {
                 <div className="space-y-3 p-3 border rounded-md">
                   <div>
                     <label className="text-xs font-medium text-muted-foreground">Address Search *</label>
-                    <Input
-                      value={customLocationData.address}
-                      onChange={(e) => setCustomLocationData(prev => ({ ...prev, address: e.target.value }))}
-                      placeholder="Search for an address..."
-                      data-testid="input-custom-address-search"
+                    <div 
+                      ref={autocompleteContainerRef} 
+                      id="geoapify-autocomplete-container"
+                      data-testid="container-address-autocomplete"
+                      className="w-full"
                     />
                     <p className="text-xs text-muted-foreground mt-1">
                       Enter a full address to auto-fill location details
@@ -924,13 +1024,13 @@ export default function MySpots() {
                 </div>
                 <div>
                   <Label htmlFor="edit-location">Location</Label>
-                  <Input id="edit-location" defaultValue={selectedSpot.location} />
+                  <Input id="edit-location" defaultValue={getLocationById(selectedSpot.locationId)} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="edit-spot-type">Spot Type</Label>
-                  <Select defaultValue={selectedSpot.spotType}>
+                  <Select defaultValue={String(selectedSpot.spotTypeId)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -1004,7 +1104,7 @@ export default function MySpots() {
                 <h3 className="font-semibold text-lg mb-1">Spot {selectedSpotForListing.spotNumber}</h3>
                 <p className="text-muted-foreground text-sm flex items-center gap-1">
                   <MapPin className="h-4 w-4" />
-                  {selectedSpotForListing.location}
+                  {getLocationById(selectedSpotForListing.locationId)}
                 </p>
               </div>
 
