@@ -36,6 +36,8 @@ export const users = pgTable("users", {
   status: text("status").notNull().$type<UserStatus>().default("active"),
   memberSince: text("member_since"),
   lastLogin: timestamp("last_login"),
+  acceptedTermsVersion: integer("accepted_terms_version"),
+  acceptedTermsAt: timestamp("accepted_terms_at"),
   deletedAt: timestamp("deleted_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -722,6 +724,27 @@ export interface AdminDashboardMetrics {
   revenueToday: number;
   newRegistrations: number;
 }
+
+// Terms and Conditions Versions Table
+export const termsVersions = pgTable("terms_versions", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  version: integer("version").notNull().unique(),
+  content: text("content").notNull(),
+  isActive: boolean("is_active").notNull().default(false),
+  publishedAt: timestamp("published_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertTermsVersionSchema = createInsertSchema(termsVersions).pick({
+  version: true,
+  content: true,
+  isActive: true,
+  publishedAt: true,
+});
+
+export type InsertTermsVersion = z.infer<typeof insertTermsVersionSchema>;
+export type TermsVersion = typeof termsVersions.$inferSelect;
 
 // Departments Table
 export const departments = pgTable("departments", {
