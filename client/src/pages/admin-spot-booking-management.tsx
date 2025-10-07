@@ -1744,7 +1744,7 @@ export default function AdminSpotBookingManagement() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <p className="font-medium">${booking.dailyRate.toFixed(2)}</p>
+                          <p className="font-medium">${Number(booking.dailyRate).toFixed(2)}</p>
                         </TableCell>
                         <TableCell>
                           {getStatusBadge(booking.status)}
@@ -2524,7 +2524,7 @@ export default function AdminSpotBookingManagement() {
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label>Daily Rate</Label>
-                  <p className="font-medium">${selectedBooking.dailyRate.toFixed(2)}</p>
+                  <p className="font-medium">${Number(selectedBooking.dailyRate).toFixed(2)}</p>
                 </div>
                 <div>
                   <Label>Status</Label>
