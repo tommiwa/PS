@@ -110,7 +110,7 @@ interface BookingAnalytics {
   totalActiveBookings: number;
   totalDailyRevenue: number;
   pendingRequests: number;
-  resolvedDisputes: number;
+  pendingDisputes: number;
   averageBookingValue: number;
   occupancyRate: number;
   todayBookings: number;
@@ -149,6 +149,26 @@ interface PendingPaymentData {
   totalAmount: number;
   daysOverdue: number;
   status: BookingStatus;
+}
+
+interface DisputeData {
+  id: string;
+  bookingId: string;
+  reporterId: string;
+  reporterName: string;
+  reporterEmail: string;
+  targetUserId: string;
+  targetUserName: string;
+  targetUserEmail: string;
+  reason: string;
+  status: 'open' | 'investigating' | 'resolved' | 'closed';
+  spotNumber?: string;
+  spotLocation?: string;
+  createdAt: string;
+  resolutionNotes?: string;
+  refundAmount?: number;
+  resolvedAt?: string;
+  resolvedBy?: string;
 }
 
 export default function AdminSpotBookingManagement() {
@@ -213,6 +233,7 @@ export default function AdminSpotBookingManagement() {
   const [showAdminNotesDialog, setShowAdminNotesDialog] = useState(false)
   const [adminNotes, setAdminNotes] = useState("")
   const [selectedAdminNotesBookingId, setSelectedAdminNotesBookingId] = useState<string | null>(null)
+  const [pendingDisputesDialogOpen, setPendingDisputesDialogOpen] = useState(false)
   
   // Pagination state for Active Bookings
   const [activeBookingsPageIndex, setActiveBookingsPageIndex] = useState(0)
@@ -325,6 +346,16 @@ export default function AdminSpotBookingManagement() {
     queryFn: () => fetch(`/api/admin/booking-analytics?scope=${scope}`).then(r => r.json())
   });
 
+  // Fetch pending disputes (lazy-loaded when dialog opens)
+  const { data: allDisputes = [], isLoading: isLoadingDisputes } = useQuery<DisputeData[]>({
+    queryKey: ["/api/admin/disputes"],
+    queryFn: () => fetch("/api/admin/disputes").then(r => r.json()),
+    enabled: pendingDisputesDialogOpen
+  });
+
+  // Filter for pending disputes (open or investigating)
+  const pendingDisputes = allDisputes.filter(d => d.status === 'open' || d.status === 'investigating');
+
   // Fetch locations for filter options
   const { data: locations = [] } = useQuery<Array<{
     id: number;
@@ -357,7 +388,7 @@ export default function AdminSpotBookingManagement() {
     totalActiveBookings: 0,
     totalDailyRevenue: 0,
     pendingRequests: 0,
-    resolvedDisputes: 0,
+    pendingDisputes: 0,
     averageBookingValue: 0,
     occupancyRate: 0,
     todayBookings: 0,
@@ -1406,24 +1437,24 @@ export default function AdminSpotBookingManagement() {
             <TooltipTrigger asChild>
               <Card 
                 className="hover-elevate cursor-pointer active-elevate-2"
-                onClick={() => setActiveTab("activity")}
+                onClick={() => setPendingDisputesDialogOpen(true)}
               >
                 <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Resolved Disputes</CardTitle>
-                  <div className="rounded-full border-2 border-purple-400 p-2">
-                    <Activity className="h-4 w-4 text-purple-600" />
+                  <CardTitle className="text-sm font-medium">Pending Disputes</CardTitle>
+                  <div className="rounded-full border-2 border-orange-400 p-2">
+                    <AlertTriangle className="h-4 w-4 text-orange-600" />
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold" data-testid="stat-resolved-disputes">
-                    {displayAnalytics.resolvedDisputes}
+                  <div className="text-2xl font-bold" data-testid="stat-pending-disputes">
+                    {displayAnalytics.pendingDisputes}
                   </div>
-                  <p className="text-xs text-purple-600">Successfully resolved</p>
+                  <p className="text-xs text-orange-600">Awaiting resolution</p>
                 </CardContent>
               </Card>
             </TooltipTrigger>
             <TooltipContent>
-              Click to view resolved dispute statistics
+              Click to view pending disputes requiring action
             </TooltipContent>
           </Tooltip>
         </div>
@@ -3066,6 +3097,121 @@ export default function AdminSpotBookingManagement() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Pending Disputes Dialog */}
+      <Dialog open={pendingDisputesDialogOpen} onOpenChange={setPendingDisputesDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto" data-testid="dialog-pending-disputes">
+          <DialogHeader>
+            <DialogTitle>Pending Disputes</DialogTitle>
+            <DialogDescription>
+              Review and manage disputes that require attention
+            </DialogDescription>
+          </DialogHeader>
+          
+          {isLoadingDisputes ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent"></div>
+                <p className="mt-2 text-sm text-muted-foreground">Loading disputes...</p>
+              </div>
+            </div>
+          ) : pendingDisputes.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Activity className="h-12 w-12 text-muted-foreground mb-3" />
+              <p className="text-sm text-muted-foreground">No pending disputes</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {pendingDisputes.map((dispute) => (
+                <Card key={dispute.id} data-testid={`dispute-card-${dispute.id}`}>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <CardTitle className="text-base">
+                            Booking #{dispute.bookingId.slice(0, 8)}
+                          </CardTitle>
+                          <Badge 
+                            variant={dispute.status === 'open' ? 'destructive' : 'default'}
+                            data-testid={`dispute-status-${dispute.id}`}
+                          >
+                            {dispute.status.charAt(0).toUpperCase() + dispute.status.slice(1)}
+                          </Badge>
+                        </div>
+                        {dispute.spotNumber && dispute.spotLocation && (
+                          <p className="text-sm text-muted-foreground">
+                            {dispute.spotNumber} - {dispute.spotLocation}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-right text-sm text-muted-foreground">
+                        {new Date(dispute.createdAt).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm font-medium mb-1">Reporter</p>
+                        <p className="text-sm text-muted-foreground" data-testid={`dispute-reporter-${dispute.id}`}>
+                          {dispute.reporterName}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{dispute.reporterEmail}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium mb-1">Target User</p>
+                        <p className="text-sm text-muted-foreground" data-testid={`dispute-target-${dispute.id}`}>
+                          {dispute.targetUserName}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{dispute.targetUserEmail}</p>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <p className="text-sm font-medium mb-1">Reason</p>
+                      <p className="text-sm text-muted-foreground" data-testid={`dispute-reason-${dispute.id}`}>
+                        {dispute.reason}
+                      </p>
+                    </div>
+                    
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const booking = activeBookings.find(b => b.id === dispute.bookingId) 
+                            || pastBookings.find(b => b.id === dispute.bookingId);
+                          if (booking) {
+                            setSelectedBooking(booking);
+                            setShowBookingDetails(true);
+                          }
+                        }}
+                        data-testid={`button-view-booking-${dispute.id}`}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        View Booking
+                      </Button>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => {
+                          setPendingDisputesDialogOpen(false);
+                          setSelectedDisputeBookingId(dispute.bookingId);
+                          setShowResolveDisputeDialog(true);
+                        }}
+                        data-testid={`button-resolve-${dispute.id}`}
+                      >
+                        <CheckCircle2 className="h-4 w-4 mr-1" />
+                        Resolve
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

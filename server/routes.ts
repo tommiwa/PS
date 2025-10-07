@@ -1812,9 +1812,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? (activeBookings.length / totalBookableSpots) * 100
         : 0;
       
-      // Get disputes (no BCI filtering needed, but we can add if required)
-      const disputes = await storage.getDisputes({ status: 'resolved' });
-      const resolvedDisputes = disputes.length;
+      // Get pending disputes (open or investigating)
+      const allDisputes = await storage.getDisputes({});
+      const pendingDisputes = allDisputes.filter(d => d.status === 'open' || d.status === 'investigating').length;
       
       // Popular spots - top 5 by booking count
       const spotBookingCounts = new Map<string, { count: number; spotNumber: string }>();
@@ -1848,7 +1848,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalActiveBookings,
         totalDailyRevenue,
         pendingRequests,
-        resolvedDisputes,
+        pendingDisputes,
         averageBookingValue,
         occupancyRate,
         todayBookings,
