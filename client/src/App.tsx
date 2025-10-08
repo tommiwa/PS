@@ -1,6 +1,6 @@
 import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -9,14 +9,17 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { RoleSwitcher } from "@/components/role-switcher";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { AuthProvider, useAuth } from "@/contexts/auth-context";
 import { ThemeProvider } from "@/contexts/theme-context";
 import { LanguageProvider } from "@/contexts/language-context";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ConfirmProvider } from "@/hooks/use-confirm";
 import { NotificationCenter } from "@/components/notification-center";
-import { LogOut, Loader2 } from "lucide-react";
-import { useEffect } from "react";
+import { LogOut, Loader2, FileText, CheckCircle2 } from "lucide-react";
+import { useEffect, useState } from "react";
 
 // Pages
 import Dashboard from "@/pages/dashboard";
@@ -35,6 +38,137 @@ import Login from "@/pages/login";
 import Terms from "@/pages/terms";
 import TermsConsent from "@/pages/terms-consent";
 import NotFound from "@/pages/not-found";
+
+// Terms version interface
+interface TermsVersion {
+  id: number;
+  version: number;
+  content: string;
+  isActive: boolean;
+  publishedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Component to render formatted terms content
+function FormattedTermsContent({ content }: { content: string }) {
+  const lines = content.split('\n');
+  const elements: React.ReactNode[] = [];
+  let currentList: React.ReactNode[] = [];
+  let listType: 'bullet' | 'check' | null = null;
+
+  const flushList = () => {
+    if (currentList.length > 0) {
+      elements.push(
+        <ul key={`list-${elements.length}`} className={listType === 'check' ? 'space-y-2 mb-6' : 'space-y-1.5 mb-6 ml-6'}>
+          {currentList}
+        </ul>
+      );
+      currentList = [];
+      listType = null;
+    }
+  };
+
+  lines.forEach((line, index) => {
+    const trimmed = line.trim();
+    
+    // Main heading (H1)
+    if (trimmed.startsWith('# ')) {
+      flushList();
+      const text = trimmed.substring(2).trim();
+      elements.push(
+        <h1 key={`h1-${index}`} className="text-2xl font-bold text-foreground mb-4 mt-8 first:mt-0">
+          {text}
+        </h1>
+      );
+    }
+    // Section heading (H2)
+    else if (trimmed.startsWith('## ')) {
+      flushList();
+      const text = trimmed.substring(3).trim();
+      elements.push(
+        <h2 key={`h2-${index}`} className="text-xl font-semibold text-primary mb-3 mt-8 first:mt-0">
+          {text}
+        </h2>
+      );
+    }
+    // Subsection heading (H3)
+    else if (trimmed.startsWith('### ')) {
+      flushList();
+      const text = trimmed.substring(4).trim();
+      elements.push(
+        <h3 key={`h3-${index}`} className="text-lg font-semibold text-foreground mb-3 mt-6">
+          {text}
+        </h3>
+      );
+    }
+    // Horizontal rule
+    else if (trimmed === '---') {
+      flushList();
+      elements.push(
+        <Separator key={`sep-${index}`} className="my-6" />
+      );
+    }
+    // Check list item
+    else if (trimmed.startsWith('✓ ')) {
+      if (listType !== 'check') {
+        flushList();
+        listType = 'check';
+      }
+      const text = trimmed.substring(2).trim();
+      currentList.push(
+        <li key={`check-${index}`} className="flex items-start gap-2 text-sm">
+          <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-500 flex-shrink-0 mt-0.5" />
+          <span className="text-muted-foreground">{text}</span>
+        </li>
+      );
+    }
+    // Bullet point
+    else if (trimmed.startsWith('- ')) {
+      if (listType !== 'bullet') {
+        flushList();
+        listType = 'bullet';
+      }
+      const text = trimmed.substring(2).trim();
+      currentList.push(
+        <li key={`bullet-${index}`} className="text-sm text-muted-foreground list-disc">
+          {text.startsWith('**') && text.endsWith('**') ? (
+            <strong className="text-foreground font-semibold">{text.slice(2, -2)}</strong>
+          ) : (
+            text
+          )}
+        </li>
+      );
+    }
+    // Bold text paragraph
+    else if (trimmed.startsWith('**') && trimmed.endsWith('**')) {
+      flushList();
+      const text = trimmed.slice(2, -2);
+      elements.push(
+        <p key={`bold-${index}`} className="text-base font-semibold text-foreground mb-3 mt-2">
+          {text}
+        </p>
+      );
+    }
+    // Regular paragraph
+    else if (trimmed && !trimmed.startsWith('*') && !trimmed.startsWith('#')) {
+      flushList();
+      elements.push(
+        <p key={`p-${index}`} className="text-sm text-muted-foreground mb-3 leading-relaxed">
+          {trimmed}
+        </p>
+      );
+    }
+    // Empty line
+    else if (!trimmed) {
+      flushList();
+    }
+  });
+
+  flushList();
+
+  return <div className="space-y-1">{elements}</div>;
+}
 
 // Protected Router that handles authentication
 function ProtectedRouter() {
@@ -173,6 +307,12 @@ function useNavigationDataRefresh() {
 // Main authenticated app layout
 function AuthenticatedApp() {
   const { user, logout } = useAuth();
+  const [termsDialogOpen, setTermsDialogOpen] = useState(false);
+  
+  // Fetch terms for the footer dialog
+  const { data: terms } = useQuery<TermsVersion>({
+    queryKey: ["/api/legal/terms"],
+  });
   
   // Enable automatic data refresh on navigation
   useNavigationDataRefresh();
@@ -307,15 +447,37 @@ function AuthenticatedApp() {
           </main>
           <footer className="border-t bg-background py-2 px-4">
             <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground/60">
-              <a 
-                href="/terms" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="hover:text-foreground/80 underline"
-                data-testid="link-footer-terms"
-              >
-                Terms and Conditions
-              </a>
+              <Dialog open={termsDialogOpen} onOpenChange={setTermsDialogOpen}>
+                <DialogTrigger asChild>
+                  <button
+                    type="button"
+                    className="hover:text-foreground/80 underline cursor-pointer"
+                    data-testid="link-footer-terms"
+                    onClick={() => setTermsDialogOpen(true)}
+                  >
+                    Terms and Conditions
+                  </button>
+                </DialogTrigger>
+                <DialogContent className="max-w-3xl max-h-[85vh]">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Terms and Conditions
+                    </DialogTitle>
+                  </DialogHeader>
+                  <ScrollArea className="h-[65vh] pr-4">
+                    {terms ? (
+                      <div className="max-w-none" data-testid="terms-dialog-content">
+                        <FormattedTermsContent content={terms.content} />
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center py-12">
+                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      </div>
+                    )}
+                  </ScrollArea>
+                </DialogContent>
+              </Dialog>
               <span>•</span>
               <span>BCI ParkShare Platform</span>
             </div>
