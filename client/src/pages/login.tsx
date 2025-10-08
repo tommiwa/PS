@@ -53,25 +53,37 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md p-8">
-        <div className="space-y-8">
-          {/* Logo */}
-          <div className="text-center">
-            <BCIHeroLogo className="mx-auto" />
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden p-4">
+      {/* Gradient Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-primary/5 dark:from-primary/5 dark:via-background dark:to-primary/10" />
+      
+      {/* Decorative Circles */}
+      <div className="absolute top-20 right-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl" />
+      <div className="absolute bottom-20 left-10 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+      
+      {/* Login Card */}
+      <Card className="w-full max-w-md relative shadow-2xl border-primary/20">
+        <div className="p-8 md:p-10 space-y-8">
+          {/* Logo with animation effect */}
+          <div className="text-center space-y-4">
+            <div className="inline-block p-4 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5">
+              <BCIHeroLogo className="mx-auto" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-lg text-muted-foreground font-light">
+                Welcome to BCI Parking
+              </p>
+              <p className="text-sm text-muted-foreground/80">
+                Sign in to access your dashboard
+              </p>
+            </div>
           </div>
 
           {/* Content */}
           <div className="space-y-6">
-            <div className="text-center space-y-2">
-              <p className="text-muted-foreground">
-                Sign in to access your dashboard
-              </p>
-            </div>
-
             {/* Error Alert */}
             {errorMessage && (
-              <Alert variant="destructive" data-testid="alert-login-error">
+              <Alert variant="destructive" data-testid="alert-login-error" className="border-destructive/50">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription data-testid="text-login-error">
                   {errorMessage}
@@ -80,12 +92,13 @@ export default function Login() {
             )}
 
             {/* Terms and Conditions Acceptance */}
-            <div className="flex items-start space-x-3 p-4 bg-muted/50 rounded-lg">
+            <div className="flex items-start space-x-3 p-4 bg-gradient-to-br from-muted/30 to-muted/50 rounded-xl border border-border/50">
               <Checkbox
                 id="terms-acceptance"
                 checked={termsAccepted}
                 onCheckedChange={(checked) => setTermsAccepted(checked === true)}
                 data-testid="checkbox-accept-terms-login"
+                className="mt-0.5"
               />
               <div className="grid gap-1.5 leading-none">
                 <label
@@ -97,7 +110,7 @@ export default function Login() {
                     <DialogTrigger asChild>
                       <button
                         type="button"
-                        className="text-primary underline hover:text-primary/80"
+                        className="text-primary underline underline-offset-2 hover:text-primary/80 transition-colors font-medium"
                         data-testid="button-open-terms-dialog"
                         onClick={(e) => {
                           e.preventDefault();
@@ -132,22 +145,24 @@ export default function Login() {
             </div>
 
             {/* Login Button */}
-            <Button 
-              onClick={handleLogin}
-              disabled={!termsAccepted}
-              className="w-full"
-              size="lg"
-              data-testid="button-login"
-            >
-              Sign In with Replit
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-            
-            {!termsAccepted && (
-              <p className="text-xs text-center text-muted-foreground">
-                Please accept the Terms and Conditions to continue
-              </p>
-            )}
+            <div className="space-y-3">
+              <Button 
+                onClick={handleLogin}
+                disabled={!termsAccepted}
+                className="w-full shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all"
+                size="lg"
+                data-testid="button-login"
+              >
+                Sign In with Replit
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+              
+              {!termsAccepted && (
+                <p className="text-xs text-center text-muted-foreground">
+                  Please accept the Terms and Conditions to continue
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </Card>
