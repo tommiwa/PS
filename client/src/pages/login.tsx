@@ -71,7 +71,7 @@ export default function Login() {
             </div>
             <div className="space-y-1">
               <p className="text-lg text-muted-foreground font-light">
-                Welcome to BCI Parking
+                Welcome to BCI ParkShare
               </p>
               <p className="text-sm text-muted-foreground/80">
                 Sign in to access your dashboard

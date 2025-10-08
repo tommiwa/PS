@@ -105,7 +105,7 @@ export class PDFExporter {
     // Footer text
     this.doc.setFontSize(8)
     this.doc.setTextColor(BCI_COLORS.secondary)
-    this.doc.text('BCI Parking Management System - Confidential Report', 20, pageHeight - 15)
+    this.doc.text('BCI ParkShare - Confidential Report', 20, pageHeight - 15)
     
     // Page number - only draw on current page
     this.doc.text(
@@ -236,7 +236,7 @@ export class ExcelExporter {
     const wsData: any[][] = []
     
     // Add title rows
-    wsData.push(['BCI Parking Management System'])
+    wsData.push(['BCI ParkShare'])
     wsData.push([exportData.title])
     if (exportData.subtitle) {
       wsData.push([exportData.subtitle])

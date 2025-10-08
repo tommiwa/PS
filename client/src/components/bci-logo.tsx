@@ -84,7 +84,7 @@ export default function BCILogo({
           "text-muted-foreground font-medium",
           sizes.subtitle
         )}>
-          Parking Management System
+          ParkShare System
         </p>
       </div>
     );
@@ -125,7 +125,7 @@ export default function BCILogo({
           "text-muted-foreground font-medium leading-tight",
           sizes.subtitle
         )}>
-          Parking Management System
+          ParkShare System
         </p>
       </div>
     </div>
@@ -146,7 +146,7 @@ export function BCIHeroLogo({ className }: { className?: string }) {
       {/* Clean Typography */}
       <div className="space-y-1">
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          BCI Parking
+          BCI ParkShare
         </h1>
         <p className="text-sm text-muted-foreground">
           Spot Sharing Application

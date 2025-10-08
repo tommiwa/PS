@@ -71,7 +71,7 @@ NEXT STEPS:
 IMPORTANT: This assignment will expire if not confirmed within 48 hours.
 
 Best regards,
-BCI Parking Management Team`;
+BCI ParkShare Team`;
 
   const html = `
 <!DOCTYPE html>
@@ -131,7 +131,7 @@ BCI Parking Management Team`;
     </div>
     
     <div class="footer">
-      <p>Best regards,<br>BCI Parking Management Team</p>
+      <p>Best regards,<br>BCI ParkShare Team</p>
     </div>
   </div>
 </body>
@@ -150,7 +150,7 @@ export const createWelcomeNotification = (
   user: { name: string; email: string },
   waitingListEntry: WaitingList
 ): EmailNotification => {
-  const subject = `Welcome to BCI Parking Waiting List`;
+  const subject = `Welcome to BCI ParkShare Waiting List`;
   
   const text = `Dear ${user.name},
 
@@ -170,7 +170,7 @@ WHAT'S NEXT:
 Thank you for your patience!
 
 Best regards,
-BCI Parking Management Team`;
+BCI ParkShare Team`;
 
   const html = `
 <!DOCTYPE html>
@@ -185,7 +185,7 @@ BCI Parking Management Team`;
 <body>
   <div class="container">
     <div class="header">
-      <h1>Welcome to BCI Parking Waiting List</h1>
+      <h1>Welcome to BCI ParkShare Waiting List</h1>
     </div>
     <div class="content">
       <p>Dear ${user.name},</p>
@@ -239,10 +239,10 @@ IMPORTANT INFORMATION:
 • Remember to display any required parking permits
 • Contact support if you need to make changes to your booking
 
-Thank you for using BCI Parking!
+Thank you for using BCI ParkShare!
 
 Best regards,
-BCI Parking Management Team`;
+BCI ParkShare Team`;
 
   const html = `
 <!DOCTYPE html>
@@ -297,7 +297,7 @@ BCI Parking Management Team`;
     </div>
     
     <div class="footer">
-      <p>Thank you for using BCI Parking!<br>BCI Parking Management Team</p>
+      <p>Thank you for using BCI ParkShare!<br>BCI ParkShare Team</p>
     </div>
   </div>
 </body>
@@ -355,7 +355,7 @@ WHAT'S NEXT:
 We apologize for any inconvenience this may have caused.
 
 Best regards,
-BCI Parking Management Team`;
+BCI ParkShare Team`;
 
   const html = `
 <!DOCTYPE html>
@@ -428,7 +428,7 @@ BCI Parking Management Team`;
     </div>
     
     <div class="footer">
-      <p>Best regards,<br>BCI Parking Management Team</p>
+      <p>Best regards,<br>BCI ParkShare Team</p>
     </div>
   </div>
 </body>
@@ -477,7 +477,7 @@ ${isOverdue
 To make a payment, please log into your account or contact our billing department.
 
 Best regards,
-BCI Parking Management Team`;
+BCI ParkShare Team`;
 
   const html = `
 <!DOCTYPE html>
@@ -533,7 +533,7 @@ BCI Parking Management Team`;
     </div>
     
     <div class="footer">
-      <p>Best regards,<br>BCI Parking Management Team</p>
+      <p>Best regards,<br>BCI ParkShare Team</p>
     </div>
   </div>
 </body>
@@ -581,7 +581,7 @@ QUICK ACTIONS:
 Don't wait - popular spots fill up quickly!
 
 Best regards,
-BCI Parking Management Team`;
+BCI ParkShare Team`;
 
   const html = `
 <!DOCTYPE html>
@@ -633,7 +633,7 @@ BCI Parking Management Team`;
     </div>
     
     <div class="footer">
-      <p>Best regards,<br>BCI Parking Management Team</p>
+      <p>Best regards,<br>BCI ParkShare Team</p>
     </div>
   </div>
 </body>
@@ -681,10 +681,10 @@ QUICK ACTIONS:
 • Book spots for upcoming weeks
 • Update your parking preferences
 
-Thank you for using BCI Parking!
+Thank you for using BCI ParkShare!
 
 Best regards,
-BCI Parking Management Team`;
+BCI ParkShare Team`;
 
   const html = `
 <!DOCTYPE html>
@@ -758,7 +758,7 @@ BCI Parking Management Team`;
     </div>
     
     <div class="footer">
-      <p>Thank you for using BCI Parking!<br>BCI Parking Management Team</p>
+      <p>Thank you for using BCI ParkShare!<br>BCI ParkShare Team</p>
     </div>
   </div>
 </body>
@@ -811,7 +811,7 @@ WHAT YOU NEED TO KNOW:
 We apologize for any inconvenience and appreciate your understanding.
 
 Best regards,
-BCI Parking Management Team`;
+BCI ParkShare Team`;
 
   const html = `
 <!DOCTYPE html>
@@ -876,7 +876,7 @@ BCI Parking Management Team`;
     </div>
     
     <div class="footer">
-      <p>We apologize for any inconvenience and appreciate your understanding.<br>BCI Parking Management Team</p>
+      <p>We apologize for any inconvenience and appreciate your understanding.<br>BCI ParkShare Team</p>
     </div>
   </div>
 </body>
@@ -998,7 +998,7 @@ export async function sendWelcomeNotification(
       await storage.createInAppNotification({
         userId: user.id,
         type: 'welcome',
-        title: 'Welcome to BCI Parking Waiting List',
+        title: 'Welcome to BCI ParkShare Waiting List',
         message: `You've been enrolled in the waiting list. We'll notify you when a ${waitingListEntry.preferredSpotType || 'parking'} spot becomes available.`,
         data: {
           waitingListEntryId: waitingListEntry.id,

@@ -220,7 +220,7 @@ function AuthenticatedApp() {
                 </TooltipContent>
               </Tooltip>
               <div className="hidden md:block">
-<h2 className="text-lg font-semibold text-primary">BCI Parking</h2>
+<h2 className="text-lg font-semibold text-primary">BCI ParkShare</h2>
                 <p className="text-sm text-muted-foreground">Spot Sharing Application</p>
               </div>
             </div>
@@ -317,7 +317,7 @@ function AuthenticatedApp() {
                 Terms and Conditions
               </a>
               <span>•</span>
-              <span>BCI Parking Spot Sharing Platform</span>
+              <span>BCI ParkShare Platform</span>
             </div>
           </footer>
         </div>
