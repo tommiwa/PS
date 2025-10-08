@@ -26,6 +26,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
+  useSidebar,
 } from "@/components/ui/sidebar"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
@@ -130,6 +131,7 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
   const { getCurrentViewRole, user } = useAuth();
   const { toast } = useToast();
   const [refreshing, setRefreshing] = useState<string | null>(null);
+  const { setOpenMobile } = useSidebar();
   
   // Get effective role: use view role if set (for admin viewing as other role), 
   // otherwise use user's actual roles
@@ -258,6 +260,9 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
   const handleProfileClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     
+    // Close sidebar on mobile
+    setOpenMobile(false);
+    
     // If already on profile page, refresh data
     if (location === "/profile") {
       await refreshProfileData();
@@ -293,6 +298,9 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
   };
 
   const handleNavItemClick = async (url: string, e: React.MouseEvent) => {
+    // Close sidebar on mobile
+    setOpenMobile(false);
+    
     // If already on this page, refresh the data
     if (location === url) {
       e.preventDefault();
