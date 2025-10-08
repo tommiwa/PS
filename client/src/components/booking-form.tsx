@@ -157,33 +157,8 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
     setIsSubmitting(true)
     
     try {
-      // Simulate API call with potential failure
-      await new Promise<void>((resolve, reject) => {
-        setTimeout(() => {
-          // Simulate 90% success rate for testing
-          if (Math.random() > 0.1) {
-            console.log('Submitting booking:', { ...formData, spotId: spot.id })
-            resolve()
-          } else {
-            reject(new Error("Failed to create booking. Please try again."))
-          }
-        }, 1000)
-      })
-      
+      // Simply pass the data to parent - parent handles the mutation and toasts
       onSubmit({ ...formData, spotId: spot.id })
-      toast({
-        title: "Booking Created",
-        description: `Successfully booked Spot ${spot.spotNumber} for ${formData.date}`,
-        variant: "success",
-      })
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred"
-      setSubmitError(errorMessage)
-      toast({
-        title: "Booking Failed",
-        description: errorMessage,
-        variant: "error",
-      })
     } finally {
       setIsSubmitting(false)
     }
