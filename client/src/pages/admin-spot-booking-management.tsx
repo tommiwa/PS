@@ -171,6 +171,21 @@ interface DisputeData {
   resolvedBy?: string;
 }
 
+interface AuditLogData {
+  id: string;
+  occurredAt: string;
+  actorId: string | null;
+  actorEmail: string | null;
+  actorRole: string | null;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  success: boolean;
+  message: string | null;
+  before: any;
+  after: any;
+}
+
 export default function AdminSpotBookingManagement() {
   const { toast } = useToast()
   const { confirm } = useConfirm()
@@ -212,6 +227,7 @@ export default function AdminSpotBookingManagement() {
   const [selectedBooking, setSelectedBooking] = useState<AdminBookingData | null>(null)
   const [selectedAvailabilityListing, setSelectedAvailabilityListing] = useState<BookingAvailabilityData | null>(null)
   const [showBookingDetails, setShowBookingDetails] = useState(false)
+  const [bookingDetailsTab, setBookingDetailsTab] = useState("details")
   const [showAvailabilityDetailsDialog, setShowAvailabilityDetailsDialog] = useState(false)
   const [showCancelDialog, setShowCancelDialog] = useState(false)
   const [showContactDialog, setShowContactDialog] = useState(false)
@@ -310,6 +326,13 @@ export default function AdminSpotBookingManagement() {
     }
   }, [activeTab, scope])
 
+  // Reset booking details tab to "details" when dialog opens
+  useEffect(() => {
+    if (showBookingDetails) {
+      setBookingDetailsTab("details")
+    }
+  }, [showBookingDetails])
+
   // Fetch active bookings
   const { data: activeBookings = [], isLoading: isLoadingActive } = useQuery<AdminBookingData[]>({
     queryKey: ["/api/admin/active-bookings", scope],
@@ -355,6 +378,16 @@ export default function AdminSpotBookingManagement() {
 
   // Filter for pending disputes (open or investigating)
   const pendingDisputes = allDisputes.filter(d => d.status === 'open' || d.status === 'investigating');
+
+  // Fetch audit logs for selected booking (lazy-loaded when dialog opens)
+  const { data: auditLogs = [], isLoading: isLoadingAuditLogs } = useQuery<AuditLogData[]>({
+    queryKey: ["/api/admin/audits", selectedBooking?.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/admin/audits?entityType=booking&entityId=${selectedBooking?.id}`).then(r => r.json());
+      return response.items ?? [];
+    },
+    enabled: showBookingDetails && !!selectedBooking?.id
+  });
 
   // Fetch locations for filter options
   const { data: locations = [] } = useQuery<Array<{
@@ -1141,6 +1174,24 @@ export default function AdminSpotBookingManagement() {
     };
     
     return iconMap[type as keyof typeof iconMap] || <Activity className="h-4 w-4 text-gray-600" />;
+  };
+
+  const getAuditIcon = (action: string) => {
+    const iconMap: Record<string, JSX.Element> = {
+      CREATE: <Calendar className="h-4 w-4 text-blue-600" />,
+      UPDATE: <Settings className="h-4 w-4 text-amber-600" />,
+      DELETE: <XCircle className="h-4 w-4 text-red-600" />,
+      CANCEL: <Ban className="h-4 w-4 text-red-600" />,
+      COMPLETE: <CheckCircle2 className="h-4 w-4 text-green-600" />,
+      APPROVE: <CheckCircle2 className="h-4 w-4 text-green-600" />,
+      REJECT: <XCircle className="h-4 w-4 text-red-600" />,
+      ACTIVATE: <Zap className="h-4 w-4 text-green-600" />,
+      DEACTIVATE: <Ban className="h-4 w-4 text-gray-600" />,
+      VIEW: <Eye className="h-4 w-4 text-blue-600" />,
+      EXPORT: <Download className="h-4 w-4 text-purple-600" />,
+    };
+    
+    return iconMap[action] || <Activity className="h-4 w-4 text-gray-600" />;
   };
 
   const formatTime = (timestamp: string) => {
@@ -2609,7 +2660,7 @@ export default function AdminSpotBookingManagement() {
 
       {/* Booking Details Dialog */}
       <Dialog open={showBookingDetails} onOpenChange={setShowBookingDetails}>
-        <DialogContent className="max-w-2xl" data-testid="dialog-booking-details">
+        <DialogContent className="max-w-3xl max-h-[90vh]" data-testid="dialog-booking-details">
           <DialogHeader>
             <DialogTitle>Booking Details</DialogTitle>
             <DialogDescription>
@@ -2617,86 +2668,215 @@ export default function AdminSpotBookingManagement() {
             </DialogDescription>
           </DialogHeader>
           {selectedBooking && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Spot Information</Label>
-                  <p className="font-medium">{selectedBooking.spotNumber}</p>
-                  <p className="text-sm text-muted-foreground">{selectedBooking.spotLocation}</p>
-                </div>
-                <div>
-                  <Label>Booking Date</Label>
-                  <p className="font-medium">{formatDate(selectedBooking.bookingDate)}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedBooking.startTime} - {selectedBooking.endTime}
-                  </p>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Renter</Label>
-                  <p className="font-medium">{selectedBooking.renterName}</p>
-                  <p className="text-sm text-muted-foreground">{selectedBooking.renterEmail}</p>
-                  <p className="text-sm text-muted-foreground">{selectedBooking.renterDepartment}</p>
-                </div>
-                <div>
-                  <Label>Owner</Label>
-                  <p className="font-medium">{selectedBooking.ownerName}</p>
-                  <p className="text-sm text-muted-foreground">{selectedBooking.ownerEmail}</p>
-                  <p className="text-sm text-muted-foreground">{selectedBooking.ownerDepartment}</p>
-                </div>
-              </div>
+            <Tabs value={bookingDetailsTab} onValueChange={setBookingDetailsTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-2" data-testid="tabs-booking-details">
+                <TabsTrigger value="details" data-testid="tab-details">Details</TabsTrigger>
+                <TabsTrigger value="audit-history" data-testid="tab-audit-history">
+                  Audit History
+                  {Array.isArray(auditLogs) && auditLogs.length > 0 && (
+                    <Badge variant="secondary" className="ml-2">{auditLogs.length}</Badge>
+                  )}
+                </TabsTrigger>
+              </TabsList>
 
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Label>Daily Rate</Label>
-                  <p className="font-medium">${Number(selectedBooking.dailyRate).toFixed(2)}</p>
+              <TabsContent value="details" className="space-y-4 mt-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Spot Information</Label>
+                    <p className="font-medium" data-testid="text-spot-number">{selectedBooking.spotNumber}</p>
+                    <p className="text-sm text-muted-foreground" data-testid="text-spot-location">{selectedBooking.spotLocation}</p>
+                  </div>
+                  <div>
+                    <Label>Booking Date</Label>
+                    <p className="font-medium" data-testid="text-booking-date">{formatDate(selectedBooking.bookingDate)}</p>
+                    <p className="text-sm text-muted-foreground" data-testid="text-booking-time">
+                      {selectedBooking.startTime} - {selectedBooking.endTime}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <Label>Status</Label>
-                  {getStatusBadge(selectedBooking.status)}
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Renter</Label>
+                    <p className="font-medium" data-testid="text-renter-name">{selectedBooking.renterName}</p>
+                    <p className="text-sm text-muted-foreground" data-testid="text-renter-email">{selectedBooking.renterEmail}</p>
+                    <p className="text-sm text-muted-foreground" data-testid="text-renter-department">{selectedBooking.renterDepartment}</p>
+                  </div>
+                  <div>
+                    <Label>Owner</Label>
+                    <p className="font-medium" data-testid="text-owner-name">{selectedBooking.ownerName}</p>
+                    <p className="text-sm text-muted-foreground" data-testid="text-owner-email">{selectedBooking.ownerEmail}</p>
+                    <p className="text-sm text-muted-foreground" data-testid="text-owner-department">{selectedBooking.ownerDepartment}</p>
+                  </div>
                 </div>
-                <div>
-                  <Label>Payment</Label>
-                  <Badge variant={selectedBooking.paymentReceived ? "default" : "secondary"}>
-                    {selectedBooking.paymentReceived ? "Received" : "Pending"}
-                  </Badge>
-                </div>
-              </div>
 
-              {selectedBooking.notes && (
-                <div>
-                  <Label>Notes</Label>
-                  <p className="text-sm">{selectedBooking.notes}</p>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Label>Daily Rate</Label>
+                    <p className="font-medium" data-testid="text-daily-rate">${Number(selectedBooking.dailyRate).toFixed(2)}</p>
+                  </div>
+                  <div>
+                    <Label>Status</Label>
+                    <div data-testid="badge-booking-status">
+                      {getStatusBadge(selectedBooking.status)}
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Payment</Label>
+                    <Badge variant={selectedBooking.paymentReceived ? "default" : "secondary"} data-testid="badge-payment-status">
+                      {selectedBooking.paymentReceived ? "Received" : "Pending"}
+                    </Badge>
+                  </div>
                 </div>
-              )}
 
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowContactDialog(true);
-                    setShowBookingDetails(false);
-                  }}
-                  data-testid="button-contact-from-details"
-                >
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Contact Users
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={() => {
-                    setShowCancelDialog(true);
-                    setShowBookingDetails(false);
-                  }}
-                  data-testid="button-cancel-from-details"
-                >
-                  <Ban className="h-4 w-4 mr-2" />
-                  Cancel Booking
-                </Button>
-              </div>
-            </div>
+                {selectedBooking.notes && (
+                  <div>
+                    <Label>Notes</Label>
+                    <p className="text-sm" data-testid="text-booking-notes">{selectedBooking.notes}</p>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowContactDialog(true);
+                      setShowBookingDetails(false);
+                    }}
+                    data-testid="button-contact-from-details"
+                  >
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Contact Users
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      setShowCancelDialog(true);
+                      setShowBookingDetails(false);
+                    }}
+                    data-testid="button-cancel-from-details"
+                  >
+                    <Ban className="h-4 w-4 mr-2" />
+                    Cancel Booking
+                  </Button>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="audit-history" className="mt-4">
+                <ScrollArea className="h-[400px] pr-4">
+                  {isLoadingAuditLogs ? (
+                    <div className="space-y-4" data-testid="audit-loading">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="flex gap-4">
+                          <Skeleton className="h-10 w-10 rounded-full" />
+                          <div className="flex-1 space-y-2">
+                            <Skeleton className="h-4 w-3/4" />
+                            <Skeleton className="h-3 w-1/2" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : !Array.isArray(auditLogs) || auditLogs.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center" data-testid="audit-empty-state">
+                      <Activity className="h-12 w-12 text-muted-foreground mb-4" />
+                      <p className="text-lg font-medium">No Audit History</p>
+                      <p className="text-sm text-muted-foreground">No audit logs found for this booking</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4" data-testid="audit-timeline">
+                      {Array.isArray(auditLogs) && auditLogs
+                        .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime())
+                        .map((log, index) => (
+                          <div 
+                            key={log.id} 
+                            className="flex gap-4 relative pb-4"
+                            data-testid={`audit-log-${log.id}`}
+                          >
+                            {index < auditLogs.length - 1 && (
+                              <div className="absolute left-5 top-10 bottom-0 w-px bg-border" />
+                            )}
+                            
+                            <div className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-background">
+                              {getAuditIcon(log.action)}
+                            </div>
+
+                            <div className="flex-1 space-y-1">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1">
+                                  <p className="font-medium" data-testid={`audit-action-${log.id}`}>
+                                    {log.message || `${log.action} - ${log.entityType}`}
+                                  </p>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <User className="h-3 w-3 text-muted-foreground" />
+                                    <p className="text-sm text-muted-foreground" data-testid={`audit-actor-${log.id}`}>
+                                      {log.actorEmail || "System"}
+                                    </p>
+                                    {log.actorRole && (
+                                      <Badge variant="outline" className="text-xs" data-testid={`audit-role-${log.id}`}>
+                                        {log.actorRole}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-sm font-medium" data-testid={`audit-time-${log.id}`}>
+                                    {new Date(log.occurredAt).toLocaleTimeString([], { 
+                                      hour: '2-digit', 
+                                      minute: '2-digit' 
+                                    })}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground" data-testid={`audit-date-${log.id}`}>
+                                    {new Date(log.occurredAt).toLocaleDateString()}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <Badge 
+                                  variant={log.success ? "default" : "destructive"}
+                                  className="text-xs"
+                                  data-testid={`audit-status-${log.id}`}
+                                >
+                                  {log.success ? "SUCCESS" : "FAILED"}
+                                </Badge>
+                                <Badge variant="outline" className="text-xs" data-testid={`audit-action-type-${log.id}`}>
+                                  {log.action}
+                                </Badge>
+                              </div>
+
+                              {(log.before || log.after) && (
+                                <details className="mt-2">
+                                  <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
+                                    View details
+                                  </summary>
+                                  <div className="mt-2 space-y-2 text-xs">
+                                    {log.before && (
+                                      <div>
+                                        <p className="font-medium">Before:</p>
+                                        <pre className="bg-muted p-2 rounded overflow-auto">
+                                          {JSON.stringify(log.before, null, 2)}
+                                        </pre>
+                                      </div>
+                                    )}
+                                    {log.after && (
+                                      <div>
+                                        <p className="font-medium">After:</p>
+                                        <pre className="bg-muted p-2 rounded overflow-auto">
+                                          {JSON.stringify(log.after, null, 2)}
+                                        </pre>
+                                      </div>
+                                    )}
+                                  </div>
+                                </details>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </ScrollArea>
+              </TabsContent>
+            </Tabs>
           )}
         </DialogContent>
       </Dialog>
