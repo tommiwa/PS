@@ -1478,7 +1478,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         renterId: userId,
         // Ensure ownerId matches the spot owner
         ownerId: spot.ownerId || "unassigned"
-      });
+      } as any); // Type assertion since we're adding required fields server-side
 
       // Audit the booking creation
       await auditService.logAction("CREATE", "booking", {
@@ -4654,7 +4654,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           paymentReceived,
           notes: `Sample booking ${i + 1} - Status: ${bookingStatus}`,
           ...(bookingStatus === 'cancelled' ? { cancellationReason: 'Sample cancellation for testing' } : {})
-        });
+        } as any); // Type assertion since we're adding required fields server-side
         
         createdBookings.push(booking);
       }

@@ -134,6 +134,9 @@ export default function Search() {
       })
       setShowBookingForm(false)
       setSelectedSpot(null)
+      
+      // CRITICAL: Invalidate queries so My Bookings page shows the new booking
+      queryClient.invalidateQueries({ queryKey: ['/api/my-bookings'] })
     },
     onError: (error: any) => {
       toast({

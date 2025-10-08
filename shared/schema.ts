@@ -257,6 +257,8 @@ export const insertBookingSchema = createInsertSchema(bookings).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  renterId: true,
+  ownerId: true,
 });
 
 export type InsertBooking = z.infer<typeof insertBookingSchema>;
