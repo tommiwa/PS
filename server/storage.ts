@@ -997,7 +997,7 @@ export class MemStorage implements IStorage {
   }
 
   async getActiveSpotListings(): Promise<SpotListing[]> {
-    return await db.select().from(spotListings).where(eq(spotListings.status, "active"));
+    return await db.select().from(spotListings).where(eq(spotListings.status, "available"));
   }
 
   async createSpotListing(insertListing: InsertSpotListing): Promise<SpotListing> {
@@ -1012,7 +1012,7 @@ export class MemStorage implements IStorage {
       recurringEndDate: insertListing.recurringEndDate ?? null,
       daysOfWeek: insertListing.daysOfWeek ?? null,
       dailyRate: insertListing.dailyRate,
-      status: (insertListing.status as ListingStatus) ?? "active",
+      status: (insertListing.status as ListingStatus) ?? "available",
       notes: insertListing.notes ?? null,
     }).returning();
     
@@ -1037,7 +1037,7 @@ export class MemStorage implements IStorage {
         recurringEndDate: listingData.recurringEndDate ?? null,
         daysOfWeek: listingData.daysOfWeek ?? null,
         dailyRate: listingData.dailyRate,
-        status: (listingData.status as ListingStatus) ?? "active",
+        status: (listingData.status as ListingStatus) ?? "available",
         notes: listingData.notes ?? null,
       }).returning();
 
@@ -2552,7 +2552,7 @@ export class MemStorage implements IStorage {
       .from(spotListings)
       .where(
         and(
-          eq(spotListings.status, 'active'),
+          eq(spotListings.status, 'available'),
           or(
             sqlOp`${spotListings.periodEndDate} >= ${today}`,
             sqlOp`${spotListings.recurringEndDate} >= ${today}`,

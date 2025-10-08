@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
+// @ts-ignore
 import { saveAs } from 'file-saver'
 
 // Export interfaces for type safety
@@ -8,7 +9,7 @@ export interface ExportColumn {
   header: string
   dataKey: string
   width?: number
-  formatter?: (value: any) => string
+  formatter?: (value: any, item?: any) => string
 }
 
 export interface ExportData {
@@ -167,7 +168,7 @@ export class PDFExporter {
         
         if (col.formatter) {
           try {
-            formattedValue = col.formatter(value)
+            formattedValue = col.formatter(value, row)
           } catch (error) {
             console.error('Formatter error:', error)
             formattedValue = value
@@ -267,7 +268,7 @@ export class ExcelExporter {
         
         if (col.formatter) {
           try {
-            formattedValue = col.formatter(value)
+            formattedValue = col.formatter(value, row)
           } catch (error) {
             console.error('Formatter error:', error)
             formattedValue = value

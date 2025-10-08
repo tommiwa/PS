@@ -15,7 +15,7 @@ export interface FilterOption {
 export interface FilterConfig {
   key: string
   label: string
-  type: "select" | "date" | "dateRange"
+  type: "select" | "date" | "dateRange" | "text"
   options?: FilterOption[]
   placeholder?: string
 }
@@ -117,6 +117,20 @@ export function EnhancedFilters({
                 data-testid={`input-filter-${toKey}`}
               />
             </div>
+          </div>
+        )
+
+      case "text":
+        return (
+          <div key={config.key} className="space-y-2">
+            <Label className="text-sm font-medium">{config.label}</Label>
+            <Input
+              type="text"
+              placeholder={config.placeholder || `Enter ${config.label.toLowerCase()}...`}
+              value={value || ""}
+              onChange={(e) => onFilterChange(config.key, e.target.value || undefined)}
+              data-testid={`input-filter-${config.key}`}
+            />
           </div>
         )
 

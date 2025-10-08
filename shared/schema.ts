@@ -175,7 +175,7 @@ export interface ParkingSpotWithSafeUserData extends ParkingSpot {
 export const listingTypes = z.enum(["single", "period", "recurring"]);
 export type ListingType = z.infer<typeof listingTypes>;
 
-export const listingStatuses = z.enum(["active", "paused", "expired", "cancelled"]);
+export const listingStatuses = z.enum(["available", "booked", "used", "unused", "cancelled"]);
 export type ListingStatus = z.infer<typeof listingStatuses>;
 
 export const daysOfWeek = z.enum(["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]);
@@ -201,7 +201,7 @@ export const spotListings = pgTable("spot_listings", {
   
   // Common fields
   dailyRate: decimal("daily_rate", { precision: 10, scale: 2 }).notNull(),
-  status: text("status").notNull().$type<ListingStatus>().default("active"),
+  status: text("status").notNull().$type<ListingStatus>().default("available"),
   notes: text("notes"),
   adminNotes: text("admin_notes"), // Admin-only notes
   createdAt: timestamp("created_at").notNull().defaultNow(),
