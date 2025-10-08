@@ -38,7 +38,7 @@ function FormattedTermsContent({ content }: { content: string }) {
       flushList();
       const text = trimmed.substring(2).trim();
       elements.push(
-        <h1 key={`h1-${index}`} className="text-2xl font-bold text-foreground mb-3 mt-6 first:mt-0">
+        <h1 key={`h1-${index}`} className="text-2xl font-bold text-foreground mb-4 mt-8 first:mt-0">
           {text}
         </h1>
       );
@@ -48,7 +48,7 @@ function FormattedTermsContent({ content }: { content: string }) {
       flushList();
       const text = trimmed.substring(3).trim();
       elements.push(
-        <h2 key={`h2-${index}`} className="text-lg font-semibold text-primary mb-3 mt-6 first:mt-0">
+        <h2 key={`h2-${index}`} className="text-lg font-semibold text-primary mb-4 mt-8 first:mt-0">
           {text}
         </h2>
       );
@@ -58,7 +58,7 @@ function FormattedTermsContent({ content }: { content: string }) {
       flushList();
       const text = trimmed.substring(4).trim();
       elements.push(
-        <h3 key={`h3-${index}`} className="text-base font-semibold text-foreground mb-2 mt-4">
+        <h3 key={`h3-${index}`} className="text-base font-semibold text-foreground mb-3 mt-6">
           {text}
         </h3>
       );
