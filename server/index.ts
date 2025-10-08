@@ -121,6 +121,216 @@ app.use((req, res, next) => {
   // Seed departments on startup
   await seedDepartments();
   
+  // Seed initial terms and conditions if not present
+  const seedTermsAndConditions = async () => {
+    try {
+      const { storage } = await import("./storage");
+      const activeTerms = await storage.getActiveTermsVersion();
+      
+      if (!activeTerms) {
+        const initialTermsContent = `# BCI ParkShare Platform - Terms and Conditions of Use
+
+**Effective Date: October 7, 2025**
+
+These Terms and Conditions ("Terms") govern your use of the BCI ParkShare platform ("Platform"). By accessing or using this Platform, you acknowledge that you have read, understood, and agree to be bound by these Terms.
+
+---
+
+## 1. Platform Description and Purpose
+
+The BCI ParkShare Platform is an internal corporate facility management tool designed to facilitate peer-to-peer parking spot sharing among BCI employees. The Platform serves solely as a connection mechanism between parking spot owners and prospective renters.
+
+**Key Platform Characteristics:**
+- **Facilitator Role**: BCI provides the technological infrastructure to enable employee-to-employee parking arrangements
+- **Non-Intermediary Status**: BCI does not participate in, manage, or oversee individual parking transactions
+- **Employee-Exclusive Access**: Platform usage is restricted to current BCI employees with valid credentials
+
+---
+
+## 2. Financial Transactions and Payment Disclaimer
+
+### 2.1 Direct Payment Arrangements
+All financial transactions, including payment terms, methods, amounts, and timing, are established and executed directly between the parking spot owner and the renter. BCI does not:
+- Process, facilitate, or hold any payments
+- Establish or recommend pricing structures
+- Mediate payment disputes or disagreements
+- Guarantee payment completion or fulfillment
+
+### 2.2 Financial Liability Limitation
+BCI expressly disclaims all liability and responsibility for any financial matters arising from parking spot arrangements, including but not limited to payment defaults, refund disputes, or pricing disagreements.
+
+---
+
+## 3. Parking Spot Availability and Access
+
+### 3.1 Availability Management
+Parking spot availability is managed exclusively by individual spot owners. BCI is not responsible for:
+- Spot availability accuracy or real-time updates
+- Booking cancellations or modifications
+- Schedule conflicts or double-bookings
+- Availability misrepresentations
+
+### 3.2 Access Control and Coordination
+**Current Access Infrastructure:**
+- Physical access to parking facilities utilizes existing BCI employee access card systems
+- The Platform does not integrate with or control automated access systems
+- Users must coordinate physical access arrangements independently
+- BCI does not manage, monitor, or guarantee parking facility access through this Platform
+
+---
+
+## 4. Liability Limitations and Risk Acknowledgment
+
+### 4.1 Comprehensive Liability Disclaimer
+BCI, its officers, directors, employees, and affiliated entities shall not be held liable for any losses, damages, claims, or expenses arising from Platform use, including but not limited to:
+- Vehicle damage, theft, vandalism, or towing
+- Personal injury or property damage
+- Financial losses or disputes
+- Access issues or facility-related incidents
+- Data breaches or privacy concerns
+
+### 4.2 User Risk Assumption
+By using this Platform, you expressly acknowledge and accept that:
+- All parking arrangements are undertaken at your sole risk
+- You are responsible for your personal security and property protection
+- BCI provides no warranties, guarantees, or assurances regarding Platform outcomes
+- You waive any claims against BCI related to parking arrangements facilitated through this Platform
+
+---
+
+## 5. User Responsibilities and Conduct Standards
+
+### 5.1 Spot Owner Obligations
+As a parking spot owner, you agree to:
+- Maintain accurate and current spot availability information
+- Provide clear, complete location and access instructions
+- Honor confirmed bookings or provide timely cancellation notice
+- Communicate professionally and respond promptly to inquiries
+- Comply with all applicable BCI policies and facility regulations
+
+### 5.2 Renter Obligations
+As a parking spot renter, you agree to:
+- Verify all arrangement details directly with the spot owner
+- Use parking facilities respectfully and in accordance with agreed terms
+- Leave parking spots in their original condition
+- Adhere to all posted regulations and time restrictions
+- Report any issues or concerns promptly
+
+### 5.3 Universal User Standards
+All Platform users must:
+- Provide accurate, current contact and account information
+- Engage in professional, courteous communication
+- Resolve disputes directly with the other party through good-faith negotiation
+- Comply with all BCI corporate policies, facility rules, and applicable laws
+- Refrain from fraudulent, abusive, or unauthorized Platform usage
+
+---
+
+## 6. Platform Access and Account Management
+
+### 6.1 Eligibility Requirements
+Platform access is restricted to current BCI employees with active employment status and valid corporate credentials.
+
+### 6.2 Account Integrity
+Users must:
+- Maintain account information accuracy and currency
+- Safeguard login credentials and prevent unauthorized access
+- Utilize the Platform in good faith and for legitimate purposes only
+- Immediately notify BCI of suspected security breaches
+
+### 6.3 Suspension and Termination Rights
+BCI reserves the right to suspend or terminate user accounts at its sole discretion, including but not limited to cases involving:
+- Terms violations or policy breaches
+- Fraudulent or abusive conduct
+- Security concerns or unauthorized access
+- Employment termination or status changes
+
+---
+
+## 7. Modifications and Platform Continuity
+
+### 7.1 Terms Amendments
+BCI reserves the right to modify, update, or revise these Terms at any time without prior notice. Material changes will be communicated through appropriate channels. Continued Platform use following Terms modifications constitutes acceptance of the updated Terms.
+
+### 7.2 Platform Availability
+BCI may, at its sole discretion:
+- Suspend, discontinue, or terminate the Platform without notice or liability
+- Modify Platform features, functionality, or access parameters
+- Implement maintenance periods or service interruptions
+- Alter operational procedures or technical requirements
+
+---
+
+## 8. Dispute Resolution
+
+All disputes arising from parking arrangements must be resolved directly between the involved parties. BCI:
+- Does not mediate, arbitrate, or adjudicate user disputes
+- Provides no dispute resolution services or mechanisms
+- Bears no responsibility for conflict outcomes or resolutions
+- Recommends professional legal counsel for unresolved disputes
+
+---
+
+## 9. Data Privacy and Information Security
+
+User data collection, processing, and protection are governed by BCI's Corporate Privacy Policy and Information Security Standards. By using this Platform, you acknowledge and consent to data handling practices as outlined in applicable corporate policies.
+
+---
+
+## 10. Governing Law and Jurisdiction
+
+These Terms shall be governed by and construed in accordance with applicable federal and state laws. Any legal actions or proceedings arising from these Terms or Platform use shall be subject to the exclusive jurisdiction of courts in BCI's principal place of business.
+
+---
+
+## 11. Severability and Entire Agreement
+
+If any provision of these Terms is found to be unenforceable or invalid, such provision shall be limited or eliminated to the minimum extent necessary, and the remaining provisions shall remain in full force and effect. These Terms constitute the entire agreement between users and BCI regarding Platform use and supersede all prior agreements or understandings.
+
+---
+
+## 12. Acknowledgment and Acceptance
+
+By using the BCI ParkShare Platform, you acknowledge that:
+
+✓ You have read and understood these Terms in their entirety
+✓ You accept all risks associated with peer-to-peer parking arrangements
+✓ You agree to resolve all matters directly with other Platform users
+✓ You release BCI from all liability related to Platform use and parking arrangements
+✓ You commit to conducting all activities in accordance with these Terms and applicable policies
+✓ You understand that BCI acts solely as a platform provider without involvement in individual transactions
+
+---
+
+## Contact Information
+
+For technical support, account issues, or Terms-related inquiries, please contact:
+
+**BCI WorkPlace Services**  
+Email: workplaceservices@bci.ca  
+Phone: (778) 410-7100
+
+---
+
+*Terms Version 1.0 | Last Updated: October 7, 2025 | © 2025 BCI Corporation*`;
+
+        await storage.createTermsVersion({
+          version: 1,
+          content: initialTermsContent,
+          isActive: true,
+          publishedAt: new Date()
+        });
+        
+        log("Seeded initial Terms and Conditions (Version 1.0)");
+      }
+    } catch (error) {
+      console.error("Error seeding terms and conditions:", error);
+    }
+  };
+  
+  // Seed terms and conditions on startup
+  await seedTermsAndConditions();
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
