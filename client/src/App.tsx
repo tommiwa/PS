@@ -306,12 +306,12 @@ function AuthenticatedApp() {
             </Switch>
           </main>
           <footer className="border-t bg-background py-2 px-4">
-            <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground">
+            <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground/60">
               <a 
                 href="/terms" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="hover:text-foreground underline"
+                className="hover:text-foreground/80 underline"
                 data-testid="link-footer-terms"
               >
                 Terms and Conditions
