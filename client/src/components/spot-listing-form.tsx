@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle, CalendarDays, Repeat } from "lucide-react"
 import { getTodayString } from "@/utils/date-utils"
 import { useQuery } from "@tanstack/react-query"
-import type { ParkingSpot } from "@shared/schema"
+import type { ParkingSpotWithUser } from "@shared/schema"
 
 interface SpotListingData {
   spotId: string
@@ -55,12 +55,12 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
     description: "",
     specialInstructions: ""
   })
-  const [selectedSpot, setSelectedSpot] = useState<ParkingSpot | null>(null)
+  const [selectedSpot, setSelectedSpot] = useState<ParkingSpotWithUser | null>(null)
 
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Fetch user's parking spots
-  const { data: userSpots = [], isLoading: spotsLoading } = useQuery<ParkingSpot[]>({
+  const { data: userSpots = [], isLoading: spotsLoading } = useQuery<ParkingSpotWithUser[]>({
     queryKey: ['/api/my-spots'],
     enabled: true // Always fetch spots when form opens
   })
@@ -254,7 +254,7 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                     <SelectContent>
                       {userSpots.map((spot) => (
                         <SelectItem key={spot.id} value={spot.id}>
-                          {spot.spotNumber} - {spot.location}
+                          {spot.spotNumber} - {spot.locationName}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -269,14 +269,14 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                   <Label>Selected Spot Details</Label>
                   <div className="p-3 bg-muted rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
-                      {getSpotTypeIcon(selectedSpot.spotType)}
+                      {getSpotTypeIcon(selectedSpot.spotTypeName)}
                       <span className="font-semibold">{selectedSpot.spotNumber}</span>
-                      <Badge variant="outline">{selectedSpot.spotType}</Badge>
+                      <Badge variant="outline">{selectedSpot.spotTypeName}</Badge>
                       {selectedSpot.isIndoor && <Badge variant="secondary">Indoor</Badge>}
                     </div>
                     <p className="text-sm text-muted-foreground flex items-center gap-1">
                       <MapPin className="h-3 w-3" />
-                      {selectedSpot.location}
+                      {selectedSpot.locationName}
                     </p>
                   </div>
                 </div>

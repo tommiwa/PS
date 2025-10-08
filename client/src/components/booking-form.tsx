@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle, User, Zap, Accessibility, Building, CreditCard } from "lucide-react"
-import { ParkingSpot } from "./parking-spot-card"
+import type { ParkingSpot as DBParkingSpot } from "@shared/schema"
 import { isPastDate, getTodayString } from "@/utils/date-utils"
 import { AuthService } from "@/lib/auth"
 import { useToast } from "@/hooks/use-toast"
@@ -22,6 +22,18 @@ interface BookingData {
   contactPhone: string
   vehicleLicense: string
   spotId: string
+}
+
+// Display spot interface with enriched properties for the booking form
+export interface ParkingSpot extends DBParkingSpot {
+  location: string
+  type: "regular" | "accessible" | "electric" | "tesla_ev" | "reserved"
+  isInside: boolean
+  price: number
+  owner: string
+  availability?: {
+    date: string
+  }
 }
 
 interface BookingFormProps {
