@@ -305,8 +305,8 @@ function AuthenticatedApp() {
               <Route path="(.*)" component={NotFound} />
             </Switch>
           </main>
-          <footer className="border-t bg-background p-4">
-            <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
+          <footer className="border-t bg-background py-2 px-4">
+            <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground">
               <a 
                 href="/terms" 
                 target="_blank" 

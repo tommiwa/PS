@@ -1,10 +1,131 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { BCIHeroLogo } from "@/components/bci-logo";
-import { Loader2, FileText, ArrowLeft } from "lucide-react";
+import { Loader2, FileText, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
+
+// Component to render formatted terms content
+function FormattedTermsContent({ content }: { content: string }) {
+  const lines = content.split('\n');
+  const elements: React.ReactNode[] = [];
+  let currentList: React.ReactNode[] = [];
+  let listType: 'bullet' | 'check' | null = null;
+
+  const flushList = () => {
+    if (currentList.length > 0) {
+      elements.push(
+        <ul key={`list-${elements.length}`} className={listType === 'check' ? 'space-y-2 mb-6' : 'space-y-1.5 mb-6 ml-6'}>
+          {currentList}
+        </ul>
+      );
+      currentList = [];
+      listType = null;
+    }
+  };
+
+  lines.forEach((line, index) => {
+    const trimmed = line.trim();
+    
+    // Main heading (H1)
+    if (trimmed.startsWith('# ')) {
+      flushList();
+      const text = trimmed.substring(2).trim();
+      elements.push(
+        <h1 key={`h1-${index}`} className="text-3xl font-bold text-foreground mb-4 mt-10 first:mt-0">
+          {text}
+        </h1>
+      );
+    }
+    // Section heading (H2)
+    else if (trimmed.startsWith('## ')) {
+      flushList();
+      const text = trimmed.substring(3).trim();
+      elements.push(
+        <h2 key={`h2-${index}`} className="text-xl font-semibold text-primary mb-4 mt-10 first:mt-0">
+          {text}
+        </h2>
+      );
+    }
+    // Subsection heading (H3)
+    else if (trimmed.startsWith('### ')) {
+      flushList();
+      const text = trimmed.substring(4).trim();
+      elements.push(
+        <h3 key={`h3-${index}`} className="text-lg font-semibold text-foreground mb-3 mt-8">
+          {text}
+        </h3>
+      );
+    }
+    // Horizontal rule
+    else if (trimmed === '---') {
+      flushList();
+      elements.push(
+        <Separator key={`sep-${index}`} className="my-6" />
+      );
+    }
+    // Check list item
+    else if (trimmed.startsWith('✓ ')) {
+      if (listType !== 'check') {
+        flushList();
+        listType = 'check';
+      }
+      const text = trimmed.substring(2).trim();
+      currentList.push(
+        <li key={`check-${index}`} className="flex items-start gap-2 text-sm">
+          <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-500 flex-shrink-0 mt-0.5" />
+          <span className="text-muted-foreground">{text}</span>
+        </li>
+      );
+    }
+    // Bullet point
+    else if (trimmed.startsWith('- ')) {
+      if (listType !== 'bullet') {
+        flushList();
+        listType = 'bullet';
+      }
+      const text = trimmed.substring(2).trim();
+      currentList.push(
+        <li key={`bullet-${index}`} className="text-sm text-muted-foreground list-disc">
+          {text.startsWith('**') && text.endsWith('**') ? (
+            <strong className="text-foreground font-semibold">{text.slice(2, -2)}</strong>
+          ) : (
+            text
+          )}
+        </li>
+      );
+    }
+    // Bold text paragraph
+    else if (trimmed.startsWith('**') && trimmed.endsWith('**')) {
+      flushList();
+      const text = trimmed.slice(2, -2);
+      elements.push(
+        <p key={`bold-${index}`} className="text-base font-semibold text-foreground mb-3 mt-2">
+          {text}
+        </p>
+      );
+    }
+    // Regular paragraph
+    else if (trimmed && !trimmed.startsWith('*') && !trimmed.startsWith('#')) {
+      flushList();
+      elements.push(
+        <p key={`p-${index}`} className="text-sm text-muted-foreground mb-3 leading-relaxed">
+          {trimmed}
+        </p>
+      );
+    }
+    // Empty line
+    else if (!trimmed) {
+      flushList();
+    }
+  });
+
+  flushList();
+
+  return <div className="space-y-1">{elements}</div>;
+}
 
 interface TermsVersion {
   id: number;
@@ -72,11 +193,9 @@ export default function Terms() {
           {/* Terms Content */}
           <Card className="p-8">
             <ScrollArea className="h-[calc(100vh-200px)]">
-              <div 
-                className="prose prose-sm dark:prose-invert max-w-none pr-4 whitespace-pre-wrap" 
-                data-testid="terms-content"
-                dangerouslySetInnerHTML={{ __html: terms.content.replace(/\n/g, '<br/>') }}
-              />
+              <div className="max-w-none pr-4" data-testid="terms-content">
+                <FormattedTermsContent content={terms.content} />
+              </div>
             </ScrollArea>
 
             {/* Footer */}
