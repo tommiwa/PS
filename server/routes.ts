@@ -1416,19 +1416,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get available parking spots for search (Authenticated users)
   app.get("/api/available-spots", isAuthenticated, async (req: any, res) => {
     try {
-      // Use safe method that excludes sensitive user data like email addresses
+      // Get all active spot listings (available for booking)
+      const activeListings = await storage.getActiveSpotListings();
+      
+      // Get the unique spot IDs from active listings
+      const spotIdsWithListings = new Set(activeListings.map(l => l.spotId));
+      
+      // Get all parking spots
       const allSpots = await storage.getAllParkingSpotsWithSafeUserData();
       
-      // Filter to only show spots that can be searched/booked by renters
+      // Filter to show spots that:
+      // 1. Are active (not deactivated)
+      // 2. Are bookable
+      // 3. Have an active listing OR have an owner (for backward compatibility)
       const availableSpots = allSpots.filter(spot => {
-        // Only show spots that are:
-        // 1. Active (not deactivated)
-        // 2. Have an owner (assigned spots)
-        // 3. Are bookable (not taxable_benefit or disabled)
         return spot.isActive && 
-               spot.ownerId && 
                spot.isBookable && 
-               true; // Removed invalid spotType comparison
+               (spotIdsWithListings.has(spot.id) || spot.ownerId);
       });
       
       res.json(availableSpots);
@@ -3134,7 +3138,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const listingData: any = {
         listingType,
         dailyRate: dailyRate.toString(),
-        status: "active"
+        status: "available"
       };
 
       if (listingType === "single" && singleDate) {
@@ -3146,6 +3150,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create listings for all selected spots with admin as owner
       const createdListings = await storage.bulkCreateSpotListings(spotIds, listingData, adminUserId);
+      
+      // Update all spots to be bookable when listings are created
+      for (const spotId of spotIds) {
+        await storage.updateParkingSpot(spotId, { isBookable: true });
+      }
       
       // Audit the bulk creation
       const dateDescription = listingType === "single" 
