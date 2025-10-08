@@ -95,11 +95,11 @@ const adminMenuItems = [
     tooltip: "Booking Management"
   },
   {
-    title: "Data Management",
+    title: "App Data Management",
     url: "/admin/data-management",
     icon: Database,
     roles: ["admin"],
-    tooltip: "Data Management"
+    tooltip: "App Data Management"
   },
   {
     title: "Audit Logs",
