@@ -960,140 +960,93 @@ export default function MyBookings() {
         ) : (
           <>
             {/* Renter Stats */}
-            <Card 
-              className="hover-elevate cursor-pointer active-elevate-2" 
-              onClick={() => setActiveTab("active")}
-              data-testid="card-stat-active"
-            >
-              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Bookings</CardTitle>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-auto p-1 text-muted-foreground"
-                        data-testid="info-button-stat-active"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Info className="h-3 w-3" />
-                        <span className="sr-only">Info about active bookings</span>
-                      </Button>
-                      <div className="rounded-full border-2 border-green-400 p-2">
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Card 
+                  className="hover-elevate cursor-pointer active-elevate-2" 
+                  onClick={() => setActiveTab("active")}
+                  data-testid="card-stat-active"
+                >
+                  <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Active Bookings</CardTitle>
+                    <div className="rounded-full border-2 border-green-400 p-2">
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
                     </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Your confirmed reservations for upcoming dates</p>
-                  </TooltipContent>
-                </Tooltip>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{activeItems.length}</div>
-              </CardContent>
-            </Card>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{activeItems.length}</div>
+                  </CardContent>
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Your confirmed reservations for upcoming dates</p>
+              </TooltipContent>
+            </Tooltip>
             
-            <Card 
-              className="hover-elevate cursor-pointer active-elevate-2" 
-              onClick={() => setActiveTab("completed")}
-              data-testid="card-stat-completed"
-            >
-              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Completed</CardTitle>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-auto p-1 text-muted-foreground"
-                        data-testid="info-button-stat-completed"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Info className="h-3 w-3" />
-                        <span className="sr-only">Info about completed bookings</span>
-                      </Button>
-                      <div className="rounded-full border-2 border-slate-400 p-2">
-                        <CheckCircle2 className="h-4 w-4 text-slate-600" />
-                      </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Card 
+                  className="hover-elevate cursor-pointer active-elevate-2" 
+                  onClick={() => setActiveTab("completed")}
+                  data-testid="card-stat-completed"
+                >
+                  <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Completed</CardTitle>
+                    <div className="rounded-full border-2 border-slate-400 p-2">
+                      <CheckCircle2 className="h-4 w-4 text-slate-600" />
                     </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Bookings you've finished using with confirmed payment</p>
-                  </TooltipContent>
-                </Tooltip>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{completedItems.length}</div>
-              </CardContent>
-            </Card>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{completedItems.length}</div>
+                  </CardContent>
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Bookings you've finished using with confirmed payment</p>
+              </TooltipContent>
+            </Tooltip>
             
-            <Card data-testid="card-stat-negative">
-              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Cancelled</CardTitle>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-auto p-1 text-muted-foreground"
-                        data-testid="info-button-stat-negative"
-                      >
-                        <Info className="h-3 w-3" />
-                        <span className="sr-only">Info about cancelled bookings</span>
-                      </Button>
-                      <div className="rounded-full border-2 border-red-400 p-2">
-                        <XCircle className="h-4 w-4 text-red-600" />
-                      </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Card data-testid="card-stat-negative">
+                  <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Cancelled</CardTitle>
+                    <div className="rounded-full border-2 border-red-400 p-2">
+                      <XCircle className="h-4 w-4 text-red-600" />
                     </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Reservations that were cancelled before the booking date</p>
-                  </TooltipContent>
-                </Tooltip>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{cancelledItems.length}</div>
-              </CardContent>
-            </Card>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{cancelledItems.length}</div>
+                  </CardContent>
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Reservations that were cancelled before the booking date</p>
+              </TooltipContent>
+            </Tooltip>
             
-            <Card 
-              className="hover-elevate cursor-pointer active-elevate-2" 
-              onClick={() => setActiveTab("all")}
-              data-testid="card-stat-money"
-            >
-              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Spent</CardTitle>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-auto p-1 text-muted-foreground"
-                        data-testid="info-button-stat-money"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Info className="h-3 w-3" />
-                        <span className="sr-only">Info about total spent</span>
-                      </Button>
-                      <div className="rounded-full border-2 border-blue-400 p-2">
-                        <DollarSign className="h-4 w-4 text-blue-600" />
-                      </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Card 
+                  className="hover-elevate cursor-pointer active-elevate-2" 
+                  onClick={() => setActiveTab("all")}
+                  data-testid="card-stat-money"
+                >
+                  <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Spent</CardTitle>
+                    <div className="rounded-full border-2 border-blue-400 p-2">
+                      <DollarSign className="h-4 w-4 text-blue-600" />
                     </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Total amount paid for all completed parking reservations</p>
-                  </TooltipContent>
-                </Tooltip>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">$180</div>
-              </CardContent>
-            </Card>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">$180</div>
+                  </CardContent>
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Total amount paid for all completed parking reservations</p>
+              </TooltipContent>
+            </Tooltip>
           </>
         )}
       </div>
