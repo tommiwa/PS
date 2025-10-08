@@ -178,7 +178,7 @@ export default function Terms() {
       <div className="container mx-auto py-8 px-4">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
-          <div className="mb-6 flex items-center justify-between">
+          <div className="mb-8 flex items-center justify-between gap-4">
             <Button
               variant="ghost"
               onClick={() => window.history.back()}
@@ -187,7 +187,7 @@ export default function Terms() {
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back
             </Button>
-            <BCIHeroLogo className="h-8" />
+            <BCIHeroLogo className="h-8 flex-shrink-0" />
           </div>
 
           {/* Terms Content */}
