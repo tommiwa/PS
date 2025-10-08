@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { queryClient } from "@/lib/queryClient"
 import { EnhancedSearch, ParsedSearch } from "@/components/enhanced-search"
@@ -40,8 +40,14 @@ export default function Search() {
   const [selectedSpot, setSelectedSpot] = useState<DisplaySpot | null>(null)
   const [showBookingForm, setShowBookingForm] = useState(false)
   const [sortBy, setSortBy] = useState("price")
-  const [activeTab, setActiveTab] = useState("calendar")
+  const [activeTab, setActiveTab] = useState<"tiles" | "calendar">("calendar")
   const { toast } = useToast()
+  
+  // Set default tab based on screen size after mount: mobile shows tiles, desktop shows calendar
+  useEffect(() => {
+    const isMobile = window.innerWidth < 768
+    setActiveTab(isMobile ? "tiles" : "calendar")
+  }, [])
 
   // Fetch available parking spots from API
   const { data: dbSpots = [], isLoading, error } = useQuery<DBParkingSpot[]>({
