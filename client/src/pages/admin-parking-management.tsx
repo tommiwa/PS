@@ -69,6 +69,11 @@ export default function AdminParkingManagement() {
   const [selectedSpotForAssign, setSelectedSpotForAssign] = useState<ParkingSpotWithUser | null>(null)
   const [selectedSpotForRelease, setSelectedSpotForRelease] = useState<ParkingSpotWithUser | null>(null)
   const [selectedAvailableSpot, setSelectedAvailableSpot] = useState<ParkingSpotWithUser | null>(null)
+  
+  // Date picker popover state for auto-close functionality
+  const [singleDatePickerOpen, setSingleDatePickerOpen] = useState(false)
+  const [startDatePickerOpen, setStartDatePickerOpen] = useState(false)
+  const [endDatePickerOpen, setEndDatePickerOpen] = useState(false)
   const [selectedUserForWaiting, setSelectedUserForWaiting] = useState("")
   const [selectedUserForAssign, setSelectedUserForAssign] = useState("")
   const [selectedUserForAvailableSpot, setSelectedUserForAvailableSpot] = useState("")
@@ -3632,7 +3637,7 @@ export default function AdminParkingManagement() {
             {createAvailabilityFormData.listingType === "single" ? (
               <div className="space-y-2">
                 <Label>Select Date</Label>
-                <Popover>
+                <Popover open={singleDatePickerOpen} onOpenChange={setSingleDatePickerOpen}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
@@ -3650,9 +3655,10 @@ export default function AdminParkingManagement() {
                     <Calendar
                       mode="single"
                       selected={createAvailabilityFormData.singleDate}
-                      onSelect={(date) => 
+                      onSelect={(date) => {
                         setCreateAvailabilityFormData({ ...createAvailabilityFormData, singleDate: date })
-                      }
+                        setSingleDatePickerOpen(false)
+                      }}
                       disabled={(date) => date < new Date()}
                       initialFocus
                     />
@@ -3663,7 +3669,7 @@ export default function AdminParkingManagement() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label>Start Date</Label>
-                  <Popover>
+                  <Popover open={startDatePickerOpen} onOpenChange={setStartDatePickerOpen}>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
@@ -3681,9 +3687,10 @@ export default function AdminParkingManagement() {
                       <Calendar
                         mode="single"
                         selected={createAvailabilityFormData.periodStartDate}
-                        onSelect={(date) => 
+                        onSelect={(date) => {
                           setCreateAvailabilityFormData({ ...createAvailabilityFormData, periodStartDate: date })
-                        }
+                          setStartDatePickerOpen(false)
+                        }}
                         disabled={(date) => date < new Date()}
                         initialFocus
                       />
@@ -3693,7 +3700,7 @@ export default function AdminParkingManagement() {
 
                 <div className="space-y-2">
                   <Label>End Date</Label>
-                  <Popover>
+                  <Popover open={endDatePickerOpen} onOpenChange={setEndDatePickerOpen}>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
@@ -3711,9 +3718,10 @@ export default function AdminParkingManagement() {
                       <Calendar
                         mode="single"
                         selected={createAvailabilityFormData.periodEndDate}
-                        onSelect={(date) => 
+                        onSelect={(date) => {
                           setCreateAvailabilityFormData({ ...createAvailabilityFormData, periodEndDate: date })
-                        }
+                          setEndDatePickerOpen(false)
+                        }}
                         disabled={(date) => {
                           if (date < new Date()) return true;
                           if (createAvailabilityFormData.periodStartDate && date < createAvailabilityFormData.periodStartDate) return true;
