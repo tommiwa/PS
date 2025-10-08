@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import { MapPin, Car, Zap, Accessibility, Calendar, DollarSign, Building, Ban, User } from "lucide-react"
+import { MapPin, Car, Zap, Accessibility, Building, User } from "lucide-react"
 import type { ParkingSpot, ParkingSpotWithUser } from "@shared/schema"
 
 interface ParkingSpotCardProps {
@@ -23,45 +23,52 @@ export function ParkingSpotCard({
     return 'assignedUserName' in spot;
   };
 
-  const getSpotTypeIcon = () => {
-    switch (spot.spotType) {
-      case "electric":
-        return <Zap className="h-4 w-4" />
-      case "tesla_ev":
-        return <Zap className="h-4 w-4 text-red-600" />
-      case "accessible":
-        return <Accessibility className="h-4 w-4" />
-      case "reserved":
-        return <Building className="h-4 w-4" />
-      default:
-        return <Car className="h-4 w-4" />
+  // Map spot type name to icon
+  const getSpotTypeIcon = (spotTypeName?: string) => {
+    if (!spotTypeName) return <Car className="h-4 w-4" />
+    
+    const lowerType = spotTypeName.toLowerCase();
+    if (lowerType.includes('electric') || lowerType.includes('ev')) {
+      return <Zap className="h-4 w-4" />
     }
+    if (lowerType.includes('tesla')) {
+      return <Zap className="h-4 w-4 text-red-600" />
+    }
+    if (lowerType.includes('accessible')) {
+      return <Accessibility className="h-4 w-4" />
+    }
+    if (lowerType.includes('reserved')) {
+      return <Building className="h-4 w-4" />
+    }
+    return <Car className="h-4 w-4" />
   }
 
   const getSpotTypeBadge = () => {
-    const spotType = spot.spotType;
-    const variants = {
-      regular: "secondary" as const,
-      accessible: "default" as const,
-      electric: "default" as const,
-      tesla_ev: "default" as const,
-      reserved: "secondary" as const
+    const spotTypeName = hasUserData(spot) ? spot.spotTypeName : undefined;
+    const displayName = spotTypeName || "Regular";
+    
+    // Determine variant based on type name
+    let variant: "default" | "secondary" = "secondary";
+    if (spotTypeName) {
+      const lowerType = spotTypeName.toLowerCase();
+      if (lowerType.includes('electric') || lowerType.includes('tesla') || lowerType.includes('accessible')) {
+        variant = "default";
+      }
     }
     
-    const labels = {
-      regular: "Regular",
-      accessible: "Accessible", 
-      electric: "EV Charger",
-      tesla_ev: "Tesla Charger",
-      reserved: "Reserved"
-    }
-
-    const tooltips = {
-      regular: "Standard parking spot - suitable for all vehicle types",
-      accessible: "Accessible parking spot - designed for vehicles with mobility accommodations",
-      electric: "Electric vehicle charging station - includes standard EV connector",
-      tesla_ev: "Tesla charging station - optimized for Tesla vehicles with Tesla connector",
-      reserved: "Reserved parking spot - restricted access for specific users or purposes"
+    // Determine tooltip text
+    let tooltipText = "Standard parking spot - suitable for all vehicle types";
+    if (spotTypeName) {
+      const lowerType = spotTypeName.toLowerCase();
+      if (lowerType.includes('accessible')) {
+        tooltipText = "Accessible parking spot - designed for vehicles with mobility accommodations";
+      } else if (lowerType.includes('tesla')) {
+        tooltipText = "Tesla charging station - optimized for Tesla vehicles with Tesla connector";
+      } else if (lowerType.includes('electric') || lowerType.includes('ev')) {
+        tooltipText = "Electric vehicle charging station - includes standard EV connector";
+      } else if (lowerType.includes('reserved')) {
+        tooltipText = "Reserved parking spot - restricted access for specific users or purposes";
+      }
     }
     
     return (
@@ -71,16 +78,16 @@ export function ParkingSpotCard({
             variant="ghost" 
             size="sm" 
             className="h-auto p-0 hover:bg-transparent"
-            data-testid={`badge-spot-type-${spotType}-${spot.id}`}
+            data-testid={`badge-spot-type-${spotTypeName || 'regular'}-${spot.id}`}
           >
-            <Badge variant={variants[spotType]} className="gap-1">
-              {getSpotTypeIcon()}
-              {labels[spotType]}
+            <Badge variant={variant} className="gap-1">
+              {getSpotTypeIcon(spotTypeName)}
+              {displayName}
             </Badge>
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>{tooltips[spotType]}</p>
+          <p>{tooltipText}</p>
         </TooltipContent>
       </Tooltip>
     )
@@ -96,13 +103,15 @@ export function ParkingSpotCard({
     onViewDetails?.(spot.id)
   }
 
+  const locationName = hasUserData(spot) ? spot.locationName : undefined;
+
   return (
     <Card 
       className={`hover-elevate ${!spot.isActive ? 'opacity-60' : ''}`}
       data-testid={`card-parking-spot-${spot.id}`}
     >
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
           <CardTitle className="text-lg font-semibold">
             Spot {spot.spotNumber}
           </CardTitle>
@@ -113,15 +122,17 @@ export function ParkingSpotCard({
             <Button
               variant="ghost"
               size="sm"
-              className="h-auto p-0 justify-start text-sm text-muted-foreground hover:bg-transparent hover:text-muted-foreground"
+              className="h-auto p-0 justify-start text-sm text-muted-foreground hover:bg-transparent hover:text-muted-foreground break-words"
               data-testid={`text-location-${spot.id}`}
             >
-              <MapPin className="h-4 w-4 mr-1" />
-              {spot.location} {spot.isIndoor && "(Indoor)"}
+              <MapPin className="h-4 w-4 mr-1 flex-shrink-0" />
+              <span className="break-words">
+                {locationName || `Location ID: ${spot.locationId}`} {spot.isIndoor && "(Indoor)"}
+              </span>
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Location: {spot.location}{spot.isIndoor ? " - Indoor parking (covered and protected from weather)" : " - Outdoor parking"}</p>
+            <p>Location: {locationName || `Location ID: ${spot.locationId}`}{spot.isIndoor ? " - Indoor parking (covered and protected from weather)" : " - Outdoor parking"}</p>
           </TooltipContent>
         </Tooltip>
       </CardHeader>
@@ -137,9 +148,9 @@ export function ParkingSpotCard({
                 className="h-auto p-2 w-full justify-start bg-muted/50 rounded-md hover:bg-muted/70"
                 data-testid={`container-assigned-user-${spot.id}`}
               >
-                <User className="h-4 w-4 text-muted-foreground mr-2" />
-                <div className="flex-1 text-left">
-                  <div className="text-sm font-medium" data-testid={`text-assigned-user-${spot.id}`}>
+                <User className="h-4 w-4 text-muted-foreground mr-2 flex-shrink-0" />
+                <div className="flex-1 text-left min-w-0">
+                  <div className="text-sm font-medium break-words" data-testid={`text-assigned-user-${spot.id}`}>
                     {hasUserData(spot) && spot.assignedUserName 
                       ? spot.assignedUserName 
                       : spot.ownerId 
@@ -147,7 +158,7 @@ export function ParkingSpotCard({
                         : "Unassigned"}
                   </div>
                   {hasUserData(spot) && spot.assignedUserDepartment && (
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-xs text-muted-foreground break-words">
                       {spot.assignedUserDepartment}
                     </div>
                   )}
@@ -169,14 +180,14 @@ export function ParkingSpotCard({
       </CardContent>
       
       {showBookButton && (
-        <CardFooter className="pt-0 gap-2">
+        <CardFooter className="pt-0 flex-col md:flex-row gap-2">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button 
                 variant="outline" 
                 size="sm" 
                 onClick={handleViewDetails}
-                className="flex-1"
+                className="w-full md:w-auto md:flex-1 min-h-11"
                 data-testid={`button-view-details-${spot.id}`}
               >
                 Details
@@ -192,7 +203,7 @@ export function ParkingSpotCard({
                 size="sm" 
                 onClick={handleBook}
                 disabled={!(spot.isActive !== false) || spot.isBookable === false}
-                className="flex-1"
+                className="w-full md:w-auto md:flex-1 min-h-11"
                 data-testid={`button-book-${spot.id}`}
               >
                 {spot.isBookable === false ? "Not Bookable" : 

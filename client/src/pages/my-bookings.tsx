@@ -198,25 +198,26 @@ export default function MyBookings() {
 
   // Owner listing with edit/delete actions (for Active tab)
   const renderOwnerListingWithActions = (listing: any) => (
-    <div key={listing.id} className="border rounded-lg p-4">
-      <div className="flex items-start justify-between mb-4">
+    <div key={listing.id} className="border rounded-lg p-3 md:p-4">
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3 mb-4">
         <div className="flex items-center gap-3">
           {getStatusIcon(listing.status)}
-          <div>
-            <h3 className="font-semibold">Spot {listing.spotNumber}</h3>
-            <p className="text-sm text-muted-foreground">{listing.location}</p>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold break-words">Spot {listing.spotNumber}</h3>
+            <p className="text-sm text-muted-foreground break-words">{listing.location}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
           <Badge 
             variant={listing.status === "used" || listing.status === "booked" ? "default" : 
                     listing.status === "available" ? "secondary" : 
                     listing.status === "unused" ? "destructive" : "outline"}
+            className="w-full sm:w-auto justify-center"
           >
             {listing.status}
           </Badge>
           {(listing.status === "available" || listing.status === "booked") && (
-            <div className="flex gap-1">
+            <div className="flex gap-2 w-full sm:w-auto">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button 
@@ -224,8 +225,10 @@ export default function MyBookings() {
                     size="sm" 
                     onClick={() => handleEditListing(listing)}
                     data-testid={`button-edit-listing-${listing.id}`}
+                    className="min-h-11 flex-1 sm:flex-initial"
                   >
-                    <Edit className="h-4 w-4" />
+                    <Edit className="h-4 w-4 sm:mr-0 mr-2" />
+                    <span className="sm:hidden">Edit</span>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -238,10 +241,11 @@ export default function MyBookings() {
                     variant="outline" 
                     size="sm" 
                     onClick={() => handleDeleteListing(listing)}
-                    className="text-red-600 hover:text-red-700 hover:border-red-300"
+                    className="text-red-600 hover:text-red-700 hover:border-red-300 min-h-11 flex-1 sm:flex-initial"
                     data-testid={`button-delete-listing-${listing.id}`}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4 sm:mr-0 mr-2" />
+                    <span className="sm:hidden">Delete</span>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -253,21 +257,21 @@ export default function MyBookings() {
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-4">
         <div>
           <p className="text-xs text-muted-foreground">Date</p>
-          <p className="text-sm font-medium">{listing.date}</p>
+          <p className="text-sm font-medium break-words">{listing.date}</p>
           <p className="text-xs text-muted-foreground">Full Day</p>
         </div>
         <div>
           <p className="text-xs text-muted-foreground">
             {listing.status === "unused" ? "No Renter" : "Renter"}
           </p>
-          <p className="text-sm font-medium">
+          <p className="text-sm font-medium break-words">
             {listing.renterName || "Not booked"}
           </p>
           {listing.renterVehicle && (
-            <p className="text-xs text-muted-foreground">{listing.renterVehicle}</p>
+            <p className="text-xs text-muted-foreground break-words">{listing.renterVehicle}</p>
           )}
         </div>
         <div>
@@ -276,7 +280,7 @@ export default function MyBookings() {
         </div>
         <div>
           <p className="text-xs text-muted-foreground">Status</p>
-          <p className="text-sm font-medium">
+          <p className="text-sm font-medium break-words">
             {listing.status === "unused" && "Listed but unused"}
             {listing.status === "used" && "Successfully rented"}
             {listing.status === "booked" && "Currently booked"}
@@ -289,20 +293,21 @@ export default function MyBookings() {
 
   // Owner listing with payment management (for All tab)
   const renderOwnerListingWithPayment = (listing: any) => (
-    <div key={listing.id} className="border rounded-lg p-4">
-      <div className="flex items-start justify-between mb-4">
+    <div key={listing.id} className="border rounded-lg p-3 md:p-4">
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3 mb-4">
         <div className="flex items-center gap-3">
           {getStatusIcon(listing.status)}
-          <div>
-            <h3 className="font-semibold">Spot {listing.spotNumber}</h3>
-            <p className="text-sm text-muted-foreground">{listing.location}</p>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold break-words">Spot {listing.spotNumber}</h3>
+            <p className="text-sm text-muted-foreground break-words">{listing.location}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
           <Badge 
             variant={listing.status === "used" || listing.status === "booked" ? "default" : 
                     listing.status === "available" ? "secondary" : 
                     listing.status === "unused" ? "destructive" : "outline"}
+            className="w-full sm:w-auto justify-center"
           >
             {listing.status}
           </Badge>
@@ -315,6 +320,7 @@ export default function MyBookings() {
                   onClick={() => handleMarkPayment(listing.id, listing.paymentReceived)}
                   disabled={markPaymentMutation.isPending}
                   data-testid={`button-payment-${listing.id}`}
+                  className="w-full sm:w-auto min-h-11"
                 >
                   <CreditCard className="h-4 w-4 mr-1" />
                   {listing.paymentReceived ? "Unmark" : "Mark Paid"}
@@ -328,21 +334,21 @@ export default function MyBookings() {
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-4">
         <div>
           <p className="text-xs text-muted-foreground">Date</p>
-          <p className="text-sm font-medium">{listing.date}</p>
+          <p className="text-sm font-medium break-words">{listing.date}</p>
           <p className="text-xs text-muted-foreground">Full Day</p>
         </div>
         <div>
           <p className="text-xs text-muted-foreground">
             {listing.status === "unused" ? "No Renter" : "Renter"}
           </p>
-          <p className="text-sm font-medium">
+          <p className="text-sm font-medium break-words">
             {listing.renterName || "Not booked"}
           </p>
           {listing.renterVehicle && (
-            <p className="text-xs text-muted-foreground">{listing.renterVehicle}</p>
+            <p className="text-xs text-muted-foreground break-words">{listing.renterVehicle}</p>
           )}
         </div>
         <div>
@@ -361,7 +367,7 @@ export default function MyBookings() {
         </div>
         <div>
           <p className="text-xs text-muted-foreground">Status</p>
-          <p className="text-sm font-medium">
+          <p className="text-sm font-medium break-words">
             {listing.status === "unused" && "Listed but unused"}
             {listing.status === "used" && "Successfully rented"}
             {listing.status === "booked" && "Currently booked"}
@@ -372,8 +378,8 @@ export default function MyBookings() {
       
       {listing.status === "unused" && (
         <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-          <div className="flex items-center gap-2 text-sm text-orange-700 dark:text-orange-300">
-            <AlertTriangle className="h-4 w-4" />
+          <div className="flex items-center gap-2 text-sm text-orange-700 dark:text-orange-300 break-words">
+            <AlertTriangle className="h-4 w-4 flex-shrink-0" />
             This spot was listed for {listing.date} but was not booked by anyone.
           </div>
         </div>
@@ -382,36 +388,37 @@ export default function MyBookings() {
   )
 
   const renderRenterBooking = (booking: any) => (
-    <div key={booking.id} className="border rounded-lg p-4">
-      <div className="flex items-start justify-between mb-4">
+    <div key={booking.id} className="border rounded-lg p-3 md:p-4">
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3 mb-4">
         <div className="flex items-center gap-3">
           {getStatusIcon(booking.status)}
-          <div>
-            <h3 className="font-semibold">Spot {booking.spotNumber}</h3>
-            <p className="text-sm text-muted-foreground">{booking.location}</p>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold break-words">Spot {booking.spotNumber}</h3>
+            <p className="text-sm text-muted-foreground break-words">{booking.location}</p>
           </div>
         </div>
         <Badge 
           variant={booking.status === "confirmed" ? "default" : 
                   booking.status === "pending" ? "secondary" : "destructive"}
+          className="w-full sm:w-auto justify-center"
         >
           {booking.status}
         </Badge>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-4">
         <div>
           <p className="text-xs text-muted-foreground">Date</p>
-          <p className="text-sm font-medium">{booking.date}</p>
+          <p className="text-sm font-medium break-words">{booking.date}</p>
           <p className="text-xs text-muted-foreground">Full Day</p>
         </div>
         <div>
           <p className="text-xs text-muted-foreground">Owner</p>
-          <p className="text-sm font-medium">{booking.owner}</p>
+          <p className="text-sm font-medium break-words">{booking.owner}</p>
         </div>
         <div>
           <p className="text-xs text-muted-foreground">Vehicle</p>
-          <p className="text-sm font-medium">{booking.vehicleUsed}</p>
+          <p className="text-sm font-medium break-words">{booking.vehicleUsed}</p>
         </div>
         <div>
           <p className="text-xs text-muted-foreground">Price</p>
@@ -423,7 +430,7 @@ export default function MyBookings() {
       </div>
       
       {(booking.canCancel || booking.canEdit) && (
-        <div className="flex gap-2 pt-2 border-t">
+        <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t">
           {booking.canEdit && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -432,6 +439,7 @@ export default function MyBookings() {
                   variant="outline"
                   onClick={() => handleEditBooking(booking.id)}
                   data-testid={`button-edit-${booking.id}`}
+                  className="w-full sm:w-auto sm:flex-1 min-h-11"
                 >
                   Edit
                 </Button>
@@ -449,6 +457,7 @@ export default function MyBookings() {
                   variant="destructive"
                   onClick={() => handleCancelBooking(booking.id)}
                   data-testid={`button-cancel-${booking.id}`}
+                  className="w-full sm:w-auto sm:flex-1 min-h-11"
                 >
                   Cancel
                 </Button>
@@ -466,11 +475,11 @@ export default function MyBookings() {
   // Show loading state while fetching data
   if (isLoadingBookings || isLoadingListings) {
     return (
-      <div className="p-6 space-y-6" data-testid="page-my-bookings">
+      <div className="w-full max-w-full overflow-x-hidden p-4 md:p-6 space-y-4 md:space-y-6" data-testid="page-my-bookings">
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading {isOwner() ? 'listings' : 'bookings'}...</p>
+            <p className="text-sm md:text-base text-muted-foreground">Loading {isOwner() ? 'listings' : 'bookings'}...</p>
           </div>
         </div>
       </div>
@@ -478,22 +487,25 @@ export default function MyBookings() {
   }
 
   return (
-    <div className="p-6 space-y-6" data-testid="page-my-bookings">
-      <div className="flex items-center justify-between">
+    <div className="w-full max-w-full overflow-x-hidden p-4 md:p-6 space-y-4 md:space-y-6" data-testid="page-my-bookings">
+      <div className="w-full flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">{isOwner() ? "My Spot Listings" : "My Bookings"}</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
+            <Calendar className="h-6 w-6 md:h-8 md:w-8" />
+            {isOwner() ? "My Spot Listings" : "My Bookings"}
+          </h1>
+          <p className="text-sm md:text-base text-muted-foreground">
             {isOwner() ? 
               "Track your parking spot listings, bookings, and usage history." :
               "Manage your current and past parking reservations."
             }
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
           {isOwner() && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button onClick={() => setShowListingForm(true)} data-testid="button-list-spot">
+                <Button onClick={() => setShowListingForm(true)} data-testid="button-list-spot" className="w-full md:w-auto min-h-11">
                   <Plus className="h-4 w-4 mr-2" />
                   List My Spot
                 </Button>
@@ -505,7 +517,7 @@ export default function MyBookings() {
           )}
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button onClick={handleDownloadHistory} variant="outline" data-testid="button-download-history">
+              <Button onClick={handleDownloadHistory} variant="outline" data-testid="button-download-history" className="w-full md:w-auto min-h-11">
                 <Download className="h-4 w-4 mr-2" />
                 Download History
               </Button>
@@ -518,7 +530,7 @@ export default function MyBookings() {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="hover-elevate" data-testid="card-stat-active">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -645,8 +657,8 @@ export default function MyBookings() {
       {/* Filters and Search */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex flex-wrap gap-4 items-center">
-            <div className="flex-1 min-w-[250px]">
+          <div className="w-full flex flex-col md:flex-row gap-4 md:items-center">
+            <div className="w-full md:flex-1">
               <div className="relative">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Tooltip>
@@ -655,7 +667,7 @@ export default function MyBookings() {
                       placeholder="Search by spot, location, or owner..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-8"
+                      className="pl-8 min-h-11"
                       data-testid="input-search-bookings"
                     />
                   </TooltipTrigger>
@@ -668,7 +680,7 @@ export default function MyBookings() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="w-[180px]" data-testid="select-filter-status">
+                  <SelectTrigger className="w-full md:w-[180px] min-h-11" data-testid="select-filter-status">
                     <SelectValue placeholder="Filter by status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -697,7 +709,7 @@ export default function MyBookings() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-[150px]" data-testid="select-sort-bookings">
+                  <SelectTrigger className="w-full md:w-[150px] min-h-11" data-testid="select-sort-bookings">
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
                   <SelectContent>
@@ -717,13 +729,14 @@ export default function MyBookings() {
 
       {/* Enhanced Status-Based Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="flex md:grid overflow-x-auto md:overflow-x-visible flex-nowrap md:grid-cols-5 w-full h-auto gap-1">
           <Tooltip>
             <TooltipTrigger asChild>
-              <TabsTrigger value="active" className="data-[state=active]:bg-emerald-50 data-[state=active]:text-emerald-600 dark:data-[state=active]:bg-emerald-950/30 dark:data-[state=active]:text-emerald-400" data-testid="tab-active">
+              <TabsTrigger value="active" className="flex-shrink-0 md:flex-shrink min-h-11 data-[state=active]:bg-emerald-50 data-[state=active]:text-emerald-600 dark:data-[state=active]:bg-emerald-950/30 dark:data-[state=active]:text-emerald-400" data-testid="tab-active">
                 <div className="flex items-center gap-1">
                   <CheckCircle className="h-3 w-3" />
-                  Active ({activeItems.length})
+                  <span className="hidden sm:inline">Active</span>
+                  <span className="sm:hidden">Active</span> ({activeItems.length})
                 </div>
               </TabsTrigger>
             </TooltipTrigger>
@@ -733,10 +746,11 @@ export default function MyBookings() {
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <TabsTrigger value="pending" className="data-[state=active]:bg-amber-50 data-[state=active]:text-amber-600 dark:data-[state=active]:bg-amber-950/30 dark:data-[state=active]:text-amber-400" data-testid="tab-pending">
+              <TabsTrigger value="pending" className="flex-shrink-0 md:flex-shrink min-h-11 data-[state=active]:bg-amber-50 data-[state=active]:text-amber-600 dark:data-[state=active]:bg-amber-950/30 dark:data-[state=active]:text-amber-400" data-testid="tab-pending">
                 <div className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
-                  Pending ({pendingItems.length})
+                  <span className="hidden sm:inline">Pending</span>
+                  <span className="sm:hidden">Pend</span> ({pendingItems.length})
                 </div>
               </TabsTrigger>
             </TooltipTrigger>
@@ -746,10 +760,11 @@ export default function MyBookings() {
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <TabsTrigger value="payment-pending" className="data-[state=active]:bg-orange-50 data-[state=active]:text-orange-600 dark:data-[state=active]:bg-orange-950/30 dark:data-[state=active]:text-orange-400" data-testid="tab-payment">
+              <TabsTrigger value="payment-pending" className="flex-shrink-0 md:flex-shrink min-h-11 data-[state=active]:bg-orange-50 data-[state=active]:text-orange-600 dark:data-[state=active]:bg-orange-950/30 dark:data-[state=active]:text-orange-400" data-testid="tab-payment">
                 <div className="flex items-center gap-1">
                   <CreditCard className="h-3 w-3" />
-                  Payment ({paymentPendingItems.length})
+                  <span className="hidden sm:inline">Payment</span>
+                  <span className="sm:hidden">Pay</span> ({paymentPendingItems.length})
                 </div>
               </TabsTrigger>
             </TooltipTrigger>
@@ -759,10 +774,11 @@ export default function MyBookings() {
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <TabsTrigger value="completed" className="data-[state=active]:bg-violet-50 data-[state=active]:text-violet-600 dark:data-[state=active]:bg-violet-950/30 dark:data-[state=active]:text-violet-400" data-testid="tab-completed">
+              <TabsTrigger value="completed" className="flex-shrink-0 md:flex-shrink min-h-11 data-[state=active]:bg-violet-50 data-[state=active]:text-violet-600 dark:data-[state=active]:bg-violet-950/30 dark:data-[state=active]:text-violet-400" data-testid="tab-completed">
                 <div className="flex items-center gap-1">
                   <CheckCircle className="h-3 w-3" />
-                  Completed ({completedItems.length})
+                  <span className="hidden sm:inline">Completed</span>
+                  <span className="sm:hidden">Done</span> ({completedItems.length})
                 </div>
               </TabsTrigger>
             </TooltipTrigger>
@@ -772,7 +788,7 @@ export default function MyBookings() {
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <TabsTrigger value="all" className="data-[state=active]:bg-slate-50 data-[state=active]:text-slate-600 dark:data-[state=active]:bg-slate-950/30 dark:data-[state=active]:text-slate-400" data-testid="tab-all">
+              <TabsTrigger value="all" className="flex-shrink-0 md:flex-shrink min-h-11 data-[state=active]:bg-slate-50 data-[state=active]:text-slate-600 dark:data-[state=active]:bg-slate-950/30 dark:data-[state=active]:text-slate-400" data-testid="tab-all">
                 All ({sortedItems.length})
               </TabsTrigger>
             </TooltipTrigger>
@@ -782,21 +798,21 @@ export default function MyBookings() {
           </Tooltip>
         </TabsList>
         
-        <TabsContent value="active" className="space-y-4">
+        <TabsContent value="active" className="w-full space-y-3 md:space-y-4">
           {activeItems.length === 0 ? (
             <Card>
-              <CardContent className="p-8 text-center">
-                <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-semibold mb-2">
+              <CardContent className="p-6 md:p-8 text-center">
+                <Clock className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-3 md:mb-4 text-muted-foreground" />
+                <h3 className="text-base md:text-lg font-semibold mb-2">
                   {isOwner() ? "No active listings" : "No active bookings"}
                 </h3>
-                <p className="text-muted-foreground">
+                <p className="text-sm md:text-base text-muted-foreground">
                   {isOwner() ? "Create a new listing to start earning from your parking spots." : "Book a parking spot to see it here."}
                 </p>
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 md:space-y-4">
               {activeItems.map((item) => (
                 isOwner() ? renderOwnerListingWithActions(item) : renderRenterBooking(item)
               ))}
@@ -804,21 +820,21 @@ export default function MyBookings() {
           )}
         </TabsContent>
 
-        <TabsContent value="pending" className="space-y-4">
+        <TabsContent value="pending" className="w-full space-y-3 md:space-y-4">
           {pendingItems.length === 0 ? (
             <Card>
-              <CardContent className="p-8 text-center">
-                <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-semibold mb-2">
+              <CardContent className="p-6 md:p-8 text-center">
+                <Clock className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-3 md:mb-4 text-muted-foreground" />
+                <h3 className="text-base md:text-lg font-semibold mb-2">
                   No pending bookings
                 </h3>
-                <p className="text-muted-foreground">
+                <p className="text-sm md:text-base text-muted-foreground">
                   {isOwner() ? "No pending bookings for your spots." : "You have no pending booking requests at this time."}
                 </p>
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 md:space-y-4">
               {pendingItems.map((item) => (
                 isOwner() ? renderOwnerListingWithActions(item) : renderRenterBooking(item)
               ))}
@@ -826,21 +842,21 @@ export default function MyBookings() {
           )}
         </TabsContent>
 
-        <TabsContent value="payment-pending" className="space-y-4">
+        <TabsContent value="payment-pending" className="w-full space-y-3 md:space-y-4">
           {paymentPendingItems.length === 0 ? (
             <Card>
-              <CardContent className="p-8 text-center">
-                <CreditCard className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-semibold mb-2">
+              <CardContent className="p-6 md:p-8 text-center">
+                <CreditCard className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-3 md:mb-4 text-muted-foreground" />
+                <h3 className="text-base md:text-lg font-semibold mb-2">
                   No payment pending
                 </h3>
-                <p className="text-muted-foreground">
+                <p className="text-sm md:text-base text-muted-foreground">
                   {isOwner() ? "All your bookings have been paid for." : "All your booking payments are up to date."}
                 </p>
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 md:space-y-4">
               {paymentPendingItems.map((item) => (
                 isOwner() ? renderOwnerListingWithPayment(item) : renderRenterBooking(item)
               ))}
@@ -848,21 +864,21 @@ export default function MyBookings() {
           )}
         </TabsContent>
 
-        <TabsContent value="completed" className="space-y-4">
+        <TabsContent value="completed" className="w-full space-y-3 md:space-y-4">
           {completedItems.length === 0 ? (
             <Card>
-              <CardContent className="p-8 text-center">
-                <CheckCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-semibold mb-2">
+              <CardContent className="p-6 md:p-8 text-center">
+                <CheckCircle className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-3 md:mb-4 text-muted-foreground" />
+                <h3 className="text-base md:text-lg font-semibold mb-2">
                   No completed bookings
                 </h3>
-                <p className="text-muted-foreground">
+                <p className="text-sm md:text-base text-muted-foreground">
                   {isOwner() ? "No completed bookings for your spots yet." : "You haven't completed any bookings yet."}
                 </p>
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 md:space-y-4">
               {completedItems.map((item) => (
                 isOwner() ? renderOwnerListingWithPayment(item) : renderRenterBooking(item)
               ))}
@@ -871,21 +887,21 @@ export default function MyBookings() {
         </TabsContent>
         
         
-        <TabsContent value="all" className="space-y-4">
+        <TabsContent value="all" className="w-full space-y-3 md:space-y-4">
           {sortedItems.length === 0 ? (
             <Card>
-              <CardContent className="p-8 text-center">
-                <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-semibold mb-2">
+              <CardContent className="p-6 md:p-8 text-center">
+                <Calendar className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-3 md:mb-4 text-muted-foreground" />
+                <h3 className="text-base md:text-lg font-semibold mb-2">
                   {isOwner() ? "No listings found" : "No bookings found"}
                 </h3>
-                <p className="text-muted-foreground">
+                <p className="text-sm md:text-base text-muted-foreground">
                   Try adjusting your search or filters to find your {isOwner() ? "listings" : "bookings"}.
                 </p>
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 md:space-y-4">
               {sortedItems.map((item) => (
                 isOwner() ? renderOwnerListingWithPayment(item) : renderRenterBooking(item)
               ))}

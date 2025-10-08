@@ -15,12 +15,24 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip
 import { MapPin, Filter, SortAsc, Calendar, Grid, Sparkles } from "lucide-react"
 import { isPastDate } from "@/utils/date-utils"
 import { apiRequest } from "@/lib/queryClient"
-import { type ParkingSpot as DBParkingSpot } from "@shared/schema"
+import { type ParkingSpot as DBParkingSpot, type SpotTypeTable } from "@shared/schema"
 import { useToast } from "@/hooks/use-toast"
+
+// Location type from database
+interface Location {
+  id: number
+  office: string
+  building: string
+  level: string
+  address?: string
+  timezone: string
+  isActive: boolean
+}
 
 // Convert database spot to display format
 interface DisplaySpot extends DBParkingSpot {
   // Additional display properties for backwards compatibility 
+  location: string
   type: "regular" | "accessible" | "electric" | "tesla_ev" | "reserved"
   isInside: boolean
   price: number
@@ -40,7 +52,7 @@ export default function Search() {
   const [selectedSpot, setSelectedSpot] = useState<DisplaySpot | null>(null)
   const [showBookingForm, setShowBookingForm] = useState(false)
   const [sortBy, setSortBy] = useState("price")
-  const [activeTab, setActiveTab] = useState<"tiles" | "calendar">("calendar")
+  const [activeTab, setActiveTab] = useState<string>("calendar")
   const { toast } = useToast()
   
   // Set default tab based on screen size after mount: mobile shows tiles, desktop shows calendar
@@ -53,6 +65,40 @@ export default function Search() {
   const { data: dbSpots = [], isLoading, error } = useQuery<DBParkingSpot[]>({
     queryKey: ['/api/available-spots']
   })
+
+  // Fetch locations to map locationId to location strings
+  const { data: locations = [] } = useQuery<Location[]>({
+    queryKey: ['/api/locations']
+  })
+
+  // Fetch spot types to map spotTypeId to type strings
+  const { data: spotTypes = [] } = useQuery<SpotTypeTable[]>({
+    queryKey: ['/api/spot-types']
+  })
+
+  // Helper function to format location from database
+  const formatLocation = (locationId: number): string => {
+    const location = locations.find(loc => loc.id === locationId)
+    if (!location) return 'Unknown Location'
+    return `${location.office} - ${location.building}, ${location.level}`
+  }
+
+  // Helper function to map spot type ID to type string
+  const mapSpotType = (spotTypeId: number): DisplaySpot['type'] => {
+    const spotType = spotTypes.find(type => type.id === spotTypeId)
+    if (!spotType) return 'regular'
+    
+    // Map database slug to DisplaySpot type
+    const typeMap: Record<string, DisplaySpot['type']> = {
+      'regular': 'regular',
+      'accessible': 'accessible',
+      'ev-chargers': 'electric',
+      'tesla-chargers': 'tesla_ev',
+      'reserved': 'reserved'
+    }
+    
+    return typeMap[spotType.slug] || 'regular'
+  }
 
   // Convert database spots to display format with mock owners
   const getSpotOwner = (ownerId: string | null) => {
@@ -67,8 +113,8 @@ export default function Search() {
   const spots: DisplaySpot[] = dbSpots.map(spot => ({
     ...spot,
     spotNumber: spot.spotNumber,
-    location: spot.location,
-    type: spot.spotType as DisplaySpot['type'],
+    location: formatLocation(spot.locationId),
+    type: mapSpotType(spot.spotTypeId),
     isInside: spot.isIndoor,
     price: 25, // Default price since MemStorage doesn't have spot pricing
     owner: getSpotOwner(spot.ownerId),
@@ -324,14 +370,14 @@ export default function Search() {
   }
 
   return (
-    <div className="p-6 space-y-6" data-testid="page-search">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6" data-testid="page-search">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Sparkles className="h-8 w-8 text-primary" />
+          <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
+            <Sparkles className="h-6 w-6 md:h-8 md:w-8 text-primary" />
             Smart Parking Search
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm md:text-base text-muted-foreground">
             Find parking spots instantly with intelligent search across all BCI locations.
           </p>
         </div>
@@ -340,9 +386,9 @@ export default function Search() {
       <EnhancedSearch onSearch={handleSearch} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-4">
-            <TabsList className="grid w-[200px] grid-cols-2">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4 mb-4">
+          <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
+            <TabsList className="grid w-full md:w-[200px] grid-cols-2">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <TabsTrigger value="tiles" className="flex items-center gap-2" data-testid="tab-tiles">
@@ -367,8 +413,8 @@ export default function Search() {
               </Tooltip>
             </TabsList>
             
-            <div className="flex items-center gap-4">
-              <h2 className="text-xl font-semibold">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-lg md:text-xl font-semibold">
                 {getResultsLabel()}
               </h2>
               {getActiveFilterCount() > 0 && (
@@ -395,14 +441,14 @@ export default function Search() {
           </div>
           
           {activeTab === "tiles" && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Sort by:</span>
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <span className="text-sm text-muted-foreground hidden md:inline">Sort by:</span>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <select 
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
-                    className="px-3 py-1 border rounded-md text-sm cursor-pointer"
+                    className="flex-1 md:flex-initial px-3 py-2 md:py-1 border rounded-md text-sm cursor-pointer min-h-11 md:min-h-0"
                     data-testid="select-sort"
                   >
                     <option value="price">Price (Low to High)</option>
@@ -416,7 +462,7 @@ export default function Search() {
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" data-testid="button-sort-direction">
+                  <Button variant="ghost" size="sm" className="hidden md:flex" data-testid="button-sort-direction">
                     <SortAsc className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>

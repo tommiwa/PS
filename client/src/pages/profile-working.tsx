@@ -467,14 +467,8 @@ export default function Profile() {
   };
 
   const handleSubmitProfile = (data: ProfileEditForm) => {
-    // Split name into firstName and lastName for backend
-    const nameParts = data.name.trim().split(' ');
-    const firstName = nameParts[0] || '';
-    const lastName = nameParts.slice(1).join(' ') || '';
-    
     const backendData = {
-      firstName,
-      lastName,
+      name: data.name,
       email: data.email,
       phone: data.phone,
       department: data.department
@@ -498,11 +492,11 @@ export default function Profile() {
     <div className="min-h-screen bg-background">
       {/* Header - Sticky for PWA */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto p-4 md:p-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">{user?.name || t("profile.profile")}</h1>
-              <p className="text-sm text-muted-foreground">{t("profile.settings")}</p>
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{user?.name || t("profile.profile")}</h1>
+              <p className="text-sm md:text-base text-muted-foreground">{t("profile.settings")}</p>
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -512,7 +506,7 @@ export default function Profile() {
                 className="h-9 w-9"
                 data-testid="button-theme-toggle"
               >
-                <Palette className="h-4 w-4" />
+                <Palette className="h-6 w-6 md:h-8 md:w-8" />
               </Button>
             </div>
           </div>
@@ -520,9 +514,9 @@ export default function Profile() {
       </div>
 
       {/* Main Content - Mobile First */}
-      <div className="container mx-auto px-4 pb-8">
+      <div className="container mx-auto p-4 md:p-6 pb-8">
         {/* User Profile Summary */}
-        <div className="py-6">
+        <div className="py-4 md:py-6">
           <UserProfileCard 
             user={{
               id: user?.id || "",
@@ -530,7 +524,7 @@ export default function Profile() {
               email: user?.email || "",
               phone: user?.phone || "",
               department: user?.department || "",
-              role: user?.role || "renter",
+              role: user?.roles?.[0] || "renter",
               assignedSpots: assignedSpots,
               memberSince: new Date().getFullYear().toString()
             }}
@@ -541,17 +535,17 @@ export default function Profile() {
 
         {/* Mobile Accordion Layout */}
         <div className="md:hidden">
-          <Accordion type="multiple" className="space-y-4" defaultValue={["waiting-list"]}>
+          <Accordion type="multiple" className="space-y-3 md:space-y-4" defaultValue={["waiting-list"]}>
             
             {/* Waiting List Section */}
             <AccordionItem value="waiting-list" className="border rounded-lg px-4">
-            <AccordionTrigger className="hover:no-underline py-6">
+            <AccordionTrigger className="hover:no-underline py-4 min-h-[44px]">
               <div className="flex items-center justify-between w-full mr-4">
                 <div className="flex items-center gap-3">
-                  <Calendar className="h-5 w-5 text-primary" />
+                  <Calendar className="h-5 w-5 text-primary flex-shrink-0" />
                   <div className="text-left">
-                    <h3 className="font-medium">{t("waitingList.title")}</h3>
-                    <p className="text-sm text-muted-foreground">
+                    <h3 className="font-medium text-sm md:text-base">{t("waitingList.title")}</h3>
+                    <p className="text-xs md:text-sm text-muted-foreground break-words">
                       {isLoadingWaitingList ? t("common.loading") : 
                        waitingListEntry ? `${t("waitingList.enrolled")} • Priority ${waitingListEntry.priority}` : 
                        t("waitingList.notEnrolled")}
@@ -560,15 +554,15 @@ export default function Profile() {
                 </div>
                 <div className="flex items-center gap-2">
                   {waitingListEntry && (
-                    <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                    <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 text-xs">
                       {t("common.active")}
                     </Badge>
                   )}
                 </div>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="pb-6">
-              <div className="space-y-4">
+            <AccordionContent className="pb-4 md:pb-6">
+              <div className="space-y-3 md:space-y-4">
                 {isLoadingWaitingList ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin" />
@@ -618,13 +612,13 @@ export default function Profile() {
 
           {/* Payment Preferences Section */}
           <AccordionItem value="payment-preferences" className="border rounded-lg px-4">
-            <AccordionTrigger className="hover:no-underline py-6">
+            <AccordionTrigger className="hover:no-underline py-4 min-h-[44px]">
               <div className="flex items-center justify-between w-full mr-4">
                 <div className="flex items-center gap-3">
-                  <CreditCard className="h-5 w-5 text-primary" />
+                  <CreditCard className="h-5 w-5 text-primary flex-shrink-0" />
                   <div className="text-left">
-                    <h3 className="font-medium">Payment Preferences</h3>
-                    <p className="text-sm text-muted-foreground">
+                    <h3 className="font-medium text-sm md:text-base">Payment Preferences</h3>
+                    <p className="text-xs md:text-sm text-muted-foreground break-words">
                       {isLoadingPaymentPreferences ? "Loading..." : 
                        paymentPreferences ? 
                        `${paymentPreferences.paymentType === "interac_transfer" ? "Interac Transfer" : "Cash"}` : 
@@ -634,16 +628,16 @@ export default function Profile() {
                 </div>
                 <div className="flex items-center gap-2">
                   {paymentPreferences && (
-                    <Badge variant="outline">
+                    <Badge variant="outline" className="text-xs">
                       {paymentPreferences.paymentType === "interac_transfer" ? "Interac" : "Cash"}
                     </Badge>
                   )}
                 </div>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="pb-6">
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
+            <AccordionContent className="pb-4 md:pb-6">
+              <div className="space-y-3 md:space-y-4">
+                <p className="text-sm md:text-base text-muted-foreground">
                   Set your preferred payment method for when others book your parking spots.
                 </p>
 {/* Mobile Payment Form - Always Drawer in accordion */}
@@ -727,13 +721,13 @@ export default function Profile() {
           
           {/* Vehicles Section */}
           <AccordionItem value="vehicles" className="border rounded-lg px-4">
-            <AccordionTrigger className="hover:no-underline py-6">
+            <AccordionTrigger className="hover:no-underline py-4 min-h-[44px]">
               <div className="flex items-center justify-between w-full mr-4">
                 <div className="flex items-center gap-3">
-                  <Car className="h-5 w-5 text-primary" />
+                  <Car className="h-5 w-5 text-primary flex-shrink-0" />
                   <div className="text-left">
-                    <h3 className="font-medium">My Vehicles</h3>
-                    <p className="text-sm text-muted-foreground">
+                    <h3 className="font-medium text-sm md:text-base">My Vehicles</h3>
+                    <p className="text-xs md:text-sm text-muted-foreground break-words">
                       {isLoadingVehicles ? "Loading..." : 
                        userVehicles?.length ? `${userVehicles.length} vehicle${userVehicles.length > 1 ? 's' : ''} registered` : 
                        "No vehicles added"}
@@ -742,13 +736,13 @@ export default function Profile() {
                 </div>
                 <div className="flex items-center gap-2">
                   {userVehicles?.length && (
-                    <Badge variant="outline">{userVehicles.length}</Badge>
+                    <Badge variant="outline" className="text-xs">{userVehicles.length}</Badge>
                   )}
                 </div>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="pb-6">
-              <div className="space-y-4">
+            <AccordionContent className="pb-4 md:pb-6">
+              <div className="space-y-3 md:space-y-4">
                 {isLoadingVehicles ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin" />
@@ -819,13 +813,13 @@ export default function Profile() {
 
           {/* Notifications Section */}
           <AccordionItem value="notifications" className="border rounded-lg px-4">
-            <AccordionTrigger className="hover:no-underline py-6">
+            <AccordionTrigger className="hover:no-underline py-4 min-h-[44px]">
               <div className="flex items-center justify-between w-full mr-4">
                 <div className="flex items-center gap-3">
-                  <Bell className="h-5 w-5 text-primary" />
+                  <Bell className="h-5 w-5 text-primary flex-shrink-0" />
                   <div className="text-left">
-                    <h3 className="font-medium">Notifications</h3>
-                    <p className="text-sm text-muted-foreground">
+                    <h3 className="font-medium text-sm md:text-base">Notifications</h3>
+                    <p className="text-xs md:text-sm text-muted-foreground break-words">
                       {isLoadingPreferences ? "Loading..." : 
                        notificationPreferences?.emailNotifications ? "Email notifications enabled" : 
                        "Email notifications disabled"}
@@ -834,15 +828,15 @@ export default function Profile() {
                 </div>
                 <div className="flex items-center gap-2">
                   {notificationPreferences?.emailNotifications && (
-                    <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                    <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 text-xs">
                       On
                     </Badge>
                   )}
                 </div>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="pb-6">
-              <div className="space-y-4">
+            <AccordionContent className="pb-4 md:pb-6">
+              <div className="space-y-3 md:space-y-4">
                 {isLoadingPreferences ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin" />
@@ -903,21 +897,21 @@ export default function Profile() {
 
           {/* App Settings Section */}
           <AccordionItem value="app-settings" className="border rounded-lg px-4">
-            <AccordionTrigger className="hover:no-underline py-6">
+            <AccordionTrigger className="hover:no-underline py-4 min-h-[44px]">
               <div className="flex items-center justify-between w-full mr-4">
                 <div className="flex items-center gap-3">
-                  <Settings className="h-5 w-5 text-primary" />
+                  <Settings className="h-5 w-5 text-primary flex-shrink-0" />
                   <div className="text-left">
-                    <h3 className="font-medium">{t("profile.tabs.appSettings")}</h3>
-                    <p className="text-sm text-muted-foreground">
+                    <h3 className="font-medium text-sm md:text-base">{t("profile.tabs.appSettings")}</h3>
+                    <p className="text-xs md:text-sm text-muted-foreground break-words">
                       Theme: {theme} • Language: {language === 'en' ? 'English' : 'Français'}
                     </p>
                   </div>
                 </div>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="pb-6">
-              <div className="space-y-4">
+            <AccordionContent className="pb-4 md:pb-6">
+              <div className="space-y-3 md:space-y-4">
                 <div className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
@@ -970,42 +964,47 @@ export default function Profile() {
         {/* Desktop Tabs Layout */}
         <div className="hidden md:block">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-5 mb-6">
-              <TabsTrigger value="waiting-list" className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                {t("profile.tabs.waitingList")}
+            <TabsList className="grid w-full grid-cols-3 md:grid-cols-5 gap-1 mb-4 md:mb-6">
+              <TabsTrigger value="waiting-list" className="flex items-center gap-2 min-h-11 text-xs md:text-sm">
+                <Calendar className="h-4 w-4 flex-shrink-0" />
+                <span className="hidden sm:inline">{t("profile.tabs.waitingList")}</span>
+                <span className="sm:hidden">Waiting</span>
               </TabsTrigger>
-              <TabsTrigger value="payment-preferences" className="flex items-center gap-2">
-                <CreditCard className="h-4 w-4" />
-                {t("profile.tabs.payment")}
+              <TabsTrigger value="payment-preferences" className="flex items-center gap-2 min-h-11 text-xs md:text-sm">
+                <CreditCard className="h-4 w-4 flex-shrink-0" />
+                <span className="hidden sm:inline">{t("profile.tabs.payment")}</span>
+                <span className="sm:hidden">Payment</span>
               </TabsTrigger>
-              <TabsTrigger value="vehicles" className="flex items-center gap-2">
-                <Car className="h-4 w-4" />
-                {t("profile.tabs.vehicles")}
+              <TabsTrigger value="vehicles" className="flex items-center gap-2 min-h-11 text-xs md:text-sm">
+                <Car className="h-4 w-4 flex-shrink-0" />
+                <span className="hidden sm:inline">{t("profile.tabs.vehicles")}</span>
+                <span className="sm:hidden">Vehicles</span>
               </TabsTrigger>
-              <TabsTrigger value="notifications" className="flex items-center gap-2">
-                <Bell className="h-4 w-4" />
-                {t("profile.tabs.notifications")}
+              <TabsTrigger value="notifications" className="flex items-center gap-2 min-h-11 text-xs md:text-sm">
+                <Bell className="h-4 w-4 flex-shrink-0" />
+                <span className="hidden sm:inline">{t("profile.tabs.notifications")}</span>
+                <span className="sm:hidden">Alerts</span>
               </TabsTrigger>
-              <TabsTrigger value="app-settings" className="flex items-center gap-2">
-                <Settings className="h-4 w-4" />
-                {t("profile.tabs.appSettings")}
+              <TabsTrigger value="app-settings" className="flex items-center gap-2 min-h-11 text-xs md:text-sm">
+                <Settings className="h-4 w-4 flex-shrink-0" />
+                <span className="hidden sm:inline">{t("profile.tabs.appSettings")}</span>
+                <span className="sm:hidden">Settings</span>
               </TabsTrigger>
             </TabsList>
 
             {/* Waiting List Tab */}
-            <TabsContent value="waiting-list" className="space-y-6">
+            <TabsContent value="waiting-list" className="space-y-4 md:space-y-6">
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Calendar className="h-5 w-5" />
+                <CardHeader className="p-4 md:p-6">
+                  <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+                    <Calendar className="h-5 w-5 md:h-6 md:w-6" />
                     {t("waitingList.title")}
                   </CardTitle>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm md:text-base text-muted-foreground">
                     {t("waitingList.description")}
                   </p>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-4 md:space-y-6 p-4 md:p-6">
                   {isLoadingWaitingList ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="h-6 w-6 animate-spin" />
@@ -1054,18 +1053,18 @@ export default function Profile() {
             </TabsContent>
 
             {/* Payment Preferences Tab */}
-            <TabsContent value="payment-preferences" className="space-y-6">
+            <TabsContent value="payment-preferences" className="space-y-4 md:space-y-6">
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <CreditCard className="h-5 w-5" />
+                <CardHeader className="p-4 md:p-6">
+                  <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+                    <CreditCard className="h-5 w-5 md:h-6 md:w-6" />
                     Payment Preferences
                   </CardTitle>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm md:text-base text-muted-foreground">
                     Set your preferred payment method for when others book your parking spots.
                   </p>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-4 md:space-y-6 p-4 md:p-6">
                   {isLoadingPaymentPreferences ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="h-6 w-6 animate-spin" />
@@ -1075,18 +1074,18 @@ export default function Profile() {
 {/* Desktop Payment Form - Dialog */}
                       <Dialog open={showPaymentPreferencesDrawer} onOpenChange={setShowPaymentPreferencesDrawer}>
                         <DialogTrigger asChild>
-                          <Button variant="outline" className="w-full h-12" data-testid="button-edit-payment-preferences-desktop">
+                          <Button variant="outline" className="w-full md:w-auto h-11" data-testid="button-edit-payment-preferences-desktop">
                             <CreditCard className="h-4 w-4 mr-2" />
                             {paymentPreferences ? "Update Payment Preferences" : "Set Payment Preferences"}
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+                        <DialogContent className="max-w-full md:max-w-lg max-h-[90vh] overflow-y-auto">
                           <DialogHeader>
                             <DialogTitle className="text-xl">Payment Preferences</DialogTitle>
                           </DialogHeader>
                           <div className="py-4">
                             <Form {...paymentForm}>
-                              <form onSubmit={paymentForm.handleSubmit(handleSubmitPaymentPreferences)} className="space-y-6">
+                              <form onSubmit={paymentForm.handleSubmit(handleSubmitPaymentPreferences)} className="space-y-4 md:space-y-6">
                                 <FormField
                                   control={paymentForm.control}
                                   name="paymentType"
@@ -1138,18 +1137,18 @@ export default function Profile() {
                               </form>
                             </Form>
                           </div>
-                          <DialogFooter className="gap-3">
+                          <DialogFooter className="flex-col md:flex-row gap-2 md:gap-3">
                             <Button 
                               variant="outline" 
                               onClick={() => setShowPaymentPreferencesDrawer(false)}
-                              className="h-11"
+                              className="w-full md:w-auto h-11"
                             >
                               Cancel
                             </Button>
                             <Button 
                               onClick={paymentForm.handleSubmit(handleSubmitPaymentPreferences)}
                               disabled={updatePaymentPreferencesMutation.isPending}
-                              className="h-11"
+                              className="w-full md:w-auto h-11"
                               data-testid="button-save-payment-preferences-desktop"
                             >
                               {updatePaymentPreferencesMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
@@ -1184,12 +1183,12 @@ export default function Profile() {
             </TabsContent>
 
             {/* Vehicles Tab */}
-            <TabsContent value="vehicles" className="space-y-6">
+            <TabsContent value="vehicles" className="space-y-4 md:space-y-6">
               <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
-                      <Car className="h-5 w-5" />
+                <CardHeader className="p-4 md:p-6">
+                  <div className="flex items-center justify-between flex-wrap gap-3">
+                    <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+                      <Car className="h-5 w-5 md:h-6 md:w-6" />
                       My Vehicles
                     </CardTitle>
 {/* Mobile Vehicle Form - Drawer */}
@@ -1207,8 +1206,8 @@ export default function Profile() {
                           </DrawerHeader>
                           <div className="px-4 pb-4">
                             <Form {...vehicleForm}>
-                              <form onSubmit={vehicleForm.handleSubmit(handleSubmitVehicle)} className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
+                              <form onSubmit={vehicleForm.handleSubmit(handleSubmitVehicle)} className="space-y-3 md:space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                                   <FormField
                                     control={vehicleForm.control}
                                     name="make"
@@ -1216,7 +1215,7 @@ export default function Profile() {
                                       <FormItem>
                                         <FormLabel>Make</FormLabel>
                                         <FormControl>
-                                          <Input placeholder="e.g., Toyota" {...field} data-testid="input-vehicle-make" />
+                                          <Input className="min-h-11" placeholder="e.g., Toyota" {...field} data-testid="input-vehicle-make" />
                                         </FormControl>
                                         <FormMessage />
                                       </FormItem>
@@ -1229,14 +1228,14 @@ export default function Profile() {
                                       <FormItem>
                                         <FormLabel>Model</FormLabel>
                                         <FormControl>
-                                          <Input placeholder="e.g., Camry" {...field} data-testid="input-vehicle-model" />
+                                          <Input className="min-h-11" placeholder="e.g., Camry" {...field} data-testid="input-vehicle-model" />
                                         </FormControl>
                                         <FormMessage />
                                       </FormItem>
                                     )}
                                   />
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                                   <FormField
                                     control={vehicleForm.control}
                                     name="year"
@@ -1246,6 +1245,7 @@ export default function Profile() {
                                         <FormControl>
                                           <Input 
                                             type="number" 
+                                            className="min-h-11"
                                             placeholder="2020" 
                                             {...field}
                                             onChange={(e) => field.onChange(parseInt(e.target.value) || "")}
@@ -1263,7 +1263,7 @@ export default function Profile() {
                                       <FormItem>
                                         <FormLabel>Color (Optional)</FormLabel>
                                         <FormControl>
-                                          <Input placeholder="e.g., Blue" {...field} data-testid="input-vehicle-color" />
+                                          <Input className="min-h-11" placeholder="e.g., Blue" {...field} data-testid="input-vehicle-color" />
                                         </FormControl>
                                         <FormMessage />
                                       </FormItem>
@@ -1277,7 +1277,7 @@ export default function Profile() {
                                     <FormItem>
                                       <FormLabel>License Plate</FormLabel>
                                       <FormControl>
-                                        <Input placeholder="e.g., ABC-123" {...field} data-testid="input-vehicle-license" />
+                                        <Input className="min-h-11" placeholder="e.g., ABC-123" {...field} data-testid="input-vehicle-license" />
                                       </FormControl>
                                       <FormMessage />
                                     </FormItem>
@@ -1346,19 +1346,19 @@ export default function Profile() {
                     <div className="hidden md:block">
                       <Dialog open={showAddVehicleDialog} onOpenChange={setShowAddVehicleDialog}>
                         <DialogTrigger asChild>
-                          <Button data-testid="button-add-vehicle-desktop">
+                          <Button className="min-h-11" data-testid="button-add-vehicle-desktop">
                             <Plus className="h-4 w-4 mr-2" />
                             Add Vehicle
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                        <DialogContent className="max-w-full md:max-w-2xl max-h-[90vh] overflow-y-auto">
                           <DialogHeader>
                             <DialogTitle className="text-xl">{editingVehicle ? "Edit Vehicle" : "Add Vehicle"}</DialogTitle>
                           </DialogHeader>
                           <div className="py-4">
                             <Form {...vehicleForm}>
-                              <form onSubmit={vehicleForm.handleSubmit(handleSubmitVehicle)} className="space-y-6">
-                                <div className="grid grid-cols-2 gap-6">
+                              <form onSubmit={vehicleForm.handleSubmit(handleSubmitVehicle)} className="space-y-4 md:space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                                   <FormField
                                     control={vehicleForm.control}
                                     name="make"
@@ -1396,7 +1396,7 @@ export default function Profile() {
                                     )}
                                   />
                                 </div>
-                                <div className="grid grid-cols-2 gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                                   <FormField
                                     control={vehicleForm.control}
                                     name="year"
@@ -1501,18 +1501,18 @@ export default function Profile() {
                               </form>
                             </Form>
                           </div>
-                          <DialogFooter className="gap-3">
+                          <DialogFooter className="flex-col md:flex-row gap-2 md:gap-3">
                             <Button 
                               variant="outline" 
                               onClick={() => setShowAddVehicleDrawer(false)}
-                              className="h-11"
+                              className="w-full md:w-auto h-11"
                             >
                               Cancel
                             </Button>
                             <Button 
                               onClick={vehicleForm.handleSubmit(handleSubmitVehicle)}
                               disabled={addVehicleMutation.isPending}
-                              className="h-11"
+                              className="w-full md:w-auto h-11"
                               data-testid="button-save-vehicle-desktop"
                             >
                               {addVehicleMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
@@ -1524,7 +1524,7 @@ export default function Profile() {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-4 md:p-6">
                   {isLoadingVehicles ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="h-6 w-6 animate-spin" />
@@ -1532,13 +1532,13 @@ export default function Profile() {
                   ) : userVehicles?.length === 0 ? (
                     <div className="text-center py-8">
                       <Car className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <h3 className="font-medium mb-2">No vehicles added</h3>
-                      <p className="text-sm text-muted-foreground mb-4">
+                      <h3 className="font-medium text-base md:text-lg mb-2">No vehicles added</h3>
+                      <p className="text-sm md:text-base text-muted-foreground mb-4">
                         Add your vehicle information to complete your parking profile.
                       </p>
                     </div>
                   ) : (
-                    <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid gap-3 md:gap-4 grid-cols-1 md:grid-cols-2">
                       {userVehicles?.map((vehicle: any) => (
                         <Card key={vehicle.id} className="hover-elevate">
                           <CardContent className="pt-4">
@@ -1596,15 +1596,15 @@ export default function Profile() {
             </TabsContent>
 
             {/* Notifications Tab */}
-            <TabsContent value="notifications" className="space-y-6">
+            <TabsContent value="notifications" className="space-y-4 md:space-y-6">
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Bell className="h-5 w-5" />
+                <CardHeader className="p-4 md:p-6">
+                  <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+                    <Bell className="h-5 w-5 md:h-6 md:w-6" />
                     Notifications
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-4 md:space-y-6 p-4 md:p-6">
                   {isLoadingPreferences ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="h-6 w-6 animate-spin" />
@@ -1664,15 +1664,15 @@ export default function Profile() {
             </TabsContent>
 
             {/* App Settings Tab */}
-            <TabsContent value="app-settings" className="space-y-6">
+            <TabsContent value="app-settings" className="space-y-4 md:space-y-6">
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Settings className="h-5 w-5" />
+                <CardHeader className="p-4 md:p-6">
+                  <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+                    <Settings className="h-5 w-5 md:h-6 md:w-6" />
                     {t("profile.tabs.appSettings")}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-4 md:space-y-6 p-4 md:p-6">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="space-y-1">
@@ -1732,7 +1732,7 @@ export default function Profile() {
           </DrawerHeader>
           <div className="px-4 pb-4 overflow-y-auto">
             <Form {...profileForm}>
-              <form onSubmit={profileForm.handleSubmit(handleSubmitProfile)} className="space-y-6">
+              <form onSubmit={profileForm.handleSubmit(handleSubmitProfile)} className="space-y-4 md:space-y-6">
                 <FormField
                   control={profileForm.control}
                   name="name"
@@ -1740,7 +1740,7 @@ export default function Profile() {
                     <FormItem>
                       <FormLabel>{t("profile.fullName")}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter your full name" {...field} data-testid="input-profile-name" />
+                        <Input className="min-h-11" placeholder="Enter your full name" {...field} data-testid="input-profile-name" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1754,7 +1754,7 @@ export default function Profile() {
                     <FormItem>
                       <FormLabel>{t("profile.emailAddress")}</FormLabel>
                       <FormControl>
-                        <Input type="email" placeholder="Enter your email" {...field} data-testid="input-profile-email" />
+                        <Input className="min-h-11" type="email" placeholder="Enter your email" {...field} data-testid="input-profile-email" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1768,7 +1768,7 @@ export default function Profile() {
                     <FormItem>
                       <FormLabel>{t("profile.phoneNumber")}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter your phone number" {...field} data-testid="input-profile-phone" />
+                        <Input className="min-h-11" placeholder="Enter your phone number" {...field} data-testid="input-profile-phone" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

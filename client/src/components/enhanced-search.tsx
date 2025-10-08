@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import { Search, X, MapPin, Car, Zap, Accessibility, DollarSign, Calendar, Clock, Filter, Building } from "lucide-react"
+import { Search, X, MapPin, Car, Zap, Accessibility, DollarSign, Calendar, Clock, Filter, Building, SlidersHorizontal } from "lucide-react"
 
 export interface ParsedSearch {
   query: string
@@ -48,11 +49,14 @@ const QUICK_FILTERS = [
   { label: "Today", value: "today", icon: Calendar, type: "date", tooltip: "Filter for parking spots available today" }
 ]
 
+const MOBILE_VISIBLE_FILTERS = 4
+
 export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
   const [query, setQuery] = useState("")
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [activeFilters, setActiveFilters] = useState<string[]>([])
   const [focused, setFocused] = useState(false)
+  const [showMoreFilters, setShowMoreFilters] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Parse the search query intelligently
@@ -220,8 +224,44 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
     }
   }, [focused, query])
 
+  const renderFilterButton = (filter: typeof QUICK_FILTERS[0]) => {
+    const Icon = filter.icon
+    const isActive = activeFilters.includes(filter.value)
+    return (
+      <Tooltip key={filter.value}>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-auto p-0 hover:bg-transparent"
+            onClick={() => handleQuickFilter(filter)}
+            aria-pressed={isActive}
+            role="button"
+            data-testid={`filter-${filter.value}`}
+          >
+            <Badge
+              variant={isActive ? "default" : "secondary"}
+              className={`gap-1 min-h-11 md:min-h-8 px-3 ${isActive ? 'bg-primary text-primary-foreground' : ''}`}
+            >
+              <Icon className="h-3 w-3" />
+              {filter.label}
+              {isActive && <X className="h-3 w-3" />}
+            </Badge>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{isActive ? `Remove filter` : filter.tooltip}</p>
+        </TooltipContent>
+      </Tooltip>
+    )
+  }
+
+  const visibleFilters = QUICK_FILTERS.slice(0, MOBILE_VISIBLE_FILTERS)
+  const hiddenFilters = QUICK_FILTERS.slice(MOBILE_VISIBLE_FILTERS)
+  const hasActiveHiddenFilters = hiddenFilters.some(f => activeFilters.includes(f.value))
+
   return (
-    <div className={`space-y-4 ${className}`} data-testid="enhanced-search">
+    <div className={`space-y-3 md:space-y-4 ${className}`} data-testid="enhanced-search">
       {/* Quick Filters */}
       <div className="flex flex-wrap gap-2">
         <Tooltip>
@@ -229,7 +269,7 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
             <Button
               variant="ghost"
               size="sm"
-              className="h-auto p-1 text-sm font-medium text-muted-foreground hover:bg-transparent hover:text-muted-foreground"
+              className="h-auto p-1 text-sm font-medium text-muted-foreground hover:bg-transparent hover:text-muted-foreground shrink-0"
               data-testid="text-quick-filters-label"
             >
               <Filter className="h-3 w-3 mr-1" />
@@ -240,37 +280,49 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
             <p>Click buttons for quick filters</p>
           </TooltipContent>
         </Tooltip>
-        {QUICK_FILTERS.map((filter) => {
-          const Icon = filter.icon
-          const isActive = activeFilters.includes(filter.value)
-          return (
-            <Tooltip key={filter.value}>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-auto p-0 hover:bg-transparent"
-                  onClick={() => handleQuickFilter(filter)}
-                  aria-pressed={isActive}
-                  role="button"
-                  data-testid={`filter-${filter.value}`}
+        
+        {/* Mobile: Show first 4 filters + More Filters button */}
+        <div className="flex flex-wrap gap-2 md:hidden">
+          {visibleFilters.map(renderFilterButton)}
+          
+          <Sheet open={showMoreFilters} onOpenChange={setShowMoreFilters}>
+            <SheetTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-auto p-0 hover:bg-transparent"
+                data-testid="button-more-filters"
+              >
+                <Badge 
+                  variant={hasActiveHiddenFilters ? "default" : "secondary"}
+                  className={`gap-1 min-h-11 md:min-h-8 px-3 ${hasActiveHiddenFilters ? 'bg-primary text-primary-foreground' : ''}`}
                 >
-                  <Badge
-                    variant={isActive ? "default" : "secondary"}
-                    className={`gap-1 ${isActive ? 'bg-primary text-primary-foreground' : ''}`}
-                  >
-                    <Icon className="h-3 w-3" />
-                    {filter.label}
-                    {isActive && <X className="h-3 w-3" />}
-                  </Badge>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{isActive ? `Remove filter` : filter.tooltip}</p>
-              </TooltipContent>
-            </Tooltip>
-          )
-        })}
+                  <SlidersHorizontal className="h-3 w-3" />
+                  More Filters
+                  {hasActiveHiddenFilters && <span className="ml-1 bg-primary-foreground text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
+                    {hiddenFilters.filter(f => activeFilters.includes(f.value)).length}
+                  </span>}
+                </Badge>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="h-auto max-h-[80vh]">
+              <SheetHeader>
+                <SheetTitle>Additional Filters</SheetTitle>
+                <SheetDescription>
+                  Select additional filters to refine your search
+                </SheetDescription>
+              </SheetHeader>
+              <div className="flex flex-wrap gap-2 mt-4 pb-4">
+                {hiddenFilters.map(renderFilterButton)}
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+
+        {/* Desktop: Show all filters */}
+        <div className="hidden md:flex md:flex-wrap md:gap-2">
+          {QUICK_FILTERS.map(renderFilterButton)}
+        </div>
       </div>
 
       {/* Search Input */}
@@ -284,13 +336,13 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
                   <Input
                     ref={inputRef}
                     type="text"
-                    placeholder="Search parking spots... (e.g., 'Victoria 750 pandora ave electric $20-30', 'accessible parking level 1')"
+                    placeholder="Search parking spots... (e.g., 'Victoria electric $20-30')"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     onKeyDown={handleKeyDown}
                     onFocus={() => setFocused(true)}
                     onBlur={() => setTimeout(() => setFocused(false), 200)}
-                    className={`pl-10 h-12 text-base ${query ? 'pr-12' : 'pr-4'}`}
+                    className={`pl-10 min-h-[44px] md:h-12 text-base ${query ? 'pr-12' : 'pr-4'}`}
                     data-testid="input-enhanced-search"
                   />
                 </TooltipTrigger>
@@ -318,12 +370,31 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
                 </Tooltip>
               )}
             </div>
+            
+            {/* Mobile: Icon-only button */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   onClick={handleSearch}
-                  className="h-12 px-6"
+                  className="md:hidden min-h-[44px] min-w-[44px] p-0"
+                  size="icon"
                   data-testid="button-search"
+                >
+                  <Search className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Search with current criteria</p>
+              </TooltipContent>
+            </Tooltip>
+
+            {/* Desktop: Full button with text */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={handleSearch}
+                  className="hidden md:flex h-12 px-6"
+                  data-testid="button-search-desktop"
                 >
                   <Search className="h-4 w-4 mr-2" />
                   Search
@@ -371,13 +442,13 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
         </PopoverContent>
       </Popover>
 
-      {/* Search Examples */}
+      {/* Search Examples - Hidden on mobile, shown on desktop */}
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
             variant="ghost"
             size="sm"
-            className="h-auto p-0 text-sm text-muted-foreground hover:bg-transparent hover:text-muted-foreground text-left justify-start"
+            className="hidden md:block h-auto p-0 text-sm text-muted-foreground hover:bg-transparent hover:text-muted-foreground text-left justify-start"
             data-testid="text-search-examples"
           >
             <span className="font-medium">Try searching:</span> "tesla ev charger", "accessible under $25", "level 1 inside", or "electric charging"

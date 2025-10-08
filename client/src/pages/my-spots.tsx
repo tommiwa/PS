@@ -602,67 +602,67 @@ export default function MySpots() {
   }
 
   return (
-    <div className="p-6 space-y-6" data-testid="page-my-spots">
-      <div className="flex items-center justify-between">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6" data-testid="page-my-spots">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">My Parking Spots</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl md:text-3xl font-bold">My Parking Spots</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
             Manage your parking spaces and track your earnings.
           </p>
         </div>
-        <Button onClick={handleAddSpot} data-testid="button-add-new-spot">
-          <Plus className="h-4 w-4 mr-2" />
+        <Button onClick={handleAddSpot} data-testid="button-add-new-spot" className="w-full sm:w-auto min-h-11">
+          <Plus className="h-4 w-4 md:h-5 md:w-5 mr-2" />
           Add New Spot
         </Button>
       </div>
 
       {/* Overview Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+          <CardHeader className="p-3 md:p-4 pb-2">
+            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Car className="h-4 w-4" />
               Active Spots
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{activeSpots}</div>
+          <CardContent className="p-3 md:p-4 pt-0">
+            <div className="text-xl md:text-2xl font-bold">{activeSpots}</div>
             <p className="text-xs text-muted-foreground">Out of {totalSpots} total</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+          <CardHeader className="p-3 md:p-4 pb-2">
+            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground flex items-center gap-2">
               <DollarSign className="h-4 w-4" />
               Total Spots
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalSpots}</div>
+          <CardContent className="p-3 md:p-4 pt-0">
+            <div className="text-xl md:text-2xl font-bold">{totalSpots}</div>
             <p className="text-xs text-muted-foreground">Registered spots</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+          <CardHeader className="p-3 md:p-4 pb-2">
+            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Users className="h-4 w-4" />
               Inactive Spots
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalSpots - activeSpots}</div>
+          <CardContent className="p-3 md:p-4 pt-0">
+            <div className="text-xl md:text-2xl font-bold">{totalSpots - activeSpots}</div>
             <p className="text-xs text-muted-foreground">Need activation</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+          <CardHeader className="p-3 md:p-4 pb-2">
+            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
               Utilization
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalSpots > 0 ? Math.round((activeSpots / totalSpots) * 100) : 0}%</div>
+          <CardContent className="p-3 md:p-4 pt-0">
+            <div className="text-xl md:text-2xl font-bold">{totalSpots > 0 ? Math.round((activeSpots / totalSpots) * 100) : 0}%</div>
             <p className="text-xs text-muted-foreground">Active spots</p>
           </CardContent>
         </Card>
@@ -671,8 +671,8 @@ export default function MySpots() {
       {/* Spot Management */}
       <div className="w-full">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <Grid className="h-5 w-5" />
+          <h2 className="text-lg md:text-xl font-semibold flex items-center gap-2">
+            <Grid className="h-4 w-4 md:h-5 md:w-5" />
             Spot Management
           </h2>
         </div>
@@ -686,7 +686,7 @@ export default function MySpots() {
           ) : userSpots.length === 0 ? (
             <div className="text-center py-8 space-y-4">
               <div className="text-muted-foreground">No parking spots yet.</div>
-              <Button onClick={handleAddSpot} data-testid="button-add-first-spot">
+              <Button onClick={handleAddSpot} data-testid="button-add-first-spot" className="min-h-11">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Your First Spot
               </Button>
@@ -696,13 +696,13 @@ export default function MySpots() {
             <div className="space-y-4">
               {userSpots.map((spot) => (
           <Card key={spot.id} className={`${!spot.isActive ? 'opacity-60' : ''}`}>
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
+            <CardContent className="p-3 md:p-6">
+              <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-4">
+                <div className="flex items-start gap-3">
                   <div className="text-2xl">{getSpotTypeIcon(getSpotTypeById(spot.spotTypeId))}</div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-xl font-semibold">Spot {spot.spotNumber}</h3>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-lg md:text-xl font-semibold break-words">Spot {spot.spotNumber}</h3>
                       <Badge className={getSpotTypeColor(getSpotTypeById(spot.spotTypeId))}>
                         {getSpotTypeById(spot.spotTypeId)}
                       </Badge>
@@ -728,24 +728,24 @@ export default function MySpots() {
                         </TooltipContent>
                       </Tooltip>
                     </div>
-                    <p className="text-muted-foreground flex items-center gap-1">
-                      <MapPin className="h-4 w-4" />
+                    <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1 break-words">
+                      <MapPin className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
                       {getLocationById(spot.locationId)}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="text-right mr-4">
-                    <p className="text-sm text-muted-foreground">Status</p>
+                <div className="flex items-center gap-2 justify-between md:justify-end">
+                  <div className="text-left md:text-right mr-4">
+                    <p className="text-xs md:text-sm text-muted-foreground">Status</p>
                     <Badge variant={spot.isActive ? "default" : "secondary"}>
                       {spot.isActive ? "Active" : "Inactive"}
                     </Badge>
                   </div>
                   <div className="flex gap-1">
-                    <Button variant="outline" size="sm" onClick={() => handleEditSpot(spot)} data-testid={`button-edit-spot-${spot.id}`}>
+                    <Button variant="outline" size="sm" onClick={() => handleEditSpot(spot)} data-testid={`button-edit-spot-${spot.id}`} className="min-h-11">
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => handleDeleteSpot(spot)} data-testid={`button-delete-spot-${spot.id}`} className="text-red-600 hover:text-red-700 hover:border-red-300">
+                    <Button variant="outline" size="sm" onClick={() => handleDeleteSpot(spot)} data-testid={`button-delete-spot-${spot.id}`} className="text-red-600 hover:text-red-700 hover:border-red-300 min-h-11">
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -753,16 +753,16 @@ export default function MySpots() {
               </div>
 
               {spot.description && (
-                <p className="text-sm text-muted-foreground mb-4">{spot.description}</p>
+                <p className="text-sm text-muted-foreground mb-4 break-words">{spot.description}</p>
               )}
 
               <div className="mb-4">
                 <p className="text-xs text-muted-foreground">Price</p>
-                <p className="text-lg font-semibold">Set when creating listings</p>
+                <p className="text-base md:text-lg font-semibold">Set when creating listings</p>
               </div>
 
 
-              <div className="flex items-center justify-between pt-4 border-t">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-4 border-t">
                 <div className="flex items-center gap-2">
                   <Label htmlFor={`spot-toggle-${spot.id}`} className="text-sm">
                     {spot.isActive ? 'Active' : 'Inactive'}
@@ -772,18 +772,20 @@ export default function MySpots() {
                     checked={spot.isActive}
                     onCheckedChange={() => handleToggleSpotStatus(spot.id)}
                     data-testid={`switch-spot-${spot.id}`}
+                    className="min-h-11"
                   />
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
                   {spot.isBciManaged ? (
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <div>
+                        <div className="w-full md:w-auto">
                           <Button
                             variant="outline"
                             size="sm"
                             disabled
                             data-testid={`button-create-listing-${spot.id}`}
+                            className="w-full md:w-auto min-h-11"
                           >
                             <Plus className="h-4 w-4 mr-1" />
                             Create Listing
@@ -800,6 +802,7 @@ export default function MySpots() {
                       size="sm"
                       onClick={() => handleOpenCreateListing(spot)}
                       data-testid={`button-create-listing-${spot.id}`}
+                      className="w-full md:w-auto min-h-11"
                     >
                       <Plus className="h-4 w-4 mr-1" />
                       Create Listing
@@ -810,6 +813,7 @@ export default function MySpots() {
                     size="sm"
                     onClick={() => handleViewBookingHistory(spot.id)}
                     data-testid={`button-history-${spot.id}`}
+                    className="w-full md:w-auto min-h-11"
                   >
                     <Eye className="h-4 w-4 mr-1" />
                     View History
@@ -819,6 +823,7 @@ export default function MySpots() {
                     size="sm"
                     onClick={() => handleEditSpot(spot)}
                     data-testid={`button-edit-${spot.id}`}
+                    className="w-full md:w-auto min-h-11"
                   >
                     <Edit className="h-4 w-4 mr-1" />
                     Edit Spot
@@ -835,7 +840,7 @@ export default function MySpots() {
 
       {/* Add New Spot Dialog */}
       <Dialog open={showAddSpot} onOpenChange={setShowAddSpot}>
-        <DialogContent className="max-w-md" data-testid="dialog-add-spot">
+        <DialogContent className="max-w-full md:max-w-md max-h-[90vh] overflow-y-auto" data-testid="dialog-add-spot">
           <DialogHeader>
             <DialogTitle>Add New Parking Spot</DialogTitle>
           </DialogHeader>
@@ -847,10 +852,11 @@ export default function MySpots() {
                 onChange={(e) => setNewSpotData(prev => ({ ...prev, spotNumber: e.target.value }))}
                 placeholder="e.g., A-101"
                 data-testid="input-new-spot-number"
+                className="min-h-11"
               />
             </div>
             <div>
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-2">
                 <label className="text-sm font-medium">Location</label>
                 <Button
                   type="button"
@@ -858,7 +864,7 @@ export default function MySpots() {
                   size="sm"
                   onClick={() => setIsCreatingCustomLocation(!isCreatingCustomLocation)}
                   data-testid="button-toggle-custom-location"
-                  className="bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950 dark:hover:bg-blue-900 dark:text-blue-300"
+                  className="bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950 dark:hover:bg-blue-900 dark:text-blue-300 w-full sm:w-auto min-h-11"
                 >
                   {isCreatingCustomLocation ? "Select Existing" : "+ Custom Location"}
                 </Button>
@@ -885,6 +891,7 @@ export default function MySpots() {
                       onChange={(e) => setCustomLocationData(prev => ({ ...prev, office: e.target.value }))}
                       placeholder="e.g., Victoria"
                       data-testid="input-custom-office"
+                      className="min-h-11"
                     />
                   </div>
                   <div>
@@ -894,6 +901,7 @@ export default function MySpots() {
                       onChange={(e) => setCustomLocationData(prev => ({ ...prev, building: e.target.value }))}
                       placeholder="e.g., 750 Pandora Ave"
                       data-testid="input-custom-building"
+                      className="min-h-11"
                     />
                   </div>
                   <div>
@@ -903,6 +911,7 @@ export default function MySpots() {
                       onChange={(e) => setCustomLocationData(prev => ({ ...prev, level: e.target.value }))}
                       placeholder="e.g., Parking Level 1"
                       data-testid="input-custom-level"
+                      className="min-h-11"
                     />
                   </div>
                   <div>
@@ -912,6 +921,7 @@ export default function MySpots() {
                       onChange={(e) => setCustomLocationData(prev => ({ ...prev, address: e.target.value }))}
                       placeholder="e.g., 750 Pandora Ave, Victoria, BC V8W 1N8"
                       data-testid="input-custom-address"
+                      className="min-h-11"
                     />
                   </div>
                 </div>
@@ -921,7 +931,7 @@ export default function MySpots() {
                   onValueChange={(value) => setNewSpotData(prev => ({ ...prev, locationId: parseInt(value) }))}
                   disabled={isLoadingLocations}
                 >
-                  <SelectTrigger data-testid="select-new-spot-location">
+                  <SelectTrigger data-testid="select-new-spot-location" className="min-h-11">
                     <SelectValue placeholder={isLoadingLocations ? "Loading locations..." : "Select location"} />
                   </SelectTrigger>
                   <SelectContent>
@@ -941,7 +951,7 @@ export default function MySpots() {
                 onValueChange={(value) => setNewSpotData(prev => ({ ...prev, spotTypeId: parseInt(value) }))}
                 disabled={isLoadingSpotTypes}
               >
-                <SelectTrigger data-testid="select-new-spot-type">
+                <SelectTrigger data-testid="select-new-spot-type" className="min-h-11">
                   <SelectValue placeholder={isLoadingSpotTypes ? "Loading spot types..." : "Select spot type"} />
                 </SelectTrigger>
                 <SelectContent>
@@ -959,6 +969,7 @@ export default function MySpots() {
                 checked={newSpotData.isIndoor}
                 onCheckedChange={(checked) => setNewSpotData(prev => ({ ...prev, isIndoor: checked as boolean }))}
                 data-testid="checkbox-new-spot-indoor"
+                className="min-h-11"
               />
               <label htmlFor="indoor" className="text-sm font-medium">Indoor Spot</label>
             </div>
@@ -969,9 +980,10 @@ export default function MySpots() {
                 onChange={(e) => setNewSpotData(prev => ({ ...prev, description: e.target.value }))}
                 placeholder="Additional details..."
                 data-testid="input-new-spot-description"
+                className="min-h-11"
               />
             </div>
-            <div className="flex gap-2 pt-4">
+            <div className="flex flex-col sm:flex-row gap-2 pt-4">
               <Button
                 onClick={handleCreateSpotWithCustomLocation}
                 disabled={
@@ -982,7 +994,7 @@ export default function MySpots() {
                   (!isCreatingCustomLocation && !newSpotData.locationId) ||
                   (isCreatingCustomLocation && (!customLocationData.office || !customLocationData.building || !customLocationData.level))
                 }
-                className="flex-1"
+                className="w-full sm:flex-1 min-h-11"
                 data-testid="button-create-spot"
               >
                 {createSpotMutation.isPending || createLocationMutation.isPending ? "Adding..." : "Add Spot"}
@@ -999,7 +1011,7 @@ export default function MySpots() {
                     address: ""
                   })
                 }}
-                className="flex-1"
+                className="w-full sm:flex-1 min-h-11"
                 data-testid="button-cancel-new-spot"
               >
                 Cancel
@@ -1011,27 +1023,27 @@ export default function MySpots() {
 
       {/* Edit Spot Dialog */}
       <Dialog open={showEditSpot} onOpenChange={setShowEditSpot}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-full md:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Parking Spot</DialogTitle>
           </DialogHeader>
           {selectedSpot && (
             <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="edit-spot-number">Spot Number</Label>
-                  <Input id="edit-spot-number" defaultValue={selectedSpot.spotNumber} />
+                  <Input id="edit-spot-number" defaultValue={selectedSpot.spotNumber} className="min-h-11" />
                 </div>
                 <div>
                   <Label htmlFor="edit-location">Location</Label>
-                  <Input id="edit-location" defaultValue={getLocationById(selectedSpot.locationId)} />
+                  <Input id="edit-location" defaultValue={getLocationById(selectedSpot.locationId)} className="min-h-11" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="edit-spot-type">Spot Type</Label>
                   <Select defaultValue={String(selectedSpot.spotTypeId)}>
-                    <SelectTrigger>
+                    <SelectTrigger className="min-h-11">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -1051,17 +1063,17 @@ export default function MySpots() {
               </div>
               <div>
                 <Label htmlFor="edit-description">Description</Label>
-                <Textarea id="edit-description" defaultValue={selectedSpot.description || ""} />
+                <Textarea id="edit-description" defaultValue={selectedSpot.description || ""} className="min-h-11" />
               </div>
               <div className="flex items-center space-x-2">
-                <Switch id="edit-is-indoor" defaultChecked={selectedSpot.isIndoor} />
+                <Switch id="edit-is-indoor" defaultChecked={selectedSpot.isIndoor} className="min-h-11" />
                 <Label htmlFor="edit-is-indoor">Indoor parking</Label>
               </div>
-              <div className="flex justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={() => setShowEditSpot(false)}>
+              <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={() => setShowEditSpot(false)} className="w-full sm:w-auto min-h-11">
                   Cancel
                 </Button>
-                <Button onClick={() => setShowEditSpot(false)}>
+                <Button onClick={() => setShowEditSpot(false)} className="w-full sm:w-auto min-h-11">
                   Save Changes
                 </Button>
               </div>
@@ -1093,7 +1105,7 @@ export default function MySpots() {
           })
         }
       }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-full md:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create Spot Listing</DialogTitle>
           </DialogHeader>
@@ -1101,9 +1113,9 @@ export default function MySpots() {
             <div className="space-y-4 py-4">
               {/* Spot Context */}
               <div className="bg-muted p-4 rounded-lg">
-                <h3 className="font-semibold text-lg mb-1">Spot {selectedSpotForListing.spotNumber}</h3>
-                <p className="text-muted-foreground text-sm flex items-center gap-1">
-                  <MapPin className="h-4 w-4" />
+                <h3 className="font-semibold text-base md:text-lg mb-1">Spot {selectedSpotForListing.spotNumber}</h3>
+                <p className="text-muted-foreground text-xs md:text-sm flex items-center gap-1 break-words">
+                  <MapPin className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
                   {getLocationById(selectedSpotForListing.locationId)}
                 </p>
               </div>
@@ -1118,7 +1130,7 @@ export default function MySpots() {
                     setDateValidationErrors({ periodDateRange: "", recurringDateRange: "" })
                   }}
                 >
-                  <SelectTrigger id="listing-type" data-testid="select-listing-type">
+                  <SelectTrigger id="listing-type" data-testid="select-listing-type" className="min-h-11">
                     <SelectValue placeholder="Select listing type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1139,13 +1151,14 @@ export default function MySpots() {
                     value={listingFormData.singleDate}
                     onChange={(e) => setListingFormData(prev => ({ ...prev, singleDate: e.target.value }))}
                     data-testid="input-single-date"
+                    className="min-h-11"
                   />
                 </div>
               )}
 
               {listingFormData.listingType === "period" && (
                 <div className="space-y-2">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="period-start-date">Start Date</Label>
                       <Input 
@@ -1157,6 +1170,7 @@ export default function MySpots() {
                           setDateValidationErrors(prev => ({ ...prev, periodDateRange: "" }))
                         }}
                         data-testid="input-period-start-date"
+                        className="min-h-11"
                       />
                     </div>
                     <div>
@@ -1170,6 +1184,7 @@ export default function MySpots() {
                           setDateValidationErrors(prev => ({ ...prev, periodDateRange: "" }))
                         }}
                         data-testid="input-period-end-date"
+                        className="min-h-11"
                       />
                     </div>
                   </div>
@@ -1184,7 +1199,7 @@ export default function MySpots() {
               {listingFormData.listingType === "recurring" && (
                 <>
                   <div className="space-y-2">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="recurring-start-date">Start Date</Label>
                         <Input 
@@ -1196,6 +1211,7 @@ export default function MySpots() {
                             setDateValidationErrors(prev => ({ ...prev, recurringDateRange: "" }))
                           }}
                           data-testid="input-recurring-start-date"
+                          className="min-h-11"
                         />
                       </div>
                       <div>
@@ -1209,6 +1225,7 @@ export default function MySpots() {
                             setDateValidationErrors(prev => ({ ...prev, recurringDateRange: "" }))
                           }}
                           data-testid="input-recurring-end-date"
+                          className="min-h-11"
                         />
                       </div>
                     </div>
@@ -1220,9 +1237,9 @@ export default function MySpots() {
                   </div>
                   <div>
                     <Label>Days of Week</Label>
-                    <div className="grid grid-cols-2 gap-3 mt-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
                       {["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"].map((day) => (
-                        <div key={day} className="flex items-center space-x-2">
+                        <div key={day} className="flex items-center space-x-2 min-h-11">
                           <Checkbox
                             id={`day-${day}`}
                             checked={listingFormData.daysOfWeek.includes(day)}
@@ -1255,7 +1272,7 @@ export default function MySpots() {
                     placeholder="0.00"
                     value={listingFormData.dailyRate}
                     onChange={(e) => setListingFormData(prev => ({ ...prev, dailyRate: e.target.value }))}
-                    className="pl-7"
+                    className="pl-7 min-h-11"
                     data-testid="input-daily-rate"
                   />
                 </div>
@@ -1270,15 +1287,17 @@ export default function MySpots() {
                   value={listingFormData.notes}
                   onChange={(e) => setListingFormData(prev => ({ ...prev, notes: e.target.value }))}
                   data-testid="textarea-listing-notes"
+                  className="min-h-11"
                 />
               </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-end gap-2 pt-4">
+              <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4">
                 <Button 
                   variant="outline" 
                   onClick={() => setShowCreateListingDialog(false)}
                   data-testid="button-cancel-listing"
+                  className="w-full sm:w-auto min-h-11"
                 >
                   Cancel
                 </Button>
@@ -1286,6 +1305,7 @@ export default function MySpots() {
                   onClick={handleCreateListing}
                   disabled={createListingMutation.isPending}
                   data-testid="button-submit-listing"
+                  className="w-full sm:w-auto min-h-11"
                 >
                   {createListingMutation.isPending ? "Creating..." : "Create Listing"}
                 </Button>
