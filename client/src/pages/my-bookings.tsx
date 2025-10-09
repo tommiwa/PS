@@ -530,22 +530,28 @@ export default function MyBookings() {
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-3 mb-3">
         <div>
           <p className="text-xs text-muted-foreground">Date</p>
-          <p className="text-sm font-medium break-words">{listing.date}</p>
-          <p className="text-xs text-muted-foreground">Full Day</p>
+          <p className="text-sm font-medium truncate">{listing.date}</p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">Duration</p>
+          <p className="text-xs truncate">Full Day</p>
         </div>
         <div>
           <p className="text-xs text-muted-foreground">
             {listing.status === "unused" ? "No Renter" : "Renter"}
           </p>
-          <p className="text-sm font-medium break-words">
+          <p className="text-sm font-medium truncate">
             {listing.renterName || "Not booked"}
           </p>
-          {listing.renterVehicle && (
-            <p className="text-xs text-muted-foreground break-words">{listing.renterVehicle}</p>
-          )}
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">Vehicle</p>
+          <p className="text-sm font-medium truncate">
+            {listing.renterVehicle || "N/A"}
+          </p>
         </div>
         <div>
           <p className="text-xs text-muted-foreground">Price</p>
@@ -553,7 +559,7 @@ export default function MyBookings() {
         </div>
         <div>
           <p className="text-xs text-muted-foreground">Status</p>
-          <p className="text-sm font-medium break-words">
+          <p className="text-xs truncate">
             {listing.status === "unused" && "Listed but unused"}
             {listing.status === "used" && "Successfully rented"}
             {listing.status === "booked" && "Currently booked"}
@@ -609,22 +615,28 @@ export default function MyBookings() {
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-3 mb-3">
         <div>
           <p className="text-xs text-muted-foreground">Date</p>
-          <p className="text-sm font-medium break-words">{listing.date}</p>
-          <p className="text-xs text-muted-foreground">Full Day</p>
+          <p className="text-sm font-medium truncate">{listing.date}</p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">Duration</p>
+          <p className="text-xs truncate">Full Day</p>
         </div>
         <div>
           <p className="text-xs text-muted-foreground">
             {listing.status === "unused" ? "No Renter" : "Renter"}
           </p>
-          <p className="text-sm font-medium break-words">
+          <p className="text-sm font-medium truncate">
             {listing.renterName || "Not booked"}
           </p>
-          {listing.renterVehicle && (
-            <p className="text-xs text-muted-foreground break-words">{listing.renterVehicle}</p>
-          )}
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">Vehicle</p>
+          <p className="text-sm font-medium truncate">
+            {listing.renterVehicle || "N/A"}
+          </p>
         </div>
         <div>
           <p className="text-xs text-muted-foreground">Price</p>
@@ -636,13 +648,13 @@ export default function MyBookings() {
           )}
           {listing.paymentReceived && listing.status === "used" && (
             <Badge variant="outline" className="text-xs text-green-600">
-              Payment received
+              Paid
             </Badge>
           )}
         </div>
         <div>
           <p className="text-xs text-muted-foreground">Status</p>
-          <p className="text-sm font-medium break-words">
+          <p className="text-xs truncate">
             {listing.status === "unused" && "Listed but unused"}
             {listing.status === "used" && "Successfully rented"}
             {listing.status === "booked" && "Currently booked"}
@@ -732,23 +744,29 @@ export default function MyBookings() {
           </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-3 mb-3">
           <div>
             <p className="text-xs text-muted-foreground">Date</p>
-            <p className="text-sm font-medium break-words">{booking.date}</p>
-            <p className="text-xs text-muted-foreground">Full Day</p>
+            <p className="text-sm font-medium truncate">{booking.date}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Duration</p>
+            <p className="text-xs truncate">Full Day</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Owner</p>
-            <p className="text-sm font-medium break-words">{booking.owner}</p>
+            <p className="text-sm font-medium truncate">{booking.owner}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Vehicle</p>
-            <p className="text-sm font-medium break-words">{booking.vehicleUsed}</p>
+            <p className="text-sm font-medium truncate">{booking.vehicleUsed}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Price</p>
             <p className="text-sm font-medium">${booking.price}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Payment</p>
             <Badge variant="outline" className="text-xs">
               {booking.paymentStatus}
             </Badge>
