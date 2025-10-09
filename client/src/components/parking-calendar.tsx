@@ -24,6 +24,7 @@ type CalendarView = "day" | "week" | "month"
 interface ParkingSpot extends BookingFormSpot {
   isAvailable: boolean
   isOwned?: boolean
+  availabilityDates?: string[] // Array of all available dates for this spot
 }
 
 interface BookingFormData {
@@ -107,9 +108,24 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
         return false;
       }
 
-      // Show available spots only on their specific availability date
+      // Show available spots only on their specific availability dates
       if (spot.isAvailable) {
-        // If spot has availability date, check if it matches
+        const checkDate = date.toISOString().split('T')[0] // Format: YYYY-MM-DD
+        
+        // Check if spot has availabilityDates array (new format)
+        if (spot.availabilityDates && spot.availabilityDates.length > 0) {
+          // Check if the date is in the availability dates array
+          const isAvailableOnDate = spot.availabilityDates.includes(checkDate)
+          
+          // Don't show past dates
+          if (isPastDate(checkDate)) {
+            return false
+          }
+          
+          return isAvailableOnDate
+        }
+        
+        // Fallback to old single date format for backward compatibility
         if (spot.availability?.date) {
           const spotDate = new Date(spot.availability.date)
           // Don't show if the spot's availability date is in the past
@@ -118,6 +134,7 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
           }
           return isSameDay(spotDate, date)
         }
+        
         // If no specific availability date, don't show the spot
         return false
       }

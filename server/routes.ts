@@ -1422,13 +1422,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get all parking spots
       const allSpots = await storage.getAllParkingSpotsWithSafeUserData();
       
-      // Create a map of spotId -> listing for quick lookup
-      const listingBySpotId = new Map();
-      activeListings.forEach(listing => {
-        // If multiple listings for same spot, use the first one
-        if (!listingBySpotId.has(listing.spotId)) {
-          listingBySpotId.set(listing.spotId, listing);
+      // Helper to generate all dates in a range
+      const generateDateRange = (startDate: string, endDate: string): string[] => {
+        const dates: string[] = [];
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          dates.push(d.toISOString().split('T')[0]);
         }
+        
+        return dates;
+      };
+      
+      // Create a map of spotId -> array of listings for that spot
+      const listingsBySpotId = new Map<string, any[]>();
+      activeListings.forEach(listing => {
+        if (!listingsBySpotId.has(listing.spotId)) {
+          listingsBySpotId.set(listing.spotId, []);
+        }
+        listingsBySpotId.get(listing.spotId)!.push(listing);
       });
       
       // Filter to show spots that:
@@ -1439,24 +1452,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .filter(spot => {
           return spot.isActive && 
                  spot.isBookable && 
-                 (listingBySpotId.has(spot.id) || spot.ownerId);
+                 (listingsBySpotId.has(spot.id) || spot.ownerId);
         })
         .map(spot => {
-          const listing = listingBySpotId.get(spot.id);
+          const listings = listingsBySpotId.get(spot.id) || [];
           
-          // Enrich spot with listing data (listing ID, daily rate, availability date)
-          if (listing) {
-            return {
-              ...spot,
-              listingId: listing.id,
-              dailyRate: listing.dailyRate,
-              availability: listing.singleDate ? {
-                date: listing.singleDate
-              } : undefined
-            };
+          if (listings.length === 0) {
+            return spot;
           }
           
-          return spot;
+          // Collect all availability dates from all listings for this spot
+          const availabilityDates: string[] = [];
+          let primaryListingId = listings[0].id;
+          let primaryDailyRate = listings[0].dailyRate;
+          
+          listings.forEach(listing => {
+            if (listing.listingType === 'single' && listing.singleDate) {
+              // Single day listing
+              availabilityDates.push(listing.singleDate);
+            } else if (listing.listingType === 'period' && listing.periodStartDate && listing.periodEndDate) {
+              // Period listing - expand to all dates in range
+              const dates = generateDateRange(listing.periodStartDate, listing.periodEndDate);
+              availabilityDates.push(...dates);
+            }
+            // TODO: Handle recurring listings
+          });
+          
+          // Enrich spot with listing data
+          return {
+            ...spot,
+            listingId: primaryListingId,
+            dailyRate: primaryDailyRate,
+            availabilityDates: availabilityDates, // Array of all available dates
+            // Keep backward compatibility with single date
+            availability: availabilityDates.length > 0 ? {
+              date: availabilityDates[0]
+            } : undefined
+          };
         });
       
       res.json(availableSpots);
