@@ -1422,6 +1422,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get all parking spots
       const allSpots = await storage.getAllParkingSpotsWithSafeUserData();
       
+      // Get all bookings to check which dates are already booked
+      const allBookings = await storage.getAllBookings();
+      
+      // Get today's date for filtering
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayStr = today.toISOString().split('T')[0];
+      
+      // Filter bookings to only confirmed/completed and today/future dates
+      const relevantBookings = allBookings.filter(booking => {
+        const isConfirmedOrCompleted = booking.status === 'confirmed' || booking.status === 'completed';
+        const bookingDate = new Date(booking.bookingDate);
+        const bookingDateStr = bookingDate.toISOString().split('T')[0];
+        const isTodayOrFuture = bookingDateStr >= todayStr;
+        
+        return isConfirmedOrCompleted && isTodayOrFuture;
+      });
+      
+      // Create a map of spotId -> Set of booked dates for quick lookup
+      const bookedDatesBySpotId = new Map<string, Set<string>>();
+      relevantBookings.forEach(booking => {
+        if (!bookedDatesBySpotId.has(booking.spotId)) {
+          bookedDatesBySpotId.set(booking.spotId, new Set());
+        }
+        const bookingDate = new Date(booking.bookingDate).toISOString().split('T')[0];
+        bookedDatesBySpotId.get(booking.spotId)!.add(bookingDate);
+      });
+      
       // Helper to generate all dates in a range
       const generateDateRange = (startDate: string, endDate: string): string[] => {
         const dates: string[] = [];
@@ -1478,12 +1506,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // TODO: Handle recurring listings
           });
           
-          // Enrich spot with listing data
+          // Check which availability dates are already booked
+          const bookedDatesSet = bookedDatesBySpotId.get(spot.id) || new Set();
+          const bookedDates = availabilityDates.filter(date => bookedDatesSet.has(date));
+          
+          // Enrich spot with listing data and booking information
           return {
             ...spot,
             listingId: primaryListingId,
             dailyRate: primaryDailyRate,
             availabilityDates: availabilityDates, // Array of all available dates
+            bookedDates: bookedDates, // Array of dates that are already booked
             // Keep backward compatibility with single date
             availability: availabilityDates.length > 0 ? {
               date: availabilityDates[0]

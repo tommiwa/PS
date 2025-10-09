@@ -42,6 +42,7 @@ interface DisplaySpot extends DBParkingSpot {
     date: string
   }
   availabilityDates?: string[] // Array of all available dates
+  bookedDates?: string[] // Array of dates that are already booked
 }
 
 export default function Search() {

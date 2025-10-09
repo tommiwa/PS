@@ -25,6 +25,7 @@ interface ParkingSpot extends BookingFormSpot {
   isAvailable: boolean
   isOwned?: boolean
   availabilityDates?: string[] // Array of all available dates for this spot
+  bookedDates?: string[] // Array of dates that are already booked
 }
 
 interface BookingFormData {
@@ -211,7 +212,23 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
 
   const [bookingDate, setBookingDate] = useState<Date | null>(null)
 
+  // Helper to check if a spot is booked on a specific date
+  const isSpotBookedOnDate = (spot: ParkingSpot, date: Date): boolean => {
+    if (!spot.bookedDates || spot.bookedDates.length === 0) {
+      return false
+    }
+    const checkDate = date.toISOString().split('T')[0] // Format: YYYY-MM-DD
+    return spot.bookedDates.includes(checkDate)
+  }
+
   const handleSpotClick = (spot: ParkingSpot, clickedDate?: Date) => {
+    const dateToCheck = clickedDate || currentDate
+    
+    // Prevent booking spots that are already booked on this date
+    if (isSpotBookedOnDate(spot, dateToCheck)) {
+      return; // Don't allow booking already booked spots
+    }
+    
     // Prevent booking spots with past availability dates
     if (spot.availability?.date && isPastDate(spot.availability.date)) {
       return; // Don't allow booking past spots
@@ -223,7 +240,7 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
     }
     
     setSelectedSpot(spot)
-    setBookingDate(clickedDate || currentDate)
+    setBookingDate(dateToCheck)
     setShowBookingForm(true)
   }
 
@@ -251,59 +268,60 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
             </div>
           ) : (
             <div className="space-y-2">
-              {daySpots.map((spot) => (
-                <Card 
-                  key={spot.id} 
-                  className={`cursor-pointer hover-elevate transition-all border-l-4 ${
-                    isOwnerView 
-                      ? getOwnershipColor(spot.isOwned || false)
-                      : getSpotTypeColor(spot.type)
-                  }`}
-                  onClick={() => handleSpotClick(spot, currentDate)}
-                  data-testid={`calendar-spot-${spot.id}`}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        {getSpotTypeIcon(spot.type)}
-                        <div>
-                          <div className="font-medium">Spot {spot.spotNumber}</div>
-                          <div className="text-sm text-muted-foreground flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {spot.location}
+              {daySpots.map((spot) => {
+                const isBooked = isSpotBookedOnDate(spot, currentDate)
+                return (
+                  <Card 
+                    key={spot.id} 
+                    className={`transition-all border-l-4 ${
+                      isBooked 
+                        ? 'opacity-60 cursor-not-allowed bg-muted border-muted'
+                        : `cursor-pointer hover-elevate ${
+                            isOwnerView 
+                              ? getOwnershipColor(spot.isOwned || false)
+                              : getSpotTypeColor(spot.type)
+                          }`
+                    }`}
+                    onClick={() => !isBooked && handleSpotClick(spot, currentDate)}
+                    data-testid={`calendar-spot-${spot.id}`}
+                  >
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          {getSpotTypeIcon(spot.type)}
+                          <div className="min-w-0">
+                            <div className="font-medium text-sm">#{spot.spotNumber}</div>
+                            <div className="text-xs text-muted-foreground truncate">{spot.location}</div>
                           </div>
                         </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-medium flex items-center gap-1">
-                          <DollarSign className="h-4 w-4" />
-                          ${spot.price}
-                        </div>
-                        <div className="text-sm text-muted-foreground flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          Full Day
+                        <div className="text-right shrink-0">
+                          <div className="font-semibold text-sm">${spot.price}</div>
+                          <div className="text-xs text-muted-foreground">per day</div>
                         </div>
                       </div>
-                    </div>
-                    <div className="mt-2 flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs">
-                        {spot.type}
-                      </Badge>
-                      {spot.isInside && (
-                        <Badge variant="outline" className="text-xs">
-                          Indoor
-                        </Badge>
-                      )}
-                      {getOwnershipBadge(spot.isOwned || false)}
-                      {!isOwnerView && (
-                        <Badge variant="secondary" className="text-xs">
-                          {spot.owner}
-                        </Badge>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                      <div className="mt-2 flex items-center gap-1 flex-wrap">
+                        {isBooked ? (
+                          <Badge variant="secondary" className="text-xs bg-gray-500 text-white">
+                            Booked
+                          </Badge>
+                        ) : (
+                          <>
+                            <Badge variant="outline" className="text-xs">
+                              {spot.type}
+                            </Badge>
+                            {spot.isInside && (
+                              <Badge variant="outline" className="text-xs">
+                                Indoor
+                              </Badge>
+                            )}
+                          </>
+                        )}
+                        {getOwnershipBadge(spot.isOwned || false)}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
             </div>
           )}
         </div>
@@ -330,32 +348,43 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
           {weekDays.map((day) => {
             const daySpots = getSpotsForDate(day)
             return (
-              <div key={day.toISOString()} className="border-r last:border-r-0 p-2 min-h-[200px]">
+              <div key={day.toISOString()} className="border-r last:border-r-0 p-1 min-h-[200px]">
                 <div className="space-y-1">
-                  {daySpots.slice(0, 3).map((spot) => (
-                    <div
-                      key={spot.id}
-                      className={`p-2 rounded text-xs cursor-pointer hover-elevate transition-all ${
-                        isOwnerView 
-                          ? getOwnershipColor(spot.isOwned || false)
-                          : getSpotTypeColor(spot.type)
-                      }`}
-                      onClick={() => handleSpotClick(spot, day)}
-                      data-testid={`calendar-spot-${spot.id}`}
-                    >
-                      <div className="font-medium">{spot.spotNumber}</div>
-                      <div className="flex items-center gap-1">
-                        {getSpotTypeIcon(spot.type)}
-                        <span>${spot.price}</span>
+                  {daySpots.slice(0, 3).map((spot) => {
+                    const isBooked = isSpotBookedOnDate(spot, day)
+                    return (
+                      <div
+                        key={spot.id}
+                        className={`p-1.5 rounded text-xs transition-all ${
+                          isBooked
+                            ? 'opacity-60 cursor-not-allowed bg-muted'
+                            : `cursor-pointer hover-elevate ${
+                                isOwnerView 
+                                  ? getOwnershipColor(spot.isOwned || false)
+                                  : getSpotTypeColor(spot.type)
+                              }`
+                        }`}
+                        onClick={() => !isBooked && handleSpotClick(spot, day)}
+                        data-testid={`calendar-spot-${spot.id}`}
+                      >
+                        <div className="font-medium">#{spot.spotNumber}</div>
+                        <div className="flex items-center gap-1 justify-between">
+                          <div className="flex items-center gap-1">
+                            {getSpotTypeIcon(spot.type)}
+                          </div>
+                          <span className="font-semibold">${spot.price}</span>
+                        </div>
+                        {isBooked && (
+                          <Badge variant="secondary" className="text-xs bg-gray-500 text-white mt-1">
+                            Booked
+                          </Badge>
+                        )}
                       </div>
-                      <div className="text-xs opacity-75">
-                        Full Day
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                   {daySpots.length > 3 && (
                     <div className="text-xs text-muted-foreground text-center py-1">
-                      +{daySpots.length - 3} more
+                      +{daySpots.length - 3}
                     </div>
                   )}
                 </div>
@@ -390,28 +419,40 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                 key={day.toISOString()} 
                 className={`border-r border-b last:border-r-0 p-1 min-h-[80px] ${!isCurrentMonth ? 'opacity-50 bg-muted/20' : ''}`}
               >
-                <div className={`text-sm mb-1 ${isToday ? 'text-primary font-bold' : ''}`}>
+                <div className={`text-xs mb-1 ${isToday ? 'text-primary font-bold' : ''}`}>
                   {format(day, "d")}
                 </div>
-                <div className="space-y-1">
-                  {daySpots.slice(0, 2).map((spot) => (
-                    <div
-                      key={spot.id}
-                      className={`p-1 rounded text-xs cursor-pointer hover-elevate transition-all ${
-                        isOwnerView 
-                          ? getOwnershipColor(spot.isOwned || false)
-                          : getSpotTypeColor(spot.type)
-                      }`}
-                      onClick={() => handleSpotClick(spot, day)}
-                      data-testid={`calendar-spot-${spot.id}`}
-                    >
-                      <div className="flex items-center gap-1">
-                        {getSpotTypeIcon(spot.type)}
-                        <span className="font-medium">{spot.spotNumber}</span>
+                <div className="space-y-0.5">
+                  {daySpots.slice(0, 2).map((spot) => {
+                    const isBooked = isSpotBookedOnDate(spot, day)
+                    return (
+                      <div
+                        key={spot.id}
+                        className={`p-0.5 rounded text-xs transition-all ${
+                          isBooked
+                            ? 'opacity-60 cursor-not-allowed bg-muted'
+                            : `cursor-pointer hover-elevate ${
+                                isOwnerView 
+                                  ? getOwnershipColor(spot.isOwned || false)
+                                  : getSpotTypeColor(spot.type)
+                              }`
+                        }`}
+                        onClick={() => !isBooked && handleSpotClick(spot, day)}
+                        data-testid={`calendar-spot-${spot.id}`}
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <div className="flex items-center gap-0.5">
+                            {getSpotTypeIcon(spot.type)}
+                            <span className="font-medium">#{spot.spotNumber}</span>
+                          </div>
+                          <span className="font-semibold">${spot.price}</span>
+                        </div>
+                        {isBooked && (
+                          <div className="text-xs text-gray-600 dark:text-gray-400">Booked</div>
+                        )}
                       </div>
-                      <div>${spot.price}</div>
-                    </div>
-                  ))}
+                    )
+                  })}
                   {daySpots.length > 2 && (
                     <div className="text-xs text-muted-foreground">
                       +{daySpots.length - 2}
