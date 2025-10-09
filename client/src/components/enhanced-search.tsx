@@ -243,7 +243,7 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
             data-testid={`filter-${filter.value}`}
           >
             <Badge
-              variant={isActive ? "default" : "secondary"}
+              variant={isActive ? "default" : "outline"}
               className={`gap-1 min-h-11 md:min-h-8 px-3 ${isActive ? 'bg-primary text-primary-foreground' : ''}`}
             >
               <Icon className="h-3 w-3" />
