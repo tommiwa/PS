@@ -3161,27 +3161,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       
-      console.log('[SPOT UPDATE] Request body:', JSON.stringify(req.body, null, 2));
-      
       // Check if spot exists
       const existingSpot = await storage.getParkingSpot(id);
       if (!existingSpot) {
         return res.status(404).json({ error: "Parking spot not found" });
       }
       
-      console.log('[SPOT UPDATE] Existing spot:', JSON.stringify(existingSpot, null, 2));
-      
       // Validate request body
       const validatedData = insertParkingSpotSchema.partial().parse(req.body);
-      
-      console.log('[SPOT UPDATE] Validated data:', JSON.stringify(validatedData, null, 2));
       
       const updatedSpot = await storage.updateParkingSpot(id, validatedData);
       if (!updatedSpot) {
         return res.status(404).json({ error: "Parking spot not found" });
       }
-      
-      console.log('[SPOT UPDATE] Updated spot:', JSON.stringify(updatedSpot, null, 2));
       
       // Audit the admin spot update
       await auditService.logAction("UPDATE", "parking_spot", {
