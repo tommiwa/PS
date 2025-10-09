@@ -83,8 +83,12 @@ Preferred communication style: Simple, everyday language.
     - **Role-based Display**: Dynamic labels using getCurrentViewRole() - "My Bookings" for renters, "My Spot Listings" for owners
     - **Colorful Tab Icons**: Active (green CheckCircle2), Payment Pending (orange DollarSign), Completed (slate CheckCircle2), All (purple Activity)
     - **Stat Cards**: Clickable cards with circular bordered colorful icons that navigate to relevant tabs
+        - **Dynamic Total Spent**: Renter card calculates total from completed or paid bookings only (not pending/unpaid)
     - **Enhanced Filters**: Professional search/filter UI with role-specific options (renters: status+date range, owners: status+spot number)
     - **Professional Action Buttons**: Icon-only ghost buttons for View Details, Cancel, Mark Paid, Download Receipt
+        - **Cancel Booking** (Renter): POST /api/bookings/:id/cancel - Allows renters to cancel their own confirmed/pending bookings with confirmation dialog
+        - **Mark Paid** (Owner): PATCH /api/bookings/:id/payment - Allows owners to mark payment as received with confirmation dialog
+        - **Download Receipt**: Generates PDF receipt using quickExportBookingsPDF utility with booking details
     - **Download History**: Format selection dialog (PDF/Excel) with comprehensive export functionality
     - **Status Mappings**: Proper mapping between filter values and database statuses for both renter and owner views
     - **Listing Status Enum**: Updated to ["available", "booked", "used", "unused", "cancelled"] for accurate lifecycle tracking
