@@ -1419,21 +1419,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get all active spot listings (available for booking)
       const activeListings = await storage.getActiveSpotListings();
       
-      // Get the unique spot IDs from active listings
-      const spotIdsWithListings = new Set(activeListings.map(l => l.spotId));
-      
       // Get all parking spots
       const allSpots = await storage.getAllParkingSpotsWithSafeUserData();
+      
+      // Create a map of spotId -> listing for quick lookup
+      const listingBySpotId = new Map();
+      activeListings.forEach(listing => {
+        // If multiple listings for same spot, use the first one
+        if (!listingBySpotId.has(listing.spotId)) {
+          listingBySpotId.set(listing.spotId, listing);
+        }
+      });
       
       // Filter to show spots that:
       // 1. Are active (not deactivated)
       // 2. Are bookable
       // 3. Have an active listing OR have an owner (for backward compatibility)
-      const availableSpots = allSpots.filter(spot => {
-        return spot.isActive && 
-               spot.isBookable && 
-               (spotIdsWithListings.has(spot.id) || spot.ownerId);
-      });
+      const availableSpots = allSpots
+        .filter(spot => {
+          return spot.isActive && 
+                 spot.isBookable && 
+                 (listingBySpotId.has(spot.id) || spot.ownerId);
+        })
+        .map(spot => {
+          const listing = listingBySpotId.get(spot.id);
+          
+          // Enrich spot with availability date from listing
+          if (listing && listing.singleDate) {
+            return {
+              ...spot,
+              availability: {
+                date: listing.singleDate
+              }
+            };
+          }
+          
+          return spot;
+        });
       
       res.json(availableSpots);
     } catch (error) {
