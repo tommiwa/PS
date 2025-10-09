@@ -296,7 +296,14 @@ export default function Search() {
     
     // Availability filtering with date constraints for tiles view
     if (spot.isAvailable) {
-      // Spot is generally available, but if searching for a specific date and spot has availability constraints, check them
+      // Check if spot has availabilityDates array (new format)
+      if (spot.availabilityDates && spot.availabilityDates.length > 0) {
+        // Check if search date is in the availability dates array
+        const isAvailableOnDate = spot.availabilityDates.includes(date)
+        return isAvailableOnDate
+      }
+      
+      // Fallback: check old single date format for backward compatibility
       if (spot.availability?.date) {
         const spotDate = new Date(spot.availability.date).toISOString().split('T')[0]
         const searchDate = date
@@ -307,9 +314,11 @@ export default function Search() {
         if (isPastDate(spotDate)) {
           return false;
         }
+        return true
       }
-      // If no specific availability constraint, spot is available for the search date
-      return true
+      
+      // If no availability dates at all, don't show in tiles for date search
+      return false
     } else {
       // Spot is not generally available, only show if searching for its specific booking date
       if (!spot.availability?.date) {
