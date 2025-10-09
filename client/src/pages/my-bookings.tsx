@@ -548,9 +548,9 @@ export default function MyBookings() {
           </p>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground">Vehicle</p>
-          <p className="text-sm font-medium truncate">
-            {listing.renterVehicle || "N/A"}
+          <p className="text-xs text-muted-foreground">Spot Type</p>
+          <p className="text-sm font-medium truncate capitalize">
+            {listing.spot?.spotType || "Regular"}
           </p>
         </div>
         <div>
@@ -577,8 +577,8 @@ export default function MyBookings() {
         <div className="flex items-center gap-3">
           {getStatusIcon(listing.status)}
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold break-words">Spot {listing.spotNumber}</h3>
-            <p className="text-sm text-muted-foreground break-words">{listing.location}</p>
+            <h3 className="font-semibold break-words">Spot {listing.spot?.spotNumber || 'Unknown'}</h3>
+            <p className="text-sm text-muted-foreground break-words">{listing.spot?.location || 'Unknown'}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -747,7 +747,7 @@ export default function MyBookings() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-3 mb-3">
           <div>
             <p className="text-xs text-muted-foreground">Date</p>
-            <p className="text-sm font-medium truncate">{booking.date}</p>
+            <p className="text-sm font-medium truncate">{booking.bookingDate}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Duration</p>
@@ -755,15 +755,15 @@ export default function MyBookings() {
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Owner</p>
-            <p className="text-sm font-medium truncate">{booking.owner}</p>
+            <p className="text-sm font-medium truncate">{booking.ownerName}</p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">Vehicle</p>
-            <p className="text-sm font-medium truncate">{booking.vehicleUsed}</p>
+            <p className="text-xs text-muted-foreground">Spot Type</p>
+            <p className="text-sm font-medium truncate capitalize">{booking.spotType}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Price</p>
-            <p className="text-sm font-medium">${booking.price}</p>
+            <p className="text-sm font-medium">${booking.dailyRate}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Payment</p>

@@ -1390,7 +1390,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const listings = await storage.getSpotListingsByOwner(userId);
-      res.json(listings);
+      
+      // Enrich listings with spot and booking details
+      const enrichedListings = await Promise.all(listings.map(async (listing) => {
+        const spot = await storage.getParkingSpot(listing.spotId);
+        
+        // Get location and spot type names
+        let locationName = 'Unknown';
+        let spotTypeName = 'regular';
+        
+        if (spot) {
+          if (spot.locationId) {
+            const location = await storage.getLocation(spot.locationId);
+            locationName = location?.name || 'Unknown';
+          }
+          if (spot.spotTypeId) {
+            const spotType = await storage.getSpotType(spot.spotTypeId);
+            spotTypeName = spotType?.name || 'regular';
+          }
+        }
+        
+        // Get booking information for this listing
+        const listingBookings = await storage.getBookingsByListing(listing.id);
+        
+        // Find the most relevant booking based on listing status
+        let booking = null;
+        
+        if (listingBookings.length > 0) {
+          if (listing.status === 'booked' || listing.status === 'used') {
+            // Get the most recent active booking (confirmed or completed)
+            // Sort by booking date descending to get the most recent one
+            const activeBookings = listingBookings
+              .filter(b => b.status === 'confirmed' || b.status === 'completed')
+              .sort((a, b) => new Date(b.bookingDate).getTime() - new Date(a.bookingDate).getTime());
+            
+            booking = activeBookings[0] || null;
+          }
+          // For "available" or "unused" status, booking remains null
+        }
+        
+        let renterName = null;
+        
+        if (booking) {
+          const renter = await storage.getUser(booking.renterId);
+          if (renter) {
+            renterName = `${renter.firstName} ${renter.lastName}`;
+          }
+        }
+        
+        // Determine the display date based on listing type
+        let displayDate = 'N/A';
+        if (listing.listingType === 'single' && listing.singleDate) {
+          displayDate = listing.singleDate;
+        } else if (listing.listingType === 'period' && listing.periodStartDate) {
+          displayDate = listing.periodStartDate;
+        } else if (listing.listingType === 'recurring' && listing.recurringStartDate) {
+          displayDate = listing.recurringStartDate;
+        }
+        
+        return {
+          ...listing,
+          spot: {
+            spotNumber: spot?.spotNumber || 'Unknown',
+            location: locationName,
+            spotType: spotTypeName
+          },
+          date: displayDate,
+          price: listing.dailyRate,
+          renterName,
+          paymentReceived: booking?.paymentReceived || false
+        };
+      }));
+      
+      res.json(enrichedListings);
     } catch (error) {
       console.error("Error fetching spot listings:", error);
       res.status(500).json({ error: "Failed to fetch spot listings" });
@@ -1406,7 +1478,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const bookings = await storage.getBookingsByRenter(userId);
-      res.json(bookings);
+      
+      // Enrich bookings with spot and owner details
+      const enrichedBookings = await Promise.all(bookings.map(async (booking) => {
+        const spot = await storage.getParkingSpot(booking.spotId);
+        const owner = await storage.getUser(booking.ownerId);
+        
+        // Get location and spot type names
+        let locationName = 'Unknown';
+        let spotTypeName = 'regular';
+        
+        if (spot) {
+          if (spot.locationId) {
+            const location = await storage.getLocation(spot.locationId);
+            locationName = location?.name || 'Unknown';
+          }
+          if (spot.spotTypeId) {
+            const spotType = await storage.getSpotType(spot.spotTypeId);
+            spotTypeName = spotType?.name || 'regular';
+          }
+        }
+        
+        return {
+          ...booking,
+          spotNumber: spot?.spotNumber || 'Unknown',
+          location: locationName,
+          spotType: spotTypeName,
+          ownerName: owner ? `${owner.firstName} ${owner.lastName}` : 'Unknown',
+          // Get payment status text
+          paymentStatus: booking.paymentReceived ? 'Paid' : 'Pending'
+        };
+      }));
+      
+      res.json(enrichedBookings);
     } catch (error) {
       console.error("Error fetching bookings:", error);
       res.status(500).json({ error: "Failed to fetch bookings" });

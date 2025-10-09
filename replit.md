@@ -87,6 +87,11 @@ Preferred communication style: Simple, everyday language.
     - **Download History**: Format selection dialog (PDF/Excel) with comprehensive export functionality
     - **Status Mappings**: Proper mapping between filter values and database statuses for both renter and owner views
     - **Listing Status Enum**: Updated to ["available", "booked", "used", "unused", "cancelled"] for accurate lifecycle tracking
+    - **API Data Enrichment**: Both `/api/my-bookings` (renters) and `/api/my-listings` (owners) return enriched data:
+        - **Renter View**: spotNumber, location, spotType, ownerName, bookingDate, dailyRate, paymentStatus
+        - **Owner View**: spot details (spotNumber, location, spotType), renterName (for booked/used listings), date, price, paymentReceived
+        - **Smart Booking Selection**: For owner listings, displays most recent active booking based on status (booked/used)
+        - **Known Limitation**: Vehicle information not tracked per booking in current schema - requires future enhancement to add vehicleId to Booking table
 
 ## External Dependencies
 
