@@ -249,10 +249,10 @@ export default function Search() {
       return false // Don't show non-bookable spots to renters
     }
     
-    // BCI Managed filtering - only show spots owned by BCI (not "Unassigned" which are personal spots)
+    // BCI Managed filtering - only show spots at 750 Pandora Ave (BCI headquarters)
     if (isBciManaged !== undefined && isBciManaged) {
-      // Filter to only BCI-managed spots (exclude personal/peer-to-peer spots)
-      if (spot.owner === 'Unassigned' || !spot.ownerId) {
+      // Filter to only BCI-managed spots (spots at 750 Pandora Ave)
+      if (!spot.location.toLowerCase().includes('750 pandora')) {
         return false
       }
     }

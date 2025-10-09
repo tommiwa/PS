@@ -43,12 +43,11 @@ const SEARCH_SUGGESTIONS = [
 const QUICK_FILTERS = [
   { label: "Today", value: "today", icon: Calendar, type: "date", tooltip: "Filter for parking spots available today" },
   { label: "Inside Building", value: "inside", icon: Building, type: "location", tooltip: "Filter for indoor parking spots protected from weather" },
-  { label: "BCI Managed", value: "bci_managed", icon: Building, type: "ownership", tooltip: "Filter for parking spots managed by BCI (not personal spots)" },
+  { label: "BCI Managed", value: "bci_managed", icon: Building, type: "ownership", tooltip: "Filter for parking spots at 750 Pandora Ave managed by BCI" },
   { label: "$15 or Less", value: "budget", icon: DollarSign, type: "price", tooltip: "Filter for budget-friendly parking spots $15 or less per day" },
   { label: "Electric Charging", value: "electric", icon: Zap, type: "spotType", tooltip: "Filter for electric vehicle charging stations with standard EV connectors" },
   { label: "Tesla Charger", value: "tesla_ev", icon: Zap, type: "spotType", tooltip: "Filter for Tesla-specific charging stations optimized for Tesla vehicles" },
-  { label: "Accessible", value: "accessible", icon: Accessibility, type: "spotType", tooltip: "Filter for accessible parking spots designed for mobility accommodations" },
-  { label: "Main Building", value: "750 pandora ave", icon: MapPin, type: "location", tooltip: "Filter for parking spots at Victoria - 750 Pandora Ave" }
+  { label: "Accessible", value: "accessible", icon: Accessibility, type: "spotType", tooltip: "Filter for accessible parking spots designed for mobility accommodations" }
 ]
 
 const MOBILE_VISIBLE_FILTERS = 4
