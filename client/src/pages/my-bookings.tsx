@@ -1025,7 +1025,15 @@ export default function MyBookings() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">$180</div>
+                    <div className="text-2xl font-bold">
+                      ${mockBookings
+                        .filter((b: Booking) => 
+                          b.status === "completed" || 
+                          (b.status === "confirmed" && b.paymentReceived)
+                        )
+                        .reduce((sum, b) => sum + Number(b.dailyRate || 0), 0)
+                        .toFixed(2)}
+                    </div>
                     <p className="text-xs text-blue-600">All-time parking expenses</p>
                   </CardContent>
                 </Card>
