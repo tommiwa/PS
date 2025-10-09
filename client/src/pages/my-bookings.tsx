@@ -218,22 +218,38 @@ export default function MyBookings() {
     unusedItems = [] // Renters don't have unused items
   }
 
+  // Mutation for cancelling booking
+  const cancelBookingMutation = useMutation({
+    mutationFn: async (bookingId: string) => {
+      return apiRequest(`/api/bookings/${bookingId}/cancel`, { method: 'POST' })
+    },
+    onSuccess: () => {
+      toast({
+        title: "Booking Cancelled",
+        description: "Your booking has been successfully cancelled",
+        variant: "warning",
+      })
+      queryClient.invalidateQueries({ queryKey: ['/api/my-bookings'] })
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Cancellation Failed",
+        description: error.message || "Failed to cancel booking. Please try again.",
+        variant: "destructive",
+      })
+    }
+  })
+
   const handleCancelBooking = async (bookingId: string) => {
-    const booking = mockBookings.find(b => b.id === bookingId)
+    const booking = mockBookings.find(b => b.id === bookingId) as any
     
     const confirmed = await confirm(confirmations.cancelBooking(
-      booking ? `Spot ${booking.spotId?.slice(-8) || 'Unknown'}` : undefined,
+      booking ? `Spot ${booking.spotNumber || booking.spotId?.slice(-8) || 'Unknown'}` : undefined,
       booking?.bookingDate
     ))
     
     if (confirmed) {
-      console.log('Cancel booking:', bookingId)
-      // TODO: Implement actual booking cancellation logic
-      toast({
-        title: "Booking Cancelled",
-        description: `Successfully cancelled booking for ${booking?.bookingDate || 'selected date'}`,
-        variant: "warning",
-      })
+      cancelBookingMutation.mutate(bookingId)
     }
   }
 
@@ -246,8 +262,33 @@ export default function MyBookings() {
     setShowViewDetails(true)
   }
 
+  // Mutation for marking payment as received
+  const markPaidMutation = useMutation({
+    mutationFn: async (bookingId: string) => {
+      return apiRequest(`/api/bookings/${bookingId}/payment`, { 
+        method: 'PATCH',
+        body: { paymentReceived: true }
+      })
+    },
+    onSuccess: () => {
+      toast({
+        title: "Payment Confirmed",
+        description: "Booking has been marked as paid",
+      })
+      queryClient.invalidateQueries({ queryKey: ['/api/my-listings'] })
+      queryClient.invalidateQueries({ queryKey: ['/api/my-bookings'] })
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Payment Update Failed",
+        description: error.message || "Failed to mark payment. Please try again.",
+        variant: "destructive",
+      })
+    }
+  })
+
   const handleMarkPaid = async (bookingId: string) => {
-    const booking = mockBookings.find(b => b.id === bookingId)
+    const booking = mockBookings.find(b => b.id === bookingId) as any
     const confirmed = await confirm({
       title: "Confirm Payment",
       description: `Mark payment as received for booking on ${booking?.bookingDate || 'selected date'}?`,
@@ -256,12 +297,7 @@ export default function MyBookings() {
     })
     
     if (confirmed) {
-      console.log('Mark as paid:', bookingId)
-      // TODO: Implement actual mark as paid logic
-      toast({
-        title: "Payment Confirmed",
-        description: "Booking has been marked as paid",
-      })
+      markPaidMutation.mutate(bookingId)
     }
   }
 
