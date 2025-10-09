@@ -342,7 +342,12 @@ export default function Search() {
     }
   })
 
-  const sortedSpots = [...filteredSpots].sort((a, b) => {
+  // Use baseFilteredSpots for tiles view (show all available spots)
+  // Use filteredSpots for calendar when date is selected (date-specific view)
+  const spotsForTiles = baseFilteredSpots
+  const spotsForCalendar = searchCriteria.date ? filteredSpots : baseFilteredSpots
+  
+  const sortedSpots = [...spotsForTiles].sort((a, b) => {
     switch (sortBy) {
       case "price":
         return a.price - b.price
@@ -557,7 +562,7 @@ export default function Search() {
           <Card className="h-[600px]">
             <CardContent className="p-0 h-full">
               <ParkingCalendar
-                spots={searchCriteria.date ? filteredSpots : baseFilteredSpots}
+                spots={spotsForCalendar}
                 onBookSpot={handleBookSpot}
                 selectedDate={searchCriteria.date ? new Date(searchCriteria.date) : new Date()}
               />
