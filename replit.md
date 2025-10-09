@@ -50,6 +50,8 @@ Preferred communication style: Simple, everyday language.
 ### Key Features
 - **Multi-role Dashboard**: Dynamic content and navigation based on user roles.
 - **Booking System**: Real-time management with status tracking, custom calendar, search & filtering by location, spot type, and pricing.
+    - **Booked Spot Display**: Calendar intelligently shows which spots are already booked with visual indicators (grayed out, "Booked" badge) and prevents double-booking by making booked spots non-clickable. Works across all calendar views (Day, Week, Month).
+    - **Period Listing Support**: Spots can be listed for single days or date ranges, with automatic expansion to individual dates for accurate calendar display and booking prevention.
 - **Admin Management**:
     - **User Management**: Comprehensive user creation/editing with form validation, duplicate prevention, status management (Active, Suspended, Deleted with soft delete and restoration), phone formatting, and assigned spot display.
     - **Bulk Spot Management**: Assign, unassign, update status, enhanced filtering.
