@@ -29,6 +29,31 @@ interface Location {
   isActive: boolean
 }
 
+// API response type from /api/available-spots with enriched data
+interface EnrichedSpotFromAPI extends DBParkingSpot {
+  listingId?: string
+  dailyRate?: string
+  availabilityDates?: string[] // Array of all available dates
+  bookedDates?: string[] // Array of dates that are already booked
+  availability?: {
+    date: string
+  }
+  owner?: {
+    id: string
+    firstName: string
+    lastName: string
+    email: string
+  }
+  location?: {
+    id: number
+    name: string
+  }
+  spotType?: {
+    id: number
+    name: string
+  }
+}
+
 // Convert database spot to display format
 interface DisplaySpot extends DBParkingSpot {
   // Additional display properties for backwards compatibility 
@@ -63,8 +88,8 @@ export default function Search() {
     setActiveTab(isMobile ? "tiles" : "calendar")
   }, [])
 
-  // Fetch available parking spots from API
-  const { data: dbSpots = [], isLoading, error } = useQuery<DBParkingSpot[]>({
+  // Fetch available parking spots from API - using enriched type that includes availabilityDates and bookedDates
+  const { data: dbSpots = [], isLoading, error } = useQuery<EnrichedSpotFromAPI[]>({
     queryKey: ['/api/available-spots']
   })
 
@@ -118,10 +143,14 @@ export default function Search() {
     location: formatLocation(spot.locationId),
     type: mapSpotType(spot.spotTypeId),
     isInside: spot.isIndoor,
-    price: 25, // Default price since MemStorage doesn't have spot pricing
-    owner: getSpotOwner(spot.ownerId),
+    price: spot.dailyRate ? parseFloat(spot.dailyRate) : 25,
+    owner: spot.owner ? `${spot.owner.firstName} ${spot.owner.lastName}` : getSpotOwner(spot.ownerId),
     isAvailable: spot.isActive,
-    isBookable: spot.isBookable
+    isBookable: spot.isBookable,
+    // Explicitly preserve enriched availability data from API
+    availabilityDates: spot.availabilityDates,
+    bookedDates: spot.bookedDates,
+    availability: spot.availability
   }))
 
   // Create booking mutation
