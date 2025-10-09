@@ -137,21 +137,41 @@ export default function Search() {
     return ownerId ? ownerMap[ownerId] || 'Unknown Owner' : 'Unassigned'
   }
 
-  const spots: DisplaySpot[] = dbSpots.map(spot => ({
-    ...spot,
-    spotNumber: spot.spotNumber,
-    location: formatLocation(spot.locationId),
-    type: mapSpotType(spot.spotTypeId),
-    isInside: spot.isIndoor,
-    price: spot.dailyRate ? parseFloat(spot.dailyRate) : 25,
-    owner: spot.owner ? `${spot.owner.firstName} ${spot.owner.lastName}` : getSpotOwner(spot.ownerId),
-    isAvailable: spot.isActive,
-    isBookable: spot.isBookable,
-    // Explicitly preserve enriched availability data from API
-    availabilityDates: spot.availabilityDates,
-    bookedDates: spot.bookedDates,
-    availability: spot.availability
-  }))
+  // Expand spots by availability dates so each date becomes a separate entry
+  // This ensures tiles and calendar show the same count
+  const spots: DisplaySpot[] = dbSpots.flatMap(spot => {
+    const baseSpot = {
+      ...spot,
+      spotNumber: spot.spotNumber,
+      location: formatLocation(spot.locationId),
+      type: mapSpotType(spot.spotTypeId),
+      isInside: spot.isIndoor,
+      price: spot.dailyRate ? parseFloat(spot.dailyRate) : 25,
+      owner: spot.owner ? `${spot.owner.firstName} ${spot.owner.lastName}` : getSpotOwner(spot.ownerId),
+      isAvailable: spot.isActive,
+      isBookable: spot.isBookable,
+      // Explicitly preserve enriched availability data from API
+      availabilityDates: spot.availabilityDates,
+      bookedDates: spot.bookedDates,
+    }
+    
+    // If spot has availability dates, create one entry per date
+    if (spot.availabilityDates && spot.availabilityDates.length > 0) {
+      return spot.availabilityDates.map(date => ({
+        ...baseSpot,
+        id: spot.id, // Keep original spot ID for booking
+        availability: { date }, // Set specific date for this entry
+        availabilityDates: [date], // Each expanded entry only has its own date
+        // Keep booked dates for the calendar to show booked status
+      }))
+    }
+    
+    // Fallback for spots without availabilityDates
+    return [{
+      ...baseSpot,
+      availability: spot.availability
+    }]
+  })
 
   // Create booking mutation
   const createBookingMutation = useMutation({
@@ -577,7 +597,7 @@ export default function Search() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {sortedSpots.map((spot) => (
                 <ParkingSpotCard 
-                  key={spot.id} 
+                  key={`${spot.id}-${spot.availability?.date || 'no-date'}`}
                   spot={spot}
                   onBook={handleBookSpot}
                   onViewDetails={(spotId) => console.log('View details:', spotId)}

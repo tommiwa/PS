@@ -272,7 +272,7 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                 const isBooked = isSpotBookedOnDate(spot, currentDate)
                 return (
                   <Card 
-                    key={spot.id} 
+                    key={`${spot.id}-${spot.availability?.date || currentDate.toISOString().split('T')[0]}`}
                     className={`transition-all border-l-4 ${
                       isBooked 
                         ? 'opacity-60 cursor-not-allowed bg-muted border-muted'
@@ -283,7 +283,7 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                           }`
                     }`}
                     onClick={() => !isBooked && handleSpotClick(spot, currentDate)}
-                    data-testid={`calendar-spot-${spot.id}`}
+                    data-testid={`calendar-spot-${spot.id}-${spot.availability?.date || currentDate.toISOString().split('T')[0]}`}
                   >
                     <CardContent className="p-3">
                       <div className="flex items-center justify-between gap-2">
@@ -354,7 +354,7 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                     const isBooked = isSpotBookedOnDate(spot, day)
                     return (
                       <div
-                        key={spot.id}
+                        key={`${spot.id}-${spot.availability?.date || day.toISOString().split('T')[0]}`}
                         className={`p-1.5 rounded text-xs transition-all ${
                           isBooked
                             ? 'opacity-60 cursor-not-allowed bg-muted'
@@ -365,7 +365,7 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                               }`
                         }`}
                         onClick={() => !isBooked && handleSpotClick(spot, day)}
-                        data-testid={`calendar-spot-${spot.id}`}
+                        data-testid={`calendar-spot-${spot.id}-${spot.availability?.date || day.toISOString().split('T')[0]}`}
                       >
                         <div className="font-medium">#{spot.spotNumber}</div>
                         <div className="flex items-center gap-1 justify-between">
@@ -427,7 +427,7 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                     const isBooked = isSpotBookedOnDate(spot, day)
                     return (
                       <div
-                        key={spot.id}
+                        key={`${spot.id}-${spot.availability?.date || day.toISOString().split('T')[0]}`}
                         className={`p-0.5 rounded text-xs transition-all ${
                           isBooked
                             ? 'opacity-60 cursor-not-allowed bg-muted'
@@ -438,7 +438,7 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                               }`
                         }`}
                         onClick={() => !isBooked && handleSpotClick(spot, day)}
-                        data-testid={`calendar-spot-${spot.id}`}
+                        data-testid={`calendar-spot-${spot.id}-${spot.availability?.date || day.toISOString().split('T')[0]}`}
                       >
                         <div className="flex items-center justify-between gap-1">
                           <div className="flex items-center gap-0.5">

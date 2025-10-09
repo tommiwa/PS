@@ -1402,7 +1402,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (spot) {
           if (spot.locationId) {
             const location = await storage.getLocation(spot.locationId);
-            locationName = location?.name || 'Unknown';
+            locationName = location ? `${location.office} - ${location.building}, ${location.level}` : 'Unknown';
           }
           if (spot.spotTypeId) {
             const spotType = await storage.getSpotType(spot.spotTypeId);
@@ -1491,7 +1491,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (spot) {
           if (spot.locationId) {
             const location = await storage.getLocation(spot.locationId);
-            locationName = location?.name || 'Unknown';
+            locationName = location ? `${location.office} - ${location.building}, ${location.level}` : 'Unknown';
           }
           if (spot.spotTypeId) {
             const spotType = await storage.getSpotType(spot.spotTypeId);
