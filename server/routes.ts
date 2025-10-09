@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, requireAdmin, getAuthenticatedUserId, getAuthenticatedUserRole, getAuthenticatedUserBaseRole } from "./replitAuth";
@@ -3157,7 +3157,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update any parking spot (Admin only)
-  app.put("/api/admin/spots/:id", requireAdmin, async (req, res) => {
+  const updateSpotHandler = async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       
@@ -3191,7 +3191,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error updating parking spot:", error);
       res.status(500).json({ error: "Failed to update parking spot" });
     }
-  });
+  };
+
+  app.put("/api/admin/spots/:id", requireAdmin, updateSpotHandler);
+  app.patch("/api/admin/spots/:id", requireAdmin, updateSpotHandler);
 
   // Delete any parking spot (Admin only)
   app.delete("/api/admin/spots/:id", requireAdmin, async (req, res) => {
