@@ -2286,6 +2286,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/bookings/:id/cancel - Cancel booking (Renter only)
+  app.post("/api/bookings/:id/cancel", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = getAuthenticatedUserId(req);
+      
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      const booking = await storage.getBooking(id);
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      // Check if booking belongs to the user (as renter)
+      if (booking.renterId !== userId) {
+        return res.status(403).json({ error: "Not authorized to cancel this booking" });
+      }
+
+      // Don't allow cancelling already completed or cancelled bookings
+      if (booking.status === 'completed' || booking.status === 'cancelled') {
+        return res.status(400).json({ error: `Cannot cancel ${booking.status} booking` });
+      }
+
+      const cancelledBooking = await storage.cancelBookingWithReason(id, "Cancelled by renter");
+      
+      await auditService.logAction("CANCEL", "booking", {
+        entityId: id,
+        message: `Booking ${id} cancelled by renter`,
+        before: booking,
+        after: cancelledBooking
+      });
+
+      res.json(cancelledBooking);
+    } catch (error) {
+      console.error("Error cancelling booking:", error);
+      res.status(500).json({ error: "Failed to cancel booking" });
+    }
+  });
+
   // POST /api/admin/bookings/:id/cancel - Cancel with reason (Admin only)
   app.post("/api/admin/bookings/:id/cancel", requireAdmin, async (req: any, res) => {
     try {
