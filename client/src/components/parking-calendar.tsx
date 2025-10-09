@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { BookingForm } from "@/components/booking-form"
+import { BookingForm, type ParkingSpot as BookingFormSpot } from "@/components/booking-form"
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -21,20 +21,9 @@ import { isPastDate } from "@/utils/date-utils"
 
 type CalendarView = "day" | "week" | "month"
 
-interface ParkingSpot {
-  id: string
-  spotNumber: string
-  location: string
-  type: "regular" | "electric" | "accessible" | "tesla_ev" | "reserved"
-  isInside: boolean
-  price: number
+interface ParkingSpot extends BookingFormSpot {
   isAvailable: boolean
-  availability?: {
-    date: string
-  }
-  owner: string
-  isOwned?: boolean // Flag to indicate if this is user's own listing
-  isBookable?: boolean // Whether the spot can be booked (false for reserved)
+  isOwned?: boolean
 }
 
 interface ParkingCalendarProps {
@@ -109,7 +98,7 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
         return false;
       }
 
-      // Show available spots on all dates
+      // Show available spots only on their specific availability date
       if (spot.isAvailable) {
         // If spot has availability date, check if it matches
         if (spot.availability?.date) {
@@ -120,8 +109,8 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
           }
           return isSameDay(spotDate, date)
         }
-        // If no specific availability date, show on all dates (except past dates)
-        return true
+        // If no specific availability date, don't show the spot
+        return false
       }
       // For unavailable spots, only show on their specific booking date if available
       if (spot.availability?.date) {

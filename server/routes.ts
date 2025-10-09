@@ -4349,7 +4349,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Get user's active spot listings for the week
           const allListings = await storage.getAllSpotListings();
           const userListings = allListings.filter(listing => {
-            return listing.ownerId === user.id && listing.status === 'active';
+            return listing.ownerId === user.id && listing.status === 'available';
           });
           
           // Calculate summary statistics
