@@ -302,8 +302,32 @@ export default function MyBookings() {
   }
 
   const handleDownloadReceipt = (bookingId: string) => {
-    console.log('Download receipt:', bookingId)
-    // TODO: Generate and download receipt
+    const booking = mockBookings.find(b => b.id === bookingId) as any
+    
+    if (!booking) {
+      toast({
+        title: "Receipt Error",
+        description: "Booking not found",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Create receipt data
+    const receiptData = [{
+      spotNumber: booking.spotNumber || 'N/A',
+      spotLocation: booking.location || 'N/A',
+      renterName: user?.firstName + ' ' + user?.lastName || 'N/A',
+      renterEmail: user?.email || 'N/A',
+      ownerName: booking.ownerName || booking.owner || 'N/A',
+      status: booking.status || 'N/A',
+      dailyRate: booking.dailyRate || 0,
+      bookingDate: booking.bookingDate || booking.date || 'N/A',
+      paymentReceived: booking.paymentReceived || false
+    }]
+
+    quickExportBookingsPDF(receiptData, `receipt-${booking.spotNumber || bookingId}`)
+    
     toast({
       title: "Receipt Downloaded",
       description: "Receipt has been downloaded successfully",
