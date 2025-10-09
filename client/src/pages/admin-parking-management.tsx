@@ -625,8 +625,8 @@ export default function AdminParkingManagement() {
       });
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["/api/admin/all-spots"] });
-      await queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] });
+      await queryClient.refetchQueries({ queryKey: ["/api/admin/all-spots"] });
+      await queryClient.refetchQueries({ queryKey: ["/api/admin/unallocated-spots"] });
       toast({
         title: "Success",
         description: "Parking spot updated successfully.",
