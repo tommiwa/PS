@@ -17,6 +17,7 @@ export interface ParsedSearch {
   priceMax?: number
   date?: string
   isInside?: boolean
+  isBciManaged?: boolean
   quickFilters: string[]
 }
 
@@ -40,13 +41,14 @@ const SEARCH_SUGGESTIONS = [
 ]
 
 const QUICK_FILTERS = [
+  { label: "Today", value: "today", icon: Calendar, type: "date", tooltip: "Filter for parking spots available today" },
+  { label: "Inside Building", value: "inside", icon: Building, type: "location", tooltip: "Filter for indoor parking spots protected from weather" },
+  { label: "BCI Managed", value: "bci_managed", icon: Building, type: "ownership", tooltip: "Filter for parking spots managed by BCI (not personal spots)" },
+  { label: "$15 or Less", value: "budget", icon: DollarSign, type: "price", tooltip: "Filter for budget-friendly parking spots $15 or less per day" },
   { label: "Electric Charging", value: "electric", icon: Zap, type: "spotType", tooltip: "Filter for electric vehicle charging stations with standard EV connectors" },
   { label: "Tesla Charger", value: "tesla_ev", icon: Zap, type: "spotType", tooltip: "Filter for Tesla-specific charging stations optimized for Tesla vehicles" },
   { label: "Accessible", value: "accessible", icon: Accessibility, type: "spotType", tooltip: "Filter for accessible parking spots designed for mobility accommodations" },
-  { label: "Inside Building", value: "inside", icon: MapPin, type: "location", tooltip: "Filter for indoor parking spots protected from weather" },
-  { label: "Under $25", value: "cheap", icon: DollarSign, type: "price", tooltip: "Filter for budget-friendly parking spots under $25 per day" },
-  { label: "Main Building", value: "750 pandora ave", icon: MapPin, type: "location", tooltip: "Filter for parking spots at Victoria - 750 Pandora Ave" },
-  { label: "Today", value: "today", icon: Calendar, type: "date", tooltip: "Filter for parking spots available today" }
+  { label: "Main Building", value: "750 pandora ave", icon: MapPin, type: "location", tooltip: "Filter for parking spots at Victoria - 750 Pandora Ave" }
 ]
 
 const MOBILE_VISIBLE_FILTERS = 4
@@ -80,8 +82,10 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
         parsed.spotType = "accessible"
       } else if (filterValue === "inside") {
         parsed.isInside = true
-      } else if (filterValue === "cheap") {
-        parsed.priceMax = 25
+      } else if (filterValue === "bci_managed") {
+        parsed.isBciManaged = true
+      } else if (filterValue === "budget") {
+        parsed.priceMax = 15
       } else if (filterValue === "750 pandora ave") {
         parsed.location = "750 pandora ave"
       }

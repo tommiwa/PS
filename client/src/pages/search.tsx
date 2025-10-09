@@ -232,7 +232,7 @@ export default function Search() {
 
   // Base filtering without date constraints (for calendar view)
   const baseFilteredSpots = spots.filter(spot => {
-    const { location, spotType, priceMin, priceMax, isInside, query } = searchCriteria
+    const { location, spotType, priceMin, priceMax, isInside, isBciManaged, query } = searchCriteria
     
     // Filter out spots with past availability dates
     if (spot.availability?.date && isPastDate(spot.availability.date)) {
@@ -247,6 +247,14 @@ export default function Search() {
     // Filter out non-bookable spots (taxable benefit) from search results
     if (spot.isBookable === false) {
       return false // Don't show non-bookable spots to renters
+    }
+    
+    // BCI Managed filtering - only show spots owned by BCI (not "Unassigned" which are personal spots)
+    if (isBciManaged !== undefined && isBciManaged) {
+      // Filter to only BCI-managed spots (exclude personal/peer-to-peer spots)
+      if (spot.owner === 'Unassigned' || !spot.ownerId) {
+        return false
+      }
     }
     
     // Text-based search across multiple fields
@@ -360,13 +368,14 @@ export default function Search() {
   }
 
   const getActiveFilterCount = () => {
-    const { location, spotType, priceMin, priceMax, isInside, date, query, quickFilters } = searchCriteria
+    const { location, spotType, priceMin, priceMax, isInside, isBciManaged, date, query, quickFilters } = searchCriteria
     let count = 0
     if (location) count++
     if (spotType && spotType !== "all") count++
     if (priceMin !== undefined) count++
     if (priceMax !== undefined) count++
     if (isInside !== undefined) count++
+    if (isBciManaged !== undefined) count++
     if (date) count++
     if (query && query.trim()) count++
     return count + (quickFilters?.length || 0)
