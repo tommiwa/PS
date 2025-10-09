@@ -223,7 +223,8 @@ export function NotificationCenter() {
           ) : (
             <div className="divide-y">
               {notifications.map((notification) => {
-                const Icon = notificationIcons[notification.type];
+                const Icon = notificationIcons[notification.type] || Info;
+                const iconColor = notificationColors[notification.type] || "bg-gray-500";
                 const expiry = getExpiryStatus(notification.expiresAt);
                 
                 return (
@@ -236,7 +237,7 @@ export function NotificationCenter() {
                     data-testid={`notification-${notification.id}`}
                   >
                     <div className="flex items-start gap-3">
-                      <div className={`p-2 rounded-full ${notificationColors[notification.type]} text-white flex-shrink-0`}>
+                      <div className={`p-2 rounded-full ${iconColor} text-white flex-shrink-0`}>
                         <Icon className="h-4 w-4" />
                       </div>
                       
@@ -352,14 +353,15 @@ export function NotificationToast({
   notification: InAppNotification; 
   onDismiss: () => void; 
 }) {
-  const Icon = notificationIcons[notification.type];
+  const Icon = notificationIcons[notification.type] || Info;
+  const iconColor = notificationColors[notification.type] || "bg-gray-500";
   
   return (
     <Card className="fixed top-4 right-4 w-80 z-50 shadow-lg" data-testid="toast-notification">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className={`p-1 rounded-full ${notificationColors[notification.type]} text-white`}>
+            <div className={`p-1 rounded-full ${iconColor} text-white`}>
               <Icon className="h-4 w-4" />
             </div>
             <CardTitle className="text-sm">{notification.title}</CardTitle>
