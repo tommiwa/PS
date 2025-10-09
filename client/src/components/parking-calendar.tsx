@@ -26,9 +26,18 @@ interface ParkingSpot extends BookingFormSpot {
   isOwned?: boolean
 }
 
+interface BookingFormData {
+  date: string
+  paymentMethod: string
+  specialInstructions: string
+  contactPhone: string
+  vehicleLicense: string
+  spotId: string
+}
+
 interface ParkingCalendarProps {
   spots: ParkingSpot[]
-  onBookSpot: (spotId: string) => void
+  onBookSpot: (spotId: string, bookingData?: BookingFormData) => void
   selectedDate?: Date
   onDateChange?: (date: Date) => void
   isOwnerView?: boolean
@@ -201,12 +210,12 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
     setShowBookingForm(true)
   }
 
-  const handleBookingSubmit = (bookingData: any) => {
+  const handleBookingSubmit = (bookingData: BookingFormData) => {
     if (selectedSpot) {
-      onBookSpot(selectedSpot.id)
+      onBookSpot(selectedSpot.id, bookingData)
+      setShowBookingForm(false)
+      setSelectedSpot(null)
     }
-    setShowBookingForm(false)
-    setSelectedSpot(null)
   }
 
   const renderDayView = () => {

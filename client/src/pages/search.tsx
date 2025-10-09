@@ -148,24 +148,41 @@ export default function Search() {
   })
 
   // Handle booking form submission
-  const handleBookSpot = (spotId: string) => {
+  const handleBookSpot = (spotId: string, bookingData?: any) => {
     const spot = spots.find(s => s.id === spotId)
     if (spot) {
-      setSelectedSpot(spot)
-      setShowBookingForm(true)
+      if (bookingData) {
+        // Booking data provided from calendar - submit immediately
+        handleBookingFormSubmit(spot, bookingData)
+      } else {
+        // No booking data - show booking form
+        setSelectedSpot(spot)
+        setShowBookingForm(true)
+      }
     }
   }
 
   // Handle actual booking submission from form
-  const handleBookingFormSubmit = (bookingData: any) => {
-    if (!selectedSpot) return
+  const handleBookingFormSubmit = (spot: DisplaySpot, bookingData: any) => {
+    // Get listing ID and daily rate from spot data (enriched by API)
+    const listingId = (spot as any).listingId
+    const dailyRate = (spot as any).dailyRate || spot.price
+    
+    if (!listingId) {
+      toast({
+        title: "Booking Error",
+        description: "This spot does not have an active listing. Please try another spot.",
+        variant: "destructive"
+      })
+      return
+    }
     
     createBookingMutation.mutate({
-      spotId: selectedSpot.id,
-      listingId: selectedSpot.id, // Using spot ID as listing ID for now
+      spotId: spot.id,
+      listingId: listingId,
       bookingDate: bookingData.date,
-      dailyRate: selectedSpot.price,
-      totalAmount: selectedSpot.price,
+      dailyRate: dailyRate,
+      totalAmount: dailyRate,
       notes: bookingData.specialInstructions
     })
   }
@@ -320,8 +337,9 @@ export default function Search() {
   })
 
   const handleBookingSubmit = (bookingData: any) => {
+    if (!selectedSpot) return
     console.log('Booking submitted:', bookingData)
-    handleBookingFormSubmit(bookingData)
+    handleBookingFormSubmit(selectedSpot, bookingData)
   }
 
   const handleSearch = (parsed: ParsedSearch) => {

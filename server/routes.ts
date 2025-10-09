@@ -1444,13 +1444,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .map(spot => {
           const listing = listingBySpotId.get(spot.id);
           
-          // Enrich spot with availability date from listing
-          if (listing && listing.singleDate) {
+          // Enrich spot with listing data (listing ID, daily rate, availability date)
+          if (listing) {
             return {
               ...spot,
-              availability: {
+              listingId: listing.id,
+              dailyRate: listing.dailyRate,
+              availability: listing.singleDate ? {
                 date: listing.singleDate
-              }
+              } : undefined
             };
           }
           
