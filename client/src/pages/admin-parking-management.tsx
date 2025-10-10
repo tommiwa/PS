@@ -1419,12 +1419,6 @@ export default function AdminParkingManagement() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Link href="/admin/reports">
-            <Button variant="outline" size="sm" data-testid="link-view-reports-parking">
-              <FileText className="w-4 h-4 mr-2" />
-              View Reports
-            </Button>
-          </Link>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button 

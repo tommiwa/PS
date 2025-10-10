@@ -766,12 +766,6 @@ export default function AdminUserManagement() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Link href="/admin/reports">
-            <Button variant="outline" size="sm" data-testid="link-view-reports-users">
-              <FileText className="w-4 h-4 mr-2" />
-              View Reports
-            </Button>
-          </Link>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button 
