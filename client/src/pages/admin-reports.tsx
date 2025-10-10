@@ -13,16 +13,21 @@ import {
 } from '@/utils/report-export';
 import { 
   BarChart3, 
-  UserPlus
+  UserPlus,
+  AlertCircle
 } from 'lucide-react';
 import type {
   ReportUtilizationResponse,
   SpotAssignmentReportResponse
 } from '@shared/schema';
 import { SpotAssignmentsReport } from '@/components/reports/SpotAssignmentsReport';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function AdminReportsPage() {
   const { filters, setDateFrom, setDateTo, setScope } = useReportFilters();
+
+  // Validate date range - must have both dates and To Date >= From Date
+  const isDateRangeValid = Boolean(filters.dateFrom && filters.dateTo && filters.dateFrom <= filters.dateTo);
 
   const utilizationQuery = useQuery<ReportUtilizationResponse>({
     queryKey: ['/api/admin/reports/utilization', filters.dateFrom, filters.dateTo, filters.scope],
@@ -35,7 +40,8 @@ export default function AdminReportsPage() {
       const response = await fetch(`/api/admin/reports/utilization?${params}`);
       if (!response.ok) throw new Error('Failed to fetch utilization report');
       return response.json();
-    }
+    },
+    enabled: isDateRangeValid
   });
 
   const spotAssignmentsQuery = useQuery<SpotAssignmentReportResponse>({
@@ -49,7 +55,8 @@ export default function AdminReportsPage() {
       const response = await fetch(`/api/admin/reports/spot-assignments?${params}`);
       if (!response.ok) throw new Error('Failed to fetch spot assignments report');
       return response.json();
-    }
+    },
+    enabled: isDateRangeValid
   });
 
   return (
@@ -59,7 +66,7 @@ export default function AdminReportsPage() {
           Reports Hub
         </h1>
         <p className="text-muted-foreground mt-2">
-          Comprehensive analytics and reporting for BCI ParkShare
+          Analytics for spot assignments and parking utilization
         </p>
       </div>
 
@@ -80,6 +87,7 @@ export default function AdminReportsPage() {
                 type="date"
                 value={filters.dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
+                max={filters.dateTo}
                 data-testid="input-date-from"
               />
             </div>
@@ -90,6 +98,7 @@ export default function AdminReportsPage() {
                 type="date"
                 value={filters.dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
+                min={filters.dateFrom}
                 data-testid="input-date-to"
               />
             </div>
@@ -109,6 +118,15 @@ export default function AdminReportsPage() {
               </Select>
             </div>
           </div>
+
+          {!isDateRangeValid && (
+            <Alert variant="destructive" className="mt-4" data-testid="alert-invalid-date-range">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                To Date must be greater than or equal to From Date
+              </AlertDescription>
+            </Alert>
+          )}
         </CardContent>
       </Card>
 
@@ -129,38 +147,62 @@ export default function AdminReportsPage() {
         <TabsContent value="spot-assignments" className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-semibold">Spot Assignment Report</h2>
-            <ReportActions
-              reportType="spot-assignments"
-              onExport={() => {
-                if (!spotAssignmentsQuery.data) return;
-                exportSpotAssignmentsReport(spotAssignmentsQuery.data);
-              }}
-              filters={filters}
-            />
+            {isDateRangeValid && (
+              <ReportActions
+                reportType="spot-assignments"
+                onExport={() => {
+                  if (!spotAssignmentsQuery.data) return;
+                  exportSpotAssignmentsReport(spotAssignmentsQuery.data);
+                }}
+                filters={filters}
+              />
+            )}
           </div>
-          <SpotAssignmentsReport
-            data={spotAssignmentsQuery.data}
-            isLoading={spotAssignmentsQuery.isLoading}
-          />
+          {isDateRangeValid ? (
+            <SpotAssignmentsReport
+              data={spotAssignmentsQuery.data}
+              isLoading={spotAssignmentsQuery.isLoading}
+            />
+          ) : (
+            <Card className="p-8 text-center" data-testid="card-invalid-dates-message">
+              <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Invalid Date Range</h3>
+              <p className="text-muted-foreground">
+                Please select a valid date range to view the report
+              </p>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Utilization Tab */}
         <TabsContent value="utilization" className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-semibold">Parking Utilization Report</h2>
-            <ReportActions
-              reportType="utilization"
-              onExport={() => {
-                if (!utilizationQuery.data) return;
-                exportUtilizationReport(utilizationQuery.data);
-              }}
-              filters={filters}
-            />
+            {isDateRangeValid && (
+              <ReportActions
+                reportType="utilization"
+                onExport={() => {
+                  if (!utilizationQuery.data) return;
+                  exportUtilizationReport(utilizationQuery.data);
+                }}
+                filters={filters}
+              />
+            )}
           </div>
-          <UtilizationReport
-            data={utilizationQuery.data}
-            isLoading={utilizationQuery.isLoading}
-          />
+          {isDateRangeValid ? (
+            <UtilizationReport
+              data={utilizationQuery.data}
+              isLoading={utilizationQuery.isLoading}
+            />
+          ) : (
+            <Card className="p-8 text-center" data-testid="card-invalid-dates-message">
+              <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Invalid Date Range</h3>
+              <p className="text-muted-foreground">
+                Please select a valid date range to view the report
+              </p>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
     </div>
