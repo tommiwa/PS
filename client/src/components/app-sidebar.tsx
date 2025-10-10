@@ -13,7 +13,8 @@ import {
   Bell,
   CalendarCheck,
   FileText,
-  Database
+  Database,
+  Lock
 } from "lucide-react"
 import { Link, useLocation, useRoute } from "wouter"
 import {
@@ -30,6 +31,7 @@ import {
 } from "@/components/ui/sidebar"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { UserRole } from "@shared/schema"
 import { useAuth } from "@/contexts/auth-context"
 import { queryClient } from "@/lib/queryClient"
@@ -87,6 +89,14 @@ const adminCoreItems = [
     icon: Shield,
     roles: ["admin"],
     tooltip: "Parking Management"
+  },
+  {
+    title: "Locker Management",
+    url: "/admin/locker-management",
+    icon: Lock,
+    roles: ["admin"],
+    tooltip: "Locker Management",
+    isNew: true
   },
 ]
 
@@ -393,6 +403,7 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
         : item.title;
       
       const tooltipText = getTooltipText(item);
+      const hasNewBadge = 'isNew' in item && item.isNew;
       
       return (
         <SidebarMenuItem key={item.title}>
@@ -408,7 +419,14 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
                 className="flex items-center gap-2 w-full text-left"
               >
                 <item.icon />
-                <span>{displayTitle}</span>
+                <span className="flex items-center gap-2 flex-1">
+                  {displayTitle}
+                  {hasNewBadge ? (
+                    <Badge variant="secondary" className="ml-auto text-xs px-1.5 py-0">
+                      New
+                    </Badge>
+                  ) : null}
+                </span>
               </button>
             ) : (
               <Link 
@@ -417,7 +435,14 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
                 data-testid={`link-${displayTitle.toLowerCase().replace(/\s+/g, '-')}`}
               >
                 <item.icon />
-                <span>{displayTitle}</span>
+                <span className="flex items-center gap-2 flex-1">
+                  {displayTitle}
+                  {hasNewBadge ? (
+                    <Badge variant="secondary" className="ml-auto text-xs px-1.5 py-0">
+                      New
+                    </Badge>
+                  ) : null}
+                </span>
               </Link>
             )}
           </SidebarMenuButton>
