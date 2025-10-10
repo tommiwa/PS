@@ -791,26 +791,26 @@ export default function AdminLockerManagement() {
           <Tooltip>
             <TooltipTrigger asChild>
               <Card 
-                data-testid="card-bci-managed-available" 
+                data-testid="card-waiting-list" 
                 className="hover-elevate cursor-pointer active-elevate-2"
-                onClick={() => setActiveTab("bci-available")}
+                onClick={() => setActiveTab("waitlist")}
               >
                 <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Available BCI Managed Lockers</CardTitle>
+                  <CardTitle className="text-sm font-medium">Waiting List</CardTitle>
                   <div className="rounded-full !border-2 !border-orange-400 p-2">
-                    <Sparkles className="h-4 w-4 text-orange-600" />
+                    <Clock className="h-4 w-4 text-orange-600" />
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold" data-testid="stat-bci-managed-available">
-                    {availableBciLockers.length}
+                  <div className="text-2xl font-bold" data-testid="stat-waiting-list">
+                    {lockerWaitlist.length}
                   </div>
-                  <p className="text-xs text-orange-600">Unassigned BCI lockers</p>
+                  <p className="text-xs text-orange-600">Pending requests</p>
                 </CardContent>
               </Card>
             </TooltipTrigger>
             <TooltipContent>
-              Click to view available BCI managed lockers
+              Click to view locker waiting list
             </TooltipContent>
           </Tooltip>
         </div>
