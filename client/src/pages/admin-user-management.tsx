@@ -322,7 +322,8 @@ export default function AdminUserManagement() {
     role: user.roles?.[0] || "renter", // Primary role for display
     roles: user.roles || ["renter"], // Keep full roles array for filtering
     spotsOwned: user.spotsOwned || 0, // Real count from backend
-    bookingsCount: user.bookingsCount || 0, // Real count from backend  
+    renterBookingsCount: user.renterBookingsCount || 0, // Bookings as renter
+    ownerBookingsCount: user.ownerBookingsCount || 0, // Bookings as owner
     status: user.status || "active",
     lastLogin: user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : "Never",
     memberSince: user.memberSince ? new Date(user.memberSince).toLocaleDateString() : "Unknown",

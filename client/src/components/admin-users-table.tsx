@@ -21,7 +21,8 @@ export interface AdminUser {
   department: string
   role: "admin" | "owner" | "renter"
   spotsOwned: number
-  bookingsCount: number
+  renterBookingsCount: number
+  ownerBookingsCount: number
   status: "active" | "inactive"
   lastLogin: string
   memberSince: string
@@ -391,12 +392,20 @@ export function AdminUsersTable({
                   {t("admin.spots")}
                 </SortableTableHeader>
                 <SortableTableHeader
-                  column="bookingsCount"
+                  column="renterBookingsCount"
                   currentSortColumn={sortState.column}
                   currentSortDirection={sortState.direction}
                   onSort={handleSort}
                 >
-                  {t("admin.bookings")}
+                  Renter Bookings
+                </SortableTableHeader>
+                <SortableTableHeader
+                  column="ownerBookingsCount"
+                  currentSortColumn={sortState.column}
+                  currentSortDirection={sortState.direction}
+                  onSort={handleSort}
+                >
+                  Owner Bookings
                 </SortableTableHeader>
                 <SortableTableHeader
                   column="status"
@@ -444,7 +453,13 @@ export function AdminUsersTable({
                   <TableCell>
                     <div className="flex items-center gap-1">
                       <Clock className="h-4 w-4 text-muted-foreground" />
-                      {user.bookingsCount}
+                      {user.renterBookingsCount}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      {user.ownerBookingsCount}
                     </div>
                   </TableCell>
                   <TableCell>{getStatusBadge(user.status)}</TableCell>

@@ -3117,9 +3117,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate real spots and bookings counts for each user
       const usersWithCounts = filteredUsers.map(user => {
         const userSpots = allSpots.filter(spot => spot.ownerId === user.id);
-        const userBookings = allBookings.filter(booking => 
-          booking.renterId === user.id || booking.ownerId === user.id
-        );
+        
+        // Separate booking counts for renter vs owner
+        const renterBookings = allBookings.filter(booking => booking.renterId === user.id);
+        const ownerBookings = allBookings.filter(booking => booking.ownerId === user.id);
         
         // Get department name from department ID
         const departmentName = user.departmentId ? departmentMap.get(user.departmentId) : undefined;
@@ -3136,7 +3137,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           roles: user.roles,
           status: user.status || "active",
           spotsOwned: userSpots.length,
-          bookingsCount: userBookings.length,
+          renterBookingsCount: renterBookings.length,
+          ownerBookingsCount: ownerBookings.length,
           lastLogin: user.lastLogin ? (user.lastLogin instanceof Date ? user.lastLogin.toISOString() : user.lastLogin) : new Date().toISOString(),
           memberSince: user.memberSince || (user.createdAt ? (user.createdAt instanceof Date ? user.createdAt.toISOString() : user.createdAt) : new Date().toISOString())
         };
