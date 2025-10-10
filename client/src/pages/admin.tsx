@@ -197,8 +197,8 @@ export default function Admin() {
       // Add Revenue Breakdown
       if (revenueQuery.data?.revenueBreakdown) {
         allData.push({ section: "REVENUE BREAKDOWN" });
-        allData.push({ category: "Spot Owner Earnings", amount: `$${revenueQuery.data.revenueBreakdown.ownerEarnings.toLocaleString()}` });
-        allData.push({ category: "BCI Revenue", amount: `$${revenueQuery.data.revenueBreakdown.platformFees.toLocaleString()}` });
+        allData.push({ category: "BCI Earnings", amount: `$${revenueQuery.data.revenueBreakdown.bciRevenue.toLocaleString()}` });
+        allData.push({ category: "Owner Earnings", amount: `$${revenueQuery.data.revenueBreakdown.ownerEarnings.toLocaleString()}` });
         allData.push({});
       }
 
@@ -852,10 +852,8 @@ export default function Admin() {
                       <PieChart width={533} height={300}>
                         <Pie
                           data={[
-                            { name: t('analytics.ownerEarnings'), value: revenueQuery.data?.revenueBreakdown.ownerEarnings || 0, color: 'hsl(var(--chart-1))' },
-                            { name: t('analytics.platformFees'), value: revenueQuery.data?.revenueBreakdown.platformFees || 0, color: 'hsl(var(--chart-2))' },
-                            { name: t('analytics.processingFees'), value: revenueQuery.data?.revenueBreakdown.processingFees || 0, color: 'hsl(var(--chart-3))' },
-                            { name: t('analytics.otherRevenue'), value: revenueQuery.data?.revenueBreakdown.otherRevenue || 0, color: 'hsl(var(--chart-4))' }
+                            { name: 'BCI Earnings', value: revenueQuery.data?.revenueBreakdown.bciRevenue || 0, color: 'hsl(var(--chart-2))' },
+                            { name: 'Owner Earnings', value: revenueQuery.data?.revenueBreakdown.ownerEarnings || 0, color: 'hsl(var(--chart-1))' }
                           ]}
                           cx="50%"
                           cy="50%"
@@ -866,10 +864,8 @@ export default function Admin() {
                           dataKey="value"
                         >
                           {[
-                            { name: t('analytics.ownerEarnings'), value: revenueQuery.data?.revenueBreakdown.ownerEarnings || 0, color: 'hsl(var(--chart-1))' },
-                            { name: t('analytics.platformFees'), value: revenueQuery.data?.revenueBreakdown.platformFees || 0, color: 'hsl(var(--chart-2))' },
-                            { name: t('analytics.processingFees'), value: revenueQuery.data?.revenueBreakdown.processingFees || 0, color: 'hsl(var(--chart-3))' },
-                            { name: t('analytics.otherRevenue'), value: revenueQuery.data?.revenueBreakdown.otherRevenue || 0, color: 'hsl(var(--chart-4))' }
+                            { name: 'BCI Earnings', value: revenueQuery.data?.revenueBreakdown.bciRevenue || 0, color: 'hsl(var(--chart-2))' },
+                            { name: 'Owner Earnings', value: revenueQuery.data?.revenueBreakdown.ownerEarnings || 0, color: 'hsl(var(--chart-1))' }
                           ].map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
                           ))}
