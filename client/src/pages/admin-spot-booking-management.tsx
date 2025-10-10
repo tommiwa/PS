@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react"
 import { useQuery, useMutation } from "@tanstack/react-query"
-import { useLocation, useSearch } from "wouter"
+import { useLocation, useSearch, Link } from "wouter"
 import { queryClient, apiRequest } from "@/lib/queryClient"
 import { useToast } from "@/hooks/use-toast"
 import { useConfirm, confirmations } from "@/hooks/use-confirm"
@@ -1249,6 +1249,12 @@ export default function AdminSpotBookingManagement() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Link href="/admin/reports">
+            <Button variant="outline" size="sm" data-testid="link-view-reports-booking">
+              <FileText className="w-4 h-4 mr-2" />
+              View Reports
+            </Button>
+          </Link>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button 

@@ -46,6 +46,14 @@ import {
   auditResponseMiddleware, 
   auditErrorMiddleware 
 } from "./audit-middleware";
+import {
+  getReportOverview,
+  getReportUtilization,
+  getReportRevenue,
+  getReportUserCompliance,
+  getReportWaitlistPerformance
+} from "./reports-controller";
+import { sendReportEmail, isEmailServiceAvailable } from "./report-service";
 
 // Zod schemas for admin endpoints
 const toggleBookabilitySchema = z.object({
@@ -4977,6 +4985,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Failed to create sample bookings:', error);
       res.status(500).json({ error: "Failed to create sample bookings" });
+    }
+  });
+
+  // Reports Hub API endpoints (Admin only)
+  app.get("/api/admin/reports/overview", requireAdmin, getReportOverview);
+  app.get("/api/admin/reports/utilization", requireAdmin, getReportUtilization);
+  app.get("/api/admin/reports/revenue", requireAdmin, getReportRevenue);
+  app.get("/api/admin/reports/user-compliance", requireAdmin, getReportUserCompliance);
+  app.get("/api/admin/reports/waitlist-performance", requireAdmin, getReportWaitlistPerformance);
+  
+  // Email report endpoint
+  app.post("/api/admin/reports/:type/email", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { type } = req.params;
+      const { recipients, from, to, scope } = req.body;
+      
+      // Validate report type
+      const validTypes = ['overview', 'utilization', 'revenue', 'user-compliance', 'waitlist-performance'];
+      if (!validTypes.includes(type)) {
+        return res.status(400).json({ error: "Invalid report type" });
+      }
+      
+      // Validate recipients
+      if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+        return res.status(400).json({ error: "Recipients array is required" });
+      }
+      
+      // Check if email service is available
+      if (!isEmailServiceAvailable()) {
+        return res.status(503).json({ 
+          error: "Email service unavailable",
+          message: "SendGrid is not configured. Please contact your administrator to set up email delivery."
+        });
+      }
+      
+      // Fetch report data based on type
+      let reportData: any;
+      const dateRange = { 
+        from: from || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        to: to || new Date().toISOString().split('T')[0]
+      };
+      const reportScope = scope || 'all';
+      
+      // Call the appropriate controller to get data
+      const mockReq = { query: { from: dateRange.from, to: dateRange.to, scope: reportScope } } as any;
+      const mockRes = {
+        json: (data: any) => { reportData = data; },
+        status: (code: number) => ({
+          json: (data: any) => { throw new Error(data.error || 'Failed to fetch report data'); }
+        })
+      } as any;
+      
+      switch (type) {
+        case 'overview':
+          await getReportOverview(mockReq, mockRes);
+          break;
+        case 'utilization':
+          await getReportUtilization(mockReq, mockRes);
+          break;
+        case 'revenue':
+          await getReportRevenue(mockReq, mockRes);
+          break;
+        case 'user-compliance':
+          await getReportUserCompliance(mockReq, mockRes);
+          break;
+        case 'waitlist-performance':
+          await getReportWaitlistPerformance(mockReq, mockRes);
+          break;
+      }
+      
+      // Send email with report
+      const result = await sendReportEmail(
+        type as any,
+        reportData,
+        recipients,
+        dateRange,
+        reportScope
+      );
+      
+      if (result.success) {
+        res.json({ success: true, message: result.message });
+      } else {
+        res.status(500).json({ error: result.message });
+      }
+    } catch (error) {
+      console.error("Error sending report email:", error);
+      res.status(500).json({ error: "Failed to send report email" });
     }
   });
 

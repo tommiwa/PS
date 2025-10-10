@@ -857,3 +857,172 @@ export interface PendingPaymentData {
   daysOverdue: number;
   status: BookingStatus;
 }
+
+// Reports Hub API Response Types
+export interface ReportDateRange {
+  from: string;
+  to: string;
+}
+
+export interface ReportOverviewResponse {
+  summary: {
+    totalSpots: number;
+    activeBookings: number;
+    totalRevenue: number;
+    activeUsers: number;
+    waitlistCount: number;
+    utilizationRate: number;
+  };
+  quickStats: {
+    todayBookings: number;
+    thisWeekRevenue: number;
+    pendingPayments: number;
+    activeDisputes: number;
+  };
+  generatedAt: string;
+  dateRange: ReportDateRange;
+  scope: 'all' | 'bci';
+}
+
+export interface ReportUtilizationResponse {
+  spotUsage: {
+    totalSpots: number;
+    allocatedSpots: number;
+    unallocatedSpots: number;
+    bookableSpots: number;
+    utilizationRate: number;
+  };
+  locationBreakdown: {
+    location: string;
+    totalSpots: number;
+    occupiedSpots: number;
+    occupancyRate: number;
+    revenue: number;
+  }[];
+  spotTypeBreakdown: {
+    type: string;
+    count: number;
+    bookedCount: number;
+    utilizationRate: number;
+  }[];
+  dailyOccupancy: {
+    date: string;
+    occupiedSpots: number;
+    totalSpots: number;
+    occupancyRate: number;
+  }[];
+  generatedAt: string;
+  dateRange: ReportDateRange;
+  scope: 'all' | 'bci';
+}
+
+export interface ReportRevenueResponse {
+  summary: {
+    totalRevenue: number;
+    ownerEarnings: number;
+    bciRevenue: number;
+    averageBookingValue: number;
+    totalBookings: number;
+  };
+  monthlyTrends: {
+    month: string;
+    revenue: number;
+    bookings: number;
+    averageValue: number;
+  }[];
+  revenueByLocation: {
+    location: string;
+    revenue: number;
+    bookings: number;
+    averageRate: number;
+  }[];
+  revenueBySpotType: {
+    type: string;
+    revenue: number;
+    bookings: number;
+  }[];
+  topEarners: {
+    ownerId: string;
+    ownerName: string;
+    totalEarnings: number;
+    bookingsCount: number;
+  }[];
+  generatedAt: string;
+  dateRange: ReportDateRange;
+  scope: 'all' | 'bci';
+}
+
+export interface ReportUserComplianceResponse {
+  userActivity: {
+    totalUsers: number;
+    activeUsers: number;
+    newRegistrations: number;
+    suspendedUsers: number;
+    deletedUsers: number;
+  };
+  roleDistribution: {
+    role: string;
+    count: number;
+    percentage: number;
+  }[];
+  departmentBreakdown: {
+    department: string;
+    userCount: number;
+    activeUsers: number;
+    spotsOwned: number;
+    bookingsMade: number;
+  }[];
+  userEngagement: {
+    date: string;
+    activeUsers: number;
+    newSignups: number;
+    bookingsMade: number;
+  }[];
+  termsCompliance: {
+    acceptedLatestTerms: number;
+    pendingAcceptance: number;
+    complianceRate: number;
+  };
+  generatedAt: string;
+  dateRange: ReportDateRange;
+  scope: 'all' | 'bci';
+}
+
+export interface ReportWaitlistPerformanceResponse {
+  summary: {
+    totalRequests: number;
+    activeRequests: number;
+    assignedRequests: number;
+    cancelledRequests: number;
+    averageWaitTime: number;
+    fulfillmentRate: number;
+  };
+  priorityBreakdown: {
+    priority: number;
+    priorityLabel: string;
+    count: number;
+    averageWaitDays: number;
+    fulfillmentRate: number;
+  }[];
+  spotTypePreferences: {
+    spotType: string;
+    requestCount: number;
+    fulfilledCount: number;
+    fulfillmentRate: number;
+  }[];
+  departmentRequests: {
+    department: string;
+    activeRequests: number;
+    assignedRequests: number;
+    averageWaitDays: number;
+  }[];
+  waitTimeTrends: {
+    date: string;
+    newRequests: number;
+    fulfilled: number;
+    averageWaitDays: number;
+  }[];
+  generatedAt: string;
+  dateRange: ReportDateRange;
+  scope: 'all' | 'bci';
+}

@@ -34,6 +34,7 @@ import AdminSpotBookingManagement from "@/pages/admin-spot-booking-management";
 import AdminAudits from "@/pages/admin-audits";
 import AdminParkingManagement from "@/pages/admin-parking-management";
 import AdminDataManagement from "@/pages/admin-data-management";
+import AdminReportsPage from "@/pages/admin-reports";
 import Login from "@/pages/login";
 import Terms from "@/pages/terms";
 import TermsConsent from "@/pages/terms-consent";
@@ -288,6 +289,13 @@ function useNavigationDataRefresh() {
         '/api/admin/analytics-usage'
       ],
       '/admin/audits': ['/api/admin/audit-logs'],
+      '/admin/reports': [
+        '/api/admin/reports/overview',
+        '/api/admin/reports/utilization',
+        '/api/admin/reports/revenue',
+        '/api/admin/reports/user-compliance',
+        '/api/admin/reports/waitlist-performance'
+      ],
       '/dashboard': ['/api/admin/users', '/api/admin/all-spots', '/api/admin/analytics-overview'],
       '/my-bookings': ['/api/bookings', '/api/my-spots'],
       '/my-spots': ['/api/my-spots'],
@@ -440,6 +448,7 @@ function AuthenticatedApp() {
               <Route path="/admin/analytics" component={AdminAnalytics} />
               <Route path="/admin/audits" component={AdminAudits} />
               <Route path="/admin/data-management" component={AdminDataManagement} />
+              <Route path="/admin/reports" component={AdminReportsPage} />
               
               {/* Fallback to 404 */}
               <Route path="(.*)" component={NotFound} />

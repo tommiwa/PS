@@ -1,0 +1,716 @@
+import type { Request, Response } from "express";
+import { z } from "zod";
+import { storage } from "./storage";
+import type {
+  ReportOverviewResponse,
+  ReportUtilizationResponse,
+  ReportRevenueResponse,
+  ReportUserComplianceResponse,
+  ReportWaitlistPerformanceResponse,
+  ReportDateRange
+} from "@shared/schema";
+
+// Zod schema for report query parameters
+const reportQuerySchema = z.object({
+  from: z.string().optional().refine(val => !val || !isNaN(Date.parse(val)), "Invalid from date"),
+  to: z.string().optional().refine(val => !val || !isNaN(Date.parse(val)), "Invalid to date"),
+  scope: z.enum(['all', 'bci']).optional().default('all')
+});
+
+// Helper function to calculate date ranges
+function calculateDateRange(from?: string, to?: string): ReportDateRange {
+  const toDate = to ? new Date(to) : new Date();
+  const fromDate = from ? new Date(from) : new Date(toDate.getTime() - 30 * 24 * 60 * 60 * 1000); // Default 30 days
+  
+  return {
+    from: fromDate.toISOString().split('T')[0],
+    to: toDate.toISOString().split('T')[0]
+  };
+}
+
+// Helper to filter by scope
+function filterByScope<T extends { isBciManaged?: boolean }>(items: T[], scope: 'all' | 'bci'): T[] {
+  if (scope === 'bci') {
+    return items.filter(item => item.isBciManaged === true);
+  }
+  return items;
+}
+
+// GET /api/admin/reports/overview - Summary metrics and quick links
+export async function getReportOverview(req: Request, res: Response) {
+  try {
+    const { from, to, scope } = reportQuerySchema.parse(req.query);
+    const dateRange = calculateDateRange(from, to);
+    
+    // Fetch all required data
+    const [allSpots, allBookings, allUsers, waitingList] = await Promise.all([
+      storage.getAllParkingSpots(),
+      storage.getAllBookings(),
+      storage.getAllUsers(),
+      storage.getAllWaitingList()
+    ]);
+    
+    // Filter by scope
+    const spots = filterByScope(allSpots, scope);
+    const bookings = allBookings.filter((b: any) => {
+      const spot = allSpots.find(s => s.id === b.spotId);
+      if (scope === 'bci') {
+        return spot?.isBciManaged === true;
+      }
+      return true; // 'all' scope includes all bookings
+    });
+    
+    // Filter bookings by date range
+    const filteredBookings = bookings.filter((b: any) => {
+      const bookingDate = new Date(b.bookingDate);
+      return bookingDate >= new Date(dateRange.from) && bookingDate <= new Date(dateRange.to);
+    });
+    
+    // Calculate metrics
+    const activeBookings = filteredBookings.filter((b: any) => 
+      b.status === 'confirmed' || b.status === 'pending'
+    ).length;
+    
+    const totalRevenue = filteredBookings.reduce((sum: number, b: any) => 
+      sum + (Number(b.dailyRate) || 0), 0
+    );
+    
+    const activeUsers = allUsers.filter(u => u.status === 'active').length;
+    const waitlistCount = waitingList.filter(w => w.status === 'active').length;
+    
+    const bookableSpots = spots.filter(s => s.isBookable && s.isActive).length;
+    const utilizationRate = bookableSpots > 0 
+      ? (activeBookings / bookableSpots) * 100 
+      : 0;
+    
+    // Quick stats
+    const today = new Date().toISOString().split('T')[0];
+    const todayBookings = filteredBookings.filter((b: any) => 
+      b.bookingDate === today
+    ).length;
+    
+    const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const thisWeekRevenue = filteredBookings
+      .filter((b: any) => b.bookingDate >= oneWeekAgo)
+      .reduce((sum: number, b: any) => sum + (Number(b.dailyRate) || 0), 0);
+    
+    const pendingPayments = filteredBookings.filter((b: any) => 
+      !b.paymentReceived && b.status === 'confirmed'
+    ).length;
+    
+    const disputes = await storage.getAllDisputes?.() || [];
+    const activeDisputes = disputes.filter((d: any) => d.status === 'open' || d.status === 'investigating').length;
+    
+    const response: ReportOverviewResponse = {
+      summary: {
+        totalSpots: spots.length,
+        activeBookings,
+        totalRevenue,
+        activeUsers,
+        waitlistCount,
+        utilizationRate: Math.round(utilizationRate * 100) / 100
+      },
+      quickStats: {
+        todayBookings,
+        thisWeekRevenue,
+        pendingPayments,
+        activeDisputes
+      },
+      generatedAt: new Date().toISOString(),
+      dateRange,
+      scope
+    };
+    
+    res.json(response);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: "Invalid query parameters", details: error.errors });
+    }
+    console.error("Error generating overview report:", error);
+    res.status(500).json({ error: "Failed to generate overview report" });
+  }
+}
+
+// GET /api/admin/reports/utilization - Parking spot usage, occupancy rates, location analytics
+export async function getReportUtilization(req: Request, res: Response) {
+  try {
+    const { from, to, scope } = reportQuerySchema.parse(req.query);
+    const dateRange = calculateDateRange(from, to);
+    
+    // Fetch required data
+    const [allSpots, allBookings, locations, spotTypes] = await Promise.all([
+      storage.getAllParkingSpots(),
+      storage.getAllBookings(),
+      storage.getAllLocations?.() || [],
+      storage.getAllSpotTypes?.() || []
+    ]);
+    
+    // Filter by scope
+    const spots = filterByScope(allSpots, scope);
+    
+    // Filter bookings by date range and scope
+    const bookings = allBookings.filter((b: any) => {
+      const spot = allSpots.find(s => s.id === b.spotId);
+      const bookingDate = new Date(b.bookingDate);
+      const scopeMatch = scope === 'all' || spot?.isBciManaged === true;
+      const dateMatch = bookingDate >= new Date(dateRange.from) && bookingDate <= new Date(dateRange.to);
+      return scopeMatch && dateMatch;
+    });
+    
+    // Calculate spot usage
+    const allocatedSpots = spots.filter(s => s.ownerId).length;
+    const unallocatedSpots = spots.filter(s => !s.ownerId).length;
+    const bookableSpots = spots.filter(s => s.isBookable && s.isActive).length;
+    const utilizationRate = bookableSpots > 0 
+      ? (bookings.length / bookableSpots) * 100 
+      : 0;
+    
+    // Location breakdown
+    const locationBreakdown = locations.map((loc: any) => {
+      const locationSpots = spots.filter(s => s.locationId === loc.id);
+      const locationBookings = bookings.filter((b: any) => {
+        const spot = spots.find(s => s.id === b.spotId);
+        return spot?.locationId === loc.id;
+      });
+      
+      const totalSpots = locationSpots.length;
+      const occupiedSpots = locationBookings.length;
+      const revenue = locationBookings.reduce((sum: number, b: any) => 
+        sum + (Number(b.dailyRate) || 0), 0
+      );
+      
+      return {
+        location: `${loc.office} - ${loc.building}, ${loc.level}`,
+        totalSpots,
+        occupiedSpots,
+        occupancyRate: totalSpots > 0 ? (occupiedSpots / totalSpots) * 100 : 0,
+        revenue
+      };
+    });
+    
+    // Spot type breakdown
+    const spotTypeBreakdown = spotTypes.map((type: any) => {
+      const typeSpots = spots.filter(s => s.spotTypeId === type.id);
+      const typeBookings = bookings.filter((b: any) => {
+        const spot = spots.find(s => s.id === b.spotId);
+        return spot?.spotTypeId === type.id;
+      });
+      
+      return {
+        type: type.name,
+        count: typeSpots.length,
+        bookedCount: typeBookings.length,
+        utilizationRate: typeSpots.length > 0 ? (typeBookings.length / typeSpots.length) * 100 : 0
+      };
+    });
+    
+    // Daily occupancy trends
+    const dailyOccupancy: any[] = [];
+    const startDate = new Date(dateRange.from);
+    const endDate = new Date(dateRange.to);
+    
+    for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
+      const dateStr = date.toISOString().split('T')[0];
+      const dayBookings = bookings.filter((b: any) => b.bookingDate === dateStr);
+      
+      dailyOccupancy.push({
+        date: dateStr,
+        occupiedSpots: dayBookings.length,
+        totalSpots: bookableSpots,
+        occupancyRate: bookableSpots > 0 ? (dayBookings.length / bookableSpots) * 100 : 0
+      });
+    }
+    
+    const response: ReportUtilizationResponse = {
+      spotUsage: {
+        totalSpots: spots.length,
+        allocatedSpots,
+        unallocatedSpots,
+        bookableSpots,
+        utilizationRate: Math.round(utilizationRate * 100) / 100
+      },
+      locationBreakdown,
+      spotTypeBreakdown,
+      dailyOccupancy,
+      generatedAt: new Date().toISOString(),
+      dateRange,
+      scope
+    };
+    
+    res.json(response);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: "Invalid query parameters", details: error.errors });
+    }
+    console.error("Error generating utilization report:", error);
+    res.status(500).json({ error: "Failed to generate utilization report" });
+  }
+}
+
+// GET /api/admin/reports/revenue - Financial analytics, booking trends, revenue breakdown
+export async function getReportRevenue(req: Request, res: Response) {
+  try {
+    const { from, to, scope } = reportQuerySchema.parse(req.query);
+    const dateRange = calculateDateRange(from, to);
+    
+    // Fetch required data
+    const [allSpots, allBookings, locations, spotTypes, allUsers] = await Promise.all([
+      storage.getAllParkingSpots(),
+      storage.getAllBookings(),
+      storage.getAllLocations?.() || [],
+      storage.getAllSpotTypes?.() || [],
+      storage.getAllUsers()
+    ]);
+    
+    // Filter bookings by date range and scope
+    const bookings = allBookings.filter((b: any) => {
+      const spot = allSpots.find(s => s.id === b.spotId);
+      const bookingDate = new Date(b.bookingDate);
+      const scopeMatch = scope === 'all' || spot?.isBciManaged === true;
+      const dateMatch = bookingDate >= new Date(dateRange.from) && bookingDate <= new Date(dateRange.to);
+      return scopeMatch && dateMatch;
+    });
+    
+    // Calculate summary
+    const totalRevenue = bookings.reduce((sum: number, b: any) => 
+      sum + (Number(b.dailyRate) || 0), 0
+    );
+    
+    const ownerEarnings = totalRevenue * 0.85; // 85% to owner
+    const bciRevenue = totalRevenue * 0.15; // 15% to BCI
+    const averageBookingValue = bookings.length > 0 ? totalRevenue / bookings.length : 0;
+    
+    // Monthly trends
+    const monthlyMap = new Map<string, { revenue: number; bookings: number }>();
+    bookings.forEach((b: any) => {
+      const date = new Date(b.bookingDate);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      
+      if (!monthlyMap.has(monthKey)) {
+        monthlyMap.set(monthKey, { revenue: 0, bookings: 0 });
+      }
+      
+      const data = monthlyMap.get(monthKey)!;
+      data.revenue += Number(b.dailyRate) || 0;
+      data.bookings += 1;
+    });
+    
+    const monthlyTrends = Array.from(monthlyMap.entries())
+      .map(([month, data]) => ({
+        month,
+        revenue: data.revenue,
+        bookings: data.bookings,
+        averageValue: data.bookings > 0 ? data.revenue / data.bookings : 0
+      }))
+      .sort((a, b) => a.month.localeCompare(b.month));
+    
+    // Revenue by location
+    const revenueByLocation = locations.map((loc: any) => {
+      const locationBookings = bookings.filter((b: any) => {
+        const spot = allSpots.find(s => s.id === b.spotId);
+        return spot?.locationId === loc.id;
+      });
+      
+      const revenue = locationBookings.reduce((sum: number, b: any) => 
+        sum + (Number(b.dailyRate) || 0), 0
+      );
+      
+      const averageRate = locationBookings.length > 0 
+        ? revenue / locationBookings.length 
+        : 0;
+      
+      return {
+        location: `${loc.office} - ${loc.building}, ${loc.level}`,
+        revenue,
+        bookings: locationBookings.length,
+        averageRate
+      };
+    }).filter(r => r.bookings > 0);
+    
+    // Revenue by spot type
+    const revenueBySpotType = spotTypes.map((type: any) => {
+      const typeBookings = bookings.filter((b: any) => {
+        const spot = allSpots.find(s => s.id === b.spotId);
+        return spot?.spotTypeId === type.id;
+      });
+      
+      const revenue = typeBookings.reduce((sum: number, b: any) => 
+        sum + (Number(b.dailyRate) || 0), 0
+      );
+      
+      return {
+        type: type.name,
+        revenue,
+        bookings: typeBookings.length
+      };
+    }).filter(r => r.bookings > 0);
+    
+    // Top earners
+    const ownerEarningsMap = new Map<string, { name: string; earnings: number; count: number }>();
+    bookings.forEach((b: any) => {
+      const spot = allSpots.find(s => s.id === b.spotId);
+      if (spot?.ownerId) {
+        const owner = allUsers.find(u => u.id === spot.ownerId);
+        const ownerName = owner ? `${owner.firstName} ${owner.lastName}` : 'Unknown';
+        
+        if (!ownerEarningsMap.has(spot.ownerId)) {
+          ownerEarningsMap.set(spot.ownerId, { name: ownerName, earnings: 0, count: 0 });
+        }
+        
+        const data = ownerEarningsMap.get(spot.ownerId)!;
+        data.earnings += (Number(b.dailyRate) || 0) * 0.85; // Owner gets 85%
+        data.count += 1;
+      }
+    });
+    
+    const topEarners = Array.from(ownerEarningsMap.entries())
+      .map(([ownerId, data]) => ({
+        ownerId,
+        ownerName: data.name,
+        totalEarnings: data.earnings,
+        bookingsCount: data.count
+      }))
+      .sort((a, b) => b.totalEarnings - a.totalEarnings)
+      .slice(0, 10); // Top 10 earners
+    
+    const response: ReportRevenueResponse = {
+      summary: {
+        totalRevenue,
+        ownerEarnings,
+        bciRevenue,
+        averageBookingValue,
+        totalBookings: bookings.length
+      },
+      monthlyTrends,
+      revenueByLocation,
+      revenueBySpotType,
+      topEarners,
+      generatedAt: new Date().toISOString(),
+      dateRange,
+      scope
+    };
+    
+    res.json(response);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: "Invalid query parameters", details: error.errors });
+    }
+    console.error("Error generating revenue report:", error);
+    res.status(500).json({ error: "Failed to generate revenue report" });
+  }
+}
+
+// GET /api/admin/reports/user-compliance - User activity, compliance metrics
+export async function getReportUserCompliance(req: Request, res: Response) {
+  try {
+    const { from, to, scope } = reportQuerySchema.parse(req.query);
+    const dateRange = calculateDateRange(from, to);
+    
+    // Fetch required data
+    const [allUsers, allSpots, allBookings, departments, termsVersions] = await Promise.all([
+      storage.getAllUsers(),
+      storage.getAllParkingSpots(),
+      storage.getAllBookings(),
+      storage.getAllDepartments?.() || [],
+      storage.getAllTermsVersions?.() || []
+    ]);
+    
+    // Filter users created in date range
+    const usersInRange = allUsers.filter(u => {
+      const createdDate = new Date(u.createdAt || '');
+      return createdDate >= new Date(dateRange.from) && createdDate <= new Date(dateRange.to);
+    });
+    
+    // User activity summary
+    const totalUsers = allUsers.length;
+    const activeUsers = allUsers.filter(u => u.status === 'active').length;
+    const newRegistrations = usersInRange.length;
+    const suspendedUsers = allUsers.filter(u => u.status === 'suspended').length;
+    const deletedUsers = allUsers.filter(u => u.deletedAt).length;
+    
+    // Role distribution
+    const roleMap = new Map<string, number>();
+    allUsers.forEach(u => {
+      u.roles?.forEach(role => {
+        roleMap.set(role, (roleMap.get(role) || 0) + 1);
+      });
+    });
+    
+    const roleDistribution = Array.from(roleMap.entries()).map(([role, count]) => ({
+      role,
+      count,
+      percentage: (count / totalUsers) * 100
+    }));
+    
+    // Department breakdown
+    const departmentBreakdown = departments.map((dept: any) => {
+      const deptUsers = allUsers.filter(u => u.departmentId === dept.id);
+      const deptActiveUsers = deptUsers.filter(u => u.status === 'active');
+      const spotsOwned = allSpots.filter(s => 
+        deptUsers.some(u => u.id === s.ownerId)
+      ).length;
+      
+      const bookingsMade = allBookings.filter((b: any) => 
+        deptUsers.some(u => u.id === b.renterId)
+      ).length;
+      
+      return {
+        department: dept.name,
+        userCount: deptUsers.length,
+        activeUsers: deptActiveUsers.length,
+        spotsOwned,
+        bookingsMade
+      };
+    });
+    
+    // User engagement trends
+    const userEngagement: any[] = [];
+    const startDate = new Date(dateRange.from);
+    const endDate = new Date(dateRange.to);
+    
+    for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
+      const dateStr = date.toISOString().split('T')[0];
+      
+      const daySignups = allUsers.filter(u => {
+        const createdDate = new Date(u.createdAt || '');
+        return createdDate.toISOString().split('T')[0] === dateStr;
+      }).length;
+      
+      const dayBookings = allBookings.filter((b: any) => b.bookingDate === dateStr).length;
+      
+      const dayActiveUsers = allUsers.filter(u => {
+        const lastLogin = new Date(u.lastLogin || '');
+        return lastLogin.toISOString().split('T')[0] === dateStr;
+      }).length;
+      
+      userEngagement.push({
+        date: dateStr,
+        activeUsers: dayActiveUsers,
+        newSignups: daySignups,
+        bookingsMade: dayBookings
+      });
+    }
+    
+    // Terms compliance
+    const activeTerms = termsVersions.find((t: any) => t.isActive);
+    const acceptedLatestTerms = activeTerms 
+      ? allUsers.filter(u => u.acceptedTermsVersion === activeTerms.version).length
+      : 0;
+    const pendingAcceptance = activeTerms 
+      ? allUsers.filter(u => !u.acceptedTermsVersion || u.acceptedTermsVersion < activeTerms.version).length
+      : 0;
+    const complianceRate = totalUsers > 0 ? (acceptedLatestTerms / totalUsers) * 100 : 0;
+    
+    const response: ReportUserComplianceResponse = {
+      userActivity: {
+        totalUsers,
+        activeUsers,
+        newRegistrations,
+        suspendedUsers,
+        deletedUsers
+      },
+      roleDistribution,
+      departmentBreakdown,
+      userEngagement,
+      termsCompliance: {
+        acceptedLatestTerms,
+        pendingAcceptance,
+        complianceRate
+      },
+      generatedAt: new Date().toISOString(),
+      dateRange,
+      scope
+    };
+    
+    res.json(response);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: "Invalid query parameters", details: error.errors });
+    }
+    console.error("Error generating user compliance report:", error);
+    res.status(500).json({ error: "Failed to generate user compliance report" });
+  }
+}
+
+// GET /api/admin/reports/waitlist-performance - Waiting list analytics, performance metrics
+export async function getReportWaitlistPerformance(req: Request, res: Response) {
+  try {
+    const { from, to, scope } = reportQuerySchema.parse(req.query);
+    const dateRange = calculateDateRange(from, to);
+    
+    // Fetch required data
+    const [waitingList, allUsers, spotTypes, departments] = await Promise.all([
+      storage.getAllWaitingList(),
+      storage.getAllUsers(),
+      storage.getAllSpotTypes?.() || [],
+      storage.getAllDepartments?.() || []
+    ]);
+    
+    // Filter waitlist by date range
+    const filteredWaitlist = waitingList.filter(w => {
+      const enrolledDate = new Date(w.enrolledDate);
+      return enrolledDate >= new Date(dateRange.from) && enrolledDate <= new Date(dateRange.to);
+    });
+    
+    // Calculate summary
+    const totalRequests = filteredWaitlist.length;
+    const activeRequests = filteredWaitlist.filter(w => w.status === 'active').length;
+    const assignedRequests = filteredWaitlist.filter(w => w.status === 'assigned').length;
+    const cancelledRequests = filteredWaitlist.filter(w => w.status === 'cancelled').length;
+    
+    // Calculate average wait time
+    const assignedItems = filteredWaitlist.filter(w => w.status === 'assigned' && w.assignedDate);
+    const totalWaitDays = assignedItems.reduce((sum, w) => {
+      const enrolled = new Date(w.enrolledDate);
+      const assigned = new Date(w.assignedDate!);
+      const days = Math.floor((assigned.getTime() - enrolled.getTime()) / (1000 * 60 * 60 * 24));
+      return sum + days;
+    }, 0);
+    const averageWaitTime = assignedItems.length > 0 ? totalWaitDays / assignedItems.length : 0;
+    
+    const fulfillmentRate = totalRequests > 0 ? (assignedRequests / totalRequests) * 100 : 0;
+    
+    // Priority breakdown
+    const priorityBreakdown = [1, 2, 3].map(priority => {
+      const priorityItems = filteredWaitlist.filter(w => w.priority === priority);
+      const priorityAssigned = priorityItems.filter(w => w.status === 'assigned' && w.assignedDate);
+      
+      const priorityWaitDays = priorityAssigned.reduce((sum, w) => {
+        const enrolled = new Date(w.enrolledDate);
+        const assigned = new Date(w.assignedDate!);
+        const days = Math.floor((assigned.getTime() - enrolled.getTime()) / (1000 * 60 * 60 * 24));
+        return sum + days;
+      }, 0);
+      
+      const avgWaitDays = priorityAssigned.length > 0 ? priorityWaitDays / priorityAssigned.length : 0;
+      const priorityFulfillment = priorityItems.length > 0 
+        ? (priorityAssigned.length / priorityItems.length) * 100 
+        : 0;
+      
+      return {
+        priority,
+        priorityLabel: priority === 1 ? 'High' : priority === 2 ? 'Medium' : 'Low',
+        count: priorityItems.length,
+        averageWaitDays: Math.round(avgWaitDays),
+        fulfillmentRate: Math.round(priorityFulfillment * 100) / 100
+      };
+    });
+    
+    // Spot type preferences
+    const spotTypeMap = new Map<number, { name: string; requests: number; fulfilled: number }>();
+    filteredWaitlist.forEach(w => {
+      if (w.preferredSpotTypeId) {
+        const type = spotTypes.find((t: any) => t.id === w.preferredSpotTypeId);
+        const typeName = type?.name || 'Unknown';
+        
+        if (!spotTypeMap.has(w.preferredSpotTypeId)) {
+          spotTypeMap.set(w.preferredSpotTypeId, { name: typeName, requests: 0, fulfilled: 0 });
+        }
+        
+        const data = spotTypeMap.get(w.preferredSpotTypeId)!;
+        data.requests += 1;
+        if (w.status === 'assigned') data.fulfilled += 1;
+      }
+    });
+    
+    const spotTypePreferences = Array.from(spotTypeMap.entries()).map(([_, data]) => ({
+      spotType: data.name,
+      requestCount: data.requests,
+      fulfilledCount: data.fulfilled,
+      fulfillmentRate: data.requests > 0 ? (data.fulfilled / data.requests) * 100 : 0
+    }));
+    
+    // Department requests
+    const departmentRequests = departments.map((dept: any) => {
+      const deptWaitlist = filteredWaitlist.filter(w => {
+        const user = allUsers.find(u => u.id === w.userId);
+        return user?.departmentId === dept.id;
+      });
+      
+      const activeReqs = deptWaitlist.filter(w => w.status === 'active').length;
+      const assignedReqs = deptWaitlist.filter(w => w.status === 'assigned' && w.assignedDate);
+      
+      const deptWaitDays = assignedReqs.reduce((sum, w) => {
+        const enrolled = new Date(w.enrolledDate);
+        const assigned = new Date(w.assignedDate!);
+        const days = Math.floor((assigned.getTime() - enrolled.getTime()) / (1000 * 60 * 60 * 24));
+        return sum + days;
+      }, 0);
+      
+      const avgWaitDays = assignedReqs.length > 0 ? deptWaitDays / assignedReqs.length : 0;
+      
+      return {
+        department: dept.name,
+        activeRequests: activeReqs,
+        assignedRequests: assignedReqs.length,
+        averageWaitDays: Math.round(avgWaitDays)
+      };
+    }).filter(d => d.activeRequests > 0 || d.assignedRequests > 0);
+    
+    // Wait time trends
+    const waitTimeTrends: any[] = [];
+    const startDate = new Date(dateRange.from);
+    const endDate = new Date(dateRange.to);
+    
+    for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
+      const dateStr = date.toISOString().split('T')[0];
+      
+      const newReqs = filteredWaitlist.filter(w => {
+        const enrolled = new Date(w.enrolledDate);
+        return enrolled.toISOString().split('T')[0] === dateStr;
+      }).length;
+      
+      const fulfilled = filteredWaitlist.filter(w => {
+        const assigned = w.assignedDate ? new Date(w.assignedDate) : null;
+        return assigned && assigned.toISOString().split('T')[0] === dateStr;
+      }).length;
+      
+      const dayAssigned = filteredWaitlist.filter(w => {
+        const assigned = w.assignedDate ? new Date(w.assignedDate) : null;
+        return assigned && assigned.toISOString().split('T')[0] === dateStr;
+      });
+      
+      const dayWaitDays = dayAssigned.reduce((sum, w) => {
+        const enrolled = new Date(w.enrolledDate);
+        const assigned = new Date(w.assignedDate!);
+        const days = Math.floor((assigned.getTime() - enrolled.getTime()) / (1000 * 60 * 60 * 24));
+        return sum + days;
+      }, 0);
+      
+      const avgWaitDays = dayAssigned.length > 0 ? dayWaitDays / dayAssigned.length : 0;
+      
+      waitTimeTrends.push({
+        date: dateStr,
+        newRequests: newReqs,
+        fulfilled,
+        averageWaitDays: Math.round(avgWaitDays)
+      });
+    }
+    
+    const response: ReportWaitlistPerformanceResponse = {
+      summary: {
+        totalRequests,
+        activeRequests,
+        assignedRequests,
+        cancelledRequests,
+        averageWaitTime: Math.round(averageWaitTime),
+        fulfillmentRate: Math.round(fulfillmentRate * 100) / 100
+      },
+      priorityBreakdown,
+      spotTypePreferences,
+      departmentRequests,
+      waitTimeTrends,
+      generatedAt: new Date().toISOString(),
+      dateRange,
+      scope
+    };
+    
+    res.json(response);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: "Invalid query parameters", details: error.errors });
+    }
+    console.error("Error generating waitlist performance report:", error);
+    res.status(500).json({ error: "Failed to generate waitlist performance report" });
+  }
+}
