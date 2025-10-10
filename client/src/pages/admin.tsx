@@ -49,10 +49,14 @@ import type {
 import { useCardsVisibility } from "@/hooks/use-cards-visibility"
 import { useLanguage } from "@/hooks/use-language"
 
+// Define DashboardScope type
+type DashboardScope = 'all' | 'bci';
+
 export default function Admin() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const [dateRange, setDateRange] = useState("last-30-days")
+  const [scope, setScope] = useState<DashboardScope>('all')
   const { cardsVisible, toggleCards, setCardsVisible } = useCardsVisibility('analytics')
   const { t } = useLanguage()
   const { toast } = useToast()
@@ -331,14 +335,23 @@ export default function Admin() {
     }
   };
 
-  // Calculate system metrics
+  // Filter spots based on scope
+  const filteredSpots = scope === 'bci' 
+    ? allSpots.filter(spot => spot.isBciManaged) 
+    : allSpots;
+  
+  const filteredUnallocatedSpots = scope === 'bci'
+    ? unallocatedSpots.filter(spot => spot.isBciManaged)
+    : unallocatedSpots;
+
+  // Calculate system metrics based on filtered data
   const systemMetrics = {
     totalUsers: allUsers.length,
-    totalSpots: allSpots.length,
-    allocatedSpots: allSpots.length - unallocatedSpots.length,
-    availableSpots: unallocatedSpots.length,
-    utilizationRate: allSpots.length > 0 
-      ? Math.round(((allSpots.length - unallocatedSpots.length) / allSpots.length) * 100)
+    totalSpots: filteredSpots.length,
+    allocatedSpots: filteredSpots.length - filteredUnallocatedSpots.length,
+    availableSpots: filteredUnallocatedSpots.length,
+    utilizationRate: filteredSpots.length > 0 
+      ? Math.round(((filteredSpots.length - filteredUnallocatedSpots.length) / filteredSpots.length) * 100)
       : 0,
     activeWaitingList: activeWaitingList.length,
     totalWaitingList: allWaitingList.length,
@@ -558,6 +571,32 @@ export default function Admin() {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Scope Selector - BCI vs All Spots */}
+      <div className="bg-muted/50 rounded-lg p-4 border" data-testid="scope-selector">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex-1">
+            <h3 className="text-sm font-semibold mb-1">Viewing Context</h3>
+            <p className="text-xs text-muted-foreground">
+              {scope === 'bci' 
+                ? 'Showing metrics for BCI-managed parking spots only' 
+                : 'Showing metrics for all parking spots in the system'}
+            </p>
+          </div>
+          <Tabs value={scope} onValueChange={(value) => setScope(value as DashboardScope)} className="w-auto">
+            <TabsList className="grid w-[320px] grid-cols-2">
+              <TabsTrigger value="all" data-testid="scope-tab-all" className="gap-2">
+                <MapPin className="h-4 w-4" />
+                All Spots
+              </TabsTrigger>
+              <TabsTrigger value="bci" data-testid="scope-tab-bci" className="gap-2">
+                <Building className="h-4 w-4" />
+                BCI Managed Spots
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
       </div>
 

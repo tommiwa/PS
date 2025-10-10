@@ -63,6 +63,7 @@ Preferred communication style: Simple, everyday language.
 - **Notification System**: Real-time alerts via email and in-app notifications.
 - **Spot Listing Creation**: Owners can list spots with single day, period, or recurring options.
 - **Admin Dashboard Metrics**: Real-time, server-side calculated metrics for occupancy, revenue, registrations, monthly trends, usage patterns, top performers, and issue alerts.
+    - **Scope Filtering**: Toggle between "All Spots" and "BCI Managed Spots" to view metrics for all parking spots or only BCI-managed spots. Scope filter affects all dashboard metrics including total spots, allocated spots, available spots, and utilization rate.
 - **Parking Management Metrics**: Dynamic metrics for available spots, users waiting, average wait time, and total assigned.
 - **Spot Booking Management**: Five-tab interface (Booking Availability, Active Bookings, Pending Payments, Past Bookings, Recent Activity) with detailed views, filters, and actions. Tabs feature colorful icons for visual clarity (green calendar, blue checkmark, orange dollar, slate calendar, purple activity).
     - **Scope Filtering**: Toggle between "All Spots" and "BCI Managed Spots" to filter data across all tabs, analytics, and exports. Scope persists via URL query parameter for seamless navigation and bookmarking.
