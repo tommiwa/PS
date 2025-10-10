@@ -719,7 +719,7 @@ export default function AdminLockerManagement() {
               >
                 <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Lockers</CardTitle>
-                  <div className="rounded-full border-2 border-blue-400 p-2">
+                  <div className="rounded-full !border-2 !border-blue-400 p-2">
                     <Package className="h-4 w-4 text-blue-600" />
                   </div>
                 </CardHeader>
@@ -745,7 +745,7 @@ export default function AdminLockerManagement() {
               >
                 <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Available Lockers</CardTitle>
-                  <div className="rounded-full border-2 border-green-400 p-2">
+                  <div className="rounded-full !border-2 !border-green-400 p-2">
                     <Sparkles className="h-4 w-4 text-green-600" />
                   </div>
                 </CardHeader>
@@ -771,7 +771,7 @@ export default function AdminLockerManagement() {
               >
                 <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total BCI Managed Lockers</CardTitle>
-                  <div className="rounded-full border-2 border-purple-400 p-2">
+                  <div className="rounded-full !border-2 !border-purple-400 p-2">
                     <Building className="h-4 w-4 text-purple-600" />
                   </div>
                 </CardHeader>
@@ -797,7 +797,7 @@ export default function AdminLockerManagement() {
               >
                 <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Available BCI Managed Lockers</CardTitle>
-                  <div className="rounded-full border-2 border-orange-400 p-2">
+                  <div className="rounded-full !border-2 !border-orange-400 p-2">
                     <Sparkles className="h-4 w-4 text-orange-600" />
                   </div>
                 </CardHeader>
