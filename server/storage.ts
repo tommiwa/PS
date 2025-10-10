@@ -44,13 +44,16 @@ import {
   type SpotTypeTable,
   type InsertSpotType,
   type TermsVersion,
-  type InsertTermsVersion
+  type InsertTermsVersion,
+  type SpotAssignmentHistory,
+  type InsertSpotAssignmentHistory,
+  type SpotAssignmentHistoryWithDetails
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { auditDecorator } from "./audit-service";
 import { type IAuditStorage } from "./audit-storage";
 import { db } from "./db";
-import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, locations, spotTypesTable, termsVersions } from "@shared/schema";
+import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, locations, spotTypesTable, termsVersions, spotAssignmentHistory } from "@shared/schema";
 import { eq, or, ilike, asc, and, notExists, sql as sqlOp, count, desc, inArray } from "drizzle-orm";
 
 // Storage interface with comprehensive CRUD methods
@@ -308,6 +311,10 @@ export interface IStorage {
   cancelBookingWithReason(id: string, reason: string): Promise<Booking | undefined>;
   markPaymentRefunded(id: string, refundAmount: string): Promise<Booking | undefined>;
   addBookingAdminNotes(id: string, notes: string): Promise<Booking | undefined>;
+  
+  // Spot Assignment History operations
+  recordSpotAssignment(data: InsertSpotAssignmentHistory): Promise<void>;
+  getSpotAssignmentHistory(filters: { from?: string; to?: string; action?: string; departmentId?: number; scope?: 'bci' | 'all' }): Promise<SpotAssignmentHistoryWithDetails[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -3064,6 +3071,112 @@ export class MemStorage implements IStorage {
       .returning();
     
     return updated[0];
+  }
+
+  // Spot Assignment History operations
+  async recordSpotAssignment(data: InsertSpotAssignmentHistory): Promise<void> {
+    await db.insert(spotAssignmentHistory).values(data);
+  }
+
+  async getSpotAssignmentHistory(filters: { 
+    from?: string; 
+    to?: string; 
+    action?: string; 
+    departmentId?: number;
+    scope?: 'bci' | 'all';
+  }): Promise<SpotAssignmentHistoryWithDetails[]> {
+    const { from, to, action, departmentId, scope = 'all' } = filters;
+    
+    // Build where conditions
+    const conditions = [];
+    
+    if (from) {
+      conditions.push(sqlOp`${spotAssignmentHistory.effectiveAt} >= ${from}`);
+    }
+    
+    if (to) {
+      conditions.push(sqlOp`${spotAssignmentHistory.effectiveAt} <= ${to}`);
+    }
+    
+    if (action && action !== 'all') {
+      conditions.push(eq(spotAssignmentHistory.action, action));
+    }
+    
+    if (departmentId) {
+      conditions.push(eq(users.departmentId, departmentId));
+    }
+    
+    if (scope === 'bci') {
+      conditions.push(eq(parkingSpots.isBciManaged, true));
+    }
+    
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    
+    // Query with joins
+    const results = await db
+      .select({
+        id: spotAssignmentHistory.id,
+        spotId: spotAssignmentHistory.spotId,
+        userId: spotAssignmentHistory.userId,
+        action: spotAssignmentHistory.action,
+        effectiveAt: spotAssignmentHistory.effectiveAt,
+        actorId: spotAssignmentHistory.actorId,
+        notes: spotAssignmentHistory.notes,
+        createdAt: spotAssignmentHistory.createdAt,
+        // User details
+        userFirstName: users.firstName,
+        userLastName: users.lastName,
+        userEmail: users.email,
+        // Department details
+        userDepartment: departments.name,
+        // Spot details
+        spotNumber: parkingSpots.spotNumber,
+        spotLocation: locations.office,
+        spotType: spotTypesTable.name,
+        // Actor details (join separately)
+        actorFirstName: sqlOp<string | null>`actor.first_name`,
+        actorLastName: sqlOp<string | null>`actor.last_name`,
+      })
+      .from(spotAssignmentHistory)
+      .innerJoin(users, eq(spotAssignmentHistory.userId, users.id))
+      .innerJoin(parkingSpots, eq(spotAssignmentHistory.spotId, parkingSpots.id))
+      .innerJoin(locations, eq(parkingSpots.locationId, locations.id))
+      .innerJoin(spotTypesTable, eq(parkingSpots.spotTypeId, spotTypesTable.id))
+      .leftJoin(departments, eq(users.departmentId, departments.id))
+      .leftJoin(
+        sqlOp`users AS actor`,
+        sqlOp`${spotAssignmentHistory.actorId} = actor.id`
+      )
+      .where(whereClause)
+      .orderBy(desc(spotAssignmentHistory.effectiveAt));
+    
+    // Transform to SpotAssignmentHistoryWithDetails
+    return results.map(row => ({
+      id: row.id,
+      spotId: row.spotId,
+      userId: row.userId,
+      action: row.action,
+      effectiveAt: row.effectiveAt,
+      actorId: row.actorId,
+      notes: row.notes,
+      createdAt: row.createdAt,
+      user: {
+        id: row.userId,
+        firstName: row.userFirstName || '',
+        lastName: row.userLastName || '',
+        email: row.userEmail || '',
+        department: row.userDepartment || 'N/A',
+      },
+      spot: {
+        spotNumber: row.spotNumber,
+        location: row.spotLocation,
+        spotType: row.spotType,
+      },
+      actor: row.actorFirstName && row.actorLastName ? {
+        firstName: row.actorFirstName,
+        lastName: row.actorLastName,
+      } : null,
+    }));
   }
 
   // Audit decorators will be applied via server initialization

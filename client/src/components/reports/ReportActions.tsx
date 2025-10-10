@@ -8,7 +8,7 @@ import { Download, Mail, Plus, X } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 
 interface ReportActionsProps {
-  reportType: 'overview' | 'utilization' | 'revenue' | 'user-compliance' | 'waitlist-performance';
+  reportType: 'overview' | 'utilization' | 'revenue' | 'user-compliance' | 'waitlist-performance' | 'spot-assignments';
   onExport: () => void;
   filters: {
     dateFrom: string;

@@ -16,22 +16,26 @@ import {
   exportUtilizationReport,
   exportRevenueReport,
   exportUserComplianceReport,
-  exportWaitlistPerformanceReport
+  exportWaitlistPerformanceReport,
+  exportSpotAssignmentsReport
 } from '@/utils/report-export';
 import { 
   BarChart3, 
   DollarSign, 
   Users, 
   ListOrdered,
-  LayoutDashboard
+  LayoutDashboard,
+  UserPlus
 } from 'lucide-react';
 import type {
   ReportOverviewResponse,
   ReportUtilizationResponse,
   ReportRevenueResponse,
   ReportUserComplianceResponse,
-  ReportWaitlistPerformanceResponse
+  ReportWaitlistPerformanceResponse,
+  SpotAssignmentReportResponse
 } from '@shared/schema';
+import { SpotAssignmentsReport } from '@/components/reports/SpotAssignmentsReport';
 
 export default function AdminReportsPage() {
   const { filters, setDateFrom, setDateTo, setScope } = useReportFilters();
@@ -107,6 +111,20 @@ export default function AdminReportsPage() {
     }
   });
 
+  const spotAssignmentsQuery = useQuery<SpotAssignmentReportResponse>({
+    queryKey: ['/api/admin/reports/spot-assignments', filters.dateFrom, filters.dateTo, filters.scope],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        from: filters.dateFrom,
+        to: filters.dateTo,
+        scope: filters.scope
+      });
+      const response = await fetch(`/api/admin/reports/spot-assignments?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch spot assignments report');
+      return response.json();
+    }
+  });
+
   return (
     <div className="flex-1 space-y-6 p-6" data-testid="page-admin-reports">
       <div>
@@ -169,7 +187,7 @@ export default function AdminReportsPage() {
 
       {/* Reports Tabs */}
       <Tabs defaultValue="overview" className="space-y-6" data-testid="tabs-reports">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview" data-testid="tab-overview">
             <LayoutDashboard className="w-4 h-4 mr-2" />
             Overview
@@ -189,6 +207,10 @@ export default function AdminReportsPage() {
           <TabsTrigger value="waitlist" data-testid="tab-waitlist">
             <ListOrdered className="w-4 h-4 mr-2" />
             Waitlist
+          </TabsTrigger>
+          <TabsTrigger value="spot-assignments" data-testid="tab-spot-assignments">
+            <UserPlus className="w-4 h-4 mr-2" />
+            Spot Assignments
           </TabsTrigger>
         </TabsList>
 
@@ -269,6 +291,22 @@ export default function AdminReportsPage() {
           <WaitlistPerformanceReport
             data={waitlistQuery.data}
             isLoading={waitlistQuery.isLoading}
+          />
+        </TabsContent>
+
+        {/* Spot Assignments Tab */}
+        <TabsContent value="spot-assignments" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-semibold">Spot Assignment Report</h2>
+            <ReportActions
+              reportType="spot-assignments"
+              onExport={() => exportSpotAssignmentsReport(spotAssignmentsQuery.data!)}
+              filters={filters}
+            />
+          </div>
+          <SpotAssignmentsReport
+            data={spotAssignmentsQuery.data}
+            isLoading={spotAssignmentsQuery.isLoading}
           />
         </TabsContent>
       </Tabs>

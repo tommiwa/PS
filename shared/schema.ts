@@ -1026,3 +1026,79 @@ export interface ReportWaitlistPerformanceResponse {
   dateRange: ReportDateRange;
   scope: 'all' | 'bci';
 }
+
+// Spot Assignment History Table
+export const spotAssignmentActions = z.enum(["assigned", "unassigned"]);
+export type SpotAssignmentAction = z.infer<typeof spotAssignmentActions>;
+
+export const spotAssignmentHistory = pgTable("spot_assignment_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  spotId: varchar("spot_id").notNull().references(() => parkingSpots.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  action: text("action").notNull().$type<SpotAssignmentAction>(),
+  effectiveAt: timestamp("effective_at").notNull().defaultNow(),
+  actorId: varchar("actor_id"), // Admin who performed the action - nullable for system actions
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("IDX_spot_assignment_history_spot_id").on(table.spotId),
+  index("IDX_spot_assignment_history_user_id").on(table.userId),
+  index("IDX_spot_assignment_history_effective_at").on(table.effectiveAt),
+  index("IDX_spot_assignment_history_action").on(table.action),
+]);
+
+export const insertSpotAssignmentHistorySchema = createInsertSchema(spotAssignmentHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertSpotAssignmentHistory = z.infer<typeof insertSpotAssignmentHistorySchema>;
+export type SpotAssignmentHistory = typeof spotAssignmentHistory.$inferSelect;
+
+// Enriched spot assignment history type with user and spot details
+export interface SpotAssignmentHistoryWithDetails extends SpotAssignmentHistory {
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    department: string;
+  };
+  spot: {
+    spotNumber: string;
+    location: string;
+    spotType: string;
+  };
+  actor: {
+    firstName: string;
+    lastName: string;
+  } | null;
+}
+
+// Spot Assignment Report Response
+export interface SpotAssignmentReportResponse {
+  assignments: Array<{
+    id: string;
+    action: 'assigned' | 'unassigned';
+    effectiveAt: string;
+    user: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      department: string;
+    };
+    spot: {
+      spotNumber: string;
+      location: string;
+      spotType: string;
+    };
+    actor: {
+      firstName: string;
+      lastName: string;
+    } | null;
+  }>;
+  dateRange: { from: string; to: string };
+  totalCount: number;
+  scope: 'all' | 'bci';
+}

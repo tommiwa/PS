@@ -5,7 +5,8 @@ import type {
   ReportUtilizationResponse,
   ReportRevenueResponse,
   ReportUserComplianceResponse,
-  ReportWaitlistPerformanceResponse
+  ReportWaitlistPerformanceResponse,
+  SpotAssignmentReportResponse
 } from '@shared/schema';
 
 // Initialize SendGrid if API key is available
@@ -314,9 +315,65 @@ async function generateWaitlistPerformanceExcel(data: ReportWaitlistPerformanceR
   return await workbook.xlsx.writeBuffer() as Buffer;
 }
 
+// Generate Excel buffer for Spot Assignment Report
+async function generateSpotAssignmentExcel(data: SpotAssignmentReportResponse): Promise<Buffer> {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Spot Assignments');
+
+  // Add title
+  worksheet.mergeCells('A1:H1');
+  const titleCell = worksheet.getCell('A1');
+  titleCell.value = 'BCI ParkShare - Spot Assignment Report';
+  titleCell.font = { bold: true, size: 16 };
+  titleCell.alignment = { horizontal: 'center' };
+
+  // Add date range and scope
+  worksheet.mergeCells('A2:H2');
+  const dateCell = worksheet.getCell('A2');
+  const scopeLabel = data.scope === 'bci' ? 'BCI-Managed' : 'All';
+  dateCell.value = `Date Range: ${data.dateRange.from} to ${data.dateRange.to} | Scope: ${scopeLabel}`;
+  dateCell.alignment = { horizontal: 'center' };
+
+  worksheet.addRow([]);
+
+  // Add headers
+  const headers = ['Action', 'User Name', 'Email', 'Department', 'Spot Number', 'Location', 'Spot Type', 'Effective Date', 'Assigned/Removed By'];
+  worksheet.addRow(headers);
+  const headerRow = worksheet.getRow(4);
+  headerRow.font = { bold: true };
+
+  // Add data
+  data.assignments.forEach(assignment => {
+    worksheet.addRow([
+      assignment.action === 'assigned' ? 'Assigned' : 'Unassigned',
+      `${assignment.user.firstName} ${assignment.user.lastName}`,
+      assignment.user.email,
+      assignment.user.department,
+      assignment.spot.spotNumber,
+      assignment.spot.location,
+      assignment.spot.spotType,
+      new Date(assignment.effectiveAt).toLocaleDateString(),
+      assignment.actor ? `${assignment.actor.firstName} ${assignment.actor.lastName}` : 'System'
+    ]);
+  });
+
+  // Style columns
+  worksheet.getColumn(1).width = 12;
+  worksheet.getColumn(2).width = 25;
+  worksheet.getColumn(3).width = 30;
+  worksheet.getColumn(4).width = 20;
+  worksheet.getColumn(5).width = 12;
+  worksheet.getColumn(6).width = 25;
+  worksheet.getColumn(7).width = 15;
+  worksheet.getColumn(8).width = 15;
+  worksheet.getColumn(9).width = 25;
+
+  return await workbook.xlsx.writeBuffer() as Buffer;
+}
+
 // Send report email
 export async function sendReportEmail(
-  reportType: 'overview' | 'utilization' | 'revenue' | 'user-compliance' | 'waitlist-performance',
+  reportType: 'overview' | 'utilization' | 'revenue' | 'user-compliance' | 'waitlist-performance' | 'spot-assignments',
   data: any,
   recipients: string[],
   dateRange: { from: string; to: string },
@@ -360,6 +417,11 @@ export async function sendReportEmail(
         attachment = await generateWaitlistPerformanceExcel(data);
         reportTitle = 'Waitlist Performance Report';
         filename = 'waitlist-performance-report.xlsx';
+        break;
+      case 'spot-assignments':
+        attachment = await generateSpotAssignmentExcel(data);
+        reportTitle = 'Spot Assignment Report';
+        filename = 'spot-assignment-report.xlsx';
         break;
       default:
         return {

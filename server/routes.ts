@@ -51,7 +51,8 @@ import {
   getReportUtilization,
   getReportRevenue,
   getReportUserCompliance,
-  getReportWaitlistPerformance
+  getReportWaitlistPerformance,
+  getSpotAssignmentReport
 } from "./reports-controller";
 import { sendReportEmail, isEmailServiceAvailable } from "./report-service";
 
@@ -2907,6 +2908,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Parking spot not found" });
       }
       
+      // Record spot assignment history
+      const actorId = getAuthenticatedUserId(req);
+      await storage.recordSpotAssignment({
+        spotId,
+        userId,
+        action: 'assigned',
+        effectiveAt: new Date(),
+        actorId: actorId || undefined,
+        notes: waitingListEntry ? 'Assigned from waiting list' : undefined
+      });
+      
       // Audit the spot assignment
       await auditService.logAction("ASSIGN", "parking_spot", {
         entityId: spotId,
@@ -2970,6 +2982,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const updatedSpots = [];
+      const actorId = getAuthenticatedUserId(req);
+      
       for (const spotId of spotIds) {
         // Fetch existing spot to preserve its isBciManaged value
         const existingSpot = await storage.getParkingSpot(spotId);
@@ -2991,6 +3005,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const updatedSpot = await storage.updateParkingSpot(spotId, updateData);
         if (updatedSpot) {
           updatedSpots.push(updatedSpot);
+          
+          // Record spot assignment history for each spot
+          await storage.recordSpotAssignment({
+            spotId,
+            userId,
+            action: 'assigned',
+            effectiveAt: new Date(),
+            actorId: actorId || undefined,
+            notes: waitingListEntry ? 'Bulk assigned from waiting list' : 'Bulk assignment'
+          });
         }
       }
       
@@ -3186,6 +3210,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedSpot = await storage.updateParkingSpot(spotId, { ownerId: null });
       if (!updatedSpot) {
         return res.status(404).json({ error: "Failed to unassign parking spot" });
+      }
+      
+      // Record spot unassignment history
+      if (existingSpot.ownerId) {
+        const actorId = getAuthenticatedUserId(req);
+        await storage.recordSpotAssignment({
+          spotId,
+          userId: existingSpot.ownerId,
+          action: 'unassigned',
+          effectiveAt: new Date(),
+          actorId: actorId || undefined,
+          notes: undefined
+        });
       }
       
       // Audit the spot unassignment
@@ -4994,6 +5031,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/reports/revenue", requireAdmin, getReportRevenue);
   app.get("/api/admin/reports/user-compliance", requireAdmin, getReportUserCompliance);
   app.get("/api/admin/reports/waitlist-performance", requireAdmin, getReportWaitlistPerformance);
+  app.get("/api/admin/reports/spot-assignments", requireAdmin, getSpotAssignmentReport);
   
   // Email report endpoint
   app.post("/api/admin/reports/:type/email", requireAdmin, async (req: Request, res: Response) => {
@@ -5002,7 +5040,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { recipients, from, to, scope } = req.body;
       
       // Validate report type
-      const validTypes = ['overview', 'utilization', 'revenue', 'user-compliance', 'waitlist-performance'];
+      const validTypes = ['overview', 'utilization', 'revenue', 'user-compliance', 'waitlist-performance', 'spot-assignments'];
       if (!validTypes.includes(type)) {
         return res.status(400).json({ error: "Invalid report type" });
       }
@@ -5052,6 +5090,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           break;
         case 'waitlist-performance':
           await getReportWaitlistPerformance(mockReq, mockRes);
+          break;
+        case 'spot-assignments':
+          await getSpotAssignmentReport(mockReq, mockRes);
           break;
       }
       

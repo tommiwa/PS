@@ -7,7 +7,8 @@ import type {
   ReportRevenueResponse,
   ReportUserComplianceResponse,
   ReportWaitlistPerformanceResponse,
-  ReportDateRange
+  ReportDateRange,
+  SpotAssignmentReportResponse
 } from '@shared/schema';
 
 // Helper function to create styled worksheet header
@@ -424,4 +425,58 @@ export function exportWaitlistPerformanceReport(data: ReportWaitlistPerformanceR
   const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
   const scopeSuffix = data.scope === 'bci' ? '-bci' : '';
   saveAs(new Blob([wbout]), `waitlist-performance-report${scopeSuffix}-${new Date().toISOString().split('T')[0]}.xlsx`);
+}
+
+// Export Spot Assignments Report
+export function exportSpotAssignmentsReport(data: SpotAssignmentReportResponse, dateRange?: ReportDateRange) {
+  const wb = XLSX.utils.book_new();
+  const range = dateRange || data.dateRange;
+  
+  const wsData: any[][] = [];
+  
+  // Title and metadata
+  wsData.push(['BCI ParkShare - Spot Assignment Report']);
+  wsData.push([`Date Range: ${range.from} to ${range.to} | Scope: ${data.scope.toUpperCase()}`]);
+  wsData.push([`Generated: ${new Date().toLocaleString()}`]);
+  wsData.push(['']); // Empty row
+  
+  // Headers
+  wsData.push(['Action', 'User Name', 'Email', 'Department', 'Spot Number', 'Location', 'Spot Type', 'Effective Date', 'Assigned/Removed By']);
+  
+  // Data rows
+  data.assignments.forEach(assignment => {
+    wsData.push([
+      assignment.action === 'assigned' ? 'Assigned' : 'Unassigned',
+      `${assignment.user.firstName} ${assignment.user.lastName}`,
+      assignment.user.email,
+      assignment.user.department,
+      assignment.spot.spotNumber,
+      assignment.spot.location,
+      assignment.spot.spotType,
+      new Date(assignment.effectiveAt).toLocaleDateString(),
+      assignment.actor ? `${assignment.actor.firstName} ${assignment.actor.lastName}` : 'System'
+    ]);
+  });
+  
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  
+  // Set column widths
+  ws['!cols'] = [
+    { wch: 12 },  // Action
+    { wch: 25 },  // User Name
+    { wch: 30 },  // Email
+    { wch: 20 },  // Department
+    { wch: 12 },  // Spot Number
+    { wch: 25 },  // Location
+    { wch: 15 },  // Spot Type
+    { wch: 15 },  // Effective Date
+    { wch: 25 }   // Assigned/Removed By
+  ];
+  
+  XLSX.utils.book_append_sheet(wb, ws, 'Spot Assignments');
+  
+  // Save file
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const scopeSuffix = data.scope === 'bci' ? '-bci' : '';
+  saveAs(new Blob([wbout]), `spot-assignments-report${scopeSuffix}-${new Date().toISOString().split('T')[0]}.xlsx`);
 }

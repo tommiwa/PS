@@ -7,7 +7,8 @@ import type {
   ReportRevenueResponse,
   ReportUserComplianceResponse,
   ReportWaitlistPerformanceResponse,
-  ReportDateRange
+  ReportDateRange,
+  SpotAssignmentReportResponse
 } from "@shared/schema";
 
 // Zod schema for report query parameters
@@ -712,5 +713,55 @@ export async function getReportWaitlistPerformance(req: Request, res: Response) 
     }
     console.error("Error generating waitlist performance report:", error);
     res.status(500).json({ error: "Failed to generate waitlist performance report" });
+  }
+}
+
+// GET /api/admin/reports/spot-assignments - Spot Assignment/Unassignment Report
+export async function getSpotAssignmentReport(req: Request, res: Response) {
+  try {
+    const spotAssignmentQuerySchema = z.object({
+      from: z.string().optional().refine(val => !val || !isNaN(Date.parse(val)), "Invalid from date"),
+      to: z.string().optional().refine(val => !val || !isNaN(Date.parse(val)), "Invalid to date"),
+      action: z.enum(['assigned', 'unassigned', 'all']).optional().default('all'),
+      departmentId: z.string().optional().transform(val => val ? parseInt(val) : undefined),
+      scope: z.enum(['all', 'bci']).optional().default('all')
+    });
+    
+    const { from, to, action, departmentId, scope } = spotAssignmentQuerySchema.parse(req.query);
+    const dateRange = calculateDateRange(from, to);
+    
+    // Get spot assignment history with filters
+    const history = await storage.getSpotAssignmentHistory({
+      from: dateRange.from,
+      to: dateRange.to,
+      action: action !== 'all' ? action : undefined,
+      departmentId,
+      scope
+    });
+    
+    // Transform to response format
+    const assignments = history.map(h => ({
+      id: h.id,
+      action: h.action,
+      effectiveAt: h.effectiveAt.toISOString(),
+      user: h.user,
+      spot: h.spot,
+      actor: h.actor
+    }));
+    
+    const response: SpotAssignmentReportResponse = {
+      assignments,
+      dateRange,
+      totalCount: assignments.length,
+      scope
+    };
+    
+    res.json(response);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: "Invalid query parameters", details: error.errors });
+    }
+    console.error("Error generating spot assignment report:", error);
+    res.status(500).json({ error: "Failed to generate spot assignment report" });
   }
 }
