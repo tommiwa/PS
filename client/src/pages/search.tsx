@@ -391,9 +391,18 @@ export default function Search() {
     }
   })
 
-  // Use baseFilteredSpots for tiles view (show all available spots)
+  // Helper to check if a spot is booked on its specific date
+  const isSpotBooked = (spot: DisplaySpot): boolean => {
+    if (!spot.availability?.date || !spot.bookedDates || spot.bookedDates.length === 0) {
+      return false
+    }
+    const spotDate = spot.availability.date
+    return spot.bookedDates.includes(spotDate)
+  }
+
+  // Use baseFilteredSpots for tiles view but filter out booked spots to sync with calendar
   // Use filteredSpots for calendar when date is selected (date-specific view)
-  const spotsForTiles = baseFilteredSpots
+  const spotsForTiles = baseFilteredSpots.filter(spot => !isSpotBooked(spot))
   const spotsForCalendar = searchCriteria.date ? filteredSpots : baseFilteredSpots
   
   const sortedSpots = [...spotsForTiles].sort((a, b) => {
