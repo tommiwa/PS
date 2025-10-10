@@ -490,12 +490,6 @@ export default function Admin() {
             </p>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
-            <Link href="/admin/reports">
-              <Button variant="outline" size="sm" data-testid="link-view-reports-dashboard">
-                <FileText className="w-4 h-4 mr-2" />
-                View Reports
-              </Button>
-            </Link>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button 

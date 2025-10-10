@@ -96,6 +96,13 @@ const adminMenuItems = [
     tooltip: "Booking Management"
   },
   {
+    title: "Reports",
+    url: "/admin/reports",
+    icon: BarChart3,
+    roles: ["admin"],
+    tooltip: "Reports & Analytics"
+  },
+  {
     title: "App Data Management",
     url: "/admin/data-management",
     icon: Database,
@@ -237,6 +244,15 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
         queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-analytics"] }),
         queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-activity"] }),
         queryClient.invalidateQueries({ queryKey: ["/api/admin/past-bookings"] }),
+      ]);
+    },
+    "/admin/reports": async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/reports/overview"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/reports/utilization"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/reports/revenue"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/reports/user-compliance"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/reports/waitlist-performance"] }),
       ]);
     },
     "/admin/data-management": async () => {
