@@ -200,7 +200,7 @@ export interface IStorage {
   queryAuditLogs(filters: any, pagination: any): Promise<any>;
   
   // Analytics query methods
-  getAnalyticsOverview(): Promise<{
+  getAnalyticsOverview(scope?: 'bci' | 'all'): Promise<{
     totalRevenue: number;
     totalBookings: number;
     activeUsers: number;
@@ -208,19 +208,19 @@ export interface IStorage {
     averageBookingValue: number;
     monthlyGrowth: number;
   }>;
-  getMonthlyRevenueData(monthsBack?: number): Promise<{
+  getMonthlyRevenueData(monthsBack?: number, scope?: 'bci' | 'all'): Promise<{
     month: string;
     revenue: number;
     bookings: number;
     year: number;
   }[]>;
-  getRevenueBreakdown(): Promise<{
+  getRevenueBreakdown(scope?: 'bci' | 'all'): Promise<{
     ownerEarnings: number;
     bciRevenue: number;
     ownerEarningsPercentage: number;
     bciRevenuePercentage: number;
   }>;
-  getTopPerformingSpots(limit?: number): Promise<{
+  getTopPerformingSpots(limit?: number, scope?: 'bci' | 'all'): Promise<{
     id: string;
     spotNumber: string;
     location: string;
@@ -229,7 +229,7 @@ export interface IStorage {
     bookingsCount: number;
     ownerName: string;
   }[]>;
-  getTopEarningOwners(limit?: number): Promise<{
+  getTopEarningOwners(limit?: number, scope?: 'bci' | 'all'): Promise<{
     id: string;
     name: string;
     earnings: number;
@@ -238,7 +238,7 @@ export interface IStorage {
     averageRating: number;
     email: string;
   }[]>;
-  getActiveIssues(): Promise<{
+  getActiveIssues(scope?: 'bci' | 'all'): Promise<{
     id: string;
     type: string;
     priority: string;
@@ -249,19 +249,19 @@ export interface IStorage {
     entityId?: string;
     entityType?: string;
   }[]>;
-  getBookingDurationData(): Promise<{
+  getBookingDurationData(scope?: 'bci' | 'all'): Promise<{
     duration: string;
     count: number;
     percentage: number;
   }[]>;
-  getLocationPerformanceData(): Promise<{
+  getLocationPerformanceData(scope?: 'bci' | 'all'): Promise<{
     location: string;
     spotsCount: number;
     utilization: number;
     earnings: number;
     averageRate: number;
   }[]>;
-  getWeeklyTrendsData(): Promise<{
+  getWeeklyTrendsData(scope?: 'bci' | 'all'): Promise<{
     dayOfWeek: string;
     bookings: number;
     utilization: number;
@@ -1772,8 +1772,55 @@ export class MemStorage implements IStorage {
     return this.auditStorage.queryAuditLogs(filters, pagination);
   }
 
+  // Helper methods for scope filtering
+  private async getFilteredSpots(scope?: 'bci' | 'all'): Promise<ParkingSpot[]> {
+    const allSpots = await db.select().from(parkingSpots);
+    
+    // Default to 'all' if scope is undefined
+    if (!scope || scope === 'all') {
+      return allSpots;
+    }
+    
+    // Filter for BCI managed spots only
+    return allSpots.filter(spot => spot.isBciManaged === true);
+  }
+
+  private async getFilteredBookings(scope?: 'bci' | 'all'): Promise<Booking[]> {
+    const allBookings = await db.select().from(bookings);
+    
+    // Default to 'all' if scope is undefined
+    if (!scope || scope === 'all') {
+      return allBookings;
+    }
+    
+    // Filter bookings for BCI managed spots only
+    const allSpots = await db.select().from(parkingSpots);
+    const bciSpotIds = new Set(
+      allSpots.filter(spot => spot.isBciManaged === true).map(spot => spot.id)
+    );
+    
+    return allBookings.filter(booking => bciSpotIds.has(booking.spotId));
+  }
+
+  private async getFilteredListings(scope?: 'bci' | 'all'): Promise<SpotListing[]> {
+    const allListings = await db.select().from(spotListings);
+    
+    // Default to 'all' if scope is undefined
+    if (!scope || scope === 'all') {
+      return allListings;
+    }
+    
+    // Filter listings for BCI managed spots only
+    const allSpots = await db.select().from(parkingSpots);
+    const bciSpotIds = new Set(
+      allSpots.filter(spot => spot.isBciManaged === true).map(spot => spot.id)
+    );
+    
+    return allListings.filter(listing => bciSpotIds.has(listing.spotId));
+  }
+
   // Analytics methods implementation
-  async getAnalyticsOverview(): Promise<{
+  async getAnalyticsOverview(scope?: 'bci' | 'all'): Promise<{
     totalRevenue: number;
     totalBookings: number;
     activeUsers: number;
@@ -1781,9 +1828,9 @@ export class MemStorage implements IStorage {
     averageBookingValue: number;
     monthlyGrowth: number;
   }> {
-    const allBookings = await db.select().from(bookings);
+    const allBookings = await this.getFilteredBookings(scope);
     const allUsers = await db.select().from(users);
-    const allSpots = await db.select().from(parkingSpots);
+    const allSpots = await this.getFilteredSpots(scope);
     
     // Calculate total revenue
     const totalRevenue = allBookings
@@ -1836,13 +1883,13 @@ export class MemStorage implements IStorage {
     };
   }
 
-  async getMonthlyRevenueData(monthsBack: number = 12): Promise<{
+  async getMonthlyRevenueData(monthsBack: number = 12, scope?: 'bci' | 'all'): Promise<{
     month: string;
     revenue: number;
     bookings: number;
     year: number;
   }[]> {
-    const allBookings = await db.select().from(bookings);
+    const allBookings = await this.getFilteredBookings(scope);
     const paidBookings = allBookings.filter(b => b.paymentReceived);
     
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
@@ -1875,13 +1922,13 @@ export class MemStorage implements IStorage {
     return result;
   }
 
-  async getRevenueBreakdown(): Promise<{
+  async getRevenueBreakdown(scope?: 'bci' | 'all'): Promise<{
     ownerEarnings: number;
     bciRevenue: number;
     ownerEarningsPercentage: number;
     bciRevenuePercentage: number;
   }> {
-    const allBookings = await db.select().from(bookings);
+    const allBookings = await this.getFilteredBookings(scope);
     const paidBookings = allBookings.filter(b => b.paymentReceived);
     
     const totalRevenue = paidBookings.reduce((sum, booking) => 
@@ -1902,7 +1949,7 @@ export class MemStorage implements IStorage {
     };
   }
 
-  async getTopPerformingSpots(limit: number = 5): Promise<{
+  async getTopPerformingSpots(limit: number = 5, scope?: 'bci' | 'all'): Promise<{
     id: string;
     spotNumber: string;
     location: string;
@@ -1911,9 +1958,9 @@ export class MemStorage implements IStorage {
     bookingsCount: number;
     ownerName: string;
   }[]> {
-    const allBookings = await db.select().from(bookings);
+    const allBookings = await this.getFilteredBookings(scope);
     const paidBookings = allBookings.filter(b => b.paymentReceived);
-    const allSpots = await db.select().from(parkingSpots);
+    const allSpots = await this.getFilteredSpots(scope);
     const allUsers = await db.select().from(users);
     const allLocations = await db.select().from(locations);
     
@@ -1952,7 +1999,7 @@ export class MemStorage implements IStorage {
       .slice(0, limit);
   }
 
-  async getTopEarningOwners(limit: number = 5): Promise<{
+  async getTopEarningOwners(limit: number = 5, scope?: 'bci' | 'all'): Promise<{
     id: string;
     name: string;
     earnings: number;
@@ -1961,9 +2008,9 @@ export class MemStorage implements IStorage {
     averageRating: number;
     email: string;
   }[]> {
-    const allBookings = await db.select().from(bookings);
+    const allBookings = await this.getFilteredBookings(scope);
     const paidBookings = allBookings.filter(b => b.paymentReceived);
-    const allSpots = await db.select().from(parkingSpots);
+    const allSpots = await this.getFilteredSpots(scope);
     const allUsers = await db.select().from(users);
     const owners = allUsers.filter(u => u.roles.includes('owner'));
     
@@ -2003,7 +2050,7 @@ export class MemStorage implements IStorage {
       .slice(0, limit);
   }
 
-  async getActiveIssues(): Promise<{
+  async getActiveIssues(scope?: 'bci' | 'all'): Promise<{
     id: string;
     type: string;
     priority: string;
@@ -2016,8 +2063,8 @@ export class MemStorage implements IStorage {
   }[]> {
     // For now, return simulated issues based on actual data patterns
     // In a real implementation, this would come from an issues/tickets system
-    const allBookings = await db.select().from(bookings);
-    const allSpots = await db.select().from(parkingSpots);
+    const allBookings = await this.getFilteredBookings(scope);
+    const allSpots = await this.getFilteredSpots(scope);
     const issues = [];
     
     // Find potential payment disputes (unpaid bookings older than 7 days)
@@ -2086,14 +2133,14 @@ export class MemStorage implements IStorage {
     return issues.slice(0, 10); // Limit to 10 most recent issues
   }
 
-  async getBookingDurationData(): Promise<{
+  async getBookingDurationData(scope?: 'bci' | 'all'): Promise<{
     duration: string;
     count: number;
     percentage: number;
   }[]> {
     // Get all spot listings and bookings from database
-    const allListings = await db.select().from(spotListings);
-    const allBookings = await db.select().from(bookings);
+    const allListings = await this.getFilteredListings(scope);
+    const allBookings = await this.getFilteredBookings(scope);
     
     // Initialize duration categories
     const durationCategories = {
@@ -2173,15 +2220,15 @@ export class MemStorage implements IStorage {
     }));
   }
 
-  async getLocationPerformanceData(): Promise<{
+  async getLocationPerformanceData(scope?: 'bci' | 'all'): Promise<{
     location: string;
     spotsCount: number;
     utilization: number;
     earnings: number;
     averageRate: number;
   }[]> {
-    const allSpots = await db.select().from(parkingSpots);
-    const allBookings = await db.select().from(bookings);
+    const allSpots = await this.getFilteredSpots(scope);
+    const allBookings = await this.getFilteredBookings(scope);
     const paidBookings = allBookings.filter(b => b.paymentReceived);
     const allLocations = await db.select().from(locations);
     
@@ -2230,13 +2277,13 @@ export class MemStorage implements IStorage {
     .sort((a, b) => b.earnings - a.earnings);
   }
 
-  async getWeeklyTrendsData(): Promise<{
+  async getWeeklyTrendsData(scope?: 'bci' | 'all'): Promise<{
     dayOfWeek: string;
     bookings: number;
     utilization: number;
   }[]> {
-    const allBookings = await db.select().from(bookings);
-    const allSpots = await db.select().from(parkingSpots);
+    const allBookings = await this.getFilteredBookings(scope);
+    const allSpots = await this.getFilteredSpots(scope);
     const totalBookableSpots = allSpots.filter(spot => spot.isBookable).length;
     
     // Get bookings from the last 4 weeks

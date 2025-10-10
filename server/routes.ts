@@ -1840,7 +1840,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Analytics API endpoints (Admin only)
   app.get("/api/admin/analytics-overview", requireAdmin, async (req, res) => {
     try {
-      const overview = await storage.getAnalyticsOverview();
+      // Extract and validate scope parameter
+      const scopeParam = req.query.scope as string;
+      const scope: 'bci' | 'all' = scopeParam === 'bci' ? 'bci' : 'all';
+      
+      const overview = await storage.getAnalyticsOverview(scope);
       const now = new Date();
       
       res.json({
@@ -1860,9 +1864,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/analytics-revenue", requireAdmin, async (req, res) => {
     try {
       const monthsBack = req.query.monthsBack ? parseInt(req.query.monthsBack as string) : 12;
+      
+      // Extract and validate scope parameter
+      const scopeParam = req.query.scope as string;
+      const scope: 'bci' | 'all' = scopeParam === 'bci' ? 'bci' : 'all';
+      
       const [monthlyData, revenueBreakdown] = await Promise.all([
-        storage.getMonthlyRevenueData(monthsBack),
-        storage.getRevenueBreakdown()
+        storage.getMonthlyRevenueData(monthsBack, scope),
+        storage.getRevenueBreakdown(scope)
       ]);
       
       res.json({
@@ -1879,9 +1888,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/analytics-top-performers", requireAdmin, async (req, res) => {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 5;
+      
+      // Extract and validate scope parameter
+      const scopeParam = req.query.scope as string;
+      const scope: 'bci' | 'all' = scopeParam === 'bci' ? 'bci' : 'all';
+      
       const [topSpots, topOwners] = await Promise.all([
-        storage.getTopPerformingSpots(limit),
-        storage.getTopEarningOwners(limit)
+        storage.getTopPerformingSpots(limit, scope),
+        storage.getTopEarningOwners(limit, scope)
       ]);
       
       res.json({
@@ -1897,7 +1911,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/admin/analytics-issues", requireAdmin, async (req, res) => {
     try {
-      const activeIssues = await storage.getActiveIssues();
+      // Extract and validate scope parameter
+      const scopeParam = req.query.scope as string;
+      const scope: 'bci' | 'all' = scopeParam === 'bci' ? 'bci' : 'all';
+      
+      const activeIssues = await storage.getActiveIssues(scope);
       
       // Calculate issues summary
       const issuesSummary = {
@@ -1921,10 +1939,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/admin/analytics-usage", requireAdmin, async (req, res) => {
     try {
+      // Extract and validate scope parameter
+      const scopeParam = req.query.scope as string;
+      const scope: 'bci' | 'all' = scopeParam === 'bci' ? 'bci' : 'all';
+      
       const [bookingDuration, locationPerformance, weeklyTrends] = await Promise.all([
-        storage.getBookingDurationData(),
-        storage.getLocationPerformanceData(),
-        storage.getWeeklyTrendsData()
+        storage.getBookingDurationData(scope),
+        storage.getLocationPerformanceData(scope),
+        storage.getWeeklyTrendsData(scope)
       ]);
       
       res.json({
