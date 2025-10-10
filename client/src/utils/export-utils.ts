@@ -784,3 +784,234 @@ export const quickExportBookingActivityExcel = (activities: any[], title?: strin
     return false
   }
 }
+
+// Export functions for lockers
+export const exportLockersData = (lockers: any[], title: string = 'Locker Management Report') => {
+  const columns: ExportColumn[] = [
+    { header: 'Locker Number', dataKey: 'lockerNumber', width: 15 },
+    { header: 'Location', dataKey: 'location', width: 25 },
+    { header: 'Type', dataKey: 'type', width: 15, formatter: (type) => type?.toUpperCase() || 'STANDARD' },
+    { header: 'Status', dataKey: 'status', width: 12, formatter: (status) => status?.toUpperCase() || 'AVAILABLE' },
+    { header: 'BCI Managed', dataKey: 'bciManaged', width: 12, formatter: (managed) => managed ? 'Yes' : 'No' },
+    { header: 'Assigned To', dataKey: 'assignedTo', width: 30, formatter: (value: any, item: any) => {
+      if (item.assignedUserName && item.assignedUserEmail) {
+        return `${item.assignedUserName} (${item.assignedUserEmail})`
+      }
+      return '-'
+    }},
+    { header: 'Assigned Date', dataKey: 'assignedDate', width: 15, formatter: (date) => date ? new Date(date).toLocaleDateString() : '-' },
+    { header: 'Notes', dataKey: 'notes', width: 40 }
+  ]
+
+  const exportData: ExportData = {
+    title,
+    subtitle: 'Locker Management and Allocation Report',
+    data: lockers,
+    columns,
+    filename: `lockers-report-${new Date().toISOString().split('T')[0]}`,
+    summary: {
+      totalRecords: lockers.length,
+      additionalStats: [
+        { label: 'Available Lockers', value: lockers.filter(l => l.status === 'available').length },
+        { label: 'Assigned Lockers', value: lockers.filter(l => l.status === 'assigned').length },
+        { label: 'BCI Managed', value: lockers.filter(l => l.bciManaged).length },
+        { label: 'User Managed', value: lockers.filter(l => !l.bciManaged).length }
+      ]
+    }
+  }
+
+  return exportData
+}
+
+export const quickExportLockersPDF = (lockers: any[], title?: string, onError?: (message: string) => void) => {
+  try {
+    if (!lockers || lockers.length === 0) {
+      const message = 'No locker data available to export'
+      if (onError) onError(message)
+      return false
+    }
+    const exportData = exportLockersData(lockers, title)
+    exportToPDF(exportData)
+    return true
+  } catch (error) {
+    console.error('Error exporting lockers to PDF:', error)
+    const message = error instanceof Error ? error.message : 'Failed to export lockers to PDF'
+    if (onError) onError(message)
+    return false
+  }
+}
+
+export const quickExportLockersExcel = (lockers: any[], title?: string, onError?: (message: string) => void) => {
+  try {
+    if (!lockers || lockers.length === 0) {
+      const message = 'No locker data available to export'
+      if (onError) onError(message)
+      return false
+    }
+    const exportData = exportLockersData(lockers, title)
+    exportToExcel(exportData)
+    return true
+  } catch (error) {
+    console.error('Error exporting lockers to Excel:', error)
+    const message = error instanceof Error ? error.message : 'Failed to export lockers to Excel'
+    if (onError) onError(message)
+    return false
+  }
+}
+
+// Export functions for locker waitlist
+export const exportLockerWaitlistData = (waitlist: any[], title: string = 'Locker Waitlist Report') => {
+  const columns: ExportColumn[] = [
+    { header: 'User Name', dataKey: 'userName', width: 20 },
+    { header: 'User Email', dataKey: 'userEmail', width: 30 },
+    { header: 'Department', dataKey: 'department', width: 20 },
+    { header: 'Location', dataKey: 'location', width: 25 },
+    { header: 'Requested Type', dataKey: 'requestedType', width: 15, formatter: (type) => type?.toUpperCase() || 'ANY' },
+    { header: 'Priority', dataKey: 'priority', width: 12, formatter: (priority) => {
+      if (priority === 1) return 'HIGH'
+      if (priority === 2) return 'MEDIUM'
+      if (priority === 3) return 'LOW'
+      return 'MEDIUM'
+    }},
+    { header: 'Status', dataKey: 'status', width: 12, formatter: (status) => status?.toUpperCase() || 'ACTIVE' },
+    { header: 'Request Date', dataKey: 'requestDate', width: 15, formatter: (date) => new Date(date).toLocaleDateString() },
+    { header: 'Waiting Days', dataKey: 'waitingDays', width: 12, formatter: (value: any, item: any) => {
+      const waitingDays = Math.floor((Date.now() - new Date(item.requestDate).getTime()) / (1000 * 60 * 60 * 24));
+      return waitingDays.toString();
+    }},
+    { header: 'Notes', dataKey: 'notes', width: 40 }
+  ]
+
+  const exportData: ExportData = {
+    title,
+    subtitle: 'Locker Waitlist Management Report',
+    data: waitlist,
+    columns,
+    filename: `locker-waitlist-report-${new Date().toISOString().split('T')[0]}`,
+    summary: {
+      totalRecords: waitlist.length,
+      additionalStats: [
+        { label: 'Active Requests', value: waitlist.filter(w => w.status === 'active').length },
+        { label: 'High Priority', value: waitlist.filter(w => w.priority === 1).length },
+        { label: 'Medium Priority', value: waitlist.filter(w => w.priority === 2).length },
+        { label: 'Low Priority', value: waitlist.filter(w => w.priority === 3).length },
+        { label: 'Average Wait Days', value: Math.round(waitlist.reduce((sum, w) => {
+          const waitingDays = Math.floor((Date.now() - new Date(w.requestDate).getTime()) / (1000 * 60 * 60 * 24));
+          return sum + waitingDays;
+        }, 0) / waitlist.length) || 0 }
+      ]
+    }
+  }
+
+  return exportData
+}
+
+export const quickExportLockerWaitlistPDF = (waitlist: any[], title?: string, onError?: (message: string) => void) => {
+  try {
+    if (!waitlist || waitlist.length === 0) {
+      const message = 'No locker waitlist data available to export'
+      if (onError) onError(message)
+      return false
+    }
+    const exportData = exportLockerWaitlistData(waitlist, title)
+    exportToPDF(exportData)
+    return true
+  } catch (error) {
+    console.error('Error exporting locker waitlist to PDF:', error)
+    const message = error instanceof Error ? error.message : 'Failed to export locker waitlist to PDF'
+    if (onError) onError(message)
+    return false
+  }
+}
+
+export const quickExportLockerWaitlistExcel = (waitlist: any[], title?: string, onError?: (message: string) => void) => {
+  try {
+    if (!waitlist || waitlist.length === 0) {
+      const message = 'No locker waitlist data available to export'
+      if (onError) onError(message)
+      return false
+    }
+    const exportData = exportLockerWaitlistData(waitlist, title)
+    exportToExcel(exportData)
+    return true
+  } catch (error) {
+    console.error('Error exporting locker waitlist to Excel:', error)
+    const message = error instanceof Error ? error.message : 'Failed to export locker waitlist to Excel'
+    if (onError) onError(message)
+    return false
+  }
+}
+
+// Export functions for locker assignment history
+export const exportLockerAssignmentHistoryData = (history: any[], title: string = 'Locker Assignment History Report') => {
+  const columns: ExportColumn[] = [
+    { header: 'Locker Number', dataKey: 'lockerNumber', width: 15 },
+    { header: 'Location', dataKey: 'location', width: 25 },
+    { header: 'Action', dataKey: 'action', width: 15, formatter: (action) => {
+      if (action === 'assigned') return 'Assigned'
+      if (action === 'unassigned') return 'Unassigned'
+      return action?.toUpperCase() || 'UNKNOWN'
+    }},
+    { header: 'User Name', dataKey: 'userName', width: 20 },
+    { header: 'User Email', dataKey: 'userEmail', width: 30 },
+    { header: 'Department', dataKey: 'department', width: 20 },
+    { header: 'Effective Date', dataKey: 'effectiveDate', width: 15, formatter: (date) => new Date(date).toLocaleDateString() },
+    { header: 'Actor', dataKey: 'actor', width: 25 },
+    { header: 'Notes', dataKey: 'notes', width: 40 }
+  ]
+
+  const exportData: ExportData = {
+    title,
+    subtitle: 'Locker Assignment History and Audit Report',
+    data: history,
+    columns,
+    filename: `locker-assignment-history-report-${new Date().toISOString().split('T')[0]}`,
+    summary: {
+      totalRecords: history.length,
+      additionalStats: [
+        { label: 'Assignments', value: history.filter(h => h.action === 'assigned').length },
+        { label: 'Unassignments', value: history.filter(h => h.action === 'unassigned').length },
+        { label: 'Unique Lockers', value: new Set(history.map(h => h.lockerNumber)).size },
+        { label: 'Unique Users', value: new Set(history.map(h => h.userEmail)).size }
+      ]
+    }
+  }
+
+  return exportData
+}
+
+export const quickExportLockerAssignmentHistoryPDF = (history: any[], title?: string, onError?: (message: string) => void) => {
+  try {
+    if (!history || history.length === 0) {
+      const message = 'No locker assignment history data available to export'
+      if (onError) onError(message)
+      return false
+    }
+    const exportData = exportLockerAssignmentHistoryData(history, title)
+    exportToPDF(exportData)
+    return true
+  } catch (error) {
+    console.error('Error exporting locker assignment history to PDF:', error)
+    const message = error instanceof Error ? error.message : 'Failed to export locker assignment history to PDF'
+    if (onError) onError(message)
+    return false
+  }
+}
+
+export const quickExportLockerAssignmentHistoryExcel = (history: any[], title?: string, onError?: (message: string) => void) => {
+  try {
+    if (!history || history.length === 0) {
+      const message = 'No locker assignment history data available to export'
+      if (onError) onError(message)
+      return false
+    }
+    const exportData = exportLockerAssignmentHistoryData(history, title)
+    exportToExcel(exportData)
+    return true
+  } catch (error) {
+    console.error('Error exporting locker assignment history to Excel:', error)
+    const message = error instanceof Error ? error.message : 'Failed to export locker assignment history to Excel'
+    if (onError) onError(message)
+    return false
+  }
+}

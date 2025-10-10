@@ -25,8 +25,17 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { 
   Package, Plus, Edit, Trash2, UserPlus, UserMinus, UserCheck,
   Search, Filter, Clock, CheckCircle2, XCircle, Calendar as CalendarIcon,
-  ChevronDown, Users, ListOrdered, Building, Sparkles, Eye, EyeOff, RefreshCw
+  ChevronDown, Users, ListOrdered, Building, Sparkles, Eye, EyeOff, RefreshCw,
+  FileText, Download
 } from "lucide-react"
+import { 
+  quickExportLockersPDF, 
+  quickExportLockersExcel,
+  quickExportLockerWaitlistPDF,
+  quickExportLockerWaitlistExcel,
+  quickExportLockerAssignmentHistoryPDF,
+  quickExportLockerAssignmentHistoryExcel
+} from "@/utils/export-utils"
 import type { 
   Locker, 
   LockerWaitlist, 
@@ -905,6 +914,74 @@ export default function AdminLockerManagement() {
                 </Select>
               </div>
 
+              {/* Export Actions */}
+              <div className="flex justify-end gap-2 mb-4">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      size="sm"
+                      variant="outline" 
+                      disabled={bciManagedLockers.length === 0}
+                      onClick={() => {
+                        const success = quickExportLockersPDF(bciManagedLockers, 'All BCI Managed Lockers Report', (errorMessage) => {
+                          toast({
+                            variant: "destructive",
+                            title: "Export Failed",
+                            description: errorMessage
+                          })
+                        })
+                        if (success) {
+                          toast({
+                            title: "Export Successful",
+                            description: "PDF report has been downloaded successfully"
+                          })
+                        }
+                      }}
+                      data-testid="button-export-bci-lockers-pdf"
+                      aria-label="Export BCI managed lockers to PDF"
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      PDF
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Export BCI managed lockers to PDF report
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      size="sm"
+                      variant="outline" 
+                      disabled={bciManagedLockers.length === 0}
+                      onClick={() => {
+                        const success = quickExportLockersExcel(bciManagedLockers, 'All BCI Managed Lockers Report', (errorMessage) => {
+                          toast({
+                            variant: "destructive",
+                            title: "Export Failed",
+                            description: errorMessage
+                          })
+                        })
+                        if (success) {
+                          toast({
+                            title: "Export Successful",
+                            description: "Excel report has been downloaded successfully"
+                          })
+                        }
+                      }}
+                      data-testid="button-export-bci-lockers-excel"
+                      aria-label="Export BCI managed lockers to Excel"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Excel
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Export BCI managed lockers to Excel spreadsheet
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+
               {/* Lockers Table */}
               {isLoadingLockers ? (
                 <div className="space-y-2">
@@ -1047,6 +1124,74 @@ export default function AdminLockerManagement() {
               <CardTitle>Available BCI Managed Lockers ({availableBciLockers.length})</CardTitle>
             </CardHeader>
             <CardContent>
+              {/* Export Actions */}
+              <div className="flex justify-end gap-2 mb-4">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      size="sm"
+                      variant="outline" 
+                      disabled={availableBciLockers.length === 0}
+                      onClick={() => {
+                        const success = quickExportLockersPDF(availableBciLockers, 'Available BCI Managed Lockers Report', (errorMessage) => {
+                          toast({
+                            variant: "destructive",
+                            title: "Export Failed",
+                            description: errorMessage
+                          })
+                        })
+                        if (success) {
+                          toast({
+                            title: "Export Successful",
+                            description: "PDF report has been downloaded successfully"
+                          })
+                        }
+                      }}
+                      data-testid="button-export-available-lockers-pdf"
+                      aria-label="Export available lockers to PDF"
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      PDF
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Export available BCI lockers to PDF report
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      size="sm"
+                      variant="outline" 
+                      disabled={availableBciLockers.length === 0}
+                      onClick={() => {
+                        const success = quickExportLockersExcel(availableBciLockers, 'Available BCI Managed Lockers Report', (errorMessage) => {
+                          toast({
+                            variant: "destructive",
+                            title: "Export Failed",
+                            description: errorMessage
+                          })
+                        })
+                        if (success) {
+                          toast({
+                            title: "Export Successful",
+                            description: "Excel report has been downloaded successfully"
+                          })
+                        }
+                      }}
+                      data-testid="button-export-available-lockers-excel"
+                      aria-label="Export available lockers to Excel"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Excel
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Export available BCI lockers to Excel spreadsheet
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+
               {isLoadingLockers ? (
                 <div className="space-y-2">
                   {[...Array(5)].map((_, i) => (
@@ -1127,6 +1272,74 @@ export default function AdminLockerManagement() {
               <CardTitle>Assigned Lockers ({assignedLockers.length})</CardTitle>
             </CardHeader>
             <CardContent>
+              {/* Export Actions */}
+              <div className="flex justify-end gap-2 mb-4">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      size="sm"
+                      variant="outline" 
+                      disabled={assignedLockers.length === 0}
+                      onClick={() => {
+                        const success = quickExportLockersPDF(assignedLockers, 'Assigned Lockers Report', (errorMessage) => {
+                          toast({
+                            variant: "destructive",
+                            title: "Export Failed",
+                            description: errorMessage
+                          })
+                        })
+                        if (success) {
+                          toast({
+                            title: "Export Successful",
+                            description: "PDF report has been downloaded successfully"
+                          })
+                        }
+                      }}
+                      data-testid="button-export-assigned-lockers-pdf"
+                      aria-label="Export assigned lockers to PDF"
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      PDF
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Export assigned lockers to PDF report
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      size="sm"
+                      variant="outline" 
+                      disabled={assignedLockers.length === 0}
+                      onClick={() => {
+                        const success = quickExportLockersExcel(assignedLockers, 'Assigned Lockers Report', (errorMessage) => {
+                          toast({
+                            variant: "destructive",
+                            title: "Export Failed",
+                            description: errorMessage
+                          })
+                        })
+                        if (success) {
+                          toast({
+                            title: "Export Successful",
+                            description: "Excel report has been downloaded successfully"
+                          })
+                        }
+                      }}
+                      data-testid="button-export-assigned-lockers-excel"
+                      aria-label="Export assigned lockers to Excel"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Excel
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Export assigned lockers to Excel spreadsheet
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+
               {isLoadingLockers ? (
                 <div className="space-y-2">
                   {[...Array(5)].map((_, i) => (
@@ -1265,6 +1478,74 @@ export default function AdminLockerManagement() {
                     <SelectItem value="fulfilled">Fulfilled</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* Export Actions */}
+              <div className="flex justify-end gap-2 mb-4">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      size="sm"
+                      variant="outline" 
+                      disabled={filteredWaitlist.length === 0}
+                      onClick={() => {
+                        const success = quickExportLockerWaitlistPDF(filteredWaitlist, 'Locker Waitlist Report', (errorMessage) => {
+                          toast({
+                            variant: "destructive",
+                            title: "Export Failed",
+                            description: errorMessage
+                          })
+                        })
+                        if (success) {
+                          toast({
+                            title: "Export Successful",
+                            description: "PDF report has been downloaded successfully"
+                          })
+                        }
+                      }}
+                      data-testid="button-export-waitlist-pdf"
+                      aria-label="Export waitlist to PDF"
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      PDF
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Export locker waitlist to PDF report
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      size="sm"
+                      variant="outline" 
+                      disabled={filteredWaitlist.length === 0}
+                      onClick={() => {
+                        const success = quickExportLockerWaitlistExcel(filteredWaitlist, 'Locker Waitlist Report', (errorMessage) => {
+                          toast({
+                            variant: "destructive",
+                            title: "Export Failed",
+                            description: errorMessage
+                          })
+                        })
+                        if (success) {
+                          toast({
+                            title: "Export Successful",
+                            description: "Excel report has been downloaded successfully"
+                          })
+                        }
+                      }}
+                      data-testid="button-export-waitlist-excel"
+                      aria-label="Export waitlist to Excel"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Excel
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Export locker waitlist to Excel spreadsheet
+                  </TooltipContent>
+                </Tooltip>
               </div>
 
               {/* Waitlist Table */}
