@@ -491,7 +491,9 @@ function AuthenticatedApp() {
                 </DialogContent>
               </Dialog>
               <span>•</span>
-              <span>BCI ParkShare Platform</span>
+              <span>BCI ParkShare Application v1.0</span>
+              <span>•</span>
+              <span>© {new Date().getFullYear()} BCI Workplace Services</span>
             </div>
           </footer>
         </div>
