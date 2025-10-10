@@ -73,7 +73,7 @@ export default function AdminReportsPage() {
       {/* Filters */}
       <Card data-testid="card-report-filters">
         <CardHeader>
-          <CardTitle>Date Range & Scope</CardTitle>
+          <CardTitle>Filters</CardTitle>
           <CardDescription>
             Select date range and scope to customize your reports
           </CardDescription>
