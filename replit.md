@@ -63,7 +63,13 @@ Preferred communication style: Simple, everyday language.
 - **Notification System**: Real-time alerts via email and in-app notifications.
 - **Spot Listing Creation**: Owners can list spots with single day, period, or recurring options.
 - **Admin Dashboard Metrics**: Real-time, server-side calculated metrics for occupancy, revenue, registrations, monthly trends, usage patterns, top performers, and issue alerts.
-    - **Scope Filtering**: Toggle between "All Spots" and "BCI Managed Spots" to view metrics for all parking spots or only BCI-managed spots. Scope filter affects all dashboard metrics including total spots, allocated spots, available spots, and utilization rate.
+    - **Scope Filtering**: Toggle between "All Spots" and "BCI Managed Spots" to filter all analytics and metrics. When "BCI Managed Spots" is selected, the system filters to only include spots where `isBciManaged = true` and their associated bookings. Scope affects:
+        - **System Metrics**: Total spots, allocated spots, available spots, utilization rate
+        - **Financial Analytics**: Total revenue, revenue per booking, monthly revenue trends, owner vs BCI revenue breakdown
+        - **Performance Metrics**: Top performing spots, top earning owners, booking counts
+        - **Usage Analytics**: Booking duration distribution, location performance, weekly trends
+        - **Issues & Alerts**: Active disputes, payment issues, system alerts
+        - Scope parameter is passed via URL query params (`?scope=bci` or `?scope=all`) and persists for consistent filtering across all analytics endpoints
 - **Parking Management Metrics**: Dynamic metrics for available spots, users waiting, average wait time, and total assigned.
 - **Spot Booking Management**: Five-tab interface (Booking Availability, Active Bookings, Pending Payments, Past Bookings, Recent Activity) with detailed views, filters, and actions. Tabs feature colorful icons for visual clarity (green calendar, blue checkmark, orange dollar, slate calendar, purple activity).
     - **Scope Filtering**: Toggle between "All Spots" and "BCI Managed Spots" to filter data across all tabs, analytics, and exports. Scope persists via URL query parameter for seamless navigation and bookmarking.
