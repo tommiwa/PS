@@ -3210,8 +3210,27 @@ export class MemStorage implements IStorage {
   }
 
   // Locker Management operations
-  async getAllLockers(): Promise<Locker[]> {
-    const results = await db.select().from(lockers).orderBy(asc(lockers.lockerNumber));
+  async getAllLockers(): Promise<any[]> {
+    const results = await db
+      .select({
+        id: lockers.id,
+        lockerNumber: lockers.lockerNumber,
+        locationId: lockers.locationId,
+        locationName: sqlOp<string>`${locations.office} || ' - ' || ${locations.building}`,
+        lockerTypeId: lockers.lockerTypeId,
+        lockerTypeName: lockerTypesTable.name,
+        status: lockers.status,
+        assignedTo: lockers.userId,
+        assignedUserName: sqlOp<string>`${users.firstName} || ' ' || ${users.lastName}`,
+        assignedUserEmail: users.email,
+        notes: lockers.notes
+      })
+      .from(lockers)
+      .leftJoin(locations, eq(lockers.locationId, locations.id))
+      .leftJoin(lockerTypesTable, eq(lockers.lockerTypeId, lockerTypesTable.id))
+      .leftJoin(users, eq(lockers.userId, users.id))
+      .orderBy(asc(lockers.lockerNumber));
+    
     return results;
   }
 
