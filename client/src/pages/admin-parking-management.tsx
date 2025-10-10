@@ -1854,7 +1854,7 @@ export default function AdminParkingManagement() {
                                 {spot.isBookable !== false ? (
                                   <Badge variant="outline">{t("admin.parkingManagement.bookable")}</Badge>
                                 ) : (
-                                  <Badge variant="secondary" className="bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100">{t("admin.parkingManagement.disabled")}</Badge>
+                                  <Badge variant="secondary" className="bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100">Not Bookable</Badge>
                                 )}
                               </div>
                             </TableCell>
@@ -2181,7 +2181,7 @@ export default function AdminParkingManagement() {
                               {spot.isBookable !== false ? (
                                 <Badge variant="outline">Bookable</Badge>
                               ) : (
-                                <Badge variant="secondary" className="bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100">Disabled</Badge>
+                                <Badge variant="secondary" className="bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100">Not Bookable</Badge>
                               )}
                             </div>
                           </TableCell>
