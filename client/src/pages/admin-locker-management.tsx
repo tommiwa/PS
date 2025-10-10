@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query"
 import { queryClient, apiRequest } from "@/lib/queryClient"
 import { useToast } from "@/hooks/use-toast"
 import { useTableSort } from "@/hooks/use-table-sort"
+import { useCardsVisibility } from "@/hooks/use-cards-visibility"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -20,10 +21,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { SortableTableHeader } from "@/components/ui/sortable-table-header"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { 
   Package, Plus, Edit, Trash2, UserPlus, UserMinus,
   Search, Filter, Clock, CheckCircle2, XCircle, Calendar as CalendarIcon,
-  ChevronDown, Users, ListOrdered
+  ChevronDown, Users, ListOrdered, Building, Sparkles, Eye, EyeOff, RefreshCw
 } from "lucide-react"
 import type { 
   Locker, 
@@ -62,7 +64,13 @@ interface LockerAssignmentHistoryWithDetails extends LockerAssignmentHistory {
 
 export default function AdminLockerManagement() {
   const { toast } = useToast()
-  const [activeTab, setActiveTab] = useState("lockers")
+  const [activeTab, setActiveTab] = useState("bci-managed")
+  
+  // Cards visibility hook
+  const { cardsVisible, toggleCards } = useCardsVisibility("locker-management")
+  
+  // Refresh state
+  const [isRefreshing, setIsRefreshing] = useState(false)
   
   // Search and filter states for each tab
   const [lockersSearchTerm, setLockersSearchTerm] = useState("")
@@ -164,12 +172,43 @@ export default function AdminLockerManagement() {
     queryKey: ["/api/admin/users"],
   })
   
+  // Refresh all data handler
+  const handleRefreshAll = async () => {
+    setIsRefreshing(true)
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/lockers"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/locker-waitlist"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/locker-assignment-history"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] })
+      ])
+      toast({
+        title: "Refreshed",
+        description: "Locker management data has been refreshed",
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to refresh data",
+        variant: "destructive",
+      })
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
+  
   // Table sorting for lockers
   const { sortedData: sortedLockers, sortState, handleSort } = useTableSort(
     allLockers,
     "lockerNumber",
     "asc"
   )
+  
+  // Calculate metrics for locker management
+  const bciManagedLockers = useMemo(() => allLockers.filter(locker => locker.isBciManaged), [allLockers])
+  const availableLockers = useMemo(() => allLockers.filter(locker => locker.status === "available"), [allLockers])
+  const availableBciLockers = useMemo(() => allLockers.filter(locker => locker.isBciManaged && locker.status === "available"), [allLockers])
+  const personalLockers = useMemo(() => allLockers.filter(locker => !locker.isBciManaged), [allLockers])
   
   // Filter lockers
   const filteredLockers = useMemo(() => {
@@ -210,7 +249,7 @@ export default function AdminLockerManagement() {
   }, [lockerHistory, historySearchTerm, historyLockerFilter, historyActionFilter])
   
   // Available lockers for assignment (only available status)
-  const availableLockers = useMemo(() => {
+  const availableLockersForAssignment = useMemo(() => {
     return allLockers.filter(locker => locker.status === "available")
   }, [allLockers])
   
@@ -600,124 +639,209 @@ export default function AdminLockerManagement() {
           <h1 className="text-3xl font-bold" data-testid="heading-locker-management">Locker Management</h1>
           <p className="text-muted-foreground mt-1">Manage locker inventory, assignments, and waitlist</p>
         </div>
+        <div className="flex gap-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={toggleCards}
+                data-testid="button-toggle-cards"
+                aria-label={cardsVisible ? "Hide dashboard cards" : "Show dashboard cards"}
+              >
+                {cardsVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {cardsVisible ? "Hide dashboard cards" : "Show dashboard cards"}
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline"
+                onClick={handleRefreshAll}
+                disabled={isRefreshing}
+                data-testid="button-refresh-data"
+                aria-label="Refresh all locker data"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Refresh Data
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              Refresh all locker data and assignments
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                onClick={() => setShowAddToWaitlistDialog(true)}
+                data-testid="button-add-to-waiting"
+                aria-label="Add user to waiting list"
+              >
+                <UserPlus className="w-4 h-4 mr-2" />
+                Add to Waiting
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              Add user to locker waiting list
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                onClick={() => setShowAddLockerDialog(true)}
+                data-testid="button-add-locker"
+                aria-label="Create new locker"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Locker
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              Create new locker with location settings
+            </TooltipContent>
+          </Tooltip>
+        </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList data-testid="tabs-locker-management">
-          <TabsTrigger value="lockers" data-testid="tab-lockers">
-            <Package className="h-4 w-4 mr-2" />
-            Lockers
+      {/* Quick Analytics Cards */}
+      {cardsVisible && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card 
+                data-testid="card-total-lockers" 
+                className="hover-elevate cursor-pointer active-elevate-2"
+                onClick={() => setActiveTab("bci-managed")}
+              >
+                <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Lockers</CardTitle>
+                  <div className="rounded-full border-2 border-blue-400 p-2">
+                    <Package className="h-4 w-4 text-blue-600" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold" data-testid="stat-total-lockers">
+                    {allLockers.length}
+                  </div>
+                  <p className="text-xs text-blue-600">All lockers</p>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent>
+              Click to view all BCI managed lockers
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card 
+                data-testid="card-available-lockers" 
+                className="hover-elevate cursor-pointer active-elevate-2"
+                onClick={() => setActiveTab("bci-available")}
+              >
+                <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Available Lockers</CardTitle>
+                  <div className="rounded-full border-2 border-green-400 p-2">
+                    <Sparkles className="h-4 w-4 text-green-600" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold" data-testid="stat-available-lockers">
+                    {availableLockers.length}
+                  </div>
+                  <p className="text-xs text-green-600">Unassigned lockers</p>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent>
+              Click to view available lockers
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card 
+                data-testid="card-bci-managed-total" 
+                className="hover-elevate cursor-pointer active-elevate-2"
+                onClick={() => setActiveTab("bci-managed")}
+              >
+                <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total BCI Managed Lockers</CardTitle>
+                  <div className="rounded-full border-2 border-purple-400 p-2">
+                    <Building className="h-4 w-4 text-purple-600" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold" data-testid="stat-bci-managed-total">
+                    {bciManagedLockers.length}
+                  </div>
+                  <p className="text-xs text-purple-600">BCI managed lockers</p>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent>
+              Click to view all BCI managed lockers
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card 
+                data-testid="card-bci-managed-available" 
+                className="hover-elevate cursor-pointer active-elevate-2"
+                onClick={() => setActiveTab("bci-available")}
+              >
+                <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Available BCI Managed Lockers</CardTitle>
+                  <div className="rounded-full border-2 border-orange-400 p-2">
+                    <Sparkles className="h-4 w-4 text-orange-600" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold" data-testid="stat-bci-managed-available">
+                    {availableBciLockers.length}
+                  </div>
+                  <p className="text-xs text-orange-600">Unassigned BCI lockers</p>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent>
+              Click to view available BCI managed lockers
+            </TooltipContent>
+          </Tooltip>
+        </div>
+      )}
+
+      {/* Main Content Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="bci-managed" data-testid="tab-bci-managed-lockers" className="gap-2">
+            <Building className="h-4 w-4 !text-purple-600" />
+            All BCI Managed ({bciManagedLockers.length})
           </TabsTrigger>
-          <TabsTrigger value="assignments" data-testid="tab-assignments">
-            <Users className="h-4 w-4 mr-2" />
-            Assignments
+          <TabsTrigger value="bci-available" data-testid="tab-bci-available-lockers" className="gap-2">
+            <Sparkles className="h-4 w-4 !text-green-600" />
+            Available BCI ({availableBciLockers.length})
           </TabsTrigger>
-          <TabsTrigger value="waitlist" data-testid="tab-waitlist">
-            <ListOrdered className="h-4 w-4 mr-2" />
-            Waitlist
+          <TabsTrigger value="personal" data-testid="tab-personal-lockers" className="gap-2">
+            <Users className="h-4 w-4 !text-blue-600" />
+            All Personal ({personalLockers.length})
           </TabsTrigger>
-          <TabsTrigger value="history" data-testid="tab-history">
-            <Clock className="h-4 w-4 mr-2" />
-            History
+          <TabsTrigger value="waitlist" data-testid="tab-waiting-list" className="gap-2">
+            <Clock className="h-4 w-4 !text-orange-600" />
+            Waiting List ({lockerWaitlist.length})
           </TabsTrigger>
         </TabsList>
 
-        {/* LOCKERS TAB */}
-        <TabsContent value="lockers" className="space-y-4">
+        {/* All BCI Managed Lockers Tab */}
+        <TabsContent value="bci-managed" className="space-y-4">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-4">
-              <CardTitle>All Lockers</CardTitle>
-              <Dialog open={showAddLockerDialog} onOpenChange={setShowAddLockerDialog}>
-                <DialogTrigger asChild>
-                  <Button size="sm" data-testid="button-add-locker">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Locker
-                  </Button>
-                </DialogTrigger>
-                <DialogContent data-testid="dialog-add-locker">
-                  <DialogHeader>
-                    <DialogTitle>Add New Locker</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="locker-number">Locker Number *</Label>
-                      <Input
-                        id="locker-number"
-                        data-testid="input-add-locker-number"
-                        value={addLockerForm.lockerNumber}
-                        onChange={(e) => setAddLockerForm({ ...addLockerForm, lockerNumber: e.target.value })}
-                        placeholder="e.g., L-001"
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="location">Location *</Label>
-                      <Select
-                        value={addLockerForm.locationId?.toString()}
-                        onValueChange={(value) => setAddLockerForm({ ...addLockerForm, locationId: parseInt(value) })}
-                      >
-                        <SelectTrigger id="location" data-testid="select-add-location">
-                          <SelectValue placeholder="Select location" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {locations.map(location => (
-                            <SelectItem key={location.id} value={location.id.toString()}>
-                              {`${location.office} - ${location.building}, ${location.level}`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="locker-type">Locker Type *</Label>
-                      <Select
-                        value={addLockerForm.lockerTypeId?.toString()}
-                        onValueChange={(value) => setAddLockerForm({ ...addLockerForm, lockerTypeId: parseInt(value) })}
-                      >
-                        <SelectTrigger id="locker-type" data-testid="select-add-locker-type">
-                          <SelectValue placeholder="Select locker type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {lockerTypes.map(type => (
-                            <SelectItem key={type.id} value={type.id.toString()}>
-                              {type.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="notes">Notes</Label>
-                      <Textarea
-                        id="notes"
-                        data-testid="textarea-add-notes"
-                        value={addLockerForm.notes}
-                        onChange={(e) => setAddLockerForm({ ...addLockerForm, notes: e.target.value })}
-                        placeholder="Optional notes about this locker"
-                        rows={3}
-                      />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setShowAddLockerDialog(false)}
-                      data-testid="button-cancel-add"
-                    >
-                      Cancel
-                    </Button>
-                    <Button 
-                      onClick={handleAddLocker}
-                      disabled={createLockerMutation.isPending}
-                      data-testid="button-submit-add"
-                    >
-                      {createLockerMutation.isPending ? "Adding..." : "Add Locker"}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+            <CardHeader>
+              <CardTitle>All BCI Managed Lockers ({bciManagedLockers.length})</CardTitle>
             </CardHeader>
             <CardContent>
               {/* Filters */}
@@ -743,7 +867,7 @@ export default function AdminLockerManagement() {
                     <SelectItem value="all">All Locations</SelectItem>
                     {locations.map(location => (
                       <SelectItem key={location.id} value={location.id.toString()}>
-                        {`${location.office} - ${location.building}, ${location.level}`}
+                        {location.office} - {location.building}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -820,14 +944,30 @@ export default function AdminLockerManagement() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredLockers.length === 0 ? (
+                      {bciManagedLockers.filter(locker => {
+                        const matchesSearch = locker.lockerNumber?.toLowerCase().includes(lockersSearchTerm.toLowerCase()) ||
+                                             locker.assignedUserName?.toLowerCase().includes(lockersSearchTerm.toLowerCase()) ||
+                                             locker.assignedUserEmail?.toLowerCase().includes(lockersSearchTerm.toLowerCase())
+                        const matchesLocation = lockersLocationFilter === "all" || locker.locationId?.toString() === lockersLocationFilter
+                        const matchesType = lockersTypeFilter === "all" || locker.lockerTypeId?.toString() === lockersTypeFilter
+                        const matchesStatus = lockersStatusFilter === "all" || locker.status === lockersStatusFilter
+                        return matchesSearch && matchesLocation && matchesType && matchesStatus
+                      }).length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                            No lockers found
+                            No BCI managed lockers found
                           </TableCell>
                         </TableRow>
                       ) : (
-                        filteredLockers.map((locker) => (
+                        bciManagedLockers.filter(locker => {
+                          const matchesSearch = locker.lockerNumber?.toLowerCase().includes(lockersSearchTerm.toLowerCase()) ||
+                                               locker.assignedUserName?.toLowerCase().includes(lockersSearchTerm.toLowerCase()) ||
+                                               locker.assignedUserEmail?.toLowerCase().includes(lockersSearchTerm.toLowerCase())
+                          const matchesLocation = lockersLocationFilter === "all" || locker.locationId?.toString() === lockersLocationFilter
+                          const matchesType = lockersTypeFilter === "all" || locker.lockerTypeId?.toString() === lockersTypeFilter
+                          const matchesStatus = lockersStatusFilter === "all" || locker.status === lockersStatusFilter
+                          return matchesSearch && matchesLocation && matchesType && matchesStatus
+                        }).map((locker) => (
                           <TableRow key={locker.id} data-testid={`row-locker-${locker.id}`}>
                             <TableCell className="font-medium" data-testid={`text-locker-number-${locker.id}`}>
                               {locker.lockerNumber}
@@ -855,22 +995,32 @@ export default function AdminLockerManagement() {
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleEditLocker(locker)}
-                                  data-testid={`button-edit-${locker.id}`}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleDeleteLocker(locker)}
-                                  data-testid={`button-delete-${locker.id}`}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handleEditLocker(locker)}
+                                      data-testid={`button-edit-${locker.id}`}
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Edit locker details</TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handleDeleteLocker(locker)}
+                                      data-testid={`button-delete-${locker.id}`}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Delete locker</TooltipContent>
+                                </Tooltip>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -884,126 +1034,181 @@ export default function AdminLockerManagement() {
           </Card>
         </TabsContent>
 
-        {/* ASSIGNMENTS TAB */}
-        <TabsContent value="assignments" className="space-y-4">
+        {/* Available BCI Lockers Tab */}
+        <TabsContent value="bci-available" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Locker Assignments</CardTitle>
+              <CardTitle>Available BCI Managed Lockers ({availableBciLockers.length})</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {/* Available Lockers */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-3" data-testid="heading-available-lockers">Available Lockers</h3>
-                  {isLoadingLockers ? (
-                    <div className="space-y-2">
-                      {[...Array(3)].map((_, i) => (
-                        <Skeleton key={i} className="h-12 w-full" />
-                      ))}
-                    </div>
-                  ) : availableLockers.length === 0 ? (
-                    <Alert>
-                      <AlertDescription>No available lockers at this time.</AlertDescription>
-                    </Alert>
-                  ) : (
-                    <div className="border rounded-md">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead data-testid="header-available-locker-number">Locker Number</TableHead>
-                            <TableHead data-testid="header-available-location">Location</TableHead>
-                            <TableHead data-testid="header-available-type">Type</TableHead>
-                            <TableHead data-testid="header-available-actions">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {availableLockers.map((locker) => (
-                            <TableRow key={locker.id} data-testid={`row-available-locker-${locker.id}`}>
-                              <TableCell className="font-medium" data-testid={`text-available-locker-number-${locker.id}`}>{locker.lockerNumber}</TableCell>
-                              <TableCell data-testid={`text-available-location-${locker.id}`}>{locker.locationName || '-'}</TableCell>
-                              <TableCell data-testid={`text-available-type-${locker.id}`}>{locker.lockerTypeName || '-'}</TableCell>
-                              <TableCell>
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleShowAssignDialog(locker)}
-                                  data-testid={`button-assign-${locker.id}`}
-                                >
-                                  <UserPlus className="h-4 w-4 mr-2" />
-                                  Assign
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )}
+              {isLoadingLockers ? (
+                <div className="space-y-2">
+                  {[...Array(5)].map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
                 </div>
-
-                {/* Assigned Lockers */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-3" data-testid="heading-assigned-lockers">Assigned Lockers</h3>
-                  {isLoadingLockers ? (
-                    <div className="space-y-2">
-                      {[...Array(3)].map((_, i) => (
-                        <Skeleton key={i} className="h-12 w-full" />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="border rounded-md">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead data-testid="header-assigned-locker-number">Locker Number</TableHead>
-                            <TableHead data-testid="header-assigned-location">Location</TableHead>
-                            <TableHead data-testid="header-assigned-type">Type</TableHead>
-                            <TableHead data-testid="header-assigned-to">Assigned To</TableHead>
-                            <TableHead data-testid="header-assigned-date">Assigned Date</TableHead>
-                            <TableHead data-testid="header-assigned-actions">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {allLockers.filter(l => l.status === "assigned").length === 0 ? (
-                            <TableRow>
-                              <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                                No assigned lockers
-                              </TableCell>
-                            </TableRow>
-                          ) : (
-                            allLockers.filter(l => l.status === "assigned").map((locker) => (
-                              <TableRow key={locker.id} data-testid={`row-assigned-locker-${locker.id}`}>
-                                <TableCell className="font-medium" data-testid={`text-assigned-locker-number-${locker.id}`}>{locker.lockerNumber}</TableCell>
-                                <TableCell data-testid={`text-assigned-location-${locker.id}`}>{locker.locationName || '-'}</TableCell>
-                                <TableCell data-testid={`text-assigned-type-${locker.id}`}>{locker.lockerTypeName || '-'}</TableCell>
-                                <TableCell data-testid={`text-assigned-user-${locker.id}`}>
-                                  <div>
-                                    <div className="font-medium">{locker.assignedUserName}</div>
-                                    <div className="text-sm text-muted-foreground">{locker.assignedUserEmail}</div>
-                                  </div>
-                                </TableCell>
-                                <TableCell data-testid={`text-assigned-date-${locker.id}`}>
-                                  {locker.assignedAt ? format(new Date(locker.assignedAt), 'MMM dd, yyyy') : '-'}
-                                </TableCell>
-                                <TableCell>
+              ) : availableBciLockers.length === 0 ? (
+                <Alert>
+                  <AlertDescription>No available BCI managed lockers at this time.</AlertDescription>
+                </Alert>
+              ) : (
+                <div className="border rounded-md">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead data-testid="header-available-locker-number">Locker Number</TableHead>
+                        <TableHead data-testid="header-available-location">Location</TableHead>
+                        <TableHead data-testid="header-available-type">Type</TableHead>
+                        <TableHead data-testid="header-available-actions">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {availableBciLockers.map((locker) => (
+                        <TableRow key={locker.id} data-testid={`row-available-locker-${locker.id}`}>
+                          <TableCell className="font-medium" data-testid={`text-available-locker-number-${locker.id}`}>
+                            {locker.lockerNumber}
+                          </TableCell>
+                          <TableCell data-testid={`text-available-location-${locker.id}`}>
+                            {locker.locationName || '-'}
+                          </TableCell>
+                          <TableCell data-testid={`text-available-type-${locker.id}`}>
+                            {locker.lockerTypeName || '-'}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
                                   <Button
                                     size="sm"
-                                    variant="outline"
-                                    onClick={() => handleShowUnassignDialog(locker)}
-                                    data-testid={`button-unassign-${locker.id}`}
+                                    onClick={() => handleShowAssignDialog(locker)}
+                                    data-testid={`button-assign-${locker.id}`}
                                   >
-                                    <UserMinus className="h-4 w-4 mr-2" />
-                                    Unassign
+                                    <UserPlus className="h-4 w-4 mr-2" />
+                                    Assign
                                   </Button>
-                                </TableCell>
-                              </TableRow>
-                            ))
-                          )}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )}
+                                </TooltipTrigger>
+                                <TooltipContent>Assign locker to user</TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleEditLocker(locker)}
+                                    data-testid={`button-edit-available-${locker.id}`}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Edit locker details</TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
-              </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Personal Lockers Tab */}
+        <TabsContent value="personal" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Personal Lockers ({personalLockers.length})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoadingLockers ? (
+                <div className="space-y-2">
+                  {[...Array(5)].map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
+                </div>
+              ) : personalLockers.length === 0 ? (
+                <Alert>
+                  <AlertDescription>No personal lockers found.</AlertDescription>
+                </Alert>
+              ) : (
+                <div className="border rounded-md">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead data-testid="header-personal-locker-number">Locker Number</TableHead>
+                        <TableHead data-testid="header-personal-location">Location</TableHead>
+                        <TableHead data-testid="header-personal-type">Type</TableHead>
+                        <TableHead data-testid="header-personal-status">Status</TableHead>
+                        <TableHead data-testid="header-personal-assigned-to">Assigned To</TableHead>
+                        <TableHead data-testid="header-personal-actions">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {personalLockers.map((locker) => (
+                        <TableRow key={locker.id} data-testid={`row-personal-locker-${locker.id}`}>
+                          <TableCell className="font-medium" data-testid={`text-personal-locker-number-${locker.id}`}>
+                            {locker.lockerNumber}
+                          </TableCell>
+                          <TableCell data-testid={`text-personal-location-${locker.id}`}>
+                            {locker.locationName || '-'}
+                          </TableCell>
+                          <TableCell data-testid={`text-personal-type-${locker.id}`}>
+                            {locker.lockerTypeName || '-'}
+                          </TableCell>
+                          <TableCell data-testid={`badge-personal-status-${locker.id}`}>
+                            <Badge variant={locker.status === "available" ? "outline" : "default"}>
+                              {locker.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell data-testid={`text-personal-assigned-user-${locker.id}`}>
+                            {locker.assignedUserName ? (
+                              <div>
+                                <div className="font-medium">{locker.assignedUserName}</div>
+                                <div className="text-sm text-muted-foreground">{locker.assignedUserEmail}</div>
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleEditLocker(locker)}
+                                    data-testid={`button-edit-personal-${locker.id}`}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Edit locker details</TooltipContent>
+                              </Tooltip>
+                              {locker.status === "assigned" && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handleShowUnassignDialog(locker)}
+                                      data-testid={`button-unassign-personal-${locker.id}`}
+                                    >
+                                      <UserMinus className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Unassign locker</TooltipContent>
+                                </Tooltip>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -1011,149 +1216,11 @@ export default function AdminLockerManagement() {
         {/* WAITLIST TAB */}
         <TabsContent value="waitlist" className="space-y-4">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-4">
-              <CardTitle>Locker Waitlist</CardTitle>
-              <Dialog open={showAddToWaitlistDialog} onOpenChange={setShowAddToWaitlistDialog}>
-                <DialogTrigger asChild>
-                  <Button size="sm" data-testid="button-add-to-waitlist">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add to Waitlist
-                  </Button>
-                </DialogTrigger>
-                <DialogContent data-testid="dialog-add-to-waitlist">
-                  <DialogHeader>
-                    <DialogTitle>Add User to Waitlist</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label>User *</Label>
-                      <Popover open={waitlistUserSearchOpen} onOpenChange={setWaitlistUserSearchOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            className="w-full justify-between"
-                            data-testid="button-select-waitlist-user"
-                          >
-                            {addToWaitlistForm.userId
-                              ? getSelectedUserName(addToWaitlistForm.userId)
-                              : "Select user"}
-                            <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[400px] p-0" data-testid="popover-waitlist-user-search">
-                          <Command shouldFilter={false}>
-                            <CommandInput 
-                              placeholder="Search users..." 
-                              value={waitlistUserSearchQuery}
-                              onValueChange={setWaitlistUserSearchQuery}
-                              data-testid="input-waitlist-user-search"
-                            />
-                            <CommandList>
-                              <CommandEmpty>No users found.</CommandEmpty>
-                              <CommandGroup>
-                                {filteredUsersForWaitlist.map((user) => (
-                                  <CommandItem
-                                    key={user.id}
-                                    value={user.id}
-                                    onSelect={(value) => {
-                                      setAddToWaitlistForm({ ...addToWaitlistForm, userId: value })
-                                      setWaitlistUserSearchOpen(false)
-                                    }}
-                                    data-testid={`option-waitlist-user-${user.id}`}
-                                  >
-                                    <div>
-                                      <div className="font-medium">
-                                        {user.firstName} {user.lastName}
-                                      </div>
-                                      <div className="text-sm text-muted-foreground">{user.email}</div>
-                                    </div>
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="waitlist-location">Preferred Location (Optional)</Label>
-                      <Select
-                        value={addToWaitlistForm.locationId?.toString()}
-                        onValueChange={(value) => setAddToWaitlistForm({ 
-                          ...addToWaitlistForm, 
-                          locationId: value ? parseInt(value) : undefined 
-                        })}
-                      >
-                        <SelectTrigger id="waitlist-location" data-testid="select-add-waitlist-location">
-                          <SelectValue placeholder="Any location" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {locations.map(location => (
-                            <SelectItem key={location.id} value={location.id.toString()}>
-                              {`${location.office} - ${location.building}, ${location.level}`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="waitlist-type">Preferred Locker Type (Optional)</Label>
-                      <Select
-                        value={addToWaitlistForm.requestedLockerTypeId?.toString()}
-                        onValueChange={(value) => setAddToWaitlistForm({ 
-                          ...addToWaitlistForm, 
-                          requestedLockerTypeId: value ? parseInt(value) : undefined 
-                        })}
-                      >
-                        <SelectTrigger id="waitlist-type" data-testid="select-add-waitlist-type">
-                          <SelectValue placeholder="Any type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {lockerTypes.map(type => (
-                            <SelectItem key={type.id} value={type.id.toString()}>
-                              {type.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="waitlist-notes">Notes</Label>
-                      <Textarea
-                        id="waitlist-notes"
-                        data-testid="textarea-add-waitlist-notes"
-                        value={addToWaitlistForm.notes}
-                        onChange={(e) => setAddToWaitlistForm({ ...addToWaitlistForm, notes: e.target.value })}
-                        placeholder="Optional notes"
-                        rows={3}
-                      />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setShowAddToWaitlistDialog(false)}
-                      data-testid="button-cancel-waitlist"
-                    >
-                      Cancel
-                    </Button>
-                    <Button 
-                      onClick={handleAddToWaitlist}
-                      disabled={addToWaitlistMutation.isPending}
-                      data-testid="button-submit-waitlist"
-                    >
-                      {addToWaitlistMutation.isPending ? "Adding..." : "Add to Waitlist"}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+            <CardHeader>
+              <CardTitle>Locker Waitlist ({lockerWaitlist.length})</CardTitle>
             </CardHeader>
             <CardContent>
-              {/* Filters */}
+              {/* Waitlist Filters */}
               <div className="flex flex-wrap gap-4 mb-4">
                 <div className="flex-1 min-w-[200px]">
                   <div className="relative">
@@ -1169,28 +1236,27 @@ export default function AdminLockerManagement() {
                 </div>
                 
                 <Select value={waitlistLocationFilter} onValueChange={setWaitlistLocationFilter}>
-                  <SelectTrigger className="w-[180px]" data-testid="select-waitlist-location-filter">
+                  <SelectTrigger className="w-[180px]" data-testid="select-waitlist-filter-location">
                     <SelectValue placeholder="All Locations" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Locations</SelectItem>
                     {locations.map(location => (
                       <SelectItem key={location.id} value={location.id.toString()}>
-                        {`${location.office} - ${location.building}, ${location.level}`}
+                        {location.office} - {location.building}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 
                 <Select value={waitlistStatusFilter} onValueChange={setWaitlistStatusFilter}>
-                  <SelectTrigger className="w-[180px]" data-testid="select-waitlist-status-filter">
+                  <SelectTrigger className="w-[180px]" data-testid="select-waitlist-filter-status">
                     <SelectValue placeholder="All Status" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Status</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="fulfilled">Fulfilled</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1208,10 +1274,10 @@ export default function AdminLockerManagement() {
                     <TableHeader>
                       <TableRow>
                         <TableHead data-testid="header-waitlist-user">User</TableHead>
-                        <TableHead data-testid="header-waitlist-location">Location</TableHead>
-                        <TableHead data-testid="header-waitlist-type">Requested Type</TableHead>
-                        <TableHead data-testid="header-waitlist-requested-at">Requested At</TableHead>
+                        <TableHead data-testid="header-waitlist-location">Preferred Location</TableHead>
+                        <TableHead data-testid="header-waitlist-type">Preferred Type</TableHead>
                         <TableHead data-testid="header-waitlist-status">Status</TableHead>
+                        <TableHead data-testid="header-waitlist-enrolled">Enrolled Date</TableHead>
                         <TableHead data-testid="header-waitlist-actions">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1231,60 +1297,51 @@ export default function AdminLockerManagement() {
                                 <div className="text-sm text-muted-foreground">{item.userEmail}</div>
                               </div>
                             </TableCell>
-                            <TableCell data-testid={`text-waitlist-location-${item.id}`}>{item.locationName || 'Any'}</TableCell>
-                            <TableCell data-testid={`text-waitlist-type-${item.id}`}>{item.lockerTypeName || 'Any'}</TableCell>
-                            <TableCell data-testid={`text-waitlist-date-${item.id}`}>
-                              {format(new Date(item.requestedAt), 'MMM dd, yyyy')}
+                            <TableCell data-testid={`text-waitlist-location-${item.id}`}>
+                              {item.locationName || '-'}
+                            </TableCell>
+                            <TableCell data-testid={`text-waitlist-type-${item.id}`}>
+                              {item.lockerTypeName || 'Any'}
                             </TableCell>
                             <TableCell data-testid={`badge-waitlist-status-${item.id}`}>
-                              <Badge 
-                                variant={
-                                  item.status === "pending" ? "default" : 
-                                  item.status === "fulfilled" ? "outline" : 
-                                  "secondary"
-                                }
-                              >
+                              <Badge variant={item.status === "pending" ? "outline" : "default"}>
                                 {item.status}
                               </Badge>
+                            </TableCell>
+                            <TableCell data-testid={`text-waitlist-enrolled-${item.id}`}>
+                              {item.requestedAt ? format(new Date(item.requestedAt), 'MMM dd, yyyy') : '-'}
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
                                 {item.status === "pending" && (
-                                  <>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => updateWaitlistStatusMutation.mutate({ 
-                                        id: item.id, 
-                                        status: "fulfilled" 
-                                      })}
-                                      data-testid={`button-fulfill-${item.id}`}
-                                    >
-                                      <CheckCircle2 className="h-4 w-4 mr-1" />
-                                      Fulfill
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => updateWaitlistStatusMutation.mutate({ 
-                                        id: item.id, 
-                                        status: "cancelled" 
-                                      })}
-                                      data-testid={`button-cancel-${item.id}`}
-                                    >
-                                      <XCircle className="h-4 w-4 mr-1" />
-                                      Cancel
-                                    </Button>
-                                  </>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        size="sm"
+                                        onClick={() => updateWaitlistStatusMutation.mutate({ id: item.id, status: "fulfilled" })}
+                                        data-testid={`button-fulfill-${item.id}`}
+                                      >
+                                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                                        Fulfill
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Mark as fulfilled</TooltipContent>
+                                  </Tooltip>
                                 )}
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => removeFromWaitlistMutation.mutate(item.id)}
-                                  data-testid={`button-remove-${item.id}`}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      onClick={() => removeFromWaitlistMutation.mutate(item.id)}
+                                      data-testid={`button-remove-waitlist-${item.id}`}
+                                    >
+                                      <XCircle className="h-4 w-4 mr-2" />
+                                      Remove
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Remove from waitlist</TooltipContent>
+                                </Tooltip>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -1297,124 +1354,94 @@ export default function AdminLockerManagement() {
             </CardContent>
           </Card>
         </TabsContent>
-
-        {/* HISTORY TAB */}
-        <TabsContent value="history" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Assignment History</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {/* Filters */}
-              <div className="flex flex-wrap gap-4 mb-4">
-                <div className="flex-1 min-w-[200px]">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search history..."
-                      value={historySearchTerm}
-                      onChange={(e) => setHistorySearchTerm(e.target.value)}
-                      className="pl-10"
-                      data-testid="input-search-history"
-                    />
-                  </div>
-                </div>
-                
-                <Select value={historyLockerFilter} onValueChange={setHistoryLockerFilter}>
-                  <SelectTrigger className="w-[180px]" data-testid="select-history-locker-filter">
-                    <SelectValue placeholder="All Lockers" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Lockers</SelectItem>
-                    {allLockers.map(locker => (
-                      <SelectItem key={locker.id} value={locker.id}>
-                        {locker.lockerNumber}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                
-                <Select value={historyActionFilter} onValueChange={setHistoryActionFilter}>
-                  <SelectTrigger className="w-[180px]" data-testid="select-history-action-filter">
-                    <SelectValue placeholder="All Actions" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Actions</SelectItem>
-                    <SelectItem value="assigned">Assigned</SelectItem>
-                    <SelectItem value="unassigned">Unassigned</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* History Timeline */}
-              {isLoadingHistory ? (
-                <div className="space-y-2">
-                  {[...Array(5)].map((_, i) => (
-                    <Skeleton key={i} className="h-20 w-full" />
-                  ))}
-                </div>
-              ) : filteredHistory.length === 0 ? (
-                <Alert>
-                  <AlertDescription>No assignment history found.</AlertDescription>
-                </Alert>
-              ) : (
-                <div className="space-y-4">
-                  {filteredHistory.map((item) => (
-                    <div 
-                      key={item.id} 
-                      className="border rounded-lg p-4 space-y-2"
-                      data-testid={`history-item-${item.id}`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-start gap-3">
-                          <div className={`mt-1 p-2 rounded-full ${
-                            item.action === 'assigned' ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'
-                          }`}>
-                            {item.action === 'assigned' ? (
-                              <UserPlus className="h-4 w-4 text-green-600 dark:text-green-400" />
-                            ) : (
-                              <UserMinus className="h-4 w-4 text-red-600 dark:text-red-400" />
-                            )}
-                          </div>
-                          <div>
-                            <div className="font-medium">
-                              {item.action === 'assigned' ? 'Locker Assigned' : 'Locker Unassigned'}
-                            </div>
-                            <div className="text-sm text-muted-foreground mt-1">
-                              Locker: <span className="font-medium">{item.lockerNumber}</span>
-                              {item.locationName && ` at ${item.locationName}`}
-                            </div>
-                            {item.userName && (
-                              <div className="text-sm text-muted-foreground">
-                                User: <span className="font-medium">{item.userName}</span>
-                                {item.userEmail && ` (${item.userEmail})`}
-                              </div>
-                            )}
-                            {item.actorName && (
-                              <div className="text-sm text-muted-foreground">
-                                By: {item.actorName}
-                              </div>
-                            )}
-                            {item.notes && (
-                              <div className="text-sm text-muted-foreground mt-1">
-                                Notes: {item.notes}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="text-sm text-muted-foreground text-right">
-                          <div>{format(new Date(item.effectiveDate), 'MMM dd, yyyy')}</div>
-                          <div className="text-xs">{format(new Date(item.createdAt), 'h:mm a')}</div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
+
+      {/* Add Locker Dialog */}
+      <Dialog open={showAddLockerDialog} onOpenChange={setShowAddLockerDialog}>
+        <DialogContent data-testid="dialog-add-locker">
+          <DialogHeader>
+            <DialogTitle>Add New Locker</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="locker-number">Locker Number *</Label>
+              <Input
+                id="locker-number"
+                data-testid="input-add-locker-number"
+                value={addLockerForm.lockerNumber}
+                onChange={(e) => setAddLockerForm({ ...addLockerForm, lockerNumber: e.target.value })}
+                placeholder="e.g., L-001"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="location">Location *</Label>
+              <Select
+                value={addLockerForm.locationId?.toString()}
+                onValueChange={(value) => setAddLockerForm({ ...addLockerForm, locationId: parseInt(value) })}
+              >
+                <SelectTrigger id="location" data-testid="select-add-location">
+                  <SelectValue placeholder="Select location" />
+                </SelectTrigger>
+                <SelectContent>
+                  {locations.map(location => (
+                    <SelectItem key={location.id} value={location.id.toString()}>
+                      {`${location.office} - ${location.building}, ${location.level}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="locker-type">Locker Type *</Label>
+              <Select
+                value={addLockerForm.lockerTypeId?.toString()}
+                onValueChange={(value) => setAddLockerForm({ ...addLockerForm, lockerTypeId: parseInt(value) })}
+              >
+                <SelectTrigger id="locker-type" data-testid="select-add-locker-type">
+                  <SelectValue placeholder="Select locker type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {lockerTypes.map(type => (
+                    <SelectItem key={type.id} value={type.id.toString()}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea
+                id="notes"
+                data-testid="textarea-add-notes"
+                value={addLockerForm.notes}
+                onChange={(e) => setAddLockerForm({ ...addLockerForm, notes: e.target.value })}
+                placeholder="Optional notes about this locker"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowAddLockerDialog(false)}
+              data-testid="button-cancel-add"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleAddLocker}
+              disabled={createLockerMutation.isPending}
+              data-testid="button-submit-add"
+            >
+              {createLockerMutation.isPending ? "Adding..." : "Add Locker"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Locker Dialog */}
       <Dialog open={showEditLockerDialog} onOpenChange={setShowEditLockerDialog}>
@@ -1440,7 +1467,7 @@ export default function AdminLockerManagement() {
                 onValueChange={(value) => setEditLockerForm({ ...editLockerForm, locationId: parseInt(value) })}
               >
                 <SelectTrigger id="edit-location" data-testid="select-edit-location">
-                  <SelectValue />
+                  <SelectValue placeholder="Select location" />
                 </SelectTrigger>
                 <SelectContent>
                   {locations.map(location => (
@@ -1459,7 +1486,7 @@ export default function AdminLockerManagement() {
                 onValueChange={(value) => setEditLockerForm({ ...editLockerForm, lockerTypeId: parseInt(value) })}
               >
                 <SelectTrigger id="edit-locker-type" data-testid="select-edit-locker-type">
-                  <SelectValue />
+                  <SelectValue placeholder="Select locker type" />
                 </SelectTrigger>
                 <SelectContent>
                   {lockerTypes.map(type => (
@@ -1505,7 +1532,7 @@ export default function AdminLockerManagement() {
       <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
         <DialogContent data-testid="dialog-assign-locker">
           <DialogHeader>
-            <DialogTitle>Assign Locker {selectedLocker?.lockerNumber}</DialogTitle>
+            <DialogTitle>Assign Locker</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -1539,8 +1566,8 @@ export default function AdminLockerManagement() {
                           <CommandItem
                             key={user.id}
                             value={user.id}
-                            onSelect={(value) => {
-                              setAssignForm({ ...assignForm, userId: value })
+                            onSelect={() => {
+                              setAssignForm({ ...assignForm, userId: user.id })
                               setUserSearchOpen(false)
                             }}
                             data-testid={`option-assign-user-${user.id}`}
@@ -1561,13 +1588,13 @@ export default function AdminLockerManagement() {
             </div>
             
             <div className="space-y-2">
-              <Label>Effective Date *</Label>
+              <Label>Effective Date</Label>
               <Popover open={assignDatePickerOpen} onOpenChange={setAssignDatePickerOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className="w-full justify-start text-left font-normal"
-                    data-testid="button-assign-date"
+                    data-testid="button-assign-effective-date"
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {format(assignEffectiveDate, "PPP")}
@@ -1584,7 +1611,6 @@ export default function AdminLockerManagement() {
                       }
                     }}
                     initialFocus
-                    data-testid="calendar-assign-date"
                   />
                 </PopoverContent>
               </Popover>
@@ -1625,24 +1651,17 @@ export default function AdminLockerManagement() {
       <Dialog open={showUnassignDialog} onOpenChange={setShowUnassignDialog}>
         <DialogContent data-testid="dialog-unassign-locker">
           <DialogHeader>
-            <DialogTitle>Unassign Locker {selectedLocker?.lockerNumber}</DialogTitle>
+            <DialogTitle>Unassign Locker</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <Alert>
-              <AlertDescription>
-                You are about to unassign locker {selectedLocker?.lockerNumber} from{' '}
-                <strong>{selectedLocker?.assignedUserName}</strong>.
-              </AlertDescription>
-            </Alert>
-            
             <div className="space-y-2">
-              <Label>Effective Date *</Label>
+              <Label>Effective Date</Label>
               <Popover open={unassignDatePickerOpen} onOpenChange={setUnassignDatePickerOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className="w-full justify-start text-left font-normal"
-                    data-testid="button-unassign-date"
+                    data-testid="button-unassign-effective-date"
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {format(unassignEffectiveDate, "PPP")}
@@ -1659,7 +1678,6 @@ export default function AdminLockerManagement() {
                       }
                     }}
                     initialFocus
-                    data-testid="calendar-unassign-date"
                   />
                 </PopoverContent>
               </Popover>
@@ -1691,6 +1709,134 @@ export default function AdminLockerManagement() {
               data-testid="button-submit-unassign"
             >
               {unassignLockerMutation.isPending ? "Unassigning..." : "Unassign Locker"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add to Waitlist Dialog */}
+      <Dialog open={showAddToWaitlistDialog} onOpenChange={setShowAddToWaitlistDialog}>
+        <DialogContent data-testid="dialog-add-to-waitlist">
+          <DialogHeader>
+            <DialogTitle>Add User to Waitlist</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>User *</Label>
+              <Popover open={waitlistUserSearchOpen} onOpenChange={setWaitlistUserSearchOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className="w-full justify-between"
+                    data-testid="button-select-waitlist-user"
+                  >
+                    {addToWaitlistForm.userId
+                      ? getSelectedUserName(addToWaitlistForm.userId)
+                      : "Select user"}
+                    <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[400px] p-0" data-testid="popover-waitlist-user-search">
+                  <Command shouldFilter={false}>
+                    <CommandInput 
+                      placeholder="Search users..." 
+                      value={waitlistUserSearchQuery}
+                      onValueChange={setWaitlistUserSearchQuery}
+                      data-testid="input-waitlist-user-search"
+                    />
+                    <CommandList>
+                      <CommandEmpty>No users found.</CommandEmpty>
+                      <CommandGroup>
+                        {filteredUsersForWaitlist.map((user) => (
+                          <CommandItem
+                            key={user.id}
+                            value={user.id}
+                            onSelect={() => {
+                              setAddToWaitlistForm({ ...addToWaitlistForm, userId: user.id })
+                              setWaitlistUserSearchOpen(false)
+                            }}
+                            data-testid={`option-waitlist-user-${user.id}`}
+                          >
+                            <div>
+                              <div className="font-medium">
+                                {user.firstName} {user.lastName}
+                              </div>
+                              <div className="text-sm text-muted-foreground">{user.email}</div>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="waitlist-location">Preferred Location</Label>
+              <Select
+                value={addToWaitlistForm.locationId?.toString()}
+                onValueChange={(value) => setAddToWaitlistForm({ ...addToWaitlistForm, locationId: parseInt(value) })}
+              >
+                <SelectTrigger id="waitlist-location" data-testid="select-waitlist-location">
+                  <SelectValue placeholder="Select preferred location" />
+                </SelectTrigger>
+                <SelectContent>
+                  {locations.map(location => (
+                    <SelectItem key={location.id} value={location.id.toString()}>
+                      {`${location.office} - ${location.building}, ${location.level}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="waitlist-locker-type">Preferred Locker Type</Label>
+              <Select
+                value={addToWaitlistForm.requestedLockerTypeId?.toString()}
+                onValueChange={(value) => setAddToWaitlistForm({ ...addToWaitlistForm, requestedLockerTypeId: parseInt(value) })}
+              >
+                <SelectTrigger id="waitlist-locker-type" data-testid="select-waitlist-locker-type">
+                  <SelectValue placeholder="Select preferred locker type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {lockerTypes.map(type => (
+                    <SelectItem key={type.id} value={type.id.toString()}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="waitlist-notes">Notes</Label>
+              <Textarea
+                id="waitlist-notes"
+                data-testid="textarea-add-waitlist-notes"
+                value={addToWaitlistForm.notes}
+                onChange={(e) => setAddToWaitlistForm({ ...addToWaitlistForm, notes: e.target.value })}
+                placeholder="Optional notes or special requirements"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowAddToWaitlistDialog(false)}
+              data-testid="button-cancel-waitlist"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleAddToWaitlist}
+              disabled={addToWaitlistMutation.isPending}
+              data-testid="button-submit-waitlist"
+            >
+              {addToWaitlistMutation.isPending ? "Adding..." : "Add to Waitlist"}
             </Button>
           </DialogFooter>
         </DialogContent>
