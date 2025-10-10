@@ -487,6 +487,9 @@ export const entityTypes = z.enum([
   "booking",
   "waiting_list",
   "notification",
+  "locker",
+  "locker_waitlist",
+  "locker_assignment",
   "system"
 ]);
 
@@ -1046,6 +1049,117 @@ export const spotAssignmentHistory = pgTable("spot_assignment_history", {
   index("IDX_spot_assignment_history_effective_at").on(table.effectiveAt),
   index("IDX_spot_assignment_history_action").on(table.action),
 ]);
+
+// Locker Types Table
+export const lockerTypesTable = pgTable("locker_types", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  name: text("name").notNull().unique(),
+  slug: text("slug").notNull().unique(),
+  description: text("description"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertLockerTypeSchema = createInsertSchema(lockerTypesTable).pick({
+  name: true,
+  slug: true,
+  description: true,
+  isActive: true,
+});
+
+export type InsertLockerType = z.infer<typeof insertLockerTypeSchema>;
+export type LockerType = typeof lockerTypesTable.$inferSelect;
+
+// Locker statuses enum
+export const lockerStatuses = z.enum(["available", "assigned"]);
+export type LockerStatus = z.infer<typeof lockerStatuses>;
+
+// Lockers Table
+export const lockers = pgTable("lockers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  lockerNumber: varchar("locker_number").notNull().unique(),
+  locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "restrict" }),
+  lockerTypeId: integer("locker_type_id").notNull().references(() => lockerTypesTable.id, { onDelete: "restrict" }),
+  status: text("status").notNull().$type<LockerStatus>().default("available"),
+  isBciManaged: boolean("is_bci_managed").notNull().default(true),
+  userId: varchar("user_id"), // References users.id - nullable for unassigned lockers
+  assignedAt: timestamp("assigned_at"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertLockerSchema = createInsertSchema(lockers).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  locationId: z.number().int().positive(),
+  lockerTypeId: z.number().int().positive(),
+});
+
+export type InsertLocker = z.infer<typeof insertLockerSchema>;
+export type Locker = typeof lockers.$inferSelect;
+
+// Locker waitlist statuses enum
+export const lockerWaitlistStatuses = z.enum(["pending", "fulfilled", "cancelled"]);
+export type LockerWaitlistStatus = z.infer<typeof lockerWaitlistStatuses>;
+
+// Locker Waitlist Table
+export const lockerWaitlist = pgTable("locker_waitlist", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  locationId: integer("location_id").references(() => locations.id, { onDelete: "set null" }),
+  requestedLockerTypeId: integer("requested_locker_type_id").references(() => lockerTypesTable.id, { onDelete: "set null" }),
+  requestedAt: timestamp("requested_at").notNull().defaultNow(),
+  status: text("status").notNull().$type<LockerWaitlistStatus>().default("pending"),
+  fulfilledAt: timestamp("fulfilled_at"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => [
+  index("IDX_locker_waitlist_user_id").on(table.userId),
+  index("IDX_locker_waitlist_status").on(table.status),
+  index("IDX_locker_waitlist_requested_at").on(table.requestedAt),
+]);
+
+export const insertLockerWaitlistSchema = createInsertSchema(lockerWaitlist).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  requestedAt: true,
+});
+
+export type InsertLockerWaitlist = z.infer<typeof insertLockerWaitlistSchema>;
+export type LockerWaitlist = typeof lockerWaitlist.$inferSelect;
+
+// Locker assignment actions enum
+export const lockerAssignmentActions = z.enum(["assigned", "unassigned"]);
+export type LockerAssignmentAction = z.infer<typeof lockerAssignmentActions>;
+
+// Locker Assignment History Table
+export const lockerAssignmentHistory = pgTable("locker_assignment_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  lockerId: varchar("locker_id").notNull().references(() => lockers.id, { onDelete: "cascade" }),
+  userId: varchar("user_id"), // Nullable to support unassignment history
+  action: text("action").notNull().$type<LockerAssignmentAction>(),
+  actorId: varchar("actor_id"), // Admin who performed the action
+  effectiveDate: date("effective_date").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("IDX_locker_assignment_history_locker_id").on(table.lockerId),
+  index("IDX_locker_assignment_history_user_id").on(table.userId),
+  index("IDX_locker_assignment_history_effective_date").on(table.effectiveDate),
+  index("IDX_locker_assignment_history_action").on(table.action),
+]);
+
+export const insertLockerAssignmentHistorySchema = createInsertSchema(lockerAssignmentHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertLockerAssignmentHistory = z.infer<typeof insertLockerAssignmentHistorySchema>;
+export type LockerAssignmentHistory = typeof lockerAssignmentHistory.$inferSelect;
 
 export const insertSpotAssignmentHistorySchema = createInsertSchema(spotAssignmentHistory).omit({
   id: true,
