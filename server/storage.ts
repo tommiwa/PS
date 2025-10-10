@@ -3220,6 +3220,7 @@ export class MemStorage implements IStorage {
         lockerTypeId: lockers.lockerTypeId,
         lockerTypeName: lockerTypesTable.name,
         status: lockers.status,
+        isBciManaged: lockers.isBciManaged,
         assignedTo: lockers.userId,
         assignedUserName: sqlOp<string>`${users.firstName} || ' ' || ${users.lastName}`,
         assignedUserEmail: users.email,

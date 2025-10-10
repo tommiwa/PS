@@ -255,7 +255,10 @@ export default function AdminLockerManagement() {
   
   // Users search for assignment
   const filteredUsersForAssign = useMemo(() => {
-    if (userSearchQuery.length < 2) return []
+    if (userSearchQuery.length === 0) {
+      // Show first 10 users when no search query
+      return allUsers.slice(0, 10)
+    }
     return allUsers.filter(user => {
       const fullName = `${user.firstName || ''} ${user.lastName || ''}`.toLowerCase()
       const email = (user.email || '').toLowerCase()
@@ -266,7 +269,10 @@ export default function AdminLockerManagement() {
   
   // Users search for waitlist
   const filteredUsersForWaitlist = useMemo(() => {
-    if (waitlistUserSearchQuery.length < 2) return []
+    if (waitlistUserSearchQuery.length === 0) {
+      // Show first 10 users when no search query
+      return allUsers.slice(0, 10)
+    }
     return allUsers.filter(user => {
       const fullName = `${user.firstName || ''} ${user.lastName || ''}`.toLowerCase()
       const email = (user.email || '').toLowerCase()
