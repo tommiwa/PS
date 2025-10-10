@@ -102,29 +102,29 @@ export default function Admin() {
     }
   };
 
-  // React Query hooks for fetching real analytics data
+  // React Query hooks for fetching real analytics data with scope parameter
   const overviewQuery = useQuery<AnalyticsOverviewResponse>({
-    queryKey: ['/api/admin/analytics-overview'],
+    queryKey: ['/api/admin/analytics-overview', { scope }],
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   const revenueQuery = useQuery<AnalyticsRevenueResponse>({
-    queryKey: ['/api/admin/analytics-revenue', { monthsBack: getMonthsBack(dateRange) }],
+    queryKey: ['/api/admin/analytics-revenue', { monthsBack: getMonthsBack(dateRange), scope }],
     staleTime: 5 * 60 * 1000,
   });
 
   const topPerformersQuery = useQuery<AnalyticsTopPerformersResponse>({
-    queryKey: ['/api/admin/analytics-top-performers'],
+    queryKey: ['/api/admin/analytics-top-performers', { scope }],
     staleTime: 5 * 60 * 1000,
   });
 
   const issuesQuery = useQuery<AnalyticsIssuesResponse>({
-    queryKey: ['/api/admin/analytics-issues'],
+    queryKey: ['/api/admin/analytics-issues', { scope }],
     staleTime: 2 * 60 * 1000, // 2 minutes for more frequent updates
   });
 
   const usageQuery = useQuery<AnalyticsUsageResponse>({
-    queryKey: ['/api/admin/analytics-usage'],
+    queryKey: ['/api/admin/analytics-usage', { scope }],
     staleTime: 5 * 60 * 1000,
   });
 
