@@ -1957,6 +1957,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/all-spots", requireAdmin, async (req, res) => {
     try {
       const allSpots = await storage.getAllParkingSpotsWithUser();
+      
+      // Debug: Check MT spot in response
+      const mtSpot = allSpots.find(s => s.spotNumber === 'MT');
+      if (mtSpot) {
+        console.log('[API RESPONSE] MT Spot being sent to frontend:', {
+          spotNumber: mtSpot.spotNumber,
+          spotTypeId: mtSpot.spotTypeId,
+          spotTypeName: mtSpot.spotTypeName,
+          locationName: mtSpot.locationName
+        });
+      }
+      
       // Disable caching for admin data to prevent stale UI
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
       res.setHeader('Pragma', 'no-cache');

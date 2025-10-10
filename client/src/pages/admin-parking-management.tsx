@@ -306,16 +306,6 @@ export default function AdminParkingManagement() {
   // Fetch all spots (allocated + unallocated) for comprehensive admin view
   const { data: allSpots = [] } = useQuery<ParkingSpotWithUser[]>({
     queryKey: ["/api/admin/all-spots"],
-    onSuccess: (data) => {
-      const mtSpot = data.find(s => s.spotNumber === 'MT');
-      if (mtSpot) {
-        console.log('[FRONTEND] MT Spot data:', {
-          spotNumber: mtSpot.spotNumber,
-          spotTypeId: mtSpot.spotTypeId,
-          spotTypeName: mtSpot.spotTypeName
-        });
-      }
-    }
   });
 
   // Use only standard parking locations (no existing locations)
