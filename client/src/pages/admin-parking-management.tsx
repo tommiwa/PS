@@ -1570,26 +1570,26 @@ export default function AdminParkingManagement() {
         <Tooltip>
           <TooltipTrigger asChild>
             <Card 
-              data-testid="card-bci-managed-available" 
+              data-testid="card-waiting-list" 
               className="hover-elevate cursor-pointer active-elevate-2"
-              onClick={() => setActiveSpotTab("bci-available")}
+              onClick={() => setActiveSpotTab("waiting")}
             >
               <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Available BCI Managed Spots</CardTitle>
+                <CardTitle className="text-sm font-medium">Waiting List</CardTitle>
                 <div className="rounded-full border-2 border-orange-400 p-2">
-                  <Sparkles className="h-4 w-4 text-orange-600" />
+                  <Clock className="h-4 w-4 text-orange-600" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold" data-testid="stat-bci-managed-available">
-                  {unallocatedSpots.filter(spot => spot.isBciManaged).length}
+                <div className="text-2xl font-bold" data-testid="stat-waiting-list">
+                  {waitingListMetrics.active}
                 </div>
-                <p className="text-xs text-orange-600">Unassigned BCI spots</p>
+                <p className="text-xs text-orange-600">Pending requests</p>
               </CardContent>
             </Card>
           </TooltipTrigger>
           <TooltipContent>
-            Click to view available BCI managed spots
+            Click to view parking spot waiting list
           </TooltipContent>
         </Tooltip>
         </div>
