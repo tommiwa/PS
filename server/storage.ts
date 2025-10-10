@@ -950,11 +950,16 @@ export class MemStorage implements IStorage {
     const existing = await db.select().from(parkingSpots).where(eq(parkingSpots.id, id));
     if (existing.length === 0) return undefined;
     
+    console.log('[STORAGE UPDATE] Received updates:', JSON.stringify(updates, null, 2));
+    console.log('[STORAGE UPDATE] Updating spot ID:', id);
+    
     // Update in database
     const updated = await db.update(parkingSpots)
       .set(updates)
       .where(eq(parkingSpots.id, id))
       .returning();
+    
+    console.log('[STORAGE UPDATE] Drizzle returned:', JSON.stringify(updated[0], null, 2));
     
     return updated[0];
   }
