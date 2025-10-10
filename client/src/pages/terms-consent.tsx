@@ -154,11 +154,12 @@ export default function TermsConsent() {
 
   const acceptTermsMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest("/api/legal/terms/accept", {
+      const response = await apiRequest("/api/legal/terms/accept", {
         method: "POST",
       });
+      return await response.json();
     },
-    onSuccess: async () => {
+    onSuccess: async (data) => {
       toast({
         title: "Terms Accepted",
         description: "You have successfully accepted the Terms and Conditions.",

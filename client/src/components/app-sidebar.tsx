@@ -72,8 +72,8 @@ const mainMenuItems = [
   },
 ]
 
-// Admin-specific menu items with tooltips
-const adminMenuItems = [
+// Admin Core Management items
+const adminCoreItems = [
   {
     title: "User Management",
     url: "/admin/users",
@@ -88,6 +88,10 @@ const adminMenuItems = [
     roles: ["admin"],
     tooltip: "Parking Management"
   },
+]
+
+// Admin Operations items
+const adminOperationsItems = [
   {
     title: "Spot Booking Management",
     url: "/admin/bookings",
@@ -102,6 +106,10 @@ const adminMenuItems = [
     roles: ["admin"],
     tooltip: "App Data Management"
   },
+]
+
+// Admin Analytics & Audit items
+const adminAnalyticsItems = [
   {
     title: "Reports",
     url: "/admin/reports",
@@ -182,8 +190,16 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
   const orderedMainItems = getOrderedMainItems();
   
   // Admin items only shown if effective role is admin (respects "view as")
-  const filteredAdminItems = effectiveRoles.includes("admin") 
-    ? adminMenuItems.filter(item => effectiveRoles.some(role => item.roles.includes(role)))
+  const filteredAdminCoreItems = effectiveRoles.includes("admin") 
+    ? adminCoreItems.filter(item => effectiveRoles.some(role => item.roles.includes(role)))
+    : [];
+  
+  const filteredAdminOperationsItems = effectiveRoles.includes("admin") 
+    ? adminOperationsItems.filter(item => effectiveRoles.some(role => item.roles.includes(role)))
+    : [];
+  
+  const filteredAdminAnalyticsItems = effectiveRoles.includes("admin") 
+    ? adminAnalyticsItems.filter(item => effectiveRoles.some(role => item.roles.includes(role)))
     : [];
   
   // Settings items shown based on effective roles
@@ -423,15 +439,45 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Admin Section - Only shown when viewing as admin */}
-        {filteredAdminItems.length > 0 && (
+        {/* Admin Core Management - Only shown when viewing as admin */}
+        {filteredAdminCoreItems.length > 0 && (
           <>
             <SidebarSeparator />
             <SidebarGroup>
-              <SidebarGroupLabel>Administration</SidebarGroupLabel>
+              <SidebarGroupLabel>Core Management</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {renderMenuItems(filteredAdminItems)}
+                  {renderMenuItems(filteredAdminCoreItems)}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        )}
+
+        {/* Admin Operations - Only shown when viewing as admin */}
+        {filteredAdminOperationsItems.length > 0 && (
+          <>
+            <SidebarSeparator />
+            <SidebarGroup>
+              <SidebarGroupLabel>Operations</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {renderMenuItems(filteredAdminOperationsItems)}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        )}
+
+        {/* Admin Analytics & Audit - Only shown when viewing as admin */}
+        {filteredAdminAnalyticsItems.length > 0 && (
+          <>
+            <SidebarSeparator />
+            <SidebarGroup>
+              <SidebarGroupLabel>Analytics & Audit</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {renderMenuItems(filteredAdminAnalyticsItems)}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
