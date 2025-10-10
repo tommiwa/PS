@@ -397,7 +397,7 @@ export function AdminUsersTable({
                   currentSortDirection={sortState.direction}
                   onSort={handleSort}
                 >
-                  Renter Bookings
+                  As Renter
                 </SortableTableHeader>
                 <SortableTableHeader
                   column="ownerBookingsCount"
@@ -405,7 +405,7 @@ export function AdminUsersTable({
                   currentSortDirection={sortState.direction}
                   onSort={handleSort}
                 >
-                  Owner Bookings
+                  As Owner
                 </SortableTableHeader>
                 <SortableTableHeader
                   column="status"

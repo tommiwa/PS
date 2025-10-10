@@ -365,8 +365,8 @@ export const exportUsersData = (users: any[], title: string = 'User Management R
     { header: 'Phone Number', dataKey: 'phoneNumber', width: 18 },
     { header: 'Status', dataKey: 'status', width: 12, formatter: (status) => status?.toUpperCase() || 'ACTIVE' },
     { header: 'Spots Owned', dataKey: 'spotsOwned', width: 12 },
-    { header: 'Renter Bookings', dataKey: 'renterBookingsCount', width: 15 },
-    { header: 'Owner Bookings', dataKey: 'ownerBookingsCount', width: 15 },
+    { header: 'As Renter', dataKey: 'renterBookingsCount', width: 12 },
+    { header: 'As Owner', dataKey: 'ownerBookingsCount', width: 12 },
     { header: 'Last Login', dataKey: 'lastLogin', width: 15 },
     { header: 'Member Since', dataKey: 'memberSince', width: 15 }
   ]
@@ -385,8 +385,8 @@ export const exportUsersData = (users: any[], title: string = 'User Management R
         { label: 'Owner Users', value: users.filter(u => u.role === 'owner').length },
         { label: 'Renter Users', value: users.filter(u => u.role === 'renter').length },
         { label: 'Total Spots Owned', value: users.reduce((sum, u) => sum + (u.spotsOwned || 0), 0) },
-        { label: 'Total Renter Bookings', value: users.reduce((sum, u) => sum + (u.renterBookingsCount || 0), 0) },
-        { label: 'Total Owner Bookings', value: users.reduce((sum, u) => sum + (u.ownerBookingsCount || 0), 0) }
+        { label: 'Bookings (As Renter)', value: users.reduce((sum, u) => sum + (u.renterBookingsCount || 0), 0) },
+        { label: 'Bookings (As Owner)', value: users.reduce((sum, u) => sum + (u.ownerBookingsCount || 0), 0) }
       ]
     }
   }
