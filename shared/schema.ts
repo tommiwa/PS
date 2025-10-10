@@ -229,6 +229,52 @@ export interface BookingAvailabilityData extends SpotListing {
   availableTo: string;
 }
 
+// Spot Locks Table - Concurrent Booking Prevention System
+// This table prevents race conditions when multiple users attempt to book the same spot simultaneously.
+// Lock Lifecycle:
+// 1. "active" - Lock is held by user during booking process (typically 5-10 minutes)
+// 2. "confirmed" - Lock is converted to a confirmed booking (bookingId is set)
+// 3. "expired" - Lock expired due to timeout (user took too long to complete booking)
+// 4. "released" - Lock manually released by user (e.g., cancelled booking process)
+// 
+// The system automatically cleans up expired locks and prevents double-booking by checking for active locks
+// before allowing new bookings. Only one active lock per spot+date combination is allowed.
+
+export const lockStatuses = z.enum(["active", "confirmed", "expired", "released"]);
+export type LockStatus = z.infer<typeof lockStatuses>;
+
+export const spotLocks = pgTable("spot_locks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  spotId: varchar("spot_id").notNull().references(() => parkingSpots.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  listingId: varchar("listing_id").notNull().references(() => spotListings.id, { onDelete: "cascade" }), // FK to spot_listings
+  status: text("status").notNull().$type<LockStatus>().default("active"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  expiresAt: timestamp("expires_at").notNull(),
+  bookingId: varchar("booking_id"), // Set when lock is converted to booking
+}, (table) => [
+  // NOTE: Uniqueness constraint (one active lock per listing) is enforced via transaction-based SELECT FOR UPDATE
+  // in the API layer, not at database level. This provides atomic lock acquisition without race conditions.
+  index("IDX_spot_locks_listing_status").on(table.listingId, table.status),
+  index("IDX_spot_locks_spot_status").on(table.spotId, table.status),
+  index("IDX_spot_locks_user_status").on(table.userId, table.status),
+  index("IDX_spot_locks_expires_at").on(table.expiresAt),
+]);
+
+export const insertSpotLockSchema = createInsertSchema(spotLocks).omit({
+  id: true,
+  createdAt: true,
+  status: true,
+  bookingId: true,
+}).extend({
+  expiresAt: z.date().refine((date) => date > new Date(), {
+    message: "Lock expiration time must be in the future",
+  }),
+});
+
+export type InsertSpotLock = z.infer<typeof insertSpotLockSchema>;
+export type SpotLock = typeof spotLocks.$inferSelect;
+
 // Bookings Table
 export const bookingStatuses = z.enum(["confirmed", "pending", "cancelled", "completed"]);
 export type BookingStatus = z.infer<typeof bookingStatuses>;
