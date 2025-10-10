@@ -35,6 +35,7 @@ import AdminAudits from "@/pages/admin-audits";
 import AdminParkingManagement from "@/pages/admin-parking-management";
 import AdminDataManagement from "@/pages/admin-data-management";
 import AdminReportsPage from "@/pages/admin-reports";
+import AdminLockerManagement from "@/pages/admin-locker-management";
 import Login from "@/pages/login";
 import Terms from "@/pages/terms";
 import TermsConsent from "@/pages/terms-consent";
@@ -280,6 +281,7 @@ function useNavigationDataRefresh() {
     const routeQueryMap: Record<string, string[]> = {
       '/admin/users': ['/api/admin/users'],
       '/admin/parking': ['/api/admin/all-spots', '/api/admin/unallocated-spots'],
+      '/admin/locker-management': ['/api/admin/lockers', '/api/admin/locker-waitlist', '/api/admin/locker-assignment-history'],
       '/admin/bookings': ['/api/admin/spot-bookings'],
       '/admin/analytics': [
         '/api/admin/analytics-overview',
@@ -443,6 +445,7 @@ function AuthenticatedApp() {
               {/* Admin-only pages */}
               <Route path="/admin" component={Admin} />
               <Route path="/admin/parking" component={AdminParkingManagement} />
+              <Route path="/admin/locker-management" component={AdminLockerManagement} />
               <Route path="/admin/users" component={AdminUserManagement} />
               <Route path="/admin/bookings" component={AdminSpotBookingManagement} />
               <Route path="/admin/analytics" component={AdminAnalytics} />
