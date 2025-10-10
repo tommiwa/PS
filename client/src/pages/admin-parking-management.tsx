@@ -1665,15 +1665,15 @@ export default function AdminParkingManagement() {
                               }
                             }}
                             disabled={toggleSpotBookabilityMutation.isPending}
-                            data-testid="button-enable-spots"
-                            aria-label="Enable selected spots for booking"
+                            data-testid="button-make-bookable"
+                            aria-label="Make selected spots bookable"
                           >
                             <CheckCircle2 className="w-4 h-4 mr-2" />
-{t("admin.parkingManagement.enable")} ({selectedSpots.size})
+                            Make Bookable ({selectedSpots.size})
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                          Enable selected spots for booking and rental
+                          Make selected spots available for booking and rental
                         </TooltipContent>
                       </Tooltip>
                       <Tooltip>
@@ -1705,15 +1705,15 @@ export default function AdminParkingManagement() {
                               }
                             }}
                             disabled={toggleSpotBookabilityMutation.isPending}
-                            data-testid="button-disable-spots"
-                            aria-label="Disable selected spots from booking"
+                            data-testid="button-make-non-bookable"
+                            aria-label="Make selected spots non-bookable"
                           >
                             <AlertTriangle className="w-4 h-4 mr-2" />
-{t("admin.parkingManagement.disable")} ({selectedSpots.size})
+                            Make Non-Bookable ({selectedSpots.size})
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                          Disable selected spots from booking (maintenance)
+                          Make selected spots unavailable for booking (maintenance/reserved)
                         </TooltipContent>
                       </Tooltip>
                     </>
