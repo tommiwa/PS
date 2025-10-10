@@ -23,7 +23,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { 
-  Package, Plus, Edit, Trash2, UserPlus, UserMinus,
+  Package, Plus, Edit, Trash2, UserPlus, UserMinus, UserCheck,
   Search, Filter, Clock, CheckCircle2, XCircle, Calendar as CalendarIcon,
   ChevronDown, Users, ListOrdered, Building, Sparkles, Eye, EyeOff, RefreshCw
 } from "lucide-react"
@@ -208,7 +208,7 @@ export default function AdminLockerManagement() {
   const bciManagedLockers = useMemo(() => allLockers.filter(locker => locker.isBciManaged), [allLockers])
   const availableLockers = useMemo(() => allLockers.filter(locker => locker.status === "available"), [allLockers])
   const availableBciLockers = useMemo(() => allLockers.filter(locker => locker.isBciManaged && locker.status === "available"), [allLockers])
-  const personalLockers = useMemo(() => allLockers.filter(locker => !locker.isBciManaged), [allLockers])
+  const assignedLockers = useMemo(() => allLockers.filter(locker => locker.status === "assigned"), [allLockers])
   
   // Filter lockers
   const filteredLockers = useMemo(() => {
@@ -765,26 +765,26 @@ export default function AdminLockerManagement() {
           <Tooltip>
             <TooltipTrigger asChild>
               <Card 
-                data-testid="card-bci-managed-total" 
+                data-testid="card-assigned-lockers" 
                 className="hover-elevate cursor-pointer active-elevate-2"
-                onClick={() => setActiveTab("bci-managed")}
+                onClick={() => setActiveTab("assigned")}
               >
                 <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total BCI Managed Lockers</CardTitle>
+                  <CardTitle className="text-sm font-medium">Assigned Lockers</CardTitle>
                   <div className="rounded-full !border-2 !border-purple-400 p-2">
-                    <Building className="h-4 w-4 text-purple-600" />
+                    <UserCheck className="h-4 w-4 text-purple-600" />
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold" data-testid="stat-bci-managed-total">
-                    {bciManagedLockers.length}
+                  <div className="text-2xl font-bold" data-testid="stat-assigned-lockers">
+                    {assignedLockers.length}
                   </div>
-                  <p className="text-xs text-purple-600">BCI managed lockers</p>
+                  <p className="text-xs text-purple-600">Currently assigned</p>
                 </CardContent>
               </Card>
             </TooltipTrigger>
             <TooltipContent>
-              Click to view all BCI managed lockers
+              Click to view all assigned lockers
             </TooltipContent>
           </Tooltip>
 
@@ -827,9 +827,9 @@ export default function AdminLockerManagement() {
             <Sparkles className="h-4 w-4 !text-green-600" />
             Available BCI ({availableBciLockers.length})
           </TabsTrigger>
-          <TabsTrigger value="personal" data-testid="tab-personal-lockers" className="gap-2">
-            <Users className="h-4 w-4 !text-blue-600" />
-            All Personal ({personalLockers.length})
+          <TabsTrigger value="assigned" data-testid="tab-assigned-lockers" className="gap-2">
+            <UserCheck className="h-4 w-4 !text-blue-600" />
+            All Assigned ({assignedLockers.length})
           </TabsTrigger>
           <TabsTrigger value="waitlist" data-testid="tab-waiting-list" className="gap-2">
             <Clock className="h-4 w-4 !text-orange-600" />
@@ -1114,11 +1114,11 @@ export default function AdminLockerManagement() {
           </Card>
         </TabsContent>
 
-        {/* Personal Lockers Tab */}
-        <TabsContent value="personal" className="space-y-4">
+        {/* Assigned Lockers Tab */}
+        <TabsContent value="assigned" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Personal Lockers ({personalLockers.length})</CardTitle>
+              <CardTitle>Assigned Lockers ({assignedLockers.length})</CardTitle>
             </CardHeader>
             <CardContent>
               {isLoadingLockers ? (
@@ -1127,41 +1127,41 @@ export default function AdminLockerManagement() {
                     <Skeleton key={i} className="h-12 w-full" />
                   ))}
                 </div>
-              ) : personalLockers.length === 0 ? (
+              ) : assignedLockers.length === 0 ? (
                 <Alert>
-                  <AlertDescription>No personal lockers found.</AlertDescription>
+                  <AlertDescription>No assigned lockers found.</AlertDescription>
                 </Alert>
               ) : (
                 <div className="border rounded-md">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead data-testid="header-personal-locker-number">Locker Number</TableHead>
-                        <TableHead data-testid="header-personal-location">Location</TableHead>
-                        <TableHead data-testid="header-personal-type">Type</TableHead>
-                        <TableHead data-testid="header-personal-status">Status</TableHead>
-                        <TableHead data-testid="header-personal-assigned-to">Assigned To</TableHead>
-                        <TableHead data-testid="header-personal-actions">Actions</TableHead>
+                        <TableHead data-testid="header-assigned-locker-number">Locker Number</TableHead>
+                        <TableHead data-testid="header-assigned-location">Location</TableHead>
+                        <TableHead data-testid="header-assigned-type">Type</TableHead>
+                        <TableHead data-testid="header-assigned-status">Status</TableHead>
+                        <TableHead data-testid="header-assigned-assigned-to">Assigned To</TableHead>
+                        <TableHead data-testid="header-assigned-actions">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {personalLockers.map((locker) => (
-                        <TableRow key={locker.id} data-testid={`row-personal-locker-${locker.id}`}>
-                          <TableCell className="font-medium" data-testid={`text-personal-locker-number-${locker.id}`}>
+                      {assignedLockers.map((locker) => (
+                        <TableRow key={locker.id} data-testid={`row-assigned-locker-${locker.id}`}>
+                          <TableCell className="font-medium" data-testid={`text-assigned-locker-number-${locker.id}`}>
                             {locker.lockerNumber}
                           </TableCell>
-                          <TableCell data-testid={`text-personal-location-${locker.id}`}>
+                          <TableCell data-testid={`text-assigned-location-${locker.id}`}>
                             {locker.locationName || '-'}
                           </TableCell>
-                          <TableCell data-testid={`text-personal-type-${locker.id}`}>
+                          <TableCell data-testid={`text-assigned-type-${locker.id}`}>
                             {locker.lockerTypeName || '-'}
                           </TableCell>
-                          <TableCell data-testid={`badge-personal-status-${locker.id}`}>
+                          <TableCell data-testid={`badge-assigned-status-${locker.id}`}>
                             <Badge variant={locker.status === "available" ? "outline" : "default"}>
                               {locker.status}
                             </Badge>
                           </TableCell>
-                          <TableCell data-testid={`text-personal-assigned-user-${locker.id}`}>
+                          <TableCell data-testid={`text-assigned-assigned-user-${locker.id}`}>
                             {locker.assignedUserName ? (
                               <div>
                                 <div className="font-medium">{locker.assignedUserName}</div>
@@ -1179,7 +1179,7 @@ export default function AdminLockerManagement() {
                                     variant="ghost"
                                     size="icon"
                                     onClick={() => handleEditLocker(locker)}
-                                    data-testid={`button-edit-personal-${locker.id}`}
+                                    data-testid={`button-edit-assigned-${locker.id}`}
                                   >
                                     <Edit className="h-4 w-4" />
                                   </Button>
@@ -1193,7 +1193,7 @@ export default function AdminLockerManagement() {
                                       variant="ghost"
                                       size="icon"
                                       onClick={() => handleShowUnassignDialog(locker)}
-                                      data-testid={`button-unassign-personal-${locker.id}`}
+                                      data-testid={`button-unassign-assigned-${locker.id}`}
                                     >
                                       <UserMinus className="h-4 w-4" />
                                     </Button>
