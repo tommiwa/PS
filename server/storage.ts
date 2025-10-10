@@ -47,13 +47,20 @@ import {
   type InsertTermsVersion,
   type SpotAssignmentHistory,
   type InsertSpotAssignmentHistory,
-  type SpotAssignmentHistoryWithDetails
+  type SpotAssignmentHistoryWithDetails,
+  type Locker,
+  type InsertLocker,
+  type LockerWaitlist,
+  type InsertLockerWaitlist,
+  type LockerAssignmentHistory,
+  type InsertLockerAssignmentHistory,
+  type LockerType
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { auditDecorator } from "./audit-service";
 import { type IAuditStorage } from "./audit-storage";
 import { db } from "./db";
-import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, locations, spotTypesTable, termsVersions, spotAssignmentHistory } from "@shared/schema";
+import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, locations, spotTypesTable, termsVersions, spotAssignmentHistory, lockers, lockerWaitlist, lockerAssignmentHistory, lockerTypesTable } from "@shared/schema";
 import { eq, or, ilike, asc, and, notExists, sql as sqlOp, count, desc, inArray } from "drizzle-orm";
 
 // Storage interface with comprehensive CRUD methods
@@ -315,6 +322,29 @@ export interface IStorage {
   // Spot Assignment History operations
   recordSpotAssignment(data: InsertSpotAssignmentHistory): Promise<void>;
   getSpotAssignmentHistory(filters: { from?: string; to?: string; action?: string; departmentId?: number; scope?: 'bci' | 'all' }): Promise<SpotAssignmentHistoryWithDetails[]>;
+  
+  // Locker Management operations
+  getAllLockers(): Promise<Locker[]>;
+  getLockerById(id: string): Promise<Locker | null>;
+  getLockersByLocation(locationId: number): Promise<Locker[]>;
+  createLocker(data: InsertLocker): Promise<Locker>;
+  updateLocker(id: string, data: Partial<InsertLocker>): Promise<Locker | null>;
+  deleteLocker(id: string): Promise<void>;
+  assignLocker(lockerId: string, userId: string, actorId: string, effectiveDate: string, notes?: string): Promise<Locker | null>;
+  unassignLocker(lockerId: string, actorId: string, effectiveDate: string, notes?: string): Promise<Locker | null>;
+  
+  // Locker Waitlist operations
+  getLockerWaitlist(): Promise<LockerWaitlist[]>;
+  addToLockerWaitlist(data: InsertLockerWaitlist): Promise<LockerWaitlist>;
+  updateLockerWaitlistStatus(id: string, status: string, fulfilledAt?: Date): Promise<LockerWaitlist | null>;
+  removeFromLockerWaitlist(id: string): Promise<void>;
+  
+  // Locker Assignment History operations
+  getLockerAssignmentHistory(lockerId?: string, userId?: string): Promise<LockerAssignmentHistory[]>;
+  recordLockerAssignment(data: InsertLockerAssignmentHistory): Promise<LockerAssignmentHistory>;
+  
+  // Locker Type operations
+  getAllLockerTypes(): Promise<LockerType[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -1140,7 +1170,7 @@ export class MemStorage implements IStorage {
     return allBookings;
   }
 
-  async createBooking(insertBooking: InsertBooking): Promise<Booking> {
+  async createBooking(insertBooking: InsertBooking & { renterId: string; ownerId: string }): Promise<Booking> {
     const id = randomUUID();
     const now = new Date();
     
@@ -3075,7 +3105,7 @@ export class MemStorage implements IStorage {
 
   // Spot Assignment History operations
   async recordSpotAssignment(data: InsertSpotAssignmentHistory): Promise<void> {
-    await db.insert(spotAssignmentHistory).values(data);
+    await db.insert(spotAssignmentHistory).values([data as any]);
   }
 
   async getSpotAssignmentHistory(filters: { 
@@ -3099,7 +3129,7 @@ export class MemStorage implements IStorage {
     }
     
     if (action && action !== 'all') {
-      conditions.push(eq(spotAssignmentHistory.action, action));
+      conditions.push(eq(spotAssignmentHistory.action, action as "assigned" | "unassigned"));
     }
     
     if (departmentId) {
@@ -3177,6 +3207,207 @@ export class MemStorage implements IStorage {
         lastName: row.actorLastName,
       } : null,
     }));
+  }
+
+  // Locker Management operations
+  async getAllLockers(): Promise<Locker[]> {
+    const results = await db.select().from(lockers).orderBy(asc(lockers.lockerNumber));
+    return results;
+  }
+
+  async getLockerById(id: string): Promise<Locker | null> {
+    const results = await db.select().from(lockers).where(eq(lockers.id, id)).limit(1);
+    return results.length > 0 ? results[0] : null;
+  }
+
+  async getLockersByLocation(locationId: number): Promise<Locker[]> {
+    const results = await db
+      .select()
+      .from(lockers)
+      .where(eq(lockers.locationId, locationId))
+      .orderBy(asc(lockers.lockerNumber));
+    return results;
+  }
+
+  async createLocker(data: InsertLocker): Promise<Locker> {
+    const [newLocker] = await db.insert(lockers).values([data as any]).returning();
+    return newLocker;
+  }
+
+  async updateLocker(id: string, data: Partial<InsertLocker>): Promise<Locker | null> {
+    const existing = await db.select().from(lockers).where(eq(lockers.id, id)).limit(1);
+    if (existing.length === 0) return null;
+
+    const [updated] = await db
+      .update(lockers)
+      .set(data as any)
+      .where(eq(lockers.id, id))
+      .returning();
+    
+    return updated;
+  }
+
+  async deleteLocker(id: string): Promise<void> {
+    await db.delete(lockers).where(eq(lockers.id, id));
+  }
+
+  async assignLocker(
+    lockerId: string, 
+    userId: string, 
+    actorId: string, 
+    effectiveDate: string, 
+    notes?: string
+  ): Promise<Locker | null> {
+    const existing = await db.select().from(lockers).where(eq(lockers.id, lockerId)).limit(1);
+    if (existing.length === 0) return null;
+
+    // Use transaction to update locker and create history entry
+    const result = await db.transaction(async (tx) => {
+      // Update locker
+      const [updatedLocker] = await tx
+        .update(lockers)
+        .set({
+          status: 'assigned',
+          userId,
+          assignedAt: new Date(),
+          notes
+        })
+        .where(eq(lockers.id, lockerId))
+        .returning();
+
+      // Create history entry
+      await tx.insert(lockerAssignmentHistory).values({
+        lockerId,
+        userId,
+        action: 'assigned',
+        actorId,
+        effectiveDate,
+        notes
+      });
+
+      return updatedLocker;
+    });
+
+    return result;
+  }
+
+  async unassignLocker(
+    lockerId: string, 
+    actorId: string, 
+    effectiveDate: string, 
+    notes?: string
+  ): Promise<Locker | null> {
+    const existing = await db.select().from(lockers).where(eq(lockers.id, lockerId)).limit(1);
+    if (existing.length === 0) return null;
+
+    const previousUserId = existing[0].userId;
+
+    // Use transaction to update locker and create history entry
+    const result = await db.transaction(async (tx) => {
+      // Update locker
+      const [updatedLocker] = await tx
+        .update(lockers)
+        .set({
+          status: 'available',
+          userId: null,
+          assignedAt: null,
+          notes
+        })
+        .where(eq(lockers.id, lockerId))
+        .returning();
+
+      // Create history entry
+      await tx.insert(lockerAssignmentHistory).values({
+        lockerId,
+        userId: previousUserId,
+        action: 'unassigned',
+        actorId,
+        effectiveDate,
+        notes
+      });
+
+      return updatedLocker;
+    });
+
+    return result;
+  }
+
+  // Locker Waitlist operations
+  async getLockerWaitlist(): Promise<LockerWaitlist[]> {
+    const results = await db
+      .select()
+      .from(lockerWaitlist)
+      .orderBy(asc(lockerWaitlist.requestedAt));
+    return results;
+  }
+
+  async addToLockerWaitlist(data: InsertLockerWaitlist): Promise<LockerWaitlist> {
+    const [newEntry] = await db.insert(lockerWaitlist).values([data as any]).returning();
+    return newEntry;
+  }
+
+  async updateLockerWaitlistStatus(
+    id: string, 
+    status: string, 
+    fulfilledAt?: Date
+  ): Promise<LockerWaitlist | null> {
+    const existing = await db.select().from(lockerWaitlist).where(eq(lockerWaitlist.id, id)).limit(1);
+    if (existing.length === 0) return null;
+
+    const updateData: any = {
+      status,
+      updatedAt: new Date()
+    };
+
+    if (fulfilledAt) {
+      updateData.fulfilledAt = fulfilledAt;
+    }
+
+    const [updated] = await db
+      .update(lockerWaitlist)
+      .set(updateData)
+      .where(eq(lockerWaitlist.id, id))
+      .returning();
+    
+    return updated;
+  }
+
+  async removeFromLockerWaitlist(id: string): Promise<void> {
+    await db.delete(lockerWaitlist).where(eq(lockerWaitlist.id, id));
+  }
+
+  // Locker Assignment History operations
+  async getLockerAssignmentHistory(lockerId?: string, userId?: string): Promise<LockerAssignmentHistory[]> {
+    const conditions = [];
+    
+    if (lockerId) {
+      conditions.push(eq(lockerAssignmentHistory.lockerId, lockerId));
+    }
+    
+    if (userId) {
+      conditions.push(eq(lockerAssignmentHistory.userId, userId));
+    }
+    
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    
+    const results = await db
+      .select()
+      .from(lockerAssignmentHistory)
+      .where(whereClause)
+      .orderBy(desc(lockerAssignmentHistory.effectiveDate));
+    
+    return results;
+  }
+
+  async recordLockerAssignment(data: InsertLockerAssignmentHistory): Promise<LockerAssignmentHistory> {
+    const [newHistory] = await db.insert(lockerAssignmentHistory).values([data as any]).returning();
+    return newHistory;
+  }
+
+  // Locker Type operations
+  async getAllLockerTypes(): Promise<LockerType[]> {
+    const results = await db.select().from(lockerTypesTable).orderBy(asc(lockerTypesTable.name));
+    return results;
   }
 
   // Audit decorators will be applied via server initialization
