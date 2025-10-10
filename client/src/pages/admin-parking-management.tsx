@@ -1641,10 +1641,29 @@ export default function AdminParkingManagement() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => toggleSpotBookabilityMutation.mutate({ 
-                              spotIds: Array.from(selectedSpots), 
-                              isBookable: true 
-                            })}
+                            onClick={() => {
+                              // Get selected spot details to check for Reserved spots
+                              const selectedSpotDetails = allSpots.filter(spot => selectedSpots.has(spot.id));
+                              const reservedSpots = selectedSpotDetails.filter(spot => spot.spotTypeId === 2);
+                              const nonReservedSpots = selectedSpotDetails.filter(spot => spot.spotTypeId !== 2);
+                              
+                              if (reservedSpots.length > 0) {
+                                // Show warning about Reserved spots
+                                toast({
+                                  title: "Reserved Spots Cannot Be Modified",
+                                  description: `${reservedSpots.length} Reserved spot(s) (C-suite exclusive) cannot be made bookable. ${nonReservedSpots.length > 0 ? `Proceeding with ${nonReservedSpots.length} other spot(s).` : 'No action taken.'}`,
+                                  variant: "warning",
+                                });
+                              }
+                              
+                              // Only process non-Reserved spots
+                              if (nonReservedSpots.length > 0) {
+                                toggleSpotBookabilityMutation.mutate({ 
+                                  spotIds: nonReservedSpots.map(s => s.id), 
+                                  isBookable: true 
+                                });
+                              }
+                            }}
                             disabled={toggleSpotBookabilityMutation.isPending}
                             data-testid="button-enable-spots"
                             aria-label="Enable selected spots for booking"
@@ -1662,10 +1681,29 @@ export default function AdminParkingManagement() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => toggleSpotBookabilityMutation.mutate({ 
-                              spotIds: Array.from(selectedSpots), 
-                              isBookable: false 
-                            })}
+                            onClick={() => {
+                              // Get selected spot details to check for Reserved spots
+                              const selectedSpotDetails = allSpots.filter(spot => selectedSpots.has(spot.id));
+                              const reservedSpots = selectedSpotDetails.filter(spot => spot.spotTypeId === 2);
+                              const nonReservedSpots = selectedSpotDetails.filter(spot => spot.spotTypeId !== 2);
+                              
+                              if (reservedSpots.length > 0) {
+                                // Show warning about Reserved spots
+                                toast({
+                                  title: "Reserved Spots Cannot Be Modified",
+                                  description: `${reservedSpots.length} Reserved spot(s) (C-suite exclusive) are always non-bookable. ${nonReservedSpots.length > 0 ? `Proceeding with ${nonReservedSpots.length} other spot(s).` : 'No action taken.'}`,
+                                  variant: "warning",
+                                });
+                              }
+                              
+                              // Only process non-Reserved spots
+                              if (nonReservedSpots.length > 0) {
+                                toggleSpotBookabilityMutation.mutate({ 
+                                  spotIds: nonReservedSpots.map(s => s.id), 
+                                  isBookable: false 
+                                });
+                              }
+                            }}
                             disabled={toggleSpotBookabilityMutation.isPending}
                             data-testid="button-disable-spots"
                             aria-label="Disable selected spots from booking"
@@ -2061,7 +2099,23 @@ export default function AdminParkingManagement() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => setShowCreateAvailabilityDialog(true)}
+                            onClick={() => {
+                              // Get selected spot details to check for non-bookable spots
+                              const selectedSpotDetails = unallocatedSpots.filter(spot => selectedSpots.has(spot.id));
+                              const nonBookableSpots = selectedSpotDetails.filter(spot => !spot.isBookable || spot.spotTypeId === 2);
+                              
+                              if (nonBookableSpots.length > 0) {
+                                // Show error about non-bookable spots
+                                toast({
+                                  title: "Cannot Create Availability",
+                                  description: `${nonBookableSpots.length} selected spot(s) are not bookable (Reserved or disabled). Please select only bookable spots to create availability.`,
+                                  variant: "destructive",
+                                });
+                                return;
+                              }
+                              
+                              setShowCreateAvailabilityDialog(true);
+                            }}
                             data-testid="button-create-availability"
                           >
                             <CalendarDays className="h-4 w-4 mr-2" />
