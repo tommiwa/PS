@@ -26,6 +26,8 @@ import {
   insertPaymentPreferencesSchema,
   updatePaymentPreferencesSchema,
   insertTermsVersionSchema,
+  insertLockerSchema,
+  insertLockerWaitlistSchema,
   type User,
   type WaitingList,
   type Vehicle,
@@ -35,6 +37,9 @@ import {
   type EntityType,
   type UserRole,
   type TermsVersion,
+  type Locker,
+  type LockerWaitlist,
+  type LockerAssignmentHistory,
   auditActions,
   entityTypes,
   userRoles
@@ -3565,6 +3570,342 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching recent assignments:", error);
       res.status(500).json({ error: "Failed to fetch recent assignments" });
+    }
+  });
+
+  // ===== LOCKER MANAGEMENT ENDPOINTS =====
+
+  // 1. GET /api/admin/lockers - Get all lockers (Admin only)
+  app.get("/api/admin/lockers", requireAdmin, async (req, res) => {
+    try {
+      const lockers = await storage.getAllLockers();
+      res.json(lockers);
+    } catch (error) {
+      console.error("Error fetching lockers:", error);
+      res.status(500).json({ error: "Failed to fetch lockers" });
+    }
+  });
+
+  // 2. GET /api/admin/lockers/:id - Get locker by ID (Admin only)
+  app.get("/api/admin/lockers/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const locker = await storage.getLockerById(id);
+      
+      if (!locker) {
+        return res.status(404).json({ error: "Locker not found" });
+      }
+      
+      res.json(locker);
+    } catch (error) {
+      console.error("Error fetching locker:", error);
+      res.status(500).json({ error: "Failed to fetch locker" });
+    }
+  });
+
+  // 3. GET /api/admin/lockers/location/:locationId - Get lockers by location (Admin only)
+  app.get("/api/admin/lockers/location/:locationId", requireAdmin, async (req, res) => {
+    try {
+      const { locationId } = req.params;
+      const lockers = await storage.getLockersByLocation(parseInt(locationId));
+      res.json(lockers);
+    } catch (error) {
+      console.error("Error fetching lockers by location:", error);
+      res.status(500).json({ error: "Failed to fetch lockers by location" });
+    }
+  });
+
+  // 4. POST /api/admin/lockers - Create new locker (Admin only)
+  app.post("/api/admin/lockers", requireAdmin, async (req, res) => {
+    try {
+      const validatedData = insertLockerSchema.parse(req.body);
+      const newLocker = await storage.createLocker(validatedData);
+      
+      await auditService.logAction("CREATE", "locker", {
+        entityId: newLocker.id,
+        message: `Created locker ${newLocker.lockerNumber}`,
+        after: newLocker
+      });
+      
+      res.status(201).json(newLocker);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input data", details: error.errors });
+      }
+      console.error("Error creating locker:", error);
+      res.status(500).json({ error: "Failed to create locker" });
+    }
+  });
+
+  // 5. PATCH /api/admin/lockers/:id - Update locker (Admin only)
+  app.patch("/api/admin/lockers/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const existingLocker = await storage.getLockerById(id);
+      if (!existingLocker) {
+        return res.status(404).json({ error: "Locker not found" });
+      }
+      
+      const validatedData = insertLockerSchema.partial().parse(req.body);
+      const updatedLocker = await storage.updateLocker(id, validatedData);
+      
+      if (!updatedLocker) {
+        return res.status(404).json({ error: "Locker not found" });
+      }
+      
+      await auditService.logAction("UPDATE", "locker", {
+        entityId: updatedLocker.id,
+        message: `Updated locker ${updatedLocker.lockerNumber}`,
+        before: existingLocker,
+        after: updatedLocker
+      });
+      
+      res.json(updatedLocker);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input data", details: error.errors });
+      }
+      console.error("Error updating locker:", error);
+      res.status(500).json({ error: "Failed to update locker" });
+    }
+  });
+
+  // 6. DELETE /api/admin/lockers/:id - Delete locker (Admin only)
+  app.delete("/api/admin/lockers/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const existingLocker = await storage.getLockerById(id);
+      if (!existingLocker) {
+        return res.status(404).json({ error: "Locker not found" });
+      }
+      
+      await storage.deleteLocker(id);
+      
+      await auditService.logAction("DELETE", "locker", {
+        entityId: id,
+        message: `Deleted locker ${existingLocker.lockerNumber}`,
+        before: existingLocker
+      });
+      
+      res.json({ success: true, message: "Locker deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting locker:", error);
+      res.status(500).json({ error: "Failed to delete locker" });
+    }
+  });
+
+  // 7. POST /api/admin/lockers/:id/assign - Assign locker to user (Admin only)
+  app.post("/api/admin/lockers/:id/assign", requireAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { userId, effectiveDate, notes } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ error: "userId is required" });
+      }
+      
+      const actorId = getAuthenticatedUserId(req);
+      if (!actorId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const existingLocker = await storage.getLockerById(id);
+      if (!existingLocker) {
+        return res.status(404).json({ error: "Locker not found" });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      const assignedLocker = await storage.assignLocker(id, userId, actorId, effectiveDate, notes);
+      
+      if (!assignedLocker) {
+        return res.status(500).json({ error: "Failed to assign locker" });
+      }
+      
+      await auditService.logAction("ASSIGN", "locker", {
+        entityId: id,
+        message: `Assigned locker ${assignedLocker.lockerNumber} to ${user.firstName} ${user.lastName} (${user.email})`,
+        before: existingLocker,
+        after: assignedLocker
+      });
+      
+      res.json(assignedLocker);
+    } catch (error) {
+      console.error("Error assigning locker:", error);
+      res.status(500).json({ error: "Failed to assign locker" });
+    }
+  });
+
+  // 8. POST /api/admin/lockers/:id/unassign - Unassign locker (Admin only)
+  app.post("/api/admin/lockers/:id/unassign", requireAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { effectiveDate, notes } = req.body;
+      
+      const actorId = getAuthenticatedUserId(req);
+      if (!actorId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const existingLocker = await storage.getLockerById(id);
+      if (!existingLocker) {
+        return res.status(404).json({ error: "Locker not found" });
+      }
+      
+      let formerUser = null;
+      if (existingLocker.userId) {
+        formerUser = await storage.getUser(existingLocker.userId);
+      }
+      
+      const unassignedLocker = await storage.unassignLocker(id, actorId, effectiveDate, notes);
+      
+      if (!unassignedLocker) {
+        return res.status(500).json({ error: "Failed to unassign locker" });
+      }
+      
+      await auditService.logAction("UNASSIGN", "locker", {
+        entityId: id,
+        message: `Unassigned locker ${unassignedLocker.lockerNumber}${formerUser ? ` from ${formerUser.firstName} ${formerUser.lastName} (${formerUser.email})` : ''}`,
+        before: existingLocker,
+        after: unassignedLocker
+      });
+      
+      res.json(unassignedLocker);
+    } catch (error) {
+      console.error("Error unassigning locker:", error);
+      res.status(500).json({ error: "Failed to unassign locker" });
+    }
+  });
+
+  // 9. GET /api/admin/locker-waitlist - Get all waitlist entries (Admin only)
+  app.get("/api/admin/locker-waitlist", requireAdmin, async (req, res) => {
+    try {
+      const waitlist = await storage.getLockerWaitlist();
+      res.json(waitlist);
+    } catch (error) {
+      console.error("Error fetching locker waitlist:", error);
+      res.status(500).json({ error: "Failed to fetch locker waitlist" });
+    }
+  });
+
+  // 10. POST /api/admin/locker-waitlist - Add to waitlist (Admin only)
+  app.post("/api/admin/locker-waitlist", requireAdmin, async (req, res) => {
+    try {
+      const validatedData = insertLockerWaitlistSchema.parse(req.body);
+      const newEntry = await storage.addToLockerWaitlist(validatedData);
+      
+      await auditService.logAction("CREATE", "locker_waitlist", {
+        entityId: newEntry.id,
+        message: `Added user ${validatedData.userId} to locker waitlist`,
+        after: newEntry
+      });
+      
+      res.status(201).json(newEntry);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input data", details: error.errors });
+      }
+      console.error("Error adding to locker waitlist:", error);
+      res.status(500).json({ error: "Failed to add to locker waitlist" });
+    }
+  });
+
+  // 11. PATCH /api/admin/locker-waitlist/:id - Update waitlist status (Admin only)
+  app.patch("/api/admin/locker-waitlist/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status, fulfilledAt } = req.body;
+      
+      if (!status) {
+        return res.status(400).json({ error: "status is required" });
+      }
+      
+      // Get existing entry for audit
+      const allEntries = await storage.getLockerWaitlist();
+      const existingEntry = allEntries.find(entry => entry.id === id);
+      
+      if (!existingEntry) {
+        return res.status(404).json({ error: "Waitlist entry not found" });
+      }
+      
+      const updatedEntry = await storage.updateLockerWaitlistStatus(id, status, fulfilledAt ? new Date(fulfilledAt) : undefined);
+      
+      if (!updatedEntry) {
+        return res.status(404).json({ error: "Waitlist entry not found" });
+      }
+      
+      await auditService.logAction("UPDATE", "locker_waitlist", {
+        entityId: id,
+        message: `Updated locker waitlist entry for user ${updatedEntry.userId} - status: ${status}`,
+        before: existingEntry,
+        after: updatedEntry
+      });
+      
+      res.json(updatedEntry);
+    } catch (error) {
+      console.error("Error updating locker waitlist:", error);
+      res.status(500).json({ error: "Failed to update locker waitlist" });
+    }
+  });
+
+  // 12. DELETE /api/admin/locker-waitlist/:id - Remove from waitlist (Admin only)
+  app.delete("/api/admin/locker-waitlist/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Get existing entry for audit
+      const allEntries = await storage.getLockerWaitlist();
+      const existingEntry = allEntries.find(entry => entry.id === id);
+      
+      if (!existingEntry) {
+        return res.status(404).json({ error: "Waitlist entry not found" });
+      }
+      
+      await storage.removeFromLockerWaitlist(id);
+      
+      await auditService.logAction("DELETE", "locker_waitlist", {
+        entityId: id,
+        message: `Removed user ${existingEntry.userId} from locker waitlist`,
+        before: existingEntry
+      });
+      
+      res.json({ success: true, message: "Waitlist entry removed successfully" });
+    } catch (error) {
+      console.error("Error removing from locker waitlist:", error);
+      res.status(500).json({ error: "Failed to remove from locker waitlist" });
+    }
+  });
+
+  // 13. GET /api/admin/locker-assignment-history - Get assignment history (Admin only)
+  app.get("/api/admin/locker-assignment-history", requireAdmin, async (req, res) => {
+    try {
+      const { lockerId, userId } = req.query;
+      
+      const history = await storage.getLockerAssignmentHistory(
+        lockerId as string | undefined,
+        userId as string | undefined
+      );
+      
+      res.json(history);
+    } catch (error) {
+      console.error("Error fetching locker assignment history:", error);
+      res.status(500).json({ error: "Failed to fetch locker assignment history" });
+    }
+  });
+
+  // 14. GET /api/admin/locker-types - Get all locker types (Admin only)
+  app.get("/api/admin/locker-types", requireAdmin, async (req, res) => {
+    try {
+      const lockerTypes = await storage.getAllLockerTypes();
+      res.json(lockerTypes);
+    } catch (error) {
+      console.error("Error fetching locker types:", error);
+      res.status(500).json({ error: "Failed to fetch locker types" });
     }
   });
 
