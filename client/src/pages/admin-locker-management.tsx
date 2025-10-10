@@ -1042,7 +1042,7 @@ export default function AdminLockerManagement() {
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-[400px] p-0" data-testid="popover-waitlist-user-search">
-                          <Command>
+                          <Command shouldFilter={false}>
                             <CommandInput 
                               placeholder="Search users..." 
                               value={waitlistUserSearchQuery}
@@ -1090,7 +1090,6 @@ export default function AdminLockerManagement() {
                           <SelectValue placeholder="Any location" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Any location</SelectItem>
                           {locations.map(location => (
                             <SelectItem key={location.id} value={location.id.toString()}>
                               {`${location.office} - ${location.building}, ${location.level}`}
@@ -1113,7 +1112,6 @@ export default function AdminLockerManagement() {
                           <SelectValue placeholder="Any type" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Any type</SelectItem>
                           {lockerTypes.map(type => (
                             <SelectItem key={type.id} value={type.id.toString()}>
                               {type.name}
@@ -1527,7 +1525,7 @@ export default function AdminLockerManagement() {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[400px] p-0" data-testid="popover-assign-user-search">
-                  <Command>
+                  <Command shouldFilter={false}>
                     <CommandInput 
                       placeholder="Search users..." 
                       value={userSearchQuery}
