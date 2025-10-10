@@ -63,7 +63,7 @@ export default function AdminReportsPage() {
     <div className="flex-1 space-y-6 p-6" data-testid="page-admin-reports">
       <div>
         <h1 className="text-3xl font-bold tracking-tight" data-testid="heading-reports">
-          Reports Hub
+          Reports & Analytics
         </h1>
         <p className="text-muted-foreground mt-2">
           Analytics for spot assignments and parking utilization
@@ -73,7 +73,7 @@ export default function AdminReportsPage() {
       {/* Filters */}
       <Card data-testid="card-report-filters">
         <CardHeader>
-          <CardTitle>Report Filters</CardTitle>
+          <CardTitle>Date Range & Scope</CardTitle>
           <CardDescription>
             Select date range and scope to customize your reports
           </CardDescription>
