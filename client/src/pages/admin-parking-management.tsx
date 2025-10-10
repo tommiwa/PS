@@ -185,6 +185,8 @@ export default function AdminParkingManagement() {
     locationId: undefined as number | undefined,
     spotTypeId: undefined as number | undefined,
     isIndoor: false,
+    isActive: true,
+    isBookable: true,
     isBciManaged: false,
     description: ""
   })
@@ -603,6 +605,8 @@ export default function AdminParkingManagement() {
         locationId: undefined,
         spotTypeId: undefined,
         isIndoor: false,
+        isActive: true,
+        isBookable: true,
         isBciManaged: false,
         description: ""
       });
