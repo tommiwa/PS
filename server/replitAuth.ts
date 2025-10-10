@@ -134,10 +134,18 @@ async function upsertUser(
   if (existingEmailUser && !existingDbUser) {
     console.log(`[UPSERT] Migrating user from ${existingEmailUser.id} to ${userId}`);
     
-    // Delete the old user record (admin-created with random UUID)
-    await db.delete(users).where(eq(users.id, existingEmailUser.id));
+    // First, update the old user's email to avoid unique constraint violation
+    const tempEmail = `${existingEmailUser.email}-old-${Date.now()}`;
+    console.log(`[UPSERT] Changing old user email from ${existingEmailUser.email} to ${tempEmail}`);
+    
+    const updateResult = await db.update(users)
+      .set({ email: tempEmail })
+      .where(eq(users.id, existingEmailUser.id))
+      .returning();
+    console.log(`[UPSERT] Email update result:`, updateResult);
     
     // Create new user with OIDC ID, preserving roles and other data
+    console.log(`[UPSERT] Creating new user with ID ${userId} and email ${userData.email}`);
     await db.insert(users).values({
       id: userId,
       email: userData.email,
@@ -153,8 +161,13 @@ async function upsertUser(
       updatedAt: now,
     });
     
+    // Delete the old user record (admin-created with random UUID)
+    console.log(`[UPSERT] Deleting old user record ${existingEmailUser.id}`);
+    await db.delete(users).where(eq(users.id, existingEmailUser.id));
+    
     // Remove old user from in-memory storage
     await storage.deleteUser(existingEmailUser.id);
+    console.log(`[UPSERT] Migration complete`);
   } else if (existingDbUser) {
     // Update existing user in database
     await db.update(users)

@@ -70,12 +70,12 @@ export function ReportActions({ reportType, onExport, filters }: ReportActionsPr
     try {
       const response: any = await apiRequest(`/api/admin/reports/${reportType}/email`, {
         method: 'POST',
-        body: JSON.stringify({
+        body: {
           recipients,
           from: filters.dateFrom,
           to: filters.dateTo,
           scope: filters.scope
-        })
+        }
       });
 
       if (response.success) {
