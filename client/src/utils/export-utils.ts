@@ -392,18 +392,29 @@ export const exportUsersData = (users: any[], title: string = 'User Management R
 }
 
 export const exportParkingSpotsData = (spots: any[], title: string = 'Parking Management Report') => {
+  // Helper to determine status based on assignment
+  const getStatus = (spot: any) => {
+    return spot.ownerId ? 'OCCUPIED' : 'AVAILABLE'
+  }
+  
   const columns: ExportColumn[] = [
     { header: 'Spot ID', dataKey: 'id', width: 15 },
     { header: 'Spot Number', dataKey: 'spotNumber', width: 12 },
-    { header: 'Location', dataKey: 'location', width: 25 },
-    { header: 'Type', dataKey: 'spotType', width: 12, formatter: (type) => type?.toUpperCase() || 'REGULAR' },
-    { header: 'Owner', dataKey: 'ownerName', width: 20 },
-    { header: 'Owner Email', dataKey: 'ownerEmail', width: 25 },
-    { header: 'Status', dataKey: 'status', width: 12, formatter: (status) => status?.toUpperCase() || 'AVAILABLE' },
+    { header: 'Location ID', dataKey: 'locationId', width: 12 },
+    { header: 'Location Name', dataKey: 'locationName', width: 30 },
+    { header: 'Spot Type ID', dataKey: 'spotTypeId', width: 12 },
+    { header: 'Spot Type', dataKey: 'spotTypeName', width: 15, formatter: (type) => type?.toUpperCase() || 'REGULAR' },
+    { header: 'Status', dataKey: 'id', width: 12, formatter: (_, spot) => getStatus(spot) },
+    { header: 'BCI Managed', dataKey: 'isBciManaged', width: 12, formatter: (managed) => managed ? 'Yes' : 'No' },
+    { header: 'Owner ID', dataKey: 'ownerId', width: 15 },
+    { header: 'Assigned User', dataKey: 'assignedUserName', width: 20 },
+    { header: 'Assigned Email', dataKey: 'assignedUserEmail', width: 25 },
+    { header: 'Department', dataKey: 'assignedUserDepartment', width: 20 },
     { header: 'Indoor', dataKey: 'isIndoor', width: 10, formatter: (indoor) => indoor ? 'Yes' : 'No' },
     { header: 'Active', dataKey: 'isActive', width: 10, formatter: (active) => active ? 'Yes' : 'No' },
     { header: 'Bookable', dataKey: 'isBookable', width: 12, formatter: (bookable) => bookable ? 'Yes' : 'No' },
-    { header: 'Description', dataKey: 'description', width: 30 }
+    { header: 'Description', dataKey: 'description', width: 30 },
+    { header: 'Created At', dataKey: 'createdAt', width: 18, formatter: (date) => date ? new Date(date).toLocaleString() : 'N/A' }
   ]
 
   const exportData: ExportData = {
@@ -415,11 +426,12 @@ export const exportParkingSpotsData = (spots: any[], title: string = 'Parking Ma
     summary: {
       totalRecords: spots.length,
       additionalStats: [
-        { label: 'Available Spots', value: spots.filter(s => s.status === 'available').length },
-        { label: 'Occupied Spots', value: spots.filter(s => s.status === 'occupied').length },
+        { label: 'Available Spots', value: spots.filter(s => !s.ownerId).length },
+        { label: 'Occupied Spots', value: spots.filter(s => s.ownerId).length },
         { label: 'Indoor Spots', value: spots.filter(s => s.isIndoor).length },
         { label: 'Bookable Spots', value: spots.filter(s => s.isBookable).length },
-        { label: 'Premium Spots', value: spots.filter(s => s.spotType === 'premium').length }
+        { label: 'BCI Managed', value: spots.filter(s => s.isBciManaged).length },
+        { label: 'Premium Spots', value: spots.filter(s => s.spotTypeName?.toLowerCase() === 'premium').length }
       ]
     }
   }
@@ -788,18 +800,17 @@ export const quickExportBookingActivityExcel = (activities: any[], title?: strin
 // Export functions for lockers
 export const exportLockersData = (lockers: any[], title: string = 'Locker Management Report') => {
   const columns: ExportColumn[] = [
+    { header: 'Locker ID', dataKey: 'id', width: 15 },
     { header: 'Locker Number', dataKey: 'lockerNumber', width: 15 },
-    { header: 'Location', dataKey: 'location', width: 25 },
-    { header: 'Type', dataKey: 'type', width: 15, formatter: (type) => type?.toUpperCase() || 'STANDARD' },
+    { header: 'Location ID', dataKey: 'locationId', width: 12 },
+    { header: 'Location Name', dataKey: 'locationName', width: 30 },
+    { header: 'Locker Type ID', dataKey: 'lockerTypeId', width: 12 },
+    { header: 'Locker Type', dataKey: 'lockerTypeName', width: 15, formatter: (type) => type?.toUpperCase() || 'STANDARD' },
     { header: 'Status', dataKey: 'status', width: 12, formatter: (status) => status?.toUpperCase() || 'AVAILABLE' },
-    { header: 'BCI Managed', dataKey: 'bciManaged', width: 12, formatter: (managed) => managed ? 'Yes' : 'No' },
-    { header: 'Assigned To', dataKey: 'assignedTo', width: 30, formatter: (value: any, item: any) => {
-      if (item.assignedUserName && item.assignedUserEmail) {
-        return `${item.assignedUserName} (${item.assignedUserEmail})`
-      }
-      return '-'
-    }},
-    { header: 'Assigned Date', dataKey: 'assignedDate', width: 15, formatter: (date) => date ? new Date(date).toLocaleDateString() : '-' },
+    { header: 'BCI Managed', dataKey: 'isBciManaged', width: 12, formatter: (managed) => managed ? 'Yes' : 'No' },
+    { header: 'Assigned User ID', dataKey: 'assignedTo', width: 15 },
+    { header: 'Assigned User Name', dataKey: 'assignedUserName', width: 25 },
+    { header: 'Assigned User Email', dataKey: 'assignedUserEmail', width: 30 },
     { header: 'Notes', dataKey: 'notes', width: 40 }
   ]
 
@@ -814,8 +825,8 @@ export const exportLockersData = (lockers: any[], title: string = 'Locker Manage
       additionalStats: [
         { label: 'Available Lockers', value: lockers.filter(l => l.status === 'available').length },
         { label: 'Assigned Lockers', value: lockers.filter(l => l.status === 'assigned').length },
-        { label: 'BCI Managed', value: lockers.filter(l => l.bciManaged).length },
-        { label: 'User Managed', value: lockers.filter(l => !l.bciManaged).length }
+        { label: 'BCI Managed', value: lockers.filter(l => l.isBciManaged).length },
+        { label: 'User Managed', value: lockers.filter(l => !l.isBciManaged).length }
       ]
     }
   }

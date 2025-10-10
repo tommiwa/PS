@@ -851,7 +851,13 @@ export class MemStorage implements IStorage {
 
   // Helper method to enrich parking spot with user information
   private async enrichSpotWithUserInfo(spot: ParkingSpot): Promise<ParkingSpotWithUser> {
-    const enrichedSpot: ParkingSpotWithUser = { ...spot };
+    const enrichedSpot: ParkingSpotWithUser = { 
+      ...spot,
+      // Always initialize user fields (will be null for unassigned spots, preserved in JSON)
+      assignedUserName: null as any,
+      assignedUserEmail: null as any,
+      assignedUserDepartment: null as any
+    };
     
     // Join location details to construct name
     const locationResult = await db
