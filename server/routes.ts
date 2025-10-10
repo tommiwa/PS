@@ -1738,6 +1738,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const allSpots = await storage.getAllParkingSpotsWithUser();
       const unallocatedSpots = allSpots.filter(spot => !spot.ownerId);
+      // Disable caching for admin data to prevent stale UI
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
       res.json(unallocatedSpots);
     } catch (error) {
       console.error("Error fetching unallocated spots:", error);
@@ -1953,6 +1957,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/all-spots", requireAdmin, async (req, res) => {
     try {
       const allSpots = await storage.getAllParkingSpotsWithUser();
+      // Disable caching for admin data to prevent stale UI
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
       res.json(allSpots);
     } catch (error) {
       console.error("Error fetching all spots:", error);
