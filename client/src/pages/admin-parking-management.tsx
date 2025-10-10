@@ -1338,7 +1338,12 @@ export default function AdminParkingManagement() {
     }
     
     const badgeConfigs: Record<string, { className: string; label: string }> = {
+      // Handle both slugs and names for backwards compatibility
       regular: { 
+        className: "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100", 
+        label: "Regular" 
+      },
+      "Regular": { 
         className: "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100", 
         label: "Regular" 
       },
@@ -1346,15 +1351,31 @@ export default function AdminParkingManagement() {
         className: "bg-green-50 text-green-700 border-green-200 hover:bg-green-100", 
         label: "EV Charging" 
       },
+      "EV Chargers": { 
+        className: "bg-green-50 text-green-700 border-green-200 hover:bg-green-100", 
+        label: "EV Chargers" 
+      },
       tesla_ev: { 
         className: "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100", 
         label: "Tesla Charger" 
+      },
+      "Tesla Chargers": { 
+        className: "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100", 
+        label: "Tesla Chargers" 
       },
       accessible: { 
         className: "bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100", 
         label: "Accessible" 
       },
+      "Accessible": { 
+        className: "bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100", 
+        label: "Accessible" 
+      },
       reserved: { 
+        className: "bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100", 
+        label: "Reserved" 
+      },
+      "Reserved": { 
         className: "bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100", 
         label: "Reserved" 
       }
