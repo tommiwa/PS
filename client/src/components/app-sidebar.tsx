@@ -95,8 +95,7 @@ const adminCoreItems = [
     url: "/admin/locker-management",
     icon: Lock,
     roles: ["admin"],
-    tooltip: "Locker Management",
-    isNew: true
+    tooltip: "Locker Management"
   },
 ]
 
