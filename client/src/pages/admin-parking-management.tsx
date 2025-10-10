@@ -3845,7 +3845,9 @@ export default function AdminParkingManagement() {
             <div className="flex gap-2 pt-4">
               <Button
                 onClick={() => {
+                  console.log('[DEBUG] Form data dailyRate (string):', createAvailabilityFormData.dailyRate);
                   const dailyRate = parseFloat(createAvailabilityFormData.dailyRate);
+                  console.log('[DEBUG] Parsed dailyRate (number):', dailyRate, 'Type:', typeof dailyRate);
                   
                   // Validation
                   if (!dailyRate || dailyRate <= 0) {
@@ -3867,6 +3869,7 @@ export default function AdminParkingManagement() {
                       return;
                     }
                     
+                    console.log('[DEBUG] Sending to API - dailyRate:', dailyRate);
                     bulkCreateListingsMutation.mutate({
                       spotIds: Array.from(selectedSpots),
                       listingType: "single",
@@ -3892,6 +3895,7 @@ export default function AdminParkingManagement() {
                       return;
                     }
                     
+                    console.log('[DEBUG] Sending to API - dailyRate:', dailyRate);
                     bulkCreateListingsMutation.mutate({
                       spotIds: Array.from(selectedSpots),
                       listingType: "period",

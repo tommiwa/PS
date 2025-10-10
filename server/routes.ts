@@ -3465,9 +3465,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Bulk create spot listings (Admin only)
   app.post("/api/admin/bulk-create-listings", requireAdmin, async (req: any, res) => {
     try {
+      console.log('[DEBUG] Bulk create listings - req.body.dailyRate:', req.body.dailyRate, 'Type:', typeof req.body.dailyRate);
+      
       // Validate request body with Zod
       const validatedData = bulkCreateListingsSchema.parse(req.body);
       const { spotIds, listingType, singleDate, periodStartDate, periodEndDate, dailyRate } = validatedData;
+      
+      console.log('[DEBUG] After Zod validation - dailyRate:', dailyRate, 'Type:', typeof dailyRate);
       
       // Get admin user ID for listings ownership
       const adminUserId = getAuthenticatedUserId(req);
@@ -3476,9 +3480,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Create the listing data object
+      const dailyRateString = dailyRate.toString();
+      console.log('[DEBUG] dailyRate after toString():', dailyRateString);
+      
       const listingData: any = {
         listingType,
-        dailyRate: dailyRate.toString(),
+        dailyRate: dailyRateString,
         status: "available"
       };
 
