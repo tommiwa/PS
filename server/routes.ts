@@ -3007,6 +3007,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const validatedData = adminSpotSchema.parse(req.body);
       
+      // Business Rule: Reserved spots (spotTypeId = 2) should NOT be bookable (reserved for C-suite)
+      if (validatedData.spotTypeId === 2) {
+        validatedData.isBookable = false;
+      }
+      
       const newSpot = await storage.createParkingSpot(validatedData);
       
       // Audit the admin spot creation
@@ -3189,6 +3194,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Validate request body
       const validatedData = insertParkingSpotSchema.partial().parse(req.body);
+      
+      // Business Rule: Reserved spots (spotTypeId = 2) should NOT be bookable (reserved for C-suite)
+      if (validatedData.spotTypeId === 2) {
+        validatedData.isBookable = false;
+      }
       
       const updatedSpot = await storage.updateParkingSpot(id, validatedData);
       if (!updatedSpot) {

@@ -50,6 +50,7 @@ Preferred communication style: Simple, everyday language.
 ### Key Features
 - **Multi-role Dashboard**: Dynamic content and navigation based on user roles.
 - **Booking System**: Real-time management with status tracking, custom calendar, search & filtering by location, spot type, and pricing.
+    - **Reserved Spot Business Rule**: Reserved spots (spotTypeId = 2) are automatically set to `isBookable = false` as they are reserved for C-suite executives. This rule is enforced at both frontend and backend levels.
     - **Booked Spot Display**: Calendar intelligently shows which spots are already booked with visual indicators (grayed out, "Booked" badge) and prevents double-booking by making booked spots non-clickable. Works across all calendar views (Day, Week, Month).
     - **Period Listing Support**: Spots can be listed for single days or date ranges, with automatic expansion to individual dates for accurate calendar display and booking prevention.
     - **Data Consistency**: Tiles and calendar views use enriched API data (`EnrichedSpotFromAPI` type) that includes `availabilityDates` and `bookedDates` arrays, ensuring both views display matching spot information.
