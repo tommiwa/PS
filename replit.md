@@ -50,7 +50,7 @@ Preferred communication style: Simple, everyday language.
 - **Enhanced Database Schema**: Includes admin metadata fields on bookings and spot listings, and a dedicated disputes table.
 - **Pagination System**: Client-side pagination across all admin pages.
 - **My Bookings Page (Renter/Owner)**: Redesigned with role-based display, colorful tab icons, stat cards, enhanced filters, professional action buttons (Cancel, Mark Paid, Download Receipt), and comprehensive export functionality.
-- **Reports Hub (Admin-only)**: Comprehensive analytics and reporting system with six specialized report categories (Overview, Parking Utilization, Booking & Revenue, User & Compliance, Waitlist Performance, BCI Spot Assignments). Features shared filter controls, professional Excel export, and email delivery via SendGrid, with data visualization using Recharts.
+- **Reports Hub (Admin-only)**: Streamlined analytics and reporting system with two essential reports: Spot Assignments and Utilization. Features shared filter controls (date range and scope), professional Excel export, and email delivery via SendGrid, with data visualization using Recharts.
 - **Spot Assignment History Tracking**: Automated audit trail system that records all BCI-managed spot assignments and unassignments with complete user details, effective dates, and actor tracking. Includes dedicated reporting tab showing newly assigned/unassigned users with department information, email links, and Excel/PDF export capabilities.
 
 ## External Dependencies
