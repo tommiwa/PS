@@ -39,7 +39,7 @@ Preferred communication style: Simple, everyday language.
 - **Terms & Conditions**: Mandatory one-time acceptance system with versioned legal terms, simplified with emojis.
 
 ### Key Features
-- **Booking System**: Real-time management with status tracking, custom calendar, search & filtering. Includes business rules for reserved spots (non-bookable), intelligent display of booked spots, support for period listings, and data consistency across views.
+- **Booking System**: Real-time management with status tracking, custom calendar, search & filtering. Includes business rules for reserved spots (non-bookable), intelligent display of booked spots, support for period listings, and data consistency across views. Tiles and calendar views are synchronized - booked spots (shown as grey/disabled in calendar) are automatically filtered from tiles view to prevent duplicate bookings.
 - **Admin Management**: Comprehensive user, bulk spot, waiting list, and reference data management (Departments, Locations, Spot Types) with full CRUD operations and safeguards for reserved spots. Streamlined "Create Availability" feature.
 - **Notification System**: Real-time alerts via email and in-app notifications.
 - **Spot Listing Creation**: Owners can list spots with single day, period, or recurring options.
