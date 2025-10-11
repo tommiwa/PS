@@ -238,7 +238,7 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
   }
 
   return (
-    <div className="w-full max-w-lg" data-testid="card-booking-form">
+    <div className="max-w-2xl mx-auto" data-testid="card-booking-form">
       {/* Header Section */}
       <div className="border-b bg-muted/30 px-6 py-4">
         <div className="flex items-start justify-between gap-4">
