@@ -6,8 +6,9 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle, User, Zap, Accessibility, Building, CreditCard, Timer, Info } from "lucide-react"
+import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle, User, Zap, Accessibility, Building, CreditCard, Timer, Info, Phone } from "lucide-react"
 import type { ParkingSpot as DBParkingSpot } from "@shared/schema"
 import { isPastDate, getTodayString } from "@/utils/date-utils"
 import { AuthService } from "@/lib/auth"
@@ -238,153 +239,186 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
 
   return (
     <div className="max-w-2xl mx-auto" data-testid="card-booking-form">
-      {/* Header with Timer */}
-      <div className="px-6 pt-6 pb-4">
+      {/* Header Section */}
+      <div className="border-b bg-muted/30 px-6 py-4">
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <div className="flex items-center gap-2 text-lg font-semibold">
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="flex items-center gap-2 text-xl font-semibold">
                 {getSpotTypeIcon()}
                 Spot {spot.spotNumber}
               </div>
-              <Badge variant="secondary" className="text-xs">
+              <Badge variant="secondary">
                 {getSpotTypeBadge()}
               </Badge>
             </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <MapPin className="h-3.5 w-3.5" />
-              {spot.location}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <MapPin className="h-4 w-4" />
+                {spot.location}
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1 text-lg font-semibold text-primary">
+                  <DollarSign className="h-5 w-5" />
+                  {spot.price}/day
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Owner: <span className="font-medium text-foreground">{spot.owner}</span>
+                </div>
+              </div>
             </div>
           </div>
           {userActiveLock && remainingSeconds > 0 && (
             <Badge 
               variant="outline" 
-              className={`flex items-center gap-1.5 whitespace-nowrap ${
+              className={`flex items-center gap-1.5 whitespace-nowrap h-fit ${
                 remainingSeconds <= 30 
                   ? 'bg-red-50 text-red-700 border-red-300 dark:bg-red-900/30 dark:text-red-400 dark:border-red-700' 
                   : 'bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700'
               }`}
               data-testid="badge-countdown-timer"
             >
-              <Timer className="h-3.5 w-3.5" />
+              <Timer className="h-4 w-4" />
               {formatTime(remainingSeconds)}
             </Badge>
           )}
         </div>
-        
-        <div className="mt-3 flex items-center justify-between">
-          <div className="text-lg font-semibold">${spot.price}/day</div>
-          <div className="text-sm text-muted-foreground">Owner: {spot.owner}</div>
-        </div>
       </div>
 
-      <div className="px-6 pb-6">
+      {/* Form Section */}
+      <div className="px-6 py-5">
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Date Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="date">Booking Date</Label>
-            <Input
-              type="date"
-              value={formData.date}
-              min={getTodayString()}
-              onChange={(e) => updateFormData("date", e.target.value)}
-              required
-              disabled={isDateLocked}
-              data-testid="input-booking-date"
-              className={`${isDateLocked ? 'bg-muted cursor-not-allowed' : ''}`}
-            />
-            {isDateLocked && (
-              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Info className="h-3.5 w-3.5" />
-                Date cannot be changed
-              </p>
-            )}
-            {(dateError || validationErrors.date) && (
-              <p className="flex items-center gap-1.5 text-sm text-destructive">
-                <AlertTriangle className="h-3.5 w-3.5" />
-                {dateError || validationErrors.date}
-              </p>
-            )}
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Calendar className="h-3.5 w-3.5" />
-              Full day reservation (12:00 AM - 11:59 PM)
-            </p>
+          <div className="space-y-2.5">
+            <Label htmlFor="date" className="text-sm font-semibold">Booking Date</Label>
+            <div className="space-y-2">
+              <Input
+                type="date"
+                value={formData.date}
+                min={getTodayString()}
+                onChange={(e) => updateFormData("date", e.target.value)}
+                required
+                disabled={isDateLocked}
+                data-testid="input-booking-date"
+                className={`${isDateLocked ? 'bg-muted cursor-not-allowed' : ''}`}
+              />
+              {isDateLocked && (
+                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Info className="h-3.5 w-3.5" />
+                  Date selected from calendar
+                </p>
+              )}
+              {(dateError || validationErrors.date) && (
+                <p className="flex items-center gap-1.5 text-sm text-destructive">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  {dateError || validationErrors.date}
+                </p>
+              )}
+              <div className="rounded-md bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 px-3 py-2">
+                <p className="flex items-center gap-1.5 text-xs text-blue-700 dark:text-blue-300">
+                  <Calendar className="h-3.5 w-3.5" />
+                  Full day reservation (12:00 AM - 11:59 PM)
+                </p>
+              </div>
+            </div>
           </div>
+
+          <Separator />
 
           {/* Payment Method */}
-          <div className="space-y-2">
-            <Label htmlFor="paymentMethod">Payment Method</Label>
-            <Select value={formData.paymentMethod} onValueChange={(value) => updateFormData("paymentMethod", value)}>
-              <SelectTrigger data-testid="select-payment-method">
-                <SelectValue placeholder="Select payment method" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Interac Transfer">Interac e-Transfer</SelectItem>
-                <SelectItem value="Cash">Cash</SelectItem>
-              </SelectContent>
-            </Select>
-            {ownerPaymentPreferences && (
-              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <CreditCard className="h-3.5 w-3.5" />
-                Owner prefers: {ownerPaymentPreferences.paymentType === "interac_transfer" ? "Interac Transfer" : "Cash"}
-              </p>
-            )}
-            {validationErrors.paymentMethod && (
-              <p className="text-sm text-destructive">{validationErrors.paymentMethod}</p>
-            )}
+          <div className="space-y-2.5">
+            <Label htmlFor="paymentMethod" className="text-sm font-semibold">Payment Method</Label>
+            <div className="space-y-2">
+              <Select value={formData.paymentMethod} onValueChange={(value) => updateFormData("paymentMethod", value)}>
+                <SelectTrigger data-testid="select-payment-method">
+                  <SelectValue placeholder="Select payment method" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Interac Transfer">Interac e-Transfer</SelectItem>
+                  <SelectItem value="Cash">Cash</SelectItem>
+                </SelectContent>
+              </Select>
+              {ownerPaymentPreferences && (
+                <div className="rounded-md bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 px-3 py-2">
+                  <p className="flex items-center gap-1.5 text-xs text-green-700 dark:text-green-300">
+                    <CreditCard className="h-3.5 w-3.5" />
+                    Owner prefers: <span className="font-medium">{ownerPaymentPreferences.paymentType === "interac_transfer" ? "Interac Transfer" : "Cash"}</span>
+                  </p>
+                </div>
+              )}
+              {validationErrors.paymentMethod && (
+                <p className="text-sm text-destructive">{validationErrors.paymentMethod}</p>
+              )}
+            </div>
           </div>
 
-          {/* Contact Details */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="contactPhone">Phone number for booking coordination</Label>
-                {authUser?.phone && (
-                  <Badge variant="outline" className="text-xs h-5">
-                    <User className="h-3 w-3 mr-1" />
-                    Profile
-                  </Badge>
-                )}
-              </div>
-              <Input
-                type="tel"
-                placeholder="(555) 123-4567"
-                value={formData.contactPhone}
-                onChange={(e) => updateFormData("contactPhone", e.target.value)}
-                required
-                data-testid="input-contact-phone"
-              />
-              {validationErrors.contactPhone && (
-                <p className="text-sm text-destructive">{validationErrors.contactPhone}</p>
-              )}
-            </div>
+          <Separator />
+
+          {/* Contact Information */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold">Contact Information</h3>
             
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="vehicleLicense">Vehicle License Plate</Label>
-                {authUser?.vehicleInfo?.licensePlate && (
-                  <Badge variant="outline" className="text-xs h-5">
-                    <User className="h-3 w-3 mr-1" />
-                    Profile
-                  </Badge>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="contactPhone" className="text-sm">Phone Number</Label>
+                  {authUser?.phone && (
+                    <Badge variant="outline" className="text-xs h-5">
+                      <User className="h-3 w-3 mr-1" />
+                      Profile
+                    </Badge>
+                  )}
+                </div>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="tel"
+                    placeholder="(555) 123-4567"
+                    value={formData.contactPhone}
+                    onChange={(e) => updateFormData("contactPhone", e.target.value)}
+                    required
+                    data-testid="input-contact-phone"
+                    className="pl-9"
+                  />
+                </div>
+                {validationErrors.contactPhone && (
+                  <p className="text-sm text-destructive">{validationErrors.contactPhone}</p>
                 )}
               </div>
-              <Input
-                placeholder="ABC-123"
-                value={formData.vehicleLicense}
-                onChange={(e) => updateFormData("vehicleLicense", e.target.value)}
-                required
-                data-testid="input-vehicle-license"
-              />
-              {validationErrors.vehicleLicense && (
-                <p className="text-sm text-destructive">{validationErrors.vehicleLicense}</p>
-              )}
+              
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="vehicleLicense" className="text-sm">License Plate</Label>
+                  {authUser?.vehicleInfo?.licensePlate && (
+                    <Badge variant="outline" className="text-xs h-5">
+                      <User className="h-3 w-3 mr-1" />
+                      Profile
+                    </Badge>
+                  )}
+                </div>
+                <div className="relative">
+                  <Car className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="ABC-123"
+                    value={formData.vehicleLicense}
+                    onChange={(e) => updateFormData("vehicleLicense", e.target.value)}
+                    required
+                    data-testid="input-vehicle-license"
+                    className="pl-9"
+                  />
+                </div>
+                {validationErrors.vehicleLicense && (
+                  <p className="text-sm text-destructive">{validationErrors.vehicleLicense}</p>
+                )}
+              </div>
             </div>
           </div>
+
+          <Separator />
 
           {/* Special Instructions */}
-          <div className="space-y-2">
-            <Label htmlFor="specialInstructions">Special Instructions (Optional)</Label>
+          <div className="space-y-2.5">
+            <Label htmlFor="specialInstructions" className="text-sm font-semibold">Special Instructions <span className="text-muted-foreground font-normal">(Optional)</span></Label>
             <Textarea
               placeholder="Any special instructions or notes for the spot owner..."
               value={formData.specialInstructions}
@@ -395,14 +429,14 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
           </div>
 
           {/* Legal Notice */}
-          <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+          <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-4">
             <div className="flex gap-3">
-              <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-              <div className="text-sm space-y-1">
-                <p className="font-medium text-amber-900 dark:text-amber-100">
+              <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" />
+              <div className="text-sm space-y-1.5">
+                <p className="font-semibold text-amber-900 dark:text-amber-100">
                   Important Notice
                 </p>
-                <p className="text-amber-800 dark:text-amber-200">
+                <p className="text-amber-800 dark:text-amber-200 leading-relaxed">
                   BCI is not responsible for payment arrangements between users. Please ensure payment details are confirmed directly with the spot owner.
                 </p>
                 <p className="text-amber-800 dark:text-amber-200">
@@ -411,7 +445,7 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
                     href="/terms" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="underline hover:text-amber-950 dark:hover:text-amber-50"
+                    className="underline font-medium hover:text-amber-950 dark:hover:text-amber-50"
                     data-testid="link-terms-conditions"
                   >
                     Terms and Conditions
@@ -423,7 +457,7 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
 
           {/* Submit Error Display */}
           {submitError && (
-            <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+            <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-4">
               <div className="flex items-center gap-2 text-sm text-destructive">
                 <AlertTriangle className="h-4 w-4" />
                 {submitError}
@@ -454,7 +488,9 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
                   Processing...
                 </>
               ) : (
-                `Book for $${spot.price}`
+                <>
+                  Book for ${spot.price}
+                </>
               )}
             </Button>
           </div>
