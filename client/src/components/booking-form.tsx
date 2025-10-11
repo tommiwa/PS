@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle, User, Zap, Accessibility, Building, CreditCard, Timer } from "lucide-react"
+import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle, User, Zap, Accessibility, Building, CreditCard, Timer, Info } from "lucide-react"
 import type { ParkingSpot as DBParkingSpot } from "@shared/schema"
 import { isPastDate, getTodayString } from "@/utils/date-utils"
 import { AuthService } from "@/lib/auth"
@@ -221,231 +221,163 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
     }
   }
 
+  const getSpotTypeBadge = () => {
+    switch (spot.type) {
+      case "electric":
+        return "EV Charger"
+      case "tesla_ev":
+        return "Tesla Charger"
+      case "accessible":
+        return "Accessible"
+      case "reserved":
+        return "Reserved"
+      default:
+        return "Regular"
+    }
+  }
+
   return (
-    <Card className="max-w-2xl mx-auto" data-testid="card-booking-form">
-      <CardHeader>
-        <div className="flex items-center justify-between gap-4">
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Book Parking Spot
-          </CardTitle>
+    <div className="max-w-2xl mx-auto" data-testid="card-booking-form">
+      {/* Header with Timer */}
+      <div className="px-6 pt-6 pb-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3 mb-1">
+              <div className="flex items-center gap-2 text-lg font-semibold">
+                {getSpotTypeIcon()}
+                Spot {spot.spotNumber}
+              </div>
+              <Badge variant="secondary" className="text-xs">
+                {getSpotTypeBadge()}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <MapPin className="h-3.5 w-3.5" />
+              {spot.location}
+            </div>
+          </div>
           {userActiveLock && remainingSeconds > 0 && (
             <Badge 
               variant="outline" 
-              className={`flex items-center gap-1 ${
+              className={`flex items-center gap-1.5 whitespace-nowrap ${
                 remainingSeconds <= 30 
                   ? 'bg-red-50 text-red-700 border-red-300 dark:bg-red-900/30 dark:text-red-400 dark:border-red-700' 
                   : 'bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700'
               }`}
               data-testid="badge-countdown-timer"
             >
-              <Timer className="h-4 w-4" />
-              Reserved for {formatTime(remainingSeconds)}
+              <Timer className="h-3.5 w-3.5" />
+              {formatTime(remainingSeconds)}
             </Badge>
           )}
         </div>
-      </CardHeader>
-      
-      <CardContent className="space-y-6">
-        {/* Spot Summary */}
-        <div className="p-4 bg-muted rounded-lg space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold flex items-center gap-2">
-              {getSpotTypeIcon()}
-              Spot {spot.spotNumber}
-            </h3>
-            <Badge variant="secondary">
-              {spot.type === "electric" ? "EV Charger" : 
-               spot.type === "tesla_ev" ? "Tesla Charger" : 
-               spot.type === "accessible" ? "Accessible" : 
-               spot.type === "reserved" ? "Reserved" : "Regular"}
-            </Badge>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <MapPin className="h-4 w-4" />
-            {spot.location} {spot.isInside && "(Inside)"}
-          </div>
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <DollarSign className="h-4 w-4" />
-            ${spot.price}/day
-          </div>
-          <div className="text-sm text-muted-foreground">
-            Owner: {spot.owner}
-          </div>
+        
+        <div className="mt-3 flex items-center justify-between">
+          <div className="text-lg font-semibold">${spot.price}/day</div>
+          <div className="text-sm text-muted-foreground">Owner: {spot.owner}</div>
         </div>
+      </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="px-6 pb-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {/* Date Selection */}
           <div className="space-y-2">
-            <Label htmlFor="date">Select Date</Label>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Input
-                  type="date"
-                  value={formData.date}
-                  min={getTodayString()}
-                  onChange={(e) => updateFormData("date", e.target.value)}
-                  required
-                  disabled={isDateLocked}
-                  data-testid="input-booking-date"
-                  className={`w-full md:w-auto ${isDateLocked ? 'bg-muted cursor-not-allowed' : ''}`}
-                />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Select reservation date</p>
-              </TooltipContent>
-            </Tooltip>
+            <Label htmlFor="date">Booking Date</Label>
+            <Input
+              type="date"
+              value={formData.date}
+              min={getTodayString()}
+              onChange={(e) => updateFormData("date", e.target.value)}
+              required
+              disabled={isDateLocked}
+              data-testid="input-booking-date"
+              className={`${isDateLocked ? 'bg-muted cursor-not-allowed' : ''}`}
+            />
             {isDateLocked && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Calendar className="h-4 w-4" />
-                Date selected from calendar and cannot be changed
-              </div>
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Info className="h-3.5 w-3.5" />
+                Date cannot be changed
+              </p>
             )}
             {(dateError || validationErrors.date) && (
-              <div className="flex items-center gap-2 text-sm text-red-600">
-                <AlertTriangle className="h-4 w-4" />
+              <p className="flex items-center gap-1.5 text-sm text-destructive">
+                <AlertTriangle className="h-3.5 w-3.5" />
                 {dateError || validationErrors.date}
-              </div>
+              </p>
             )}
-            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-              <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
-                <Calendar className="h-4 w-4" />
-                This reservation is for the full day (12:00 AM - 11:59 PM)
-              </div>
-            </div>
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Calendar className="h-3.5 w-3.5" />
+              Full day reservation (12:00 AM - 11:59 PM)
+            </p>
           </div>
-
-          {/* Owner's Payment Preferences */}
-          {ownerPaymentPreferences && (
-            <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg space-y-3">
-              <h4 className="font-medium flex items-center gap-2 text-green-800 dark:text-green-200">
-                <CreditCard className="h-4 w-4" />
-                Owner's Payment Preferences
-              </h4>
-              <div className="space-y-2 text-sm">
-                <div>
-                  <span className="font-medium text-green-700 dark:text-green-300">Preferred Payment Method: </span>
-                  <span className="text-green-600 dark:text-green-400">
-                    {ownerPaymentPreferences.paymentType === "interac_transfer" ? "Interac Transfer" : "Cash"}
-                  </span>
-                </div>
-                {ownerPaymentPreferences.paymentInstructions && (
-                  <div>
-                    <span className="font-medium text-green-700 dark:text-green-300">Payment Instructions: </span>
-                    <span className="text-green-600 dark:text-green-400">
-                      {ownerPaymentPreferences.paymentInstructions}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-          
-          {isLoadingPaymentPreferences && (
-            <div className="p-4 bg-muted rounded-lg">
-              <div className="text-sm text-muted-foreground">Loading payment preferences...</div>
-            </div>
-          )}
 
           {/* Payment Method */}
           <div className="space-y-2">
             <Label htmlFor="paymentMethod">Payment Method</Label>
             <Select value={formData.paymentMethod} onValueChange={(value) => updateFormData("paymentMethod", value)}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <SelectTrigger data-testid="select-payment-method">
-                    <SelectValue placeholder="Select payment method" />
-                  </SelectTrigger>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Choose payment method for this booking</p>
-                </TooltipContent>
-              </Tooltip>
+              <SelectTrigger data-testid="select-payment-method">
+                <SelectValue placeholder="Select payment method" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Interac Transfer">Interac e-Transfer</SelectItem>
                 <SelectItem value="Cash">Cash</SelectItem>
               </SelectContent>
             </Select>
+            {ownerPaymentPreferences && (
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <CreditCard className="h-3.5 w-3.5" />
+                Owner prefers: {ownerPaymentPreferences.paymentType === "interac_transfer" ? "Interac Transfer" : "Cash"}
+              </p>
+            )}
             {validationErrors.paymentMethod && (
-              <p className="text-sm text-red-600">{validationErrors.paymentMethod}</p>
+              <p className="text-sm text-destructive">{validationErrors.paymentMethod}</p>
             )}
           </div>
 
           {/* Contact Details */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="contactPhone" className="flex items-center gap-2">
-                Contact Phone
+              <div className="flex items-center justify-between">
+                <Label htmlFor="contactPhone">Phone number for booking coordination</Label>
                 {authUser?.phone && (
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge variant="outline" className="text-xs h-5">
                     <User className="h-3 w-3 mr-1" />
-                    From Profile
+                    Profile
                   </Badge>
                 )}
-              </Label>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Input
-                    type="tel"
-                    placeholder="(555) 123-4567"
-                    value={formData.contactPhone}
-                    onChange={(e) => updateFormData("contactPhone", e.target.value)}
-                    required
-                    data-testid="input-contact-phone"
-                    className={authUser?.phone ? "border-blue-200 bg-blue-50/50 dark:bg-blue-950/50" : ""}
-                  />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Phone number for booking coordination</p>
-                </TooltipContent>
-              </Tooltip>
-              {authUser?.phone && (
-                <p className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1">
-                  <User className="h-3 w-3" />
-                  Auto-filled from your profile
-                </p>
-              )}
+              </div>
+              <Input
+                type="tel"
+                placeholder="(555) 123-4567"
+                value={formData.contactPhone}
+                onChange={(e) => updateFormData("contactPhone", e.target.value)}
+                required
+                data-testid="input-contact-phone"
+              />
               {validationErrors.contactPhone && (
-                <p className="text-sm text-red-600">{validationErrors.contactPhone}</p>
+                <p className="text-sm text-destructive">{validationErrors.contactPhone}</p>
               )}
             </div>
+            
             <div className="space-y-2">
-              <Label htmlFor="vehicleLicense" className="flex items-center gap-2">
-                Vehicle License Plate
+              <div className="flex items-center justify-between">
+                <Label htmlFor="vehicleLicense">Vehicle License Plate</Label>
                 {authUser?.vehicleInfo?.licensePlate && (
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge variant="outline" className="text-xs h-5">
                     <User className="h-3 w-3 mr-1" />
-                    From Profile
+                    Profile
                   </Badge>
                 )}
-              </Label>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Input
-                    placeholder="ABC-123"
-                    value={formData.vehicleLicense}
-                    onChange={(e) => updateFormData("vehicleLicense", e.target.value)}
-                    required
-                    data-testid="input-vehicle-license"
-                    className={authUser?.vehicleInfo?.licensePlate ? "border-blue-200 bg-blue-50/50 dark:bg-blue-950/50" : ""}
-                  />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>License plate for parking identification</p>
-                </TooltipContent>
-              </Tooltip>
-              {authUser?.vehicleInfo?.licensePlate ? (
-                <p className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1">
-                  <User className="h-3 w-3" />
-                  Auto-filled from your profile • Can be changed if using different car
-                </p>
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  💡 Tip: Add your vehicle info to your profile to auto-fill this field next time
-                </p>
-              )}
+              </div>
+              <Input
+                placeholder="ABC-123"
+                value={formData.vehicleLicense}
+                onChange={(e) => updateFormData("vehicleLicense", e.target.value)}
+                required
+                data-testid="input-vehicle-license"
+              />
               {validationErrors.vehicleLicense && (
-                <p className="text-sm text-red-600">{validationErrors.vehicleLicense}</p>
+                <p className="text-sm text-destructive">{validationErrors.vehicleLicense}</p>
               )}
             </div>
           </div>
@@ -453,41 +385,33 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
           {/* Special Instructions */}
           <div className="space-y-2">
             <Label htmlFor="specialInstructions">Special Instructions (Optional)</Label>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Textarea
-                  placeholder="Any special instructions or notes for the spot owner..."
-                  value={formData.specialInstructions}
-                  onChange={(e) => updateFormData("specialInstructions", e.target.value)}
-                  className="min-h-20"
-                  data-testid="textarea-instructions"
-                />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Add special requirements or arrival notes</p>
-              </TooltipContent>
-            </Tooltip>
+            <Textarea
+              placeholder="Any special instructions or notes for the spot owner..."
+              value={formData.specialInstructions}
+              onChange={(e) => updateFormData("specialInstructions", e.target.value)}
+              className="min-h-20 resize-none"
+              data-testid="textarea-instructions"
+            />
           </div>
 
           {/* Legal Notice */}
-          <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-            <div className="flex items-start gap-2">
-              <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
-              <div className="text-sm">
-                <p className="font-medium text-yellow-800 dark:text-yellow-200 mb-1">
+          <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+            <div className="flex gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+              <div className="text-sm space-y-1">
+                <p className="font-medium text-amber-900 dark:text-amber-100">
                   Important Notice
                 </p>
-                <p className="text-yellow-700 dark:text-yellow-300">
-                  BCI is not responsible for payment arrangements between users. 
-                  Please ensure payment details are confirmed directly with the spot owner.
+                <p className="text-amber-800 dark:text-amber-200">
+                  BCI is not responsible for payment arrangements between users. Please ensure payment details are confirmed directly with the spot owner.
                 </p>
-                <p className="text-yellow-700 dark:text-yellow-300 mt-2">
+                <p className="text-amber-800 dark:text-amber-200">
                   By booking, you agree to our{" "}
                   <a 
                     href="/terms" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="underline hover:text-yellow-900 dark:hover:text-yellow-100"
+                    className="underline hover:text-amber-950 dark:hover:text-amber-50"
                     data-testid="link-terms-conditions"
                   >
                     Terms and Conditions
@@ -499,8 +423,8 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
 
           {/* Submit Error Display */}
           {submitError && (
-            <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-              <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
+            <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+              <div className="flex items-center gap-2 text-sm text-destructive">
                 <AlertTriangle className="h-4 w-4" />
                 {submitError}
               </div>
@@ -508,48 +432,34 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
           )}
 
           {/* Action Buttons */}
-          <div className="flex gap-3 pt-4">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={onCancel}
-                  className="flex-1"
-                  data-testid="button-cancel-booking"
-                >
-                  Cancel
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Cancel booking and return</p>
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  type="submit" 
-                  disabled={isSubmitting || !formData.paymentMethod}
-                  className="flex-1"
-                  data-testid="button-submit-booking"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Clock className="h-4 w-4 mr-2 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    `Book for $${spot.price}`
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Submit booking request</p>
-              </TooltipContent>
-            </Tooltip>
+          <div className="flex gap-3 pt-2">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={onCancel}
+              className="flex-1"
+              data-testid="button-cancel-booking"
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={isSubmitting || !formData.paymentMethod}
+              className="flex-1"
+              data-testid="button-submit-booking"
+            >
+              {isSubmitting ? (
+                <>
+                  <Clock className="h-4 w-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                `Book for $${spot.price}`
+              )}
+            </Button>
           </div>
         </form>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
