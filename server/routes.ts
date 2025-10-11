@@ -1964,15 +1964,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Create the booking with the authenticated user as renter
-      const newBooking = await storage.createBooking({
-        ...validatedData,
-        renterId: userId,
-        // Ensure ownerId matches the spot owner
-        ownerId: spot.ownerId || "unassigned"
-      } as any); // Type assertion since we're adding required fields server-side
-
-      // Check for active lock and confirm it if exists
+      // CRITICAL: Check for active lock BEFORE creating booking
       const [activeLock] = await db
         .select()
         .from(spotLocks)
@@ -1984,9 +1976,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ))
         .limit(1);
 
-      if (activeLock) {
-        await confirmLock(activeLock.id, newBooking.id);
+      // Require a valid lock for booking creation
+      if (!activeLock) {
+        return res.status(409).json({ 
+          error: "No active lock found", 
+          message: "Please acquire a lock before booking. Your lock may have expired." 
+        });
       }
+
+      // Verify lock hasn't expired
+      if (new Date(activeLock.expiresAt) < new Date()) {
+        return res.status(409).json({ 
+          error: "Lock expired", 
+          message: "Your reservation lock has expired. Please try booking again." 
+        });
+      }
+
+      // Create the booking with the authenticated user as renter
+      const newBooking = await storage.createBooking({
+        ...validatedData,
+        renterId: userId,
+        // Ensure ownerId matches the spot owner
+        ownerId: spot.ownerId || "unassigned"
+      } as any); // Type assertion since we're adding required fields server-side
+
+      // Confirm the lock with the new booking
+      await confirmLock(activeLock.id, newBooking.id);
 
       // Audit the booking creation
       await auditService.logAction("CREATE", "booking", {

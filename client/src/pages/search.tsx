@@ -302,18 +302,12 @@ export default function Search() {
     const listingId = (spot as any).listingId
     const dailyRate = (spot as any).dailyRate || spot.price
     
-    if (!listingId) {
-      toast({
-        title: "Booking Error",
-        description: "This spot does not have an active listing. Please try another spot.",
-        variant: "destructive"
-      })
-      return
-    }
+    // Note: Don't check listingId here - let backend handle validation
+    // This allows backend to return proper error messages (lock expired, etc.)
     
     createBookingMutation.mutate({
       spotId: spot.id,
-      listingId: listingId,
+      listingId: listingId || '', // Provide empty string if missing, backend will validate
       bookingDate: bookingData.date,
       dailyRate: dailyRate,
       totalAmount: dailyRate,
