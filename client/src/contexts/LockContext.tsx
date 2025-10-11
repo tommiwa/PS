@@ -87,8 +87,8 @@ export function LockProvider({ children }: { children: React.ReactNode }) {
                 setUserActiveLock(lockInfo);
               }
 
-              // Invalidate available spots query to refresh UI
-              queryClient.invalidateQueries({ queryKey: ['/api/available-spots'] });
+              // Force refetch available spots to show updated lock states
+              queryClient.refetchQueries({ queryKey: ['/api/available-spots'] });
               break;
             }
 
@@ -119,8 +119,8 @@ export function LockProvider({ children }: { children: React.ReactNode }) {
                 return prev;
               });
 
-              // Invalidate available spots query
-              queryClient.invalidateQueries({ queryKey: ['/api/available-spots'] });
+              // Force refetch available spots - critical for updating booked/locked states
+              queryClient.refetchQueries({ queryKey: ['/api/available-spots'] });
               break;
             }
 
