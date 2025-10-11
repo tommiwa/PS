@@ -156,7 +156,7 @@ export default function Search() {
   }
 
   // Expand spots by availability dates so each date becomes a separate entry
-  // This ensures tiles and calendar show the same count
+  // CRITICAL: Filter out booked dates during expansion to hide them from tiles view
   const spots: DisplaySpot[] = dbSpots.flatMap(spot => {
     const baseSpot = {
       ...spot,
@@ -178,13 +178,17 @@ export default function Search() {
     
     // If spot has availability dates, create one entry per date
     if (spot.availabilityDates && spot.availabilityDates.length > 0) {
-      return spot.availabilityDates.map(date => ({
-        ...baseSpot,
-        id: spot.id, // Keep original spot ID for booking
-        availability: { date }, // Set specific date for this entry
-        availabilityDates: [date], // Each expanded entry only has its own date
-        // Keep booked dates for the calendar to show booked status
-      }))
+      // CRITICAL FIX: Filter out dates that are already booked BEFORE creating entries
+      // This ensures booked spots don't appear in tiles view
+      return spot.availabilityDates
+        .filter(date => !spot.bookedDates?.includes(date)) // Exclude booked dates
+        .map(date => ({
+          ...baseSpot,
+          id: spot.id, // Keep original spot ID for booking
+          availability: { date }, // Set specific date for this entry
+          availabilityDates: [date], // Each expanded entry only has its own date
+          bookedDates: spot.bookedDates, // Preserve for calendar view
+        }))
     }
     
     // Fallback for spots without availabilityDates
@@ -261,7 +265,15 @@ export default function Search() {
       // Booking data provided from calendar - submit immediately
       handleBookingFormSubmit(spot, bookingData)
     } else {
-      // No booking data - acquire lock BEFORE showing form
+      // CRITICAL FIX: Check if user already has lock on THIS specific spot
+      if (userActiveLock?.spotId === spotId) {
+        // User already has lock on this spot, just reopen form without acquiring new lock
+        setSelectedSpot(spot);
+        setShowBookingForm(true);
+        return;
+      }
+      
+      // No lock yet - acquire lock BEFORE showing form
       setIsAcquiringLock(true);
       try {
         await acquireLock(spotId, listingId);
@@ -724,7 +736,7 @@ export default function Search() {
           {selectedSpot && (
             <BookingForm
               spot={selectedSpot}
-              onSubmit={handleBookingFormSubmit}
+              onSubmit={(bookingData) => handleBookingFormSubmit(selectedSpot, bookingData)}
               onCancel={() => setShowBookingForm(false)}
             />
           )}

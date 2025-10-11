@@ -6,8 +6,18 @@ import { MapPin, Car, Zap, Accessibility, Building, User, Clock } from "lucide-r
 import type { ParkingSpot, ParkingSpotWithUser } from "@shared/schema"
 import { useAuth } from "@/contexts/auth-context"
 
+// Extend spot types to include activeLock from API enrichment
+type SpotWithLock = (ParkingSpot | ParkingSpotWithUser) & {
+  activeLock?: {
+    lockId: string
+    expiresAt: string
+    remainingSeconds: number
+    userId?: string
+  } | null
+}
+
 interface ParkingSpotCardProps {
-  spot: ParkingSpot | ParkingSpotWithUser
+  spot: SpotWithLock
   onBook?: (spotId: string) => void
   onViewDetails?: (spotId: string) => void
   showBookButton?: boolean
@@ -22,16 +32,16 @@ export function ParkingSpotCard({
   const { user } = useAuth();
   
   // Type guard to check if spot has enriched user data
-  const hasUserData = (spot: ParkingSpot | ParkingSpotWithUser): spot is ParkingSpotWithUser => {
+  const hasUserData = (spot: SpotWithLock): spot is ParkingSpotWithUser => {
     return 'assignedUserName' in spot;
   };
 
   // Check if spot is locked (and by another user)
-  const activeLock = (spot as any).activeLock;
+  const activeLock = spot.activeLock;
   const isLockedByMe = activeLock && activeLock.userId === user?.id;
   // If activeLock exists but is not locked by me, it's locked by someone else
   // (backend omits userId for privacy when locked by others)
-  const isLockedByOther = activeLock && !isLockedByMe;
+  const isLockedByOther = Boolean(activeLock && !isLockedByMe);
 
   // Map spot type name to icon
   const getSpotTypeIcon = (spotTypeName?: string) => {
@@ -222,7 +232,7 @@ export function ParkingSpotCard({
               <Button 
                 size="sm" 
                 onClick={handleBook}
-                disabled={!(spot.isActive !== false) || spot.isBookable === false || isLockedByOther}
+                disabled={spot.isActive === false || spot.isBookable === false || spot.isBookable === null || isLockedByOther}
                 className="w-full md:w-auto md:flex-1 min-h-11"
                 data-testid={`button-book-${spot.id}`}
               >
