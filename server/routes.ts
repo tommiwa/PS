@@ -1674,30 +1674,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentUser = currentUserId ? await storage.getUser(currentUserId) : null;
       const isAdmin = currentUser?.roles?.includes('admin') || false;
       
-      // Map locks by listingId
-      const locksByListingId = new Map<string, any>();
-      activeLocks.forEach(lock => {
-        const lockInfo: any = {
-          lockId: lock.id,
-          expiresAt: lock.expiresAt.toISOString(),
-          remainingSeconds: Math.floor((lock.expiresAt.getTime() - Date.now()) / 1000)
-        };
-        
-        // Only include userId for admins or if it's the current user's lock
-        if (isAdmin || lock.userId === currentUserId) {
-          lockInfo.userId = lock.userId;
-        }
-        
-        locksByListingId.set(lock.listingId, lockInfo);
-      });
+      // NOTE: Lock display is now handled entirely by LockContext using composite keys (listingId|bookingDate)
+      // via GET /api/active-locks endpoint and real-time WebSocket updates.
+      // The old activeLock field on spots has been removed since it couldn't properly represent
+      // date-specific locks (one spot can be available on multiple dates with different lock states).
       
-      // Enrich each spot with active lock info
-      const spotsWithLocks = availableSpots.map(spot => ({
-        ...spot,
-        activeLock: locksByListingId.get(spot.listingId) || null
-      }));
-      
-      res.json(spotsWithLocks);
+      res.json(availableSpots);
     } catch (error) {
       console.error("Error fetching available spots:", error);
       res.status(500).json({ error: "Failed to fetch available spots" });
@@ -1837,6 +1819,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Handle generic errors
       console.error("Error acquiring lock:", error);
       res.status(500).json({ error: "Failed to acquire lock" });
+    }
+  });
+
+  // GET /api/active-locks - Fetch all active locks (for initial load)
+  app.get("/api/active-locks", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      const user = userId ? await storage.getUser(userId) : null;
+      const isAdmin = user?.roles?.includes('admin') || false;
+      
+      // Fetch all active locks
+      const locks = await db
+        .select()
+        .from(spotLocks)
+        .where(and(
+          eq(spotLocks.status, 'active'),
+          gt(spotLocks.expiresAt, new Date())
+        ));
+      
+      // Map to response format with conditional userId inclusion
+      const lockData = locks.map(lock => ({
+        id: lock.id,
+        spotId: lock.spotId,
+        listingId: lock.listingId,
+        bookingDate: lock.bookingDate,
+        expiresAt: lock.expiresAt.toISOString(),
+        ...(isAdmin || lock.userId === userId ? { userId: lock.userId } : {})
+      }));
+      
+      res.json(lockData);
+    } catch (error) {
+      console.error("Error fetching active locks:", error);
+      res.status(500).json({ error: "Failed to fetch active locks" });
     }
   });
 

@@ -189,6 +189,65 @@ export function LockProvider({ children }: { children: React.ReactNode }) {
     };
   }, [user, connectWebSocket]);
 
+  // Fetch initial active locks on mount
+  useEffect(() => {
+    const fetchInitialLocks = async () => {
+      try {
+        const response = await fetch('/api/active-locks');
+        if (!response.ok) {
+          throw new Error(`Failed to fetch locks: ${response.status}`);
+        }
+        
+        const locks = await response.json();
+        console.log('[LockContext] Fetched initial locks:', locks);
+        
+        // Populate lockedListings with composite keys
+        const locksMap = new Map(
+          locks.map((lock: any) => {
+            const compositeKey = `${lock.listingId}|${lock.bookingDate}`;
+            const remainingSeconds = Math.floor(
+              (new Date(lock.expiresAt).getTime() - Date.now()) / 1000
+            );
+            
+            return [compositeKey, {
+              lockId: lock.id,
+              spotId: lock.spotId,
+              listingId: lock.listingId,
+              bookingDate: lock.bookingDate,
+              expiresAt: lock.expiresAt,
+              remainingSeconds,
+            }];
+          })
+        );
+        
+        setLockedListings(locksMap);
+        
+        // Set userActiveLock if one belongs to current user
+        const userLock = locks.find((l: any) => l.userId === user?.id);
+        if (userLock) {
+          const remainingSeconds = Math.floor(
+            (new Date(userLock.expiresAt).getTime() - Date.now()) / 1000
+          );
+          
+          setUserActiveLock({
+            lockId: userLock.id,
+            spotId: userLock.spotId,
+            listingId: userLock.listingId,
+            bookingDate: userLock.bookingDate,
+            expiresAt: userLock.expiresAt,
+            remainingSeconds,
+          });
+        }
+      } catch (error) {
+        console.error('[LockContext] Error fetching initial locks:', error);
+      }
+    };
+    
+    if (user) {
+      fetchInitialLocks();
+    }
+  }, [user]);
+
   // Acquire lock
   const acquireLock = useCallback(
     async (spotId: string, listingId: string, bookingDate: string): Promise<ActiveLock> => {
