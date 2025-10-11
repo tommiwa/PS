@@ -7,6 +7,7 @@ interface ActiveLock {
   lockId: string;
   spotId: string;
   listingId: string;
+  bookingDate: string;
   expiresAt: string;
   remainingSeconds: number;
 }
@@ -14,7 +15,7 @@ interface ActiveLock {
 interface LockContextType {
   userActiveLock: ActiveLock | null;
   lockedListings: Map<string, ActiveLock>;
-  acquireLock: (spotId: string, listingId: string) => Promise<ActiveLock>;
+  acquireLock: (spotId: string, listingId: string, bookingDate: string) => Promise<ActiveLock>;
   releaseLock: (lockId: string) => Promise<void>;
   clearUserLock: () => void;
 }
@@ -62,7 +63,7 @@ export function LockProvider({ children }: { children: React.ReactNode }) {
 
           switch (message.type) {
             case 'lock.created': {
-              const { lockId, spotId, listingId, userId, expiresAt } = message.data;
+              const { lockId, spotId, listingId, bookingDate, userId, expiresAt } = message.data;
               const remainingSeconds = Math.floor(
                 (new Date(expiresAt).getTime() - Date.now()) / 1000
               );
@@ -71,14 +72,16 @@ export function LockProvider({ children }: { children: React.ReactNode }) {
                 lockId,
                 spotId,
                 listingId,
+                bookingDate,
                 expiresAt,
                 remainingSeconds,
               };
 
-              // Update locked listings map
+              // Update locked listings map with composite key (listingId|bookingDate)
+              const compositeKey = `${listingId}|${bookingDate}`;
               setLockedListings((prev) => {
                 const updated = new Map(prev);
-                updated.set(listingId, lockInfo);
+                updated.set(compositeKey, lockInfo);
                 return updated;
               });
 
@@ -95,12 +98,13 @@ export function LockProvider({ children }: { children: React.ReactNode }) {
             case 'lock.released':
             case 'lock.expired':
             case 'lock.confirmed': {
-              const { lockId, listingId } = message.data;
+              const { lockId, listingId, bookingDate } = message.data;
 
-              // Remove from locked listings
+              // Remove from locked listings using composite key
+              const compositeKey = `${listingId}|${bookingDate}`;
               setLockedListings((prev) => {
                 const updated = new Map(prev);
-                updated.delete(listingId);
+                updated.delete(compositeKey);
                 return updated;
               });
 
@@ -187,11 +191,11 @@ export function LockProvider({ children }: { children: React.ReactNode }) {
 
   // Acquire lock
   const acquireLock = useCallback(
-    async (spotId: string, listingId: string): Promise<ActiveLock> => {
+    async (spotId: string, listingId: string, bookingDate: string): Promise<ActiveLock> => {
       try {
         const response = await apiRequest(`/api/spots/${spotId}/locks`, {
           method: 'POST',
-          body: { listingId },
+          body: { listingId, bookingDate },
         });
 
         const data = await response.json();
@@ -200,16 +204,18 @@ export function LockProvider({ children }: { children: React.ReactNode }) {
           lockId: data.lockId,
           spotId: data.spotId,
           listingId: data.listingId,
+          bookingDate: data.bookingDate,
           expiresAt: data.expiresAt,
           remainingSeconds: data.remainingSeconds,
         };
 
         setUserActiveLock(lockInfo);
         
-        // Also add to locked listings
+        // Also add to locked listings using composite key
+        const compositeKey = `${listingId}|${bookingDate}`;
         setLockedListings((prev) => {
           const updated = new Map(prev);
-          updated.set(listingId, lockInfo);
+          updated.set(compositeKey, lockInfo);
           return updated;
         });
 

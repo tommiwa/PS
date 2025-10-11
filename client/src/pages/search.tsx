@@ -265,9 +265,15 @@ export default function Search() {
       // Booking data provided from calendar - submit immediately
       handleBookingFormSubmit(spot, bookingData)
     } else {
-      // CRITICAL FIX: Check if user already has lock on THIS specific spot
-      if (userActiveLock?.spotId === spotId) {
-        // User already has lock on this spot, just reopen form without acquiring new lock
+      // Determine the booking date from spot availability, search criteria, or today
+      const bookingDate = 
+        spot.availability?.date || // From tiles view spot
+        searchCriteria.date || // From search filter
+        new Date().toISOString().split('T')[0]; // Fallback to today
+      
+      // CRITICAL FIX: Check if user already has lock on THIS specific spot AND date
+      if (userActiveLock?.spotId === spotId && userActiveLock?.bookingDate === bookingDate) {
+        // User already has lock on this spot+date, just reopen form without acquiring new lock
         setSelectedSpot(spot);
         setShowBookingForm(true);
         return;
@@ -276,7 +282,7 @@ export default function Search() {
       // No lock yet - acquire lock BEFORE showing form
       setIsAcquiringLock(true);
       try {
-        await acquireLock(spotId, listingId);
+        await acquireLock(spotId, listingId, bookingDate);
         // Lock acquired successfully, show booking form
         setSelectedSpot(spot);
         setShowBookingForm(true);

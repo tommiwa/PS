@@ -1713,7 +1713,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { spotId } = req.params;
-      const { listingId } = req.body;
+      const { listingId, bookingDate } = req.body;
 
       // Validate input
       if (!spotId) {
@@ -1721,6 +1721,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       if (!listingId) {
         return res.status(400).json({ error: "listingId is required" });
+      }
+      if (!bookingDate) {
+        return res.status(400).json({ error: "bookingDate is required" });
+      }
+      if (isNaN(Date.parse(bookingDate))) {
+        return res.status(400).json({ error: "Invalid bookingDate format" });
       }
 
       // Verify spot exists
@@ -1740,12 +1746,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Execute lock acquisition in atomic transaction
       const result = await db.transaction(async (tx) => {
-        // Step 1: Check for existing active locks on this listing (with row-level lock)
+        // Step 1: Check for existing active locks on this listing+date combination (with row-level lock)
         const existingLock = await tx
           .select()
           .from(spotLocks)
           .where(and(
             eq(spotLocks.listingId, listingId),
+            eq(spotLocks.bookingDate, bookingDate),
             eq(spotLocks.status, 'active')
           ))
           .for('update');
@@ -1775,6 +1782,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             spotId,
             userId,
             listingId,
+            bookingDate,
             expiresAt,
             status: 'active'
           })
@@ -1793,6 +1801,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             lockId: result.id,
             spotId: result.spotId,
             listingId: result.listingId,
+            bookingDate: result.bookingDate,
             userId: result.userId,
             expiresAt: result.expiresAt.toISOString()
           });
@@ -1806,6 +1815,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lockId: result.id,
         spotId: result.spotId,
         listingId: result.listingId,
+        bookingDate: result.bookingDate,
         expiresAt: result.expiresAt.toISOString(),
         remainingSeconds
       });
@@ -1860,6 +1870,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           lockId: lock.id,
           spotId: lock.spotId,
           listingId: lock.listingId,
+          bookingDate: lock.bookingDate,
           bookingId
         });
       } catch (error) {
@@ -1921,7 +1932,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           broadcastLockEvent('lock.released', {
             lockId: lock.id,
             spotId: lock.spotId,
-            listingId: lock.listingId
+            listingId: lock.listingId,
+            bookingDate: lock.bookingDate
           });
         } catch (error) {
           console.error('[Lock Broadcast] Failed to broadcast lock.released:', error);

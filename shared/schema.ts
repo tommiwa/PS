@@ -244,7 +244,7 @@ export interface BookingAvailabilityData extends SpotListing {
 // 4. "released" - Lock manually released by user (e.g., cancelled booking process)
 // 
 // The system automatically cleans up expired locks and prevents double-booking by checking for active locks
-// before allowing new bookings. Only one active lock per spot+date combination is allowed.
+// before allowing new bookings. Only one active lock per spot+date+listing combination is allowed.
 
 export const lockStatuses = z.enum(["active", "confirmed", "expired", "released"]);
 export type LockStatus = z.infer<typeof lockStatuses>;
@@ -254,14 +254,15 @@ export const spotLocks = pgTable("spot_locks", {
   spotId: varchar("spot_id").notNull().references(() => parkingSpots.id, { onDelete: "cascade" }),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   listingId: varchar("listing_id").notNull().references(() => spotListings.id, { onDelete: "cascade" }), // FK to spot_listings
+  bookingDate: date("booking_date").notNull(),
   status: text("status").notNull().$type<LockStatus>().default("active"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   expiresAt: timestamp("expires_at").notNull(),
   bookingId: varchar("booking_id"), // Set when lock is converted to booking
 }, (table) => [
-  // NOTE: Uniqueness constraint (one active lock per listing) is enforced via transaction-based SELECT FOR UPDATE
+  // NOTE: Uniqueness constraint (one active lock per listing+date) is enforced via transaction-based SELECT FOR UPDATE
   // in the API layer, not at database level. This provides atomic lock acquisition without race conditions.
-  index("IDX_spot_locks_listing_status").on(table.listingId, table.status),
+  index("IDX_spot_locks_listing_date_status").on(table.listingId, table.bookingDate, table.status),
   index("IDX_spot_locks_spot_status").on(table.spotId, table.status),
   index("IDX_spot_locks_user_status").on(table.userId, table.status),
   index("IDX_spot_locks_expires_at").on(table.expiresAt),
@@ -273,6 +274,9 @@ export const insertSpotLockSchema = createInsertSchema(spotLocks).omit({
   status: true,
   bookingId: true,
 }).extend({
+  bookingDate: z.string().refine((date) => !isNaN(Date.parse(date)), {
+    message: "Invalid booking date format",
+  }),
   expiresAt: z.date().refine((date) => date > new Date(), {
     message: "Lock expiration time must be in the future",
   }),
