@@ -178,10 +178,28 @@ export default function Search() {
     
     // If spot has availability dates, create one entry per date
     if (spot.availabilityDates && spot.availabilityDates.length > 0) {
-      // CRITICAL FIX: Filter out dates that are already booked BEFORE creating entries
-      // This ensures booked spots don't appear in tiles view
+      // CRITICAL FIX: Filter out dates that are already booked OR locked by others BEFORE creating entries
+      // This ensures booked/locked spots don't appear in tiles view
       return spot.availabilityDates
-        .filter(date => !spot.bookedDates?.includes(date)) // Exclude booked dates
+        .filter(date => {
+          // Exclude booked dates
+          if (spot.bookedDates?.includes(date)) return false;
+          
+          // Exclude dates locked by other users (check using composite key)
+          if (spot.listingId) {
+            const compositeKey = `${spot.listingId}|${date}`;
+            const lock = lockedListings.get(compositeKey);
+            
+            if (lock) {
+              // Check if it's the current user's lock by comparing lockId
+              const isMyLock = userActiveLock?.lockId === lock.lockId;
+              // Filter out if locked by someone else
+              if (!isMyLock) return false;
+            }
+          }
+          
+          return true;
+        })
         .map(date => ({
           ...baseSpot,
           id: spot.id, // Keep original spot ID for booking

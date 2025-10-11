@@ -19,6 +19,7 @@ import {
 import { format, startOfWeek, addDays, addWeeks, addMonths, subWeeks, subMonths, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, getDay } from "date-fns"
 import { isPastDate } from "@/utils/date-utils"
 import { useAuth } from "@/contexts/auth-context"
+import { useLock } from "@/contexts/LockContext"
 
 type CalendarView = "day" | "week" | "month"
 
@@ -55,6 +56,7 @@ interface ParkingCalendarProps {
 
 export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), onDateChange, isOwnerView = false }: ParkingCalendarProps) {
   const { user } = useAuth();
+  const { lockedListings, userActiveLock } = useLock();
   const [currentDate, setCurrentDate] = useState(selectedDate)
   const [view, setView] = useState<CalendarView>("week")
   const [selectedSpot, setSelectedSpot] = useState<ParkingSpot | null>(null)
@@ -230,9 +232,29 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
     return spot.bookedDates.includes(checkDate)
   }
 
-  // Helper to check if a spot is locked by another user
-  const isSpotLockedByOther = (spot: ParkingSpot): boolean => {
-    return spot.activeLock !== undefined && spot.activeLock !== null && spot.activeLock.userId !== user?.id
+  // Helper to check if a spot is locked by another user on a specific date
+  const isSpotLockedByOther = (spot: ParkingSpot, date: Date): boolean => {
+    // Check if spot has listingId (required for composite key)
+    if (!spot.listingId) {
+      return false;
+    }
+    
+    // Create composite key: listingId|date
+    const dateStr = date.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+    const compositeKey = `${spot.listingId}|${dateStr}`;
+    
+    // Check if this specific listing+date is locked
+    const lock = lockedListings.get(compositeKey);
+    
+    if (!lock) {
+      return false; // Not locked at all
+    }
+    
+    // Check if it's the current user's lock by comparing lockId
+    const isMyLock = userActiveLock?.lockId === lock.lockId;
+    
+    // Return true if locked by someone else
+    return !isMyLock;
   }
 
   const handleSpotClick = (spot: ParkingSpot, clickedDate?: Date) => {
@@ -243,8 +265,8 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
       return; // Don't allow booking already booked spots
     }
     
-    // Prevent clicking spots locked by another user
-    if (isSpotLockedByOther(spot)) {
+    // Prevent clicking spots locked by another user on this specific date
+    if (isSpotLockedByOther(spot, dateToCheck)) {
       return; // Don't allow booking locked spots
     }
     
@@ -289,7 +311,7 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
             <div className="space-y-2">
               {daySpots.map((spot) => {
                 const isBooked = isSpotBookedOnDate(spot, currentDate)
-                const isLocked = isSpotLockedByOther(spot)
+                const isLocked = isSpotLockedByOther(spot, currentDate)
                 return (
                   <Card 
                     key={`${spot.id}-${spot.availability?.date || currentDate.toISOString().split('T')[0]}`}
@@ -388,7 +410,7 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                 <div className="space-y-1">
                   {daySpots.slice(0, 3).map((spot) => {
                     const isBooked = isSpotBookedOnDate(spot, day)
-                    const isLocked = isSpotLockedByOther(spot)
+                    const isLocked = isSpotLockedByOther(spot, day)
                     return (
                       <div
                         key={`${spot.id}-${spot.availability?.date || day.toISOString().split('T')[0]}`}
@@ -471,7 +493,7 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                 <div className="space-y-0.5">
                   {daySpots.slice(0, 2).map((spot) => {
                     const isBooked = isSpotBookedOnDate(spot, day)
-                    const isLocked = isSpotLockedByOther(spot)
+                    const isLocked = isSpotLockedByOther(spot, day)
                     return (
                       <div
                         key={`${spot.id}-${spot.availability?.date || day.toISOString().split('T')[0]}`}

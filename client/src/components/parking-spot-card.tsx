@@ -5,8 +5,9 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip
 import { MapPin, Car, Zap, Accessibility, Building, User, Clock } from "lucide-react"
 import type { ParkingSpot, ParkingSpotWithUser } from "@shared/schema"
 import { useAuth } from "@/contexts/auth-context"
+import { useLock } from "@/contexts/LockContext"
 
-// Extend spot types to include activeLock from API enrichment
+// Extend spot types to include activeLock and availability from API enrichment
 type SpotWithLock = (ParkingSpot | ParkingSpotWithUser) & {
   activeLock?: {
     lockId: string
@@ -14,6 +15,10 @@ type SpotWithLock = (ParkingSpot | ParkingSpotWithUser) & {
     remainingSeconds: number
     userId?: string
   } | null
+  availability?: {
+    date: string
+  }
+  listingId?: string
 }
 
 interface ParkingSpotCardProps {
@@ -30,18 +35,34 @@ export function ParkingSpotCard({
   showBookButton = true 
 }: ParkingSpotCardProps) {
   const { user } = useAuth();
+  const { lockedListings, userActiveLock } = useLock();
   
   // Type guard to check if spot has enriched user data
   const hasUserData = (spot: SpotWithLock): spot is ParkingSpotWithUser => {
     return 'assignedUserName' in spot;
   };
 
-  // Check if spot is locked (and by another user)
-  const activeLock = spot.activeLock;
-  const isLockedByMe = activeLock && activeLock.userId === user?.id;
-  // If activeLock exists but is not locked by me, it's locked by someone else
-  // (backend omits userId for privacy when locked by others)
-  const isLockedByOther = Boolean(activeLock && !isLockedByMe);
+  // Check if spot is locked (and by another user) using composite key if date is available
+  let isLockedByOther = false;
+  
+  if (spot.listingId && spot.availability?.date) {
+    // Use composite key to check date-specific lock
+    const compositeKey = `${spot.listingId}|${spot.availability.date}`;
+    const lock = lockedListings.get(compositeKey);
+    
+    if (lock) {
+      // Check if it's the current user's lock by comparing lockId
+      const isMyLock = userActiveLock?.lockId === lock.lockId;
+      isLockedByOther = !isMyLock;
+    }
+  } else {
+    // Fallback to old method if no date available (backward compatibility)
+    const activeLock = spot.activeLock;
+    if (activeLock) {
+      const isMyLock = userActiveLock?.lockId === activeLock.lockId;
+      isLockedByOther = !isMyLock;
+    }
+  }
 
   // Map spot type name to icon
   const getSpotTypeIcon = (spotTypeName?: string) => {
