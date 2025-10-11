@@ -40,6 +40,7 @@ Preferred communication style: Simple, everyday language.
 
 ### Key Features
 - **Booking System**: Real-time management with status tracking, custom calendar, search & filtering. Includes business rules for reserved spots (non-bookable), intelligent display of booked spots, support for period listings, and data consistency across views. Tiles and calendar views are synchronized - booked spots (shown as grey/disabled in calendar) are automatically filtered from tiles view to prevent duplicate bookings.
+- **Concurrent Booking Prevention**: Pessimistic locking system with 2-minute reservation locks prevents race conditions when multiple users attempt to book the same spot. Features include: atomic lock acquisition using SELECT FOR UPDATE transactions, real-time WebSocket updates across all clients, yellow "PENDING" visual states in both tiles and calendar views, countdown timer in booking dialog, automatic 30-second cleanup job for expired locks, backend validation requiring valid locks before booking creation, and admin override capability to release any lock.
 - **Admin Management**: Comprehensive user, bulk spot, waiting list, and reference data management (Departments, Locations, Spot Types) with full CRUD operations and safeguards for reserved spots. Streamlined "Create Availability" feature.
 - **Notification System**: Real-time alerts via email and in-app notifications.
 - **Spot Listing Creation**: Owners can list spots with single day, period, or recurring options.
