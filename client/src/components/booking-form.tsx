@@ -238,7 +238,7 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
   }
 
   return (
-    <div className="max-w-2xl mx-auto" data-testid="card-booking-form">
+    <div className="w-full" data-testid="card-booking-form">
       {/* Header Section */}
       <div className="border-b bg-muted/30 px-6 py-4">
         <div className="flex items-start justify-between gap-4">
@@ -288,47 +288,33 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
       {/* Form Section */}
       <div className="px-6 py-5">
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Date Selection */}
-          <div className="space-y-2.5">
-            <Label htmlFor="date" className="text-sm font-semibold">Booking Date</Label>
+          {/* Date and Payment Method - Side by Side */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Date Selection */}
             <div className="space-y-2">
+              <Label htmlFor="date" className="text-sm font-semibold">Booking Date</Label>
               <Input
                 type="date"
                 value={formData.date}
                 min={getTodayString()}
                 onChange={(e) => updateFormData("date", e.target.value)}
                 required
-                disabled={isDateLocked}
+                disabled={true}
+                readOnly={true}
                 data-testid="input-booking-date"
-                className={`${isDateLocked ? 'bg-muted cursor-not-allowed' : ''}`}
+                className="bg-muted cursor-not-allowed"
               />
-              {isDateLocked && (
-                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Info className="h-3.5 w-3.5" />
-                  Date selected from calendar
-                </p>
-              )}
               {(dateError || validationErrors.date) && (
                 <p className="flex items-center gap-1.5 text-sm text-destructive">
                   <AlertTriangle className="h-3.5 w-3.5" />
                   {dateError || validationErrors.date}
                 </p>
               )}
-              <div className="rounded-md bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 px-3 py-2">
-                <p className="flex items-center gap-1.5 text-xs text-blue-700 dark:text-blue-300">
-                  <Calendar className="h-3.5 w-3.5" />
-                  Full day reservation (12:00 AM - 11:59 PM)
-                </p>
-              </div>
             </div>
-          </div>
 
-          <Separator />
-
-          {/* Payment Method */}
-          <div className="space-y-2.5">
-            <Label htmlFor="paymentMethod" className="text-sm font-semibold">Payment Method</Label>
+            {/* Payment Method */}
             <div className="space-y-2">
+              <Label htmlFor="paymentMethod" className="text-sm font-semibold">Payment Method</Label>
               <Select value={formData.paymentMethod} onValueChange={(value) => updateFormData("paymentMethod", value)}>
                 <SelectTrigger data-testid="select-payment-method">
                   <SelectValue placeholder="Select payment method" />
@@ -338,19 +324,28 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
                   <SelectItem value="Cash">Cash</SelectItem>
                 </SelectContent>
               </Select>
-              {ownerPaymentPreferences && (
-                <div className="rounded-md bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 px-3 py-2">
-                  <p className="flex items-center gap-1.5 text-xs text-green-700 dark:text-green-300">
-                    <CreditCard className="h-3.5 w-3.5" />
-                    Owner prefers: <span className="font-medium">{ownerPaymentPreferences.paymentType === "interac_transfer" ? "Interac Transfer" : "Cash"}</span>
-                  </p>
-                </div>
-              )}
               {validationErrors.paymentMethod && (
                 <p className="text-sm text-destructive">{validationErrors.paymentMethod}</p>
               )}
             </div>
           </div>
+
+          {/* Info boxes - full width, no side padding */}
+          <div className="rounded-md bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 px-3 py-2">
+            <p className="flex items-center gap-1.5 text-xs text-blue-700 dark:text-blue-300">
+              <Calendar className="h-3.5 w-3.5" />
+              Full day reservation (12:00 AM - 11:59 PM)
+            </p>
+          </div>
+
+          {ownerPaymentPreferences && (
+            <div className="rounded-md bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 px-3 py-2">
+              <p className="flex items-center gap-1.5 text-xs text-green-700 dark:text-green-300">
+                <CreditCard className="h-3.5 w-3.5" />
+                Owner prefers: <span className="font-medium">{ownerPaymentPreferences.paymentType === "interac_transfer" ? "Interac Transfer" : "Cash"}</span>
+              </p>
+            </div>
+          )}
 
           <Separator />
 
@@ -417,7 +412,7 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
           <Separator />
 
           {/* Special Instructions */}
-          <div className="space-y-2.5">
+          <div className="space-y-2">
             <Label htmlFor="specialInstructions" className="text-sm font-semibold">Special Instructions <span className="text-muted-foreground font-normal">(Optional)</span></Label>
             <Textarea
               placeholder="Any special instructions or notes for the spot owner..."
