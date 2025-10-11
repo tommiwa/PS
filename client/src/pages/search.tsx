@@ -289,12 +289,21 @@ export default function Search() {
         searchCriteria.date || // From search filter
         new Date().toISOString().split('T')[0]; // Fallback to today
       
-      // CRITICAL FIX: Check if user already has lock on THIS specific spot AND date
-      if (userActiveLock?.spotId === spotId && userActiveLock?.bookingDate === bookingDate) {
-        // User already has lock on this spot+date, just reopen form without acquiring new lock
+      // Check if user already has a VALID lock on THIS specific spot AND date
+      const hasValidLock = userActiveLock?.spotId === spotId && 
+                           userActiveLock?.bookingDate === bookingDate &&
+                           new Date(userActiveLock.expiresAt).getTime() > Date.now();
+      
+      if (hasValidLock) {
+        // User already has valid lock on this spot+date, just reopen form without acquiring new lock
         setSelectedSpot(spot);
         setShowBookingForm(true);
         return;
+      }
+      
+      // If user had an expired lock, clear it first
+      if (userActiveLock && new Date(userActiveLock.expiresAt).getTime() <= Date.now()) {
+        clearUserLock();
       }
       
       // No lock yet - acquire lock BEFORE showing form
@@ -749,7 +758,11 @@ export default function Search() {
           setShowBookingForm(open);
           // Release lock when dialog closes
           if (!open && userActiveLock) {
-            releaseLock(userActiveLock.lockId);
+            const lockIdToRelease = userActiveLock.lockId;
+            // Clear lock immediately to prevent race condition
+            clearUserLock();
+            // Then release on backend
+            releaseLock(lockIdToRelease);
           }
         }}
       >

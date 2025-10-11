@@ -1611,18 +1611,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Filter to show spots that:
       // 1. Are active (not deactivated)
       // 2. Are bookable
-      // 3. Have an active listing OR have an owner (for backward compatibility)
+      // 3. Have an active listing (listings are required for the lock system to work)
       const availableSpots = allSpots
         .filter(spot => {
           return spot.isActive && 
                  spot.isBookable && 
-                 (listingsBySpotId.has(spot.id) || spot.ownerId);
+                 listingsBySpotId.has(spot.id);
         })
         .map(spot => {
           const listings = listingsBySpotId.get(spot.id) || [];
           
+          // Safety check: should not happen due to filter above, but handle gracefully
           if (listings.length === 0) {
-            return spot;
+            return null;
           }
           
           // Collect all availability dates from all listings for this spot
@@ -1658,7 +1659,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               date: availabilityDates[0]
             } : undefined
           };
-        });
+        })
+        .filter(spot => spot !== null); // Remove any null entries from safety check
       
       // Fetch active locks to show pending/locked state
       const activeLocks = await db

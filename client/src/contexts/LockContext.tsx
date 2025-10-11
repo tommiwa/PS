@@ -202,8 +202,8 @@ export function LockProvider({ children }: { children: React.ReactNode }) {
         console.log('[LockContext] Fetched initial locks:', locks);
         
         // Populate lockedListings with composite keys
-        const locksMap = new Map(
-          locks.map((lock: any) => {
+        const locksMap = new Map<string, ActiveLock>(
+          locks.map((lock: any): [string, ActiveLock] => {
             const compositeKey = `${lock.listingId}|${lock.bookingDate}`;
             const remainingSeconds = Math.floor(
               (new Date(lock.expiresAt).getTime() - Date.now()) / 1000
