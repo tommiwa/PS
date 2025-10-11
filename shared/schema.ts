@@ -169,6 +169,12 @@ export interface ParkingSpotWithUser extends ParkingSpot {
 export interface ParkingSpotWithSafeUserData extends ParkingSpot {
   assignedUserName?: string;
   assignedUserDepartment?: string;
+  listingId?: string;
+  dailyRate?: string;
+  availabilityDates?: string[];
+  bookedDates?: string[];
+  availability?: { date: string };
+  activeLock?: any;
 }
 
 // Spot Listings Table
@@ -530,6 +536,7 @@ export const entityTypes = z.enum([
   "user",
   "parking_spot", 
   "spot_listing",
+  "spot_lock",
   "booking",
   "waiting_list",
   "notification",

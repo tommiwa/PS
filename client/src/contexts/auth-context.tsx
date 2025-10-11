@@ -15,6 +15,11 @@ interface AuthUser {
   profileImageUrl?: string;
   acceptedTermsVersion?: number | null;
   acceptedTermsAt?: string | null;
+  vehicleInfo?: { 
+    make?: string; 
+    model?: string; 
+    licensePlate?: string; 
+  };
 }
 
 interface AuthContextType {

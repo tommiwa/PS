@@ -163,12 +163,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         departmentName = department?.name || null;
       }
       
+      // Fetch user's primary vehicle info
+      let vehicleInfo = null;
+      const userVehicles = await storage.getVehiclesByUser(userId);
+      if (userVehicles && userVehicles.length > 0) {
+        // Find the primary/default vehicle or use the first one
+        const primaryVehicle = userVehicles.find(v => v.isDefault) || userVehicles[0];
+        vehicleInfo = {
+          licensePlate: primaryVehicle.licensePlate,
+          make: primaryVehicle.make,
+          model: primaryVehicle.model
+        };
+      }
+      
       // Add computed fields for compatibility
       const userWithName = {
         ...user,
         name: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.firstName || user.lastName || user.email,
         memberSince,
-        department: departmentName
+        department: departmentName,
+        vehicleInfo
       };
       
       res.json(userWithName);

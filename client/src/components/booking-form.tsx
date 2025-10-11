@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -11,7 +11,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip
 import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle, User, Zap, Accessibility, Building, CreditCard, Timer, Info, Phone } from "lucide-react"
 import type { ParkingSpot as DBParkingSpot } from "@shared/schema"
 import { isPastDate, getTodayString } from "@/utils/date-utils"
-import { AuthService } from "@/lib/auth"
+import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { useQuery } from "@tanstack/react-query"
 import { type PaymentPreferences } from "@shared/schema"
@@ -48,10 +48,13 @@ interface BookingFormProps {
 
 export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLocked = false }: BookingFormProps) {
   // Get authenticated user for auto-population
-  const authUser = AuthService.getAuthUser();
+  const { user: authUser } = useAuth();
   const { toast } = useToast();
   const { userActiveLock } = useLock();
   const [remainingSeconds, setRemainingSeconds] = useState<number>(0);
+  
+  // Track if we've hydrated auth data to avoid overwriting user edits
+  const authDataHydratedRef = useRef(false);
 
   // Query spot owner's payment preferences
   const { data: ownerPaymentPreferences, isLoading: isLoadingPaymentPreferences } = useQuery<PaymentPreferences | null>({
@@ -70,9 +73,21 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
     date: getValidDate(),
     paymentMethod: "",
     specialInstructions: "",
-    contactPhone: authUser?.phone || "", // Auto-populate from user profile
-    vehicleLicense: authUser?.vehicleInfo?.licensePlate || "" // Auto-populate from user profile
+    contactPhone: "", // Will be populated when auth loads
+    vehicleLicense: "" // Will be populated when auth loads
   })
+
+  // Auto-populate user fields from auth context when it loads (once only)
+  useEffect(() => {
+    if (authUser && !authDataHydratedRef.current) {
+      authDataHydratedRef.current = true;
+      setFormData(prev => ({
+        ...prev,
+        contactPhone: authUser.phone || "",
+        vehicleLicense: authUser.vehicleInfo?.licensePlate || ""
+      }));
+    }
+  }, [authUser]);
 
   // Auto-populate payment method from owner's preferences
   useEffect(() => {
