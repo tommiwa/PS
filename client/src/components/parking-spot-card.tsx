@@ -2,8 +2,9 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import { MapPin, Car, Zap, Accessibility, Building, User } from "lucide-react"
+import { MapPin, Car, Zap, Accessibility, Building, User, Clock } from "lucide-react"
 import type { ParkingSpot, ParkingSpotWithUser } from "@shared/schema"
+import { useAuth } from "@/contexts/auth-context"
 
 interface ParkingSpotCardProps {
   spot: ParkingSpot | ParkingSpotWithUser
@@ -18,10 +19,19 @@ export function ParkingSpotCard({
   onViewDetails,
   showBookButton = true 
 }: ParkingSpotCardProps) {
+  const { user } = useAuth();
+  
   // Type guard to check if spot has enriched user data
   const hasUserData = (spot: ParkingSpot | ParkingSpotWithUser): spot is ParkingSpotWithUser => {
     return 'assignedUserName' in spot;
   };
+
+  // Check if spot is locked (and by another user)
+  const activeLock = (spot as any).activeLock;
+  const isLockedByMe = activeLock && activeLock.userId === user?.id;
+  // If activeLock exists but is not locked by me, it's locked by someone else
+  // (backend omits userId for privacy when locked by others)
+  const isLockedByOther = activeLock && !isLockedByMe;
 
   // Map spot type name to icon
   const getSpotTypeIcon = (spotTypeName?: string) => {
@@ -107,14 +117,24 @@ export function ParkingSpotCard({
 
   return (
     <Card 
-      className={`hover-elevate ${!spot.isActive ? 'opacity-60' : ''}`}
+      className={`hover-elevate ${!spot.isActive ? 'opacity-60' : ''} ${
+        isLockedByOther ? 'bg-yellow-50 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-700' : ''
+      }`}
       data-testid={`card-parking-spot-${spot.id}`}
     >
       <CardHeader className="pb-3">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-          <CardTitle className="text-lg font-semibold">
-            Spot {spot.spotNumber}
-          </CardTitle>
+          <div className="flex items-center gap-2 flex-wrap">
+            <CardTitle className="text-lg font-semibold">
+              Spot {spot.spotNumber}
+            </CardTitle>
+            {isLockedByOther && (
+              <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/50 dark:text-yellow-200 dark:border-yellow-600">
+                <Clock className="h-3 w-3 mr-1" />
+                PENDING
+              </Badge>
+            )}
+          </div>
           {getSpotTypeBadge()}
         </div>
         <Tooltip>
@@ -202,16 +222,19 @@ export function ParkingSpotCard({
               <Button 
                 size="sm" 
                 onClick={handleBook}
-                disabled={!(spot.isActive !== false) || spot.isBookable === false}
+                disabled={!(spot.isActive !== false) || spot.isBookable === false || isLockedByOther}
                 className="w-full md:w-auto md:flex-1 min-h-11"
                 data-testid={`button-book-${spot.id}`}
               >
-                {spot.isBookable === false ? "Not Bookable" : 
+                {isLockedByOther ? "Pending" :
+                 spot.isBookable === false ? "Not Bookable" : 
                  (spot.isActive !== false) ? "Book" : "Unavailable"}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>{spot.isBookable === false 
+              <p>{isLockedByOther
+                ? "This spot is currently being booked by another user. Please try again in a moment."
+                : spot.isBookable === false 
                 ? "This spot is currently not available for booking" 
                 : (spot.isActive !== false) 
                   ? "Click to book this parking spot - you'll be guided through the reservation process" 

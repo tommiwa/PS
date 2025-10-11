@@ -15,6 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { AuthProvider, useAuth } from "@/contexts/auth-context";
 import { ThemeProvider } from "@/contexts/theme-context";
 import { LanguageProvider } from "@/contexts/language-context";
+import { LockProvider } from "@/contexts/LockContext";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ConfirmProvider } from "@/hooks/use-confirm";
 import { NotificationCenter } from "@/components/notification-center";
@@ -511,10 +512,12 @@ function App() {
           <ThemeProvider>
             <LanguageProvider>
               <AuthProvider>
-                <ConfirmProvider>
-                  <ProtectedRouter />
-                </ConfirmProvider>
-                <Toaster />
+                <LockProvider>
+                  <ConfirmProvider>
+                    <ProtectedRouter />
+                  </ConfirmProvider>
+                  <Toaster />
+                </LockProvider>
               </AuthProvider>
             </LanguageProvider>
           </ThemeProvider>

@@ -1,11 +1,12 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { broadcastLockEvent } from "./websocket";
 import { setupAuth, isAuthenticated, requireAdmin, getAuthenticatedUserId, getAuthenticatedUserRole, getAuthenticatedUserBaseRole } from "./replitAuth";
 import { z } from "zod";
 import { db } from "./db";
-import { parkingSpots } from "@shared/schema";
-import { inArray, and, eq } from "drizzle-orm";
+import { parkingSpots, spotLocks, spotListings } from "@shared/schema";
+import { inArray, and, eq, lt, gt } from "drizzle-orm";
 import { 
   sendAssignmentNotification, 
   sendWelcomeNotification,
@@ -60,6 +61,9 @@ import {
   getSpotAssignmentReport
 } from "./reports-controller";
 import { sendReportEmail, isEmailServiceAvailable } from "./report-service";
+
+// Lock duration configuration
+const LOCK_DURATION_MS = 120000; // 2 minutes (120 seconds)
 
 // Zod schemas for admin endpoints
 const toggleBookabilitySchema = z.object({
@@ -1642,10 +1646,287 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         });
       
-      res.json(availableSpots);
+      // Fetch active locks to show pending/locked state
+      const activeLocks = await db
+        .select()
+        .from(spotLocks)
+        .where(and(
+          eq(spotLocks.status, 'active'),
+          gt(spotLocks.expiresAt, new Date()) // Only non-expired locks
+        ));
+      
+      // Get current user info to determine if admin
+      const currentUserId = getAuthenticatedUserId(req);
+      const currentUser = currentUserId ? await storage.getUser(currentUserId) : null;
+      const isAdmin = currentUser?.roles?.includes('admin') || false;
+      
+      // Map locks by listingId
+      const locksByListingId = new Map<string, any>();
+      activeLocks.forEach(lock => {
+        const lockInfo: any = {
+          lockId: lock.id,
+          expiresAt: lock.expiresAt.toISOString(),
+          remainingSeconds: Math.floor((lock.expiresAt.getTime() - Date.now()) / 1000)
+        };
+        
+        // Only include userId for admins or if it's the current user's lock
+        if (isAdmin || lock.userId === currentUserId) {
+          lockInfo.userId = lock.userId;
+        }
+        
+        locksByListingId.set(lock.listingId, lockInfo);
+      });
+      
+      // Enrich each spot with active lock info
+      const spotsWithLocks = availableSpots.map(spot => ({
+        ...spot,
+        activeLock: locksByListingId.get(spot.listingId) || null
+      }));
+      
+      res.json(spotsWithLocks);
     } catch (error) {
       console.error("Error fetching available spots:", error);
       res.status(500).json({ error: "Failed to fetch available spots" });
+    }
+  });
+
+  // Lock acquisition endpoint for concurrent booking prevention
+  app.post("/api/spots/:spotId/locks", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      const { spotId } = req.params;
+      const { listingId } = req.body;
+
+      // Validate input
+      if (!spotId) {
+        return res.status(400).json({ error: "spotId is required" });
+      }
+      if (!listingId) {
+        return res.status(400).json({ error: "listingId is required" });
+      }
+
+      // Verify spot exists
+      const spot = await storage.getParkingSpot(spotId);
+      if (!spot) {
+        return res.status(404).json({ error: "Parking spot not found" });
+      }
+
+      // Verify listing exists and belongs to this spot
+      const listing = await storage.getSpotListing(listingId);
+      if (!listing) {
+        return res.status(404).json({ error: "Listing not found" });
+      }
+      if (listing.spotId !== spotId) {
+        return res.status(400).json({ error: "Listing does not belong to this spot" });
+      }
+
+      // Execute lock acquisition in atomic transaction
+      const result = await db.transaction(async (tx) => {
+        // Step 1: Check for existing active locks on this listing (with row-level lock)
+        const existingLock = await tx
+          .select()
+          .from(spotLocks)
+          .where(and(
+            eq(spotLocks.listingId, listingId),
+            eq(spotLocks.status, 'active')
+          ))
+          .for('update');
+        
+        if (existingLock.length > 0) {
+          throw new Error('SPOT_ALREADY_LOCKED');
+        }
+        
+        // Step 2: Check if user already has an active lock (enforce one lock per user)
+        const userActiveLock = await tx
+          .select()
+          .from(spotLocks)
+          .where(and(
+            eq(spotLocks.userId, userId),
+            eq(spotLocks.status, 'active')
+          ));
+        
+        if (userActiveLock.length > 0) {
+          throw new Error('USER_HAS_ACTIVE_LOCK');
+        }
+        
+        // Step 3: Create the new lock
+        const expiresAt = new Date(Date.now() + LOCK_DURATION_MS);
+        const [newLock] = await tx
+          .insert(spotLocks)
+          .values({
+            spotId,
+            userId,
+            listingId,
+            expiresAt,
+            status: 'active'
+          })
+          .returning();
+        
+        return newLock;
+      });
+
+      // Calculate remaining seconds
+      const remainingSeconds = Math.floor((result.expiresAt.getTime() - Date.now()) / 1000);
+
+      // Broadcast lock.created event (fire and forget - non-blocking)
+      setImmediate(() => {
+        try {
+          broadcastLockEvent('lock.created', {
+            lockId: result.id,
+            spotId: result.spotId,
+            listingId: result.listingId,
+            userId: result.userId,
+            expiresAt: result.expiresAt.toISOString()
+          });
+        } catch (error) {
+          console.error('[Lock Broadcast] Failed to broadcast lock.created:', error);
+        }
+      });
+
+      // Return success response
+      res.json({
+        lockId: result.id,
+        spotId: result.spotId,
+        listingId: result.listingId,
+        expiresAt: result.expiresAt.toISOString(),
+        remainingSeconds
+      });
+    } catch (error: any) {
+      // Handle specific lock errors
+      if (error.message === 'SPOT_ALREADY_LOCKED') {
+        return res.status(409).json({ 
+          error: "Spot is already locked by another user",
+          code: "SPOT_ALREADY_LOCKED"
+        });
+      }
+      if (error.message === 'USER_HAS_ACTIVE_LOCK') {
+        return res.status(409).json({ 
+          error: "You already have an active lock on another spot",
+          code: "USER_HAS_ACTIVE_LOCK"
+        });
+      }
+      
+      // Handle generic errors
+      console.error("Error acquiring lock:", error);
+      res.status(500).json({ error: "Failed to acquire lock" });
+    }
+  });
+
+  // Helper function to confirm a lock when booking is created
+  async function confirmLock(lockId: string, bookingId: string) {
+    // Get the lock details before updating
+    const [lock] = await db
+      .select()
+      .from(spotLocks)
+      .where(eq(spotLocks.id, lockId))
+      .limit(1);
+
+    if (!lock) {
+      console.warn(`[confirmLock] Lock ${lockId} not found`);
+      return;
+    }
+
+    // Update the lock status to confirmed
+    await db
+      .update(spotLocks)
+      .set({ 
+        status: 'confirmed',
+        bookingId 
+      })
+      .where(eq(spotLocks.id, lockId));
+
+    // Broadcast lock.confirmed event (fire and forget - non-blocking)
+    setImmediate(() => {
+      try {
+        broadcastLockEvent('lock.confirmed', {
+          lockId: lock.id,
+          spotId: lock.spotId,
+          listingId: lock.listingId,
+          bookingId
+        });
+      } catch (error) {
+        console.error('[Lock Broadcast] Failed to broadcast lock.confirmed:', error);
+      }
+    });
+  }
+
+  // DELETE /api/spot-locks/:lockId - Release a lock
+  app.delete("/api/spot-locks/:lockId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      const { lockId } = req.params;
+
+      // Find the lock
+      const [lock] = await db
+        .select()
+        .from(spotLocks)
+        .where(eq(spotLocks.id, lockId))
+        .limit(1);
+
+      if (!lock) {
+        return res.status(404).json({ error: "Lock not found" });
+      }
+
+      // Check if lock is already confirmed/expired/released
+      if (lock.status !== 'active') {
+        return res.status(409).json({ 
+          error: `Lock is already ${lock.status}`,
+          status: lock.status
+        });
+      }
+
+      // Check authorization: user must own the lock OR be an admin
+      const userRole = await getAuthenticatedUserRole(req);
+      const isAdmin = userRole === 'admin';
+      const isOwner = lock.userId === userId;
+
+      if (!isOwner && !isAdmin) {
+        return res.status(403).json({ 
+          error: "Not authorized to release this lock",
+          reason: "You can only release your own locks"
+        });
+      }
+
+      // Update lock status to 'released'
+      await db
+        .update(spotLocks)
+        .set({ status: 'released' })
+        .where(eq(spotLocks.id, lockId));
+
+      // Broadcast lock.released event (fire and forget - non-blocking)
+      setImmediate(() => {
+        try {
+          broadcastLockEvent('lock.released', {
+            lockId: lock.id,
+            spotId: lock.spotId,
+            listingId: lock.listingId
+          });
+        } catch (error) {
+          console.error('[Lock Broadcast] Failed to broadcast lock.released:', error);
+        }
+      });
+
+      // Audit the lock release
+      await auditService.logAction("UPDATE", "spot_lock", {
+        entityId: lockId,
+        message: `Lock released for spot ${lock.spotId} ${isAdmin && !isOwner ? '(by admin)' : ''}`,
+        before: { status: 'active' },
+        after: { status: 'released' }
+      });
+
+      // Return 204 No Content on success
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error releasing lock:", error);
+      res.status(500).json({ error: "Failed to release lock" });
     }
   });
 
@@ -1690,6 +1971,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Ensure ownerId matches the spot owner
         ownerId: spot.ownerId || "unassigned"
       } as any); // Type assertion since we're adding required fields server-side
+
+      // Check for active lock and confirm it if exists
+      const [activeLock] = await db
+        .select()
+        .from(spotLocks)
+        .where(and(
+          eq(spotLocks.userId, userId),
+          eq(spotLocks.spotId, validatedData.spotId),
+          eq(spotLocks.listingId, validatedData.listingId),
+          eq(spotLocks.status, 'active')
+        ))
+        .limit(1);
+
+      if (activeLock) {
+        await confirmLock(activeLock.id, newBooking.id);
+      }
 
       // Audit the booking creation
       await auditService.logAction("CREATE", "booking", {

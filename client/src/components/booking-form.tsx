@@ -7,13 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle, User, Zap, Accessibility, Building, CreditCard } from "lucide-react"
+import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle, User, Zap, Accessibility, Building, CreditCard, Timer } from "lucide-react"
 import type { ParkingSpot as DBParkingSpot } from "@shared/schema"
 import { isPastDate, getTodayString } from "@/utils/date-utils"
 import { AuthService } from "@/lib/auth"
 import { useToast } from "@/hooks/use-toast"
 import { useQuery } from "@tanstack/react-query"
 import { type PaymentPreferences } from "@shared/schema"
+import { useLock } from "@/contexts/LockContext"
 
 interface BookingData {
   date: string
@@ -48,6 +49,8 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
   // Get authenticated user for auto-population
   const authUser = AuthService.getAuthUser();
   const { toast } = useToast();
+  const { userActiveLock } = useLock();
+  const [remainingSeconds, setRemainingSeconds] = useState<number>(0);
 
   // Query spot owner's payment preferences
   const { data: ownerPaymentPreferences, isLoading: isLoadingPaymentPreferences } = useQuery<PaymentPreferences | null>({
@@ -88,6 +91,45 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
   const [dateError, setDateError] = useState("")
   const [submitError, setSubmitError] = useState("")
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (userActiveLock) {
+      // Initialize remaining seconds from lock
+      const remaining = Math.max(0, Math.floor((new Date(userActiveLock.expiresAt).getTime() - Date.now()) / 1000));
+      setRemainingSeconds(remaining);
+
+      // Update timer every second
+      const interval = setInterval(() => {
+        setRemainingSeconds(prev => {
+          const newRemaining = prev - 1;
+          
+          // When timer hits 0, close dialog and show toast
+          if (newRemaining <= 0) {
+            clearInterval(interval);
+            toast({
+              title: "Lock Expired",
+              description: "Your reservation expired. Please try again.",
+              variant: "destructive"
+            });
+            onCancel(); // Close the dialog
+            return 0;
+          }
+          
+          return newRemaining;
+        });
+      }, 1000);
+
+      return () => clearInterval(interval);
+    }
+  }, [userActiveLock, onCancel, toast]);
+
+  // Format remaining time as MM:SS
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const updateFormData = (key: string, value: string) => {
     // Don't allow date changes if locked
@@ -182,10 +224,26 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
   return (
     <Card className="max-w-2xl mx-auto" data-testid="card-booking-form">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Calendar className="h-5 w-5" />
-          Book Parking Spot
-        </CardTitle>
+        <div className="flex items-center justify-between gap-4">
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Book Parking Spot
+          </CardTitle>
+          {userActiveLock && remainingSeconds > 0 && (
+            <Badge 
+              variant="outline" 
+              className={`flex items-center gap-1 ${
+                remainingSeconds <= 30 
+                  ? 'bg-red-50 text-red-700 border-red-300 dark:bg-red-900/30 dark:text-red-400 dark:border-red-700' 
+                  : 'bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700'
+              }`}
+              data-testid="badge-countdown-timer"
+            >
+              <Timer className="h-4 w-4" />
+              Reserved for {formatTime(remainingSeconds)}
+            </Badge>
+          )}
+        </div>
       </CardHeader>
       
       <CardContent className="space-y-6">

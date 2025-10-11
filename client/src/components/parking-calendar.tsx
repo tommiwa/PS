@@ -18,6 +18,7 @@ import {
 } from "lucide-react"
 import { format, startOfWeek, addDays, addWeeks, addMonths, subWeeks, subMonths, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, getDay } from "date-fns"
 import { isPastDate } from "@/utils/date-utils"
+import { useAuth } from "@/contexts/auth-context"
 
 type CalendarView = "day" | "week" | "month"
 
@@ -26,6 +27,13 @@ interface ParkingSpot extends BookingFormSpot {
   isOwned?: boolean
   availabilityDates?: string[] // Array of all available dates for this spot
   bookedDates?: string[] // Array of dates that are already booked
+  activeLock?: {
+    lockId: string
+    expiresAt: string
+    remainingSeconds: number
+    userId?: string
+  } | null
+  listingId?: string
 }
 
 interface BookingFormData {
@@ -46,6 +54,7 @@ interface ParkingCalendarProps {
 }
 
 export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), onDateChange, isOwnerView = false }: ParkingCalendarProps) {
+  const { user } = useAuth();
   const [currentDate, setCurrentDate] = useState(selectedDate)
   const [view, setView] = useState<CalendarView>("week")
   const [selectedSpot, setSelectedSpot] = useState<ParkingSpot | null>(null)
@@ -221,12 +230,22 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
     return spot.bookedDates.includes(checkDate)
   }
 
+  // Helper to check if a spot is locked by another user
+  const isSpotLockedByOther = (spot: ParkingSpot): boolean => {
+    return spot.activeLock !== undefined && spot.activeLock !== null && spot.activeLock.userId !== user?.id
+  }
+
   const handleSpotClick = (spot: ParkingSpot, clickedDate?: Date) => {
     const dateToCheck = clickedDate || currentDate
     
     // Prevent booking spots that are already booked on this date
     if (isSpotBookedOnDate(spot, dateToCheck)) {
       return; // Don't allow booking already booked spots
+    }
+    
+    // Prevent clicking spots locked by another user
+    if (isSpotLockedByOther(spot)) {
+      return; // Don't allow booking locked spots
     }
     
     // Prevent booking spots with past availability dates
@@ -270,19 +289,22 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
             <div className="space-y-2">
               {daySpots.map((spot) => {
                 const isBooked = isSpotBookedOnDate(spot, currentDate)
+                const isLocked = isSpotLockedByOther(spot)
                 return (
                   <Card 
                     key={`${spot.id}-${spot.availability?.date || currentDate.toISOString().split('T')[0]}`}
                     className={`transition-all border-l-4 ${
                       isBooked 
                         ? 'opacity-60 cursor-not-allowed bg-muted border-muted'
+                        : isLocked
+                        ? 'opacity-90 cursor-not-allowed bg-yellow-50 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-700'
                         : `cursor-pointer hover-elevate ${
                             isOwnerView 
                               ? getOwnershipColor(spot.isOwned || false)
                               : getSpotTypeColor(spot.type)
                           }`
                     }`}
-                    onClick={() => !isBooked && handleSpotClick(spot, currentDate)}
+                    onClick={() => !isBooked && !isLocked && handleSpotClick(spot, currentDate)}
                     data-testid={`calendar-spot-${spot.id}-${spot.availability?.date || currentDate.toISOString().split('T')[0]}`}
                   >
                     <CardContent className="p-3">
@@ -295,14 +317,28 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                           </div>
                         </div>
                         <div className="text-right shrink-0">
-                          <div className="font-semibold text-sm">${spot.price}</div>
-                          <div className="text-xs text-muted-foreground">per day</div>
+                          {isLocked ? (
+                            <div className="flex items-center gap-1 text-yellow-700 dark:text-yellow-300">
+                              <Clock className="h-3 w-3" />
+                              <span className="font-semibold text-sm">PENDING</span>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="font-semibold text-sm">${spot.price}</div>
+                              <div className="text-xs text-muted-foreground">per day</div>
+                            </>
+                          )}
                         </div>
                       </div>
                       <div className="mt-2 flex items-center gap-1 flex-wrap">
                         {isBooked ? (
                           <Badge variant="secondary" className="text-xs bg-gray-500 text-white">
                             Booked
+                          </Badge>
+                        ) : isLocked ? (
+                          <Badge variant="outline" className="text-xs bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/50 dark:text-yellow-200">
+                            <Clock className="h-3 w-3 mr-1" />
+                            PENDING
                           </Badge>
                         ) : (
                           <>
@@ -352,19 +388,22 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                 <div className="space-y-1">
                   {daySpots.slice(0, 3).map((spot) => {
                     const isBooked = isSpotBookedOnDate(spot, day)
+                    const isLocked = isSpotLockedByOther(spot)
                     return (
                       <div
                         key={`${spot.id}-${spot.availability?.date || day.toISOString().split('T')[0]}`}
                         className={`p-1.5 rounded text-xs transition-all ${
                           isBooked
                             ? 'opacity-60 cursor-not-allowed bg-muted'
+                            : isLocked
+                            ? 'opacity-90 cursor-not-allowed bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700'
                             : `cursor-pointer hover-elevate ${
                                 isOwnerView 
                                   ? getOwnershipColor(spot.isOwned || false)
                                   : getSpotTypeColor(spot.type)
                               }`
                         }`}
-                        onClick={() => !isBooked && handleSpotClick(spot, day)}
+                        onClick={() => !isBooked && !isLocked && handleSpotClick(spot, day)}
                         data-testid={`calendar-spot-${spot.id}-${spot.availability?.date || day.toISOString().split('T')[0]}`}
                       >
                         <div className="font-medium">#{spot.spotNumber}</div>
@@ -372,7 +411,14 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                           <div className="flex items-center gap-1">
                             {getSpotTypeIcon(spot.type)}
                           </div>
-                          <span className="font-semibold">${spot.price}</span>
+                          {isLocked ? (
+                            <span className="text-yellow-700 dark:text-yellow-300 font-semibold flex items-center gap-0.5">
+                              <Clock className="h-2.5 w-2.5" />
+                              PENDING
+                            </span>
+                          ) : (
+                            <span className="font-semibold">${spot.price}</span>
+                          )}
                         </div>
                         {isBooked && (
                           <Badge variant="secondary" className="text-xs bg-gray-500 text-white mt-1">
@@ -425,19 +471,22 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                 <div className="space-y-0.5">
                   {daySpots.slice(0, 2).map((spot) => {
                     const isBooked = isSpotBookedOnDate(spot, day)
+                    const isLocked = isSpotLockedByOther(spot)
                     return (
                       <div
                         key={`${spot.id}-${spot.availability?.date || day.toISOString().split('T')[0]}`}
                         className={`p-0.5 rounded text-xs transition-all ${
                           isBooked
                             ? 'opacity-60 cursor-not-allowed bg-muted'
+                            : isLocked
+                            ? 'opacity-90 cursor-not-allowed bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700'
                             : `cursor-pointer hover-elevate ${
                                 isOwnerView 
                                   ? getOwnershipColor(spot.isOwned || false)
                                   : getSpotTypeColor(spot.type)
                               }`
                         }`}
-                        onClick={() => !isBooked && handleSpotClick(spot, day)}
+                        onClick={() => !isBooked && !isLocked && handleSpotClick(spot, day)}
                         data-testid={`calendar-spot-${spot.id}-${spot.availability?.date || day.toISOString().split('T')[0]}`}
                       >
                         <div className="flex items-center justify-between gap-1">
@@ -445,7 +494,14 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                             {getSpotTypeIcon(spot.type)}
                             <span className="font-medium">#{spot.spotNumber}</span>
                           </div>
-                          <span className="font-semibold">${spot.price}</span>
+                          {isLocked ? (
+                            <span className="text-yellow-700 dark:text-yellow-300 font-semibold flex items-center gap-0.5">
+                              <Clock className="h-2 w-2" />
+                              PENDING
+                            </span>
+                          ) : (
+                            <span className="font-semibold">${spot.price}</span>
+                          )}
                         </div>
                         {isBooked && (
                           <div className="text-xs text-gray-600 dark:text-gray-400">Booked</div>

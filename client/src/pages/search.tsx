@@ -12,11 +12,13 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import { MapPin, Filter, SortAsc, Calendar, Grid, Sparkles } from "lucide-react"
+import { MapPin, Filter, SortAsc, Calendar, Grid, Sparkles, Loader2 } from "lucide-react"
 import { isPastDate } from "@/utils/date-utils"
 import { apiRequest } from "@/lib/queryClient"
 import { type ParkingSpot as DBParkingSpot, type SpotTypeTable } from "@shared/schema"
 import { useToast } from "@/hooks/use-toast"
+import { useLock } from "@/contexts/LockContext"
+import { useAuth } from "@/contexts/auth-context"
 
 // Location type from database
 interface Location {
@@ -52,6 +54,12 @@ interface EnrichedSpotFromAPI extends DBParkingSpot {
     id: number
     name: string
   }
+  activeLock?: {
+    lockId: string
+    expiresAt: string
+    remainingSeconds: number
+    userId?: string
+  } | null
 }
 
 // Convert database spot to display format
@@ -68,6 +76,13 @@ interface DisplaySpot extends DBParkingSpot {
   }
   availabilityDates?: string[] // Array of all available dates
   bookedDates?: string[] // Array of dates that are already booked
+  activeLock?: {
+    lockId: string
+    expiresAt: string
+    remainingSeconds: number
+    userId?: string
+  } | null
+  listingId?: string
 }
 
 export default function Search() {
@@ -80,7 +95,10 @@ export default function Search() {
   const [showBookingForm, setShowBookingForm] = useState(false)
   const [sortBy, setSortBy] = useState("price")
   const [activeTab, setActiveTab] = useState<string>("calendar")
+  const [isAcquiringLock, setIsAcquiringLock] = useState(false)
   const { toast } = useToast()
+  const { userActiveLock, lockedListings, acquireLock, releaseLock, clearUserLock } = useLock()
+  const { user } = useAuth()
   
   // Set default tab based on screen size after mount: mobile shows tiles, desktop shows calendar
   useEffect(() => {
@@ -153,6 +171,9 @@ export default function Search() {
       // Explicitly preserve enriched availability data from API
       availabilityDates: spot.availabilityDates,
       bookedDates: spot.bookedDates,
+      // Preserve lock and listing info from API
+      activeLock: spot.activeLock,
+      listingId: spot.listingId,
     }
     
     // If spot has availability dates, create one entry per date
@@ -176,39 +197,101 @@ export default function Search() {
   // Create booking mutation
   const createBookingMutation = useMutation({
     mutationFn: async (bookingData: any) => {
-      return apiRequest('/api/bookings', { method: 'POST', body: bookingData })
+      // Include lockId in request if user has an active lock
+      const dataWithLock = {
+        ...bookingData,
+        lockId: userActiveLock?.lockId
+      };
+      return apiRequest('/api/bookings', { method: 'POST', body: dataWithLock })
     },
     onSuccess: () => {
       toast({
         title: "Booking Created",
         description: "Your parking spot has been successfully booked!"
       })
+      
+      // Clear user lock from context (lock auto-confirmed by backend)
+      clearUserLock();
+      
       setShowBookingForm(false)
       setSelectedSpot(null)
       
       // CRITICAL: Invalidate queries so My Bookings page shows the new booking
       queryClient.invalidateQueries({ queryKey: ['/api/my-bookings'] })
+      queryClient.invalidateQueries({ queryKey: ['/api/available-spots'] })
     },
     onError: (error: any) => {
-      toast({
-        title: "Booking Failed",
-        description: error.message || "Failed to create booking. Please try again.",
-        variant: "destructive"
-      })
+      const errorMessage = error.message || "Failed to create booking. Please try again.";
+      
+      // Check if lock expired
+      if (errorMessage.toLowerCase().includes('lock')) {
+        toast({
+          title: "Lock Expired",
+          description: "Your reservation expired. Please try again.",
+          variant: "destructive"
+        })
+        setShowBookingForm(false)
+        setSelectedSpot(null)
+      } else {
+        toast({
+          title: "Booking Failed",
+          description: errorMessage,
+          variant: "destructive"
+        })
+      }
     }
   })
 
   // Handle booking form submission
-  const handleBookSpot = (spotId: string, bookingData?: any) => {
+  const handleBookSpot = async (spotId: string, bookingData?: any) => {
     const spot = spots.find(s => s.id === spotId)
-    if (spot) {
-      if (bookingData) {
-        // Booking data provided from calendar - submit immediately
-        handleBookingFormSubmit(spot, bookingData)
-      } else {
-        // No booking data - show booking form
-        setSelectedSpot(spot)
-        setShowBookingForm(true)
+    if (!spot) return;
+    
+    const listingId = (spot as any).listingId;
+    if (!listingId) {
+      toast({
+        title: "Booking Error",
+        description: "This spot does not have an active listing.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (bookingData) {
+      // Booking data provided from calendar - submit immediately
+      handleBookingFormSubmit(spot, bookingData)
+    } else {
+      // No booking data - acquire lock BEFORE showing form
+      setIsAcquiringLock(true);
+      try {
+        await acquireLock(spotId, listingId);
+        // Lock acquired successfully, show booking form
+        setSelectedSpot(spot);
+        setShowBookingForm(true);
+      } catch (error: any) {
+        // Lock acquisition failed
+        const errorMessage = error.message || "";
+        if (errorMessage.includes('409') || errorMessage.includes('SPOT_ALREADY_LOCKED')) {
+          toast({
+            title: "Spot Already Reserved",
+            description: "Another user is currently booking this spot. Please try again.",
+            variant: "destructive"
+          });
+        } else if (errorMessage.includes('USER_HAS_ACTIVE_LOCK')) {
+          toast({
+            title: "Active Reservation",
+            description: "You already have an active reservation on another spot. Please complete or cancel it first.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Lock Failed",
+            description: "Could not reserve spot. Please try again.",
+            variant: "destructive"
+          });
+        }
+      } finally {
+        setIsAcquiringLock(false);
       }
     }
   }
@@ -630,7 +713,16 @@ export default function Search() {
       </Tabs>
 
       {/* Booking Dialog */}
-      <Dialog open={showBookingForm} onOpenChange={setShowBookingForm}>
+      <Dialog 
+        open={showBookingForm} 
+        onOpenChange={(open) => {
+          setShowBookingForm(open);
+          // Release lock when dialog closes
+          if (!open && userActiveLock) {
+            releaseLock(userActiveLock.lockId);
+          }
+        }}
+      >
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Book Parking Spot</DialogTitle>
@@ -638,7 +730,7 @@ export default function Search() {
           {selectedSpot && (
             <BookingForm
               spot={selectedSpot}
-              onSubmit={handleBookingSubmit}
+              onSubmit={handleBookingFormSubmit}
               onCancel={() => setShowBookingForm(false)}
             />
           )}

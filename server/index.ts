@@ -3,6 +3,10 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { auditService } from "./audit-service";
 import { auditStorage } from "./audit-storage";
+import { db } from "./db";
+import { spotLocks } from "@shared/schema";
+import { and, eq, lt } from "drizzle-orm";
+import { setupWebSocket, broadcastLockEvent } from "./websocket";
 
 const app = express();
 app.use(express.json());
@@ -331,7 +335,53 @@ Phone: (778) 410-7100
   // Seed terms and conditions on startup
   await seedTermsAndConditions();
   
+  // Background cleanup job for expired locks
+  async function cleanupExpiredLocks() {
+    try {
+      const now = new Date();
+      
+      // Update all locks where expiresAt < now AND status = 'active'
+      const expiredLocks = await db
+        .update(spotLocks)
+        .set({ status: 'expired' })
+        .where(and(
+          eq(spotLocks.status, 'active'),
+          lt(spotLocks.expiresAt, now)
+        ))
+        .returning();
+      
+      if (expiredLocks.length > 0) {
+        console.log(`[Lock Cleanup] Expired ${expiredLocks.length} lock(s)`);
+        
+        // Broadcast lock.expired event for each expired lock
+        expiredLocks.forEach(lock => {
+          broadcastLockEvent('lock.expired', {
+            lockId: lock.id,
+            spotId: lock.spotId,
+            listingId: lock.listingId
+          });
+        });
+      }
+      
+      return expiredLocks;
+    } catch (error) {
+      console.error("[Lock Cleanup] Error cleaning up expired locks:", error);
+      return [];
+    }
+  }
+  
+  // Run cleanup once on startup to clean any locks that expired while server was down
+  log("Running initial lock cleanup...");
+  await cleanupExpiredLocks();
+  
+  // Set up interval to run cleanup every 30 seconds
+  setInterval(cleanupExpiredLocks, 30000);
+  log("Lock cleanup job scheduled (runs every 30 seconds)");
+  
   const server = await registerRoutes(app);
+
+  // Setup WebSocket server
+  setupWebSocket(server);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
