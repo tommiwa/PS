@@ -1199,6 +1199,12 @@ export default function AdminSpotBookingManagement() {
   };
 
   const formatDate = (timestamp: string) => {
+    // Handle date-only strings (YYYY-MM-DD) without timezone conversion
+    if (timestamp && /^\d{4}-\d{2}-\d{2}$/.test(timestamp)) {
+      const [year, month, day] = timestamp.split('-').map(Number);
+      return `${month}/${day}/${year}`;
+    }
+    // For full timestamps, use toLocaleDateString
     return new Date(timestamp).toLocaleDateString();
   };
 
