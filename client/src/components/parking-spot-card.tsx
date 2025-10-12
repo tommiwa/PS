@@ -2,10 +2,11 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import { MapPin, Car, Zap, Accessibility, Building, User, Clock } from "lucide-react"
+import { MapPin, Car, Zap, Accessibility, Building, User, Clock, DollarSign, Calendar } from "lucide-react"
 import type { ParkingSpot, ParkingSpotWithUser } from "@shared/schema"
 import { useAuth } from "@/contexts/auth-context"
 import { useLock } from "@/contexts/LockContext"
+import { formatDateFromDB } from "@/lib/date-utils"
 
 // Extend spot types to include activeLock and availability from API enrichment
 type SpotWithLock = (ParkingSpot | ParkingSpotWithUser) & {
@@ -19,6 +20,9 @@ type SpotWithLock = (ParkingSpot | ParkingSpotWithUser) & {
     date: string
   }
   listingId?: string
+  dailyRate?: number
+  price?: number
+  assignedUserName?: string
 }
 
 interface ParkingSpotCardProps {
@@ -190,43 +194,40 @@ export function ParkingSpotCard({
       
       <CardContent className="pt-0 pb-4">
         <div className="space-y-3">
-          {/* Prominent Assigned User Display */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-auto p-2 w-full justify-start bg-muted/50 rounded-md hover:bg-muted/70"
-                data-testid={`container-assigned-user-${spot.id}`}
-              >
-                <User className="h-4 w-4 text-muted-foreground mr-2 flex-shrink-0" />
-                <div className="flex-1 text-left min-w-0">
-                  <div className="text-sm font-medium break-words" data-testid={`text-assigned-user-${spot.id}`}>
-                    {hasUserData(spot) && spot.assignedUserName 
-                      ? spot.assignedUserName 
-                      : spot.ownerId 
-                        ? "Assigned User" 
-                        : "Unassigned"}
-                  </div>
-                  {hasUserData(spot) && spot.assignedUserDepartment && (
-                    <div className="text-xs text-muted-foreground break-words">
-                      {spot.assignedUserDepartment}
-                    </div>
-                  )}
+          {/* Price Display - Prominent */}
+          <div className="flex items-center justify-between p-3 bg-primary/5 rounded-md border border-primary/20">
+            <div className="flex items-center gap-2">
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <DollarSign className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-primary" data-testid={`text-price-${spot.id}`}>
+                  ${(spot as any).dailyRate || spot.price || '0'}
                 </div>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{hasUserData(spot) && spot.assignedUserName 
-                ? `This spot is primarily assigned to ${spot.assignedUserName}${spot.assignedUserDepartment ? ` from ${spot.assignedUserDepartment}` : ''} but may be available when not in use` 
-                : spot.ownerId 
-                  ? "This spot has an assigned primary user but may be available for booking when not in use" 
-                  : "This spot is currently unassigned and available for booking"}</p>
-            </TooltipContent>
-          </Tooltip>
+                <div className="text-xs text-muted-foreground">per day</div>
+              </div>
+            </div>
+            {spot.availability?.date && (
+              <div className="text-right">
+                <div className="flex items-center gap-1 text-sm font-medium text-foreground">
+                  <Calendar className="h-4 w-4" />
+                  {formatDateFromDB(spot.availability.date)}
+                </div>
+                <div className="text-xs text-muted-foreground">Available</div>
+              </div>
+            )}
+          </div>
 
-          {/* Availability information would come from spot listings table in real implementation */}
-          {/* Pricing information would come from spot listings table in real implementation */}
+          {/* Owner/Assigned User Display */}
+          <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-md">
+            <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="text-xs text-muted-foreground">Owner</div>
+              <div className="text-sm font-medium truncate" data-testid={`text-assigned-user-${spot.id}`}>
+                {(spot as any).assignedUserName || "BCI Managed"}
+              </div>
+            </div>
+          </div>
         </div>
       </CardContent>
       
