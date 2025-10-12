@@ -267,10 +267,13 @@ export default function Search() {
   // Handle booking form submission
   const handleBookSpot = async (spotId: string, bookingData?: any) => {
     const spot = spots.find(s => s.id === spotId)
+    console.log('[handleBookSpot] Called with spotId:', spotId, 'spot:', spot);
     if (!spot) return;
     
     const listingId = (spot as any).listingId;
+    console.log('[handleBookSpot] listingId:', listingId);
     if (!listingId) {
+      console.error('[handleBookSpot] Missing listingId! Spot data:', spot);
       toast({
         title: "Booking Error",
         description: "This spot does not have an active listing.",
