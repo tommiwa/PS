@@ -295,6 +295,7 @@ export default function Search() {
     
     if (bookingData) {
       // Booking data provided from calendar - submit immediately
+      console.log('[handleBookSpot] bookingData provided, submitting immediately');
       handleBookingFormSubmit(spot, bookingData)
     } else {
       // Determine the booking date from spot availability, search criteria, or today
@@ -303,13 +304,19 @@ export default function Search() {
         searchCriteria.date || // From search filter
         new Date().toISOString().split('T')[0]; // Fallback to today
       
+      console.log('[handleBookSpot] Calculated bookingDate:', bookingDate);
+      console.log('[handleBookSpot] userActiveLock:', userActiveLock);
+      
       // Check if user already has a VALID lock on THIS specific spot AND date
       const hasValidLock = userActiveLock?.spotId === spotId && 
                            userActiveLock?.bookingDate === bookingDate &&
                            new Date(userActiveLock.expiresAt).getTime() > Date.now();
       
+      console.log('[handleBookSpot] hasValidLock:', hasValidLock);
+      
       if (hasValidLock) {
         // User already has valid lock on this spot+date, just reopen form without acquiring new lock
+        console.log('[handleBookSpot] User has valid lock, reopening form');
         setSelectedSpot(spot);
         setShowBookingForm(true);
         return;
@@ -317,17 +324,22 @@ export default function Search() {
       
       // If user had an expired lock, clear it first
       if (userActiveLock && new Date(userActiveLock.expiresAt).getTime() <= Date.now()) {
+        console.log('[handleBookSpot] Clearing expired lock');
         clearUserLock();
       }
       
       // No lock yet - acquire lock BEFORE showing form
+      console.log('[handleBookSpot] About to acquire lock...');
       setIsAcquiringLock(true);
       try {
+        console.log('[handleBookSpot] Calling acquireLock with:', { spotId, listingId, bookingDate });
         await acquireLock(spotId, listingId, bookingDate);
+        console.log('[handleBookSpot] Lock acquired successfully!');
         // Lock acquired successfully, show booking form
         setSelectedSpot(spot);
         setShowBookingForm(true);
       } catch (error: any) {
+        console.error('[handleBookSpot] Lock acquisition failed:', error);
         // Lock acquisition failed
         const errorMessage = error.message || "";
         if (errorMessage.includes('409') || errorMessage.includes('SPOT_ALREADY_LOCKED')) {

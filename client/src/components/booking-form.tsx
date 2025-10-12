@@ -278,7 +278,7 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
                   {spot.price}/day
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  Owner: <span className="font-medium text-foreground">{spot.owner}</span>
+                  Owner: <span className="font-medium text-foreground">{(spot as any).assignedUserName || "BCI Managed"}</span>
                 </div>
               </div>
             </div>
