@@ -200,13 +200,24 @@ export default function Search() {
           
           return true;
         })
-        .map(date => ({
-          ...baseSpot,
-          id: spot.id, // Keep original spot ID for booking
-          availability: { date }, // Set specific date for this entry
-          availabilityDates: [date], // Each expanded entry only has its own date
-          bookedDates: spot.bookedDates, // Preserve for calendar view
-        }))
+        .map(date => {
+          // Get date-specific price if available
+          const dateToPrice = (spot as any).dateToPrice;
+          let spotPrice = spot.dailyRate ? parseFloat(spot.dailyRate) : 25;
+          
+          if (dateToPrice && dateToPrice[date]) {
+            spotPrice = parseFloat(dateToPrice[date].dailyRate);
+          }
+          
+          return {
+            ...baseSpot,
+            id: spot.id, // Keep original spot ID for booking
+            price: spotPrice, // Override with date-specific price
+            availability: { date }, // Set specific date for this entry
+            availabilityDates: [date], // Each expanded entry only has its own date
+            bookedDates: spot.bookedDates, // Preserve for calendar view
+          };
+        })
     }
     
     // Fallback for spots without availabilityDates

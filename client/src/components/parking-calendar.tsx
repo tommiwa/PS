@@ -28,6 +28,7 @@ interface ParkingSpot extends BookingFormSpot {
   isOwned?: boolean
   availabilityDates?: string[] // Array of all available dates for this spot
   bookedDates?: string[] // Array of dates that are already booked
+  dateToPrice?: Record<string, {listingId: string, dailyRate: number}> // Map date -> price
   activeLock?: {
     lockId: string
     expiresAt: string
@@ -106,6 +107,19 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
         const calendarEnd = addDays(startOfWeek(monthEnd), 6)
         return eachDayOfInterval({ start: calendarStart, end: calendarEnd })
     }
+  }
+
+  // Get the correct price for a spot on a specific date
+  const getPriceForDate = (spot: ParkingSpot, date: Date): number => {
+    const dateStr = date.toISOString().split('T')[0];
+    
+    // Use dateToPrice mapping if available
+    if (spot.dateToPrice && spot.dateToPrice[dateStr]) {
+      return spot.dateToPrice[dateStr].dailyRate;
+    }
+    
+    // Fallback to spot.price for backward compatibility
+    return spot.price;
   }
 
   const getSpotsForDate = (date: Date) => {
@@ -346,7 +360,7 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                             </div>
                           ) : (
                             <>
-                              <div className="font-semibold text-sm">${spot.price}</div>
+                              <div className="font-semibold text-sm">${getPriceForDate(spot, currentDate)}</div>
                               <div className="text-xs text-muted-foreground">per day</div>
                             </>
                           )}
@@ -439,7 +453,7 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                               PENDING
                             </span>
                           ) : (
-                            <span className="font-semibold">${spot.price}</span>
+                            <span className="font-semibold">${getPriceForDate(spot, day)}</span>
                           )}
                         </div>
                         {isBooked && (
@@ -522,7 +536,7 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                               PENDING
                             </span>
                           ) : (
-                            <span className="font-semibold">${spot.price}</span>
+                            <span className="font-semibold">${getPriceForDate(spot, day)}</span>
                           )}
                         </div>
                         {isBooked && (

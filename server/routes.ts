@@ -1626,37 +1626,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return null;
           }
           
-          // Collect all availability dates from all listings for this spot
+          // Build date-to-listing mapping for proper price display
+          // Key: date string, Value: {listingId, dailyRate}
+          const dateToListing = new Map<string, {listingId: string, dailyRate: number}>();
           const availabilityDates: string[] = [];
-          let primaryListingId = listings[0].id;
-          let primaryDailyRate = listings[0].dailyRate;
           
           listings.forEach(listing => {
             if (listing.listingType === 'single' && listing.singleDate) {
               // Single day listing
-              availabilityDates.push(listing.singleDate);
+              const dateStr = listing.singleDate;
+              availabilityDates.push(dateStr);
+              dateToListing.set(dateStr, {
+                listingId: listing.id,
+                dailyRate: listing.dailyRate
+              });
             } else if (listing.listingType === 'period' && listing.periodStartDate && listing.periodEndDate) {
               // Period listing - expand to all dates in range
               const dates = generateDateRange(listing.periodStartDate, listing.periodEndDate);
-              availabilityDates.push(...dates);
+              dates.forEach(dateStr => {
+                availabilityDates.push(dateStr);
+                // Only set if not already set (single day listings take precedence)
+                if (!dateToListing.has(dateStr)) {
+                  dateToListing.set(dateStr, {
+                    listingId: listing.id,
+                    dailyRate: listing.dailyRate
+                  });
+                }
+              });
             }
             // TODO: Handle recurring listings
           });
           
+          // Remove duplicate dates
+          const uniqueDates = Array.from(new Set(availabilityDates));
+          
+          // Use first date's listing as "primary" for backward compatibility
+          const firstDate = uniqueDates.sort()[0];
+          const primaryListing = firstDate ? dateToListing.get(firstDate) : null;
+          const primaryListingId = primaryListing?.listingId || listings[0].id;
+          const primaryDailyRate = primaryListing?.dailyRate || listings[0].dailyRate;
+          
           // Check which availability dates are already booked
           const bookedDatesSet = bookedDatesBySpotId.get(spot.id) || new Set();
-          const bookedDates = availabilityDates.filter(date => bookedDatesSet.has(date));
+          const bookedDates = uniqueDates.filter(date => bookedDatesSet.has(date));
+          
+          // Convert dateToListing map to object for JSON serialization
+          const dateToPrice: Record<string, {listingId: string, dailyRate: number}> = {};
+          dateToListing.forEach((value, key) => {
+            dateToPrice[key] = value;
+          });
           
           // Enrich spot with listing data and booking information
           return {
             ...spot,
             listingId: primaryListingId,
             dailyRate: primaryDailyRate,
-            availabilityDates: availabilityDates, // Array of all available dates
+            availabilityDates: uniqueDates, // Array of all available dates (deduplicated)
             bookedDates: bookedDates, // Array of dates that are already booked
+            dateToPrice: dateToPrice, // Map of date -> {listingId, dailyRate} for accurate pricing
             // Keep backward compatibility with single date
-            availability: availabilityDates.length > 0 ? {
-              date: availabilityDates[0]
+            availability: uniqueDates.length > 0 ? {
+              date: uniqueDates[0]
             } : undefined
           };
         })
