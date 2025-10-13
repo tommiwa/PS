@@ -2133,12 +2133,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // SECURITY: Fetch the listing to get the ACTUAL price (never trust frontend)
+      const [listing] = await db
+        .select()
+        .from(spotListings)
+        .where(eq(spotListings.id, validatedData.listingId))
+        .limit(1);
+
+      if (!listing) {
+        return res.status(404).json({ error: "Listing not found" });
+      }
+
+      // SECURITY: Calculate price from database listing, NOT from frontend
+      const actualDailyRate = Number(listing.dailyRate);
+      const actualTotalAmount = actualDailyRate; // Single day booking
+
+      console.log(`[Booking] Using ACTUAL price from listing: dailyRate=${actualDailyRate}, totalAmount=${actualTotalAmount}`);
+
       // Create the booking with the authenticated user as renter
       const newBooking = await storage.createBooking({
         ...validatedData,
         renterId: userId,
         // Ensure ownerId matches the spot owner
-        ownerId: spot.ownerId || "unassigned"
+        ownerId: spot.ownerId || "unassigned",
+        // SECURITY: Override frontend prices with actual database prices
+        dailyRate: actualDailyRate.toString(),
+        totalAmount: actualTotalAmount.toString()
       } as any); // Type assertion since we're adding required fields server-side
 
       // Confirm the lock with the new booking
