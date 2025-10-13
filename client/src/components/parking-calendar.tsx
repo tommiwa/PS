@@ -63,9 +63,6 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
   const { toast } = useToast();
   const [currentDate, setCurrentDate] = useState(selectedDate)
   const [view, setView] = useState<CalendarView>("week")
-  const [selectedSpot, setSelectedSpot] = useState<ParkingSpot | null>(null)
-  const [showBookingForm, setShowBookingForm] = useState(false)
-  const [bookingDate, setBookingDate] = useState<Date | null>(null)
   const [isAcquiringLock, setIsAcquiringLock] = useState(false)
 
   const navigateDate = (direction: "prev" | "next") => {
@@ -325,10 +322,9 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
         }
       });
       
-      // Lock acquired successfully, show booking form
-      setSelectedSpot(spot)
-      setBookingDate(dateToCheck)
-      setShowBookingForm(true)
+      // Lock acquired successfully, call parent to show booking form
+      // Don't pass bookingData - let parent show the dialog
+      onBookSpot(spot.id)
     } catch (error: any) {
       console.error('[Calendar] Lock acquisition failed:', error);
       const errorMessage = error.message || "";
@@ -356,13 +352,6 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
     }
   }
 
-  const handleBookingSubmit = (bookingData: BookingFormData) => {
-    if (selectedSpot) {
-      onBookSpot(selectedSpot.id, bookingData)
-      setShowBookingForm(false)
-      setSelectedSpot(null)
-    }
-  }
 
   const renderDayView = () => {
     const daySpots = getSpotsForDate(currentDate)
@@ -675,24 +664,6 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
       <div className="flex-1 overflow-auto">
         {renderCalendarContent()}
       </div>
-
-      {/* Booking Dialog */}
-      <Dialog open={showBookingForm} onOpenChange={setShowBookingForm}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Book Parking Spot</DialogTitle>
-          </DialogHeader>
-          {selectedSpot && (
-            <BookingForm
-              spot={selectedSpot}
-              onSubmit={handleBookingSubmit}
-              onCancel={() => setShowBookingForm(false)}
-              selectedDate={bookingDate ? bookingDate.toISOString().split('T')[0] : undefined}
-              isDateLocked={bookingDate !== null}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
