@@ -23,6 +23,9 @@ type SpotWithLock = (ParkingSpot | ParkingSpotWithUser) & {
   dailyRate?: number
   price?: number
   assignedUserName?: string
+  locationName?: string
+  spotTypeName?: string
+  dateToPrice?: Record<string, { listingId: string; dailyRate: number }>
 }
 
 interface ParkingSpotCardProps {
@@ -89,7 +92,7 @@ export function ParkingSpotCard({
   }
 
   const getSpotTypeBadge = () => {
-    const spotTypeName = hasUserData(spot) ? spot.spotTypeName : undefined;
+    const spotTypeName = spot.spotTypeName;
     const displayName = spotTypeName || "Regular";
     
     // Determine variant based on type name
@@ -148,7 +151,19 @@ export function ParkingSpotCard({
     onViewDetails?.(spot.id)
   }
 
-  const locationName = hasUserData(spot) ? spot.locationName : undefined;
+  const locationName = spot.locationName;
+  
+  // Get date-specific price if available
+  const getDisplayPrice = (): number => {
+    // If we have a specific date and dateToPrice mapping, use that
+    if (spot.availability?.date && spot.dateToPrice?.[spot.availability.date]) {
+      return spot.dateToPrice[spot.availability.date].dailyRate;
+    }
+    // Fall back to dailyRate or price
+    return spot.dailyRate || spot.price || 0;
+  };
+  
+  const displayPrice = getDisplayPrice();
 
   return (
     <Card 
@@ -202,7 +217,7 @@ export function ParkingSpotCard({
               </div>
               <div>
                 <div className="text-2xl font-bold text-primary" data-testid={`text-price-${spot.id}`}>
-                  ${(spot as any).dailyRate || spot.price || '0'}
+                  ${displayPrice.toFixed(2)}
                 </div>
                 <div className="text-xs text-muted-foreground">per day</div>
               </div>
@@ -224,7 +239,7 @@ export function ParkingSpotCard({
             <div className="flex-1 min-w-0">
               <div className="text-xs text-muted-foreground">Owner</div>
               <div className="text-sm font-medium truncate" data-testid={`text-assigned-user-${spot.id}`}>
-                {(spot as any).assignedUserName || "BCI Managed"}
+                {spot.assignedUserName || "BCI Managed"}
               </div>
             </div>
           </div>

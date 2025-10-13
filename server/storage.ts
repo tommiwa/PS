@@ -937,6 +937,33 @@ export class MemStorage implements IStorage {
   private async enrichSpotWithSafeUserInfo(spot: ParkingSpot): Promise<ParkingSpotWithSafeUserData> {
     const enrichedSpot: ParkingSpotWithSafeUserData = { ...spot };
     
+    // Join location details to construct name
+    const locationResult = await db
+      .select({ 
+        office: locations.office,
+        building: locations.building,
+        level: locations.level
+      })
+      .from(locations)
+      .where(eq(locations.id, spot.locationId))
+      .limit(1);
+    
+    if (locationResult.length > 0) {
+      const loc = locationResult[0];
+      enrichedSpot.locationName = `${loc.office} - ${loc.building}, ${loc.level}`;
+    }
+    
+    // Join spot type name
+    const spotTypeResult = await db
+      .select({ name: spotTypesTable.name })
+      .from(spotTypesTable)
+      .where(eq(spotTypesTable.id, spot.spotTypeId))
+      .limit(1);
+    
+    if (spotTypeResult.length > 0) {
+      enrichedSpot.spotTypeName = spotTypeResult[0].name;
+    }
+    
     if (spot.ownerId) {
       // Query database for user with department join
       const userResult = await db

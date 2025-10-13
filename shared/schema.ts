@@ -169,6 +169,8 @@ export interface ParkingSpotWithUser extends ParkingSpot {
 export interface ParkingSpotWithSafeUserData extends ParkingSpot {
   assignedUserName?: string;
   assignedUserDepartment?: string;
+  locationName?: string;
+  spotTypeName?: string;
   listingId?: string;
   dailyRate?: string;
   availabilityDates?: string[];
