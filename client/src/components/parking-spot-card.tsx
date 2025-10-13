@@ -143,8 +143,12 @@ export function ParkingSpotCard({
     if (spot.availability?.date && spot.dateToPrice?.[spot.availability.date]) {
       return spot.dateToPrice[spot.availability.date].dailyRate;
     }
-    // Fall back to dailyRate or price
-    return spot.dailyRate || spot.price || 0;
+    // Fall back to dailyRate or price (convert to number if string)
+    const rate = spot.dailyRate || spot.price;
+    if (typeof rate === 'string') {
+      return parseFloat(rate) || 0;
+    }
+    return rate || 0;
   };
   
   const displayPrice = getDisplayPrice();
