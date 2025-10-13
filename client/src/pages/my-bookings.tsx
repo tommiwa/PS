@@ -615,7 +615,7 @@ export default function MyBookings() {
         </div>
         <div>
           <p className="text-xs text-muted-foreground">Price</p>
-          <p className="text-sm font-medium">${listing.price}</p>
+          <p className="text-sm font-medium">${listing.totalAmount || listing.price}</p>
         </div>
         <div>
           <p className="text-xs text-muted-foreground">Status</p>
@@ -700,7 +700,7 @@ export default function MyBookings() {
         </div>
         <div>
           <p className="text-xs text-muted-foreground">Price</p>
-          <p className="text-sm font-medium">${listing.price}</p>
+          <p className="text-sm font-medium">${listing.totalAmount || listing.price}</p>
           {listing.status === "unused" && (
             <Badge variant="outline" className="text-xs text-orange-600">
               No revenue
@@ -823,7 +823,7 @@ export default function MyBookings() {
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Price</p>
-            <p className="text-sm font-medium">${booking.dailyRate}</p>
+            <p className="text-sm font-medium">${booking.totalAmount || booking.dailyRate}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Payment</p>
@@ -1281,7 +1281,7 @@ export default function MyBookings() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Price</p>
-                    <p className="font-medium">${selectedListing.price}</p>
+                    <p className="font-medium">${selectedListing.totalAmount || selectedListing.price}</p>
                   </div>
                   <div className="col-span-2">
                     <p className="text-sm text-muted-foreground">Location</p>
@@ -1320,7 +1320,7 @@ export default function MyBookings() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Price</p>
-                    <p className="font-medium">${selectedBooking.price}</p>
+                    <p className="font-medium">${selectedBooking.totalAmount || selectedBooking.price}</p>
                   </div>
                   <div className="col-span-2">
                     <p className="text-sm text-muted-foreground">Location</p>
