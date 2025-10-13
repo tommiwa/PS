@@ -1,8 +1,8 @@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import { MapPin, Car, Zap, Accessibility, Building, User, Clock, DollarSign, Calendar } from "lucide-react"
+import { MapPin, Car, Zap, Accessibility, Building, User, Clock, Calendar } from "lucide-react"
 import type { ParkingSpot, ParkingSpotWithUser } from "@shared/schema"
 import { useAuth } from "@/contexts/auth-context"
 import { useLock } from "@/contexts/LockContext"
@@ -38,16 +38,10 @@ interface ParkingSpotCardProps {
 export function ParkingSpotCard({ 
   spot, 
   onBook, 
-  onViewDetails,
   showBookButton = true 
 }: ParkingSpotCardProps) {
   const { user } = useAuth();
   const { lockedListings, userActiveLock } = useLock();
-  
-  // Type guard to check if spot has enriched user data
-  const hasUserData = (spot: SpotWithLock): spot is ParkingSpotWithUser => {
-    return 'assignedUserName' in spot;
-  };
 
   // Check if spot is locked (and by another user) using composite key if date is available
   let isLockedByOther = false;
@@ -122,17 +116,12 @@ export function ParkingSpotCard({
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="h-auto p-0 hover:bg-transparent"
-            data-testid={`badge-spot-type-${spotTypeName || 'regular'}-${spot.id}`}
-          >
+          <div data-testid={`badge-spot-type-${spotTypeName || 'regular'}-${spot.id}`}>
             <Badge variant={variant} className="gap-1">
               {getSpotTypeIcon(spotTypeName)}
               {displayName}
             </Badge>
-          </Button>
+          </div>
         </TooltipTrigger>
         <TooltipContent>
           <p>{tooltipText}</p>
@@ -144,11 +133,6 @@ export function ParkingSpotCard({
   const handleBook = () => {
     console.log(`Booking spot ${spot.id}`)
     onBook?.(spot.id)
-  }
-
-  const handleViewDetails = () => {
-    console.log(`Viewing details for spot ${spot.id}`)
-    onViewDetails?.(spot.id)
   }
 
   const locationName = spot.locationName;
@@ -167,115 +151,91 @@ export function ParkingSpotCard({
 
   return (
     <Card 
-      className={`hover-elevate ${!spot.isActive ? 'opacity-60' : ''} ${
-        isLockedByOther ? 'bg-yellow-50 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-700' : ''
+      className={`relative overflow-hidden hover-elevate transition-all ${
+        !spot.isActive ? 'opacity-60' : ''
+      } ${
+        isLockedByOther ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700' : ''
       }`}
       data-testid={`card-parking-spot-${spot.id}`}
     >
-      <CardHeader className="pb-3">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <CardTitle className="text-lg font-semibold">
-              Spot {spot.spotNumber}
-            </CardTitle>
-            {isLockedByOther && (
-              <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/50 dark:text-yellow-200 dark:border-yellow-600">
-                <Clock className="h-3 w-3 mr-1" />
-                PENDING
-              </Badge>
-            )}
+      {/* Header Section with Spot Number and Type */}
+      <div className="p-4 pb-3 border-b">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-2">
+              <h3 className="text-xl font-bold text-foreground">
+                Spot {spot.spotNumber}
+              </h3>
+              {isLockedByOther && (
+                <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/50 dark:text-yellow-200 dark:border-yellow-600">
+                  <Clock className="h-3 w-3 mr-1" />
+                  PENDING
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
+              <span className="truncate" data-testid={`text-location-${spot.id}`}>
+                {locationName || `Location ID: ${spot.locationId}`}
+                {spot.isIndoor && " • Indoor"}
+              </span>
+            </div>
           </div>
           {getSpotTypeBadge()}
         </div>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-auto p-0 justify-start text-sm text-muted-foreground hover:bg-transparent hover:text-muted-foreground break-words"
-              data-testid={`text-location-${spot.id}`}
-            >
-              <MapPin className="h-4 w-4 mr-1 flex-shrink-0" />
-              <span className="break-words">
-                {locationName || `Location ID: ${spot.locationId}`} {spot.isIndoor && "(Indoor)"}
-              </span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Location: {locationName || `Location ID: ${spot.locationId}`}{spot.isIndoor ? " - Indoor parking (covered and protected from weather)" : " - Outdoor parking"}</p>
-          </TooltipContent>
-        </Tooltip>
-      </CardHeader>
-      
-      <CardContent className="pt-0 pb-4">
-        <div className="space-y-3">
-          {/* Price Display - Prominent */}
-          <div className="flex items-center justify-between p-3 bg-primary/5 rounded-md border border-primary/20">
-            <div className="flex items-center gap-2">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <DollarSign className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-primary" data-testid={`text-price-${spot.id}`}>
-                  ${displayPrice.toFixed(2)}
-                </div>
-                <div className="text-xs text-muted-foreground">per day</div>
+      </div>
+
+      {/* Price and Date Section */}
+      <div className="p-4 pb-3">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <div className="text-xs text-muted-foreground mb-1">Daily Rate</div>
+            <div className="text-3xl font-bold text-primary" data-testid={`text-price-${spot.id}`}>
+              ${displayPrice.toFixed(2)}
+            </div>
+          </div>
+          {spot.availability?.date && (
+            <div className="text-right">
+              <div className="text-xs text-muted-foreground mb-1">Available</div>
+              <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                <Calendar className="h-4 w-4 text-primary" />
+                {formatDateFromDB(spot.availability.date)}
               </div>
             </div>
-            {spot.availability?.date && (
-              <div className="text-right">
-                <div className="flex items-center gap-1 text-sm font-medium text-foreground">
-                  <Calendar className="h-4 w-4" />
-                  {formatDateFromDB(spot.availability.date)}
-                </div>
-                <div className="text-xs text-muted-foreground">Available</div>
-              </div>
-            )}
-          </div>
+          )}
+        </div>
+      </div>
 
-          {/* Owner/Assigned User Display */}
-          <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-md">
-            <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <div className="text-xs text-muted-foreground">Owner</div>
-              <div className="text-sm font-medium truncate" data-testid={`text-assigned-user-${spot.id}`}>
-                {spot.assignedUserName || "BCI Managed"}
-              </div>
+      {/* Owner Section */}
+      <div className="px-4 pb-4">
+        <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md">
+          <div className="h-8 w-8 rounded-full bg-background flex items-center justify-center flex-shrink-0">
+            <User className="h-4 w-4 text-muted-foreground" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-xs text-muted-foreground">Managed By</div>
+            <div className="text-sm font-medium truncate" data-testid={`text-assigned-user-${spot.id}`}>
+              {spot.assignedUserName || "BCI Managed"}
             </div>
           </div>
         </div>
-      </CardContent>
-      
+      </div>
+
+      {/* Book Button */}
       {showBookButton && (
-        <CardFooter className="pt-0 flex-col md:flex-row gap-2">
+        <div className="p-4 pt-0">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleViewDetails}
-                className="w-full md:w-auto md:flex-1 min-h-11"
-                data-testid={`button-view-details-${spot.id}`}
-              >
-                Details
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>View detailed information about this parking spot including amenities, photos, and exact location</p>
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                size="sm" 
+                size="default"
                 onClick={handleBook}
                 disabled={spot.isActive === false || spot.isBookable === false || spot.isBookable === null || isLockedByOther}
-                className="w-full md:w-auto md:flex-1 min-h-11"
+                className="w-full"
                 data-testid={`button-book-${spot.id}`}
               >
-                {isLockedByOther ? "Pending" :
-                 spot.isBookable === false ? "Not Bookable" : 
-                 (spot.isActive !== false) ? "Book" : "Unavailable"}
+                {isLockedByOther ? "Currently Pending" :
+                 spot.isBookable === false ? "Not Available" : 
+                 (spot.isActive !== false) ? "Book This Spot" : "Unavailable"}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
@@ -284,11 +244,11 @@ export function ParkingSpotCard({
                 : spot.isBookable === false 
                 ? "This spot is currently not available for booking" 
                 : (spot.isActive !== false) 
-                  ? "Click to book this parking spot - you'll be guided through the reservation process" 
+                  ? "Click to book this parking spot" 
                   : "This spot is currently unavailable or inactive"}</p>
             </TooltipContent>
           </Tooltip>
-        </CardFooter>
+        </div>
       )}
     </Card>
   )
