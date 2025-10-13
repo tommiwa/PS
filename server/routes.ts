@@ -2137,27 +2137,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Don't trust the frontend listingId - validate it matches the date
       const bookingDate = validatedData.bookingDate;
       
-      const correctListing = await db
+      // First, try to find a single-day listing (most specific)
+      let correctListing = await db
         .select()
         .from(spotListings)
         .where(and(
           eq(spotListings.spotId, validatedData.spotId),
           eq(spotListings.status, 'available'),
-          or(
-            // Single day listing matching this exact date
-            and(
-              eq(spotListings.listingType, 'single'),
-              eq(spotListings.singleDate, bookingDate)
-            ),
-            // Period listing that includes this date
-            and(
-              eq(spotListings.listingType, 'period'),
-              sql`${spotListings.periodStartDate} <= ${bookingDate}`,
-              sql`${spotListings.periodEndDate} >= ${bookingDate}`
-            )
-          )
+          eq(spotListings.listingType, 'single'),
+          eq(spotListings.singleDate, bookingDate)
         ))
         .limit(1);
+
+      // If no single-day listing, try period listing
+      if (!correctListing || correctListing.length === 0) {
+        correctListing = await db
+          .select()
+          .from(spotListings)
+          .where(and(
+            eq(spotListings.spotId, validatedData.spotId),
+            eq(spotListings.status, 'available'),
+            eq(spotListings.listingType, 'period'),
+            sql`${spotListings.periodStartDate} <= ${bookingDate}`,
+            sql`${spotListings.periodEndDate} >= ${bookingDate}`
+          ))
+          .limit(1);
+      }
 
       if (!correctListing || correctListing.length === 0) {
         return res.status(404).json({ 
