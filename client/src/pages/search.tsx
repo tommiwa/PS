@@ -201,17 +201,20 @@ export default function Search() {
           return true;
         })
         .map(date => {
-          // Get date-specific price if available
+          // Get date-specific price AND listingId if available
           const dateToPrice = (spot as any).dateToPrice;
           let spotPrice = spot.dailyRate ? parseFloat(spot.dailyRate) : 25;
+          let dateListing = spot.listingId; // Default to spot's listingId
           
           if (dateToPrice && dateToPrice[date]) {
             spotPrice = parseFloat(dateToPrice[date].dailyRate);
+            dateListing = dateToPrice[date].listingId; // Use date-specific listingId
           }
           
           return {
             ...baseSpot,
             id: spot.id, // Keep original spot ID for booking
+            listingId: dateListing, // Override with date-specific listingId
             price: spotPrice, // Override with date-specific price
             availability: { date }, // Set specific date for this entry
             availabilityDates: [date], // Each expanded entry only has its own date
