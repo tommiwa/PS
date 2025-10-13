@@ -15,7 +15,7 @@ Preferred communication style: Simple, everyday language.
 - **Routing**: Wouter
 - **State Management**: TanStack React Query
 - **Theme**: Light/dark mode
-- **UI/UX Decisions**: Professional blue and neutral gray color palette, Inter font family, Tailwind's 8-point grid system, custom components, standardized location format, and role-specific dashboards with dynamic content and navigation.
+- **UI/UX Decisions**: Professional blue and neutral gray color palette, Inter font family, Tailwind's 8-point grid system, custom components, standardized location format, and role-specific dashboards with dynamic content and navigation. Sidebar navigation includes dedicated "Configuration" section for system-wide admin settings (Departments, Locations, Spot Types, App Settings) separated from personal "Account" section (Profile) for clear UX separation.
 
 ### Backend
 - **Runtime**: Node.js with Express.js

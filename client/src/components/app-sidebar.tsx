@@ -128,21 +128,25 @@ const adminAnalyticsItems = [
   },
 ]
 
-// Settings menu items with tooltips
-const settingsMenuItems = [
-  {
-    title: "Profile",
-    url: "/profile",
-    icon: Users,
-    roles: ["admin", "owner", "renter"],
-    tooltip: "Profile"
-  },
+// Admin Configuration items
+const adminConfigurationItems = [
   {
     title: "Settings",
     url: "/admin/data-management",
     icon: Settings,
     roles: ["admin"],
     tooltip: "App Settings & Configuration"
+  },
+]
+
+// Account menu items with tooltips
+const accountMenuItems = [
+  {
+    title: "Profile",
+    url: "/profile",
+    icon: Users,
+    roles: ["admin", "owner", "renter"],
+    tooltip: "Profile"
   },
 ]
 
@@ -211,8 +215,12 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
     ? adminAnalyticsItems.filter(item => effectiveRoles.some(role => item.roles.includes(role)))
     : [];
   
-  // Settings items shown based on effective roles
-  const filteredSettingsItems = settingsMenuItems.filter(item => 
+  const filteredAdminConfigurationItems = effectiveRoles.includes("admin") 
+    ? adminConfigurationItems.filter(item => effectiveRoles.some(role => item.roles.includes(role)))
+    : [];
+  
+  // Account items shown based on effective roles
+  const filteredAccountItems = accountMenuItems.filter(item => 
     effectiveRoles.some(role => item.roles.includes(role))
   );
 
@@ -508,15 +516,30 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
           </>
         )}
 
-        {/* Settings Section */}
-        {filteredSettingsItems.length > 0 && (
+        {/* Configuration Section - Admin Only */}
+        {filteredAdminConfigurationItems.length > 0 && (
+          <>
+            <SidebarSeparator />
+            <SidebarGroup>
+              <SidebarGroupLabel>Configuration</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {renderMenuItems(filteredAdminConfigurationItems)}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        )}
+
+        {/* Account Section */}
+        {filteredAccountItems.length > 0 && (
           <>
             <SidebarSeparator />
             <SidebarGroup>
               <SidebarGroupLabel>Account</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {renderMenuItems(filteredSettingsItems)}
+                  {renderMenuItems(filteredAccountItems)}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
