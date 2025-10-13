@@ -49,7 +49,7 @@ interface BookingFormData {
 
 interface ParkingCalendarProps {
   spots: ParkingSpot[]
-  onBookSpot: (spotId: string, bookingData?: BookingFormData) => void
+  onBookSpot: (spotId: string, bookingData?: any) => void
   selectedDate?: Date
   onDateChange?: (date: Date) => void
   isOwnerView?: boolean
@@ -60,8 +60,7 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
   const { lockedListings, userActiveLock } = useLock();
   const [currentDate, setCurrentDate] = useState(selectedDate)
   const [view, setView] = useState<CalendarView>("week")
-  const [selectedSpot, setSelectedSpot] = useState<ParkingSpot | null>(null)
-  const [showBookingForm, setShowBookingForm] = useState(false)
+  const [bookingDate, setBookingDate] = useState<Date | null>(null)
 
   const navigateDate = (direction: "prev" | "next") => {
     let newDate: Date
@@ -235,8 +234,6 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
     return null
   }
 
-  const [bookingDate, setBookingDate] = useState<Date | null>(null)
-
   // Helper to check if a spot is booked on a specific date
   const isSpotBookedOnDate = (spot: ParkingSpot, date: Date): boolean => {
     if (!spot.bookedDates || spot.bookedDates.length === 0) {
@@ -294,17 +291,13 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
       return; // Don't allow booking non-bookable spots
     }
     
-    setSelectedSpot(spot)
+    // Store the booking date for this spot
     setBookingDate(dateToCheck)
-    setShowBookingForm(true)
-  }
-
-  const handleBookingSubmit = (bookingData: BookingFormData) => {
-    if (selectedSpot) {
-      onBookSpot(selectedSpot.id, bookingData)
-      setShowBookingForm(false)
-      setSelectedSpot(null)
-    }
+    
+    // Call parent handler with spot ID and date info (same as tiles view)
+    // This will trigger lock acquisition in search.tsx
+    const dateStr = dateToCheck.toISOString().split('T')[0];
+    onBookSpot(spot.id, { spotId: spot.id, date: dateStr })
   }
 
   const renderDayView = () => {
@@ -619,23 +612,6 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
         {renderCalendarContent()}
       </div>
 
-      {/* Booking Dialog */}
-      <Dialog open={showBookingForm} onOpenChange={setShowBookingForm}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Book Parking Spot</DialogTitle>
-          </DialogHeader>
-          {selectedSpot && (
-            <BookingForm
-              spot={selectedSpot}
-              onSubmit={handleBookingSubmit}
-              onCancel={() => setShowBookingForm(false)}
-              selectedDate={bookingDate ? bookingDate.toISOString().split('T')[0] : undefined}
-              isDateLocked={bookingDate !== null}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
