@@ -131,11 +131,11 @@ const adminAnalyticsItems = [
 // Admin Configuration items
 const adminConfigurationItems = [
   {
-    title: "Settings",
+    title: "System Settings",
     url: "/admin/data-management",
     icon: Settings,
     roles: ["admin"],
-    tooltip: "App Settings & Configuration"
+    tooltip: "System Settings & Configuration"
   },
 ]
 

@@ -872,10 +872,10 @@ export default function AdminDataManagement() {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2" data-testid="text-page-title">
             <Database className="h-8 w-8 text-primary" />
-            App Data Management
+            System Settings
           </h1>
           <p className="text-muted-foreground mt-1">
-            Manage departments, locations, and spot types
+            Manage system-wide configuration, departments, locations, and spot types
           </p>
         </div>
         <div className="flex gap-2">
