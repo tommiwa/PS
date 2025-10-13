@@ -1410,7 +1410,7 @@ export default function AdminParkingManagement() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6" data-testid="page-admin-parking-management">
+    <div className="p-6 space-y-6" data-testid="page-admin-parking-management">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">{t("admin.parkingManagement.title")}</h1>
