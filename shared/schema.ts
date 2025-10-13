@@ -1275,3 +1275,34 @@ export interface SpotAssignmentReportResponse {
   totalCount: number;
   scope: 'all' | 'bci';
 }
+
+// App Configurations Table - System-wide settings
+export const appConfigs = pgTable("app_configs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  key: varchar("key").notNull().unique(), // Configuration key (e.g., 'lock_timeout_minutes')
+  value: text("value").notNull(), // Configuration value as string
+  dataType: text("data_type").notNull().default("string"), // Data type: 'string', 'number', 'boolean', 'json'
+  category: text("category").notNull().default("general"), // Category for grouping (e.g., 'booking', 'system', 'notifications')
+  label: text("label").notNull(), // Human-readable label
+  description: text("description"), // Description of what this config does
+  updatedBy: varchar("updated_by"), // User ID who last updated this config
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertAppConfigSchema = createInsertSchema(appConfigs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateAppConfigSchema = createInsertSchema(appConfigs).omit({
+  id: true,
+  key: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+
+export type InsertAppConfig = z.infer<typeof insertAppConfigSchema>;
+export type UpdateAppConfig = z.infer<typeof updateAppConfigSchema>;
+export type AppConfig = typeof appConfigs.$inferSelect;
