@@ -1898,6 +1898,7 @@ export default function AdminSpotBookingManagement() {
                           </div>
                         </TableCell>
                         <TableCell>
+                          {/* Display total booking amount */}
                           <p className="font-medium">${Number(booking.totalAmount).toFixed(2)}</p>
                         </TableCell>
                         <TableCell>
