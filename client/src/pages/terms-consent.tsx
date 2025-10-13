@@ -165,12 +165,12 @@ export default function TermsConsent() {
         description: "You have successfully accepted the Terms and Conditions.",
       });
       
-      // Refresh user and invalidate cache (don't await to prevent blocking navigation)
-      refreshUser().catch(console.error);
+      // Refresh user data to update terms acceptance status
+      await refreshUser();
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       
-      // Navigate to search page
-      setLocation("/search");
+      // Navigate to home and let role-based routing handle the destination
+      setLocation("/");
     },
     onError: (error: any) => {
       toast({

@@ -1230,6 +1230,7 @@ export class MemStorage implements IStorage {
       totalAmount: insertBooking.totalAmount,
       status: (insertBooking.status as BookingStatus) ?? "confirmed",
       paymentReceived: insertBooking.paymentReceived ?? false,
+      paymentStatus: insertBooking.paymentStatus ?? 'pending',
       notes: insertBooking.notes ?? null,
       adminNotes: insertBooking.adminNotes ?? null,
       cancellationReason: insertBooking.cancellationReason ?? null,

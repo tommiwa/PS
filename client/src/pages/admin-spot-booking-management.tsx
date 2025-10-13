@@ -78,8 +78,7 @@ interface AdminBookingData {
   dailyRate: number;
   totalAmount: number;
   status: BookingStatus;
-  paymentReceived: boolean;
-  paymentStatus?: 'pending' | 'paid' | 'received';
+  paymentStatus: 'pending' | 'paid' | 'received';
   startTime: string;
   endTime: string;
   notes: string;
@@ -1860,7 +1859,7 @@ export default function AdminSpotBookingManagement() {
                         Status
                       </SortableTableHeader>
                       <SortableTableHeader
-                        column="paymentReceived"
+                        column="paymentStatus"
                         currentSortColumn={sortState.column}
                         currentSortDirection={sortState.direction}
                         onSort={handleSort}
@@ -2159,7 +2158,6 @@ export default function AdminSpotBookingManagement() {
                                         dailyRate: payment.totalAmount,
                                         totalAmount: payment.totalAmount,
                                         status: payment.status,
-                                        paymentReceived: false,
                                         paymentStatus: payment.paymentStatus || 'pending',
                                         startTime: '',
                                         endTime: '',
@@ -2176,43 +2174,44 @@ export default function AdminSpotBookingManagement() {
                                 </TooltipTrigger>
                                 <TooltipContent>Contact Renter</TooltipContent>
                               </Tooltip>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                      setSelectedBooking({
-                                        id: payment.id,
-                                        spotNumber: payment.spotNumber,
-                                        spotLocation: payment.spotLocation,
-                                        renterName: payment.renterName,
-                                        renterEmail: payment.renterEmail,
-                                        renterDepartment: '',
-                                        ownerName: payment.ownerName,
-                                        ownerEmail: payment.ownerEmail,
-                                        ownerDepartment: '',
-                                        bookingDate: payment.bookingDate,
-                                        dailyRate: payment.totalAmount,
-                                        totalAmount: payment.totalAmount,
-                                        status: payment.status,
-                                        paymentReceived: false,
-                                        paymentStatus: payment.paymentStatus || 'pending',
-                                        startTime: '',
-                                        endTime: '',
-                                        notes: '',
-                                        createdAt: '',
-                                        lastActivity: ''
-                                      } as AdminBookingData);
-                                      setShowMarkPaidConfirmDialog(true);
-                                    }}
-                                    data-testid={`button-mark-paid-${payment.id}`}
-                                  >
-                                    <CheckCircle2 className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Confirm Payment Received</TooltipContent>
-                              </Tooltip>
+                              {payment.paymentStatus === 'paid' && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        setSelectedBooking({
+                                          id: payment.id,
+                                          spotNumber: payment.spotNumber,
+                                          spotLocation: payment.spotLocation,
+                                          renterName: payment.renterName,
+                                          renterEmail: payment.renterEmail,
+                                          renterDepartment: '',
+                                          ownerName: payment.ownerName,
+                                          ownerEmail: payment.ownerEmail,
+                                          ownerDepartment: '',
+                                          bookingDate: payment.bookingDate,
+                                          dailyRate: payment.totalAmount,
+                                          totalAmount: payment.totalAmount,
+                                          status: payment.status,
+                                          paymentStatus: payment.paymentStatus || 'pending',
+                                          startTime: '',
+                                          endTime: '',
+                                          notes: '',
+                                          createdAt: '',
+                                          lastActivity: ''
+                                        } as AdminBookingData);
+                                        setShowMarkPaidConfirmDialog(true);
+                                      }}
+                                      data-testid={`button-mark-paid-${payment.id}`}
+                                    >
+                                      <CheckCircle2 className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Confirm Payment Received</TooltipContent>
+                                </Tooltip>
+                              )}
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button

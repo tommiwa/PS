@@ -330,7 +330,7 @@ export default function MyBookings() {
       status: booking.status || 'N/A',
       dailyRate: booking.dailyRate || 0,
       bookingDate: booking.bookingDate || booking.date || 'N/A',
-      paymentReceived: booking.paymentReceived || false
+      paymentStatus: booking.paymentStatus || 'pending'
     }]
 
     quickExportBookingsPDF(receiptData, `receipt-${booking.spotNumber || bookingId}`)
@@ -381,7 +381,7 @@ export default function MyBookings() {
           startTime: item.startTime || 'N/A',
           endTime: item.endTime || 'N/A',
           bookingDate: item.singleDate ?? item.periodStartDate ?? 'N/A',
-          paymentReceived: item.paymentReceived || false
+          paymentStatus: item.paymentStatus || 'pending'
         }
       } else {
         // Renter booking data
@@ -397,7 +397,7 @@ export default function MyBookings() {
           startTime: item.startTime || 'N/A',
           endTime: item.endTime || 'N/A',
           bookingDate: item.bookingDate || item.date || 'N/A',
-          paymentReceived: item.paymentReceived || false
+          paymentStatus: item.paymentStatus || 'pending'
         }
       }
     })
@@ -439,7 +439,7 @@ export default function MyBookings() {
           startTime: item.startTime || 'N/A',
           endTime: item.endTime || 'N/A',
           bookingDate: item.singleDate ?? item.periodStartDate ?? 'N/A',
-          paymentReceived: item.paymentReceived || false
+          paymentStatus: item.paymentStatus || 'pending'
         }
       } else {
         // Renter booking data
@@ -455,7 +455,7 @@ export default function MyBookings() {
           startTime: item.startTime || 'N/A',
           endTime: item.endTime || 'N/A',
           bookingDate: item.bookingDate || item.date || 'N/A',
-          paymentReceived: item.paymentReceived || false
+          paymentStatus: item.paymentStatus || 'pending'
         }
       }
     })
@@ -738,7 +738,7 @@ export default function MyBookings() {
               No revenue
             </Badge>
           )}
-          {listing.paymentReceived && listing.status === "used" && (
+          {listing.paymentStatus === "received" && listing.status === "used" && (
             <Badge variant="outline" className="text-xs text-green-600">
               Paid
             </Badge>
@@ -1126,7 +1126,7 @@ export default function MyBookings() {
                       ${mockBookings
                         .filter((b: Booking) => 
                           b.status === "completed" || 
-                          (b.status === "confirmed" && b.paymentReceived)
+                          (b.status === "confirmed" && b.paymentStatus === "received")
                         )
                         .reduce((sum, b) => sum + Number(b.dailyRate || 0), 0)
                         .toFixed(2)}
