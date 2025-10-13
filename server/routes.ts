@@ -1440,6 +1440,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get single booking by ID
+  app.get("/api/bookings/:id", isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const booking = await storage.getBooking(id);
+      
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+      
+      res.json(booking);
+    } catch (error) {
+      console.error("Error fetching booking:", error);
+      res.status(500).json({ error: "Failed to fetch booking" });
+    }
+  });
+
   // Get user's listings (for owners in MyBookings)
   app.get("/api/my-listings", isAuthenticated, async (req: any, res) => {
     try {
