@@ -33,6 +33,7 @@ import {
   type WaitingList,
   type Vehicle,
   type PaymentPreferences,
+  type PaymentStatus,
   type SpotType,
   type AuditAction,
   type EntityType,

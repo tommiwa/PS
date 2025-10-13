@@ -465,10 +465,10 @@ export default function Search() {
       return false // Don't show non-bookable spots to renters
     }
     
-    // BCI Managed filtering - only show spots at 750 Pandora Ave (BCI headquarters)
+    // BCI Managed filtering - only show BCI-managed spots
     if (isBciManaged !== undefined && isBciManaged) {
-      // Filter to only BCI-managed spots (spots at 750 Pandora Ave)
-      if (!spot.location.toLowerCase().includes('750 pandora')) {
+      // Filter to only BCI-managed spots using the database field
+      if (!spot.isBciManaged) {
         return false
       }
     }
