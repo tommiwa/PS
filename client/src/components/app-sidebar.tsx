@@ -108,13 +108,6 @@ const adminOperationsItems = [
     roles: ["admin"],
     tooltip: "Booking Management"
   },
-  {
-    title: "App Data Management",
-    url: "/admin/data-management",
-    icon: Database,
-    roles: ["admin"],
-    tooltip: "App Data Management"
-  },
 ]
 
 // Admin Analytics & Audit items
@@ -143,6 +136,13 @@ const settingsMenuItems = [
     icon: Users,
     roles: ["admin", "owner", "renter"],
     tooltip: "Profile"
+  },
+  {
+    title: "Settings",
+    url: "/admin/data-management",
+    icon: Settings,
+    roles: ["admin"],
+    tooltip: "App Settings & Configuration"
   },
 ]
 
