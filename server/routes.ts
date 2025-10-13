@@ -6,7 +6,7 @@ import { setupAuth, isAuthenticated, requireAdmin, getAuthenticatedUserId, getAu
 import { z } from "zod";
 import { db } from "./db";
 import { parkingSpots, spotLocks, spotListings, bookings } from "@shared/schema";
-import { inArray, and, eq, lt, gt, not } from "drizzle-orm";
+import { inArray, and, eq, lt, gt, not, or, sql } from "drizzle-orm";
 import { 
   sendAssignmentNotification, 
   sendWelcomeNotification,
