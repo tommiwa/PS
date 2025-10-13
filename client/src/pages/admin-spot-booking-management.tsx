@@ -79,6 +79,7 @@ interface AdminBookingData {
   totalAmount: number;
   status: BookingStatus;
   paymentReceived: boolean;
+  paymentStatus?: 'pending' | 'paid' | 'received';
   startTime: string;
   endTime: string;
   notes: string;
@@ -149,6 +150,7 @@ interface PendingPaymentData {
   totalAmount: number;
   daysOverdue: number;
   status: BookingStatus;
+  paymentStatus?: 'pending' | 'paid' | 'received';
 }
 
 interface DisputeData {
@@ -990,12 +992,12 @@ export default function AdminSpotBookingManagement() {
     }
   });
 
-  // Mark payment as received mutation
+  // Mark payment as received mutation (admin confirms paid → received)
   const markPaidMutation = useMutation({
     mutationFn: async (bookingId: string) => {
       const response = await apiRequest(`/api/admin/bookings/${bookingId}/payment`, { 
         method: 'PATCH', 
-        body: { paymentReceived: true }
+        body: { paymentStatus: 'received' }
       });
       return response.json();
     },
@@ -1905,9 +1907,14 @@ export default function AdminSpotBookingManagement() {
                           {getStatusBadge(booking.status)}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={booking.paymentReceived ? "default" : "secondary"}>
-                            {booking.paymentReceived ? "Paid" : "Pending"}
-                          </Badge>
+                          {(() => {
+                            const status = (booking as any).paymentStatus || 'pending';
+                            return (
+                              <Badge variant={status === 'received' ? 'default' : status === 'paid' ? 'secondary' : 'outline'}>
+                                {status === 'pending' ? 'Pending' : status === 'paid' ? 'Paid' : 'Received'}
+                              </Badge>
+                            );
+                          })()}
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1">
@@ -2153,6 +2160,7 @@ export default function AdminSpotBookingManagement() {
                                         totalAmount: payment.totalAmount,
                                         status: payment.status,
                                         paymentReceived: false,
+                                        paymentStatus: payment.paymentStatus || 'pending',
                                         startTime: '',
                                         endTime: '',
                                         notes: '',
@@ -2189,6 +2197,7 @@ export default function AdminSpotBookingManagement() {
                                         totalAmount: payment.totalAmount,
                                         status: payment.status,
                                         paymentReceived: false,
+                                        paymentStatus: payment.paymentStatus || 'pending',
                                         startTime: '',
                                         endTime: '',
                                         notes: '',
@@ -2202,7 +2211,7 @@ export default function AdminSpotBookingManagement() {
                                     <CheckCircle2 className="h-4 w-4" />
                                   </Button>
                                 </TooltipTrigger>
-                                <TooltipContent>Mark as Paid</TooltipContent>
+                                <TooltipContent>Confirm Payment Received</TooltipContent>
                               </Tooltip>
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -2730,9 +2739,17 @@ export default function AdminSpotBookingManagement() {
                   </div>
                   <div>
                     <Label>Payment</Label>
-                    <Badge variant={selectedBooking.paymentReceived ? "default" : "secondary"} data-testid="badge-payment-status">
-                      {selectedBooking.paymentReceived ? "Received" : "Pending"}
-                    </Badge>
+                    {(() => {
+                      const status = (selectedBooking as any).paymentStatus || 'pending';
+                      return (
+                        <Badge 
+                          variant={status === 'received' ? 'default' : status === 'paid' ? 'secondary' : 'outline'} 
+                          data-testid="badge-payment-status"
+                        >
+                          {status === 'pending' ? 'Pending' : status === 'paid' ? 'Paid' : 'Received'}
+                        </Badge>
+                      );
+                    })()}
                   </div>
                 </div>
 
@@ -3104,7 +3121,7 @@ export default function AdminSpotBookingManagement() {
                   disabled={markPaidMutation.isPending}
                   data-testid="button-confirm-mark-paid"
                 >
-                  {markPaidMutation.isPending ? "Marking as Paid..." : "Confirm Payment Received"}
+                  {markPaidMutation.isPending ? "Confirming..." : "Confirm Payment Received"}
                 </Button>
               </div>
             </div>

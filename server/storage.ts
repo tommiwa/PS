@@ -2811,7 +2811,7 @@ export class MemStorage implements IStorage {
       LEFT JOIN users renter ON b.renter_id = renter.id
       LEFT JOIN users owner ON b.owner_id = owner.id
       WHERE 
-        b.payment_received = false
+        b.payment_status = 'paid'
         AND b.status != 'cancelled'
         ${isBciOnly ? 'AND ps.is_bci_managed = true' : ''}
       ORDER BY b.created_at DESC
@@ -2847,7 +2847,8 @@ export class MemStorage implements IStorage {
         bookingDate: row.booking_date,
         totalAmount: Number(row.total_amount),
         daysOverdue,
-        status: row.status
+        status: row.status,
+        paymentStatus: row.payment_status || 'pending'
       };
     });
   }
@@ -2910,6 +2911,7 @@ export class MemStorage implements IStorage {
         totalAmount: Number(row.total_amount),
         status: row.status,
         paymentReceived: row.payment_received,
+        paymentStatus: row.payment_status || 'pending',
         startTime: '08:00',
         endTime: '18:00',
         notes: row.notes || '',
@@ -2976,6 +2978,7 @@ export class MemStorage implements IStorage {
         totalAmount: Number(row.total_amount),
         status: row.status,
         paymentReceived: row.payment_received,
+        paymentStatus: row.payment_status || 'pending',
         startTime: '08:00',
         endTime: '18:00',
         notes: row.notes || '',
