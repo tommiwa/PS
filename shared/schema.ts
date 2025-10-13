@@ -291,6 +291,9 @@ export type SpotLock = typeof spotLocks.$inferSelect;
 export const bookingStatuses = z.enum(["confirmed", "pending", "cancelled", "completed"]);
 export type BookingStatus = z.infer<typeof bookingStatuses>;
 
+export const paymentStatuses = z.enum(["pending", "paid", "received"]);
+export type PaymentStatus = z.infer<typeof paymentStatuses>;
+
 export const bookings = pgTable("bookings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   listingId: varchar("listing_id").notNull(), // References spot_listings.id
@@ -301,7 +304,8 @@ export const bookings = pgTable("bookings", {
   dailyRate: decimal("daily_rate", { precision: 10, scale: 2 }).notNull(),
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
   status: text("status").notNull().$type<BookingStatus>().default("confirmed"),
-  paymentReceived: boolean("payment_received").notNull().default(false), // Track payment status
+  paymentReceived: boolean("payment_received").notNull().default(false), // Legacy field - use paymentStatus instead
+  paymentStatus: text("payment_status").notNull().$type<PaymentStatus>().default("pending"), // Two-step payment: pending → paid (renter) → received (owner/admin)
   notes: text("notes"),
   adminNotes: text("admin_notes"), // Admin-only notes
   cancellationReason: text("cancellation_reason"), // Reason for cancellation
