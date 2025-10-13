@@ -35,7 +35,8 @@ import {
   type Location,
   insertSpotTypeSchema,
   type InsertSpotType,
-  type SpotTypeTable
+  type SpotTypeTable,
+  type AppConfig
 } from "@shared/schema"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Tooltip as UITooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -142,6 +143,15 @@ export default function AdminDataManagement() {
   const [spotTypePageIndex, setSpotTypePageIndex] = useState(0)
   const [spotTypePageSize, setSpotTypePageSize] = useState(10)
 
+  // App Configs state
+  const [showEditConfigDialog, setShowEditConfigDialog] = useState(false)
+  const [editingConfig, setEditingConfig] = useState<AppConfig | null>(null)
+  const [configSearchFilter, setConfigSearchFilter] = useState("")
+  
+  // Pagination state - App Configs
+  const [configPageIndex, setConfigPageIndex] = useState(0)
+  const [configPageSize, setConfigPageSize] = useState(10)
+
   // Department forms
   const addDepartmentForm = useForm<DepartmentFormData>({
     resolver: zodResolver(departmentFormSchema),
@@ -214,6 +224,10 @@ export default function AdminDataManagement() {
 
   const { data: spotTypes = [], isLoading: isLoadingSpotTypes } = useQuery<SpotTypeTable[]>({
     queryKey: ["/api/spot-types"],
+  });
+
+  const { data: appConfigs = [], isLoading: isLoadingConfigs } = useQuery<AppConfig[]>({
+    queryKey: ["/api/admin/app-configs"],
   });
 
   // Filtered and sorted data
@@ -336,6 +350,23 @@ export default function AdminDataManagement() {
     return filteredAndSortedSpotTypes.slice(startIndex, endIndex);
   }, [filteredAndSortedSpotTypes, spotTypePageIndex, spotTypePageSize]);
 
+  const filteredAndSortedConfigs = useMemo(() => {
+    return appConfigs.filter(config => {
+      const searchTerm = configSearchFilter.toLowerCase();
+      return (
+        config.key.toLowerCase().includes(searchTerm) ||
+        config.label.toLowerCase().includes(searchTerm) ||
+        config.description?.toLowerCase().includes(searchTerm)
+      );
+    });
+  }, [appConfigs, configSearchFilter]);
+
+  const paginatedConfigs = useMemo(() => {
+    const startIndex = configPageIndex * configPageSize;
+    const endIndex = startIndex + configPageSize;
+    return filteredAndSortedConfigs.slice(startIndex, endIndex);
+  }, [filteredAndSortedConfigs, configPageIndex, configPageSize]);
+
   // Reset pagination when filters/sorting changes
   useEffect(() => {
     setDepartmentPageIndex(0);
@@ -370,6 +401,17 @@ export default function AdminDataManagement() {
       setSpotTypePageIndex(maxPage);
     }
   }, [filteredAndSortedSpotTypes.length, spotTypePageSize, spotTypePageIndex]);
+
+  useEffect(() => {
+    setConfigPageIndex(0);
+  }, [configSearchFilter]);
+
+  useEffect(() => {
+    const maxPage = Math.max(0, Math.ceil(filteredAndSortedConfigs.length / configPageSize) - 1);
+    if (configPageIndex > maxPage) {
+      setConfigPageIndex(maxPage);
+    }
+  }, [filteredAndSortedConfigs.length, configPageSize, configPageIndex]);
 
   // Department mutations
   const createDepartmentMutation = useMutation({
@@ -610,6 +652,34 @@ export default function AdminDataManagement() {
     }
   });
 
+  // App Config mutations
+  const updateConfigMutation = useMutation({
+    mutationFn: async ({ key, value }: { key: string; value: string }): Promise<AppConfig> => {
+      const response = await apiRequest(`/api/admin/app-configs/${key}`, {
+        method: 'PATCH',
+        body: { value }
+      });
+      return await response.json();
+    },
+    onSuccess: (updatedConfig: AppConfig) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/app-configs"] });
+      setShowEditConfigDialog(false);
+      setEditingConfig(null);
+      toast({
+        title: "Configuration Updated",
+        description: `Successfully updated ${updatedConfig.label}`,
+      });
+    },
+    onError: (error: any) => {
+      console.error('Error updating config:', error);
+      toast({
+        variant: "destructive",
+        title: "Error Updating Configuration",
+        description: error.message || "Failed to update configuration. Please try again.",
+      });
+    }
+  });
+
   // Sort handlers
   const handleDepartmentSort = (field: 'name' | 'createdAt') => {
     if (departmentSortField === field) {
@@ -760,13 +830,19 @@ export default function AdminDataManagement() {
     setShowEditSpotTypeDialog(true);
   };
 
+  const openEditConfigDialog = (config: AppConfig) => {
+    setEditingConfig(config);
+    setShowEditConfigDialog(true);
+  };
+
   const handleRefreshAll = async () => {
     setIsRefreshing(true)
     try {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["/api/departments"] }),
         queryClient.invalidateQueries({ queryKey: ["/api/locations"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/spot-types"] })
+        queryClient.invalidateQueries({ queryKey: ["/api/spot-types"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/app-configs"] })
       ])
       toast({
         title: "Refreshed",
@@ -938,7 +1014,7 @@ export default function AdminDataManagement() {
       )}
 
       <Tabs defaultValue="departments" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="departments" data-testid="tab-departments" className="gap-2">
             <Building2 className="h-4 w-4 !text-blue-600" />
             Departments
@@ -950,6 +1026,10 @@ export default function AdminDataManagement() {
           <TabsTrigger value="spot-types" data-testid="tab-spot-types" className="gap-2">
             <Layers className="h-4 w-4 !text-purple-600" />
             Spot Types
+          </TabsTrigger>
+          <TabsTrigger value="app-configs" data-testid="tab-app-configs" className="gap-2">
+            <Database className="h-4 w-4 !text-orange-600" />
+            App Settings
           </TabsTrigger>
         </TabsList>
 
@@ -1711,6 +1791,99 @@ export default function AdminDataManagement() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* App Configurations Tab */}
+        <TabsContent value="app-configs">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Database className="h-5 w-5" />
+                  Application Settings
+                </CardTitle>
+              </div>
+              <div className="flex gap-4 mt-4">
+                <div className="flex-1">
+                  <Input
+                    placeholder="Search settings..."
+                    value={configSearchFilter}
+                    onChange={(e) => setConfigSearchFilter(e.target.value)}
+                    data-testid="input-search-configs"
+                  />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoadingConfigs ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Setting</TableHead>
+                      <TableHead>Value</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredAndSortedConfigs.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                          No settings found. {configSearchFilter ? "Try adjusting your search." : "No settings available."}
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      paginatedConfigs.map((config) => (
+                        <TableRow key={config.key} data-testid={`row-config-${config.key}`}>
+                          <TableCell className="font-medium" data-testid={`text-config-label-${config.key}`}>
+                            {config.label}
+                          </TableCell>
+                          <TableCell data-testid={`text-config-value-${config.key}`}>
+                            {config.dataType === 'number' && config.key.includes('timeout') 
+                              ? `${Number(config.value) / 1000}s`
+                              : config.value}
+                          </TableCell>
+                          <TableCell data-testid={`text-config-description-${config.key}`}>
+                            {config.description || "-"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openEditConfigDialog(config)}
+                              data-testid={`button-edit-config-${config.key}`}
+                            >
+                              <Edit className="h-4 w-4 mr-1" />
+                              Edit
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              )}
+              
+              {filteredAndSortedConfigs.length > 0 && (
+                <TablePagination
+                  totalCount={filteredAndSortedConfigs.length}
+                  pageSize={configPageSize}
+                  pageIndex={configPageIndex}
+                  onPageSizeChange={(size) => {
+                    setConfigPageSize(size);
+                    setConfigPageIndex(0);
+                  }}
+                  onPageIndexChange={setConfigPageIndex}
+                />
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       {/* Edit Department Dialog */}
@@ -1990,6 +2163,78 @@ export default function AdminDataManagement() {
               </div>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Config Dialog */}
+      <Dialog open={showEditConfigDialog} onOpenChange={setShowEditConfigDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Configuration</DialogTitle>
+          </DialogHeader>
+          {editingConfig && (
+            <div className="space-y-4">
+              <div>
+                <FormLabel>{editingConfig.label}</FormLabel>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {editingConfig.description}
+                </p>
+              </div>
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                const value = formData.get('value') as string;
+                let finalValue = value;
+                
+                // Convert timeout values from seconds to milliseconds
+                if (editingConfig.dataType === 'number' && editingConfig.key.includes('timeout')) {
+                  finalValue = String(Number(value) * 1000);
+                }
+                
+                updateConfigMutation.mutate({ 
+                  key: editingConfig.key, 
+                  value: finalValue 
+                });
+              }} className="space-y-4">
+                <div>
+                  <FormLabel>Value</FormLabel>
+                  <Input
+                    name="value"
+                    type={editingConfig.dataType === 'number' ? 'number' : 'text'}
+                    defaultValue={
+                      editingConfig.dataType === 'number' && editingConfig.key.includes('timeout')
+                        ? Number(editingConfig.value) / 1000
+                        : editingConfig.value
+                    }
+                    placeholder="Enter value"
+                    data-testid="input-edit-config-value"
+                  />
+                  {editingConfig.dataType === 'number' && editingConfig.key.includes('timeout') && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Value in seconds
+                    </p>
+                  )}
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setShowEditConfigDialog(false)}
+                    data-testid="button-cancel-edit-config"
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    disabled={updateConfigMutation.isPending}
+                    data-testid="button-submit-edit-config"
+                  >
+                    {updateConfigMutation.isPending ? "Updating..." : "Update"}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
