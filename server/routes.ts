@@ -2133,22 +2133,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // SECURITY: Fetch the listing to get the ACTUAL price (never trust frontend)
-      const [listing] = await db
+      // SECURITY: Find the CORRECT listing that covers this booking date
+      // Don't trust the frontend listingId - validate it matches the date
+      const bookingDate = validatedData.bookingDate;
+      
+      const correctListing = await db
         .select()
         .from(spotListings)
-        .where(eq(spotListings.id, validatedData.listingId))
+        .where(and(
+          eq(spotListings.spotId, validatedData.spotId),
+          eq(spotListings.status, 'available'),
+          or(
+            // Single day listing matching this exact date
+            and(
+              eq(spotListings.listingType, 'single'),
+              eq(spotListings.singleDate, bookingDate)
+            ),
+            // Period listing that includes this date
+            and(
+              eq(spotListings.listingType, 'period'),
+              sql`${spotListings.periodStartDate} <= ${bookingDate}`,
+              sql`${spotListings.periodEndDate} >= ${bookingDate}`
+            )
+          )
+        ))
         .limit(1);
 
-      if (!listing) {
-        return res.status(404).json({ error: "Listing not found" });
+      if (!correctListing || correctListing.length === 0) {
+        return res.status(404).json({ 
+          error: "No active listing found for this date",
+          message: "This spot is not available for booking on the selected date."
+        });
+      }
+
+      const listing = correctListing[0];
+
+      // SECURITY: Validate that frontend sent the correct listingId
+      if (listing.id !== validatedData.listingId) {
+        console.warn(`[Booking Security] Frontend sent wrong listingId! Expected ${listing.id}, got ${validatedData.listingId}`);
       }
 
       // SECURITY: Calculate price from database listing, NOT from frontend
       const actualDailyRate = Number(listing.dailyRate);
       const actualTotalAmount = actualDailyRate; // Single day booking
 
-      console.log(`[Booking] Using ACTUAL price from listing: dailyRate=${actualDailyRate}, totalAmount=${actualTotalAmount}`);
+      console.log(`[Booking] Using CORRECT listing ${listing.id} with price: dailyRate=${actualDailyRate}, totalAmount=${actualTotalAmount}`);
 
       // Create the booking with the authenticated user as renter
       const newBooking = await storage.createBooking({
