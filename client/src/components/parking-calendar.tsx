@@ -194,6 +194,21 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
     }
   }
 
+  const getSpotTypeLabel = (type: string) => {
+    switch (type) {
+      case "electric":
+        return "EV"
+      case "tesla_ev":
+        return "Tesla"
+      case "accessible":
+        return "Accessible"
+      case "reserved":
+        return "Reserved"
+      default:
+        return null
+    }
+  }
+
   // Get ownership-based styling with dark mode support
   const getOwnershipColor = (isOwned: boolean) => {
     if (isOwned) {
@@ -424,9 +439,11 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                           </Badge>
                         ) : (
                           <>
-                            <Badge variant="outline" className="text-xs">
-                              {spot.type}
-                            </Badge>
+                            {getSpotTypeLabel(spot.type) && (
+                              <Badge variant="outline" className="text-xs">
+                                {getSpotTypeLabel(spot.type)}
+                              </Badge>
+                            )}
                             {spot.isInside && (
                               <Badge variant="outline" className="text-xs">
                                 Indoor
@@ -492,6 +509,9 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                         <div className="flex items-center gap-1 justify-between">
                           <div className="flex items-center gap-1">
                             {getSpotTypeIcon(spot.type)}
+                            {getSpotTypeLabel(spot.type) && (
+                              <span className="text-[10px] font-medium">{getSpotTypeLabel(spot.type)}</span>
+                            )}
                           </div>
                           {isLocked ? (
                             <span className="text-yellow-700 dark:text-yellow-300 font-semibold flex items-center gap-0.5">
@@ -574,6 +594,9 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                         <div className="flex items-center justify-between gap-1">
                           <div className="flex items-center gap-0.5">
                             {getSpotTypeIcon(spot.type)}
+                            {getSpotTypeLabel(spot.type) && (
+                              <span className="text-[9px] font-medium">{getSpotTypeLabel(spot.type)}</span>
+                            )}
                             <span className="font-medium">#{spot.spotNumber}</span>
                           </div>
                           {isLocked ? (
