@@ -458,43 +458,62 @@ function AuthenticatedApp() {
               <Route path="(.*)" component={NotFound} />
             </Switch>
           </main>
-          <footer className="border-t bg-background py-2 px-4">
-            <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground/60">
+          <footer className="border-t bg-background py-3 px-4">
+            <div className="flex flex-col md:flex-row items-center justify-center gap-1 md:gap-3 text-xs text-muted-foreground/60">
+              {/* Mobile: Simple single line */}
+              <div className="flex md:hidden items-center gap-2">
+                <Dialog open={termsDialogOpen} onOpenChange={setTermsDialogOpen}>
+                  <DialogTrigger asChild>
+                    <button
+                      type="button"
+                      className="hover:text-foreground/80 underline cursor-pointer"
+                      data-testid="link-footer-terms"
+                      onClick={() => setTermsDialogOpen(true)}
+                    >
+                      Terms
+                    </button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-3xl max-h-[85vh]">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <FileText className="h-5 w-5" />
+                        Terms and Conditions
+                      </DialogTitle>
+                    </DialogHeader>
+                    <ScrollArea className="h-[65vh] pr-4">
+                      {terms ? (
+                        <div className="max-w-none" data-testid="terms-dialog-content">
+                          <FormattedTermsContent content={terms.content} />
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center py-12">
+                          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                        </div>
+                      )}
+                    </ScrollArea>
+                  </DialogContent>
+                </Dialog>
+                <span>•</span>
+                <span>© {new Date().getFullYear()} BCI</span>
+              </div>
+              
+              {/* Desktop: Full footer */}
               <Dialog open={termsDialogOpen} onOpenChange={setTermsDialogOpen}>
                 <DialogTrigger asChild>
                   <button
                     type="button"
-                    className="hover:text-foreground/80 underline cursor-pointer"
-                    data-testid="link-footer-terms"
+                    className="hidden md:inline hover:text-foreground/80 underline cursor-pointer"
+                    data-testid="link-footer-terms-desktop"
                     onClick={() => setTermsDialogOpen(true)}
                   >
                     Terms and Conditions
                   </button>
                 </DialogTrigger>
-                <DialogContent className="max-w-3xl max-h-[85vh]">
-                  <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                      <FileText className="h-5 w-5" />
-                      Terms and Conditions
-                    </DialogTitle>
-                  </DialogHeader>
-                  <ScrollArea className="h-[65vh] pr-4">
-                    {terms ? (
-                      <div className="max-w-none" data-testid="terms-dialog-content">
-                        <FormattedTermsContent content={terms.content} />
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center py-12">
-                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                      </div>
-                    )}
-                  </ScrollArea>
-                </DialogContent>
               </Dialog>
-              <span>•</span>
-              <span>BCI ParkShare Application v1.0</span>
-              <span>•</span>
-              <span>© {new Date().getFullYear()} BCI Workplace Services</span>
+              <span className="hidden md:inline">•</span>
+              <span className="hidden md:inline">BCI ParkShare Application v1.0</span>
+              <span className="hidden md:inline">•</span>
+              <span className="hidden md:inline">© {new Date().getFullYear()} BCI Workplace Services</span>
             </div>
           </footer>
         </div>
