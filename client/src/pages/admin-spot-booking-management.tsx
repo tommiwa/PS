@@ -1841,13 +1841,13 @@ export default function AdminSpotBookingManagement() {
                         Date
                       </SortableTableHeader>
                       <SortableTableHeader
-                        column="dailyRate"
+                        column="totalAmount"
                         currentSortColumn={sortState.column}
                         currentSortDirection={sortState.direction}
                         onSort={handleSort}
                         align="right"
                       >
-                        Rate
+                        Amount
                       </SortableTableHeader>
                       <SortableTableHeader
                         column="status"
@@ -1898,7 +1898,7 @@ export default function AdminSpotBookingManagement() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <p className="font-medium">${Number(booking.dailyRate).toFixed(2)}</p>
+                          <p className="font-medium">${Number(booking.totalAmount).toFixed(2)}</p>
                         </TableCell>
                         <TableCell>
                           {getStatusBadge(booking.status)}
@@ -2718,8 +2718,8 @@ export default function AdminSpotBookingManagement() {
 
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <Label>Daily Rate</Label>
-                    <p className="font-medium" data-testid="text-daily-rate">${Number(selectedBooking.dailyRate).toFixed(2)}</p>
+                    <Label>Total Amount</Label>
+                    <p className="font-medium" data-testid="text-total-amount">${Number(selectedBooking.totalAmount).toFixed(2)}</p>
                   </div>
                   <div>
                     <Label>Status</Label>
