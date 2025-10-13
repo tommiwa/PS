@@ -30,7 +30,7 @@ type SpotWithLock = (ParkingSpot | ParkingSpotWithUser) & {
 
 interface ParkingSpotCardProps {
   spot: SpotWithLock
-  onBook?: (spotId: string) => void
+  onBook?: (spotId: string, bookingData?: any) => void
   onViewDetails?: (spotId: string) => void
   showBookButton?: boolean
 }
@@ -131,8 +131,9 @@ export function ParkingSpotCard({
   }
 
   const handleBook = () => {
-    console.log(`Booking spot ${spot.id}`)
-    onBook?.(spot.id)
+    console.log(`Booking spot ${spot.id} for date ${spot.availability?.date}`)
+    // Pass spot ID and date information for accurate price lookup
+    onBook?.(spot.id, { spotId: spot.id, date: spot.availability?.date })
   }
 
   const locationName = spot.locationName;

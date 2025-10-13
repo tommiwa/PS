@@ -277,8 +277,24 @@ export default function Search() {
 
   // Handle booking form submission
   const handleBookSpot = async (spotId: string, bookingData?: any) => {
-    const spot = spots.find(s => s.id === spotId)
-    console.log('[handleBookSpot] Called with spotId:', spotId, 'spot:', spot);
+    // Find the spot - prefer matching by BOTH id and date to get correct price
+    let spot: DisplaySpot | undefined;
+    
+    const targetDate = bookingData?.date || bookingData?.bookingDate;
+    
+    if (targetDate) {
+      // If we have a date, find the EXACT spot entry for that date (ensures correct price)
+      spot = spots.find(s => s.id === spotId && s.availability?.date === targetDate);
+      console.log('[handleBookSpot] Looking for spot with ID:', spotId, 'and date:', targetDate, 'found:', !!spot);
+    }
+    
+    // Fallback: find any spot with this ID (should only happen if no date provided)
+    if (!spot) {
+      spot = spots.find(s => s.id === spotId);
+      console.log('[handleBookSpot] Fallback: found spot without date match:', !!spot);
+    }
+    
+    console.log('[handleBookSpot] Final selected spot price:', spot?.price);
     if (!spot) return;
     
     const listingId = (spot as any).listingId;
