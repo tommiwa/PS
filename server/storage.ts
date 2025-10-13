@@ -131,6 +131,7 @@ export interface IStorage {
   deleteBooking(id: string): Promise<boolean>;
   // Payment marking functionality
   markPaymentReceived(id: string, paymentReceived: boolean): Promise<Booking | undefined>;
+  updatePaymentStatus(id: string, paymentStatus: PaymentStatus): Promise<Booking | undefined>;
 
   // Availability checking
   checkSpotAvailability(spotId: string, date: string): Promise<boolean>;
@@ -1296,6 +1297,36 @@ export class MemStorage implements IStorage {
         paymentReceived,
         updatedAt: now
       })
+      .where(eq(bookings.id, id))
+      .returning();
+
+    // Update memory cache for performance
+    this.bookings.set(id, updatedBooking);
+    return updatedBooking;
+  }
+
+  async updatePaymentStatus(id: string, paymentStatus: PaymentStatus): Promise<Booking | undefined> {
+    // Query database first
+    const existing = await db.select().from(bookings).where(eq(bookings.id, id)).limit(1);
+    if (existing.length === 0) return undefined;
+
+    const now = new Date();
+    
+    // Prepare updates: paymentStatus + sync paymentReceived for backward compatibility
+    const updates: any = {
+      paymentStatus,
+      paymentReceived: paymentStatus === 'received',
+      updatedAt: now
+    };
+
+    // If payment is marked as received, auto-complete the booking
+    if (paymentStatus === 'received') {
+      updates.status = 'completed';
+    }
+    
+    // Update database
+    const [updatedBooking] = await db.update(bookings)
+      .set(updates)
       .where(eq(bookings.id, id))
       .returning();
 

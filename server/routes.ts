@@ -1362,19 +1362,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Mark payment received/unreceived
+  // Two-step payment status update
   app.patch("/api/bookings/:id/payment", isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
-      const { paymentReceived } = req.body;
+      const { paymentStatus } = req.body;
       const userId = getAuthenticatedUserId(req);
       
       if (!userId) {
         return res.status(401).json({ error: "User not authenticated" });
       }
       
-      if (typeof paymentReceived !== 'boolean') {
-        return res.status(400).json({ error: "paymentReceived must be a boolean" });
+      // Validate paymentStatus value
+      if (!paymentStatus || !['pending', 'paid', 'received'].includes(paymentStatus)) {
+        return res.status(400).json({ error: "paymentStatus must be one of: pending, paid, received" });
       }
       
       // Check if booking belongs to the user (as owner OR renter)
@@ -1383,29 +1384,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Booking not found" });
       }
       
-      // Allow both owner and renter to update payment status
-      // Owner marks payment as received, Renter marks that they've paid
       if (booking.ownerId !== userId && booking.renterId !== userId) {
         return res.status(403).json({ error: "Not authorized to update payment status for this booking" });
       }
+
+      // Get current payment status (default to 'pending' if not set)
+      const currentStatus = booking.paymentStatus || 'pending';
       
-      const updatedBooking = await storage.markPaymentReceived(id, paymentReceived);
+      // Enforce two-step payment flow:
+      // - Renters can only mark: pending → paid
+      // - Owners can mark: paid → received  
+      if (booking.renterId === userId) {
+        // Renter can only mark as "paid" when current status is "pending"
+        if (paymentStatus === 'paid' && currentStatus === 'pending') {
+          // Valid: renter marking payment as sent
+        } else {
+          return res.status(403).json({ 
+            error: "Renters can only mark pending payments as paid" 
+          });
+        }
+      } else if (booking.ownerId === userId) {
+        // Owner can only mark as "received" when current status is "paid"
+        if (paymentStatus === 'received' && currentStatus === 'paid') {
+          // Valid: owner confirming payment received
+        } else {
+          return res.status(403).json({ 
+            error: "Owners can only confirm payment received when status is paid" 
+          });
+        }
+      }
+      
+      const updatedBooking = await storage.updatePaymentStatus(id, paymentStatus as PaymentStatus);
       
       if (!updatedBooking) {
         return res.status(404).json({ error: "Failed to update payment status" });
       }
       
-      // If payment is marked as received, also mark booking as completed
-      if (paymentReceived) {
-        await storage.updateBooking(id, { status: 'completed' });
-      }
-      
       // Audit the payment status update
+      const actionMessages = {
+        paid: 'Renter marked payment as paid',
+        received: 'Owner confirmed payment received'
+      };
+      
       await auditService.logAction("UPDATE", "booking", {
         entityId: updatedBooking.id,
-        message: `${paymentReceived ? 'Marked payment as received' : 'Unmarked payment'} for booking ${updatedBooking.id}`,
-        before: { ...booking, paymentReceived: booking.paymentReceived },
-        after: { ...updatedBooking, paymentReceived: updatedBooking.paymentReceived }
+        message: actionMessages[paymentStatus as 'paid' | 'received'] || `Payment status updated to ${paymentStatus}`,
+        before: { ...booking, paymentStatus: currentStatus },
+        after: { ...updatedBooking, paymentStatus: updatedBooking.paymentStatus }
       });
       
       res.json(updatedBooking);
@@ -2734,6 +2759,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/admin/bookings/:id/payment", requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
+      const { paymentStatus } = req.body;
       
       // Verify booking exists
       const booking = await storage.getBooking(id);
@@ -2741,17 +2767,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Booking not found" });
       }
 
-      // Mark payment as received
-      const updatedBooking = await storage.markPaymentReceived(id, true);
+      // Validate paymentStatus value
+      if (!paymentStatus || !['pending', 'paid', 'received'].includes(paymentStatus)) {
+        return res.status(400).json({ error: "paymentStatus must be one of: pending, paid, received" });
+      }
+
+      // Get current payment status (default to 'pending' if not set)
+      const currentStatus = booking.paymentStatus || 'pending';
+
+      // Admin can update to any status, but typically marks paid → received
+      const updatedBooking = await storage.updatePaymentStatus(id, paymentStatus as PaymentStatus);
       
       if (!updatedBooking) {
         return res.status(500).json({ error: "Failed to update payment status" });
       }
 
-      // Also mark booking as completed when payment is received
-      const completedBooking = await storage.updateBooking(id, { status: 'completed' });
+      // Audit the payment status update
+      await auditService.logAction("UPDATE", "booking", {
+        entityId: updatedBooking.id,
+        message: `Admin updated payment status from ${currentStatus} to ${paymentStatus}`,
+        before: { ...booking, paymentStatus: currentStatus },
+        after: { ...updatedBooking, paymentStatus: updatedBooking.paymentStatus }
+      });
 
-      res.json(completedBooking || updatedBooking);
+      res.json(updatedBooking);
     } catch (error) {
       console.error("Error updating payment status:", error);
       res.status(500).json({ error: "Failed to update payment status" });
