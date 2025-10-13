@@ -20,6 +20,8 @@ import { format, startOfWeek, addDays, addWeeks, addMonths, subWeeks, subMonths,
 import { isPastDate } from "@/utils/date-utils"
 import { useAuth } from "@/contexts/auth-context"
 import { useLock } from "@/contexts/LockContext"
+import { useToast } from "@/hooks/use-toast"
+import { apiRequest } from "@/lib/queryClient"
 
 type CalendarView = "day" | "week" | "month"
 
@@ -58,9 +60,13 @@ interface ParkingCalendarProps {
 export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), onDateChange, isOwnerView = false }: ParkingCalendarProps) {
   const { user } = useAuth();
   const { lockedListings, userActiveLock } = useLock();
+  const { toast } = useToast();
   const [currentDate, setCurrentDate] = useState(selectedDate)
   const [view, setView] = useState<CalendarView>("week")
+  const [selectedSpot, setSelectedSpot] = useState<ParkingSpot | null>(null)
+  const [showBookingForm, setShowBookingForm] = useState(false)
   const [bookingDate, setBookingDate] = useState<Date | null>(null)
+  const [isAcquiringLock, setIsAcquiringLock] = useState(false)
 
   const navigateDate = (direction: "prev" | "next") => {
     let newDate: Date
@@ -268,7 +274,7 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
     return !isMyLock;
   }
 
-  const handleSpotClick = (spot: ParkingSpot, clickedDate?: Date) => {
+  const handleSpotClick = async (spot: ParkingSpot, clickedDate?: Date) => {
     const dateToCheck = clickedDate || currentDate
     
     // Prevent booking spots that are already booked on this date
@@ -291,13 +297,71 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
       return; // Don't allow booking non-bookable spots
     }
     
-    // Store the booking date for this spot
-    setBookingDate(dateToCheck)
-    
-    // Call parent handler with spot ID and date info (same as tiles view)
-    // This will trigger lock acquisition in search.tsx
-    const dateStr = dateToCheck.toISOString().split('T')[0];
-    onBookSpot(spot.id, { spotId: spot.id, date: dateStr })
+    // First, acquire lock for this spot on this date
+    setIsAcquiringLock(true);
+    try {
+      const dateStr = dateToCheck.toISOString().split('T')[0];
+      
+      // Get the listingId and dailyRate for this specific date from the spot's dateToPrice map
+      const priceInfo = spot.dateToPrice?.[dateStr];
+      if (!priceInfo) {
+        toast({
+          title: "Booking Error",
+          description: "Unable to determine pricing for this date.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      const { listingId, dailyRate } = priceInfo;
+      
+      // Acquire lock with composite key (listingId + date)
+      await apiRequest(`/api/locks`, {
+        method: 'POST',
+        body: {
+          spotId: spot.id,
+          listingId,
+          bookingDate: dateStr
+        }
+      });
+      
+      // Lock acquired successfully, show booking form
+      setSelectedSpot(spot)
+      setBookingDate(dateToCheck)
+      setShowBookingForm(true)
+    } catch (error: any) {
+      console.error('[Calendar] Lock acquisition failed:', error);
+      const errorMessage = error.message || "";
+      if (errorMessage.includes('409') || errorMessage.includes('SPOT_ALREADY_LOCKED')) {
+        toast({
+          title: "Spot Already Reserved",
+          description: "Another user is currently booking this spot. Please try again.",
+          variant: "destructive"
+        });
+      } else if (errorMessage.includes('USER_HAS_ACTIVE_LOCK')) {
+        toast({
+          title: "Active Reservation",
+          description: "You already have an active reservation on another spot. Please complete or cancel it first.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Lock Failed",
+          description: "Could not reserve spot. Please try again.",
+          variant: "destructive"
+        });
+      }
+    } finally {
+      setIsAcquiringLock(false);
+    }
+  }
+
+  const handleBookingSubmit = (bookingData: BookingFormData) => {
+    if (selectedSpot) {
+      onBookSpot(selectedSpot.id, bookingData)
+      setShowBookingForm(false)
+      setSelectedSpot(null)
+    }
   }
 
   const renderDayView = () => {
@@ -612,6 +676,23 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
         {renderCalendarContent()}
       </div>
 
+      {/* Booking Dialog */}
+      <Dialog open={showBookingForm} onOpenChange={setShowBookingForm}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Book Parking Spot</DialogTitle>
+          </DialogHeader>
+          {selectedSpot && (
+            <BookingForm
+              spot={selectedSpot}
+              onSubmit={handleBookingSubmit}
+              onCancel={() => setShowBookingForm(false)}
+              selectedDate={bookingDate ? bookingDate.toISOString().split('T')[0] : undefined}
+              isDateLocked={bookingDate !== null}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
