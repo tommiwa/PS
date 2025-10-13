@@ -1377,13 +1377,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "paymentReceived must be a boolean" });
       }
       
-      // Check if booking belongs to the user (as owner)
+      // Check if booking belongs to the user (as owner OR renter)
       const booking = await storage.getBooking(id);
       if (!booking) {
         return res.status(404).json({ error: "Booking not found" });
       }
       
-      if (booking.ownerId !== userId) {
+      // Allow both owner and renter to update payment status
+      // Owner marks payment as received, Renter marks that they've paid
+      if (booking.ownerId !== userId && booking.renterId !== userId) {
         return res.status(403).json({ error: "Not authorized to update payment status for this booking" });
       }
       
