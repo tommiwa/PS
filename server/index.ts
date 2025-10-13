@@ -2,7 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { auditService } from "./audit-service";
-import { auditStorage } from "./audit-storage";
+import { dbAuditStorage as auditStorage } from "./audit-storage";
 import { db } from "./db";
 import { spotLocks } from "@shared/schema";
 import { and, eq, lt } from "drizzle-orm";
@@ -55,39 +55,8 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Initialize audit service with storage
+  // Initialize audit service with database-backed storage
   auditService.setStorage(auditStorage);
-  
-  // Add some sample booking activity audit logs for testing (development only)
-  // Only seed if not already done to prevent repeated seeding on server restarts
-  if (app.get("env") === "development" && !auditStorage.hasBeenSeeded()) {
-    await auditService.logAction("CREATE", "booking", {
-      entityId: "booking-test-1",
-      message: "Test booking created for spot 101 by John Doe",
-      success: true
-    });
-    
-    await auditService.logAction("CREATE", "spot_listing", {
-      entityId: "listing-test-1", 
-      message: "Parking spot listing created for spot 102",
-      success: true
-    });
-    
-    await auditService.logAction("UPDATE", "booking", {
-      entityId: "booking-test-2",
-      message: "Payment received for booking",
-      success: true
-    });
-    
-    await auditService.logAction("CANCEL", "booking", {
-      entityId: "booking-test-3", 
-      message: "Booking cancelled by user request",
-      success: true
-    });
-
-    // Mark as seeded to prevent future seeding
-    auditStorage.markAsSeeded();
-  }
   
   // Seed departments if table is empty
   const seedDepartments = async () => {
@@ -377,6 +346,31 @@ Phone: (778) 410-7100
   // Set up interval to run cleanup every 30 seconds
   setInterval(cleanupExpiredLocks, 30000);
   log("Lock cleanup job scheduled (runs every 30 seconds)");
+
+  // Background cleanup job for old audit logs (1 year retention policy)
+  async function cleanupOldAuditLogs() {
+    try {
+      const RETENTION_DAYS = 365; // 1 year retention
+      const deletedCount = await auditStorage.cleanupOldLogs(RETENTION_DAYS);
+      
+      if (deletedCount > 0) {
+        console.log(`[Audit Cleanup] Deleted ${deletedCount} audit log(s) older than ${RETENTION_DAYS} days`);
+      }
+      
+      return deletedCount;
+    } catch (error) {
+      console.error("[Audit Cleanup] Error cleaning up old audit logs:", error);
+      return 0;
+    }
+  }
+  
+  // Run audit cleanup once on startup
+  log("Running initial audit log cleanup...");
+  await cleanupOldAuditLogs();
+  
+  // Set up interval to run audit cleanup every 24 hours (86400000 ms)
+  setInterval(cleanupOldAuditLogs, 86400000);
+  log("Audit log cleanup job scheduled (runs daily, 1-year retention)");
   
   const server = await registerRoutes(app);
 

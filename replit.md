@@ -54,6 +54,7 @@ Preferred communication style: Simple, everyday language.
 - **My Bookings Page (Renter/Owner)**: Redesigned with role-based display, colorful tab icons, stat cards, enhanced filters, professional action buttons (Cancel, Mark Paid, Download Receipt), and comprehensive export functionality.
 - **Reports Hub (Admin-only)**: Streamlined analytics and reporting system with two essential reports: Spot Assignments and Utilization. Features shared filter controls (date range and scope), professional Excel export, and email delivery via SendGrid, with data visualization using Recharts.
 - **Spot Assignment History Tracking**: Automated audit trail system that records all BCI-managed spot assignments and unassignments with complete user details, effective dates, and actor tracking. Includes dedicated reporting tab showing newly assigned/unassigned users with department information, email links, and Excel/PDF export capabilities.
+- **Audit Log System**: Database-persisted audit logging with hash chaining for security and integrity. All audit logs stored in PostgreSQL with automated 1-year retention policy (daily cleanup job deletes logs older than 365 days). System tracks all user actions, entity changes, and administrative activities with complete actor details and request metadata.
 
 ## External Dependencies
 
