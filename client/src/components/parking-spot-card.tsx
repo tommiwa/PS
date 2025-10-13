@@ -137,18 +137,26 @@ export function ParkingSpotCard({
 
   const locationName = spot.locationName;
   
-  // Get date-specific price if available
+  // Get date-specific price if available - ensure we always return a number
   const getDisplayPrice = (): number => {
+    let price: any;
+    
     // If we have a specific date and dateToPrice mapping, use that
     if (spot.availability?.date && spot.dateToPrice?.[spot.availability.date]) {
-      return spot.dateToPrice[spot.availability.date].dailyRate;
+      price = spot.dateToPrice[spot.availability.date].dailyRate;
+    } else {
+      // Fall back to dailyRate or price
+      price = spot.dailyRate || spot.price;
     }
-    // Fall back to dailyRate or price (convert to number if string)
-    const rate = spot.dailyRate || spot.price;
-    if (typeof rate === 'string') {
-      return parseFloat(rate) || 0;
+    
+    // Convert to number regardless of type
+    if (typeof price === 'string') {
+      return parseFloat(price) || 0;
     }
-    return rate || 0;
+    if (typeof price === 'number') {
+      return price;
+    }
+    return 0;
   };
   
   const displayPrice = getDisplayPrice();
