@@ -5,8 +5,8 @@ import { broadcastLockEvent } from "./websocket";
 import { setupAuth, isAuthenticated, requireAdmin, getAuthenticatedUserId, getAuthenticatedUserRole, getAuthenticatedUserBaseRole } from "./replitAuth";
 import { z } from "zod";
 import { db } from "./db";
-import { parkingSpots, spotLocks, spotListings } from "@shared/schema";
-import { inArray, and, eq, lt, gt } from "drizzle-orm";
+import { parkingSpots, spotLocks, spotListings, bookings } from "@shared/schema";
+import { inArray, and, eq, lt, gt, not } from "drizzle-orm";
 import { 
   sendAssignmentNotification, 
   sendWelcomeNotification,
@@ -2038,7 +2038,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // CRITICAL: Check for active lock BEFORE creating booking
-      const [activeLock] = await db
+      let [activeLock] = await db
         .select()
         .from(spotLocks)
         .where(and(
@@ -2049,19 +2049,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ))
         .limit(1);
 
-      // Require a valid lock for booking creation
-      if (!activeLock) {
-        return res.status(409).json({ 
-          error: "No active lock found", 
-          message: "Please acquire a lock before booking. Your lock may have expired." 
-        });
-      }
+      // Check if lock is missing or expired
+      const lockExpired = activeLock && new Date(activeLock.expiresAt) < new Date();
+      const needsNewLock = !activeLock || lockExpired;
 
-      // Verify lock hasn't expired
-      if (new Date(activeLock.expiresAt) < new Date()) {
-        return res.status(409).json({ 
-          error: "Lock expired", 
-          message: "Your reservation lock has expired. Please try booking again." 
+      if (needsNewLock) {
+        // Graceful handling: Try to re-acquire lock if spot is still available
+        console.log(`[Booking] Lock ${lockExpired ? 'expired' : 'missing'} for user ${userId}, checking spot availability...`);
+        
+        // Check if spot is still available on this date
+        const existingBooking = await db
+          .select()
+          .from(bookings)
+          .where(and(
+            eq(bookings.spotId, validatedData.spotId),
+            eq(bookings.bookingDate, validatedData.bookingDate),
+            not(eq(bookings.status, 'cancelled'))
+          ))
+          .limit(1);
+
+        if (existingBooking.length > 0) {
+          return res.status(409).json({ 
+            error: "Spot no longer available", 
+            message: "This spot has already been booked by another user." 
+          });
+        }
+
+        // Check if someone else has locked this spot
+        const conflictingLock = await db
+          .select()
+          .from(spotLocks)
+          .where(and(
+            eq(spotLocks.listingId, validatedData.listingId),
+            eq(spotLocks.bookingDate, validatedData.bookingDate),
+            eq(spotLocks.status, 'active'),
+            gt(spotLocks.expiresAt, new Date())
+          ))
+          .limit(1);
+
+        if (conflictingLock.length > 0 && conflictingLock[0].userId !== userId) {
+          return res.status(409).json({ 
+            error: "Spot is currently locked", 
+            message: "Another user is currently booking this spot. Please try again in a moment." 
+          });
+        }
+
+        // Spot is available! Auto-acquire a new lock
+        console.log(`[Booking] Spot available, auto-acquiring new lock for user ${userId}...`);
+        
+        // Release any old expired lock
+        if (activeLock && lockExpired) {
+          await db
+            .update(spotLocks)
+            .set({ status: 'released' })
+            .where(eq(spotLocks.id, activeLock.id));
+        }
+
+        // Create a new lock (2 minutes)
+        const expiresAt = new Date(Date.now() + 2 * 60 * 1000);
+        const [newLock] = await db
+          .insert(spotLocks)
+          .values({
+            userId,
+            spotId: validatedData.spotId,
+            listingId: validatedData.listingId,
+            bookingDate: validatedData.bookingDate,
+            expiresAt,
+            status: 'active'
+          })
+          .returning();
+
+        activeLock = newLock;
+        console.log(`[Booking] New lock acquired (ID: ${newLock.id}), proceeding with booking...`);
+
+        // Broadcast the new lock to all clients
+        broadcastLockEvent('lock.acquired', {
+          lockId: newLock.id,
+          userId: newLock.userId,
+          spotId: newLock.spotId,
+          listingId: newLock.listingId,
+          bookingDate: newLock.bookingDate,
+          expiresAt: newLock.expiresAt.toISOString()
         });
       }
 
