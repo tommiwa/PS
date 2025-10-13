@@ -1760,6 +1760,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Listing does not belong to this spot" });
       }
 
+      // Get lock timeout from app config (with fallback to default 2 minutes)
+      const lockTimeoutConfig = await storage.getAppConfigValue('lock_timeout_ms');
+      let lockDurationMs = LOCK_DURATION_MS; // default
+      
+      if (lockTimeoutConfig) {
+        const parsed = Number.parseInt(lockTimeoutConfig, 10);
+        // Validate: must be a positive integer (at least 1000ms = 1 second)
+        if (Number.isFinite(parsed) && parsed > 0) {
+          lockDurationMs = parsed;
+        } else {
+          console.warn(`Invalid lock_timeout_ms config value: ${lockTimeoutConfig}. Using default: ${LOCK_DURATION_MS}ms`);
+        }
+      }
+
       // Execute lock acquisition in atomic transaction
       const result = await db.transaction(async (tx) => {
         // Step 1: Check for existing active locks on this listing+date combination (with row-level lock)
@@ -1790,8 +1804,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           throw new Error('USER_HAS_ACTIVE_LOCK');
         }
         
-        // Step 3: Create the new lock
-        const expiresAt = new Date(Date.now() + LOCK_DURATION_MS);
+        // Step 3: Create the new lock with configurable timeout
+        const expiresAt = new Date(Date.now() + lockDurationMs);
         const [newLock] = await tx
           .insert(spotLocks)
           .values({
@@ -4465,6 +4479,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (value === undefined || value === null) {
         return res.status(400).json({ error: "Value is required" });
+      }
+      
+      // Get the config to check its data type
+      const config = await storage.getAppConfig(key);
+      if (!config) {
+        return res.status(404).json({ error: "Configuration not found" });
+      }
+      
+      // Validate based on data type
+      if (config.dataType === 'number') {
+        const numValue = Number(value);
+        if (!Number.isFinite(numValue)) {
+          return res.status(400).json({ error: "Value must be a valid number" });
+        }
+        // Special validation for timeout values (must be positive)
+        if (key.includes('timeout') && numValue <= 0) {
+          return res.status(400).json({ error: "Timeout value must be greater than 0" });
+        }
       }
       
       const updatedConfig = await storage.updateAppConfig(key, String(value), req.user?.id);

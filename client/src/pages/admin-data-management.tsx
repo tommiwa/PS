@@ -2201,17 +2201,20 @@ export default function AdminDataManagement() {
                   <Input
                     name="value"
                     type={editingConfig.dataType === 'number' ? 'number' : 'text'}
+                    min={editingConfig.dataType === 'number' && editingConfig.key.includes('timeout') ? 1 : undefined}
+                    step={editingConfig.dataType === 'number' ? 1 : undefined}
                     defaultValue={
                       editingConfig.dataType === 'number' && editingConfig.key.includes('timeout')
                         ? Number(editingConfig.value) / 1000
                         : editingConfig.value
                     }
                     placeholder="Enter value"
+                    required
                     data-testid="input-edit-config-value"
                   />
                   {editingConfig.dataType === 'number' && editingConfig.key.includes('timeout') && (
                     <p className="text-sm text-muted-foreground mt-1">
-                      Value in seconds
+                      Value in seconds (minimum: 1)
                     </p>
                   )}
                 </div>
