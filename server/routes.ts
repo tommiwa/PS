@@ -4427,6 +4427,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== APP CONFIGURATION ENDPOINTS =====
+
+  // GET /api/admin/app-configs - Get all app configurations (Admin only)
+  app.get("/api/admin/app-configs", requireAdmin, async (req, res) => {
+    try {
+      const configs = await storage.getAllAppConfigs();
+      res.json(configs);
+    } catch (error) {
+      console.error("Error fetching app configs:", error);
+      res.status(500).json({ error: "Failed to fetch app configurations" });
+    }
+  });
+
+  // GET /api/admin/app-configs/:key - Get specific app configuration (Admin only)
+  app.get("/api/admin/app-configs/:key", requireAdmin, async (req, res) => {
+    try {
+      const { key } = req.params;
+      const config = await storage.getAppConfig(key);
+      
+      if (!config) {
+        return res.status(404).json({ error: "Configuration not found" });
+      }
+      
+      res.json(config);
+    } catch (error) {
+      console.error("Error fetching app config:", error);
+      res.status(500).json({ error: "Failed to fetch app configuration" });
+    }
+  });
+
+  // PATCH /api/admin/app-configs/:key - Update app configuration (Admin only)
+  app.patch("/api/admin/app-configs/:key", requireAdmin, async (req: any, res) => {
+    try {
+      const { key } = req.params;
+      const { value } = req.body;
+      
+      if (value === undefined || value === null) {
+        return res.status(400).json({ error: "Value is required" });
+      }
+      
+      const updatedConfig = await storage.updateAppConfig(key, String(value), req.user?.id);
+      
+      if (!updatedConfig) {
+        return res.status(404).json({ error: "Configuration not found" });
+      }
+      
+      res.json(updatedConfig);
+    } catch (error) {
+      console.error("Error updating app config:", error);
+      res.status(500).json({ error: "Failed to update app configuration" });
+    }
+  });
+
   // ===== AUDIT ENDPOINTS =====
 
   // Get audit logs (Admin only)

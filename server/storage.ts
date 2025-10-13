@@ -54,13 +54,15 @@ import {
   type InsertLockerWaitlist,
   type LockerAssignmentHistory,
   type InsertLockerAssignmentHistory,
-  type LockerType
+  type LockerType,
+  type AppConfig,
+  type InsertAppConfig
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { auditDecorator } from "./audit-service";
 import { type IAuditStorage } from "./audit-storage";
 import { db } from "./db";
-import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, locations, spotTypesTable, termsVersions, spotAssignmentHistory, lockers, lockerWaitlist, lockerAssignmentHistory, lockerTypesTable } from "@shared/schema";
+import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, locations, spotTypesTable, termsVersions, spotAssignmentHistory, lockers, lockerWaitlist, lockerAssignmentHistory, lockerTypesTable, appConfigs } from "@shared/schema";
 import { eq, or, ilike, asc, and, notExists, sql as sqlOp, count, desc, inArray } from "drizzle-orm";
 
 // Storage interface with comprehensive CRUD methods
@@ -345,6 +347,14 @@ export interface IStorage {
   
   // Locker Type operations
   getAllLockerTypes(): Promise<LockerType[]>;
+  
+  // App Configuration operations
+  getAllAppConfigs(): Promise<AppConfig[]>;
+  getAppConfig(key: string): Promise<AppConfig | undefined>;
+  getAppConfigValue(key: string): Promise<string | undefined>;
+  updateAppConfig(key: string, value: string, updatedBy?: string): Promise<AppConfig | undefined>;
+  createAppConfig(config: InsertAppConfig): Promise<AppConfig>;
+  deleteAppConfig(key: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -3461,6 +3471,51 @@ export class MemStorage implements IStorage {
   async getAllLockerTypes(): Promise<LockerType[]> {
     const results = await db.select().from(lockerTypesTable).orderBy(asc(lockerTypesTable.name));
     return results;
+  }
+
+  // App Configuration operations
+  async getAllAppConfigs(): Promise<AppConfig[]> {
+    const results = await db.select().from(appConfigs).orderBy(asc(appConfigs.category), asc(appConfigs.label));
+    return results;
+  }
+
+  async getAppConfig(key: string): Promise<AppConfig | undefined> {
+    const results = await db.select().from(appConfigs).where(eq(appConfigs.key, key)).limit(1);
+    return results[0];
+  }
+
+  async getAppConfigValue(key: string): Promise<string | undefined> {
+    const config = await this.getAppConfig(key);
+    return config?.value;
+  }
+
+  async updateAppConfig(key: string, value: string, updatedBy?: string): Promise<AppConfig | undefined> {
+    const updates: Partial<AppConfig> = {
+      value,
+      updatedAt: new Date(),
+    };
+    
+    if (updatedBy) {
+      updates.updatedBy = updatedBy;
+    }
+
+    const results = await db
+      .update(appConfigs)
+      .set(updates)
+      .where(eq(appConfigs.key, key))
+      .returning();
+    
+    return results[0];
+  }
+
+  async createAppConfig(config: InsertAppConfig): Promise<AppConfig> {
+    const results = await db.insert(appConfigs).values(config).returning();
+    return results[0];
+  }
+
+  async deleteAppConfig(key: string): Promise<boolean> {
+    const result = await db.delete(appConfigs).where(eq(appConfigs.key, key));
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Audit decorators will be applied via server initialization
