@@ -2175,7 +2175,9 @@ export default function AdminDataManagement() {
           {editingConfig && (
             <div className="space-y-4">
               <div>
-                <FormLabel>{editingConfig.label}</FormLabel>
+                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  {editingConfig.label}
+                </label>
                 <p className="text-sm text-muted-foreground mt-1">
                   {editingConfig.description}
                 </p>
@@ -2197,7 +2199,9 @@ export default function AdminDataManagement() {
                 });
               }} className="space-y-4">
                 <div>
-                  <FormLabel>Value</FormLabel>
+                  <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    Value
+                  </label>
                   <Input
                     name="value"
                     type={editingConfig.dataType === 'number' ? 'number' : 'text'}
@@ -2210,6 +2214,7 @@ export default function AdminDataManagement() {
                     }
                     placeholder="Enter value"
                     required
+                    className="mt-2"
                     data-testid="input-edit-config-value"
                   />
                   {editingConfig.dataType === 'number' && editingConfig.key.includes('timeout') && (
