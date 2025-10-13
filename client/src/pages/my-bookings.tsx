@@ -157,7 +157,8 @@ export default function MyBookings() {
         } else if (filterValues.status === 'cancelled') {
           matchesStatus = booking.status === 'cancelled'
         } else if (filterValues.status === 'payment-pending') {
-          matchesStatus = booking.status === 'confirmed' && !booking.paymentReceived
+          const paymentStatus = booking.paymentStatus || 'pending'
+          matchesStatus = booking.status === 'confirmed' && paymentStatus === 'pending'
         } else {
           matchesStatus = booking.status === filterValues.status
         }
@@ -212,8 +213,14 @@ export default function MyBookings() {
     const today = new Date().toISOString().split('T')[0]
     activeItems = mockBookings.filter((b: Booking) => b.status === "confirmed" && b.bookingDate >= today)
     pendingItems = mockBookings.filter((b: Booking) => b.status === "pending") 
-    paymentPendingItems = mockBookings.filter((b: Booking) => b.status === "confirmed" && !b.paymentReceived && b.bookingDate >= today)
-    completedItems = mockBookings.filter((b: Booking) => b.status === "completed" || (b.status === "confirmed" && b.paymentReceived && b.bookingDate < today))
+    paymentPendingItems = mockBookings.filter((b: Booking) => {
+      const paymentStatus = b.paymentStatus || 'pending'
+      return b.status === "confirmed" && paymentStatus === 'pending' && b.bookingDate >= today
+    })
+    completedItems = mockBookings.filter((b: Booking) => {
+      const paymentStatus = b.paymentStatus || 'pending'
+      return b.status === "completed" || (b.status === "confirmed" && paymentStatus === 'received' && b.bookingDate < today)
+    })
     cancelledItems = mockBookings.filter((b: Booking) => b.status === "cancelled")
     unusedItems = [] // Renters don't have unused items
   }
@@ -262,18 +269,18 @@ export default function MyBookings() {
     setShowViewDetails(true)
   }
 
-  // Mutation for marking payment as received
+  // Mutation for renter marking payment as paid (pending → paid)
   const markPaidMutation = useMutation({
     mutationFn: async (bookingId: string) => {
       return apiRequest(`/api/bookings/${bookingId}/payment`, { 
         method: 'PATCH',
-        body: { paymentReceived: true }
+        body: { paymentStatus: 'paid' }
       })
     },
     onSuccess: () => {
       toast({
-        title: "Payment Confirmed",
-        description: "Booking has been marked as paid",
+        title: "Payment Marked as Paid",
+        description: "You've marked the payment as sent. Waiting for owner confirmation.",
       })
       queryClient.invalidateQueries({ queryKey: ['/api/my-listings'] })
       queryClient.invalidateQueries({ queryKey: ['/api/my-bookings'] })
@@ -503,18 +510,43 @@ export default function MyBookings() {
     }
   })
 
+  // Mutation for owner confirming payment received (paid → received)
   const markPaymentMutation = useMutation({
-    mutationFn: async ({ id, paid }: { id: string, paid: boolean }) => {
-      return apiRequest(`/api/bookings/${id}/payment`, { method: 'PATCH', body: { paymentReceived: paid } })
+    mutationFn: async (bookingId: string) => {
+      return apiRequest(`/api/bookings/${bookingId}/payment`, { 
+        method: 'PATCH', 
+        body: { paymentStatus: 'received' } 
+      })
     },
     onSuccess: () => {
+      toast({
+        title: "Payment Confirmed",
+        description: "Payment has been marked as received and booking is now completed.",
+      })
       queryClient.invalidateQueries({ queryKey: ['/api/my-listings'] })
+      queryClient.invalidateQueries({ queryKey: ['/api/my-bookings'] })
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Payment Update Failed",
+        description: error.message || "Failed to confirm payment. Please try again.",
+        variant: "destructive",
+      })
     }
   })
 
 
-  const handleMarkPayment = (listingId: string, currentlyPaid: boolean) => {
-    markPaymentMutation.mutate({ id: listingId, paid: !currentlyPaid })
+  const handleMarkPayment = async (bookingId: string) => {
+    const confirmed = await confirm({
+      title: "Confirm Payment Received",
+      description: "Confirm that you have received payment for this booking? This will mark the booking as completed.",
+      confirmText: "Confirm Receipt",
+      cancelText: "Cancel"
+    })
+    
+    if (confirmed) {
+      markPaymentMutation.mutate(bookingId)
+    }
   }
 
   const getStatusIcon = (status: string) => {
@@ -659,14 +691,14 @@ export default function MyBookings() {
             >
               <Eye className="h-4 w-4" />
             </Button>
-            {listing.status === "used" && (
+            {listing.status === "used" && listing.paymentStatus === "paid" && (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => handleMarkPayment(listing.id, listing.paymentReceived)}
+                onClick={() => handleMarkPayment(listing.id)}
                 disabled={markPaymentMutation.isPending}
                 data-testid={`button-payment-${listing.id}`}
-                title={listing.paymentReceived ? "Mark payment as not received" : "Mark payment as received"}
+                title="Confirm Payment Received"
               >
                 <CheckCircle className="h-4 w-4" />
               </Button>
@@ -737,8 +769,9 @@ export default function MyBookings() {
   const renderRenterBooking = (booking: any) => {
     const today = new Date().toISOString().split('T')[0]
     const isActive = booking.status === "confirmed" && booking.bookingDate >= today
-    const isPaymentPending = booking.status === "confirmed" && !booking.paymentReceived && booking.bookingDate >= today
-    const isCompleted = booking.status === "completed" || (booking.status === "confirmed" && booking.paymentReceived && booking.bookingDate < today)
+    const paymentStatus = booking.paymentStatus || 'pending'
+    const canMarkPaid = booking.status === "confirmed" && paymentStatus === 'pending' && booking.bookingDate >= today
+    const isCompleted = booking.status === "completed" || (booking.status === "confirmed" && paymentStatus === 'received' && booking.bookingDate < today)
     
     return (
       <div key={booking.id} className="border rounded-lg p-3 md:p-4">
@@ -778,13 +811,14 @@ export default function MyBookings() {
                   <XCircle className="h-4 w-4" />
                 </Button>
               )}
-              {isPaymentPending && (
+              {canMarkPaid && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => handleMarkPaid(booking.id)}
                   data-testid={`button-mark-paid-${booking.id}`}
                   title="Mark as Paid"
+                  disabled={markPaidMutation.isPending}
                 >
                   <DollarSign className="h-4 w-4" />
                 </Button>
@@ -827,8 +861,11 @@ export default function MyBookings() {
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Payment</p>
-            <Badge variant="outline" className="text-xs">
-              {booking.paymentStatus}
+            <Badge 
+              variant={paymentStatus === 'received' ? 'default' : paymentStatus === 'paid' ? 'secondary' : 'outline'} 
+              className="text-xs"
+            >
+              {paymentStatus === 'pending' ? 'Pending' : paymentStatus === 'paid' ? 'Paid' : 'Received'}
             </Badge>
           </div>
         </div>
