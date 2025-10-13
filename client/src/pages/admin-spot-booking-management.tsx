@@ -1000,10 +1000,23 @@ export default function AdminSpotBookingManagement() {
       });
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: async (data, bookingId) => {
+      // Invalidate queries
       queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-payments", scope] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/active-bookings", scope] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-activity", scope] });
+      
+      // Refetch the booking and update selectedBooking state
+      try {
+        const response = await fetch(`/api/bookings/${bookingId}`);
+        if (response.ok) {
+          const updatedBooking = await response.json();
+          // Update selectedBooking with fresh data
+          setSelectedBooking(prev => prev?.id === bookingId ? updatedBooking : prev);
+        }
+      } catch (error) {
+        console.error("Failed to refetch booking:", error);
+      }
       
       toast({
         title: "Payment Marked as Received",
@@ -1012,7 +1025,6 @@ export default function AdminSpotBookingManagement() {
       });
       
       setShowMarkPaidConfirmDialog(false);
-      setSelectedBooking(null);
     },
     onError: (error) => {
       toast({
