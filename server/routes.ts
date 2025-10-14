@@ -2467,6 +2467,230 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get renter dashboard statistics (Authenticated renters)
+  app.get("/api/renter/dashboard-stats", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      // Get today's date in configured timezone
+      const today = await getTodayInTimezone();
+      const now = new Date();
+      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+      // Fetch all bookings for this renter
+      const allBookings = await storage.getBookingsByRenter(userId);
+
+      // Calculate Active Bookings (confirmed bookings with dates >= today)
+      const activeBookings = allBookings.filter(booking => 
+        booking.status === 'confirmed' && 
+        booking.bookingDate >= today
+      ).length;
+
+      // Calculate This Month Spent and Bookings Count
+      const thisMonthBookings = allBookings.filter(booking => {
+        const bookingDate = booking.bookingDate.toString();
+        return bookingDate.startsWith(currentMonth) && 
+               (booking.paymentStatus === 'paid' || booking.paymentStatus === 'received');
+      });
+
+      const thisMonthSpent = thisMonthBookings.reduce((total, booking) => {
+        return total + parseFloat(booking.totalAmount.toString());
+      }, 0);
+
+      // Calculate Favorite Locations (top locations by booking count)
+      const locationCounts = new Map<string, number>();
+      for (const booking of allBookings) {
+        const spot = await storage.getParkingSpot(booking.spotId);
+        if (spot && spot.locationId) {
+          const location = await storage.getLocation(spot.locationId);
+          if (location) {
+            const locationKey = location.id.toString();
+            locationCounts.set(locationKey, (locationCounts.get(locationKey) || 0) + 1);
+          }
+        }
+      }
+      
+      const favoriteLocations = locationCounts.size;
+
+      // Calculate Total Bookings
+      const totalBookings = allBookings.length;
+
+      // Return renter dashboard statistics
+      res.json({
+        activeBookings,
+        thisMonthSpent: Number(thisMonthSpent.toFixed(2)),
+        thisMonthBookings: thisMonthBookings.length,
+        favoriteLocations,
+        totalBookings,
+        generatedAt: now.toISOString()
+      });
+    } catch (error) {
+      console.error("Error fetching renter dashboard statistics:", error);
+      res.status(500).json({ error: "Failed to fetch renter dashboard statistics" });
+    }
+  });
+
+  // Get detailed renter statistics (Authenticated renters)
+  app.get("/api/renter/statistics", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      const monthsBack = req.query.monthsBack ? parseInt(req.query.monthsBack as string) : 6;
+      
+      // Get today's date in configured timezone
+      const today = await getTodayInTimezone();
+      const now = new Date();
+
+      // Fetch all bookings for this renter
+      const allBookings = await storage.getBookingsByRenter(userId);
+
+      // Calculate basic stats (same as dashboard-stats)
+      const activeBookings = allBookings.filter(booking => 
+        booking.status === 'confirmed' && 
+        booking.bookingDate >= today
+      ).length;
+
+      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const thisMonthBookings = allBookings.filter(booking => {
+        const bookingDate = booking.bookingDate.toString();
+        return bookingDate.startsWith(currentMonth) && 
+               (booking.paymentStatus === 'paid' || booking.paymentStatus === 'received');
+      });
+
+      const thisMonthSpent = thisMonthBookings.reduce((total, booking) => {
+        return total + parseFloat(booking.totalAmount.toString());
+      }, 0);
+
+      // Get monthly spending data for charts
+      const monthlySpendingMap = new Map<string, { spent: number; bookings: number; year: number }>();
+      
+      for (let i = 0; i < monthsBack; i++) {
+        const date = new Date(now);
+        date.setMonth(date.getMonth() - i);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        const monthName = date.toLocaleDateString('en-US', { month: 'short' });
+        
+        const monthBookings = allBookings.filter(booking => {
+          const bookingDate = booking.bookingDate.toString();
+          return bookingDate.startsWith(monthKey) && 
+                 (booking.paymentStatus === 'paid' || booking.paymentStatus === 'received');
+        });
+
+        const monthSpent = monthBookings.reduce((total, booking) => {
+          return total + parseFloat(booking.totalAmount.toString());
+        }, 0);
+
+        monthlySpendingMap.set(monthName, {
+          spent: Number(monthSpent.toFixed(2)),
+          bookings: monthBookings.length,
+          year: date.getFullYear()
+        });
+      }
+
+      const monthlySpending = Array.from(monthlySpendingMap.entries())
+        .map(([month, data]) => ({
+          month,
+          ...data
+        }))
+        .reverse(); // Show oldest to newest
+
+      // Get top locations with detailed stats
+      const locationStatsMap = new Map<number, { 
+        locationName: string; 
+        bookingsCount: number; 
+        totalSpent: number;
+        lastBookedDate: string;
+      }>();
+
+      for (const booking of allBookings) {
+        if (booking.paymentStatus === 'paid' || booking.paymentStatus === 'received') {
+          const spot = await storage.getParkingSpot(booking.spotId);
+          if (spot && spot.locationId) {
+            const location = await storage.getLocation(spot.locationId);
+            if (location) {
+              const existing = locationStatsMap.get(location.id) || {
+                locationName: `${location.office} - ${location.building}`,
+                bookingsCount: 0,
+                totalSpent: 0,
+                lastBookedDate: booking.bookingDate
+              };
+
+              existing.bookingsCount += 1;
+              existing.totalSpent += parseFloat(booking.totalAmount.toString());
+              
+              // Update last booked date if this booking is more recent
+              if (booking.bookingDate > existing.lastBookedDate) {
+                existing.lastBookedDate = booking.bookingDate;
+              }
+
+              locationStatsMap.set(location.id, existing);
+            }
+          }
+        }
+      }
+
+      const topLocations = Array.from(locationStatsMap.entries())
+        .map(([locationId, stats]) => ({
+          locationId,
+          ...stats,
+          totalSpent: Number(stats.totalSpent.toFixed(2))
+        }))
+        .sort((a, b) => b.bookingsCount - a.bookingsCount)
+        .slice(0, 5); // Top 5 locations
+
+      // Calculate recent activity
+      const upcomingBookings = allBookings.filter(booking => 
+        booking.status === 'confirmed' && 
+        booking.bookingDate >= today
+      ).length;
+
+      const weekAgo = new Date(now);
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      const weekAgoStr = await formatDateInTimezone(weekAgo, 'yyyy-MM-dd');
+
+      const completedThisWeek = allBookings.filter(booking => 
+        booking.status === 'confirmed' && 
+        booking.bookingDate >= weekAgoStr && 
+        booking.bookingDate < today
+      ).length;
+
+      const cancelledThisMonth = allBookings.filter(booking => {
+        const bookingDate = booking.bookingDate.toString();
+        return booking.status === 'cancelled' && bookingDate.startsWith(currentMonth);
+      }).length;
+
+      const favoriteLocations = locationStatsMap.size;
+
+      // Return comprehensive renter statistics
+      res.json({
+        stats: {
+          activeBookings,
+          thisMonthSpent: Number(thisMonthSpent.toFixed(2)),
+          thisMonthBookings: thisMonthBookings.length,
+          favoriteLocations,
+          totalBookings: allBookings.length,
+          generatedAt: now.toISOString()
+        },
+        monthlySpending,
+        topLocations,
+        recentActivity: {
+          upcomingBookings,
+          completedThisWeek,
+          cancelledThisMonth
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching detailed renter statistics:", error);
+      res.status(500).json({ error: "Failed to fetch renter statistics" });
+    }
+  });
+
   // Analytics API endpoints (Admin only)
   app.get("/api/admin/analytics-overview", requireAdmin, async (req, res) => {
     try {
