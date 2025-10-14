@@ -22,6 +22,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { useLock } from "@/contexts/LockContext"
 import { useToast } from "@/hooks/use-toast"
 import { apiRequest } from "@/lib/queryClient"
+import { formatDateForDB } from "@/lib/timezone"
 
 type CalendarView = "day" | "week" | "month"
 
@@ -314,7 +315,7 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
     // First, acquire lock for this spot on this date
     setIsAcquiringLock(true);
     try {
-      const dateStr = dateToCheck.toISOString().split('T')[0];
+      const dateStr = await formatDateForDB(dateToCheck);
       
       // Get the listingId and dailyRate for this specific date from the spot's dateToPrice map
       const priceInfo = spot.dateToPrice?.[dateStr];
