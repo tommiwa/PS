@@ -186,7 +186,7 @@ export function DashboardStats({ userRole, onCardClick }: DashboardStatsProps) {
         return [
           {
             id: "month-bookings",
-            title: "No of bookings this month",
+            title: "This Month Bookings",
             value: renterStats.thisMonthBookings,
             icon: createColorfulIcon(Calendar, "bg-purple-500", "Booking metrics - tracks reservations and appointments"),
             description: "This month"
