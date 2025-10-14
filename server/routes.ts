@@ -1632,11 +1632,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Helper to generate all dates in a range
       const generateDateRange = async (startDate: string, endDate: string): Promise<string[]> => {
         const dates: string[] = [];
-        const start = new Date(startDate);
-        const end = new Date(endDate);
+        
+        // Parse dates as midnight in the configured timezone
+        const parseDate = (dateStr: string): Date => {
+          const [year, month, day] = dateStr.split('-').map(Number);
+          return new Date(year, month - 1, day);
+        };
+        
+        const start = parseDate(startDate);
+        const end = parseDate(endDate);
         
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-          dates.push(await formatDateInTimezone(d));
+          const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+          dates.push(dateStr);
         }
         
         return dates;

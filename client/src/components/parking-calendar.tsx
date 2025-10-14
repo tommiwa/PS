@@ -316,16 +316,10 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
     setIsAcquiringLock(true);
     try {
       const dateStr = await formatDateForDB(dateToCheck);
-      console.log('[Calendar] Attempting to book:', {
-        dateStr,
-        dateToPrice: spot.dateToPrice,
-        availableDates: Object.keys(spot.dateToPrice || {})
-      });
       
       // Get the listingId and dailyRate for this specific date from the spot's dateToPrice map
       const priceInfo = spot.dateToPrice?.[dateStr];
       if (!priceInfo) {
-        console.error('[Calendar] No price info for date:', dateStr, 'Available dates:', Object.keys(spot.dateToPrice || {}));
         toast({
           title: "Booking Error",
           description: "Unable to determine pricing for this date.",
