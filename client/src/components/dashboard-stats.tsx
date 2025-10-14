@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Car, Calendar, Clock, Users, TrendingUp, MapPin, AlertTriangle } from "lucide-react"
-import { UserRole, DashboardStatsResponse } from "@shared/schema"
+import { UserRole, DashboardStatsResponse, RenterDashboardStatsResponse } from "@shared/schema"
 import { useQuery } from "@tanstack/react-query"
 
 export interface DashboardStat {
@@ -26,14 +26,29 @@ export function DashboardStats({ userRole, onCardClick }: DashboardStatsProps) {
   // Fetch real dashboard stats for admin users
   const { 
     data: dashboardStats, 
-    isLoading, 
-    error 
+    isLoading: adminLoading, 
+    error: adminError 
   } = useQuery<DashboardStatsResponse>({
     queryKey: ["/api/admin/dashboard-stats"],
     enabled: userRole === "admin", // Only fetch for admin users
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
   });
+
+  // Fetch real dashboard stats for renter users
+  const { 
+    data: renterStats, 
+    isLoading: renterLoading, 
+    error: renterError 
+  } = useQuery<RenterDashboardStatsResponse>({
+    queryKey: ["/api/renter/dashboard-stats"],
+    enabled: userRole === "renter", // Only fetch for renter users
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
+  });
+
+  const isLoading = adminLoading || renterLoading;
+  const error = adminError || renterError;
 
   // Helper function to format currency consistently
   const formatCurrency = (amount: number): string => {
@@ -150,32 +165,50 @@ export function DashboardStats({ userRole, onCardClick }: DashboardStatsProps) {
           }
         ]
       case "renter":
+        if (renterError) {
+          // Return error state stats
+          return [
+            {
+              id: "error-state",
+              title: "Data Unavailable",
+              value: "--",
+              icon: createColorfulIcon(AlertTriangle, "bg-red-500", "Alert indicator - shows system errors or important notifications"),
+              description: "Error loading stats"
+            }
+          ];
+        }
+        
+        if (!renterStats) {
+          // Return empty stats while loading or no data
+          return [];
+        }
+        
         return [
           {
             id: "active-bookings",
             title: "Active Bookings",
-            value: 3,
+            value: renterStats.activeBookings,
             icon: createColorfulIcon(Calendar, "bg-purple-500", "Booking metrics - tracks reservations and appointments"),
             description: "Confirmed reservations"
           },
           {
             id: "month-spent",
             title: "This Month Spent",
-            value: "$75",
+            value: formatCurrency(renterStats.thisMonthSpent),
             icon: createColorfulIcon(TrendingUp, "bg-orange-500", "Financial metrics - shows revenue and performance trends"),
-            description: "3 bookings"
+            description: `${renterStats.thisMonthBookings} booking${renterStats.thisMonthBookings !== 1 ? 's' : ''}`
           },
           {
             id: "favorite-locations",
             title: "Favorite Locations",
-            value: 2,
+            value: renterStats.favoriteLocations,
             icon: createColorfulIcon(MapPin, "bg-red-500", "Location-based metrics - shows geographic preferences and usage"),
-            description: "Saved preferences"
+            description: "Unique locations"
           },
           {
             id: "booking-history",
             title: "Booking History",
-            value: 23,
+            value: renterStats.totalBookings,
             icon: createColorfulIcon(Clock, "bg-yellow-500", "Time-based metrics - tracks schedules and availability patterns"),
             description: "Total bookings"
           }
