@@ -25,7 +25,8 @@ import type {
   AnalyticsRevenueResponse,
   AnalyticsTopPerformersResponse,
   AnalyticsIssuesResponse,
-  AnalyticsUsageResponse
+  AnalyticsUsageResponse,
+  RenterStatisticsResponse
 } from "@shared/schema"
 import {
   LineChart,
@@ -114,9 +115,16 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Renter statistics query
+  const renterStatsQuery = useQuery<RenterStatisticsResponse>({
+    queryKey: ['/api/renter/statistics', { monthsBack: 6 }],
+    enabled: effectiveRole === "renter",
+    staleTime: 5 * 60 * 1000,
+  });
+
   const isLoading = overviewQuery.isLoading || revenueQuery.isLoading || 
                    topPerformersQuery.isLoading || issuesQuery.isLoading || 
-                   usageQuery.isLoading;
+                   usageQuery.isLoading || renterStatsQuery.isLoading;
 
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-overview'] });
@@ -386,78 +394,176 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
         {/* Renter section - show only if viewing as renter */}
         {effectiveRole === "renter" && (
           <div className="space-y-6" data-testid="section-renter-dashboard">
-            <h2 className="text-2xl font-semibold">Statistics</h2>
+            <h2 className="text-2xl font-semibold">Detailed Statistics</h2>
             
-            {/* Statistics Coming Soon Panel */}
-            <Card className="border-dashed" data-testid="card-statistics-coming-soon">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5 text-muted-foreground" />
-                  Statistics Coming Soon
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <p className="text-muted-foreground">
-                  We're working on bringing you detailed parking statistics and insights. In the meantime, explore your parking data through these features:
-                </p>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Link href="/my-bookings">
-                    <Card className="hover-elevate cursor-pointer transition-all" data-testid="card-link-my-bookings">
-                      <CardContent className="p-4 flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-primary/10">
-                          <Calendar className="h-5 w-5 text-primary" />
-                        </div>
-                        <div>
-                          <h3 className="font-medium">My Bookings</h3>
-                          <p className="text-xs text-muted-foreground">View and manage your bookings</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                  
-                  <Link href="/search">
-                    <Card className="hover-elevate cursor-pointer transition-all" data-testid="card-link-available-spots">
-                      <CardContent className="p-4 flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-primary/10">
-                          <MapPin className="h-5 w-5 text-primary" />
-                        </div>
-                        <div>
-                          <h3 className="font-medium">Available Spots</h3>
-                          <p className="text-xs text-muted-foreground">Find parking spots to book</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                  
-                  <Link href="/account">
-                    <Card className="hover-elevate cursor-pointer transition-all" data-testid="card-link-vehicles">
-                      <CardContent className="p-4 flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-primary/10">
-                          <Car className="h-5 w-5 text-primary" />
-                        </div>
-                        <div>
-                          <h3 className="font-medium">Vehicles</h3>
-                          <p className="text-xs text-muted-foreground">Manage your vehicles</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                  
-                  <Card className="cursor-not-allowed opacity-60" data-testid="card-notifications-disabled">
-                    <CardContent className="p-4 flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-muted">
-                        <Bell className="h-5 w-5 text-muted-foreground" />
+            {renterStatsQuery.isLoading ? (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Skeleton className="h-[300px]" data-testid="skeleton-chart-1" />
+                <Skeleton className="h-[300px]" data-testid="skeleton-chart-2" />
+              </div>
+            ) : renterStatsQuery.error ? (
+              <Card className="border-destructive" data-testid="card-stats-error">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-destructive">
+                    <AlertTriangle className="h-5 w-5" />
+                    Failed to Load Statistics
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">
+                    We couldn't load your statistics. Please refresh the page or try again later.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : renterStatsQuery.data ? (
+              <>
+                {/* Monthly Spending Trends Chart */}
+                <Card data-testid="card-monthly-spending">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5 text-primary" />
+                      Monthly Spending Trends
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={renterStatsQuery.data.monthlySpending}>
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                          <XAxis 
+                            dataKey="month" 
+                            className="text-xs" 
+                            tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                          />
+                          <YAxis 
+                            className="text-xs"
+                            tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                          />
+                          <RechartsTooltip 
+                            contentStyle={{
+                              backgroundColor: 'hsl(var(--popover))',
+                              border: '1px solid hsl(var(--border))',
+                              borderRadius: '6px'
+                            }}
+                            labelStyle={{ color: 'hsl(var(--popover-foreground))' }}
+                          />
+                          <Bar 
+                            dataKey="spent" 
+                            fill="hsl(var(--primary))" 
+                            radius={[4, 4, 0, 0]}
+                            name="Amount Spent ($)"
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Top Locations */}
+                <Card data-testid="card-top-locations">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <MapPin className="h-5 w-5 text-primary" />
+                      Top Locations
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {renterStatsQuery.data.topLocations.length > 0 ? (
+                      <div className="space-y-4">
+                        {renterStatsQuery.data.topLocations.map((location, index) => (
+                          <div key={location.locationId} className="flex items-center justify-between p-3 rounded-lg bg-muted/50" data-testid={`location-${index}`}>
+                            <div className="flex-1">
+                              <div className="font-medium">{location.locationName}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {location.bookingsCount} booking{location.bookingsCount !== 1 ? 's' : ''} • ${location.totalSpent.toFixed(2)} total
+                              </div>
+                            </div>
+                            <Badge variant="outline" className="ml-2">
+                              #{index + 1}
+                            </Badge>
+                          </div>
+                        ))}
                       </div>
-                      <div>
-                        <h3 className="font-medium text-muted-foreground">Notifications</h3>
-                        <p className="text-xs text-muted-foreground">In header menu</p>
+                    ) : (
+                      <p className="text-muted-foreground text-center py-8">No booking history yet</p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Recent Activity */}
+                <Card data-testid="card-recent-activity">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Clock className="h-5 w-5 text-primary" />
+                      Recent Activity
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20" data-testid="stat-upcoming-bookings">
+                        <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                          {renterStatsQuery.data.recentActivity.upcomingBookings}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Upcoming Bookings</div>
                       </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </CardContent>
-            </Card>
+                      <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20" data-testid="stat-completed-week">
+                        <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                          {renterStatsQuery.data.recentActivity.completedThisWeek}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Completed This Week</div>
+                      </div>
+                      <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20" data-testid="stat-cancelled-month">
+                        <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+                          {renterStatsQuery.data.recentActivity.cancelledThisMonth}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Cancelled This Month</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Quick Links */}
+                <Card data-testid="card-quick-links">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <BarChart3 className="h-5 w-5 text-primary" />
+                      Quick Actions
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Link href="/my-bookings">
+                        <Card className="hover-elevate cursor-pointer transition-all" data-testid="card-link-my-bookings">
+                          <CardContent className="p-4 flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-primary/10">
+                              <Calendar className="h-5 w-5 text-primary" />
+                            </div>
+                            <div>
+                              <h3 className="font-medium">My Bookings</h3>
+                              <p className="text-xs text-muted-foreground">View and manage your bookings</p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </Link>
+                      
+                      <Link href="/search">
+                        <Card className="hover-elevate cursor-pointer transition-all" data-testid="card-link-available-spots">
+                          <CardContent className="p-4 flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-primary/10">
+                              <MapPin className="h-5 w-5 text-primary" />
+                            </div>
+                            <div>
+                              <h3 className="font-medium">Available Spots</h3>
+                              <p className="text-xs text-muted-foreground">Find parking spots to book</p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            ) : null}
           </div>
         )}
       </div>
