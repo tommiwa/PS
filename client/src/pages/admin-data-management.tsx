@@ -2202,24 +2202,48 @@ export default function AdminDataManagement() {
                   <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                     Value
                   </label>
-                  <Input
-                    name="value"
-                    type={editingConfig.dataType === 'number' ? 'number' : 'text'}
-                    min={editingConfig.dataType === 'number' && editingConfig.key.includes('timeout') ? 1 : undefined}
-                    step={editingConfig.dataType === 'number' ? 1 : undefined}
-                    defaultValue={
-                      editingConfig.dataType === 'number' && editingConfig.key.includes('timeout')
-                        ? Number(editingConfig.value) / 1000
-                        : editingConfig.value
-                    }
-                    placeholder="Enter value"
-                    required
-                    className="mt-2"
-                    data-testid="input-edit-config-value"
-                  />
+                  {editingConfig.key === 'timezone' ? (
+                    <select
+                      name="value"
+                      defaultValue={editingConfig.value}
+                      required
+                      className="mt-2 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                      data-testid="select-edit-config-timezone"
+                    >
+                      <option value="America/Los_Angeles">Pacific Time (PST/PDT) - Los Angeles</option>
+                      <option value="America/Denver">Mountain Time (MST/MDT) - Denver</option>
+                      <option value="America/Chicago">Central Time (CST/CDT) - Chicago</option>
+                      <option value="America/New_York">Eastern Time (EST/EDT) - New York</option>
+                      <option value="America/Phoenix">Arizona Time (MST) - Phoenix</option>
+                      <option value="America/Anchorage">Alaska Time (AKST/AKDT) - Anchorage</option>
+                      <option value="Pacific/Honolulu">Hawaii Time (HST) - Honolulu</option>
+                      <option value="UTC">UTC (Coordinated Universal Time)</option>
+                    </select>
+                  ) : (
+                    <Input
+                      name="value"
+                      type={editingConfig.dataType === 'number' ? 'number' : 'text'}
+                      min={editingConfig.dataType === 'number' && editingConfig.key.includes('timeout') ? 1 : undefined}
+                      step={editingConfig.dataType === 'number' ? 1 : undefined}
+                      defaultValue={
+                        editingConfig.dataType === 'number' && editingConfig.key.includes('timeout')
+                          ? Number(editingConfig.value) / 1000
+                          : editingConfig.value
+                      }
+                      placeholder="Enter value"
+                      required
+                      className="mt-2"
+                      data-testid="input-edit-config-value"
+                    />
+                  )}
                   {editingConfig.dataType === 'number' && editingConfig.key.includes('timeout') && (
                     <p className="text-sm text-muted-foreground mt-1">
                       Value in seconds (minimum: 1)
+                    </p>
+                  )}
+                  {editingConfig.key === 'timezone' && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      All dates and times in the application will be displayed in this timezone
                     </p>
                   )}
                 </div>
