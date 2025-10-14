@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { auditService } from "./audit-service";
 import { dbAuditStorage as auditStorage } from "./audit-storage";
+import { initTimezone } from "./timezone";
 import { db } from "./db";
 import { spotLocks } from "@shared/schema";
 import { and, eq, lt } from "drizzle-orm";
@@ -58,10 +59,13 @@ app.use((req, res, next) => {
   // Initialize audit service with database-backed storage
   auditService.setStorage(auditStorage);
   
+  // Initialize timezone utilities with storage
+  const { storage } = await import("./storage");
+  initTimezone(storage);
+  
   // Seed departments if table is empty
   const seedDepartments = async () => {
     try {
-      const { storage } = await import("./storage");
       const existingDepartments = await storage.getDepartments();
       
       if (existingDepartments.length === 0) {

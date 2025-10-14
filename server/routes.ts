@@ -1606,10 +1606,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get all bookings to check which dates are already booked
       const allBookings = await storage.getAllBookings();
       
-      // Get today's date for filtering
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const todayStr = today.toISOString().split('T')[0];
+      // Get today's date in configured timezone for filtering
+      const { getTodayInTimezone } = await import("./timezone");
+      const todayStr = await getTodayInTimezone();
       
       // Filter bookings to only confirmed/completed and today/future dates
       const relevantBookings = allBookings.filter(booking => {
