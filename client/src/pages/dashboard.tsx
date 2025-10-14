@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
-import { Calendar, MapPin, Clock, Plus, Users, Car, TrendingUp, BarChart3, PieChart, Target, DollarSign, AlertTriangle, Download, RefreshCw, Loader2, Eye, EyeOff, AlertCircle } from "lucide-react"
+import { Calendar, MapPin, Clock, Plus, Users, Car, TrendingUp, BarChart3, PieChart, Target, DollarSign, AlertTriangle, Download, RefreshCw, Loader2, Eye, EyeOff, AlertCircle, Bell } from "lucide-react"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { useAuth } from "@/contexts/auth-context"
 import { useState, useEffect } from "react"
@@ -207,7 +207,8 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
   useEffect(() => {
     setActiveFilter(null);
   }, [effectiveRole]);
-  //todo: remove mock functionality
+
+  //todo: remove mock functionality - used by Owner section only
   const mockUpcomingBookings = [
     {
       id: "B-001",
@@ -247,9 +248,9 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
       spotType: "regular" as const,
       isIndoor: false,
       isBciManaged: false,
-      ownerId: "user-owner-002", // Changed from owner to ownerId with proper format
+      ownerId: "user-owner-002",
       description: "Regular parking spot in South Parking Lot",
-      isActive: true, // Changed from isAvailable to isActive
+      isActive: true,
       isBookable: true,
       createdAt: new Date("2023-12-01T10:00:00Z")
     },
@@ -260,14 +261,13 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
       spotType: "accessible" as const,
       isIndoor: true,
       isBciManaged: true,
-      ownerId: "user-owner-003", // Changed from owner to ownerId with proper format
+      ownerId: "user-owner-003",
       description: "Accessible parking spot with convenient access",
-      isActive: true, // Changed from isAvailable to isActive
+      isActive: true,
       isBookable: true,
       createdAt: new Date("2023-12-01T11:00:00Z")
     }
   ]
-
 
   const renderRoleSpecificContent = () => {
     return (
