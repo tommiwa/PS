@@ -174,6 +174,8 @@ export interface ParkingSpotWithSafeUserData extends ParkingSpot {
   listingId?: string;
   dailyRate?: string;
   availabilityDates?: string[];
+  expiredDates?: string[];
+  isExpired?: boolean;
   bookedDates?: string[];
   availability?: { date: string };
   activeLock?: any;

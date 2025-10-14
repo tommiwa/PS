@@ -36,6 +36,8 @@ interface EnrichedSpotFromAPI extends DBParkingSpot {
   listingId?: string
   dailyRate?: string
   availabilityDates?: string[] // Array of all available dates
+  expiredDates?: string[] // Array of past unbooked dates
+  isExpired?: boolean // True if all dates are expired
   bookedDates?: string[] // Array of dates that are already booked
   availability?: {
     date: string
@@ -75,6 +77,8 @@ interface DisplaySpot extends DBParkingSpot {
     date: string
   }
   availabilityDates?: string[] // Array of all available dates
+  expiredDates?: string[] // Array of past unbooked dates
+  isExpired?: boolean // True if all dates are expired
   bookedDates?: string[] // Array of dates that are already booked
   activeLock?: {
     lockId: string
@@ -156,8 +160,10 @@ export default function Search() {
   }
 
   // Expand spots by availability dates so each date becomes a separate entry
-  // CRITICAL: Filter out booked dates during expansion to hide them from tiles view
-  const spots: DisplaySpot[] = dbSpots.flatMap(spot => {
+  // CRITICAL: Filter out expired spots AND booked dates during expansion to hide them from tiles view
+  const spots: DisplaySpot[] = dbSpots
+    .filter(spot => !spot.isExpired) // Filter out fully expired spots from tiles view
+    .flatMap(spot => {
     const baseSpot = {
       ...spot,
       spotNumber: spot.spotNumber,
@@ -170,6 +176,8 @@ export default function Search() {
       isBookable: spot.isBookable,
       // Explicitly preserve enriched availability data from API
       availabilityDates: spot.availabilityDates,
+      expiredDates: spot.expiredDates,
+      isExpired: spot.isExpired,
       bookedDates: spot.bookedDates,
       // Preserve lock and listing info from API
       activeLock: spot.activeLock,

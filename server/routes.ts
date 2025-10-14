@@ -1657,13 +1657,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // 1. Are active (not deactivated)
       // 2. Are bookable
       // 3. Have an active listing (listings are required for the lock system to work)
-      const availableSpots = allSpots
+      const availableSpots = await Promise.all(allSpots
         .filter(spot => {
           return spot.isActive && 
                  spot.isBookable && 
                  listingsBySpotId.has(spot.id);
         })
-        .map(spot => {
+        .map(async (spot) => {
           const listings = listingsBySpotId.get(spot.id) || [];
           
           // Safety check: should not happen due to filter above, but handle gracefully
@@ -1674,13 +1674,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Build date-to-listing mapping for proper price display
           // Key: date string, Value: {listingId, dailyRate}
           const dateToListing = new Map<string, {listingId: string, dailyRate: number}>();
-          const availabilityDates: string[] = [];
+          const allDates: string[] = [];
+          const listingIdToType = new Map<string, 'single' | 'period' | 'recurring'>();
           
           listings.forEach(listing => {
+            listingIdToType.set(listing.id, listing.listingType);
+            
             if (listing.listingType === 'single' && listing.singleDate) {
               // Single day listing
               const dateStr = listing.singleDate;
-              availabilityDates.push(dateStr);
+              allDates.push(dateStr);
               dateToListing.set(dateStr, {
                 listingId: listing.id,
                 dailyRate: listing.dailyRate
@@ -1689,7 +1692,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Period listing - expand to all dates in range
               const dates = generateDateRange(listing.periodStartDate, listing.periodEndDate);
               dates.forEach(dateStr => {
-                availabilityDates.push(dateStr);
+                allDates.push(dateStr);
                 // Only set if not already set (single day listings take precedence)
                 if (!dateToListing.has(dateStr)) {
                   dateToListing.set(dateStr, {
@@ -1702,18 +1705,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // TODO: Handle recurring listings
           });
           
-          // Remove duplicate dates
-          const uniqueDates = Array.from(new Set(availabilityDates));
-          
-          // Use first date's listing as "primary" for backward compatibility
-          const firstDate = uniqueDates.sort()[0];
-          const primaryListing = firstDate ? dateToListing.get(firstDate) : null;
-          const primaryListingId = primaryListing?.listingId || listings[0].id;
-          const primaryDailyRate = primaryListing?.dailyRate || listings[0].dailyRate;
+          // Remove duplicate dates and sort
+          const uniqueDates = Array.from(new Set(allDates)).sort();
           
           // Check which availability dates are already booked
           const bookedDatesSet = bookedDatesBySpotId.get(spot.id) || new Set();
           const bookedDates = uniqueDates.filter(date => bookedDatesSet.has(date));
+          
+          // Separate dates into expired (past unbooked) and available (today/future)
+          const expiredDates: string[] = [];
+          const availabilityDates: string[] = [];
+          
+          for (const dateStr of uniqueDates) {
+            const isPast = dateStr < todayStr;
+            const isBooked = bookedDatesSet.has(dateStr);
+            
+            if (isPast && !isBooked) {
+              // Past date that was never booked = expired
+              expiredDates.push(dateStr);
+            } else if (!isPast) {
+              // Today or future date = available
+              availabilityDates.push(dateStr);
+            }
+            // Note: Past booked dates are excluded from both arrays
+          }
+          
+          // Determine if listing is fully expired (all dates are past and unbooked)
+          const isExpired = availabilityDates.length === 0 && expiredDates.length > 0;
+          
+          // Mark single/period listings as "unused" if fully expired
+          // Recurring listings keep "available" status but track expired dates
+          if (isExpired) {
+            for (const listing of listings) {
+              const listingType = listing.listingType;
+              
+              if (listingType === 'single' && listing.singleDate) {
+                // Single listing: mark as unused if date is past and not booked
+                const dateStr = listing.singleDate;
+                if (dateStr < todayStr && !bookedDatesSet.has(dateStr) && listing.status === 'available') {
+                  await storage.updateSpotListingStatus(listing.id, 'unused');
+                }
+              } else if (listingType === 'period' && listing.periodEndDate) {
+                // Period listing: mark as unused if end date is past and no dates were booked
+                const endDateStr = listing.periodEndDate;
+                const listingDates = generateDateRange(listing.periodStartDate!, listing.periodEndDate!);
+                const anyBooked = listingDates.some(d => bookedDatesSet.has(d));
+                
+                if (endDateStr < todayStr && !anyBooked && listing.status === 'available') {
+                  await storage.updateSpotListingStatus(listing.id, 'unused');
+                }
+              }
+              // Recurring listings: keep status as "available" (handled separately)
+            }
+          }
+          
+          // Use first available date's listing as "primary" for backward compatibility
+          const firstDate = availabilityDates.sort()[0] || uniqueDates[0];
+          const primaryListing = firstDate ? dateToListing.get(firstDate) : null;
+          const primaryListingId = primaryListing?.listingId || listings[0].id;
+          const primaryDailyRate = primaryListing?.dailyRate || listings[0].dailyRate;
           
           // Convert dateToListing map to object for JSON serialization
           const dateToPrice: Record<string, {listingId: string, dailyRate: number}> = {};
@@ -1726,16 +1776,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ...spot,
             listingId: primaryListingId,
             dailyRate: primaryDailyRate,
-            availabilityDates: uniqueDates, // Array of all available dates (deduplicated)
+            availabilityDates: availabilityDates, // Array of today/future dates only
+            expiredDates: expiredDates, // Array of past unbooked dates
+            isExpired: isExpired, // True if all dates are expired
             bookedDates: bookedDates, // Array of dates that are already booked
             dateToPrice: dateToPrice, // Map of date -> {listingId, dailyRate} for accurate pricing
             // Keep backward compatibility with single date
-            availability: uniqueDates.length > 0 ? {
-              date: uniqueDates[0]
+            availability: availabilityDates.length > 0 ? {
+              date: availabilityDates[0]
             } : undefined
           };
-        })
-        .filter(spot => spot !== null); // Remove any null entries from safety check
+        }))
+        .then(spots => spots.filter(spot => spot !== null)); // Remove any null entries from safety check
       
       // Fetch active locks to show pending/locked state
       const activeLocks = await db
