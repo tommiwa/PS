@@ -62,6 +62,7 @@ import {
   getSpotAssignmentReport
 } from "./reports-controller";
 import { sendReportEmail, isEmailServiceAvailable } from "./report-service";
+import { getTodayInTimezone, formatDateInTimezone, isDateInPast, isDateTodayOrFuture } from "./timezone";
 
 // Lock duration configuration
 const LOCK_DURATION_MS = 120000; // 2 minutes (120 seconds)
@@ -1607,37 +1608,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allBookings = await storage.getAllBookings();
       
       // Get today's date in configured timezone for filtering
-      const { getTodayInTimezone } = await import("./timezone");
       const todayStr = await getTodayInTimezone();
       
       // Filter bookings to only confirmed/completed and today/future dates
-      const relevantBookings = allBookings.filter(booking => {
+      const relevantBookings = await Promise.all(allBookings.map(async (booking) => {
         const isConfirmedOrCompleted = booking.status === 'confirmed' || booking.status === 'completed';
-        const bookingDate = new Date(booking.bookingDate);
-        const bookingDateStr = bookingDate.toISOString().split('T')[0];
+        const bookingDateStr = await formatDateInTimezone(booking.bookingDate);
         const isTodayOrFuture = bookingDateStr >= todayStr;
         
-        return isConfirmedOrCompleted && isTodayOrFuture;
-      });
+        return isConfirmedOrCompleted && isTodayOrFuture ? booking : null;
+      })).then(results => results.filter(b => b !== null)) as typeof allBookings;
       
       // Create a map of spotId -> Set of booked dates for quick lookup
       const bookedDatesBySpotId = new Map<string, Set<string>>();
-      relevantBookings.forEach(booking => {
+      for (const booking of relevantBookings) {
         if (!bookedDatesBySpotId.has(booking.spotId)) {
           bookedDatesBySpotId.set(booking.spotId, new Set());
         }
-        const bookingDate = new Date(booking.bookingDate).toISOString().split('T')[0];
+        const bookingDate = await formatDateInTimezone(booking.bookingDate);
         bookedDatesBySpotId.get(booking.spotId)!.add(bookingDate);
-      });
+      }
       
       // Helper to generate all dates in a range
-      const generateDateRange = (startDate: string, endDate: string): string[] => {
+      const generateDateRange = async (startDate: string, endDate: string): Promise<string[]> => {
         const dates: string[] = [];
         const start = new Date(startDate);
         const end = new Date(endDate);
         
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-          dates.push(d.toISOString().split('T')[0]);
+          dates.push(await formatDateInTimezone(d));
         }
         
         return dates;
@@ -1676,7 +1675,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const allDates: string[] = [];
           const listingIdToType = new Map<string, 'single' | 'period' | 'recurring'>();
           
-          listings.forEach(listing => {
+          for (const listing of listings) {
             listingIdToType.set(listing.id, listing.listingType);
             
             if (listing.listingType === 'single' && listing.singleDate) {
@@ -1689,8 +1688,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               });
             } else if (listing.listingType === 'period' && listing.periodStartDate && listing.periodEndDate) {
               // Period listing - expand to all dates in range
-              const dates = generateDateRange(listing.periodStartDate, listing.periodEndDate);
-              dates.forEach(dateStr => {
+              const dates = await generateDateRange(listing.periodStartDate, listing.periodEndDate);
+              for (const dateStr of dates) {
                 allDates.push(dateStr);
                 // Only set if not already set (single day listings take precedence)
                 if (!dateToListing.has(dateStr)) {
@@ -1699,10 +1698,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     dailyRate: listing.dailyRate
                   });
                 }
-              });
+              }
             }
             // TODO: Handle recurring listings
-          });
+          }
           
           // Remove duplicate dates and sort
           const uniqueDates = Array.from(new Set(allDates)).sort();
@@ -1747,7 +1746,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               } else if (listingType === 'period' && listing.periodEndDate) {
                 // Period listing: mark as unused if end date is past and no dates were booked
                 const endDateStr = listing.periodEndDate;
-                const listingDates = generateDateRange(listing.periodStartDate!, listing.periodEndDate!);
+                const listingDates = await generateDateRange(listing.periodStartDate!, listing.periodEndDate!);
                 const anyBooked = listingDates.some(d => bookedDatesSet.has(d));
                 
                 if (endDateStr < todayStr && !anyBooked && listing.status === 'available') {
@@ -2477,12 +2476,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const overview = await storage.getAnalyticsOverview(scope);
       const now = new Date();
+      const todayStr = await getTodayInTimezone();
       
       res.json({
         ...overview,
         generatedAt: now.toISOString(),
         dateContext: {
-          today: now.toISOString().split('T')[0],
+          today: todayStr,
           currentMonth: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
         }
       });
@@ -2729,14 +2729,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         : allBookings;
       
       // Get today's date for filtering
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const todayStr = today.toISOString().split('T')[0];
+      const todayStr = await getTodayInTimezone();
       
       // Calculate this week's start date (Monday)
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
       const thisWeekStart = new Date(today);
       thisWeekStart.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1));
-      const thisWeekStartStr = thisWeekStart.toISOString().split('T')[0];
+      const thisWeekStartStr = await formatDateInTimezone(thisWeekStart);
       
       // Calculate analytics
       const totalActiveBookings = activeBookings.length;
@@ -4756,7 +4756,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .join('\n');
 
       // Set CSV response headers
-      const timestamp = new Date().toISOString().split('T')[0];
+      const timestamp = await getTodayInTimezone();
       const filename = `audit-logs-${timestamp}.csv`;
       
       res.setHeader('Content-Type', 'text/csv');
@@ -5979,22 +5979,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const lastWeek = new Date(today);
       lastWeek.setDate(lastWeek.getDate() - 7);
       
-      const formatDate = (date: Date) => date.toISOString().split('T')[0];
+      const formatDate = async (date: Date) => await formatDateInTimezone(date);
       
       // Create listings for each spot
       for (let i = 0; i < sampleSpots.length; i++) {
         const spot = sampleSpots[i];
+        
+        // Determine the date for this listing
+        let singleDate: string;
+        if (i === 0) {
+          singleDate = await formatDate(yesterday);
+        } else if (i === 1) {
+          singleDate = await formatDate(today);
+        } else if (i === 2) {
+          singleDate = await formatDate(tomorrow);
+        } else if (i === 3) {
+          singleDate = await formatDate(nextWeek);
+        } else {
+          singleDate = await formatDate(lastWeek);
+        }
         
         // Create a listing for this spot
         const listing = await storage.createSpotListing({
           spotId: spot.id,
           ownerId: owner.id,
           listingType: 'single',
-          singleDate: i === 0 ? formatDate(yesterday) : 
-                      i === 1 ? formatDate(today) : 
-                      i === 2 ? formatDate(tomorrow) :
-                      i === 3 ? formatDate(nextWeek) :
-                      formatDate(lastWeek),
+          singleDate,
           dailyRate: (25 + i * 5).toString(),
           status: 'active'
         });
@@ -6112,9 +6122,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Fetch report data based on type
       let reportData: any;
+      const todayStr = await getTodayInTimezone();
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const thirtyDaysAgoStr = await formatDateInTimezone(thirtyDaysAgo);
+      
       const dateRange = { 
-        from: from || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        to: to || new Date().toISOString().split('T')[0]
+        from: from || thirtyDaysAgoStr,
+        to: to || todayStr
       };
       const reportScope = scope || 'all';
       
