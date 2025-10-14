@@ -4358,6 +4358,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Unauthorized" });
       }
       
+      // Helper function to check if two date ranges overlap
+      const checkOverlap = (
+        listing1: { listingType: string; singleDate?: string | null; periodStartDate?: string | null; periodEndDate?: string | null },
+        listing2: { listingType: string; singleDate?: string | null; periodStartDate?: string | null; periodEndDate?: string | null }
+      ): boolean => {
+        // Single vs Single
+        if (listing1.listingType === 'single' && listing2.listingType === 'single') {
+          return listing1.singleDate === listing2.singleDate;
+        }
+        
+        // Single vs Period
+        if (listing1.listingType === 'single' && listing2.listingType === 'period') {
+          return listing1.singleDate! >= listing2.periodStartDate! && listing1.singleDate! <= listing2.periodEndDate!;
+        }
+        if (listing1.listingType === 'period' && listing2.listingType === 'single') {
+          return listing2.singleDate! >= listing1.periodStartDate! && listing2.singleDate! <= listing1.periodEndDate!;
+        }
+        
+        // Period vs Period
+        if (listing1.listingType === 'period' && listing2.listingType === 'period') {
+          return listing1.periodStartDate! <= listing2.periodEndDate! && listing2.periodStartDate! <= listing1.periodEndDate!;
+        }
+        
+        return false;
+      };
+      
+      // Check for overlapping listings on each spot
+      for (const spotId of spotIds) {
+        const existingListings = await storage.getActiveSpotListings();
+        const spotListings = existingListings.filter(l => l.spotId === spotId);
+        
+        const newListing = {
+          listingType,
+          singleDate: singleDate || null,
+          periodStartDate: periodStartDate || null,
+          periodEndDate: periodEndDate || null
+        };
+        
+        for (const existing of spotListings) {
+          if (checkOverlap(newListing, existing)) {
+            const spot = await storage.getParkingSpot(spotId);
+            const dateDesc = listingType === 'single' 
+              ? singleDate 
+              : `${periodStartDate} to ${periodEndDate}`;
+            return res.status(409).json({ 
+              error: `Spot ${spot?.spotNumber || spotId} already has a listing that overlaps with ${dateDesc}. Please remove the existing listing first or choose different dates.` 
+            });
+          }
+        }
+      }
+      
       // Create the listing data object
       const dailyRateString = dailyRate.toString();
       console.log('[DEBUG] dailyRate after toString():', dailyRateString);
