@@ -388,312 +388,76 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
           <div className="space-y-6" data-testid="section-renter-dashboard">
             <h2 className="text-2xl font-semibold">Statistics</h2>
             
-            {/* Simplified Spending Overview */}
-            {(!activeFilter || activeFilter === "month-spent") && (
-            <div>
-              <h3 className="text-xl font-semibold mb-4">Spending Overview</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Card tabIndex={0} role="button" className="cursor-help focus:ring-2 focus:ring-primary focus:outline-none" data-testid="card-monthly-spending">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                          <DollarSign className="h-4 w-4" />
-                          This Month
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">$75</div>
-                        <div className="text-xs text-muted-foreground mb-2">8 bookings • $25 avg per day</div>
-                        <div className="text-xs text-green-600">$20 saved vs last month</div>
-                      </CardContent>
-                    </Card>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Your total parking expenses for this month, including active and completed bookings</p>
-                  </TooltipContent>
-                </Tooltip>
+            {/* Statistics Coming Soon Panel */}
+            <Card className="border-dashed" data-testid="card-statistics-coming-soon">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5 text-muted-foreground" />
+                  Statistics Coming Soon
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <p className="text-muted-foreground">
+                  We're working on bringing you detailed parking statistics and insights. In the meantime, explore your parking data through these features:
+                </p>
                 
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Card tabIndex={0} role="button" className="cursor-help focus:ring-2 focus:ring-primary focus:outline-none" data-testid="card-monthly-budget">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                          <Target className="h-4 w-4" />
-                          Monthly Budget
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">$100</div>
-                        <div className="text-xs text-muted-foreground mb-2">Budget limit</div>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-auto p-0 w-full hover:bg-transparent"
-                              data-testid="progress-budget-utilization"
-                            >
-                              <Progress value={75} className="h-2 w-full" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Budget utilization: 75% used ($75 of $100) - you have $25 remaining this month</p>
-                          </TooltipContent>
-                        </Tooltip>
-                        <div className="text-xs text-green-600 mt-1">$25 remaining</div>
-                      </CardContent>
-                    </Card>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Your monthly parking budget limit. Set and track your spending to manage expenses</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-            </div>
-            )}
-
-            {/* Location & Usage Patterns */}
-            {(!activeFilter || activeFilter === "favorite-locations") && (
-            <div>
-              <h3 className="text-xl font-semibold mb-4">Usage Patterns</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Card tabIndex={0} role="button" className="cursor-help focus:ring-2 focus:ring-primary focus:outline-none" data-testid="card-favorite-locations">
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <MapPin className="h-5 w-5" />
-                          Favorite Locations
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className="font-medium">Victoria - 750 Pandora Ave</div>
-                              <div className="text-xs text-muted-foreground">Parking Level 2 - Indoor</div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-sm font-medium">67%</div>
-                              <div className="text-xs text-muted-foreground">15 bookings</div>
-                            </div>
-                          </div>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-auto p-0 w-full hover:bg-transparent"
-                                data-testid="progress-location-usage-main"
-                              >
-                                <Progress value={67} className="h-2 w-full" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>67% of your bookings at this location - your most preferred parking spot</p>
-                            </TooltipContent>
-                          </Tooltip>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Link href="/my-bookings">
+                    <Card className="hover-elevate cursor-pointer transition-all" data-testid="card-link-my-bookings">
+                      <CardContent className="p-4 flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          <Calendar className="h-5 w-5 text-primary" />
                         </div>
-                        
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className="font-medium">North Parking Lot</div>
-                              <div className="text-xs text-muted-foreground">Outdoor - Budget</div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-sm font-medium">33%</div>
-                              <div className="text-xs text-muted-foreground">8 bookings</div>
-                            </div>
-                          </div>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-auto p-0 w-full hover:bg-transparent"
-                                data-testid="progress-location-usage-north"
-                              >
-                                <Progress value={33} className="h-2 w-full" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>33% of your bookings at this budget-friendly outdoor location</p>
-                            </TooltipContent>
-                          </Tooltip>
+                        <div>
+                          <h3 className="font-medium">My Bookings</h3>
+                          <p className="text-xs text-muted-foreground">View and manage your bookings</p>
                         </div>
                       </CardContent>
                     </Card>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Your most frequently booked parking locations with usage statistics</p>
-                  </TooltipContent>
-                </Tooltip>
-                
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Card tabIndex={0} role="button" className="cursor-help focus:ring-2 focus:ring-primary focus:outline-none" data-testid="card-peak-booking-days">
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Calendar className="h-5 w-5" />
-                          Peak Booking Days
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm">Tuesday</span>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-auto p-0 hover:bg-transparent"
-                                  data-testid="badge-tuesday-popularity"
-                                >
-                                  <Badge variant="default">Most Popular</Badge>
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Tuesday is your most frequent booking day - consider booking early for this day</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm">Wednesday</span>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-auto p-0 hover:bg-transparent"
-                                  data-testid="badge-wednesday-popularity"
-                                >
-                                  <Badge variant="secondary">High Demand</Badge>
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Wednesday has high booking demand - spots may fill up quickly</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm">Monday</span>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-auto p-0 hover:bg-transparent"
-                                  data-testid="badge-monday-popularity"
-                                >
-                                  <Badge variant="outline">Moderate</Badge>
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Monday has moderate booking activity - good availability expected</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </div>
+                  </Link>
+                  
+                  <Link href="/search">
+                    <Card className="hover-elevate cursor-pointer transition-all" data-testid="card-link-available-spots">
+                      <CardContent className="p-4 flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          <MapPin className="h-5 w-5 text-primary" />
                         </div>
-                        <div className="pt-3 border-t">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-auto p-0 text-xs text-muted-foreground hover:bg-transparent hover:text-muted-foreground"
-                                data-testid="text-booking-tip"
-                              >
-                                💡 Book 2+ days ahead for better availability
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Pro tip: Booking 2+ days in advance gives you more spot options and better prices</p>
-                            </TooltipContent>
-                          </Tooltip>
+                        <div>
+                          <h3 className="font-medium">Available Spots</h3>
+                          <p className="text-xs text-muted-foreground">Find parking spots to book</p>
                         </div>
                       </CardContent>
                     </Card>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Days of the week when you book parking most often - helps you plan ahead</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-            </div>
-            )}
-
-            {/* Simple Performance Summary */}
-            {(!activeFilter || activeFilter === "active-bookings" || activeFilter === "booking-history") && (
-            <div>
-              <h3 className="text-xl font-semibold mb-4">Booking Summary</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Card tabIndex={0} role="button" className="cursor-help focus:ring-2 focus:ring-primary focus:outline-none" data-testid="card-advance-booking">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                          <Calendar className="h-4 w-4" />
-                          Advance Booking
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">2.3 days</div>
-                        <div className="text-xs text-muted-foreground">Average notice given</div>
-                        <div className="mt-2 text-xs text-blue-600">
-                          Great for securing preferred spots
+                  </Link>
+                  
+                  <Link href="/account">
+                    <Card className="hover-elevate cursor-pointer transition-all" data-testid="card-link-vehicles">
+                      <CardContent className="p-4 flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          <Car className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <h3 className="font-medium">Vehicles</h3>
+                          <p className="text-xs text-muted-foreground">Manage your vehicles</p>
                         </div>
                       </CardContent>
                     </Card>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>How far in advance you typically book parking. Booking ahead helps secure better spots and prices</p>
-                  </TooltipContent>
-                </Tooltip>
-                
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Card tabIndex={0} role="button" className="cursor-help focus:ring-2 focus:ring-primary focus:outline-none" data-testid="card-success-rate">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                          <TrendingUp className="h-4 w-4" />
-                          Success Rate
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold text-green-600">94%</div>
-                        <div className="text-xs text-muted-foreground">Bookings completed successfully</div>
-                        <div className="mt-2">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-auto p-0 hover:bg-transparent"
-                                data-testid="badge-performance-rating"
-                              >
-                                <Badge variant="secondary" className="text-xs text-green-600">
-                                  Excellent performance
-                                </Badge>
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>You have an excellent booking completion rate - reliable renter status</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Percentage of your bookings that were completed without cancellation or issues</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-            </div>
-            )}
+                  </Link>
+                  
+                  <Card className="cursor-not-allowed opacity-60" data-testid="card-notifications-disabled">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-muted">
+                        <Bell className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-muted-foreground">Notifications</h3>
+                        <p className="text-xs text-muted-foreground">In header menu</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
       </div>
