@@ -504,7 +504,7 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">
-            {userRole === "admin" ? "Dashboard" : "Statistics"}
+            {effectiveRole === "admin" ? "Dashboard" : "Statistics"}
           </h1>
           <p className="text-muted-foreground">
             Welcome back! Here's what's happening with your parking.
