@@ -132,6 +132,8 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
     queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-top-performers'] });
     queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-issues'] });
     queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-usage'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/renter/statistics'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/renter/dashboard-stats'] });
   };
 
   // Helper component for individual section error states
