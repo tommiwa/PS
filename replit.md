@@ -46,6 +46,7 @@ Preferred communication style: Simple, everyday language.
 - **Notification System**: Real-time alerts via email and in-app notifications.
 - **Spot Listing Creation**: Owners can list spots with single day, period, or recurring options.
 - **Admin Dashboard Metrics**: Real-time, server-side calculated metrics for occupancy, revenue, registrations, and usage patterns, with scope filtering for "All Spots" vs. "BCI Managed Spots".
+- **Renter Dashboard Statistics**: Comprehensive real-time statistics dashboard for renters featuring stat cards (active bookings, monthly spending, favorite locations, booking history), monthly spending trends visualization using Recharts, top 5 locations by booking frequency with spending details, recent activity metrics (upcoming/completed/cancelled bookings), and quick action links. All data fetched from dedicated API endpoints (/api/renter/dashboard-stats, /api/renter/statistics) with proper timezone handling and real-time calculations.
 - **Spot Booking Management**: Five-tab interface for detailed booking views, filters, actions, and an audit history timeline. Includes scope filtering.
 - **Peer-to-Peer Booking Management**: Admin tools for managing peer-to-peer bookings, including actions, listing controls, payment management, and an audit trail.
 - **Dispute Resolution System**: Full dispute lifecycle management with creation, tracking, refund processing, and audit snapshots.
