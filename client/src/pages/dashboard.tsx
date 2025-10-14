@@ -386,7 +386,7 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
         {/* Renter section - show only if viewing as renter */}
         {effectiveRole === "renter" && (
           <div className="space-y-6" data-testid="section-renter-dashboard">
-            <h2 className="text-2xl font-semibold">Renter Dashboard</h2>
+            <h2 className="text-2xl font-semibold">Statistics</h2>
             
             {/* Simplified Spending Overview */}
             {(!activeFilter || activeFilter === "month-spent") && (
