@@ -189,6 +189,9 @@ function ProtectedRouter() {
       setLocation("/login");
     } else if (isAuthenticated && location === "/login") {
       setLocation("/"); // Move away from /login to let LandingPageRedirect handle role-based routing
+    } else if (isAuthenticated && hasAcceptedTerms() && location === "/terms-consent") {
+      // Redirect away from terms-consent if user has accepted terms
+      setLocation("/");
     } else if (isAuthenticated && !hasAcceptedTerms() && location !== "/terms-consent") {
       // Redirect to terms consent if user hasn't accepted terms
       setLocation("/terms-consent");
