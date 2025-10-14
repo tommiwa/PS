@@ -632,6 +632,48 @@ export interface DashboardStatsResponse {
   };
 }
 
+// Renter Dashboard Stats API Response Types
+export interface RenterDashboardStatsResponse {
+  activeBookings: number;
+  thisMonthSpent: number;
+  thisMonthBookings: number;
+  favoriteLocations: number;
+  totalBookings: number;
+  generatedAt: string;
+}
+
+export interface RenterMonthlySpending {
+  month: string;
+  spent: number;
+  bookings: number;
+  year: number;
+}
+
+export interface RenterLocationStats {
+  locationId: number;
+  locationName: string;
+  bookingsCount: number;
+  totalSpent: number;
+  lastBookedDate: string;
+}
+
+export interface RenterBookingTrend {
+  period: string; // e.g., "Week 1", "Week 2", etc.
+  bookings: number;
+  spent: number;
+}
+
+export interface RenterStatisticsResponse {
+  stats: RenterDashboardStatsResponse;
+  monthlySpending: RenterMonthlySpending[];
+  topLocations: RenterLocationStats[];
+  recentActivity: {
+    upcomingBookings: number;
+    completedThisWeek: number;
+    cancelledThisMonth: number;
+  };
+}
+
 // Analytics API Response Types
 export interface AnalyticsOverviewResponse {
   totalRevenue: number;

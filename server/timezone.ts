@@ -1,4 +1,4 @@
-import { formatInTimeZone, toZonedTime, fromZonedTime, zonedTimeToUtc } from 'date-fns-tz';
+import { formatInTimeZone, toZonedTime, fromZonedTime } from 'date-fns-tz';
 import { parseISO } from 'date-fns';
 import type { IStorage } from './storage';
 
@@ -69,10 +69,7 @@ export async function formatDateInTimezone(
   
   // Handle YYYY-MM-DD format specially to avoid timezone conversion issues
   if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    // Create timezone-anchored instant first
-    const instant = zonedTimeToUtc(`${date}T00:00:00`, timezone);
-    // Then format it
-    return formatInTimeZone(instant, timezone, formatStr);
+    return formatInTimeZone(`${date}T00:00:00`, timezone, formatStr);
   }
   
   const dateObj = typeof date === 'string' ? parseISO(date) : date;
@@ -87,10 +84,7 @@ export async function toConfiguredTimezone(date: Date | string): Promise<Date> {
   
   // Handle YYYY-MM-DD format specially to avoid timezone conversion issues
   if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    // Create timezone-anchored instant first
-    const instant = zonedTimeToUtc(`${date}T00:00:00`, timezone);
-    // Then convert to zoned time
-    return toZonedTime(instant, timezone);
+    return toZonedTime(`${date}T00:00:00`, timezone);
   }
   
   const dateObj = typeof date === 'string' ? parseISO(date) : date;
@@ -105,9 +99,7 @@ export async function fromConfiguredTimezone(date: Date | string): Promise<Date>
   
   // Handle YYYY-MM-DD format specially to avoid timezone conversion issues
   if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    // Create timezone-anchored instant
-    const instant = zonedTimeToUtc(`${date}T00:00:00`, timezone);
-    return instant; // This is already in UTC
+    return fromZonedTime(`${date}T00:00:00`, timezone);
   }
   
   const dateObj = typeof date === 'string' ? parseISO(date) : date;
