@@ -1659,6 +1659,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         listingsBySpotId.get(listing.spotId)!.push(listing);
       });
       
+      // Debug: Log spot with ID 10d2f6ad-a890-40f2-bb10-94f78a8a034b
+      const debugSpotId = '10d2f6ad-a890-40f2-bb10-94f78a8a034b';
+      if (listingsBySpotId.has(debugSpotId)) {
+        console.log('[Available Spots Debug] Listings for spot', debugSpotId, ':', listingsBySpotId.get(debugSpotId));
+      } else {
+        console.log('[Available Spots Debug] No listings found for spot', debugSpotId);
+      }
+      
       // Filter to show spots that:
       // 1. Are active (not deactivated)
       // 2. Are bookable
@@ -1713,6 +1721,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Remove duplicate dates and sort
           const uniqueDates = Array.from(new Set(allDates)).sort();
+          
+          // Debug: Log dateToPrice map for the debug spot
+          if (spot.id === debugSpotId) {
+            console.log('[Available Spots Debug] dateToListing map for spot', debugSpotId, ':', 
+              Array.from(dateToListing.entries()).map(([date, info]) => ({ date, ...info }))
+            );
+            console.log('[Available Spots Debug] uniqueDates for spot', debugSpotId, ':', uniqueDates);
+          }
           
           // Check which availability dates are already booked
           const bookedDatesSet = bookedDatesBySpotId.get(spot.id) || new Set();
