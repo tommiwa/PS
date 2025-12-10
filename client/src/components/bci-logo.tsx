@@ -9,28 +9,28 @@ interface BCILogoProps {
 
 const sizeClasses = {
   sm: {
-    container: "gap-2",
-    icon: "h-8",
-    title: "text-lg",
-    subtitle: "text-xs",
+    container: "gap-1.5",
+    icon: "h-6 w-6",
+    title: "text-sm",
+    subtitle: "text-[10px]",
   },
   md: {
-    container: "gap-3",
-    icon: "h-12",
-    title: "text-2xl",
-    subtitle: "text-sm",
+    container: "gap-2",
+    icon: "h-8 w-8",
+    title: "text-base",
+    subtitle: "text-xs",
   },
   lg: {
-    container: "gap-4",
-    icon: "h-16",
-    title: "text-3xl",
-    subtitle: "text-base",
+    container: "gap-2.5",
+    icon: "h-10 w-10",
+    title: "text-lg",
+    subtitle: "text-sm",
   },
   xl: {
-    container: "gap-5",
-    icon: "h-20",
-    title: "text-4xl",
-    subtitle: "text-lg",
+    container: "gap-3",
+    icon: "h-12 w-12",
+    title: "text-xl",
+    subtitle: "text-sm",
   }
 };
 
@@ -47,7 +47,7 @@ export default function BCILogo({
         <img 
           src={logoImage} 
           alt="BCI ParkShare Logo" 
-          className={cn(sizes.icon, "w-auto object-contain")}
+          className={cn(sizes.icon, "object-contain rounded-md bg-white")}
         />
       </div>
     );
@@ -57,16 +57,16 @@ export default function BCILogo({
     return (
       <div className={cn("text-center", className)} data-testid="bci-logo-text">
         <h1 className={cn(
-          "font-bold tracking-tight text-foreground",
+          "font-bold tracking-tight text-primary",
           sizes.title
         )}>
-          BCI
+          BCI ParkShare
         </h1>
         <p className={cn(
           "text-muted-foreground font-medium",
           sizes.subtitle
         )}>
-          ParkShare System
+          Spot Sharing System
         </p>
       </div>
     );
@@ -80,20 +80,20 @@ export default function BCILogo({
       <img 
         src={logoImage} 
         alt="BCI ParkShare Logo" 
-        className={cn(sizes.icon, "w-auto object-contain")}
+        className={cn(sizes.icon, "object-contain rounded-md bg-white")}
       />
       <div className="text-left">
         <h1 className={cn(
-          "font-bold tracking-tight text-foreground leading-none",
+          "font-semibold tracking-tight text-primary leading-none",
           sizes.title
         )}>
-          BCI
+          BCI ParkShare
         </h1>
         <p className={cn(
           "text-muted-foreground font-medium leading-tight",
           sizes.subtitle
         )}>
-          ParkShare System
+          Spot Sharing
         </p>
       </div>
     </div>
@@ -102,16 +102,16 @@ export default function BCILogo({
 
 export function BCIHeroLogo({ className }: { className?: string }) {
   return (
-    <div className={cn("text-center space-y-6", className)} data-testid="bci-hero-logo">
+    <div className={cn("text-center space-y-4", className)} data-testid="bci-hero-logo">
       <div className="flex justify-center">
         <img 
           src={logoImage} 
           alt="BCI ParkShare Logo" 
-          className="h-24 w-auto object-contain"
+          className="h-16 w-16 object-contain rounded-lg bg-white shadow-sm"
         />
       </div>
       <div className="space-y-1">
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+        <h1 className="text-2xl font-semibold tracking-tight text-primary">
           BCI ParkShare
         </h1>
         <p className="text-sm text-muted-foreground">
