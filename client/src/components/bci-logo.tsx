@@ -47,7 +47,7 @@ export default function BCILogo({
         <img 
           src={logoImage} 
           alt="BCI ParkShare Logo" 
-          className={cn(sizes.icon, "object-contain rounded-md bg-white")}
+          className={cn(sizes.icon, "object-contain")}
         />
       </div>
     );
@@ -80,7 +80,7 @@ export default function BCILogo({
       <img 
         src={logoImage} 
         alt="BCI ParkShare Logo" 
-        className={cn(sizes.icon, "object-contain rounded-md bg-white")}
+        className={cn(sizes.icon, "object-contain")}
       />
       <div className="text-left">
         <h1 className={cn(
@@ -107,7 +107,7 @@ export function BCIHeroLogo({ className }: { className?: string }) {
         <img 
           src={logoImage} 
           alt="BCI ParkShare Logo" 
-          className="h-16 w-16 object-contain rounded-lg bg-white shadow-sm"
+          className="h-16 w-16 object-contain"
         />
       </div>
       <div className="space-y-1">
