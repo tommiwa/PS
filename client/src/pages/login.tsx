@@ -185,11 +185,9 @@ export default function Login() {
       {/* Login Card */}
       <Card className="w-full max-w-md relative shadow-2xl border-primary/20">
         <div className="p-8 md:p-10 space-y-8">
-          {/* Logo with animation effect */}
+          {/* Logo */}
           <div className="text-center space-y-4">
-            <div className="inline-block p-4 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5">
-              <BCIHeroLogo className="mx-auto" />
-            </div>
+            <BCIHeroLogo className="mx-auto" />
             <div className="space-y-1">
               <p className="text-lg text-muted-foreground font-light">
                 Welcome to BCI ParkShare
