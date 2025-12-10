@@ -190,7 +190,7 @@ export default function Login() {
             <BCIHeroLogo className="mx-auto" />
             <div className="space-y-1">
               <p className="text-lg text-muted-foreground font-light">
-                Welcome to BCI ParkShare
+                Welcome!
               </p>
               <p className="text-sm text-muted-foreground/80">
                 Sign in to access your dashboard
