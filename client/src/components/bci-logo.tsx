@@ -57,7 +57,7 @@ export default function BCILogo({
     return (
       <div className={cn("text-center", className)} data-testid="bci-logo-text">
         <h1 className={cn(
-          "font-bold tracking-tight text-primary",
+          "font-bold tracking-tight text-foreground",
           sizes.title
         )}>
           BCI ParkShare
@@ -84,7 +84,7 @@ export default function BCILogo({
       />
       <div className="text-left">
         <h1 className={cn(
-          "font-semibold tracking-tight text-primary leading-none",
+          "font-semibold tracking-tight text-foreground leading-none",
           sizes.title
         )}>
           BCI ParkShare
@@ -111,7 +111,7 @@ export function BCIHeroLogo({ className }: { className?: string }) {
         />
       </div>
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-primary">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
           BCI ParkShare
         </h1>
         <p className="text-sm text-muted-foreground">
