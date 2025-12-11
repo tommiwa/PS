@@ -188,14 +188,9 @@ export default function Login() {
           {/* Logo */}
           <div className="text-center space-y-4">
             <BCIHeroLogo className="mx-auto" />
-            <div className="space-y-1">
-              <p className="text-lg text-muted-foreground font-light">
-                Welcome!
-              </p>
-              <p className="text-sm text-muted-foreground/80">
-                Sign in to access your dashboard
-              </p>
-            </div>
+            <p className="text-sm text-muted-foreground">
+              Sign in to continue
+            </p>
           </div>
 
           {/* Content */}

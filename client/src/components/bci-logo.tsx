@@ -114,9 +114,6 @@ export function BCIHeroLogo({ className }: { className?: string }) {
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">
           BCI ParkShare
         </h1>
-        <p className="text-sm text-muted-foreground">
-          Spot Sharing Application
-        </p>
       </div>
     </div>
   );
