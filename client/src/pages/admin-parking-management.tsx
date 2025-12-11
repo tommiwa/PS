@@ -175,7 +175,7 @@ export default function AdminParkingManagement() {
     isIndoor: false,
     isActive: true,
     isBookable: true,
-    isBciManaged: false,
+    isBciManaged: true,
     description: "",
     ownerId: null as string | null
   })
@@ -188,7 +188,7 @@ export default function AdminParkingManagement() {
     isIndoor: false,
     isActive: true,
     isBookable: true,
-    isBciManaged: false,
+    isBciManaged: true,
     description: ""
   })
 
@@ -612,7 +612,7 @@ export default function AdminParkingManagement() {
         isIndoor: false,
         isActive: true,
         isBookable: true,
-        isBciManaged: false,
+        isBciManaged: true,
         description: ""
       });
     },
@@ -2686,36 +2686,6 @@ export default function AdminParkingManagement() {
               />
               <label htmlFor="indoor" className="text-sm font-medium">Indoor Spot</label>
             </div>
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="bci-managed"
-                  checked={addSpotFormData.isBciManaged}
-                  onCheckedChange={(checked) => setAddSpotFormData(prev => ({ ...prev, isBciManaged: checked as boolean }))}
-                  data-testid="checkbox-add-spot-bci-managed"
-                />
-                <label htmlFor="bci-managed" className="text-sm font-medium">BCI Managed</label>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-4 w-4 p-0"
-                      type="button"
-                      aria-label="BCI Managed information"
-                    >
-                      <Info className="h-3 w-3 text-muted-foreground" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
-                    BCI Managed: Only admins can reassign. Personal: Owner can create listings.
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <p className="text-xs text-muted-foreground pl-6">
-                Default is Personal (unchecked) for new spots
-              </p>
-            </div>
             <div>
               <label className="text-sm font-medium">Description (Optional)</label>
               <Input
@@ -2844,31 +2814,6 @@ export default function AdminParkingManagement() {
                 data-testid="checkbox-edit-spot-bookable"
               />
               <label htmlFor="edit-bookable" className="text-sm font-medium">Bookable</label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="edit-bci-managed"
-                checked={editFormData.isBciManaged}
-                onCheckedChange={(checked) => setEditFormData(prev => ({ ...prev, isBciManaged: checked as boolean }))}
-                data-testid="checkbox-edit-spot-bci-managed"
-              />
-              <label htmlFor="edit-bci-managed" className="text-sm font-medium">BCI Managed</label>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-4 w-4 p-0"
-                    type="button"
-                    aria-label="BCI Managed information"
-                  >
-                    <Info className="h-3 w-3 text-muted-foreground" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-xs">
-                  BCI Managed: Only admins can reassign. Personal: Owner can create listings.
-                </TooltipContent>
-              </Tooltip>
             </div>
             <div>
               <label className="text-sm font-medium">Description</label>
@@ -3201,36 +3146,6 @@ export default function AdminParkingManagement() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="direct-assign-bci-managed"
-                  checked={directAssignFormData.isBciManaged}
-                  onCheckedChange={(checked) => setDirectAssignFormData(prev => ({ ...prev, isBciManaged: checked as boolean }))}
-                  data-testid="checkbox-direct-assign-bci-managed"
-                />
-                <label htmlFor="direct-assign-bci-managed" className="text-sm font-medium">BCI Managed</label>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-4 w-4 p-0"
-                      type="button"
-                      aria-label="BCI Managed information"
-                    >
-                      <Info className="h-3 w-3 text-muted-foreground" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
-                    BCI Managed: Only admins can reassign. Personal: Owner can create listings.
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <p className="text-xs text-muted-foreground pl-6">
-                Default is BCI Managed (checked) for direct assignments
-              </p>
-            </div>
             <div>
               <label className="text-sm font-medium">Notes (Optional)</label>
               <Input
@@ -3338,36 +3253,6 @@ export default function AdminParkingManagement() {
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="assign-available-bci-managed"
-                      checked={assignAvailableSpotFormData.isBciManaged}
-                      onCheckedChange={(checked) => setAssignAvailableSpotFormData(prev => ({ ...prev, isBciManaged: checked as boolean }))}
-                      data-testid="checkbox-assign-available-bci-managed"
-                    />
-                    <label htmlFor="assign-available-bci-managed" className="text-sm font-medium">BCI Managed</label>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-4 w-4 p-0"
-                          type="button"
-                          aria-label="BCI Managed information"
-                        >
-                          <Info className="h-3 w-3 text-muted-foreground" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-xs">
-                        BCI Managed: Only admins can reassign. Personal: Owner can create listings.
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                  <p className="text-xs text-muted-foreground pl-6">
-                    Default is BCI Managed (checked) for assignments
-                  </p>
                 </div>
                 <div className="flex gap-2 pt-4">
                   <Button
