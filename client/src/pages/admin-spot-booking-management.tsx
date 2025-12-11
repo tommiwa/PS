@@ -1221,43 +1221,6 @@ export default function AdminSpotBookingManagement() {
     return new Date(timestamp).toLocaleDateString();
   };
 
-  // Mutation for seeding sample bookings
-  const seedSampleBookingsMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("/api/admin/seed-sample-bookings", { method: "POST" })
-    },
-    onSuccess: (data: any) => {
-      toast({
-        title: "Sample Bookings Created",
-        description: data.message || "Successfully created sample bookings with various statuses",
-      })
-      // Invalidate relevant queries to refresh the data
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/bookings/active"] })
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/bookings/past"] })
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-activity"] })
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-availability"] })
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/bookings/pending-payments"] })
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Failed to create sample bookings",
-        description: error?.message || "An error occurred while creating sample bookings",
-        variant: "destructive",
-      })
-    }
-  })
-
-  const handleSeedSampleBookings = async () => {
-    const confirmed = await confirm({
-      title: "Create Sample Bookings",
-      description: "This will create 5 sample bookings with different statuses (confirmed, pending, cancelled, completed) for testing purposes. Continue?",
-    })
-    
-    if (confirmed) {
-      seedSampleBookingsMutation.mutate()
-    }
-  }
-
   return (
     <div className="p-6 space-y-6" data-testid="page-admin-booking-management">
       <div className="flex items-center justify-between">
@@ -1268,31 +1231,6 @@ export default function AdminSpotBookingManagement() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="outline"
-                onClick={handleSeedSampleBookings}
-                disabled={seedSampleBookingsMutation.isPending}
-                data-testid="button-seed-sample-bookings"
-              >
-                {seedSampleBookingsMutation.isPending ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <Zap className="h-4 w-4 mr-2" />
-                    Seed Sample Bookings
-                  </>
-                )}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Create sample bookings with various statuses for testing</p>
-            </TooltipContent>
-          </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button 
