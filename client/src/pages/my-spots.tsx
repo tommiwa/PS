@@ -610,10 +610,6 @@ export default function MySpots() {
             Manage your parking spaces and track your earnings.
           </p>
         </div>
-        <Button onClick={handleAddSpot} data-testid="button-add-new-spot" className="w-full sm:w-auto min-h-11">
-          <Plus className="h-4 w-4 md:h-5 md:w-5 mr-2" />
-          Add New Spot
-        </Button>
       </div>
 
       {/* Overview Stats */}
@@ -685,11 +681,8 @@ export default function MySpots() {
             </div>
           ) : userSpots.length === 0 ? (
             <div className="text-center py-8 space-y-4">
-              <div className="text-muted-foreground">No parking spots yet.</div>
-              <Button onClick={handleAddSpot} data-testid="button-add-first-spot" className="min-h-11">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Your First Spot
-              </Button>
+              <div className="text-muted-foreground">No parking spots assigned to you yet.</div>
+              <p className="text-sm text-muted-foreground">Contact your administrator to get a spot assigned.</p>
             </div>
           ) : (
             /* Spots List */
@@ -837,189 +830,6 @@ export default function MySpots() {
           )}
         </div>
       </div>
-
-      {/* Add New Spot Dialog */}
-      <Dialog open={showAddSpot} onOpenChange={setShowAddSpot}>
-        <DialogContent className="max-w-full md:max-w-md max-h-[90vh] overflow-y-auto" data-testid="dialog-add-spot">
-          <DialogHeader>
-            <DialogTitle>Add New Parking Spot</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium">Spot Number</label>
-              <Input
-                value={newSpotData.spotNumber}
-                onChange={(e) => setNewSpotData(prev => ({ ...prev, spotNumber: e.target.value }))}
-                placeholder="e.g., A-101"
-                data-testid="input-new-spot-number"
-                className="min-h-11"
-              />
-            </div>
-            <div>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-2">
-                <label className="text-sm font-medium">Location</label>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setIsCreatingCustomLocation(!isCreatingCustomLocation)}
-                  data-testid="button-toggle-custom-location"
-                  className="bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950 dark:hover:bg-blue-900 dark:text-blue-300 w-full sm:w-auto min-h-11"
-                >
-                  {isCreatingCustomLocation ? "Select Existing" : "+ Custom Location"}
-                </Button>
-              </div>
-              
-              {isCreatingCustomLocation ? (
-                <div className="space-y-3 p-3 border rounded-md">
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground">Address Search *</label>
-                    <div 
-                      ref={autocompleteContainerRef} 
-                      id="geoapify-autocomplete-container"
-                      data-testid="container-address-autocomplete"
-                      className="w-full"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Enter a full address to auto-fill location details
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground">Office *</label>
-                    <Input
-                      value={customLocationData.office}
-                      onChange={(e) => setCustomLocationData(prev => ({ ...prev, office: e.target.value }))}
-                      placeholder="e.g., Victoria"
-                      data-testid="input-custom-office"
-                      className="min-h-11"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground">Building *</label>
-                    <Input
-                      value={customLocationData.building}
-                      onChange={(e) => setCustomLocationData(prev => ({ ...prev, building: e.target.value }))}
-                      placeholder="e.g., 750 Pandora Ave"
-                      data-testid="input-custom-building"
-                      className="min-h-11"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground">Level *</label>
-                    <Input
-                      value={customLocationData.level}
-                      onChange={(e) => setCustomLocationData(prev => ({ ...prev, level: e.target.value }))}
-                      placeholder="e.g., Parking Level 1"
-                      data-testid="input-custom-level"
-                      className="min-h-11"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground">Full Address (Optional)</label>
-                    <Input
-                      value={customLocationData.address}
-                      onChange={(e) => setCustomLocationData(prev => ({ ...prev, address: e.target.value }))}
-                      placeholder="e.g., 750 Pandora Ave, Victoria, BC V8W 1N8"
-                      data-testid="input-custom-address"
-                      className="min-h-11"
-                    />
-                  </div>
-                </div>
-              ) : (
-                <Select
-                  value={newSpotData.locationId?.toString() || ""}
-                  onValueChange={(value) => setNewSpotData(prev => ({ ...prev, locationId: parseInt(value) }))}
-                  disabled={isLoadingLocations}
-                >
-                  <SelectTrigger data-testid="select-new-spot-location" className="min-h-11">
-                    <SelectValue placeholder={isLoadingLocations ? "Loading locations..." : "Select location"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {locations.map(loc => (
-                      <SelectItem key={loc.id} value={loc.id.toString()}>
-                        {loc.office} - {loc.building}, {loc.level}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-            <div>
-              <label className="text-sm font-medium">Spot Type</label>
-              <Select 
-                value={newSpotData.spotTypeId?.toString() || ""}
-                onValueChange={(value) => setNewSpotData(prev => ({ ...prev, spotTypeId: parseInt(value) }))}
-                disabled={isLoadingSpotTypes}
-              >
-                <SelectTrigger data-testid="select-new-spot-type" className="min-h-11">
-                  <SelectValue placeholder={isLoadingSpotTypes ? "Loading spot types..." : "Select spot type"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {spotTypes.map(type => (
-                    <SelectItem key={type.id} value={type.id.toString()}>
-                      {type.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="indoor"
-                checked={newSpotData.isIndoor}
-                onCheckedChange={(checked) => setNewSpotData(prev => ({ ...prev, isIndoor: checked as boolean }))}
-                data-testid="checkbox-new-spot-indoor"
-                className="min-h-11"
-              />
-              <label htmlFor="indoor" className="text-sm font-medium">Indoor Spot</label>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Description (Optional)</label>
-              <Input
-                value={newSpotData.description}
-                onChange={(e) => setNewSpotData(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Additional details..."
-                data-testid="input-new-spot-description"
-                className="min-h-11"
-              />
-            </div>
-            <div className="flex flex-col sm:flex-row gap-2 pt-4">
-              <Button
-                onClick={handleCreateSpotWithCustomLocation}
-                disabled={
-                  createSpotMutation.isPending || 
-                  createLocationMutation.isPending ||
-                  !newSpotData.spotNumber || 
-                  !newSpotData.spotTypeId ||
-                  (!isCreatingCustomLocation && !newSpotData.locationId) ||
-                  (isCreatingCustomLocation && (!customLocationData.office || !customLocationData.building || !customLocationData.level))
-                }
-                className="w-full sm:flex-1 min-h-11"
-                data-testid="button-create-spot"
-              >
-                {createSpotMutation.isPending || createLocationMutation.isPending ? "Adding..." : "Add Spot"}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowAddSpot(false)
-                  setIsCreatingCustomLocation(false)
-                  setCustomLocationData({
-                    office: "",
-                    building: "",
-                    level: "",
-                    address: ""
-                  })
-                }}
-                className="w-full sm:flex-1 min-h-11"
-                data-testid="button-cancel-new-spot"
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Edit Spot Dialog */}
       <Dialog open={showEditSpot} onOpenChange={setShowEditSpot}>
