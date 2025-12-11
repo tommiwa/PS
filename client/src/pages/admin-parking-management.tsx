@@ -1597,18 +1597,14 @@ export default function AdminParkingManagement() {
 
       {/* Main Content Tabs */}
       <Tabs value={activeSpotTab} onValueChange={setActiveSpotTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="bci-managed" data-testid="tab-bci-managed-spots" className="gap-2">
             <Building className="h-4 w-4 !text-purple-600" />
-            All BCI Managed ({allSpots.filter(spot => spot.isBciManaged).length})
+            All Spots ({allSpots.length})
           </TabsTrigger>
           <TabsTrigger value="bci-available" data-testid="tab-bci-available-spots" className="gap-2">
             <Sparkles className="h-4 w-4 !text-green-600" />
-            Available BCI ({unallocatedSpots.filter(spot => spot.isBciManaged).length})
-          </TabsTrigger>
-          <TabsTrigger value="personal" data-testid="tab-personal-spots" className="gap-2">
-            <Users className="h-4 w-4 !text-blue-600" />
-            All Personal ({allSpots.filter(spot => !spot.isBciManaged).length})
+            Available ({unallocatedSpots.length})
           </TabsTrigger>
           <TabsTrigger value="waiting" data-testid="tab-waiting-list" className="gap-2">
             <Clock className="h-4 w-4 !text-orange-600" />
@@ -1616,7 +1612,7 @@ export default function AdminParkingManagement() {
           </TabsTrigger>
         </TabsList>
 
-        {/* All BCI Managed Spots Tab */}
+        {/* All Spots Tab */}
         <TabsContent value="bci-managed" className="space-y-4">
           {/* Enhanced Filters */}
           <EnhancedFilters
@@ -1633,7 +1629,7 @@ export default function AdminParkingManagement() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>All BCI Managed Spots ({sortedSpots.length})</CardTitle>
+                <CardTitle>All Parking Spots ({sortedSpots.length})</CardTitle>
                 <div className="flex gap-2">
                   {selectedSpots.size > 0 && (
                     <>
@@ -1998,7 +1994,7 @@ export default function AdminParkingManagement() {
             </Card>
         </TabsContent>
 
-        {/* Available BCI Managed Spots Tab */}
+        {/* Available Spots Tab */}
         <TabsContent value="bci-available" className="space-y-4">
           {/* Enhanced Filters for Available Spots */}
           <EnhancedFilters
@@ -2015,7 +2011,7 @@ export default function AdminParkingManagement() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Available BCI Managed Spots ({sortedAvailableSpots.length})</CardTitle>
+                <CardTitle>Available Parking Spots ({sortedAvailableSpots.length})</CardTitle>
                 <div className="flex gap-2">
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -2313,299 +2309,6 @@ export default function AdminParkingManagement() {
                   />
                 </div>
                 </>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* All Personal Spots Tab */}
-        <TabsContent value="personal" className="space-y-4">
-          {/* Enhanced Filters */}
-          <EnhancedFilters
-            searchValue={searchTerm}
-            onSearchChange={setSearchTerm}
-            filterConfigs={parkingFilterConfigs}
-            filterValues={filterValues}
-            onFilterChange={handleFilterChange}
-            onClearFilters={handleClearFilters}
-            searchPlaceholder="Search personal spots by number or location..."
-            className="hover-elevate"
-          />
-          
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>All Personal Spots ({sortedSpots.length})</CardTitle>
-                <div className="flex gap-2">
-                  {selectedSpots.size > 0 && (
-                    <>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => toggleSpotBookabilityMutation.mutate({ 
-                              spotIds: Array.from(selectedSpots), 
-                              isBookable: true 
-                            })}
-                            disabled={toggleSpotBookabilityMutation.isPending}
-                            data-testid="button-enable-personal-spots"
-                            aria-label="Enable selected personal spots for booking"
-                          >
-                            <CheckCircle2 className="w-4 h-4 mr-2" />
-                            {t("admin.parkingManagement.enable")} ({selectedSpots.size})
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          Enable selected personal spots for booking and rental
-                        </TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => toggleSpotBookabilityMutation.mutate({ 
-                              spotIds: Array.from(selectedSpots), 
-                              isBookable: false 
-                            })}
-                            disabled={toggleSpotBookabilityMutation.isPending}
-                            data-testid="button-disable-personal-spots"
-                            aria-label="Disable selected personal spots from booking"
-                          >
-                            <AlertTriangle className="w-4 h-4 mr-2" />
-                            {t("admin.parkingManagement.disable")} ({selectedSpots.size})
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          Disable selected personal spots from booking (maintenance)
-                        </TooltipContent>
-                      </Tooltip>
-                    </>
-                  )}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button 
-                        size="sm"
-                        variant="outline" 
-                        disabled={sortedSpots.length === 0}
-                        onClick={() => {
-                          const success = quickExportParkingSpotsPDF(sortedSpots, 'Personal Spots Report', (errorMessage) => {
-                            toast({
-                              variant: "destructive",
-                              title: "Export Failed",
-                              description: errorMessage
-                            })
-                          })
-                          if (success) {
-                            toast({
-                              title: "Export Successful",
-                              description: "PDF report has been downloaded successfully"
-                            })
-                          }
-                        }}
-                        data-testid="button-export-personal-spots-pdf"
-                        aria-label="Export personal spots to PDF"
-                      >
-                        <FileText className="h-4 w-4 mr-2" />
-                        PDF
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      Export personal spots data to PDF report
-                    </TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button 
-                        size="sm"
-                        variant="outline" 
-                        disabled={sortedSpots.length === 0}
-                        onClick={() => {
-                          const success = quickExportParkingSpotsExcel(sortedSpots, 'Personal Spots Report', (errorMessage) => {
-                            toast({
-                              variant: "destructive",
-                              title: "Export Failed",
-                              description: errorMessage
-                            })
-                          })
-                          if (success) {
-                            toast({
-                              title: "Export Successful",
-                              description: "Excel report has been downloaded successfully"
-                            })
-                          }
-                        }}
-                        data-testid="button-export-personal-spots-excel"
-                        aria-label="Export personal spots to Excel"
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        Excel
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      Export personal spots data to Excel report
-                    </TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button 
-                        size="sm"
-                        onClick={() => setShowAddSpotDialog(true)}
-                        data-testid="button-add-personal-spot"
-                        aria-label="Add new personal spot"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Spot
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      Add a new personal parking spot to the system
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {sortedSpots.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <Car className="mx-auto h-12 w-12 mb-4 opacity-50" />
-                  <p>No personal spots found</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-12">
-                          <Checkbox
-                            checked={isSelectAllChecked}
-                            onCheckedChange={handleSelectAllSpots}
-                            data-testid="checkbox-select-all-personal"
-                            aria-label="Select all personal spots"
-                          />
-                        </TableHead>
-                        <SortableTableHeader
-                          column="spotNumber"
-                          currentSortColumn={sortState.column}
-                          currentSortDirection={sortState.direction}
-                          onSort={handleSort}
-                        >
-                          Spot #
-                        </SortableTableHeader>
-                        <SortableTableHeader
-                          column="locationName"
-                          currentSortColumn={sortState.column}
-                          currentSortDirection={sortState.direction}
-                          onSort={handleSort}
-                        >
-                          Location
-                        </SortableTableHeader>
-                        <SortableTableHeader
-                          column="spotTypeName"
-                          currentSortColumn={sortState.column}
-                          currentSortDirection={sortState.direction}
-                          onSort={handleSort}
-                        >
-                          Type
-                        </SortableTableHeader>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Assigned To</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {paginatedPersonalSpots.map((spot) => (
-                        <TableRow key={spot.id} data-testid={`row-personal-spot-${spot.id}`}>
-                          <TableCell>
-                            <Checkbox
-                              checked={selectedSpots.has(spot.id)}
-                              onCheckedChange={() => handleToggleSpotSelection(spot.id)}
-                              data-testid={`checkbox-select-personal-spot-${spot.id}`}
-                              aria-label={`Select personal spot ${spot.spotNumber}`}
-                            />
-                          </TableCell>
-                          <TableCell className="font-medium" data-testid={`text-spot-number-${spot.id}`}>
-                            {spot.spotNumber}
-                          </TableCell>
-                          <TableCell data-testid={`text-location-${spot.id}`}>
-                            {spot.locationName}
-                          </TableCell>
-                          <TableCell data-testid={`text-type-${spot.id}`}>
-                            {spot.spotTypeName}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-col gap-1">
-                              <Badge 
-                                variant={spot.isActive ? "default" : "secondary"}
-                                data-testid={`badge-active-status-${spot.id}`}
-                              >
-                                {spot.isActive ? "Enabled" : "Disabled"}
-                              </Badge>
-                              {spot.ownerId && (
-                                <Badge variant="outline" data-testid={`badge-assigned-${spot.id}`}>
-                                  Assigned
-                                </Badge>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell data-testid={`text-owner-${spot.id}`}>
-                            {spot.ownerId ? (
-                              allUsers.find(user => user.id === spot.ownerId)?.name || 
-                              `${allUsers.find(user => user.id === spot.ownerId)?.firstName || ''} ${allUsers.find(user => user.id === spot.ownerId)?.lastName || ''}`.trim() || 
-                              'Assigned User'
-                            ) : "-"}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEditSpot(spot)}
-                                data-testid={`button-edit-personal-spot-${spot.id}`}
-                                title="Edit Spot"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              {spot.ownerId && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleReleaseSpot(spot)}
-                                  data-testid={`button-release-personal-spot-${spot.id}`}
-                                  title="Release Spot"
-                                >
-                                  <UserMinus className="h-4 w-4" />
-                                </Button>
-                              )}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDeleteSpot(spot.id)}
-                                data-testid={`button-delete-personal-spot-${spot.id}`}
-                                title="Delete Spot"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-              {sortedSpots.length > 0 && (
-                <TablePagination
-                  totalCount={sortedSpots.length}
-                  pageSize={personalSpotsPageSize}
-                  pageIndex={personalSpotsPageIndex}
-                  onPageSizeChange={(size) => {
-                    setPersonalSpotsPageSize(size)
-                    setPersonalSpotsPageIndex(0)
-                  }}
-                  onPageIndexChange={setPersonalSpotsPageIndex}
-                />
               )}
             </CardContent>
           </Card>
