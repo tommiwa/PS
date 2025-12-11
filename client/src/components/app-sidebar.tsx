@@ -90,13 +90,6 @@ const adminCoreItems = [
     roles: ["admin"],
     tooltip: "Parking Management"
   },
-  {
-    title: "Locker Management",
-    url: "/admin/locker-management",
-    icon: Lock,
-    roles: ["admin"],
-    tooltip: "Locker Management"
-  },
 ]
 
 // Admin Operations items
