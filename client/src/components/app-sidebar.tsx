@@ -101,10 +101,6 @@ const adminOperationsItems = [
     roles: ["admin"],
     tooltip: "Booking Management"
   },
-]
-
-// Admin Analytics & Audit items
-const adminAnalyticsItems = [
   {
     title: "Audit Logs",
     url: "/admin/audits",
@@ -113,6 +109,9 @@ const adminAnalyticsItems = [
     tooltip: "Audit Logs"
   },
 ]
+
+// Admin Analytics & Audit items (empty - Reports moved to Dashboard, Audit Logs moved to Operations)
+const adminAnalyticsItems: typeof adminOperationsItems = []
 
 // Admin Configuration items
 const adminConfigurationItems = [
