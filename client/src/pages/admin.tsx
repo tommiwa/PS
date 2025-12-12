@@ -574,32 +574,6 @@ export default function Admin() {
         </div>
       </div>
 
-      {/* Scope Selector - BCI vs All Spots */}
-      <div className="bg-muted/50 rounded-lg p-4 border" data-testid="scope-selector">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex-1">
-            <h3 className="text-sm font-semibold mb-1">Viewing Context</h3>
-            <p className="text-xs text-muted-foreground">
-              {scope === 'bci' 
-                ? 'Showing metrics for BCI-managed parking spots only' 
-                : 'Showing metrics for all parking spots in the system'}
-            </p>
-          </div>
-          <Tabs value={scope} onValueChange={(value) => setScope(value as DashboardScope)} className="w-auto">
-            <TabsList className="grid w-[320px] grid-cols-2">
-              <TabsTrigger value="all" data-testid="scope-tab-all" className="gap-2">
-                <MapPin className="h-4 w-4" />
-                All Spots
-              </TabsTrigger>
-              <TabsTrigger value="bci" data-testid="scope-tab-bci" className="gap-2">
-                <Building className="h-4 w-4" />
-                BCI Managed Spots
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-      </div>
-
       {/* Key Metrics Overview */}
       <div className="space-y-6">
         {cardsVisible && (

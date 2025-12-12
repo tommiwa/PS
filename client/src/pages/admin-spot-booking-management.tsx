@@ -1329,40 +1329,6 @@ export default function AdminSpotBookingManagement() {
         </div>
       </div>
 
-      {/* Scope Selector - BCI vs All Spots */}
-      <div className="bg-muted/50 rounded-lg p-4 border" data-testid="scope-selector">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex-1">
-            <h3 className="text-sm font-semibold mb-1">Viewing Context</h3>
-            <p className="text-xs text-muted-foreground">
-              {scope === 'bci' 
-                ? 'Showing only BCI-managed parking spots and bookings' 
-                : 'Showing all parking spots and bookings in the system'}
-            </p>
-          </div>
-          <Tabs value={scope} onValueChange={(value) => setScope(value as BookingScope)} className="w-auto">
-            <TabsList className="grid w-[320px] grid-cols-2">
-              <TabsTrigger value="all" data-testid="scope-tab-all" className="gap-2">
-                <MapPin className="h-4 w-4" />
-                All Spots
-              </TabsTrigger>
-              <TabsTrigger value="bci" data-testid="scope-tab-bci" className="gap-2">
-                <Settings className="h-4 w-4" />
-                BCI Managed Spots
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-        {scope === 'bci' && (
-          <Alert className="mt-3">
-            <Info className="h-4 w-4" />
-            <AlertDescription>
-              You are viewing only BCI-managed parking spots. Switch to "All Spots" to see the complete system.
-            </AlertDescription>
-          </Alert>
-        )}
-      </div>
-
       {/* Quick Analytics Cards */}
       {cardsVisible && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
