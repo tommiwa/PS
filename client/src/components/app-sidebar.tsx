@@ -106,13 +106,6 @@ const adminOperationsItems = [
 // Admin Analytics & Audit items
 const adminAnalyticsItems = [
   {
-    title: "Reports",
-    url: "/admin/reports",
-    icon: BarChart3,
-    roles: ["admin"],
-    tooltip: "Reports & Analytics"
-  },
-  {
     title: "Audit Logs",
     url: "/admin/audits",
     icon: FileText,
