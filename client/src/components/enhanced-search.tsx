@@ -7,7 +7,7 @@ import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import { Search, X, MapPin, Car, Zap, Accessibility, DollarSign, Calendar, Clock, Filter, Building, SlidersHorizontal } from "lucide-react"
+import { Search, X, MapPin, Car, Zap, Accessibility, Calendar, Clock, Filter, SlidersHorizontal } from "lucide-react"
 
 export interface ParsedSearch {
   query: string
@@ -42,9 +42,6 @@ const SEARCH_SUGGESTIONS = [
 
 const QUICK_FILTERS = [
   { label: "Today", value: "today", icon: Calendar, type: "date", tooltip: "Filter for parking spots available today" },
-  { label: "Inside Building", value: "inside", icon: Building, type: "location", tooltip: "Filter for indoor parking spots protected from weather" },
-  { label: "BCI Managed", value: "bci_managed", icon: Building, type: "ownership", tooltip: "Filter for parking spots at 750 Pandora Ave managed by BCI" },
-  { label: "$15 or Less", value: "budget", icon: DollarSign, type: "price", tooltip: "Filter for budget-friendly parking spots $15 or less per day" },
   { label: "Electric Charging", value: "electric", icon: Zap, type: "spotType", tooltip: "Filter for electric vehicle charging stations with standard EV connectors" },
   { label: "Tesla Charger", value: "tesla_ev", icon: Zap, type: "spotType", tooltip: "Filter for Tesla-specific charging stations optimized for Tesla vehicles" },
   { label: "Accessible", value: "accessible", icon: Accessibility, type: "spotType", tooltip: "Filter for accessible parking spots designed for mobility accommodations" }
@@ -79,12 +76,6 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
         parsed.spotType = "tesla_ev"
       } else if (filterValue === "accessible") {
         parsed.spotType = "accessible"
-      } else if (filterValue === "inside") {
-        parsed.isInside = true
-      } else if (filterValue === "bci_managed") {
-        parsed.isBciManaged = true
-      } else if (filterValue === "budget") {
-        parsed.priceMax = 15
       } else if (filterValue === "750 pandora ave") {
         parsed.location = "750 pandora ave"
       }
