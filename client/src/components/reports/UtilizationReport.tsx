@@ -8,26 +8,29 @@ import type { ReportUtilizationResponse } from '@shared/schema';
 interface UtilizationReportProps {
   data: ReportUtilizationResponse | undefined;
   isLoading: boolean;
+  hideStatCards?: boolean;
 }
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
-export function UtilizationReport({ data, isLoading }: UtilizationReportProps) {
+export function UtilizationReport({ data, isLoading, hideStatCards = false }: UtilizationReportProps) {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i}>
-              <CardHeader>
-                <Skeleton className="h-4 w-24" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-8 w-20" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {!hideStatCards && (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i}>
+                <CardHeader>
+                  <Skeleton className="h-4 w-24" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-8 w-20" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
         <Card>
           <CardHeader>
             <Skeleton className="h-6 w-40" />
@@ -73,24 +76,26 @@ export function UtilizationReport({ data, isLoading }: UtilizationReportProps) {
 
   return (
     <div className="space-y-6" data-testid="utilization-report">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {usageCards.map((card) => {
-          const Icon = card.icon;
-          return (
-            <Card key={card.title} data-testid={`card-${card.title.toLowerCase().replace(/\s+/g, '-')}`}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
-                <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
-                <Icon className={`h-5 w-5 ${card.color}`} />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold" data-testid={`value-${card.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                  {card.value}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      {!hideStatCards && (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {usageCards.map((card) => {
+            const Icon = card.icon;
+            return (
+              <Card key={card.title} data-testid={`card-${card.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
+                  <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
+                  <Icon className={`h-5 w-5 ${card.color}`} />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold" data-testid={`value-${card.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                    {card.value}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
 
       {data.locationBreakdown.length > 0 && (
         <Card data-testid="card-location-breakdown">

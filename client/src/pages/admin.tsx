@@ -969,6 +969,7 @@ export default function Admin() {
             <UtilizationReport
               data={utilizationQuery.data}
               isLoading={utilizationQuery.isLoading}
+              hideStatCards
             />
           </TabsContent>
         </Tabs>
