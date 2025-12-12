@@ -577,7 +577,7 @@ export default function Admin() {
       {/* Key Metrics Overview */}
       <div className="space-y-6">
         {cardsVisible && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4" data-testid="analytics-cards">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="analytics-cards">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
@@ -658,6 +658,31 @@ export default function Admin() {
               </CardContent>
             </Card>
             
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4" />
+                  {t('analytics.avgBookingValue')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {overviewQuery.isLoading ? (
+                  <>
+                    <Skeleton className="h-8 w-16 mb-2" />
+                    <Skeleton className="h-4 w-16" />
+                  </>
+                ) : overviewQuery.error ? (
+                  <SectionError title="Booking Value" onRetry={() => queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-overview'] })} />
+                ) : (
+                  <>
+                    <div className="text-2xl font-bold">
+                      ${overviewQuery.data?.averageBookingValue || 0}
+                    </div>
+                    <p className="text-xs text-muted-foreground">{t('analytics.perBooking')}</p>
+                  </>
+                )}
+              </CardContent>
+            </Card>
           </div>
         )}
 
