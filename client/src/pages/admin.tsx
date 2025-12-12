@@ -746,17 +746,11 @@ export default function Admin() {
         )}
 
         {/* Utilization Section */}
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <BarChart3 className="h-5 w-5" />
-            Utilization
-          </h2>
-          <UtilizationReport
-            data={utilizationQuery.data}
-            isLoading={utilizationQuery.isLoading}
-            hideStatCards
-          />
-        </div>
+        <UtilizationReport
+          data={utilizationQuery.data}
+          isLoading={utilizationQuery.isLoading}
+          hideStatCards
+        />
       </div>
     </div>
   )

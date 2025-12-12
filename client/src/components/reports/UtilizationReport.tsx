@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import { Layers, MapPin, ParkingSquare, TrendingUp } from 'lucide-react';
+import { BarChart3, Layers, MapPin, ParkingSquare, TrendingUp } from 'lucide-react';
 import type { ReportUtilizationResponse } from '@shared/schema';
 
 interface UtilizationReportProps {
@@ -180,7 +180,10 @@ export function UtilizationReport({ data, isLoading, hideStatCards = false }: Ut
       {data.dailyOccupancy.length > 0 && (
         <Card data-testid="card-daily-occupancy">
           <CardHeader>
-            <CardTitle>Daily Occupancy Trend</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              Daily Occupancy Trend
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
