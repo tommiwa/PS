@@ -199,18 +199,18 @@ export function DashboardStats({ userRole, onCardClick }: DashboardStatsProps) {
             description: `${renterStats.thisMonthBookings} booking${renterStats.thisMonthBookings !== 1 ? 's' : ''}`
           },
           {
-            id: "favorite-locations",
-            title: "Favorite Locations",
-            value: renterStats.favoriteLocations,
-            icon: createColorfulIcon(MapPin, "bg-red-500", "Location-based metrics - shows geographic preferences and usage"),
-            description: "Unique locations"
+            id: "year-bookings",
+            title: "Past Year Bookings",
+            value: renterStats.pastYearBookings,
+            icon: createColorfulIcon(Clock, "bg-blue-500", "Annual booking metrics - tracks your parking usage over the past year"),
+            description: "Last 12 months"
           },
           {
-            id: "booking-history",
-            title: "Booking History",
-            value: renterStats.totalBookings,
-            icon: createColorfulIcon(Clock, "bg-yellow-500", "Time-based metrics - tracks schedules and availability patterns"),
-            description: "Total bookings"
+            id: "year-spent",
+            title: "Past Year Spent",
+            value: formatCurrency(renterStats.pastYearSpent),
+            icon: createColorfulIcon(Car, "bg-green-500", "Annual spending metrics - shows your total parking expenses over the past year"),
+            description: `${renterStats.pastYearBookings} booking${renterStats.pastYearBookings !== 1 ? 's' : ''}`
           }
         ]
       default:
@@ -293,10 +293,10 @@ export function DashboardStats({ userRole, onCardClick }: DashboardStatsProps) {
         return `Your current active parking reservations. ${baseMessage}. Manage your bookings and view details`
       case "month-spent":
         return `Total amount you've spent on parking this month. ${baseMessage}. Track your parking expenses`
-      case "favorite-locations":
-        return `Number of parking locations you've saved as favorites. ${baseMessage}. Quick access to preferred spots`
-      case "booking-history":
-        return `Total number of parking bookings you've made historically. ${baseMessage}. View your complete booking record`
+      case "year-bookings":
+        return `Total parking bookings you've made in the past 12 months. ${baseMessage}. View your annual usage patterns`
+      case "year-spent":
+        return `Total amount you've spent on parking over the past year. ${baseMessage}. Track your annual expenses`
       case "error-state":
         return "There was an error loading dashboard statistics. Please refresh the page or contact support if the problem persists"
       default:

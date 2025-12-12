@@ -460,37 +460,6 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
                     </div>
                   </CardContent>
                 </Card>
-
-                {/* Top Locations */}
-                <Card data-testid="card-top-locations">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <MapPin className="h-5 w-5 text-primary" />
-                      Top Locations
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {renterStatsQuery.data.topLocations.length > 0 ? (
-                      <div className="space-y-4">
-                        {renterStatsQuery.data.topLocations.map((location, index) => (
-                          <div key={location.locationId} className="flex items-center justify-between p-3 rounded-lg bg-muted/50" data-testid={`location-${index}`}>
-                            <div className="flex-1">
-                              <div className="font-medium">{location.locationName}</div>
-                              <div className="text-sm text-muted-foreground">
-                                {location.bookingsCount} booking{location.bookingsCount !== 1 ? 's' : ''} • ${location.totalSpent.toFixed(2)} total
-                              </div>
-                            </div>
-                            <Badge variant="outline" className="ml-2">
-                              #{index + 1}
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-muted-foreground text-center py-8">No booking history yet</p>
-                    )}
-                  </CardContent>
-                </Card>
               </>
             ) : null}
           </div>

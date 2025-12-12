@@ -2508,31 +2508,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return total + parseFloat(booking.totalAmount.toString());
       }, 0);
 
-      // Calculate Favorite Locations (top locations by booking count)
-      const locationCounts = new Map<string, number>();
-      for (const booking of allBookings) {
-        const spot = await storage.getParkingSpot(booking.spotId);
-        if (spot && spot.locationId) {
-          const location = await storage.getLocation(spot.locationId);
-          if (location) {
-            const locationKey = location.id.toString();
-            locationCounts.set(locationKey, (locationCounts.get(locationKey) || 0) + 1);
-          }
-        }
-      }
+      // Calculate Past Year Spent and Bookings Count (last 12 months)
+      const oneYearAgo = new Date(now);
+      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+      const oneYearAgoStr = oneYearAgo.toISOString().split('T')[0];
       
-      const favoriteLocations = locationCounts.size;
+      const pastYearBookings = allBookings.filter(booking => {
+        const bookingDate = booking.bookingDate.toString();
+        return bookingDate >= oneYearAgoStr && 
+               (booking.paymentStatus === 'paid' || booking.paymentStatus === 'received');
+      });
 
-      // Calculate Total Bookings
-      const totalBookings = allBookings.length;
+      const pastYearSpent = pastYearBookings.reduce((total, booking) => {
+        return total + parseFloat(booking.totalAmount.toString());
+      }, 0);
 
       // Return renter dashboard statistics
       res.json({
         activeBookings,
         thisMonthSpent: Number(thisMonthSpent.toFixed(2)),
         thisMonthBookings: thisMonthBookings.length,
-        favoriteLocations,
-        totalBookings,
+        pastYearSpent: Number(pastYearSpent.toFixed(2)),
+        pastYearBookings: pastYearBookings.length,
         generatedAt: now.toISOString()
       });
     } catch (error) {

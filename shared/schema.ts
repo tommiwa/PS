@@ -637,8 +637,8 @@ export interface RenterDashboardStatsResponse {
   activeBookings: number;
   thisMonthSpent: number;
   thisMonthBookings: number;
-  favoriteLocations: number;
-  totalBookings: number;
+  pastYearSpent: number;
+  pastYearBookings: number;
   generatedAt: string;
 }
 
