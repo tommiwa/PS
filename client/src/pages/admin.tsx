@@ -44,8 +44,10 @@ import type {
   AnalyticsRevenueResponse, 
   AnalyticsTopPerformersResponse,
   AnalyticsIssuesResponse,
-  AnalyticsUsageResponse
+  AnalyticsUsageResponse,
+  ReportUtilizationResponse
 } from "@shared/schema"
+import { UtilizationReport } from '@/components/reports/UtilizationReport'
 import { useCardsVisibility } from "@/hooks/use-cards-visibility"
 import { useLanguage } from "@/hooks/use-language"
 
@@ -128,6 +130,62 @@ export default function Admin() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Helper to get date range for utilization query
+  const getDateRange = (range: string) => {
+    const toDate = new Date().toISOString().split('T')[0];
+    let fromDate: string;
+    
+    switch (range) {
+      case 'last-7-days': {
+        const date = new Date();
+        date.setDate(date.getDate() - 7);
+        fromDate = date.toISOString().split('T')[0];
+        break;
+      }
+      case 'last-30-days': {
+        const date = new Date();
+        date.setDate(date.getDate() - 30);
+        fromDate = date.toISOString().split('T')[0];
+        break;
+      }
+      case 'last-3-months': {
+        const date = new Date();
+        date.setMonth(date.getMonth() - 3);
+        fromDate = date.toISOString().split('T')[0];
+        break;
+      }
+      case 'last-year': {
+        const date = new Date();
+        date.setFullYear(date.getFullYear() - 1);
+        fromDate = date.toISOString().split('T')[0];
+        break;
+      }
+      default: {
+        const date = new Date();
+        date.setDate(date.getDate() - 30);
+        fromDate = date.toISOString().split('T')[0];
+      }
+    }
+    return { fromDate, toDate };
+  };
+
+  const { fromDate: utilizationFromDate, toDate: utilizationToDate } = getDateRange(dateRange);
+
+  const utilizationQuery = useQuery<ReportUtilizationResponse>({
+    queryKey: ['/api/admin/reports/utilization', utilizationFromDate, utilizationToDate, scope],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        from: utilizationFromDate,
+        to: utilizationToDate,
+        scope: scope
+      });
+      const response = await fetch(`/api/admin/reports/utilization?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch utilization report');
+      return response.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
   // Check if any query is loading
   const isLoadingAnalytics = overviewQuery.isLoading || revenueQuery.isLoading || 
                    topPerformersQuery.isLoading || issuesQuery.isLoading || 
@@ -140,6 +198,7 @@ export default function Admin() {
     queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-top-performers'] });
     queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-issues'] });
     queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-usage'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/admin/reports/utilization'] });
   };
 
   // Handle refresh all admin data
@@ -687,9 +746,13 @@ export default function Admin() {
         )}
 
         <Tabs defaultValue="revenue" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="revenue" data-testid="tab-revenue-analysis">{t('analytics.tabs.revenueAnalysis')}</TabsTrigger>
             <TabsTrigger value="usage" data-testid="tab-usage-patterns">{t('analytics.tabs.usagePatterns')}</TabsTrigger>
+            <TabsTrigger value="utilization" data-testid="tab-utilization">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Utilization
+            </TabsTrigger>
           </TabsList>
 
           {/* Revenue Analysis Tab */}
@@ -899,6 +962,14 @@ export default function Admin() {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          {/* Utilization Tab */}
+          <TabsContent value="utilization" className="space-y-4">
+            <UtilizationReport
+              data={utilizationQuery.data}
+              isLoading={utilizationQuery.isLoading}
+            />
           </TabsContent>
         </Tabs>
       </div>
