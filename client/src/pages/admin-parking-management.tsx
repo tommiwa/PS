@@ -910,6 +910,20 @@ export default function AdminParkingManagement() {
     return sortedSpots.slice(startIndex, endIndex)
   }, [sortedSpots, personalSpotsPageIndex, personalSpotsPageSize])
 
+  // Derived data for Assigned Spots tab (spots with owners)
+  const assignedSpots = useMemo(() => {
+    return allSpots.filter(spot => spot.ownerId).sort((a, b) => 
+      a.spotNumber.localeCompare(b.spotNumber)
+    )
+  }, [allSpots])
+
+  // Derived data for Bookable Spots tab (spots enabled for booking)
+  const bookableSpots = useMemo(() => {
+    return allSpots.filter(spot => spot.isBookable).sort((a, b) => 
+      a.spotNumber.localeCompare(b.spotNumber)
+    )
+  }, [allSpots])
+
   // Page clamping useEffects to prevent invalid page indices
   // Clamp All Spots page
   useEffect(() => {
@@ -1248,7 +1262,7 @@ export default function AdminParkingManagement() {
             <Card 
               data-testid="card-assigned-spots" 
               className="hover-elevate cursor-pointer active-elevate-2"
-              onClick={() => setActiveSpotTab("bci-managed")}
+              onClick={() => setActiveSpotTab("bci-assigned")}
             >
               <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Assigned Spots</CardTitle>
@@ -1258,7 +1272,7 @@ export default function AdminParkingManagement() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold" data-testid="stat-assigned-spots">
-                  {allSpots.length - unallocatedSpots.length}
+                  {allSpots.filter(spot => spot.ownerId).length}
                 </div>
                 <p className="text-xs text-purple-600">Spots with assigned owners</p>
               </CardContent>
@@ -1274,7 +1288,7 @@ export default function AdminParkingManagement() {
             <Card 
               data-testid="card-bookable-spots" 
               className="hover-elevate cursor-pointer active-elevate-2"
-              onClick={() => setActiveSpotTab("bci-managed")}
+              onClick={() => setActiveSpotTab("bci-bookable")}
             >
               <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Bookable Spots</CardTitle>
@@ -1299,14 +1313,22 @@ export default function AdminParkingManagement() {
 
       {/* Main Content Tabs */}
       <Tabs value={activeSpotTab} onValueChange={setActiveSpotTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="bci-managed" data-testid="tab-bci-managed-spots" className="gap-2">
-            <Building className="h-4 w-4 !text-purple-600" />
-            All Spots ({allSpots.length})
+            <Car className="h-4 w-4 !text-blue-600" />
+            All ({allSpots.length})
           </TabsTrigger>
           <TabsTrigger value="bci-available" data-testid="tab-bci-available-spots" className="gap-2">
             <Sparkles className="h-4 w-4 !text-green-600" />
             Available ({unallocatedSpots.length})
+          </TabsTrigger>
+          <TabsTrigger value="bci-assigned" data-testid="tab-bci-assigned-spots" className="gap-2">
+            <Users className="h-4 w-4 !text-purple-600" />
+            Assigned ({assignedSpots.length})
+          </TabsTrigger>
+          <TabsTrigger value="bci-bookable" data-testid="tab-bci-bookable-spots" className="gap-2">
+            <CheckCircle2 className="h-4 w-4 !text-orange-600" />
+            Bookable ({bookableSpots.length})
           </TabsTrigger>
         </TabsList>
 
@@ -1504,7 +1526,15 @@ export default function AdminParkingManagement() {
                             currentSortDirection={sortState.direction}
                             onSort={handleSort}
                           >
-{t("admin.parkingManagement.spotNumber")}
+                            <div className="flex items-center gap-1">
+                              {t("admin.parkingManagement.spotNumber")}
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent>Unique identifier for the parking spot</TooltipContent>
+                              </Tooltip>
+                            </div>
                           </SortableTableHeader>
                           <SortableTableHeader
                             column="location"
@@ -1512,7 +1542,15 @@ export default function AdminParkingManagement() {
                             currentSortDirection={sortState.direction}
                             onSort={handleSort}
                           >
-{t("admin.parkingManagement.location")}
+                            <div className="flex items-center gap-1">
+                              {t("admin.parkingManagement.location")}
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent>Building and parking level where spot is located</TooltipContent>
+                              </Tooltip>
+                            </div>
                           </SortableTableHeader>
                           <SortableTableHeader
                             column="spotType"
@@ -1520,7 +1558,15 @@ export default function AdminParkingManagement() {
                             currentSortDirection={sortState.direction}
                             onSort={handleSort}
                           >
-{t("admin.parkingManagement.type")}
+                            <div className="flex items-center gap-1">
+                              {t("admin.parkingManagement.type")}
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent>Standard, Accessible, Reserved (C-Suite), or EV Charging</TooltipContent>
+                              </Tooltip>
+                            </div>
                           </SortableTableHeader>
                           <SortableTableHeader
                             column="isActive"
@@ -1528,7 +1574,15 @@ export default function AdminParkingManagement() {
                             currentSortDirection={sortState.direction}
                             onSort={handleSort}
                           >
-{t("admin.parkingManagement.status")}
+                            <div className="flex items-center gap-1">
+                              {t("admin.parkingManagement.status")}
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent>Active = in use, Bookable = can be shared/booked</TooltipContent>
+                              </Tooltip>
+                            </div>
                           </SortableTableHeader>
                           <SortableTableHeader
                             column="ownerId"
@@ -1536,7 +1590,15 @@ export default function AdminParkingManagement() {
                             currentSortDirection={sortState.direction}
                             onSort={handleSort}
                           >
-{t("admin.parkingManagement.assignedTo")}
+                            <div className="flex items-center gap-1">
+                              {t("admin.parkingManagement.assignedTo")}
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent>Employee assigned to this spot, or Workplace Services</TooltipContent>
+                              </Tooltip>
+                            </div>
                           </SortableTableHeader>
                           <SortableTableHeader
                             column="isBookable"
@@ -1544,7 +1606,15 @@ export default function AdminParkingManagement() {
                             currentSortDirection={sortState.direction}
                             onSort={handleSort}
                           >
-{t("admin.parkingManagement.assignmentStatus")}
+                            <div className="flex items-center gap-1">
+                              {t("admin.parkingManagement.assignmentStatus")}
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent>Assigned = has owner, Available = managed by Workplace Services</TooltipContent>
+                              </Tooltip>
+                            </div>
                           </SortableTableHeader>
                           <SortableTableHeader
                             column="isBciManaged"
@@ -1552,7 +1622,15 @@ export default function AdminParkingManagement() {
                             currentSortDirection={sortState.direction}
                             onSort={handleSort}
                           >
-                            Management Type
+                            <div className="flex items-center gap-1">
+                              Management Type
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent>BCI = company-managed, Personal = employee-owned spots</TooltipContent>
+                              </Tooltip>
+                            </div>
                           </SortableTableHeader>
                           <TableHead>{t("admin.parkingManagement.actions")}</TableHead>
                         </TableRow>
@@ -2007,6 +2085,260 @@ export default function AdminParkingManagement() {
                   />
                 </div>
                 </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Assigned Spots Tab */}
+        <TabsContent value="bci-assigned" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-purple-600" />
+                  Assigned Parking Spots ({assignedSpots.length})
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {assignedSpots.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground" data-testid="text-no-assigned-spots">
+                  <Users className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                  <p>No spots are currently assigned to employees.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table data-testid="table-assigned-spots">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>
+                          <div className="flex items-center gap-1">
+                            Spot #
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent>Unique identifier for the parking spot</TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TableHead>
+                        <TableHead>
+                          <div className="flex items-center gap-1">
+                            Location
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent>Building and parking level where spot is located</TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TableHead>
+                        <TableHead>
+                          <div className="flex items-center gap-1">
+                            Assigned To
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent>Employee currently assigned to this spot</TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TableHead>
+                        <TableHead>
+                          <div className="flex items-center gap-1">
+                            Type
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent>Spot type: Standard, Accessible, Reserved (C-Suite), or EV Charging</TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TableHead>
+                        <TableHead>
+                          <div className="flex items-center gap-1">
+                            Status
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent>Active = in use, Bookable = can be shared/booked by others</TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {assignedSpots.map((spot) => (
+                        <TableRow key={spot.id} data-testid={`row-assigned-spot-${spot.id}`}>
+                          <TableCell className="font-medium">{spot.spotNumber}</TableCell>
+                          <TableCell>
+                            {spot.locationName}
+                            {spot.isIndoor && <Badge variant="outline" className="ml-2">Indoor</Badge>}
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-medium">
+                              {allUsers.find(user => user.id === spot.ownerId)?.name || 
+                               `${allUsers.find(user => user.id === spot.ownerId)?.firstName || ''} ${allUsers.find(user => user.id === spot.ownerId)?.lastName || ''}`.trim() || 
+                               'Assigned User'}
+                            </span>
+                          </TableCell>
+                          <TableCell>{getSpotTypeBadge(spot.spotTypeName)}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              {spot.isActive !== false ? (
+                                <Badge variant="secondary" className="bg-green-50 text-green-700 border-green-200">Active</Badge>
+                              ) : (
+                                <Badge variant="secondary" className="bg-red-50 text-red-700 border-red-200">Inactive</Badge>
+                              )}
+                              {spot.isBookable ? (
+                                <Badge variant="outline">Bookable</Badge>
+                              ) : (
+                                <Badge variant="secondary" className="bg-gray-50 text-gray-700 border-gray-200">Not Bookable</Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="sm" onClick={() => handleEditSpot(spot)} title="Edit Spot">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => handleReleaseSpot(spot)} title="Release Spot">
+                                <UserMinus className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Bookable Spots Tab */}
+        <TabsContent value="bci-bookable" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-orange-600" />
+                  Bookable Parking Spots ({bookableSpots.length})
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {bookableSpots.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground" data-testid="text-no-bookable-spots">
+                  <CheckCircle2 className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                  <p>No spots are currently enabled for booking.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table data-testid="table-bookable-spots">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>
+                          <div className="flex items-center gap-1">
+                            Spot #
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent>Unique identifier for the parking spot</TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TableHead>
+                        <TableHead>
+                          <div className="flex items-center gap-1">
+                            Location
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent>Building and parking level where spot is located</TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TableHead>
+                        <TableHead>
+                          <div className="flex items-center gap-1">
+                            Owner
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent>Assigned employee, or Workplace Services if unassigned</TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TableHead>
+                        <TableHead>
+                          <div className="flex items-center gap-1">
+                            Type
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent>Spot type: Standard, Accessible, Reserved (C-Suite), or EV Charging</TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TableHead>
+                        <TableHead>
+                          <div className="flex items-center gap-1">
+                            Assignment
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent>Assigned = has an owner, Available = managed by Workplace Services</TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {bookableSpots.map((spot) => (
+                        <TableRow key={spot.id} data-testid={`row-bookable-spot-${spot.id}`}>
+                          <TableCell className="font-medium">{spot.spotNumber}</TableCell>
+                          <TableCell>
+                            {spot.locationName}
+                            {spot.isIndoor && <Badge variant="outline" className="ml-2">Indoor</Badge>}
+                          </TableCell>
+                          <TableCell>
+                            {spot.ownerId ? (
+                              <span className="font-medium">
+                                {allUsers.find(user => user.id === spot.ownerId)?.name || 
+                                 `${allUsers.find(user => user.id === spot.ownerId)?.firstName || ''} ${allUsers.find(user => user.id === spot.ownerId)?.lastName || ''}`.trim() || 
+                                 'Assigned User'}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">Workplace Services</span>
+                            )}
+                          </TableCell>
+                          <TableCell>{getSpotTypeBadge(spot.spotTypeName)}</TableCell>
+                          <TableCell>
+                            {spot.ownerId ? (
+                              <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200">Assigned</Badge>
+                            ) : (
+                              <Badge variant="outline">Available</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="sm" onClick={() => handleEditSpot(spot)} title="Edit Spot">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               )}
             </CardContent>
           </Card>
