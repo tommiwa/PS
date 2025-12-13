@@ -1616,22 +1616,6 @@ export default function AdminParkingManagement() {
                               </Tooltip>
                             </div>
                           </SortableTableHeader>
-                          <SortableTableHeader
-                            column="isBciManaged"
-                            currentSortColumn={sortState.column}
-                            currentSortDirection={sortState.direction}
-                            onSort={handleSort}
-                          >
-                            <div className="flex items-center gap-1">
-                              Management Type
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-                                </TooltipTrigger>
-                                <TooltipContent>BCI = company-managed, Personal = employee-owned spots</TooltipContent>
-                              </Tooltip>
-                            </div>
-                          </SortableTableHeader>
                           <TableHead>{t("admin.parkingManagement.actions")}</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -1686,26 +1670,6 @@ export default function AdminParkingManagement() {
                               ) : (
                                 <Badge variant="outline">{t("admin.parkingManagement.available")}</Badge>
                               )}
-                            </TableCell>
-                            <TableCell data-testid={`text-spot-management-type-${spot.id}`}>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  {spot.isBciManaged ? (
-                                    <Badge variant="secondary" className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100">
-                                      BCI Managed
-                                    </Badge>
-                                  ) : (
-                                    <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100">
-                                      Personal
-                                    </Badge>
-                                  )}
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  {spot.isBciManaged 
-                                    ? "BCI Managed: Only admins can reassign. Personal: Owner can create listings."
-                                    : "Personal: Owner can create listings and manage availability."}
-                                </TooltipContent>
-                              </Tooltip>
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center justify-end gap-1">
