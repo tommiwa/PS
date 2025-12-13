@@ -18,7 +18,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { TablePagination } from "@/components/shared/TablePagination"
 import { 
   Users, Clock, ArrowRight, RefreshCw, Trash2, Download, FileText,
-  Eye, EyeOff, AlertTriangle, Timer, Target, UserPlus, Plus
+  Eye, EyeOff, AlertTriangle, Timer, Target, UserPlus, Plus, XCircle
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -135,6 +135,7 @@ export default function AdminWaitingList() {
     total: allWaitingList?.length || 0,
     active: activeWaitingList?.length || 0,
     assigned: allWaitingList?.filter(entry => entry.status === "assigned").length || 0,
+    cancelled: allWaitingList?.filter(entry => entry.status === "cancelled").length || 0,
     highPriority: activeWaitingList?.filter(entry => entry.priority === 1).length || 0,
     mediumPriority: activeWaitingList?.filter(entry => entry.priority === 2).length || 0,
     lowPriority: activeWaitingList?.filter(entry => entry.priority === 3).length || 0,
@@ -435,7 +436,7 @@ export default function AdminWaitingList() {
       </div>
 
       {cardsVisible && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-3">
           <Card data-testid="card-active-waiting">
             <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Requests</CardTitle>
@@ -481,20 +482,6 @@ export default function AdminWaitingList() {
             </CardContent>
           </Card>
 
-          <Card data-testid="card-assigned-total">
-            <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Assigned</CardTitle>
-              <div className="rounded-full border-2 border-green-400 p-2">
-                <Target className="h-4 w-4 text-green-600" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold" data-testid="stat-assigned">
-                {waitingListMetrics.assigned}
-              </div>
-              <p className="text-xs text-green-600">Successfully assigned</p>
-            </CardContent>
-          </Card>
         </div>
       )}
 
