@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { SortableTableHeader } from "@/components/ui/sortable-table-header"
 import { EnhancedFilters, type FilterConfig, type FilterValues } from "@/components/ui/enhanced-filters"
 import { Badge } from "@/components/ui/badge"
@@ -389,7 +390,14 @@ export function AdminUsersTable({
                   currentSortDirection={sortState.direction}
                   onSort={handleSort}
                 >
-                  {t("admin.spots")}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="cursor-help">{t("admin.spots")}</span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Number of parking spots assigned to this user</p>
+                    </TooltipContent>
+                  </Tooltip>
                 </SortableTableHeader>
                 <SortableTableHeader
                   column="renterBookingsCount"
@@ -397,7 +405,14 @@ export function AdminUsersTable({
                   currentSortDirection={sortState.direction}
                   onSort={handleSort}
                 >
-                  As Renter
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="cursor-help">As Renter</span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Total bookings made by this user (renting spots from others)</p>
+                    </TooltipContent>
+                  </Tooltip>
                 </SortableTableHeader>
                 <SortableTableHeader
                   column="ownerBookingsCount"
@@ -405,7 +420,14 @@ export function AdminUsersTable({
                   currentSortDirection={sortState.direction}
                   onSort={handleSort}
                 >
-                  As Owner
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="cursor-help">As Owner</span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Total bookings received on this user's spots (rented by others)</p>
+                    </TooltipContent>
+                  </Tooltip>
                 </SortableTableHeader>
                 <SortableTableHeader
                   column="status"
