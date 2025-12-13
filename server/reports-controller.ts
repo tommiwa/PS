@@ -271,7 +271,7 @@ export async function getReportUtilization(req: Request, res: Response) {
       
       dailyOccupancy.push({
         date: dateStr,
-        totalSpots: spots.length,
+        totalSpots: bookableSpots,
         occupiedSpots: allocatedSpots,
         availableForSharing,
         bookedSpots
