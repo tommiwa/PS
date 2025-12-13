@@ -131,19 +131,22 @@ export default function AdminWaitingList() {
     },
   })
 
+  // Get active entries from allWaitingList for consistent metrics
+  const activeEntries = allWaitingList?.filter(entry => entry.status === "active") || [];
+  
   const waitingListMetrics = {
     total: allWaitingList?.length || 0,
-    active: activeWaitingList?.length || 0,
+    active: activeEntries.length,
     assigned: allWaitingList?.filter(entry => entry.status === "assigned").length || 0,
     cancelled: allWaitingList?.filter(entry => entry.status === "cancelled").length || 0,
-    highPriority: activeWaitingList?.filter(entry => entry.priority === 1).length || 0,
-    mediumPriority: activeWaitingList?.filter(entry => entry.priority === 2).length || 0,
-    lowPriority: activeWaitingList?.filter(entry => entry.priority === 3).length || 0,
-    averageWaitTime: activeWaitingList && activeWaitingList.length > 0 
-      ? Math.round(activeWaitingList.reduce((sum, entry) => {
+    highPriority: activeEntries.filter(entry => entry.priority === 1).length,
+    mediumPriority: activeEntries.filter(entry => entry.priority === 2).length,
+    lowPriority: activeEntries.filter(entry => entry.priority === 3).length,
+    averageWaitTime: activeEntries.length > 0 
+      ? Math.round(activeEntries.reduce((sum, entry) => {
           const daysSinceEnrollment = Math.floor((Date.now() - new Date(entry.enrolledDate).getTime()) / (1000 * 60 * 60 * 24));
           return sum + daysSinceEnrollment;
-        }, 0) / activeWaitingList.length)
+        }, 0) / activeEntries.length)
       : 0
   }
 
