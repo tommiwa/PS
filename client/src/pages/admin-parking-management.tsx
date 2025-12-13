@@ -32,14 +32,14 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { TablePagination } from "@/components/shared/TablePagination"
 import { 
   Users, Car, Clock, AlertTriangle, TrendingUp, Plus, 
-  ListOrdered, CalendarDays, UserPlus, ArrowRight,
+  ListOrdered, CalendarDays, UserPlus,
   Timer, Target, CheckCircle2, Search, Filter,
   Zap, Accessibility, Building, MoreHorizontal, Info, RefreshCw,
   Trash2, Edit, UserMinus, UserCheck, Download, FileText,
   Eye, EyeOff, Layers, Sparkles
 } from "lucide-react"
-import type { WaitingList, ParkingSpot, ParkingSpotWithUser, SpotType, Location, SpotTypeTable } from "@shared/schema"
-import { quickExportParkingSpotsPDF, quickExportParkingSpotsExcel, quickExportWaitingListPDF, quickExportWaitingListExcel } from "@/utils/export-utils"
+import type { ParkingSpot, ParkingSpotWithUser, SpotType, Location, SpotTypeTable } from "@shared/schema"
+import { quickExportParkingSpotsPDF, quickExportParkingSpotsExcel } from "@/utils/export-utils"
 
 // Standard parking locations (preferred for new spots)
 const STANDARD_PARKING_LOCATIONS = [
@@ -55,10 +55,6 @@ export default function AdminParkingManagement() {
   const [filterValues, setFilterValues] = useState<FilterValues>({})
   const [availableSpotsSearchTerm, setAvailableSpotsSearchTerm] = useState("")
   const [availableSpotsFilterValues, setAvailableSpotsFilterValues] = useState<FilterValues>({})
-  const [waitingListSearchTerm, setWaitingListSearchTerm] = useState("")
-  const [waitingListFilterValues, setWaitingListFilterValues] = useState<FilterValues>({})
-  const [selectedWaitingListItem, setSelectedWaitingListItem] = useState<string | null>(null)
-  const [showAssignDialog, setShowAssignDialog] = useState(false)
   const [showAddSpotDialog, setShowAddSpotDialog] = useState(false)
   const [showEditSpotDialog, setShowEditSpotDialog] = useState(false)
   const [showAddToWaitingDialog, setShowAddToWaitingDialog] = useState(false)
@@ -127,9 +123,6 @@ export default function AdminParkingManagement() {
   const [availableSpotsPageIndex, setAvailableSpotsPageIndex] = useState(0)
   const [availableSpotsPageSize, setAvailableSpotsPageSize] = useState(10)
 
-  // Pagination state for Waiting List
-  const [waitingListPageIndex, setWaitingListPageIndex] = useState(0)
-  const [waitingListPageSize, setWaitingListPageSize] = useState(25)
 
   // Pagination state for Personal Spots
   const [personalSpotsPageIndex, setPersonalSpotsPageIndex] = useState(0)
@@ -292,15 +285,6 @@ export default function AdminParkingManagement() {
     dailyRate: ""
   })
   
-  // Fetch waiting list data for metrics
-  const { data: allWaitingList, isLoading: isLoadingWaitingList } = useQuery<WaitingList[]>({
-    queryKey: ["/api/waiting-list"],
-  });
-
-  const { data: activeWaitingList, isLoading: isLoadingActiveWaitingList } = useQuery<WaitingList[]>({
-    queryKey: ["/api/waiting-list/active"],
-  });
-
   // Fetch unallocated spots
   const { data: unallocatedSpots = [] } = useQuery<ParkingSpotWithUser[]>({
     queryKey: ["/api/admin/unallocated-spots"],
@@ -337,94 +321,6 @@ export default function AdminParkingManagement() {
   }>>({
     queryKey: [`/api/admin/search-users?query=${encodeURIComponent(debouncedUserSearchQuery)}`],
     enabled: debouncedUserSearchQuery.length >= 3,
-  });
-
-  // Calculate waiting list metrics
-  const waitingListMetrics = {
-    total: allWaitingList?.length || 0,
-    active: activeWaitingList?.length || 0,
-    assigned: allWaitingList?.filter(entry => entry.status === "assigned").length || 0,
-    // Priority is numeric: 1=high, 2=medium, 3=low
-    highPriority: activeWaitingList?.filter(entry => entry.priority === 1).length || 0,
-    mediumPriority: activeWaitingList?.filter(entry => entry.priority === 2).length || 0,
-    lowPriority: activeWaitingList?.filter(entry => entry.priority === 3).length || 0,
-    averageWaitTime: activeWaitingList && activeWaitingList.length > 0 
-      ? Math.round(activeWaitingList.reduce((sum, entry) => {
-          const daysSinceEnrollment = Math.floor((Date.now() - new Date(entry.enrolledDate).getTime()) / (1000 * 60 * 60 * 24));
-          return sum + daysSinceEnrollment;
-        }, 0) / activeWaitingList.length)
-      : 0
-  };
-
-  // Filter waiting list - show all waiting list entries, not just active (keeping this for backwards compatibility)
-  const filteredWaitingList = allWaitingList?.filter(item => {
-    const matchesSearch = item.userName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.userEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.reason?.toLowerCase().includes(searchTerm.toLowerCase())
-    const preferredSpotTypeName = item.preferredSpotTypeId 
-      ? spotTypes.find(st => st.id === item.preferredSpotTypeId)?.name 
-      : null;
-    const matchesType = unallocatedFilterType === "all" || preferredSpotTypeName === unallocatedFilterType
-    return matchesSearch && matchesType
-  }) || []
-
-  // Mutation to assign a spot from the waiting list
-  const assignFromWaitingListMutation = useMutation({
-    mutationFn: async ({ userId, spotId }: { userId: string; spotId: string }) => {
-      return await apiRequest(`/api/admin/assign-spot`, {
-        method: "POST",
-        body: { userId, spotId },
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/active"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/all-spots"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
-      toast({
-        title: "Success",
-        description: "Spot assigned successfully from waiting list.",
-        variant: "success",
-      });
-      setShowAssignDialog(false);
-      setSelectedWaitingListItem(null);
-      setSelectedSpotForAssign(null);
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to assign spot.",
-        variant: "error",
-      });
-    },
-  });
-
-  // Mutation to remove from waiting list
-  const removeFromWaitingListMutation = useMutation({
-    mutationFn: async ({ waitingListId, userId }: { waitingListId: string; userId: string }) => {
-      return await apiRequest(`/api/waiting-list/${waitingListId}`, {
-        method: "DELETE",
-      });
-    },
-    onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/active"] });
-      // Also invalidate the user-specific waiting list query so their profile updates
-      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/user", variables.userId] });
-      toast({
-        title: "Success",
-        description: "User removed from waiting list successfully.",
-        variant: "success",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to remove user from waiting list.",
-        variant: "error",
-      });
-    },
   });
 
   // Mutation to toggle spot bookability
@@ -871,28 +767,6 @@ export default function AdminParkingManagement() {
     }
   };
 
-  const handleAssignFromWaitingList = (waitingListItem: WaitingList) => {
-    setSelectedWaitingListItem(waitingListItem.id);
-    setShowAssignDialog(true);
-  };
-
-  const handleRemoveFromWaitingList = async (waitingListItem: WaitingList) => {
-    const confirmed = await confirm({
-      title: "Remove from Waiting List",
-      description: `Are you sure you want to remove ${waitingListItem.userName} from the waiting list? This action cannot be undone.`,
-      confirmText: "Remove",
-      cancelText: "Cancel",
-      variant: "destructive"
-    });
-    
-    if (confirmed) {
-      removeFromWaitingListMutation.mutate({
-        waitingListId: waitingListItem.id,
-        userId: waitingListItem.userId
-      });
-    }
-  };
-
   const handleDirectAssign = (spot: ParkingSpot) => {
     setSelectedSpotForAssign(spot);
     setDirectAssignFormData({
@@ -1078,57 +952,6 @@ export default function AdminParkingManagement() {
     return sortedSpots.slice(startIndex, endIndex)
   }, [sortedSpots, personalSpotsPageIndex, personalSpotsPageSize])
 
-  // Enhanced filtering for waiting list
-  const filteredWaitingListEnhanced = allWaitingList?.filter(item => {
-    // Search filter
-    if (waitingListSearchTerm.trim()) {
-      const searchLower = waitingListSearchTerm.toLowerCase()
-      const matchesSearch = item.userName?.toLowerCase().includes(searchLower) ||
-                           item.userEmail?.toLowerCase().includes(searchLower) ||
-                           item.reason?.toLowerCase().includes(searchLower)
-      if (!matchesSearch) return false
-    }
-    
-    // Priority filter
-    if (waitingListFilterValues.priority && waitingListFilterValues.priority !== "all") {
-      if (item.priority?.toString() !== waitingListFilterValues.priority) return false
-    }
-    
-    // Preferred spot type filter
-    if (waitingListFilterValues.preferredSpotType && waitingListFilterValues.preferredSpotType !== "all") {
-      const preferredSpotTypeName = item.preferredSpotTypeId 
-        ? spotTypes.find(st => st.id === item.preferredSpotTypeId)?.name 
-        : null;
-      if (preferredSpotTypeName !== waitingListFilterValues.preferredSpotType) return false
-    }
-    
-    // Status filter
-    if (waitingListFilterValues.status && waitingListFilterValues.status !== "all") {
-      // If a specific status is selected, show only that status
-      if (item.status !== waitingListFilterValues.status) return false
-    } else {
-      // By default (when no status filter is selected), exclude "assigned" entries
-      // since those users have already received their parking spots
-      if (item.status === "assigned") return false
-    }
-    
-    return true
-  }) || []
-
-  // Sorting functionality for waiting list
-  const { sortState: waitingListSortState, sortedData: sortedWaitingList, handleSort: handleWaitingListSort } = useTableSort(
-    filteredWaitingListEnhanced,
-    "enrolledDate", // Default sort by enrolled date
-    "desc" // Descending order (newest first)
-  )
-
-  // Paginated data for Waiting List
-  const paginatedWaitingList = useMemo(() => {
-    const startIndex = waitingListPageIndex * waitingListPageSize
-    const endIndex = startIndex + waitingListPageSize
-    return sortedWaitingList.slice(startIndex, endIndex)
-  }, [sortedWaitingList, waitingListPageIndex, waitingListPageSize])
-
   // Page clamping useEffects to prevent invalid page indices
   // Clamp All Spots page
   useEffect(() => {
@@ -1145,14 +968,6 @@ export default function AdminParkingManagement() {
       setAvailableSpotsPageIndex(maxPage)
     }
   }, [sortedAvailableSpots.length, availableSpotsPageSize, availableSpotsPageIndex])
-
-  // Clamp Waiting List page
-  useEffect(() => {
-    const maxPage = Math.max(0, Math.ceil(sortedWaitingList.length / waitingListPageSize) - 1)
-    if (waitingListPageIndex > maxPage) {
-      setWaitingListPageIndex(maxPage)
-    }
-  }, [sortedWaitingList.length, waitingListPageSize, waitingListPageIndex])
 
   // Clamp Personal Spots page
   useEffect(() => {
@@ -1180,11 +995,6 @@ export default function AdminParkingManagement() {
   useEffect(() => {
     setAvailableSpotsPageIndex(0)
   }, [availableSpotsSearchTerm, availableSpotsFilterValues])
-
-  // Reset Waiting List page on filter/search change
-  useEffect(() => {
-    setWaitingListPageIndex(0)
-  }, [waitingListSearchTerm, waitingListFilterValues])
   
   // Filter configuration for parking management
   const parkingFilterConfigs: FilterConfig[] = [
@@ -1257,42 +1067,6 @@ export default function AdminParkingManagement() {
     }
   ]
 
-  // Filter configuration for waiting list
-  const waitingListFilterConfigs: FilterConfig[] = [
-    {
-      key: "priority",
-      label: "Priority",
-      type: "select",
-      options: [
-        { value: "1", label: "High Priority" },
-        { value: "2", label: "Medium Priority" },
-        { value: "3", label: "Low Priority" }
-      ]
-    },
-    {
-      key: "preferredSpotType",
-      label: "Preferred Spot Type",
-      type: "select",
-      options: [
-        { value: "regular", label: "Regular" },
-        { value: "electric", label: "EV" },
-        { value: "tesla_ev", label: "Tesla Charger" },
-        { value: "accessible", label: "Accessible" },
-        { value: "reserved", label: "Reserved" }
-      ]
-    },
-    {
-      key: "status",
-      label: "Status",
-      type: "select",
-      options: [
-        { value: "active", label: "Active" },
-        { value: "assigned", label: "Assigned" },
-        { value: "cancelled", label: "Cancelled" }
-      ]
-    }
-  ]
-  
   // Handle filter changes
   const handleFilterChange = (key: string, value: string | undefined) => {
     setFilterValues(prev => ({
@@ -1319,20 +1093,6 @@ export default function AdminParkingManagement() {
   const handleClearAvailableSpotsFilters = () => {
     setAvailableSpotsSearchTerm("")
     setAvailableSpotsFilterValues({})
-  }
-
-  // Handle waiting list filter changes
-  const handleWaitingListFilterChange = (key: string, value: string | undefined) => {
-    setWaitingListFilterValues(prev => ({
-      ...prev,
-      [key]: value
-    }))
-  }
-  
-  // Clear waiting list filters
-  const handleClearWaitingListFilters = () => {
-    setWaitingListSearchTerm("")
-    setWaitingListFilterValues({})
   }
 
   const getPriorityBadge = (priority: number) => {
@@ -1566,38 +1326,12 @@ export default function AdminParkingManagement() {
             Click to view all BCI managed parking spots
           </TooltipContent>
         </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Card 
-              data-testid="card-waiting-list" 
-              className="hover-elevate cursor-pointer active-elevate-2"
-              onClick={() => setActiveSpotTab("waiting")}
-            >
-              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Waiting List</CardTitle>
-                <div className="rounded-full border-2 border-orange-400 p-2">
-                  <Clock className="h-4 w-4 text-orange-600" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold" data-testid="stat-waiting-list">
-                  {waitingListMetrics.active}
-                </div>
-                <p className="text-xs text-orange-600">Pending requests</p>
-              </CardContent>
-            </Card>
-          </TooltipTrigger>
-          <TooltipContent>
-            Click to view parking spot waiting list
-          </TooltipContent>
-        </Tooltip>
         </div>
       )}
 
       {/* Main Content Tabs */}
       <Tabs value={activeSpotTab} onValueChange={setActiveSpotTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="bci-managed" data-testid="tab-bci-managed-spots" className="gap-2">
             <Building className="h-4 w-4 !text-purple-600" />
             All Spots ({allSpots.length})
@@ -1605,10 +1339,6 @@ export default function AdminParkingManagement() {
           <TabsTrigger value="bci-available" data-testid="tab-bci-available-spots" className="gap-2">
             <Sparkles className="h-4 w-4 !text-green-600" />
             Available ({unallocatedSpots.length})
-          </TabsTrigger>
-          <TabsTrigger value="waiting" data-testid="tab-waiting-list" className="gap-2">
-            <Clock className="h-4 w-4 !text-orange-600" />
-            {t("admin.parkingManagement.waiting")} ({waitingListMetrics.active})
           </TabsTrigger>
         </TabsList>
 
@@ -2313,246 +2043,6 @@ export default function AdminParkingManagement() {
             </CardContent>
           </Card>
         </TabsContent>
-
-        {/* Waiting List Tab */}
-        <TabsContent value="waiting" className="space-y-4">
-          {/* Enhanced Filters for Waiting List */}
-          <EnhancedFilters
-            searchValue={waitingListSearchTerm}
-            onSearchChange={setWaitingListSearchTerm}
-            filterConfigs={waitingListFilterConfigs}
-            filterValues={waitingListFilterValues}
-            onFilterChange={handleWaitingListFilterChange}
-            onClearFilters={handleClearWaitingListFilters}
-            searchPlaceholder="Search waiting list by name, email, or reason..."
-            className="hover-elevate"
-          />
-          
-          {/* Waiting List */}
-      <Card data-testid="card-waiting-list">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Waiting List ({sortedWaitingList.length})
-            </CardTitle>
-            <div className="flex gap-2">
-              <Button 
-                size="sm"
-                variant="outline" 
-                disabled={sortedWaitingList.length === 0}
-                onClick={() => {
-                  const success = quickExportWaitingListPDF(sortedWaitingList, 'Waiting List Report', (errorMessage) => {
-                    toast({
-                      variant: "destructive",
-                      title: "Export Failed",
-                      description: errorMessage
-                    })
-                  })
-                  if (success) {
-                    toast({
-                      title: "Export Successful",
-                      description: "PDF report has been downloaded successfully"
-                    })
-                  }
-                }}
-                data-testid="button-export-waiting-list-pdf"
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                PDF
-              </Button>
-              <Button 
-                size="sm"
-                variant="outline" 
-                disabled={sortedWaitingList.length === 0}
-                onClick={() => {
-                  const success = quickExportWaitingListExcel(sortedWaitingList, 'Waiting List Report', (errorMessage) => {
-                    toast({
-                      variant: "destructive",
-                      title: "Export Failed",
-                      description: errorMessage
-                    })
-                  })
-                  if (success) {
-                    toast({
-                      title: "Export Successful",
-                      description: "Excel report has been downloaded successfully"
-                    })
-                  }
-                }}
-                data-testid="button-export-waiting-list-excel"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Excel
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          {isLoadingWaitingList ? (
-            <div className="space-y-3 p-4">
-              {[...Array(5)].map((_, i) => (
-                <Skeleton key={i} className="h-16 w-full" />
-              ))}
-            </div>
-          ) : sortedWaitingList.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground" data-testid="text-no-waiting">
-              <Users className="h-12 w-12 mx-auto mb-4 opacity-30" />
-              <p>No waiting list entries found.</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table data-testid="table-waiting-list">
-                  <TableHeader>
-                    <TableRow>
-                      <SortableTableHeader
-                        column="userName"
-                        currentSortColumn={waitingListSortState.column}
-                        currentSortDirection={waitingListSortState.direction}
-                        onSort={handleWaitingListSort}
-                      >
-                        User
-                      </SortableTableHeader>
-                      <SortableTableHeader
-                        column="priority"
-                        currentSortColumn={waitingListSortState.column}
-                        currentSortDirection={waitingListSortState.direction}
-                        onSort={handleWaitingListSort}
-                      >
-                        Priority
-                      </SortableTableHeader>
-                      <SortableTableHeader
-                        column="preferredSpotType"
-                        currentSortColumn={waitingListSortState.column}
-                        currentSortDirection={waitingListSortState.direction}
-                        onSort={handleWaitingListSort}
-                      >
-                        Preferred Type
-                      </SortableTableHeader>
-                      <SortableTableHeader
-                        column="status"
-                        currentSortColumn={waitingListSortState.column}
-                        currentSortDirection={waitingListSortState.direction}
-                        onSort={handleWaitingListSort}
-                      >
-                        Status
-                      </SortableTableHeader>
-                      <SortableTableHeader
-                        column="enrolledDate"
-                        currentSortColumn={waitingListSortState.column}
-                        currentSortDirection={waitingListSortState.direction}
-                        onSort={handleWaitingListSort}
-                      >
-                        Enrolled Date
-                      </SortableTableHeader>
-                      <TableHead>Waiting Days</TableHead>
-                      <SortableTableHeader
-                        column="reason"
-                        currentSortColumn={waitingListSortState.column}
-                        currentSortDirection={waitingListSortState.direction}
-                        onSort={handleWaitingListSort}
-                      >
-                        Reason
-                      </SortableTableHeader>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginatedWaitingList.map((item) => {
-                      const waitingDays = Math.floor((Date.now() - new Date(item.enrolledDate).getTime()) / (1000 * 60 * 60 * 24));
-                      return (
-                        <TableRow key={item.id} data-testid={`row-waiting-${item.id}`}>
-                          <TableCell data-testid={`text-waiting-user-${item.id}`}>
-                            <div>
-                              <div className="font-medium">{item.userName}</div>
-                              <div className="text-sm text-muted-foreground">{item.userEmail}</div>
-                            </div>
-                          </TableCell>
-                          <TableCell data-testid={`text-waiting-priority-${item.id}`}>
-                            {getPriorityBadge(item.priority)}
-                          </TableCell>
-                          <TableCell data-testid={`text-waiting-type-${item.id}`}>
-                            {item.preferredSpotTypeId ? getSpotTypeBadge(spotTypes.find(st => st.id === item.preferredSpotTypeId)?.name) : <Badge variant="outline">Any</Badge>}
-                          </TableCell>
-                          <TableCell data-testid={`text-waiting-status-${item.id}`}>
-                            <Badge 
-                              variant="secondary"
-                              className={
-                                item.status === "active" ? "bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100" :
-                                item.status === "assigned" ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100" :
-                                "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
-                              }
-                            >
-                              {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell data-testid={`text-waiting-enrolled-${item.id}`}>
-                            {new Date(item.enrolledDate).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell data-testid={`text-waiting-days-${item.id}`}>
-                            <Badge variant="outline">{waitingDays} days</Badge>
-                          </TableCell>
-                          <TableCell data-testid={`text-waiting-reason-${item.id}`}>
-                            {item.reason && item.reason.trim() ? (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className="max-w-[200px] truncate block cursor-help">
-                                    {item.reason}
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent className="max-w-sm">
-                                  <p>{item.reason}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            ) : (
-                              <span className="text-muted-foreground text-sm">Not specified</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center justify-end gap-1">
-                              {item.status === "active" && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleAssignFromWaitingList(item)}
-                                  data-testid={`button-assign-waiting-${item.id}`}
-                                  title="Assign Spot"
-                                >
-                                  <ArrowRight className="h-4 w-4 mr-1" />
-                                  Assign
-                                </Button>
-                              )}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleRemoveFromWaitingList(item)}
-                                data-testid={`button-remove-waiting-${item.id}`}
-                                title="Remove from Waiting List"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-                <TablePagination
-                  totalCount={sortedWaitingList.length}
-                  pageSize={waitingListPageSize}
-                  pageIndex={waitingListPageIndex}
-                  onPageSizeChange={(size) => {
-                    setWaitingListPageSize(size)
-                    setWaitingListPageIndex(0)
-                  }}
-                  onPageIndexChange={setWaitingListPageIndex}
-                />
-              </div>
-            )}
-        </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
 
       {/* Add Spot Dialog */}
@@ -2840,76 +2330,6 @@ export default function AdminParkingManagement() {
                 onClick={() => setShowEditSpotDialog(false)}
                 className="flex-1"
                 data-testid="button-cancel-edit-spot"
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Assign Spot Dialog */}
-      <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
-        <DialogContent className="max-w-md" data-testid="dialog-assign-spot">
-          <DialogHeader>
-            <DialogTitle>Assign Spot from Waiting List</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium">Select Available Spot</label>
-              <Select 
-                value={selectedSpotForAssign?.id || ""} 
-                onValueChange={(spotId) => {
-                  const spot = unallocatedSpots.find(s => s.id === spotId);
-                  setSelectedSpotForAssign(spot || null);
-                }}
-              >
-                <SelectTrigger data-testid="select-assign-spot">
-                  <SelectValue placeholder="Choose a spot..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {unallocatedSpots.map((spot) => (
-                    <SelectItem key={spot.id} value={spot.id}>
-                      {spot.spotNumber} - {spot.locationName} ({getSpotTypeBadge(spot.spotTypeName)})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {selectedWaitingListItem && selectedSpotForAssign && (
-              <div className="p-4 bg-muted rounded-lg">
-                <h4 className="font-medium mb-2">Assignment Summary</h4>
-                <div className="text-sm space-y-1">
-                  <div>User: {filteredWaitingList.find(w => w.id === selectedWaitingListItem)?.userName}</div>
-                  <div>Spot: {selectedSpotForAssign.spotNumber} - {selectedSpotForAssign.locationName}</div>
-                  <div>Type: {getSpotTypeBadge(selectedSpotForAssign.spotTypeName)}</div>
-                </div>
-              </div>
-            )}
-            <div className="flex gap-2 pt-4">
-              <Button
-                onClick={() => {
-                  if (selectedWaitingListItem && selectedSpotForAssign) {
-                    const waitingListEntry = filteredWaitingList.find(w => w.id === selectedWaitingListItem);
-                    if (waitingListEntry) {
-                      assignFromWaitingListMutation.mutate({
-                        userId: waitingListEntry.userId,
-                        spotId: selectedSpotForAssign.id
-                      });
-                    }
-                  }
-                }}
-                disabled={!selectedWaitingListItem || !selectedSpotForAssign || assignFromWaitingListMutation.isPending}
-                className="flex-1"
-                data-testid="button-confirm-assign-spot"
-              >
-                {assignFromWaitingListMutation.isPending ? "Assigning..." : "Assign Spot"}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setShowAssignDialog(false)}
-                className="flex-1"
-                data-testid="button-cancel-assign-spot"
               >
                 Cancel
               </Button>

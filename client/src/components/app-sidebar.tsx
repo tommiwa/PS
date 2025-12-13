@@ -14,7 +14,8 @@ import {
   CalendarCheck,
   FileText,
   Database,
-  Lock
+  Lock,
+  Clock
 } from "lucide-react"
 import { Link, useLocation, useRoute } from "wouter"
 import {
@@ -89,6 +90,13 @@ const adminCoreItems = [
     icon: Shield,
     roles: ["admin"],
     tooltip: "Parking Management"
+  },
+  {
+    title: "Waiting List",
+    url: "/admin/waiting-list",
+    icon: Clock,
+    roles: ["admin"],
+    tooltip: "Waiting List Management"
   },
 ]
 

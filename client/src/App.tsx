@@ -37,6 +37,7 @@ import AdminParkingManagement from "@/pages/admin-parking-management";
 import AdminDataManagement from "@/pages/admin-data-management";
 import AdminReportsPage from "@/pages/admin-reports";
 import AdminLockerManagement from "@/pages/admin-locker-management";
+import AdminWaitingList from "@/pages/admin-waiting-list";
 import Login from "@/pages/login";
 import Terms from "@/pages/terms";
 import TermsConsent from "@/pages/terms-consent";
@@ -456,6 +457,7 @@ function AuthenticatedApp() {
               <Route path="/admin/audits" component={AdminAudits} />
               <Route path="/admin/data-management" component={AdminDataManagement} />
               <Route path="/admin/reports" component={AdminReportsPage} />
+              <Route path="/admin/waiting-list" component={AdminWaitingList} />
               
               {/* Fallback to 404 */}
               <Route path="(.*)" component={NotFound} />
