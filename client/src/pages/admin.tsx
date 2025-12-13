@@ -104,33 +104,7 @@ export default function Admin() {
     }
   };
 
-  // React Query hooks for fetching real analytics data with scope parameter
-  const overviewQuery = useQuery<AnalyticsOverviewResponse>({
-    queryKey: ['/api/admin/analytics-overview', { scope }],
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-
-  const revenueQuery = useQuery<AnalyticsRevenueResponse>({
-    queryKey: ['/api/admin/analytics-revenue', { monthsBack: getMonthsBack(dateRange), scope }],
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const topPerformersQuery = useQuery<AnalyticsTopPerformersResponse>({
-    queryKey: ['/api/admin/analytics-top-performers', { scope }],
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const issuesQuery = useQuery<AnalyticsIssuesResponse>({
-    queryKey: ['/api/admin/analytics-issues', { scope }],
-    staleTime: 2 * 60 * 1000, // 2 minutes for more frequent updates
-  });
-
-  const usageQuery = useQuery<AnalyticsUsageResponse>({
-    queryKey: ['/api/admin/analytics-usage', { scope }],
-    staleTime: 5 * 60 * 1000,
-  });
-
-  // Helper to get date range for utilization query
+  // Helper to get date range for queries
   const getDateRange = (range: string) => {
     const toDate = new Date().toISOString().split('T')[0];
     let fromDate: string;
@@ -169,14 +143,51 @@ export default function Admin() {
     return { fromDate, toDate };
   };
 
-  const { fromDate: utilizationFromDate, toDate: utilizationToDate } = getDateRange(dateRange);
+  // Get computed date range for all queries
+  const { fromDate, toDate } = getDateRange(dateRange);
 
-  const utilizationQuery = useQuery<ReportUtilizationResponse>({
-    queryKey: ['/api/admin/reports/utilization', utilizationFromDate, utilizationToDate, scope],
+  // React Query hooks for fetching real analytics data with scope and date range parameters
+  const overviewQuery = useQuery<AnalyticsOverviewResponse>({
+    queryKey: ['/api/admin/analytics-overview', { scope, from: fromDate, to: toDate }],
     queryFn: async () => {
       const params = new URLSearchParams({
-        from: utilizationFromDate,
-        to: utilizationToDate,
+        scope,
+        from: fromDate,
+        to: toDate
+      });
+      const response = await fetch(`/api/admin/analytics-overview?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch analytics overview');
+      return response.json();
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  const revenueQuery = useQuery<AnalyticsRevenueResponse>({
+    queryKey: ['/api/admin/analytics-revenue', { monthsBack: getMonthsBack(dateRange), scope }],
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const topPerformersQuery = useQuery<AnalyticsTopPerformersResponse>({
+    queryKey: ['/api/admin/analytics-top-performers', { scope }],
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const issuesQuery = useQuery<AnalyticsIssuesResponse>({
+    queryKey: ['/api/admin/analytics-issues', { scope }],
+    staleTime: 2 * 60 * 1000, // 2 minutes for more frequent updates
+  });
+
+  const usageQuery = useQuery<AnalyticsUsageResponse>({
+    queryKey: ['/api/admin/analytics-usage', { scope }],
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const utilizationQuery = useQuery<ReportUtilizationResponse>({
+    queryKey: ['/api/admin/reports/utilization', fromDate, toDate, scope],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        from: fromDate,
+        to: toDate,
         scope: scope
       });
       const response = await fetch(`/api/admin/reports/utilization?${params}`);

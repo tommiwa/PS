@@ -2703,7 +2703,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const scopeParam = req.query.scope as string;
       const scope: 'bci' | 'all' = scopeParam === 'bci' ? 'bci' : 'all';
       
-      const overview = await storage.getAnalyticsOverview(scope);
+      // Extract date range parameters
+      const fromDate = req.query.from as string | undefined;
+      const toDate = req.query.to as string | undefined;
+      
+      const overview = await storage.getAnalyticsOverview(scope, fromDate, toDate);
       const now = new Date();
       const todayStr = await getTodayInTimezone();
       

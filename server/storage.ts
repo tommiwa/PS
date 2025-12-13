@@ -213,7 +213,7 @@ export interface IStorage {
   queryAuditLogs(filters: any, pagination: any): Promise<any>;
   
   // Analytics query methods
-  getAnalyticsOverview(scope?: 'bci' | 'all'): Promise<{
+  getAnalyticsOverview(scope?: 'bci' | 'all', fromDate?: string, toDate?: string): Promise<{
     totalRevenue: number;
     totalBookings: number;
     activeUsers: number;
@@ -1932,7 +1932,7 @@ export class MemStorage implements IStorage {
   }
 
   // Analytics methods implementation
-  async getAnalyticsOverview(scope?: 'bci' | 'all'): Promise<{
+  async getAnalyticsOverview(scope?: 'bci' | 'all', fromDate?: string, toDate?: string): Promise<{
     totalRevenue: number;
     totalBookings: number;
     activeUsers: number;
@@ -1940,50 +1940,94 @@ export class MemStorage implements IStorage {
     averageBookingValue: number;
     monthlyGrowth: number;
   }> {
-    const allBookings = await this.getFilteredBookings(scope);
+    const allBookingsUnfiltered = await this.getFilteredBookings(scope);
     const allUsers = await db.select().from(users);
     const allSpots = await this.getFilteredSpots(scope);
     
-    // Calculate total revenue
+    // Filter bookings by date range if provided
+    let allBookings = allBookingsUnfiltered;
+    if (fromDate && toDate) {
+      allBookings = allBookingsUnfiltered.filter(booking => {
+        const bookingDate = booking.bookingDate;
+        return bookingDate >= fromDate && bookingDate <= toDate;
+      });
+    }
+    
+    // Calculate total revenue from date-filtered bookings
     const totalRevenue = allBookings
       .filter(b => b.paymentReceived)
       .reduce((sum, booking) => sum + parseFloat(booking.totalAmount.toString()), 0);
     
-    // Calculate total bookings
+    // Calculate total bookings within date range
     const totalBookings = allBookings.length;
     
-    // Active users (those with recent activity)
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    // Active users (those with recent activity within selected date range or last 30 days)
+    const activeUserDate = fromDate ? new Date(fromDate) : new Date();
+    if (!fromDate) {
+      activeUserDate.setDate(activeUserDate.getDate() - 30);
+    }
     const activeUsers = allUsers.filter(user => 
-      user.lastLogin && new Date(user.lastLogin) >= thirtyDaysAgo
+      user.lastLogin && new Date(user.lastLogin) >= activeUserDate
     ).length;
     
-    // Calculate utilization rate
+    // Calculate utilization rate based on date range
     const totalSpots = allSpots.length;
-    const bookingsToday = allBookings.filter(booking => {
+    let utilizationRate = 0;
+    if (fromDate && toDate && totalSpots > 0) {
+      const startDate = new Date(fromDate);
+      const endDate = new Date(toDate);
+      const daysDiff = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+      const totalPossibleBookings = totalSpots * daysDiff;
+      utilizationRate = (allBookings.length / totalPossibleBookings) * 100;
+    } else {
+      // Fallback to today's utilization
       const today = new Date().toISOString().split('T')[0];
-      return booking.bookingDate === today;
-    }).length;
-    const utilizationRate = totalSpots > 0 ? (bookingsToday / totalSpots) * 100 : 0;
+      const bookingsToday = allBookingsUnfiltered.filter(booking => booking.bookingDate === today).length;
+      utilizationRate = totalSpots > 0 ? (bookingsToday / totalSpots) * 100 : 0;
+    }
     
     // Calculate average booking value
-    const averageBookingValue = totalBookings > 0 ? totalRevenue / totalBookings : 0;
+    const paidBookings = allBookings.filter(b => b.paymentReceived);
+    const averageBookingValue = paidBookings.length > 0 ? totalRevenue / paidBookings.length : 0;
     
-    // Calculate monthly growth (simplified)
-    const currentMonth = new Date().getMonth();
-    const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-    
-    const currentMonthBookings = allBookings.filter(booking => 
-      new Date(booking.createdAt).getMonth() === currentMonth
-    ).length;
-    const lastMonthBookings = allBookings.filter(booking => 
-      new Date(booking.createdAt).getMonth() === lastMonth
-    ).length;
-    
-    const monthlyGrowth = lastMonthBookings > 0 
-      ? ((currentMonthBookings - lastMonthBookings) / lastMonthBookings) * 100 
-      : 0;
+    // Calculate monthly growth (compare current period to previous equivalent period)
+    let monthlyGrowth = 0;
+    if (fromDate && toDate) {
+      const startDate = new Date(fromDate);
+      const endDate = new Date(toDate);
+      const periodDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      
+      const prevEndDate = new Date(startDate);
+      prevEndDate.setDate(prevEndDate.getDate() - 1);
+      const prevStartDate = new Date(prevEndDate);
+      prevStartDate.setDate(prevStartDate.getDate() - periodDays + 1);
+      
+      const prevFromStr = prevStartDate.toISOString().split('T')[0];
+      const prevToStr = prevEndDate.toISOString().split('T')[0];
+      
+      const prevPeriodBookings = allBookingsUnfiltered.filter(booking => {
+        const bookingDate = booking.bookingDate;
+        return bookingDate >= prevFromStr && bookingDate <= prevToStr;
+      }).length;
+      
+      monthlyGrowth = prevPeriodBookings > 0 
+        ? ((allBookings.length - prevPeriodBookings) / prevPeriodBookings) * 100 
+        : 0;
+    } else {
+      const currentMonth = new Date().getMonth();
+      const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+      
+      const currentMonthBookings = allBookingsUnfiltered.filter(booking => 
+        new Date(booking.createdAt).getMonth() === currentMonth
+      ).length;
+      const lastMonthBookings = allBookingsUnfiltered.filter(booking => 
+        new Date(booking.createdAt).getMonth() === lastMonth
+      ).length;
+      
+      monthlyGrowth = lastMonthBookings > 0 
+        ? ((currentMonthBookings - lastMonthBookings) / lastMonthBookings) * 100 
+        : 0;
+    }
     
     return {
       totalRevenue: Math.round(totalRevenue),
