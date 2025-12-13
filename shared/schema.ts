@@ -1017,9 +1017,10 @@ export interface ReportUtilizationResponse {
   }[];
   dailyOccupancy: {
     date: string;
-    occupiedSpots: number;
     totalSpots: number;
-    occupancyRate: number;
+    occupiedSpots: number;
+    availableForSharing: number;
+    bookedSpots: number;
   }[];
   generatedAt: string;
   dateRange: ReportDateRange;

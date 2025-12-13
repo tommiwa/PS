@@ -139,11 +139,12 @@ export async function getReportUtilization(req: Request, res: Response) {
     const dateRange = calculateDateRange(from, to);
     
     // Fetch required data
-    const [allSpots, allBookings, locations, spotTypes] = await Promise.all([
+    const [allSpots, allBookings, locations, spotTypes, allListings] = await Promise.all([
       storage.getAllParkingSpots(),
       storage.getAllBookings(),
       storage.getAllLocations?.() || [],
-      storage.getAllSpotTypes?.() || []
+      storage.getAllSpotTypes?.() || [],
+      storage.getAllSpotListings?.() || []
     ]);
     
     // Filter by scope
@@ -205,20 +206,75 @@ export async function getReportUtilization(req: Request, res: Response) {
       };
     });
     
-    // Daily occupancy trends
+    // Filter listings by scope
+    const listings = allListings.filter((l: any) => {
+      const spot = allSpots.find(s => s.id === l.spotId);
+      if (scope === 'bci') {
+        return spot?.isBciManaged === true;
+      }
+      return true;
+    });
+    
+    // Helper to check if a listing is available on a specific date
+    const isListingAvailableOnDate = (listing: any, dateStr: string): boolean => {
+      const checkDate = new Date(dateStr);
+      
+      // Only include active/available listings
+      if (listing.status !== 'available') return false;
+      
+      if (listing.listingType === 'single') {
+        return listing.singleDate === dateStr;
+      }
+      
+      if (listing.listingType === 'period') {
+        const start = new Date(listing.periodStartDate);
+        const end = new Date(listing.periodEndDate);
+        return checkDate >= start && checkDate <= end;
+      }
+      
+      if (listing.listingType === 'recurring') {
+        const start = new Date(listing.recurringStartDate);
+        const end = listing.recurringEndDate ? new Date(listing.recurringEndDate) : null;
+        
+        if (checkDate < start) return false;
+        if (end && checkDate > end) return false;
+        
+        // Check day of week
+        const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const dayOfWeek = dayNames[checkDate.getDay()];
+        return listing.daysOfWeek?.includes(dayOfWeek) || false;
+      }
+      
+      return false;
+    };
+    
+    // Daily occupancy trends with 4 data series
     const dailyOccupancy: any[] = [];
     const startDate = new Date(dateRange.from);
     const endDate = new Date(dateRange.to);
     
     for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
       const dateStr = date.toISOString().split('T')[0];
+      
+      // Count bookings on this date
       const dayBookings = bookings.filter((b: any) => b.bookingDate === dateStr);
+      const bookedSpots = dayBookings.length;
+      
+      // Count unique spots with available listings on this date
+      const spotsWithListings = new Set<string>();
+      listings.forEach((l: any) => {
+        if (isListingAvailableOnDate(l, dateStr)) {
+          spotsWithListings.add(l.spotId);
+        }
+      });
+      const availableForSharing = spotsWithListings.size;
       
       dailyOccupancy.push({
         date: dateStr,
-        occupiedSpots: dayBookings.length,
-        totalSpots: bookableSpots,
-        occupancyRate: bookableSpots > 0 ? (dayBookings.length / bookableSpots) * 100 : 0
+        totalSpots: spots.length,
+        occupiedSpots: allocatedSpots,
+        availableForSharing,
+        bookedSpots
       });
     }
     
