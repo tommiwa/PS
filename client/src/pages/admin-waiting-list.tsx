@@ -18,9 +18,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { TablePagination } from "@/components/shared/TablePagination"
 import { 
   Users, Clock, ArrowRight, RefreshCw, Trash2, Download, FileText,
-  Eye, EyeOff, AlertTriangle, Timer, Target
+  Eye, EyeOff, AlertTriangle, Timer, Target, UserPlus, Plus
 } from "lucide-react"
-import type { WaitingList, ParkingSpotWithUser, SpotType, SpotTypeTable } from "@shared/schema"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import type { WaitingList, ParkingSpotWithUser, SpotType, SpotTypeTable, Location } from "@shared/schema"
 import { quickExportWaitingListPDF, quickExportWaitingListExcel } from "@/utils/export-utils"
 
 export default function AdminWaitingList() {
@@ -30,10 +32,20 @@ export default function AdminWaitingList() {
   const [waitingListFilterValues, setWaitingListFilterValues] = useState<FilterValues>({})
   const [selectedWaitingListItem, setSelectedWaitingListItem] = useState<WaitingList | null>(null)
   const [showAssignDialog, setShowAssignDialog] = useState(false)
+  const [showAddToWaitingDialog, setShowAddToWaitingDialog] = useState(false)
   const [selectedSpotForAssign, setSelectedSpotForAssign] = useState<ParkingSpotWithUser | null>(null)
   
   const [waitingListPageIndex, setWaitingListPageIndex] = useState(0)
   const [waitingListPageSize, setWaitingListPageSize] = useState(25)
+  
+  // Form state for add to waiting list dialog
+  const [waitingListFormData, setWaitingListFormData] = useState({
+    userId: "",
+    preferredSpotTypeId: undefined as number | undefined,
+    preferredLocationId: undefined as number | undefined,
+    priority: 2, // 1=high, 2=medium, 3=low
+    reason: ""
+  })
   
   const { cardsVisible, toggleCards } = useCardsVisibility("waiting-list-management")
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -75,6 +87,48 @@ export default function AdminWaitingList() {
 
   const { data: spotTypes = [] } = useQuery<SpotTypeTable[]>({
     queryKey: ["/api/spot-types"],
+  })
+
+  const { data: locations = [], isLoading: isLoadingLocations } = useQuery<Location[]>({
+    queryKey: ["/api/locations"],
+  })
+
+  const { data: allUsers = [], isLoading: isLoadingUsers, error: usersError } = useQuery<any[]>({
+    queryKey: ["/api/admin/users"],
+  })
+
+  // Mutation to add user to waiting list
+  const addToWaitingListMutation = useMutation({
+    mutationFn: async (waitingData: typeof waitingListFormData) => {
+      return await apiRequest(`/api/admin/waiting-list`, {
+        method: "POST",
+        body: waitingData,
+      })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list"] })
+      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/active"] })
+      toast({
+        title: "Success",
+        description: "User added to waiting list successfully.",
+        variant: "success",
+      })
+      setShowAddToWaitingDialog(false)
+      setWaitingListFormData({
+        userId: "",
+        preferredSpotTypeId: undefined,
+        preferredLocationId: undefined,
+        priority: 2,
+        reason: ""
+      })
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add user to waiting list.",
+        variant: "error",
+      })
+    },
   })
 
   const waitingListMetrics = {
@@ -360,6 +414,21 @@ export default function AdminWaitingList() {
             </TooltipTrigger>
             <TooltipContent>
               Refresh waiting list data
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={() => setShowAddToWaitingDialog(true)}
+                data-testid="button-add-to-waiting"
+                aria-label="Add user to waiting list"
+              >
+                <UserPlus className="w-4 h-4 mr-2" />
+                Add to Waiting List
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              Add user to parking spot waiting list
             </TooltipContent>
           </Tooltip>
         </div>
@@ -736,6 +805,123 @@ export default function AdminWaitingList() {
                 }}
                 className="flex-1"
                 data-testid="button-cancel-assign"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add to Waiting List Dialog */}
+      <Dialog open={showAddToWaitingDialog} onOpenChange={setShowAddToWaitingDialog}>
+        <DialogContent className="max-w-md" data-testid="dialog-add-waiting">
+          <DialogHeader>
+            <DialogTitle>Add User to Waiting List</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-sm font-medium">Select User</Label>
+              {usersError ? (
+                <div className="text-sm text-red-600">Error loading users. Please try again.</div>
+              ) : isLoadingUsers ? (
+                <Skeleton className="h-10 w-full" />
+              ) : (
+                <Select 
+                  value={waitingListFormData.userId} 
+                  onValueChange={(userId) => setWaitingListFormData(prev => ({ ...prev, userId }))}
+                >
+                  <SelectTrigger data-testid="select-waiting-user">
+                    <SelectValue placeholder="Choose a user..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(allUsers as any[]).map((user: any) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.name || user.firstName || user.email} ({user.email})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+            <div>
+              <Label className="text-sm font-medium">Preferred Location (Optional)</Label>
+              <Select 
+                value={waitingListFormData.preferredLocationId?.toString() || "any"}
+                onValueChange={(value) => setWaitingListFormData(prev => ({ ...prev, preferredLocationId: value === "any" ? undefined : parseInt(value) }))}
+                disabled={isLoadingLocations}
+              >
+                <SelectTrigger data-testid="select-waiting-location">
+                  <SelectValue placeholder={isLoadingLocations ? "Loading locations..." : "Any location"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="any">Any location</SelectItem>
+                  {locations.map(loc => (
+                    <SelectItem key={loc.id} value={loc.id.toString()}>
+                      {loc.office} - {loc.building}, {loc.level}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-sm font-medium">Preferred Spot Type (Optional)</Label>
+              <Select 
+                value={waitingListFormData.preferredSpotTypeId?.toString() || "any"}
+                onValueChange={(value) => setWaitingListFormData(prev => ({ ...prev, preferredSpotTypeId: value === "any" ? undefined : parseInt(value) }))}
+              >
+                <SelectTrigger data-testid="select-waiting-spot-type">
+                  <SelectValue placeholder="Any spot type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="any">Any spot type</SelectItem>
+                  {spotTypes.map(type => (
+                    <SelectItem key={type.id} value={type.id.toString()}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-sm font-medium">Priority</Label>
+              <Select 
+                value={waitingListFormData.priority.toString()} 
+                onValueChange={(value) => setWaitingListFormData(prev => ({ ...prev, priority: parseInt(value) }))}
+              >
+                <SelectTrigger data-testid="select-waiting-priority">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">High Priority</SelectItem>
+                  <SelectItem value="2">Medium Priority</SelectItem>
+                  <SelectItem value="3">Low Priority</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-sm font-medium">Reason (Optional)</Label>
+              <Input
+                value={waitingListFormData.reason}
+                onChange={(e) => setWaitingListFormData(prev => ({ ...prev, reason: e.target.value }))}
+                placeholder="Reason for waiting list placement..."
+                data-testid="input-waiting-reason"
+              />
+            </div>
+            <div className="flex gap-2 pt-4">
+              <Button
+                onClick={() => addToWaitingListMutation.mutate(waitingListFormData)}
+                disabled={addToWaitingListMutation.isPending || !waitingListFormData.userId}
+                className="flex-1"
+                data-testid="button-confirm-add-waiting"
+              >
+                {addToWaitingListMutation.isPending ? "Adding..." : "Add to Waiting List"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowAddToWaitingDialog(false)}
+                className="flex-1"
+                data-testid="button-cancel-add-waiting"
               >
                 Cancel
               </Button>

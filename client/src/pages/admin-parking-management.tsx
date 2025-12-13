@@ -32,7 +32,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { TablePagination } from "@/components/shared/TablePagination"
 import { 
   Users, Car, Clock, AlertTriangle, TrendingUp, Plus, 
-  ListOrdered, CalendarDays, UserPlus,
+  ListOrdered, CalendarDays,
   Timer, Target, CheckCircle2, Search, Filter,
   Zap, Accessibility, Building, MoreHorizontal, Info, RefreshCw,
   Trash2, Edit, UserMinus, UserCheck, Download, FileText,
@@ -57,7 +57,6 @@ export default function AdminParkingManagement() {
   const [availableSpotsFilterValues, setAvailableSpotsFilterValues] = useState<FilterValues>({})
   const [showAddSpotDialog, setShowAddSpotDialog] = useState(false)
   const [showEditSpotDialog, setShowEditSpotDialog] = useState(false)
-  const [showAddToWaitingDialog, setShowAddToWaitingDialog] = useState(false)
   const [showDirectAssignDialog, setShowDirectAssignDialog] = useState(false)
   const [showReleaseSpotDialog, setShowReleaseSpotDialog] = useState(false)
   const [showAssignAvailableSpotDialog, setShowAssignAvailableSpotDialog] = useState(false)
@@ -80,14 +79,6 @@ export default function AdminParkingManagement() {
   const [activeSpotTab, setActiveSpotTab] = useState("bci-managed")
   const [unallocatedFilterType, setUnallocatedFilterType] = useState("all")
   
-  // Form state for add to waiting list dialog
-  const [waitingListFormData, setWaitingListFormData] = useState({
-    userId: "",
-    preferredSpotTypeId: undefined as number | undefined,
-    preferredLocationId: undefined as number | undefined,
-    priority: 2, // 1=high, 2=medium, 3=low
-    reason: ""
-  })
   
   // Form state for direct assignment dialog
   const [directAssignFormData, setDirectAssignFormData] = useState({
@@ -580,39 +571,6 @@ export default function AdminParkingManagement() {
     },
   });
 
-  // Mutation to add user to waiting list
-  const addToWaitingListMutation = useMutation({
-    mutationFn: async (waitingData: typeof waitingListFormData) => {
-      return await apiRequest(`/api/admin/waiting-list`, {
-        method: "POST",
-        body: waitingData,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/active"] });
-      toast({
-        title: "Success",
-        description: "User added to waiting list successfully.",
-        variant: "success",
-      });
-      setShowAddToWaitingDialog(false);
-      setWaitingListFormData({
-        userId: "",
-        preferredSpotTypeId: undefined,
-        preferredLocationId: undefined,
-        priority: 2,
-        reason: ""
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to add user to waiting list.",
-        variant: "error",
-      });
-    },
-  });
 
   // Mutation to create custom location
   const createLocationMutation = useMutation({
@@ -1214,22 +1172,6 @@ export default function AdminParkingManagement() {
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                onClick={() => setShowAddToWaitingDialog(true)}
-                data-testid="button-add-to-waiting"
-                aria-label="Add user to waiting list"
-              >
-                <UserPlus className="w-4 h-4 mr-2" />
-                {t("admin.parkingManagement.addToWaiting")}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              Add user to parking spot waiting list
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
               <Button 
                 onClick={() => setShowAddSpotDialog(true)}
                 data-testid="button-add-spot"
@@ -1304,26 +1246,52 @@ export default function AdminParkingManagement() {
         <Tooltip>
           <TooltipTrigger asChild>
             <Card 
-              data-testid="card-bci-managed-total" 
+              data-testid="card-assigned-spots" 
               className="hover-elevate cursor-pointer active-elevate-2"
               onClick={() => setActiveSpotTab("bci-managed")}
             >
               <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total BCI Managed Spots</CardTitle>
+                <CardTitle className="text-sm font-medium">Assigned Spots</CardTitle>
                 <div className="rounded-full border-2 border-purple-400 p-2">
-                  <Building className="h-4 w-4 text-purple-600" />
+                  <Users className="h-4 w-4 text-purple-600" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold" data-testid="stat-bci-managed-total">
-                  {allSpots.filter(spot => spot.isBciManaged).length}
+                <div className="text-2xl font-bold" data-testid="stat-assigned-spots">
+                  {allSpots.length - unallocatedSpots.length}
                 </div>
-                <p className="text-xs text-purple-600">BCI managed spots</p>
+                <p className="text-xs text-purple-600">Spots with assigned owners</p>
               </CardContent>
             </Card>
           </TooltipTrigger>
           <TooltipContent>
-            Click to view all BCI managed parking spots
+            View all spots that are assigned to employees
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Card 
+              data-testid="card-bookable-spots" 
+              className="hover-elevate cursor-pointer active-elevate-2"
+              onClick={() => setActiveSpotTab("bci-managed")}
+            >
+              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Bookable Spots</CardTitle>
+                <div className="rounded-full border-2 border-orange-400 p-2">
+                  <CheckCircle2 className="h-4 w-4 text-orange-600" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold" data-testid="stat-bookable-spots">
+                  {allSpots.filter(spot => spot.isBookable).length}
+                </div>
+                <p className="text-xs text-orange-600">Spots available for booking</p>
+              </CardContent>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent>
+            View all spots enabled for bookings
           </TooltipContent>
         </Tooltip>
         </div>
@@ -2330,124 +2298,6 @@ export default function AdminParkingManagement() {
                 onClick={() => setShowEditSpotDialog(false)}
                 className="flex-1"
                 data-testid="button-cancel-edit-spot"
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add to Waiting List Dialog */}
-      <Dialog open={showAddToWaitingDialog} onOpenChange={setShowAddToWaitingDialog}>
-        <DialogContent className="max-w-md" data-testid="dialog-add-waiting">
-          <DialogHeader>
-            <DialogTitle>Add User to Waiting List</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium">Select User</label>
-              {usersError ? (
-                <div className="text-sm text-red-600">Error loading users. Please try again.</div>
-              ) : isLoadingUsers ? (
-                <Skeleton className="h-10 w-full" />
-              ) : (
-                <Select 
-                  value={waitingListFormData.userId} 
-                  onValueChange={(userId) => setWaitingListFormData(prev => ({ ...prev, userId }))}
-                >
-                  <SelectTrigger data-testid="select-waiting-user">
-                    <SelectValue placeholder="Choose a user..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(allUsers as any[]).map((user: any) => (
-                      <SelectItem key={user.id} value={user.id}>
-                        {user.name || user.firstName || user.email} ({user.email})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-            <div>
-              <label className="text-sm font-medium">Preferred Location (Optional)</label>
-              <Select 
-                value={waitingListFormData.preferredLocationId?.toString() || "any"}
-                onValueChange={(value) => setWaitingListFormData(prev => ({ ...prev, preferredLocationId: value === "any" ? undefined : parseInt(value) }))}
-                disabled={isLoadingLocations}
-              >
-                <SelectTrigger data-testid="select-waiting-location">
-                  <SelectValue placeholder={isLoadingLocations ? "Loading locations..." : "Any location"} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="any">Any location</SelectItem>
-                  {locations.map(loc => (
-                    <SelectItem key={loc.id} value={loc.id.toString()}>
-                      {loc.office} - {loc.building}, {loc.level}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Preferred Spot Type (Optional)</label>
-              <Select 
-                value={waitingListFormData.preferredSpotTypeId?.toString() || "any"}
-                onValueChange={(value) => setWaitingListFormData(prev => ({ ...prev, preferredSpotTypeId: value === "any" ? undefined : parseInt(value) }))}
-                disabled={isLoadingSpotTypes}
-              >
-                <SelectTrigger data-testid="select-waiting-spot-type">
-                  <SelectValue placeholder={isLoadingSpotTypes ? "Loading spot types..." : "Any spot type"} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="any">Any spot type</SelectItem>
-                  {spotTypes.map(type => (
-                    <SelectItem key={type.id} value={type.id.toString()}>
-                      {type.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Priority</label>
-              <Select 
-                value={waitingListFormData.priority.toString()} 
-                onValueChange={(value) => setWaitingListFormData(prev => ({ ...prev, priority: parseInt(value) }))}
-              >
-                <SelectTrigger data-testid="select-waiting-priority">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">High Priority</SelectItem>
-                  <SelectItem value="2">Medium Priority</SelectItem>
-                  <SelectItem value="3">Low Priority</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Reason (Optional)</label>
-              <Input
-                value={waitingListFormData.reason}
-                onChange={(e) => setWaitingListFormData(prev => ({ ...prev, reason: e.target.value }))}
-                placeholder="Reason for waiting list placement..."
-                data-testid="input-waiting-reason"
-              />
-            </div>
-            <div className="flex gap-2 pt-4">
-              <Button
-                onClick={() => addToWaitingListMutation.mutate(waitingListFormData)}
-                disabled={addToWaitingListMutation.isPending || !waitingListFormData.userId}
-                className="flex-1"
-                data-testid="button-confirm-add-waiting"
-              >
-                {addToWaitingListMutation.isPending ? "Adding..." : "Add to Waiting List"}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setShowAddToWaitingDialog(false)}
-                className="flex-1"
-                data-testid="button-cancel-add-waiting"
               >
                 Cancel
               </Button>
