@@ -1234,32 +1234,6 @@ export default function AdminParkingManagement() {
         <Tooltip>
           <TooltipTrigger asChild>
             <Card 
-              data-testid="card-available-spots" 
-              className="hover-elevate cursor-pointer active-elevate-2"
-              onClick={() => setActiveSpotTab("bci-available")}
-            >
-              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t("admin.parkingManagement.availableSpots")}</CardTitle>
-                <div className="rounded-full border-2 border-green-400 p-2">
-                  <Sparkles className="h-4 w-4 text-green-600" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold" data-testid="stat-available-spots">
-                  {unallocatedSpots.length}
-                </div>
-                <p className="text-xs text-green-600">Unassigned spots</p>
-              </CardContent>
-            </Card>
-          </TooltipTrigger>
-          <TooltipContent>
-            Click to view available BCI managed spots
-          </TooltipContent>
-        </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Card 
               data-testid="card-assigned-spots" 
               className="hover-elevate cursor-pointer active-elevate-2"
               onClick={() => setActiveSpotTab("bci-assigned")}
@@ -1280,6 +1254,32 @@ export default function AdminParkingManagement() {
           </TooltipTrigger>
           <TooltipContent>
             View all spots that are assigned to employees
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Card 
+              data-testid="card-available-spots" 
+              className="hover-elevate cursor-pointer active-elevate-2"
+              onClick={() => setActiveSpotTab("bci-available")}
+            >
+              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{t("admin.parkingManagement.availableSpots")}</CardTitle>
+                <div className="rounded-full border-2 border-green-400 p-2">
+                  <Sparkles className="h-4 w-4 text-green-600" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold" data-testid="stat-available-spots">
+                  {unallocatedSpots.length}
+                </div>
+                <p className="text-xs text-green-600">Unassigned spots</p>
+              </CardContent>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent>
+            Click to view available BCI managed spots
           </TooltipContent>
         </Tooltip>
 
@@ -1318,13 +1318,13 @@ export default function AdminParkingManagement() {
             <Car className="h-4 w-4 !text-blue-600" />
             All ({allSpots.length})
           </TabsTrigger>
-          <TabsTrigger value="bci-available" data-testid="tab-bci-available-spots" className="gap-2">
-            <Sparkles className="h-4 w-4 !text-green-600" />
-            Available ({unallocatedSpots.length})
-          </TabsTrigger>
           <TabsTrigger value="bci-assigned" data-testid="tab-bci-assigned-spots" className="gap-2">
             <Users className="h-4 w-4 !text-purple-600" />
             Assigned ({assignedSpots.length})
+          </TabsTrigger>
+          <TabsTrigger value="bci-available" data-testid="tab-bci-available-spots" className="gap-2">
+            <Sparkles className="h-4 w-4 !text-green-600" />
+            Available ({unallocatedSpots.length})
           </TabsTrigger>
           <TabsTrigger value="bci-bookable" data-testid="tab-bci-bookable-spots" className="gap-2">
             <CheckCircle2 className="h-4 w-4 !text-orange-600" />
