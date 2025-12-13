@@ -18,7 +18,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { TablePagination } from "@/components/shared/TablePagination"
 import { 
   Users, Clock, ArrowRight, RefreshCw, Trash2, Download, FileText,
-  Eye, EyeOff, AlertTriangle, Timer, Target, UserPlus, Plus, XCircle
+  Eye, EyeOff, AlertTriangle, Timer, Target, UserPlus, Plus, XCircle, Pencil
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -34,6 +34,14 @@ export default function AdminWaitingList() {
   const [showAssignDialog, setShowAssignDialog] = useState(false)
   const [showAddToWaitingDialog, setShowAddToWaitingDialog] = useState(false)
   const [selectedSpotForAssign, setSelectedSpotForAssign] = useState<ParkingSpotWithUser | null>(null)
+  const [showEditDialog, setShowEditDialog] = useState(false)
+  const [editWaitingListItem, setEditWaitingListItem] = useState<WaitingList | null>(null)
+  const [editFormData, setEditFormData] = useState({
+    priority: 2,
+    reason: "",
+    preferredSpotTypeId: undefined as number | undefined,
+    preferredLocationId: undefined as number | undefined
+  })
   
   const [waitingListPageIndex, setWaitingListPageIndex] = useState(0)
   const [waitingListPageSize, setWaitingListPageSize] = useState(25)
@@ -206,6 +214,33 @@ export default function AdminWaitingList() {
     },
   })
 
+  const updateWaitingListMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: typeof editFormData }) => {
+      return await apiRequest(`/api/waiting-list/${id}`, {
+        method: "PUT",
+        body: data,
+      })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list"] })
+      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/active"] })
+      toast({
+        title: "Success",
+        description: "Waiting list entry updated successfully.",
+        variant: "success",
+      })
+      setShowEditDialog(false)
+      setEditWaitingListItem(null)
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update waiting list entry.",
+        variant: "error",
+      })
+    },
+  })
+
   const filteredWaitingListEnhanced = allWaitingList?.filter(item => {
     if (waitingListSearchTerm.trim()) {
       const searchLower = waitingListSearchTerm.toLowerCase()
@@ -347,6 +382,26 @@ export default function AdminWaitingList() {
   const handleAssignFromWaitingList = (waitingListItem: WaitingList) => {
     setSelectedWaitingListItem(waitingListItem)
     setShowAssignDialog(true)
+  }
+
+  const handleEditWaitingList = (item: WaitingList) => {
+    setEditWaitingListItem(item)
+    setEditFormData({
+      priority: item.priority,
+      reason: item.reason || "",
+      preferredSpotTypeId: item.preferredSpotTypeId || undefined,
+      preferredLocationId: item.preferredLocationId || undefined
+    })
+    setShowEditDialog(true)
+  }
+
+  const handleSaveEdit = () => {
+    if (editWaitingListItem) {
+      updateWaitingListMutation.mutate({
+        id: editWaitingListItem.id,
+        data: editFormData
+      })
+    }
   }
 
   const handleRemoveFromWaitingList = async (waitingListItem: WaitingList) => {
@@ -695,6 +750,15 @@ export default function AdminWaitingList() {
                             <Button
                               variant="ghost"
                               size="sm"
+                              onClick={() => handleEditWaitingList(item)}
+                              data-testid={`button-edit-waiting-${item.id}`}
+                              title="Edit Entry"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               onClick={() => handleRemoveFromWaitingList(item)}
                               data-testid={`button-remove-waiting-${item.id}`}
                               title="Remove from Waiting List"
@@ -912,6 +976,108 @@ export default function AdminWaitingList() {
                 onClick={() => setShowAddToWaitingDialog(false)}
                 className="flex-1"
                 data-testid="button-cancel-add-waiting"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Waiting List Entry Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-md" data-testid="dialog-edit-waiting">
+          <DialogHeader>
+            <DialogTitle>Edit Waiting List Entry</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {editWaitingListItem && (
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="font-medium">{editWaitingListItem.userName}</p>
+                <p className="text-sm text-muted-foreground">{editWaitingListItem.userEmail}</p>
+              </div>
+            )}
+            <div>
+              <Label className="text-sm font-medium">Preferred Location (Optional)</Label>
+              <Select 
+                value={editFormData.preferredLocationId?.toString() || "any"}
+                onValueChange={(value) => setEditFormData(prev => ({ ...prev, preferredLocationId: value === "any" ? undefined : parseInt(value) }))}
+                disabled={isLoadingLocations}
+              >
+                <SelectTrigger data-testid="select-edit-location">
+                  <SelectValue placeholder={isLoadingLocations ? "Loading locations..." : "Any location"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="any">Any location</SelectItem>
+                  {locations.map(loc => (
+                    <SelectItem key={loc.id} value={loc.id.toString()}>
+                      {loc.office} - {loc.building}, {loc.level}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-sm font-medium">Preferred Spot Type (Optional)</Label>
+              <Select 
+                value={editFormData.preferredSpotTypeId?.toString() || "any"}
+                onValueChange={(value) => setEditFormData(prev => ({ ...prev, preferredSpotTypeId: value === "any" ? undefined : parseInt(value) }))}
+              >
+                <SelectTrigger data-testid="select-edit-spot-type">
+                  <SelectValue placeholder="Any spot type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="any">Any spot type</SelectItem>
+                  {spotTypes.map(type => (
+                    <SelectItem key={type.id} value={type.id.toString()}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-sm font-medium">Priority</Label>
+              <Select 
+                value={editFormData.priority.toString()} 
+                onValueChange={(value) => setEditFormData(prev => ({ ...prev, priority: parseInt(value) }))}
+              >
+                <SelectTrigger data-testid="select-edit-priority">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">High Priority</SelectItem>
+                  <SelectItem value="2">Medium Priority</SelectItem>
+                  <SelectItem value="3">Low Priority</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-sm font-medium">Reason (Optional)</Label>
+              <Input
+                value={editFormData.reason}
+                onChange={(e) => setEditFormData(prev => ({ ...prev, reason: e.target.value }))}
+                placeholder="Reason for waiting list placement..."
+                data-testid="input-edit-reason"
+              />
+            </div>
+            <div className="flex gap-2 pt-4">
+              <Button
+                onClick={handleSaveEdit}
+                disabled={updateWaitingListMutation.isPending}
+                className="flex-1"
+                data-testid="button-confirm-edit-waiting"
+              >
+                {updateWaitingListMutation.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowEditDialog(false)
+                  setEditWaitingListItem(null)
+                }}
+                className="flex-1"
+                data-testid="button-cancel-edit-waiting"
               >
                 Cancel
               </Button>
