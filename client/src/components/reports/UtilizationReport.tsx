@@ -193,8 +193,10 @@ export function UtilizationReport({ data, isLoading, hideStatCards = false }: Ut
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Line type="monotone" dataKey="occupiedSpots" stroke="#10b981" name="Occupied" />
-                <Line type="monotone" dataKey="totalSpots" stroke="#3b82f6" name="Total" />
+                <Line type="monotone" dataKey="totalSpots" stroke="#3b82f6" name="Total Spots" strokeWidth={2} />
+                <Line type="monotone" dataKey="occupiedSpots" stroke="#10b981" name="Allocated Spots" strokeWidth={2} />
+                <Line type="monotone" dataKey="availableForSharing" stroke="#f59e0b" name="Available for Sharing" strokeWidth={2} />
+                <Line type="monotone" dataKey="bookedSpots" stroke="#8b5cf6" name="Booked Spots" strokeWidth={2} />
               </LineChart>
             </ResponsiveContainer>
           </CardContent>
