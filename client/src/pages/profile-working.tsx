@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger, DrawerFooter, DrawerClose } from "@/components/ui/drawer"
@@ -42,7 +43,8 @@ import {
   ChevronRight,
   User,
   Palette,
-  Globe
+  Globe,
+  AlertTriangle
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useTheme } from "@/contexts/theme-context"
@@ -91,6 +93,7 @@ export default function Profile() {
   const [showPaymentPreferencesDrawer, setShowPaymentPreferencesDrawer] = useState(false)
   const [showProfileEditDrawer, setShowProfileEditDrawer] = useState(false)
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null)
+  const [confirmedHasSpotWarning, setConfirmedHasSpotWarning] = useState(false)
 
   // Vehicle form
   const vehicleForm = useForm<VehicleForm>({
@@ -563,24 +566,11 @@ export default function Profile() {
             </AccordionTrigger>
             <AccordionContent className="pb-4 md:pb-6">
               <div className="space-y-3 md:space-y-4">
-                {isLoadingWaitingList ? (
+                {isLoadingWaitingList || isLoadingAssignedSpots ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin" />
                   </div>
-                ) : !waitingListEntry ? (
-                  <div className="text-center py-6">
-                    <p className="text-muted-foreground mb-4">{t("waitingList.description")}</p>
-                    <Button 
-                      className="w-full h-12" 
-                      onClick={handleJoinWaitingList}
-                      disabled={createWaitingListMutation.isPending}
-                      data-testid="button-join-waiting-list"
-                    >
-                      {createWaitingListMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                      {t("waitingList.enrollButton")}
-                    </Button>
-                  </div>
-                ) : (
+                ) : waitingListEntry ? (
                   <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800/50 rounded-lg p-4">
                     <div className="flex items-start gap-3">
                       <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
@@ -597,13 +587,53 @@ export default function Profile() {
                           onClick={handleLeaveWaitingList}
                           disabled={cancelWaitingListMutation.isPending}
                           className="mt-3"
-                          data-testid="button-leave-waiting-list"
+                          data-testid="button-leave-waiting-list-mobile"
                         >
                           {cancelWaitingListMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                           {t("waitingList.leave")}
                         </Button>
                       </div>
                     </div>
+                  </div>
+                ) : assignedSpots.length > 0 && !confirmedHasSpotWarning ? (
+                  <div className="space-y-4">
+                    <Alert variant="default" className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800/50" data-testid="alert-has-spot-warning-mobile">
+                      <AlertTriangle className="h-4 w-4 text-amber-600" />
+                      <AlertDescription className="text-amber-800 dark:text-amber-200">
+                        <p className="font-medium mb-2">You already have {assignedSpots.length} parking spot{assignedSpots.length > 1 ? 's' : ''} assigned to you.</p>
+                        <p className="text-sm">Are you sure you want to join the waiting list for another spot?</p>
+                      </AlertDescription>
+                    </Alert>
+                    <div className="flex gap-3">
+                      <Button 
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => setConfirmedHasSpotWarning(false)}
+                        data-testid="button-cancel-waiting-list-mobile"
+                      >
+                        No, Cancel
+                      </Button>
+                      <Button 
+                        className="flex-1"
+                        onClick={() => setConfirmedHasSpotWarning(true)}
+                        data-testid="button-confirm-waiting-list-mobile"
+                      >
+                        Yes, Continue
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-6">
+                    <p className="text-muted-foreground mb-4">{t("waitingList.description")}</p>
+                    <Button 
+                      className="w-full h-12" 
+                      onClick={handleJoinWaitingList}
+                      disabled={createWaitingListMutation.isPending}
+                      data-testid="button-join-waiting-list-mobile"
+                    >
+                      {createWaitingListMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      {t("waitingList.enrollButton")}
+                    </Button>
                   </div>
                 )}
               </div>
@@ -1005,24 +1035,11 @@ export default function Profile() {
                   </p>
                 </CardHeader>
                 <CardContent className="space-y-4 md:space-y-6 p-4 md:p-6">
-                  {isLoadingWaitingList ? (
+                  {isLoadingWaitingList || isLoadingAssignedSpots ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="h-6 w-6 animate-spin" />
                     </div>
-                  ) : !waitingListEntry ? (
-                    <div className="text-center py-6">
-                      <p className="text-muted-foreground mb-4">{t("waitingList.description")}</p>
-                      <Button 
-                        className="w-full h-12" 
-                        onClick={handleJoinWaitingList}
-                        disabled={createWaitingListMutation.isPending}
-                        data-testid="button-join-waiting-list"
-                      >
-                        {createWaitingListMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                        {t("waitingList.enrollButton")}
-                      </Button>
-                    </div>
-                  ) : (
+                  ) : waitingListEntry ? (
                     <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800/50 rounded-lg p-4">
                       <div className="flex items-start gap-3">
                         <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
@@ -1046,6 +1063,46 @@ export default function Profile() {
                           </Button>
                         </div>
                       </div>
+                    </div>
+                  ) : assignedSpots.length > 0 && !confirmedHasSpotWarning ? (
+                    <div className="space-y-4">
+                      <Alert variant="default" className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800/50" data-testid="alert-has-spot-warning">
+                        <AlertTriangle className="h-4 w-4 text-amber-600" />
+                        <AlertDescription className="text-amber-800 dark:text-amber-200">
+                          <p className="font-medium mb-2">You already have {assignedSpots.length} parking spot{assignedSpots.length > 1 ? 's' : ''} assigned to you.</p>
+                          <p className="text-sm">Are you sure you want to join the waiting list for another spot?</p>
+                        </AlertDescription>
+                      </Alert>
+                      <div className="flex gap-3">
+                        <Button 
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => setConfirmedHasSpotWarning(false)}
+                          data-testid="button-cancel-waiting-list"
+                        >
+                          No, Cancel
+                        </Button>
+                        <Button 
+                          className="flex-1"
+                          onClick={() => setConfirmedHasSpotWarning(true)}
+                          data-testid="button-confirm-waiting-list"
+                        >
+                          Yes, Continue
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-6">
+                      <p className="text-muted-foreground mb-4">{t("waitingList.description")}</p>
+                      <Button 
+                        className="w-full h-12" 
+                        onClick={handleJoinWaitingList}
+                        disabled={createWaitingListMutation.isPending}
+                        data-testid="button-join-waiting-list"
+                      >
+                        {createWaitingListMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                        {t("waitingList.enrollButton")}
+                      </Button>
                     </div>
                   )}
                 </CardContent>
