@@ -610,7 +610,7 @@ export default function Profile() {
                       <Button 
                         variant="outline"
                         className="flex-1"
-                        onClick={() => setConfirmedHasSpotWarning(false)}
+                        onClick={() => setActiveTab("payment-preferences")}
                         data-testid="button-cancel-waiting-list-mobile"
                       >
                         No, Cancel
@@ -1079,7 +1079,7 @@ export default function Profile() {
                         <Button 
                           variant="outline"
                           className="flex-1"
-                          onClick={() => setConfirmedHasSpotWarning(false)}
+                          onClick={() => setActiveTab("payment-preferences")}
                           data-testid="button-cancel-waiting-list"
                         >
                           No, Cancel
