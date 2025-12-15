@@ -94,6 +94,7 @@ export default function Profile() {
   const [showProfileEditDrawer, setShowProfileEditDrawer] = useState(false)
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null)
   const [confirmedHasSpotWarning, setConfirmedHasSpotWarning] = useState(false)
+  const [cancelledJoinAttempt, setCancelledJoinAttempt] = useState(false)
 
   // Vehicle form
   const vehicleForm = useForm<VehicleForm>({
@@ -303,8 +304,9 @@ export default function Profile() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/user", user?.id] });
-      // Reset the confirmation state so warning shows again if user tries to re-join
+      // Reset the confirmation states so warning shows again if user tries to re-join
       setConfirmedHasSpotWarning(false);
+      setCancelledJoinAttempt(false);
       toast({
         title: "Left Waiting List",
         description: "You've been removed from the parking waiting list.",
@@ -597,7 +599,7 @@ export default function Profile() {
                       </div>
                     </div>
                   </div>
-                ) : assignedSpots.length > 0 && !confirmedHasSpotWarning ? (
+                ) : assignedSpots.length > 0 && !confirmedHasSpotWarning && !cancelledJoinAttempt ? (
                   <div className="space-y-4">
                     <Alert variant="default" className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800/50" data-testid="alert-has-spot-warning-mobile">
                       <AlertTriangle className="h-4 w-4 text-amber-600" />
@@ -610,7 +612,7 @@ export default function Profile() {
                       <Button 
                         variant="outline"
                         className="flex-1"
-                        onClick={() => setActiveTab("payment-preferences")}
+                        onClick={() => setCancelledJoinAttempt(true)}
                         data-testid="button-cancel-waiting-list-mobile"
                       >
                         No, Cancel
@@ -621,6 +623,19 @@ export default function Profile() {
                         data-testid="button-confirm-waiting-list-mobile"
                       >
                         Yes, Continue
+                      </Button>
+                    </div>
+                  </div>
+                ) : cancelledJoinAttempt ? (
+                  <div className="space-y-4">
+                    <div className="bg-muted/50 border rounded-lg p-4 text-center">
+                      <p className="text-muted-foreground mb-4">You chose not to join the waiting list.</p>
+                      <Button 
+                        variant="outline"
+                        onClick={() => setCancelledJoinAttempt(false)}
+                        data-testid="button-reconsider-waiting-list-mobile"
+                      >
+                        Reconsider
                       </Button>
                     </div>
                   </div>
@@ -1066,7 +1081,7 @@ export default function Profile() {
                         </div>
                       </div>
                     </div>
-                  ) : assignedSpots.length > 0 && !confirmedHasSpotWarning ? (
+                  ) : assignedSpots.length > 0 && !confirmedHasSpotWarning && !cancelledJoinAttempt ? (
                     <div className="space-y-4">
                       <Alert variant="default" className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800/50" data-testid="alert-has-spot-warning">
                         <AlertTriangle className="h-4 w-4 text-amber-600" />
@@ -1079,7 +1094,7 @@ export default function Profile() {
                         <Button 
                           variant="outline"
                           className="flex-1"
-                          onClick={() => setActiveTab("payment-preferences")}
+                          onClick={() => setCancelledJoinAttempt(true)}
                           data-testid="button-cancel-waiting-list"
                         >
                           No, Cancel
@@ -1090,6 +1105,19 @@ export default function Profile() {
                           data-testid="button-confirm-waiting-list"
                         >
                           Yes, Continue
+                        </Button>
+                      </div>
+                    </div>
+                  ) : cancelledJoinAttempt ? (
+                    <div className="space-y-4">
+                      <div className="bg-muted/50 border rounded-lg p-4 text-center">
+                        <p className="text-muted-foreground mb-4">You chose not to join the waiting list.</p>
+                        <Button 
+                          variant="outline"
+                          onClick={() => setCancelledJoinAttempt(false)}
+                          data-testid="button-reconsider-waiting-list"
+                        >
+                          Reconsider
                         </Button>
                       </div>
                     </div>
