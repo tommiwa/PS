@@ -142,6 +142,14 @@ export interface IStorage {
   getWaitingListByUser(userId: string): Promise<WaitingList | undefined>;
   getAllWaitingList(): Promise<WaitingList[]>;
   getActiveWaitingList(): Promise<WaitingList[]>;
+  getWaitingListSummary(): Promise<{
+    total: number;
+    active: number;
+    assigned: number;
+    cancelled: number;
+    highPriority: number;
+    averageWaitDays: number;
+  }>;
   createWaitingListEntry(entry: InsertWaitingList): Promise<WaitingList>;
   updateWaitingListEntry(id: string, updates: Partial<InsertWaitingList>): Promise<WaitingList | undefined>;
   deleteWaitingListEntry(id: string): Promise<boolean>;
@@ -1427,6 +1435,43 @@ export class MemStorage implements IStorage {
     entries.forEach(entry => this.waitingList.set(entry.id, entry));
     
     return entries;
+  }
+
+  async getWaitingListSummary(): Promise<{
+    total: number;
+    active: number;
+    assigned: number;
+    cancelled: number;
+    highPriority: number;
+    averageWaitDays: number;
+  }> {
+    // Use SQL aggregate queries for lightweight summary (no full data fetch)
+    const [counts] = await db
+      .select({
+        total: sqlOp<number>`count(*)::int`,
+        active: sqlOp<number>`count(*) filter (where ${waitingList.status} = 'active')::int`,
+        assigned: sqlOp<number>`count(*) filter (where ${waitingList.status} = 'assigned')::int`,
+        cancelled: sqlOp<number>`count(*) filter (where ${waitingList.status} = 'cancelled')::int`,
+        highPriority: sqlOp<number>`count(*) filter (where ${waitingList.status} = 'active' and ${waitingList.priority} = 1)::int`,
+      })
+      .from(waitingList);
+    
+    // Calculate average wait days for active entries
+    const [avgResult] = await db
+      .select({
+        avgDays: sqlOp<number>`coalesce(avg(extract(day from now() - ${waitingList.enrolledDate})), 0)::int`
+      })
+      .from(waitingList)
+      .where(eq(waitingList.status, 'active'));
+    
+    return {
+      total: counts?.total ?? 0,
+      active: counts?.active ?? 0,
+      assigned: counts?.assigned ?? 0,
+      cancelled: counts?.cancelled ?? 0,
+      highPriority: counts?.highPriority ?? 0,
+      averageWaitDays: avgResult?.avgDays ?? 0,
+    };
   }
 
   async createWaitingListEntry(insertEntry: InsertWaitingList): Promise<WaitingList> {
