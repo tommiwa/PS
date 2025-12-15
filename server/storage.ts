@@ -1483,13 +1483,20 @@ export class MemStorage implements IStorage {
 
   async deleteWaitingListEntry(id: string): Promise<boolean> {
     try {
+      // Soft delete by setting status to "cancelled" instead of removing record
       const result = await db
-        .delete(waitingList)
+        .update(waitingList)
+        .set({
+          status: 'cancelled',
+          updatedAt: new Date()
+        })
         .where(eq(waitingList.id, id))
         .returning();
       
-      // Also delete from memory
-      this.waitingList.delete(id);
+      // Update memory cache
+      if (result.length > 0) {
+        this.waitingList.set(id, result[0]);
+      }
       
       return result.length > 0;
     } catch (error) {

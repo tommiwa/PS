@@ -293,7 +293,7 @@ export default function AdminWaitingList() {
     setWaitingListPageIndex(0)
   }, [waitingListSearchTerm, waitingListFilterValues])
 
-  const waitingListFilterConfigs: FilterConfig[] = [
+  const waitingListFilterConfigs: FilterConfig[] = useMemo(() => [
     {
       key: "priority",
       label: "Priority",
@@ -308,13 +308,7 @@ export default function AdminWaitingList() {
       key: "preferredSpotType",
       label: "Preferred Spot Type",
       type: "select",
-      options: [
-        { value: "regular", label: "Regular" },
-        { value: "electric", label: "EV" },
-        { value: "tesla_ev", label: "Tesla Charger" },
-        { value: "accessible", label: "Accessible" },
-        { value: "reserved", label: "Reserved" }
-      ]
+      options: spotTypes.map(st => ({ value: st.name, label: st.name }))
     },
     {
       key: "status",
@@ -326,7 +320,7 @@ export default function AdminWaitingList() {
         { value: "cancelled", label: "Cancelled" }
       ]
     }
-  ]
+  ], [spotTypes])
 
   const handleWaitingListFilterChange = (key: string, value: string | undefined) => {
     setWaitingListFilterValues(prev => ({
