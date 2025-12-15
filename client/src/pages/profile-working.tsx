@@ -1026,14 +1026,6 @@ export default function Profile() {
 
             {/* Waiting List Tab */}
             <TabsContent value="waiting-list" className="space-y-4 md:space-y-6">
-              {/* DEBUG - Remove after fixing */}
-              <div className="p-3 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-100 rounded-lg text-sm font-mono border border-yellow-300 dark:border-yellow-700">
-                <strong>DEBUG:</strong> spots={assignedSpots.length}, 
-                confirmed={String(confirmedHasSpotWarning)}, 
-                waitingEntry={waitingListEntry ? 'exists' : 'null'}, 
-                loadingSpots={String(isLoadingAssignedSpots)}, 
-                loadingWL={String(isLoadingWaitingList)}
-              </div>
               <Card>
                 <CardHeader className="p-4 md:p-6">
                   <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
