@@ -58,20 +58,12 @@ export default function AdminWaitingList() {
   const { cardsVisible, toggleCards } = useCardsVisibility("waiting-list-management")
   const [isRefreshing, setIsRefreshing] = useState(false)
   
-  // Track whether we need to load all records (including cancelled/assigned)
-  // By default, only load active records for better performance
-  const needsAllRecords = waitingListFilterValues.status === "all" || 
-                          waitingListFilterValues.status === "cancelled" || 
-                          waitingListFilterValues.status === "assigned" ||
-                          Object.keys(waitingListFilterValues).length === 0;
-  
   const handleRefreshAll = async () => {
     setIsRefreshing(true)
     try {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["/api/waiting-list"] }),
         queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/active"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/summary"] }),
         queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] }),
       ])
       toast({
@@ -89,32 +81,13 @@ export default function AdminWaitingList() {
     }
   }
 
-  // Only fetch all records when needed (cancelled/assigned filter or "all")
-  const { data: allWaitingList, isLoading: isLoadingAllWaitingList } = useQuery<WaitingList[]>({
+  const { data: allWaitingList, isLoading: isLoadingWaitingList } = useQuery<WaitingList[]>({
     queryKey: ["/api/waiting-list"],
-    enabled: needsAllRecords, // Only fetch when we need non-active records
   })
 
-  // Always fetch active records (default view)
-  const { data: activeWaitingList, isLoading: isLoadingActiveWaitingList } = useQuery<WaitingList[]>({
+  const { data: activeWaitingList } = useQuery<WaitingList[]>({
     queryKey: ["/api/waiting-list/active"],
   })
-  
-  // Fetch summary counts for metrics (lightweight endpoint)
-  const { data: waitingListSummary } = useQuery<{
-    total: number;
-    active: number;
-    assigned: number;
-    cancelled: number;
-    highPriority: number;
-    averageWaitDays: number;
-  }>({
-    queryKey: ["/api/waiting-list/summary"],
-  })
-  
-  // Use appropriate data source based on filter
-  const waitingListData = needsAllRecords ? allWaitingList : activeWaitingList;
-  const isLoadingWaitingList = needsAllRecords ? isLoadingAllWaitingList : isLoadingActiveWaitingList;
 
   const { data: unallocatedSpots = [] } = useQuery<ParkingSpotWithUser[]>({
     queryKey: ["/api/admin/unallocated-spots"],
@@ -143,7 +116,6 @@ export default function AdminWaitingList() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/waiting-list"] })
       queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/active"] })
-      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/summary"] })
       toast({
         title: "Success",
         description: "User added to waiting list successfully.",
@@ -167,23 +139,23 @@ export default function AdminWaitingList() {
     },
   })
 
-  // Get metrics from summary endpoint (lightweight) or calculate from available data
-  const activeEntries = activeWaitingList || [];
+  // Get active entries from allWaitingList for consistent metrics
+  const activeEntries = allWaitingList?.filter(entry => entry.status === "active") || [];
   
   const waitingListMetrics = {
-    total: waitingListSummary?.total ?? (activeWaitingList?.length || 0),
-    active: waitingListSummary?.active ?? activeEntries.length,
-    assigned: waitingListSummary?.assigned ?? 0,
-    cancelled: waitingListSummary?.cancelled ?? 0,
-    highPriority: waitingListSummary?.highPriority ?? activeEntries.filter(entry => entry.priority === 1).length,
+    total: allWaitingList?.length || 0,
+    active: activeEntries.length,
+    assigned: allWaitingList?.filter(entry => entry.status === "assigned").length || 0,
+    cancelled: allWaitingList?.filter(entry => entry.status === "cancelled").length || 0,
+    highPriority: activeEntries.filter(entry => entry.priority === 1).length,
     mediumPriority: activeEntries.filter(entry => entry.priority === 2).length,
     lowPriority: activeEntries.filter(entry => entry.priority === 3).length,
-    averageWaitTime: waitingListSummary?.averageWaitDays ?? (activeEntries.length > 0 
+    averageWaitTime: activeEntries.length > 0 
       ? Math.round(activeEntries.reduce((sum, entry) => {
           const daysSinceEnrollment = Math.floor((Date.now() - new Date(entry.enrolledDate).getTime()) / (1000 * 60 * 60 * 24));
           return sum + daysSinceEnrollment;
         }, 0) / activeEntries.length)
-      : 0)
+      : 0
   }
 
   const assignFromWaitingListMutation = useMutation({
@@ -196,7 +168,6 @@ export default function AdminWaitingList() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/waiting-list"] })
       queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/active"] })
-      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/summary"] })
       queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] })
       queryClient.invalidateQueries({ queryKey: ["/api/admin/all-spots"] })
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] })
@@ -227,7 +198,6 @@ export default function AdminWaitingList() {
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/waiting-list"] })
       queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/active"] })
-      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/summary"] })
       queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/user", variables.userId] })
       toast({
         title: "Success",
@@ -254,7 +224,6 @@ export default function AdminWaitingList() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/waiting-list"] })
       queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/active"] })
-      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/summary"] })
       toast({
         title: "Success",
         description: "Waiting list entry updated successfully.",
@@ -273,7 +242,7 @@ export default function AdminWaitingList() {
   })
 
   const filteredWaitingListEnhanced = useMemo(() => {
-    return (waitingListData?.filter(item => {
+    return (allWaitingList?.filter(item => {
       if (waitingListSearchTerm.trim()) {
         const searchLower = waitingListSearchTerm.toLowerCase()
         const matchesSearch = item.userName?.toLowerCase().includes(searchLower) ||
@@ -296,7 +265,7 @@ export default function AdminWaitingList() {
       if (waitingListFilterValues.status && waitingListFilterValues.status !== "all") {
         if (item.status !== waitingListFilterValues.status) return false
       }
-      // When status filter is empty/cleared, show all entries from the appropriate data source
+      // When status filter is empty/cleared, show all entries
       
       return true
     }) || []).map(item => ({
@@ -307,7 +276,7 @@ export default function AdminWaitingList() {
         : "Any",
       waitingDays: Math.floor((Date.now() - new Date(item.enrolledDate).getTime()) / (1000 * 60 * 60 * 24))
     }))
-  }, [waitingListData, waitingListSearchTerm, waitingListFilterValues, spotTypes])
+  }, [allWaitingList, waitingListSearchTerm, waitingListFilterValues, spotTypes])
 
   const { sortState: waitingListSortState, sortedData: sortedWaitingList, handleSort: handleWaitingListSort } = useTableSort(
     filteredWaitingListEnhanced,
@@ -370,8 +339,7 @@ export default function AdminWaitingList() {
   
   const handleClearWaitingListFilters = () => {
     setWaitingListSearchTerm("")
-    // Reset to default state (active only) rather than showing all records
-    setWaitingListFilterValues({ status: "active" })
+    setWaitingListFilterValues({})
   }
 
   const getPriorityBadge = (priority: number) => {

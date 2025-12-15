@@ -142,14 +142,6 @@ export interface IStorage {
   getWaitingListByUser(userId: string): Promise<WaitingList | undefined>;
   getAllWaitingList(): Promise<WaitingList[]>;
   getActiveWaitingList(): Promise<WaitingList[]>;
-  getWaitingListSummary(): Promise<{
-    total: number;
-    active: number;
-    assigned: number;
-    cancelled: number;
-    highPriority: number;
-    averageWaitDays: number;
-  }>;
   createWaitingListEntry(entry: InsertWaitingList): Promise<WaitingList>;
   updateWaitingListEntry(id: string, updates: Partial<InsertWaitingList>): Promise<WaitingList | undefined>;
   deleteWaitingListEntry(id: string): Promise<boolean>;
@@ -1435,53 +1427,6 @@ export class MemStorage implements IStorage {
     entries.forEach(entry => this.waitingList.set(entry.id, entry));
     
     return entries;
-  }
-
-  async getWaitingListSummary(): Promise<{
-    total: number;
-    active: number;
-    assigned: number;
-    cancelled: number;
-    highPriority: number;
-    averageWaitDays: number;
-  }> {
-    // Get basic counts for all statuses
-    const [baseCounts] = await db
-      .select({
-        total: sqlOp<number>`count(*)::int`,
-        assigned: sqlOp<number>`count(*) filter (where ${waitingList.status} = 'assigned')::int`,
-        cancelled: sqlOp<number>`count(*) filter (where ${waitingList.status} = 'cancelled')::int`,
-      })
-      .from(waitingList);
-    
-    // For active counts, exclude users who already have BCI-managed spots (same logic as getActiveWaitingList)
-    const [activeCounts] = await db
-      .select({
-        active: sqlOp<number>`count(*)::int`,
-        highPriority: sqlOp<number>`count(*) filter (where ${waitingList.priority} = 1)::int`,
-        avgDays: sqlOp<number>`coalesce(avg(extract(day from now() - ${waitingList.enrolledDate})), 0)::int`
-      })
-      .from(waitingList)
-      .where(and(
-        eq(waitingList.status, 'active'),
-        notExists(
-          db.select({ id: parkingSpots.id })
-            .from(parkingSpots)
-            .where(and(
-              eq(parkingSpots.ownerId, waitingList.userId),
-              eq(parkingSpots.isBciManaged, true)
-            ))
-        )
-      ));
-    
-    return {
-      total: baseCounts?.total ?? 0,
-      active: activeCounts?.active ?? 0,
-      assigned: baseCounts?.assigned ?? 0,
-      cancelled: baseCounts?.cancelled ?? 0,
-      highPriority: activeCounts?.highPriority ?? 0,
-      averageWaitDays: activeCounts?.avgDays ?? 0,
-    };
   }
 
   async createWaitingListEntry(insertEntry: InsertWaitingList): Promise<WaitingList> {

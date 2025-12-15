@@ -5290,17 +5290,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get waiting list summary counts (lightweight endpoint for metrics)
-  app.get("/api/waiting-list/summary", requireAdmin, async (req, res) => {
-    try {
-      const summary = await storage.getWaitingListSummary();
-      res.json(summary);
-    } catch (error) {
-      console.error("Error fetching waiting list summary:", error);
-      res.status(500).json({ error: "Failed to fetch waiting list summary" });
-    }
-  });
-
   // Get user's waiting list entry
   app.get("/api/waiting-list/user/:userId", isAuthenticated, async (req: any, res) => {
     try {
