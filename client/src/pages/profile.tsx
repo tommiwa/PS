@@ -1815,6 +1815,35 @@ export default function Profile() {
                     </Form>
                   )}
                 </div>
+              ) : assignedSpots.length > 0 && !confirmedHasSpotWarning ? (
+                <div className="space-y-3">
+                  <Alert variant="default" className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800/50" data-testid="alert-has-spot-warning-card">
+                    <AlertTriangle className="h-4 w-4 text-amber-600" />
+                    <AlertDescription className="text-amber-800 dark:text-amber-200">
+                      <p className="font-medium text-sm mb-1">You already have {assignedSpots.length} spot{assignedSpots.length > 1 ? 's' : ''} assigned.</p>
+                      <p className="text-xs">Do you want to join the waiting list for another spot?</p>
+                    </AlertDescription>
+                  </Alert>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 text-xs"
+                      onClick={() => setConfirmedHasSpotWarning(false)}
+                      data-testid="button-cancel-waiting-list-card"
+                    >
+                      No
+                    </Button>
+                    <Button 
+                      size="sm"
+                      className="flex-1 text-xs"
+                      onClick={() => setConfirmedHasSpotWarning(true)}
+                      data-testid="button-confirm-waiting-list-card"
+                    >
+                      Yes, Continue
+                    </Button>
+                  </div>
+                </div>
               ) : (
                 <div className="space-y-3">
                   <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/50 rounded-lg p-3">
@@ -1830,31 +1859,72 @@ export default function Profile() {
                       </div>
                     </div>
                   </div>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="w-full text-xs"
-                        onClick={() => {
-                          waitingListForm.reset();
-                          setShowEnrollmentDialog(true);
-                        }}
-                        disabled={isLoadingSpots}
-                        data-testid="button-join-waiting-list"
-                      >
-                        {isLoadingSpots ? (
-                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                        ) : (
-                          <Plus className="h-3 w-3 mr-1" />
-                        )}
-                        {isLoadingSpots ? t("common.loading") : t("waitingList.enrollButton")}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{isLoadingSpots ? "Checking your parking spot status..." : t("tooltip.waitingList.enroll")}</p>
-                    </TooltipContent>
-                  </Tooltip>
+                  
+                  {/* Inline enrollment form */}
+                  <div className="border rounded-lg p-3 bg-muted/30 space-y-3">
+                    <Form {...waitingListForm}>
+                      <form onSubmit={waitingListForm.handleSubmit((data) => createWaitingListMutation.mutate(data))} className="space-y-3">
+                        <FormField
+                          control={waitingListForm.control}
+                          name="priority"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs">{t("waitingList.form.priority")}</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger className="h-8" data-testid="select-enrollment-priority-card">
+                                    <SelectValue placeholder={t("placeholder.selectPriority")} />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="1">{t("priority.high")}</SelectItem>
+                                  <SelectItem value="2">{t("priority.medium")}</SelectItem>
+                                  <SelectItem value="3">{t("priority.low")}</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={waitingListForm.control}
+                          name="preferredSpotType"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs">{t("waitingList.form.preferredSpotType")}</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger className="h-8" data-testid="select-enrollment-spot-type-card">
+                                    <SelectValue placeholder={t("placeholder.selectSpotType")} />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="regular">{t("spotType.regular")}</SelectItem>
+                                  <SelectItem value="electric">{t("spotType.electric")}</SelectItem>
+                                  <SelectItem value="accessible">{t("spotType.accessible")}</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <Button 
+                          type="submit"
+                          size="sm"
+                          className="w-full text-xs"
+                          disabled={createWaitingListMutation.isPending}
+                          data-testid="button-submit-enrollment-card"
+                        >
+                          {createWaitingListMutation.isPending && (
+                            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                          )}
+                          {t("waitingList.enrollButton")}
+                        </Button>
+                      </form>
+                    </Form>
+                  </div>
                 </div>
               )}
             </CardContent>
