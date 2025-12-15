@@ -29,7 +29,7 @@ export default function AdminWaitingList() {
   const { toast } = useToast()
   const { confirm } = useConfirm()
   const [waitingListSearchTerm, setWaitingListSearchTerm] = useState("")
-  const [waitingListFilterValues, setWaitingListFilterValues] = useState<FilterValues>({})
+  const [waitingListFilterValues, setWaitingListFilterValues] = useState<FilterValues>({ status: "active" })
   const [selectedWaitingListItem, setSelectedWaitingListItem] = useState<WaitingList | null>(null)
   const [showAssignDialog, setShowAssignDialog] = useState(false)
   const [showAddToWaitingDialog, setShowAddToWaitingDialog] = useState(false)
