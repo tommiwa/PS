@@ -1916,54 +1916,6 @@ export default function Profile() {
             <form onSubmit={waitingListForm.handleSubmit((data) => createWaitingListMutation.mutate(data))} className="space-y-4">
               <FormField
                 control={waitingListForm.control}
-                name="preferredSpotType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("waitingList.form.preferredSpotType")}</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger data-testid="select-enrollment-spot-type">
-                          <SelectValue placeholder={t("placeholder.selectSpotType")} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="regular">{t("spotType.regular")}</SelectItem>
-                        <SelectItem value="electric">{t("spotType.electric")}</SelectItem>
-                        <SelectItem value="accessible">{t("spotType.accessible")}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={waitingListForm.control}
-                name="preferredBuilding"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("waitingList.form.preferredBuilding")}</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger data-testid="select-enrollment-building">
-                          <SelectValue placeholder={t("placeholder.selectBuilding")} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {buildingOptions.map((building) => (
-                          <SelectItem key={building.value} value={building.value}>
-                            {building.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={waitingListForm.control}
                 name="priority"
                 render={({ field }) => (
                   <FormItem>
@@ -1989,18 +1941,22 @@ export default function Profile() {
 
               <FormField
                 control={waitingListForm.control}
-                name="reason"
+                name="preferredSpotType"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("waitingList.form.reason")}</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="Please explain why you need a parking spot"
-                        className="resize-none h-20"
-                        data-testid="textarea-enrollment-reason"
-                        {...field}
-                      />
-                    </FormControl>
+                    <FormLabel>{t("waitingList.form.preferredSpotType")}</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-enrollment-spot-type">
+                          <SelectValue placeholder={t("placeholder.selectSpotType")} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="regular">{t("spotType.regular")}</SelectItem>
+                        <SelectItem value="electric">{t("spotType.electric")}</SelectItem>
+                        <SelectItem value="accessible">{t("spotType.accessible")}</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
