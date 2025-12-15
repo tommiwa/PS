@@ -241,33 +241,42 @@ export default function AdminWaitingList() {
     },
   })
 
-  const filteredWaitingListEnhanced = allWaitingList?.filter(item => {
-    if (waitingListSearchTerm.trim()) {
-      const searchLower = waitingListSearchTerm.toLowerCase()
-      const matchesSearch = item.userName?.toLowerCase().includes(searchLower) ||
-                           item.userEmail?.toLowerCase().includes(searchLower) ||
-                           item.reason?.toLowerCase().includes(searchLower)
-      if (!matchesSearch) return false
-    }
-    
-    if (waitingListFilterValues.priority && waitingListFilterValues.priority !== "all") {
-      if (item.priority?.toString() !== waitingListFilterValues.priority) return false
-    }
-    
-    if (waitingListFilterValues.preferredSpotType && waitingListFilterValues.preferredSpotType !== "all") {
-      const preferredSpotTypeName = item.preferredSpotTypeId 
-        ? spotTypes.find(st => st.id === item.preferredSpotTypeId)?.name 
-        : null
-      if (preferredSpotTypeName !== waitingListFilterValues.preferredSpotType) return false
-    }
-    
-    if (waitingListFilterValues.status && waitingListFilterValues.status !== "all") {
-      if (item.status !== waitingListFilterValues.status) return false
-    }
-    // When status filter is empty/cleared, show all entries
-    
-    return true
-  }) || []
+  const filteredWaitingListEnhanced = useMemo(() => {
+    return (allWaitingList?.filter(item => {
+      if (waitingListSearchTerm.trim()) {
+        const searchLower = waitingListSearchTerm.toLowerCase()
+        const matchesSearch = item.userName?.toLowerCase().includes(searchLower) ||
+                             item.userEmail?.toLowerCase().includes(searchLower) ||
+                             item.reason?.toLowerCase().includes(searchLower)
+        if (!matchesSearch) return false
+      }
+      
+      if (waitingListFilterValues.priority && waitingListFilterValues.priority !== "all") {
+        if (item.priority?.toString() !== waitingListFilterValues.priority) return false
+      }
+      
+      if (waitingListFilterValues.preferredSpotType && waitingListFilterValues.preferredSpotType !== "all") {
+        const preferredSpotTypeName = item.preferredSpotTypeId 
+          ? spotTypes.find(st => st.id === item.preferredSpotTypeId)?.name 
+          : null
+        if (preferredSpotTypeName !== waitingListFilterValues.preferredSpotType) return false
+      }
+      
+      if (waitingListFilterValues.status && waitingListFilterValues.status !== "all") {
+        if (item.status !== waitingListFilterValues.status) return false
+      }
+      // When status filter is empty/cleared, show all entries
+      
+      return true
+    }) || []).map(item => ({
+      ...item,
+      // Add computed fields for sorting
+      preferredSpotType: item.preferredSpotTypeId 
+        ? spotTypes.find(st => st.id === item.preferredSpotTypeId)?.name || "Any"
+        : "Any",
+      waitingDays: Math.floor((Date.now() - new Date(item.enrolledDate).getTime()) / (1000 * 60 * 60 * 24))
+    }))
+  }, [allWaitingList, waitingListSearchTerm, waitingListFilterValues, spotTypes])
 
   const { sortState: waitingListSortState, sortedData: sortedWaitingList, handleSort: handleWaitingListSort } = useTableSort(
     filteredWaitingListEnhanced,
@@ -684,7 +693,14 @@ export default function AdminWaitingList() {
                     >
                       Enrolled Date
                     </SortableTableHeader>
-                    <TableHead>Waiting Days</TableHead>
+                    <SortableTableHeader
+                      column="waitingDays"
+                      currentSortColumn={waitingListSortState.column}
+                      currentSortDirection={waitingListSortState.direction}
+                      onSort={handleWaitingListSort}
+                    >
+                      Waiting Days
+                    </SortableTableHeader>
                     <SortableTableHeader
                       column="reason"
                       currentSortColumn={waitingListSortState.column}
@@ -698,7 +714,6 @@ export default function AdminWaitingList() {
                 </TableHeader>
                 <TableBody>
                   {paginatedWaitingList.map((item) => {
-                    const waitingDays = Math.floor((Date.now() - new Date(item.enrolledDate).getTime()) / (1000 * 60 * 60 * 24))
                     return (
                       <TableRow key={item.id} data-testid={`row-waiting-${item.id}`}>
                         <TableCell data-testid={`text-waiting-user-${item.id}`}>
@@ -729,7 +744,7 @@ export default function AdminWaitingList() {
                           {new Date(item.enrolledDate).toLocaleDateString()}
                         </TableCell>
                         <TableCell data-testid={`text-waiting-days-${item.id}`}>
-                          <Badge variant="outline">{waitingDays} days</Badge>
+                          <Badge variant="outline">{item.waitingDays} days</Badge>
                         </TableCell>
                         <TableCell data-testid={`text-waiting-reason-${item.id}`}>
                           {item.reason && item.reason.trim() ? (
