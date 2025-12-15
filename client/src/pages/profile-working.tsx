@@ -303,6 +303,8 @@ export default function Profile() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/user", user?.id] });
+      // Reset the confirmation state so warning shows again if user tries to re-join
+      setConfirmedHasSpotWarning(false);
       toast({
         title: "Left Waiting List",
         description: "You've been removed from the parking waiting list.",
