@@ -263,10 +263,8 @@ export default function AdminWaitingList() {
     
     if (waitingListFilterValues.status && waitingListFilterValues.status !== "all") {
       if (item.status !== waitingListFilterValues.status) return false
-    } else {
-      // By default, hide "assigned" and "cancelled" entries unless explicitly selected
-      if (item.status === "assigned" || item.status === "cancelled") return false
     }
+    // When status filter is empty/cleared, show all entries
     
     return true
   }) || []

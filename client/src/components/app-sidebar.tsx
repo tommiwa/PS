@@ -288,6 +288,16 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
         queryClient.invalidateQueries({ queryKey: ["/api/spot-types"] }),
       ]);
     },
+    "/admin/waiting-list": async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/waiting-list"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/active"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/spot-types"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/locations"] }),
+      ]);
+    },
   };
 
 
@@ -343,10 +353,11 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
     // Close sidebar on mobile
     setOpenMobile(false);
     
-    // If already on this page, refresh the data
+    const refreshFn = refreshFunctions[url];
+    
+    // If already on this page, refresh the data and prevent navigation
     if (location === url) {
       e.preventDefault();
-      const refreshFn = refreshFunctions[url];
       if (refreshFn) {
         setRefreshing(url);
         try {
@@ -365,8 +376,15 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
           setRefreshing(null);
         }
       }
+    } else {
+      // Navigating to a new page - also refresh data in background
+      if (refreshFn) {
+        // Small delay to ensure navigation happens first, then refresh data
+        setTimeout(async () => {
+          await refreshFn();
+        }, 100);
+      }
     }
-    // Otherwise, navigate normally (Link component handles this)
   };
 
   const renderMenuItems = (items: typeof mainMenuItems) => {
