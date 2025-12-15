@@ -3227,7 +3227,10 @@ export class MemStorage implements IStorage {
 
   // Spot Assignment History operations
   async recordSpotAssignment(data: InsertSpotAssignmentHistory): Promise<void> {
-    await db.insert(spotAssignmentHistory).values([data as any]);
+    await db.insert(spotAssignmentHistory).values([{
+      ...data,
+      id: crypto.randomUUID()
+    } as any]);
   }
 
   async getSpotAssignmentHistory(filters: { 
