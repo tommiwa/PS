@@ -709,7 +709,7 @@ export default function AdminWaitingList() {
                     >
                       Reason
                     </SortableTableHeader>
-                    <TableHead>Actions</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
