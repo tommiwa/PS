@@ -173,6 +173,7 @@ export default function Profile() {
   const [availabilityAlertsEnabled, setAvailabilityAlertsEnabled] = useState(false)
   const [editWaitingListMode, setEditWaitingListMode] = useState(false)
   const [showEnrollmentDialog, setShowEnrollmentDialog] = useState(false)
+  const [confirmedHasSpotWarning, setConfirmedHasSpotWarning] = useState(false)
 
   // Waiting list form
   const waitingListForm = useForm<WaitingListForm>({
@@ -1010,6 +1011,33 @@ export default function Profile() {
                             Priority: {waitingListEntry.priority}
                           </p>
                         </div>
+                      </div>
+                    </div>
+                  ) : assignedSpots.length > 0 && !confirmedHasSpotWarning ? (
+                    <div className="space-y-4">
+                      <Alert variant="default" className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800/50" data-testid="alert-has-spot-warning">
+                        <AlertTriangle className="h-4 w-4 text-amber-600" />
+                        <AlertDescription className="text-amber-800 dark:text-amber-200">
+                          <p className="font-medium mb-2">You already have {assignedSpots.length} parking spot{assignedSpots.length > 1 ? 's' : ''} assigned to you.</p>
+                          <p className="text-sm">Are you sure you want to join the waiting list for another spot?</p>
+                        </AlertDescription>
+                      </Alert>
+                      <div className="flex gap-3">
+                        <Button 
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => setConfirmedHasSpotWarning(false)}
+                          data-testid="button-cancel-waiting-list"
+                        >
+                          No, Cancel
+                        </Button>
+                        <Button 
+                          className="flex-1"
+                          onClick={() => setConfirmedHasSpotWarning(true)}
+                          data-testid="button-confirm-waiting-list"
+                        >
+                          Yes, Continue
+                        </Button>
                       </div>
                     </div>
                   ) : (
