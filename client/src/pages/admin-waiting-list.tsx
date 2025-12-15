@@ -370,7 +370,8 @@ export default function AdminWaitingList() {
   
   const handleClearWaitingListFilters = () => {
     setWaitingListSearchTerm("")
-    setWaitingListFilterValues({})
+    // Reset to default state (active only) rather than showing all records
+    setWaitingListFilterValues({ status: "active" })
   }
 
   const getPriorityBadge = (priority: number) => {
