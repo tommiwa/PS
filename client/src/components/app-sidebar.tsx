@@ -92,7 +92,7 @@ const adminCoreItems = [
     tooltip: "Parking Management"
   },
   {
-    title: "Waiting List",
+    title: "Waiting List Management",
     url: "/admin/waiting-list",
     icon: Clock,
     roles: ["admin"],
