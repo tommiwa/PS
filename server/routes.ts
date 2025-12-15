@@ -5595,6 +5595,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Permanently delete waiting list entry (admin only - for cancelled records)
+  app.delete("/api/waiting-list/:id/permanent", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Get existing entry for audit logging
+      const existingEntry = await storage.getWaitingListById(id);
+      if (!existingEntry) {
+        return res.status(404).json({ error: "Waiting list entry not found" });
+      }
+      
+      if (existingEntry.status !== 'cancelled') {
+        return res.status(400).json({ error: "Only cancelled entries can be permanently deleted" });
+      }
+      
+      const deleted = await storage.permanentDeleteWaitingListEntry(id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Failed to permanently delete waiting list entry" });
+      }
+      
+      // Audit the permanent deletion
+      await auditService.logAction("DELETE", "waiting_list", {
+        entityId: id,
+        message: `Permanently deleted waiting list entry for ${existingEntry.userName} (${existingEntry.userEmail})`,
+        before: existingEntry,
+        metadata: { permanentDelete: true }
+      });
+      
+      res.json({ success: true, message: "Waiting list entry permanently deleted" });
+    } catch (error: any) {
+      console.error("Error permanently deleting waiting list entry:", error);
+      res.status(500).json({ error: error.message || "Failed to permanently delete waiting list entry" });
+    }
+  });
+
   // ===== NOTIFICATION API ENDPOINTS =====
 
   // Get user notifications

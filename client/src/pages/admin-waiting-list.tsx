@@ -214,6 +214,31 @@ export default function AdminWaitingList() {
     },
   })
 
+  const permanentDeleteMutation = useMutation({
+    mutationFn: async ({ waitingListId, userId }: { waitingListId: string; userId: string }) => {
+      return await apiRequest(`/api/waiting-list/${waitingListId}/permanent`, {
+        method: "DELETE",
+      })
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list"] })
+      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/active"] })
+      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/user", variables.userId] })
+      toast({
+        title: "Permanently Deleted",
+        description: "Record has been permanently removed from the database.",
+        variant: "success",
+      })
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to permanently delete record.",
+        variant: "error",
+      })
+    },
+  })
+
   const updateWaitingListMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: typeof editFormData }) => {
       return await apiRequest(`/api/waiting-list/${id}`, {
@@ -417,6 +442,23 @@ export default function AdminWaitingList() {
     
     if (confirmed) {
       removeFromWaitingListMutation.mutate({ 
+        waitingListId: waitingListItem.id, 
+        userId: waitingListItem.userId 
+      })
+    }
+  }
+
+  const handlePermanentDelete = async (waitingListItem: WaitingList) => {
+    const confirmed = await confirm({
+      title: "Permanent Delete",
+      description: `This will permanently remove ${waitingListItem.userName}'s cancelled record from the database. This action cannot be undone.`,
+      confirmText: "Delete Forever",
+      cancelText: "Cancel",
+      variant: "destructive"
+    })
+    
+    if (confirmed) {
+      permanentDeleteMutation.mutate({ 
         waitingListId: waitingListItem.id, 
         userId: waitingListItem.userId 
       })
@@ -785,15 +827,28 @@ export default function AdminWaitingList() {
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleRemoveFromWaitingList(item)}
-                              data-testid={`button-remove-waiting-${item.id}`}
-                              title="Remove from Waiting List"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            {item.status !== "cancelled" ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRemoveFromWaitingList(item)}
+                                data-testid={`button-remove-waiting-${item.id}`}
+                                title="Remove from Waiting List"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handlePermanentDelete(item)}
+                                data-testid={`button-permanent-delete-${item.id}`}
+                                title="Permanently Delete"
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>

@@ -1505,6 +1505,36 @@ export class MemStorage implements IStorage {
     }
   }
 
+  async permanentDeleteWaitingListEntry(id: string): Promise<boolean> {
+    try {
+      // Check if the entry exists and is cancelled before permanent deletion
+      const existing = await db.select().from(waitingList).where(eq(waitingList.id, id)).limit(1);
+      if (existing.length === 0) {
+        return false;
+      }
+      
+      if (existing[0].status !== 'cancelled') {
+        throw new Error("Only cancelled entries can be permanently deleted");
+      }
+      
+      // Permanently delete from database
+      const result = await db
+        .delete(waitingList)
+        .where(eq(waitingList.id, id))
+        .returning();
+      
+      // Remove from memory cache
+      if (result.length > 0) {
+        this.waitingList.delete(id);
+      }
+      
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error permanently deleting waiting list entry:", error);
+      throw error;
+    }
+  }
+
   async getWaitingListById(id: string): Promise<WaitingList | undefined> {
     const result = await db.select().from(waitingList).where(eq(waitingList.id, id)).limit(1);
     if (result.length === 0) return undefined;
