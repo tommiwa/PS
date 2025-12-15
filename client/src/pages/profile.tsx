@@ -1014,7 +1014,10 @@ export default function Profile() {
                     </div>
                   ) : (
                     <Button 
-                      onClick={() => setIsEnrolledInWaitingList(true)}
+                      onClick={() => {
+                        waitingListForm.reset();
+                        setShowEnrollmentDialog(true);
+                      }}
                       className="w-full"
                       data-testid="button-join-waiting-list-tab"
                       disabled={isLoadingSpots}
