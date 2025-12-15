@@ -1445,32 +1445,42 @@ export class MemStorage implements IStorage {
     highPriority: number;
     averageWaitDays: number;
   }> {
-    // Use SQL aggregate queries for lightweight summary (no full data fetch)
-    const [counts] = await db
+    // Get basic counts for all statuses
+    const [baseCounts] = await db
       .select({
         total: sqlOp<number>`count(*)::int`,
-        active: sqlOp<number>`count(*) filter (where ${waitingList.status} = 'active')::int`,
         assigned: sqlOp<number>`count(*) filter (where ${waitingList.status} = 'assigned')::int`,
         cancelled: sqlOp<number>`count(*) filter (where ${waitingList.status} = 'cancelled')::int`,
-        highPriority: sqlOp<number>`count(*) filter (where ${waitingList.status} = 'active' and ${waitingList.priority} = 1)::int`,
       })
       .from(waitingList);
     
-    // Calculate average wait days for active entries
-    const [avgResult] = await db
+    // For active counts, exclude users who already have BCI-managed spots (same logic as getActiveWaitingList)
+    const [activeCounts] = await db
       .select({
+        active: sqlOp<number>`count(*)::int`,
+        highPriority: sqlOp<number>`count(*) filter (where ${waitingList.priority} = 1)::int`,
         avgDays: sqlOp<number>`coalesce(avg(extract(day from now() - ${waitingList.enrolledDate})), 0)::int`
       })
       .from(waitingList)
-      .where(eq(waitingList.status, 'active'));
+      .where(and(
+        eq(waitingList.status, 'active'),
+        notExists(
+          db.select({ id: parkingSpots.id })
+            .from(parkingSpots)
+            .where(and(
+              eq(parkingSpots.ownerId, waitingList.userId),
+              eq(parkingSpots.isBciManaged, true)
+            ))
+        )
+      ));
     
     return {
-      total: counts?.total ?? 0,
-      active: counts?.active ?? 0,
-      assigned: counts?.assigned ?? 0,
-      cancelled: counts?.cancelled ?? 0,
-      highPriority: counts?.highPriority ?? 0,
-      averageWaitDays: avgResult?.avgDays ?? 0,
+      total: baseCounts?.total ?? 0,
+      active: activeCounts?.active ?? 0,
+      assigned: baseCounts?.assigned ?? 0,
+      cancelled: baseCounts?.cancelled ?? 0,
+      highPriority: activeCounts?.highPriority ?? 0,
+      averageWaitDays: activeCounts?.avgDays ?? 0,
     };
   }
 
