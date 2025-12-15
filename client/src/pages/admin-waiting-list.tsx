@@ -489,7 +489,14 @@ export default function AdminWaitingList() {
 
       {cardsVisible && (
         <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-3">
-          <Card data-testid="card-active-waiting">
+          <Card 
+            data-testid="card-active-waiting"
+            className="cursor-pointer hover-elevate transition-all"
+            onClick={() => {
+              setWaitingListFilterValues({ status: "active" });
+              setWaitingListSearchTerm("");
+            }}
+          >
             <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Requests</CardTitle>
               <div className="rounded-full border-2 border-orange-400 p-2">
@@ -504,7 +511,14 @@ export default function AdminWaitingList() {
             </CardContent>
           </Card>
 
-          <Card data-testid="card-high-priority">
+          <Card 
+            data-testid="card-high-priority"
+            className="cursor-pointer hover-elevate transition-all"
+            onClick={() => {
+              setWaitingListFilterValues({ status: "active", priority: "1" });
+              setWaitingListSearchTerm("");
+            }}
+          >
             <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">High Priority</CardTitle>
               <div className="rounded-full border-2 border-red-400 p-2">
@@ -519,7 +533,14 @@ export default function AdminWaitingList() {
             </CardContent>
           </Card>
 
-          <Card data-testid="card-avg-wait-time">
+          <Card 
+            data-testid="card-avg-wait-time"
+            className="cursor-pointer hover-elevate transition-all"
+            onClick={() => {
+              setWaitingListFilterValues({ status: "active" });
+              setWaitingListSearchTerm("");
+            }}
+          >
             <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Avg Wait Time</CardTitle>
               <div className="rounded-full border-2 border-blue-400 p-2">
