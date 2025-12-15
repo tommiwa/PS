@@ -1013,24 +1013,76 @@ export default function Profile() {
                       </div>
                     </div>
                   ) : (
-                    <Button 
-                      onClick={() => {
-                        waitingListForm.reset();
-                        setShowEnrollmentDialog(true);
-                      }}
-                      className="w-full"
-                      data-testid="button-join-waiting-list-tab"
-                      disabled={isLoadingSpots}
-                    >
-                      {isLoadingSpots ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          {t("common.loading")}
-                        </>
-                      ) : (
-                        t("waitingList.enrollButton")
-                      )}
-                    </Button>
+                    <div className="space-y-4">
+                      <p className="text-center text-muted-foreground">
+                        {t("waitingList.description")}
+                      </p>
+                      
+                      {/* Inline enrollment form */}
+                      <div className="border rounded-lg p-4 bg-muted/30">
+                        <Form {...waitingListForm}>
+                          <form onSubmit={waitingListForm.handleSubmit((data) => createWaitingListMutation.mutate(data))} className="space-y-4">
+                            <FormField
+                              control={waitingListForm.control}
+                              name="priority"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>{t("waitingList.form.priority")}</FormLabel>
+                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                      <SelectTrigger data-testid="select-enrollment-priority-inline">
+                                        <SelectValue placeholder={t("placeholder.selectPriority")} />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="1">{t("priority.high")}</SelectItem>
+                                      <SelectItem value="2">{t("priority.medium")}</SelectItem>
+                                      <SelectItem value="3">{t("priority.low")}</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={waitingListForm.control}
+                              name="preferredSpotType"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>{t("waitingList.form.preferredSpotType")}</FormLabel>
+                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                      <SelectTrigger data-testid="select-enrollment-spot-type-inline">
+                                        <SelectValue placeholder={t("placeholder.selectSpotType")} />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="regular">{t("spotType.regular")}</SelectItem>
+                                      <SelectItem value="electric">{t("spotType.electric")}</SelectItem>
+                                      <SelectItem value="accessible">{t("spotType.accessible")}</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <Button 
+                              type="submit"
+                              className="w-full"
+                              disabled={createWaitingListMutation.isPending}
+                              data-testid="button-submit-enrollment-inline"
+                            >
+                              {createWaitingListMutation.isPending && (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              )}
+                              {t("waitingList.enrollButton")}
+                            </Button>
+                          </form>
+                        </Form>
+                      </div>
+                    </div>
                   )}
                 </CardContent>
               </Card>
