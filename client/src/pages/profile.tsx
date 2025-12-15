@@ -63,7 +63,7 @@ import {
 import { useAuth } from "@/contexts/auth-context"
 import { useTheme } from "@/contexts/theme-context"
 import { useLanguage } from "@/hooks/use-language"
-import { spotTypes, type SpotType, type WaitingList, type InsertWaitingList, type ParkingSpot, type NotificationPreferences, type UpdateNotificationPreferences } from "@shared/schema"
+import { type SpotTypeTable, type WaitingList, type InsertWaitingList, type ParkingSpot, type NotificationPreferences, type UpdateNotificationPreferences } from "@shared/schema"
 import { getErrorMessage } from "@/lib/error-utils"
 
 // Format phone number for display: 1234567890 -> (123) 456-7890
@@ -219,10 +219,21 @@ export default function Profile() {
     }
   }, [user]);
 
-  // Query user's waiting list status  
+  // Query user's waiting list status (handle 404 gracefully - means not enrolled)
   const { data: waitingListEntry, isLoading: isLoadingWaitingList, refetch: refetchWaitingList } = useQuery<WaitingList | null>({
     queryKey: ["/api/waiting-list/user", user?.id],
-    enabled: !!user?.id
+    enabled: !!user?.id,
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const res = await fetch(`/api/waiting-list/user/${user.id}`, { credentials: "include" });
+      if (res.status === 404) {
+        return null; // Not enrolled in waiting list
+      }
+      if (!res.ok) {
+        throw new Error(`${res.status}: ${res.statusText}`);
+      }
+      return res.json();
+    }
   });
 
   // Query user's assigned spots (for all authenticated users to check BCI-managed spots)
@@ -243,13 +254,26 @@ export default function Profile() {
     enabled: !!user?.id
   });
 
+  // Query spot types for mapping preferredSpotType to preferredSpotTypeId
+  const { data: spotTypesList = [] } = useQuery<SpotTypeTable[]>({
+    queryKey: ["/api/spot-types"]
+  });
+
   // Mutation for creating waiting list entry
   const createWaitingListMutation = useMutation({
     mutationFn: async (data: WaitingListForm) => {
       if (!user) throw new Error("User not found");
       
-      // Note: preferredSpotTypeId and preferredLocationId should be sent as numbers
-      // For now, we're omitting these until proper ID mapping is implemented
+      // Map preferredSpotType string to preferredSpotTypeId
+      let preferredSpotTypeId: number | undefined;
+      if (data.preferredSpotType) {
+        const spotType = spotTypesList.find(st => 
+          st.name?.toLowerCase() === data.preferredSpotType?.toLowerCase() ||
+          st.slug?.toLowerCase() === data.preferredSpotType?.toLowerCase()
+        );
+        preferredSpotTypeId = spotType?.id;
+      }
+      
       const waitingListData: Partial<InsertWaitingList> = {
         userId: user.id,
         userName: user.name,
@@ -257,7 +281,8 @@ export default function Profile() {
         priority: parseInt(data.priority),
         reason: data.reason,
         status: "active",
-        enrolledBy: "user"
+        enrolledBy: "user",
+        preferredSpotTypeId: preferredSpotTypeId
       };
       
       const response = await apiRequest("/api/waiting-list", { method: 'POST', body: waitingListData });
@@ -274,6 +299,7 @@ export default function Profile() {
       queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/user", user?.id] });
       setIsEnrolledInWaitingList(true);
       setShowEnrollmentDialog(false);
+      setConfirmedHasSpotWarning(false); // Reset warning confirmation for next time
       waitingListForm.reset();
 
       // Send welcome notification (in background, don't block UI)
@@ -999,7 +1025,7 @@ export default function Profile() {
                         You already have a BCI-assigned spot. Users with BCI-managed spots cannot join the waiting list.
                       </AlertDescription>
                     </Alert>
-                  ) : waitingListEntry ? (
+                  ) : waitingListEntry?.status === "active" ? (
                     <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800/50 rounded-lg p-3">
                       <div className="flex items-center gap-2">
                         <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
