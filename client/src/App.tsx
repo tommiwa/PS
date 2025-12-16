@@ -425,7 +425,7 @@ function AuthenticatedApp() {
               <ThemeToggle />
             </div>
           </header>
-          <main className="flex-1 min-w-0 overflow-auto bg-muted/30">
+          <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden bg-muted/30">
             <Switch>
               {/* Default landing page - redirects based on user role */}
               <Route path="/">
