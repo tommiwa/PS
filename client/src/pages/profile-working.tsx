@@ -101,8 +101,8 @@ export default function Profile() {
   const [showPaymentPreferencesDrawer, setShowPaymentPreferencesDrawer] = useState(false)
   const [showProfileEditDrawer, setShowProfileEditDrawer] = useState(false)
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null)
-  const [confirmedHasSpotWarning, setConfirmedHasSpotWarning] = useState(false)
-  const [cancelledJoinAttempt, setCancelledJoinAttempt] = useState(false)
+  const [showSpotWarning, setShowSpotWarning] = useState(false)
+  const [showJoinForm, setShowJoinForm] = useState(false)
 
   // Vehicle form
   const vehicleForm = useForm<VehicleForm>({
@@ -305,10 +305,10 @@ export default function Profile() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/user", user?.id] });
-      // Reset form and confirmation states
+      // Reset form and UI states
       waitingListForm.reset();
-      setConfirmedHasSpotWarning(false);
-      setCancelledJoinAttempt(false);
+      setShowSpotWarning(false);
+      setShowJoinForm(false);
       toast({
         title: "Joined Waiting List",
         description: "You're on the list! We'll notify you when a spot becomes available.",
@@ -334,9 +334,9 @@ export default function Profile() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/user", user?.id] });
-      // Reset the confirmation states so warning shows again if user tries to re-join
-      setConfirmedHasSpotWarning(false);
-      setCancelledJoinAttempt(false);
+      // Reset UI states so flow starts fresh if user wants to re-join
+      setShowSpotWarning(false);
+      setShowJoinForm(false);
       toast({
         title: "Left Waiting List",
         description: "You've been removed from the parking waiting list.",
@@ -613,7 +613,7 @@ export default function Profile() {
                           {t("waitingList.enrolled")}
                         </h4>
                         <p className="text-sm text-green-700 dark:text-green-300">
-                          Priority: {waitingListEntry.priority} • Enrolled: {waitingListEntry.enrolledDate ? new Date(waitingListEntry.enrolledDate).toLocaleDateString() : 'N/A'}
+                          Priority: {waitingListEntry.priority === 1 ? "High" : waitingListEntry.priority === 2 ? "Medium" : "Low"} • Enrolled: {waitingListEntry.enrolledDate ? new Date(waitingListEntry.enrolledDate).toLocaleDateString() : 'N/A'}
                         </p>
                         <Button 
                           variant="outline" 
@@ -629,7 +629,7 @@ export default function Profile() {
                       </div>
                     </div>
                   </div>
-                ) : assignedSpots.length > 0 && !confirmedHasSpotWarning && !cancelledJoinAttempt ? (
+                ) : showSpotWarning ? (
                   <div className="space-y-4">
                     <Alert variant="default" className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800/50" data-testid="alert-has-spot-warning-mobile">
                       <AlertTriangle className="h-4 w-4 text-amber-600" />
@@ -642,34 +642,21 @@ export default function Profile() {
                       <Button 
                         variant="outline"
                         className="flex-1"
-                        onClick={() => setCancelledJoinAttempt(true)}
+                        onClick={() => setShowSpotWarning(false)}
                         data-testid="button-cancel-waiting-list-mobile"
                       >
                         No, Cancel
                       </Button>
                       <Button 
                         className="flex-1"
-                        onClick={() => setConfirmedHasSpotWarning(true)}
+                        onClick={() => { setShowSpotWarning(false); setShowJoinForm(true); }}
                         data-testid="button-confirm-waiting-list-mobile"
                       >
                         Yes, Continue
                       </Button>
                     </div>
                   </div>
-                ) : cancelledJoinAttempt ? (
-                  <div className="space-y-4">
-                    <div className="bg-muted/50 border rounded-lg p-4 text-center">
-                      <p className="text-muted-foreground mb-4">You chose not to join the waiting list.</p>
-                      <Button 
-                        variant="outline"
-                        onClick={() => setCancelledJoinAttempt(false)}
-                        data-testid="button-reconsider-waiting-list-mobile"
-                      >
-                        Reconsider
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
+                ) : showJoinForm ? (
                   <div className="space-y-4">
                     <p className="text-sm text-muted-foreground">{t("waitingList.description")}</p>
                     <Form {...waitingListForm}>
@@ -727,17 +714,39 @@ export default function Profile() {
                             </FormItem>
                           )}
                         />
-                        <Button 
-                          type="submit"
-                          className="w-full h-12" 
-                          disabled={createWaitingListMutation.isPending}
-                          data-testid="button-join-waiting-list-mobile"
-                        >
-                          {createWaitingListMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                          {t("waitingList.enrollButton")}
-                        </Button>
+                        <div className="flex gap-3">
+                          <Button 
+                            type="button"
+                            variant="outline"
+                            className="flex-1"
+                            onClick={() => setShowJoinForm(false)}
+                            data-testid="button-back-waiting-list-mobile"
+                          >
+                            Back
+                          </Button>
+                          <Button 
+                            type="submit"
+                            className="flex-1" 
+                            disabled={createWaitingListMutation.isPending}
+                            data-testid="button-join-waiting-list-mobile"
+                          >
+                            {createWaitingListMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                            {t("waitingList.enrollButton")}
+                          </Button>
+                        </div>
                       </form>
                     </Form>
+                  </div>
+                ) : (
+                  <div className="text-center py-6">
+                    <p className="text-muted-foreground mb-4">{t("waitingList.description")}</p>
+                    <Button 
+                      className="w-full h-12" 
+                      onClick={() => assignedSpots.length > 0 ? setShowSpotWarning(true) : setShowJoinForm(true)}
+                      data-testid="button-start-join-waiting-list-mobile"
+                    >
+                      {t("waitingList.enrollButton")}
+                    </Button>
                   </div>
                 )}
               </div>
@@ -1152,7 +1161,7 @@ export default function Profile() {
                             {t("waitingList.enrolled")}
                           </h4>
                           <p className="text-sm text-green-700 dark:text-green-300">
-                            Priority: {waitingListEntry.priority} • Enrolled: {waitingListEntry.enrolledDate ? new Date(waitingListEntry.enrolledDate).toLocaleDateString() : 'N/A'}
+                            Priority: {waitingListEntry.priority === 1 ? "High" : waitingListEntry.priority === 2 ? "Medium" : "Low"} • Enrolled: {waitingListEntry.enrolledDate ? new Date(waitingListEntry.enrolledDate).toLocaleDateString() : 'N/A'}
                           </p>
                           <Button 
                             variant="outline" 
@@ -1168,7 +1177,7 @@ export default function Profile() {
                         </div>
                       </div>
                     </div>
-                  ) : assignedSpots.length > 0 && !confirmedHasSpotWarning && !cancelledJoinAttempt ? (
+                  ) : showSpotWarning ? (
                     <div className="space-y-4">
                       <Alert variant="default" className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800/50" data-testid="alert-has-spot-warning">
                         <AlertTriangle className="h-4 w-4 text-amber-600" />
@@ -1181,36 +1190,22 @@ export default function Profile() {
                         <Button 
                           variant="outline"
                           className="flex-1"
-                          onClick={() => setCancelledJoinAttempt(true)}
+                          onClick={() => setShowSpotWarning(false)}
                           data-testid="button-cancel-waiting-list"
                         >
                           No, Cancel
                         </Button>
                         <Button 
                           className="flex-1"
-                          onClick={() => setConfirmedHasSpotWarning(true)}
+                          onClick={() => { setShowSpotWarning(false); setShowJoinForm(true); }}
                           data-testid="button-confirm-waiting-list"
                         >
                           Yes, Continue
                         </Button>
                       </div>
                     </div>
-                  ) : cancelledJoinAttempt ? (
+                  ) : showJoinForm ? (
                     <div className="space-y-4">
-                      <div className="bg-muted/50 border rounded-lg p-4 text-center">
-                        <p className="text-muted-foreground mb-4">You chose not to join the waiting list.</p>
-                        <Button 
-                          variant="outline"
-                          onClick={() => setCancelledJoinAttempt(false)}
-                          data-testid="button-reconsider-waiting-list"
-                        >
-                          Reconsider
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <p className="text-sm text-muted-foreground">{t("waitingList.description")}</p>
                       <Form {...waitingListForm}>
                         <form onSubmit={waitingListForm.handleSubmit(handleJoinWaitingList)} className="space-y-4">
                           <FormField
@@ -1266,17 +1261,38 @@ export default function Profile() {
                               </FormItem>
                             )}
                           />
-                          <Button 
-                            type="submit"
-                            className="w-full h-12" 
-                            disabled={createWaitingListMutation.isPending}
-                            data-testid="button-join-waiting-list"
-                          >
-                            {createWaitingListMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                            {t("waitingList.enrollButton")}
-                          </Button>
+                          <div className="flex gap-3">
+                            <Button 
+                              type="button"
+                              variant="outline"
+                              className="flex-1"
+                              onClick={() => setShowJoinForm(false)}
+                              data-testid="button-back-waiting-list"
+                            >
+                              Back
+                            </Button>
+                            <Button 
+                              type="submit"
+                              className="flex-1" 
+                              disabled={createWaitingListMutation.isPending}
+                              data-testid="button-join-waiting-list"
+                            >
+                              {createWaitingListMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                              {t("waitingList.enrollButton")}
+                            </Button>
+                          </div>
                         </form>
                       </Form>
+                    </div>
+                  ) : (
+                    <div className="text-center py-6">
+                      <Button 
+                        className="w-full h-12" 
+                        onClick={() => assignedSpots.length > 0 ? setShowSpotWarning(true) : setShowJoinForm(true)}
+                        data-testid="button-start-join-waiting-list"
+                      >
+                        {t("waitingList.enrollButton")}
+                      </Button>
                     </div>
                   )}
                 </CardContent>
