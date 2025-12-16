@@ -519,7 +519,7 @@ export default function MySpots() {
   const updatePaymentPreferencesMutation = useMutation({
     mutationFn: async (data: typeof paymentFormData) => {
       const response = await apiRequest(`/api/users/${user?.id}/payment-preferences`, {
-        method: "POST",
+        method: "PATCH",
         body: data,
       })
       return response.json()
