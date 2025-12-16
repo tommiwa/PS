@@ -59,7 +59,8 @@ import {
   Trash2,
   MapPin,
   FileText,
-  Info
+  Info,
+  Loader2
 } from "lucide-react"
 
 // Format phone number for display: 1234567890 -> (123) 456-7890
@@ -741,6 +742,17 @@ export default function AdminUserManagement() {
   const formatDate = (timestamp: string) => {
     return new Date(timestamp).toLocaleDateString();
   };
+
+  if (isLoadingUsers) {
+    return (
+      <div className="flex items-center justify-center h-full" data-testid="loading-admin-users">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+          <p className="text-muted-foreground">Loading user data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6" data-testid="page-admin-users">

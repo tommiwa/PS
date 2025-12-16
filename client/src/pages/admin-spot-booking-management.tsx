@@ -55,7 +55,8 @@ import {
   Download,
   FileText,
   Info,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from "lucide-react"
 import type { Booking, BookingStatus, ParkingSpot } from "@shared/schema"
 import { quickExportBookingsPDF, quickExportBookingsExcel, quickExportBookingActivityPDF, quickExportBookingActivityExcel } from "@/utils/export-utils"
@@ -1220,6 +1221,19 @@ export default function AdminSpotBookingManagement() {
     // For full timestamps, use toLocaleDateString
     return new Date(timestamp).toLocaleDateString();
   };
+
+  const isInitialLoading = isLoadingActive || isLoadingAnalytics;
+
+  if (isInitialLoading) {
+    return (
+      <div className="flex items-center justify-center h-full" data-testid="loading-admin-booking">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+          <p className="text-muted-foreground">Loading booking data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6" data-testid="page-admin-booking-management">

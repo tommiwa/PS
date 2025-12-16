@@ -18,7 +18,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { TablePagination } from "@/components/shared/TablePagination"
 import { 
   Users, Clock, ArrowRight, RefreshCw, Trash2, Download, FileText,
-  Eye, EyeOff, AlertTriangle, Timer, Target, UserPlus, Plus, XCircle, Pencil
+  Eye, EyeOff, AlertTriangle, Timer, Target, UserPlus, Plus, XCircle, Pencil, Loader2
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -475,6 +475,17 @@ export default function AdminWaitingList() {
   }
 
   const availableBciSpots = unallocatedSpots.filter(spot => spot.isBciManaged)
+
+  if (isLoadingWaitingList) {
+    return (
+      <div className="flex items-center justify-center h-full" data-testid="loading-admin-waiting-list">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+          <p className="text-muted-foreground">Loading waiting list data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6" data-testid="page-admin-waiting-list">

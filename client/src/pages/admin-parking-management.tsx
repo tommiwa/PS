@@ -36,7 +36,7 @@ import {
   Timer, Target, CheckCircle2, Search, Filter,
   Zap, Accessibility, Building, MoreHorizontal, Info, RefreshCw,
   Trash2, Edit, UserMinus, UserCheck, Download, FileText,
-  Eye, EyeOff, Layers, Sparkles
+  Eye, EyeOff, Layers, Sparkles, Loader2
 } from "lucide-react"
 import type { ParkingSpot, ParkingSpotWithUser, SpotType, Location, SpotTypeTable } from "@shared/schema"
 import { quickExportParkingSpotsPDF, quickExportParkingSpotsExcel } from "@/utils/export-utils"
@@ -1178,6 +1178,19 @@ export default function AdminParkingManagement() {
       </Badge>
     );
   };
+
+  const isInitialLoading = isLoadingLocations || isLoadingSpotTypes;
+
+  if (isInitialLoading) {
+    return (
+      <div className="flex items-center justify-center h-full" data-testid="loading-admin-parking">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+          <p className="text-muted-foreground">Loading parking data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6" data-testid="page-admin-parking-management">
