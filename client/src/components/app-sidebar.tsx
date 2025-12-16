@@ -53,7 +53,10 @@ const mainMenuItems = [
     url: "/my-bookings",
     icon: Calendar,
     roles: ["owner", "renter"],
-    tooltip: "My Bookings"
+    tooltip: {
+      owner: "My Spot Listings",
+      renter: "My Bookings"
+    }
   },
   {
     title: "Dashboard",
@@ -416,9 +419,13 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
       }
       
       // For Dashboard item, show "Statistics" for renter/owner roles, "Dashboard" for admin
-      const displayTitle = item.title === "Dashboard" && (effectiveRole === "renter" || effectiveRole === "owner") 
-        ? "Statistics" 
-        : item.title;
+      // For My Bookings item, show "My Spot Listings" for owners
+      let displayTitle = item.title;
+      if (item.title === "Dashboard" && (effectiveRole === "renter" || effectiveRole === "owner")) {
+        displayTitle = "Statistics";
+      } else if (item.title === "My Bookings" && effectiveRole === "owner") {
+        displayTitle = "My Spot Listings";
+      }
       
       const tooltipText = getTooltipText(item);
       const hasNewBadge = 'isNew' in item && item.isNew;
