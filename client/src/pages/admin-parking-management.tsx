@@ -119,6 +119,14 @@ export default function AdminParkingManagement() {
   const [personalSpotsPageIndex, setPersonalSpotsPageIndex] = useState(0)
   const [personalSpotsPageSize, setPersonalSpotsPageSize] = useState(10)
   
+  // Pagination state for Assigned Spots
+  const [assignedSpotsPageIndex, setAssignedSpotsPageIndex] = useState(0)
+  const [assignedSpotsPageSize, setAssignedSpotsPageSize] = useState(10)
+  
+  // Pagination state for Bookable Spots
+  const [bookableSpotsPageIndex, setBookableSpotsPageIndex] = useState(0)
+  const [bookableSpotsPageSize, setBookableSpotsPageSize] = useState(10)
+  
   // Cards visibility hook
   const { cardsVisible, toggleCards } = useCardsVisibility("parking-management")
   
@@ -924,6 +932,20 @@ export default function AdminParkingManagement() {
     )
   }, [allSpots])
 
+  // Paginated data for Assigned Spots
+  const paginatedAssignedSpots = useMemo(() => {
+    const startIndex = assignedSpotsPageIndex * assignedSpotsPageSize
+    const endIndex = startIndex + assignedSpotsPageSize
+    return assignedSpots.slice(startIndex, endIndex)
+  }, [assignedSpots, assignedSpotsPageIndex, assignedSpotsPageSize])
+
+  // Paginated data for Bookable Spots
+  const paginatedBookableSpots = useMemo(() => {
+    const startIndex = bookableSpotsPageIndex * bookableSpotsPageSize
+    const endIndex = startIndex + bookableSpotsPageSize
+    return bookableSpots.slice(startIndex, endIndex)
+  }, [bookableSpots, bookableSpotsPageIndex, bookableSpotsPageSize])
+
   // Page clamping useEffects to prevent invalid page indices
   // Clamp All Spots page
   useEffect(() => {
@@ -967,6 +989,22 @@ export default function AdminParkingManagement() {
   useEffect(() => {
     setAvailableSpotsPageIndex(0)
   }, [availableSpotsSearchTerm, availableSpotsFilterValues])
+
+  // Clamp Assigned Spots page
+  useEffect(() => {
+    const maxPage = Math.max(0, Math.ceil(assignedSpots.length / assignedSpotsPageSize) - 1)
+    if (assignedSpotsPageIndex > maxPage) {
+      setAssignedSpotsPageIndex(maxPage)
+    }
+  }, [assignedSpots.length, assignedSpotsPageSize, assignedSpotsPageIndex])
+
+  // Clamp Bookable Spots page
+  useEffect(() => {
+    const maxPage = Math.max(0, Math.ceil(bookableSpots.length / bookableSpotsPageSize) - 1)
+    if (bookableSpotsPageIndex > maxPage) {
+      setBookableSpotsPageIndex(maxPage)
+    }
+  }, [bookableSpots.length, bookableSpotsPageSize, bookableSpotsPageIndex])
   
   // Filter configuration for parking management
   const parkingFilterConfigs: FilterConfig[] = [
@@ -2135,7 +2173,7 @@ export default function AdminParkingManagement() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {assignedSpots.map((spot) => (
+                      {paginatedAssignedSpots.map((spot) => (
                         <TableRow key={spot.id} data-testid={`row-assigned-spot-${spot.id}`}>
                           <TableCell className="font-medium">{spot.spotNumber}</TableCell>
                           <TableCell>
@@ -2178,6 +2216,16 @@ export default function AdminParkingManagement() {
                       ))}
                     </TableBody>
                   </Table>
+                  <TablePagination
+                    totalCount={assignedSpots.length}
+                    pageSize={assignedSpotsPageSize}
+                    pageIndex={assignedSpotsPageIndex}
+                    onPageSizeChange={(size) => {
+                      setAssignedSpotsPageSize(size)
+                      setAssignedSpotsPageIndex(0)
+                    }}
+                    onPageIndexChange={setAssignedSpotsPageIndex}
+                  />
                 </div>
               )}
             </CardContent>
@@ -2265,7 +2313,7 @@ export default function AdminParkingManagement() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {bookableSpots.map((spot) => (
+                      {paginatedBookableSpots.map((spot) => (
                         <TableRow key={spot.id} data-testid={`row-bookable-spot-${spot.id}`}>
                           <TableCell className="font-medium">{spot.spotNumber}</TableCell>
                           <TableCell>
@@ -2302,6 +2350,16 @@ export default function AdminParkingManagement() {
                       ))}
                     </TableBody>
                   </Table>
+                  <TablePagination
+                    totalCount={bookableSpots.length}
+                    pageSize={bookableSpotsPageSize}
+                    pageIndex={bookableSpotsPageIndex}
+                    onPageSizeChange={(size) => {
+                      setBookableSpotsPageSize(size)
+                      setBookableSpotsPageIndex(0)
+                    }}
+                    onPageIndexChange={setBookableSpotsPageIndex}
+                  />
                 </div>
               )}
             </CardContent>
