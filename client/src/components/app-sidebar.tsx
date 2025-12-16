@@ -505,9 +505,9 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
         {/* Owner-specific grouped navigation */}
         {isOwnerView ? (
           <>
-            {/* Spot Management Group for Owners */}
+            {/* Spot Sharing Group for Owners */}
             <SidebarGroup>
-              <SidebarGroupLabel>Spot Management</SidebarGroupLabel>
+              <SidebarGroupLabel>Spot Sharing</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
                   {renderMenuItems(filteredOwnerManagementItems)}
@@ -515,10 +515,10 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
               </SidebarGroupContent>
             </SidebarGroup>
 
-            {/* Renting Management Group for Owners */}
+            {/* Spot Renting Group for Owners */}
             <SidebarSeparator />
             <SidebarGroup>
-              <SidebarGroupLabel>Renting Management</SidebarGroupLabel>
+              <SidebarGroupLabel>Spot Renting</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
                   {renderMenuItems(filteredOwnerRentingItems)}
