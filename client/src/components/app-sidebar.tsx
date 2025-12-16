@@ -39,22 +39,8 @@ import { queryClient } from "@/lib/queryClient"
 import { useToast } from "@/hooks/use-toast"
 import { useState } from "react"
 
-// Main navigation items with tooltips
-const mainMenuItems = [
-  {
-    title: "Find Parking",
-    url: "/search",
-    icon: Search,
-    roles: ["owner", "renter"],
-    tooltip: "Find Parking"
-  },
-  {
-    title: "My Bookings",
-    url: "/my-bookings",
-    icon: Calendar,
-    roles: ["renter"],
-    tooltip: "My Bookings"
-  },
+// Owner-specific navigation items - grouped by category
+const ownerParkingItems = [
   {
     title: "My Spot Listings",
     url: "/my-listings",
@@ -70,22 +56,61 @@ const mainMenuItems = [
     tooltip: "Spots you've booked from others"
   },
   {
+    title: "My Spots",
+    url: "/my-spots",
+    icon: Car,
+    roles: ["owner"],
+    tooltip: "Manage your parking spots"
+  },
+]
+
+const ownerBrowseItems = [
+  {
+    title: "Find Parking",
+    url: "/search",
+    icon: Search,
+    roles: ["owner"],
+    tooltip: "Find Parking"
+  },
+  {
     title: "Dashboard",
     url: "/dashboard",
     icon: Home,
-    roles: ["admin", "owner", "renter"],
+    roles: ["owner"],
     tooltip: {
       admin: "Dashboard",
       owner: "Statistics",
       renter: "Statistics"
     }
   },
+]
+
+// Main navigation items for non-owners (renters)
+const mainMenuItems = [
   {
-    title: "My Spots",
-    url: "/my-spots",
-    icon: Car,
-    roles: ["owner"],
-    tooltip: "My Spots"
+    title: "Find Parking",
+    url: "/search",
+    icon: Search,
+    roles: ["renter"],
+    tooltip: "Find Parking"
+  },
+  {
+    title: "My Bookings",
+    url: "/my-bookings",
+    icon: Calendar,
+    roles: ["renter"],
+    tooltip: "My Bookings"
+  },
+  {
+    title: "Dashboard",
+    url: "/dashboard",
+    icon: Home,
+    roles: ["admin", "renter"],
+    tooltip: {
+      admin: "Dashboard",
+      owner: "Statistics",
+      renter: "Statistics"
+    }
   },
 ]
 
@@ -173,45 +198,17 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
   const effectiveRole = getCurrentViewRole();
   const effectiveRoles = effectiveRole ? [effectiveRole] : (user?.roles || []);
   
+  // Check if user is an owner (for grouped navigation)
+  const isOwnerView = effectiveRoles.includes("owner");
+  
   // Filter menu items based on effective roles (respects "view as" functionality)
   const filteredMainItems = mainMenuItems.filter(item => 
     effectiveRoles.some(role => item.roles.includes(role))
   );
-
-  // Custom ordering for spot owners: My Spot Listings, My Rentals, My Spots, Find Parking, Statistics
-  const getOrderedMainItems = () => {
-    // If effective roles include owner, use custom ordering
-    if (effectiveRoles.includes("owner")) {
-      const orderedItems = [];
-      
-      // 1. My Spot Listings (first) - spots they're renting out
-      const mySpotListings = filteredMainItems.find(item => item.title === "My Spot Listings");
-      if (mySpotListings) orderedItems.push(mySpotListings);
-      
-      // 2. My Rentals (second) - spots they've booked from others
-      const myRentals = filteredMainItems.find(item => item.title === "My Rentals");
-      if (myRentals) orderedItems.push(myRentals);
-      
-      // 3. My Spots (third) - spot management
-      const mySpots = filteredMainItems.find(item => item.title === "My Spots");
-      if (mySpots) orderedItems.push(mySpots);
-      
-      // 4. Find Parking (fourth)
-      const findParking = filteredMainItems.find(item => item.title === "Find Parking");
-      if (findParking) orderedItems.push(findParking);
-      
-      // 5. Statistics/Dashboard (last)
-      const dashboard = filteredMainItems.find(item => item.title === "Dashboard");
-      if (dashboard) orderedItems.push(dashboard);
-      
-      return orderedItems;
-    }
-    
-    // For other roles, use original order
-    return filteredMainItems;
-  };
-
-  const orderedMainItems = getOrderedMainItems();
+  
+  // Owner-specific grouped items
+  const filteredOwnerParkingItems = isOwnerView ? ownerParkingItems : [];
+  const filteredOwnerBrowseItems = isOwnerView ? ownerBrowseItems : [];
   
   // Admin items only shown if effective role is admin (respects "view as")
   const filteredAdminCoreItems = effectiveRoles.includes("admin") 
@@ -503,15 +500,41 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
   return (
     <Sidebar data-testid="sidebar-main">
       <SidebarContent>
-        {/* Main Navigation */}
-        <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {renderMenuItems(orderedMainItems)}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {/* Owner-specific grouped navigation */}
+        {isOwnerView ? (
+          <>
+            {/* My Parking Group for Owners */}
+            <SidebarGroup>
+              <SidebarGroupLabel>My Parking</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {renderMenuItems(filteredOwnerParkingItems)}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+
+            {/* Browse Group for Owners */}
+            <SidebarSeparator />
+            <SidebarGroup>
+              <SidebarGroupLabel>Browse</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {renderMenuItems(filteredOwnerBrowseItems)}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        ) : (
+          /* Standard Navigation for Renters */
+          <SidebarGroup>
+            <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {renderMenuItems(filteredMainItems)}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         {/* Admin Core Management - Only shown when viewing as admin */}
         {filteredAdminCoreItems.length > 0 && (
