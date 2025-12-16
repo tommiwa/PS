@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { apiRequest, queryClient } from "@/lib/queryClient"
-import type { ParkingSpot as DBParkingSpot, InsertParkingSpot, InsertSpotListing, Location, SpotTypeTable } from "@shared/schema"
+import type { ParkingSpot as DBParkingSpot, InsertParkingSpot, InsertSpotListing, Location, SpotTypeTable, PaymentPreferences } from "@shared/schema"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Car, MapPin, DollarSign, Clock, Edit, Plus, Eye, Users, TrendingUp, Grid, Trash2, Info } from "lucide-react"
+import { Car, MapPin, DollarSign, Clock, Edit, Plus, Eye, Users, TrendingUp, Grid, Trash2, Info, CreditCard, Loader2 } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useConfirm, confirmations } from "@/hooks/use-confirm"
 import { useAuth } from "@/contexts/auth-context"
@@ -167,6 +167,29 @@ export default function MySpots() {
   const { data: spotTypes = [], isLoading: isLoadingSpotTypes } = useQuery<SpotTypeTable[]>({
     queryKey: ["/api/spot-types"],
   })
+
+  // Fetch payment preferences for spot owners
+  const { data: paymentPreferences, isLoading: isLoadingPaymentPreferences } = useQuery<PaymentPreferences | null>({
+    queryKey: ["/api/users", user?.id, "payment-preferences"],
+    enabled: !!user?.id
+  })
+
+  // Payment dialog state
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false)
+  const [paymentFormData, setPaymentFormData] = useState({
+    paymentType: "interac_transfer" as "interac_transfer" | "cash",
+    paymentInstructions: ""
+  })
+
+  // Update payment form when preferences are loaded
+  useEffect(() => {
+    if (paymentPreferences) {
+      setPaymentFormData({
+        paymentType: paymentPreferences.paymentType as "interac_transfer" | "cash",
+        paymentInstructions: paymentPreferences.paymentInstructions || ""
+      })
+    }
+  }, [paymentPreferences])
 
   // Helper functions to lookup location and spot type data
   const getLocationById = (locationId: number) => {
@@ -492,6 +515,36 @@ export default function MySpots() {
     updateDefaultPriceMutation.mutate({ spotId, price })
   }
 
+  // Mutation to update payment preferences
+  const updatePaymentPreferencesMutation = useMutation({
+    mutationFn: async (data: typeof paymentFormData) => {
+      const response = await apiRequest(`/api/users/${user?.id}/payment-preferences`, {
+        method: "POST",
+        body: data,
+      })
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "payment-preferences"] })
+      setShowPaymentDialog(false)
+      toast({
+        title: "Success",
+        description: "Payment preferences updated successfully.",
+      })
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update payment preferences.",
+        variant: "destructive",
+      })
+    },
+  })
+
+  const handleSavePaymentPreferences = () => {
+    updatePaymentPreferencesMutation.mutate(paymentFormData)
+  }
+
   const handleOpenCreateListing = (spot: DBParkingSpot) => {
     setSelectedSpotForListing(spot)
     setShowCreateListingDialog(true)
@@ -781,25 +834,66 @@ export default function MySpots() {
                 <p className="text-sm text-muted-foreground mb-4 break-words">{spot.description}</p>
               )}
 
-              {/* Default Price - Owners can set this */}
-              <div className="mb-4">
-                <p className="text-xs text-muted-foreground mb-1">Default Daily Rate</p>
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground">$</span>
-                  <Input
-                    type="number"
-                    placeholder="Set default price"
-                    defaultValue={spot.defaultPrice || ""}
-                    className="w-32 min-h-9"
-                    data-testid={`input-default-price-${spot.id}`}
-                    onBlur={(e) => {
-                      const newPrice = parseFloat(e.target.value)
-                      if (!isNaN(newPrice) && newPrice >= 0) {
-                        handleUpdateDefaultPrice(spot.id, newPrice)
-                      }
-                    }}
-                  />
-                  <span className="text-sm text-muted-foreground">per day</span>
+              {/* Default Price and Payment Preferences - Owners can set these */}
+              <div className="mb-4 flex flex-col md:flex-row gap-4 md:gap-8">
+                {/* Default Daily Rate */}
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Default Daily Rate</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">$</span>
+                    <Input
+                      type="number"
+                      placeholder="Set default price"
+                      defaultValue={spot.defaultPrice || ""}
+                      className="w-32 min-h-9"
+                      data-testid={`input-default-price-${spot.id}`}
+                      onBlur={(e) => {
+                        const newPrice = parseFloat(e.target.value)
+                        if (!isNaN(newPrice) && newPrice >= 0) {
+                          handleUpdateDefaultPrice(spot.id, newPrice)
+                        }
+                      }}
+                    />
+                    <span className="text-sm text-muted-foreground">per day</span>
+                  </div>
+                </div>
+                
+                {/* Payment Preferences */}
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Payment Method</p>
+                  <div className="flex items-center gap-2">
+                    {isLoadingPaymentPreferences ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : paymentPreferences ? (
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                          <CreditCard className="h-3 w-3 mr-1" />
+                          {paymentPreferences.paymentType === "interac_transfer" ? "Interac" : "Cash"}
+                        </Badge>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowPaymentDialog(true)}
+                          className="text-xs h-8"
+                          data-testid="button-edit-payment-method"
+                        >
+                          <Edit className="h-3 w-3 mr-1" />
+                          Edit
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowPaymentDialog(true)}
+                        className="min-h-9"
+                        data-testid="button-set-payment-method"
+                      >
+                        <CreditCard className="h-4 w-4 mr-1" />
+                        Set Payment Method
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -1134,6 +1228,74 @@ export default function MySpots() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment Preferences Dialog */}
+      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+        <DialogContent className="max-w-full md:max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              Payment Preferences
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Set how you want to receive payment when others book your parking spots.
+            </p>
+            <div>
+              <Label htmlFor="payment-type">Payment Type</Label>
+              <Select
+                value={paymentFormData.paymentType}
+                onValueChange={(value: "interac_transfer" | "cash") => 
+                  setPaymentFormData(prev => ({ ...prev, paymentType: value }))
+                }
+              >
+                <SelectTrigger className="min-h-11" data-testid="select-payment-type">
+                  <SelectValue placeholder="Select payment type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="interac_transfer">Interac Transfer</SelectItem>
+                  <SelectItem value="cash">Cash</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="payment-instructions">Payment Instructions</Label>
+              <Textarea
+                id="payment-instructions"
+                placeholder={paymentFormData.paymentType === "interac_transfer" 
+                  ? "e.g., Send to email@example.com" 
+                  : "e.g., Meet at Building A lobby"}
+                value={paymentFormData.paymentInstructions}
+                onChange={(e) => setPaymentFormData(prev => ({ ...prev, paymentInstructions: e.target.value }))}
+                className="min-h-24"
+                data-testid="textarea-payment-instructions"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                This will be shown to renters when they book your spot.
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowPaymentDialog(false)}
+              className="w-full sm:w-auto min-h-11"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSavePaymentPreferences}
+              disabled={updatePaymentPreferencesMutation.isPending}
+              className="w-full sm:w-auto min-h-11"
+              data-testid="button-save-payment-preferences"
+            >
+              {updatePaymentPreferencesMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Save Preferences
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
