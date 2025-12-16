@@ -734,14 +734,17 @@ export default function MySpots() {
                       {spot.isActive ? "Active" : "Inactive"}
                     </Badge>
                   </div>
-                  <div className="flex gap-1">
-                    <Button variant="outline" size="sm" onClick={() => handleEditSpot(spot)} data-testid={`button-edit-spot-${spot.id}`} className="min-h-11">
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => handleDeleteSpot(spot)} data-testid={`button-delete-spot-${spot.id}`} className="text-red-600 hover:text-red-700 hover:border-red-300 min-h-11">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  {/* Only show edit/delete for personal spots, not BCI-managed */}
+                  {!spot.isBciManaged && (
+                    <div className="flex gap-1">
+                      <Button variant="outline" size="sm" onClick={() => handleEditSpot(spot)} data-testid={`button-edit-spot-${spot.id}`} className="min-h-11">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleDeleteSpot(spot)} data-testid={`button-delete-spot-${spot.id}`} className="text-red-600 hover:text-red-700 hover:border-red-300 min-h-11">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -756,51 +759,38 @@ export default function MySpots() {
 
 
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-4 border-t">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor={`spot-toggle-${spot.id}`} className="text-sm">
-                    {spot.isActive ? 'Active' : 'Inactive'}
-                  </Label>
-                  <Switch
-                    id={`spot-toggle-${spot.id}`}
-                    checked={spot.isActive}
-                    onCheckedChange={() => handleToggleSpotStatus(spot.id)}
-                    data-testid={`switch-spot-${spot.id}`}
-                    className="min-h-11"
-                  />
-                </div>
+                {/* Only show status toggle for personal spots */}
+                {!spot.isBciManaged ? (
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor={`spot-toggle-${spot.id}`} className="text-sm">
+                      {spot.isActive ? 'Active' : 'Inactive'}
+                    </Label>
+                    <Switch
+                      id={`spot-toggle-${spot.id}`}
+                      checked={spot.isActive}
+                      onCheckedChange={() => handleToggleSpotStatus(spot.id)}
+                      data-testid={`switch-spot-${spot.id}`}
+                      className="min-h-11"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Assigned by administrator</span>
+                  </div>
+                )}
                 <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
-                  {spot.isBciManaged ? (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="w-full md:w-auto">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled
-                            data-testid={`button-create-listing-${spot.id}`}
-                            className="w-full md:w-auto min-h-11"
-                          >
-                            <Plus className="h-4 w-4 mr-1" />
-                            Create Listing
-                          </Button>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        BCI-managed spots cannot be listed. Contact administrator.
-                      </TooltipContent>
-                    </Tooltip>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleOpenCreateListing(spot)}
-                      data-testid={`button-create-listing-${spot.id}`}
-                      className="w-full md:w-auto min-h-11"
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Create Listing
-                    </Button>
-                  )}
+                  {/* List My Spot button - enabled for all spots */}
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => handleOpenCreateListing(spot)}
+                    data-testid={`button-create-listing-${spot.id}`}
+                    className="w-full md:w-auto min-h-11"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    List My Spot
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
@@ -811,16 +801,19 @@ export default function MySpots() {
                     <Eye className="h-4 w-4 mr-1" />
                     View History
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEditSpot(spot)}
-                    data-testid={`button-edit-${spot.id}`}
-                    className="w-full md:w-auto min-h-11"
-                  >
-                    <Edit className="h-4 w-4 mr-1" />
-                    Edit Spot
-                  </Button>
+                  {/* Only show Edit button for personal spots */}
+                  {!spot.isBciManaged && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditSpot(spot)}
+                      data-testid={`button-edit-${spot.id}`}
+                      className="w-full md:w-auto min-h-11"
+                    >
+                      <Edit className="h-4 w-4 mr-1" />
+                      Edit Spot
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardContent>
