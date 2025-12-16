@@ -213,9 +213,17 @@ export function AdminUsersTable({
       renter: { variant: "outline" as const, label: t("role.renter") },
     }
     
+    // Sort roles: admin first, owner second, renter third
+    const roleOrder = { admin: 1, owner: 2, renter: 3 };
+    const sortedRoles = [...rolesArray].sort((a, b) => {
+      const orderA = roleOrder[a as keyof typeof roleOrder] ?? 99;
+      const orderB = roleOrder[b as keyof typeof roleOrder] ?? 99;
+      return orderA - orderB;
+    });
+    
     return (
       <div className="flex gap-1 flex-wrap">
-        {rolesArray.map((role, index) => {
+        {sortedRoles.map((role, index) => {
           const config = roleConfig[role as keyof typeof roleConfig];
           return config ? (
             <Badge key={index} variant={config.variant}>{config.label}</Badge>
