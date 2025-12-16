@@ -509,7 +509,7 @@ function AuthenticatedApp() {
                   </DialogContent>
                 </Dialog>
                 <span>•</span>
-                <span>© {new Date().getFullYear()} BCI</span>
+                <span>© 2025-2026 BCI</span>
               </div>
               
               {/* Desktop: Full footer */}
@@ -528,7 +528,7 @@ function AuthenticatedApp() {
               <span className="hidden md:inline">•</span>
               <span className="hidden md:inline">BCI ParkShare Application v1.0</span>
               <span className="hidden md:inline">•</span>
-              <span className="hidden md:inline">© {new Date().getFullYear()} BCI Workplace Services</span>
+              <span className="hidden md:inline">© 2025-2026 BCI Workplace Services</span>
             </div>
           </footer>
         </div>
