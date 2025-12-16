@@ -216,6 +216,14 @@
     @apply border-border;
   }
 
+  html, body, #root {
+    height: 100vh;
+    max-height: 100vh;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+  }
+
   body {
     @apply font-sans antialiased bg-background text-foreground;
   }

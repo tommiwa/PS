@@ -363,7 +363,7 @@ function AuthenticatedApp() {
     <SidebarProvider style={style as React.CSSProperties}>
       <div className="flex h-screen w-full">
         <AppSidebar userRole={userRole} />
-        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+        <div className="flex flex-col flex-1 min-w-0 h-full overflow-hidden">
           <header className="flex items-center justify-between p-4 border-b bg-primary/10 border-primary/20 shadow-sm min-w-0">
             <div className="flex items-center gap-4">
               <Tooltip>
@@ -425,7 +425,7 @@ function AuthenticatedApp() {
               <ThemeToggle />
             </div>
           </header>
-          <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden bg-muted/30">
+          <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden bg-muted/30">
             <Switch>
               {/* Default landing page - redirects based on user role */}
               <Route path="/">
