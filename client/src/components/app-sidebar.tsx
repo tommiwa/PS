@@ -52,11 +52,22 @@ const mainMenuItems = [
     title: "My Bookings",
     url: "/my-bookings",
     icon: Calendar,
-    roles: ["owner", "renter"],
-    tooltip: {
-      owner: "My Spot Listings",
-      renter: "My Bookings"
-    }
+    roles: ["renter"],
+    tooltip: "My Bookings"
+  },
+  {
+    title: "My Spot Listings",
+    url: "/my-listings",
+    icon: Calendar,
+    roles: ["owner"],
+    tooltip: "Spots you're renting out"
+  },
+  {
+    title: "My Rentals",
+    url: "/my-rentals",
+    icon: CalendarCheck,
+    roles: ["owner"],
+    tooltip: "Spots you've booked from others"
   },
   {
     title: "Dashboard",
@@ -167,25 +178,29 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
     effectiveRoles.some(role => item.roles.includes(role))
   );
 
-  // Custom ordering for spot owners: My Bookings, My Spots, Find Parking, Statistics
+  // Custom ordering for spot owners: My Spot Listings, My Rentals, My Spots, Find Parking, Statistics
   const getOrderedMainItems = () => {
     // If effective roles include owner, use custom ordering
     if (effectiveRoles.includes("owner")) {
       const orderedItems = [];
       
-      // 1. My Bookings (first)
-      const myBookings = filteredMainItems.find(item => item.title === "My Bookings");
-      if (myBookings) orderedItems.push(myBookings);
+      // 1. My Spot Listings (first) - spots they're renting out
+      const mySpotListings = filteredMainItems.find(item => item.title === "My Spot Listings");
+      if (mySpotListings) orderedItems.push(mySpotListings);
       
-      // 2. My Spots (second) 
+      // 2. My Rentals (second) - spots they've booked from others
+      const myRentals = filteredMainItems.find(item => item.title === "My Rentals");
+      if (myRentals) orderedItems.push(myRentals);
+      
+      // 3. My Spots (third) - spot management
       const mySpots = filteredMainItems.find(item => item.title === "My Spots");
       if (mySpots) orderedItems.push(mySpots);
       
-      // 3. Find Parking (third)
+      // 4. Find Parking (fourth)
       const findParking = filteredMainItems.find(item => item.title === "Find Parking");
       if (findParking) orderedItems.push(findParking);
       
-      // 4. Statistics/Dashboard (last)
+      // 5. Statistics/Dashboard (last)
       const dashboard = filteredMainItems.find(item => item.title === "Dashboard");
       if (dashboard) orderedItems.push(dashboard);
       
@@ -301,6 +316,18 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
         queryClient.invalidateQueries({ queryKey: ["/api/locations"] }),
       ]);
     },
+    "/my-listings": async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/my-listings"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/my-spots"] }),
+      ]);
+    },
+    "/my-rentals": async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/my-bookings"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/my-spots"] }),
+      ]);
+    },
   };
 
 
@@ -408,8 +435,8 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
           isActive = true; // Admin lands on /admin, so dashboard should be active
         } else if (item.url === "/search" && effectiveRole === "renter") {
           isActive = true; // Renter lands on search, so search should be active
-        } else if (item.url === "/my-bookings" && effectiveRole === "owner") {
-          isActive = true; // Owner lands on my-bookings (if has spots), so my-bookings should be active
+        } else if (item.url === "/my-listings" && effectiveRole === "owner") {
+          isActive = true; // Owner lands on my-listings, so my-listings should be active
         }
       }
       
@@ -419,12 +446,9 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
       }
       
       // For Dashboard item, show "Statistics" for renter/owner roles, "Dashboard" for admin
-      // For My Bookings item, show "My Spot Listings" for owners
       let displayTitle = item.title;
       if (item.title === "Dashboard" && (effectiveRole === "renter" || effectiveRole === "owner")) {
         displayTitle = "Statistics";
-      } else if (item.title === "My Bookings" && effectiveRole === "owner") {
-        displayTitle = "My Spot Listings";
       }
       
       const tooltipText = getTooltipText(item);

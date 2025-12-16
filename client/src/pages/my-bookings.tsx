@@ -20,10 +20,18 @@ import { useConfirm, confirmations } from "@/hooks/use-confirm"
 import { useToast } from "@/hooks/use-toast"
 import { quickExportBookingsPDF, quickExportBookingsExcel } from "@/utils/export-utils"
 
-export default function MyBookings() {
+interface MyBookingsProps {
+  viewMode?: 'listings' | 'rentals';
+}
+
+export default function MyBookings({ viewMode }: MyBookingsProps) {
   const { user, isOwner, getCurrentViewRole } = useAuth()
   // Use view role for admins, otherwise use actual role
-  const isOwnerView = getCurrentViewRole() === 'owner' || (getCurrentViewRole() === null && isOwner())
+  // If viewMode is explicitly set, use that to determine the view
+  // 'listings' = owner's listings (isOwnerView = true)
+  // 'rentals' = owner's bookings as a renter (isOwnerView = false)
+  const defaultOwnerView = getCurrentViewRole() === 'owner' || (getCurrentViewRole() === null && isOwner())
+  const isOwnerView = viewMode === 'listings' ? true : viewMode === 'rentals' ? false : defaultOwnerView
   const [searchTerm, setSearchTerm] = useState("")
   const [filterValues, setFilterValues] = useState<FilterValues>({})
   const [showListingForm, setShowListingForm] = useState(false)
@@ -893,12 +901,14 @@ export default function MyBookings() {
         <div>
           <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
             <Calendar className="h-6 w-6 md:h-8 md:w-8" />
-            {isOwnerView ? "My Spot Listings" : "My Bookings"}
+            {isOwnerView ? "My Spot Listings" : viewMode === 'rentals' ? "My Rentals" : "My Bookings"}
           </h1>
           <p className="text-sm md:text-base text-muted-foreground">
             {isOwnerView ? 
               "Track your parking spot listings, bookings, and usage history." :
-              "Manage your current and past parking reservations."
+              viewMode === 'rentals' ? 
+                "Spots you've booked from other owners." :
+                "Manage your current and past parking reservations."
             }
           </p>
         </div>

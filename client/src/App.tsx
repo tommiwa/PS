@@ -257,8 +257,8 @@ function LandingPageRedirect() {
     if (effectiveRole === "admin") {
       setLocation("/admin", { replace: true });
     } else if (effectiveRole === "owner") {
-      // Spot owners: My Bookings if they have spots, My Spots if they don't
-      const targetPage = hasRegisteredSpots(user.id) ? "/my-bookings" : "/my-spots";
+      // Spot owners: My Spot Listings if they have spots, My Spots if they don't
+      const targetPage = hasRegisteredSpots(user.id) ? "/my-listings" : "/my-spots";
       setLocation(targetPage, { replace: true });
     } else {
       // Renters and others: Search
@@ -305,6 +305,8 @@ function useNavigationDataRefresh() {
       ],
       '/dashboard': ['/api/admin/users', '/api/admin/all-spots', '/api/admin/analytics-overview'],
       '/my-bookings': ['/api/bookings', '/api/my-spots'],
+      '/my-listings': ['/api/my-listings', '/api/my-spots'],
+      '/my-rentals': ['/api/bookings', '/api/my-spots'],
       '/my-spots': ['/api/my-spots'],
       '/search': ['/api/admin/all-spots', '/api/bookings']
     };
@@ -442,9 +444,17 @@ function AuthenticatedApp() {
               <Route path="/profile" component={Profile} />
               
               {/* Renter-specific pages */}
-              <Route path="/my-bookings" component={MyBookings} />
+              <Route path="/my-bookings">
+                <MyBookings />
+              </Route>
               
               {/* Owner-specific pages */}
+              <Route path="/my-listings">
+                <MyBookings viewMode="listings" />
+              </Route>
+              <Route path="/my-rentals">
+                <MyBookings viewMode="rentals" />
+              </Route>
               <Route path="/my-spots" component={MySpots} />
               
               {/* Admin-only pages */}
