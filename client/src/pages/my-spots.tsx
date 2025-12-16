@@ -463,6 +463,35 @@ export default function MySpots() {
     // Navigate to spot booking history
   }
 
+  // Mutation to update default price
+  const updateDefaultPriceMutation = useMutation({
+    mutationFn: async ({ spotId, price }: { spotId: string; price: number }) => {
+      const response = await apiRequest(`/api/my-spots/${spotId}/default-price`, {
+        method: "PATCH",
+        body: { defaultPrice: price },
+      })
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/my-spots'] })
+      toast({
+        title: "Success",
+        description: "Default price updated successfully.",
+      })
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update default price.",
+        variant: "destructive",
+      })
+    },
+  })
+
+  const handleUpdateDefaultPrice = (spotId: string, price: number) => {
+    updateDefaultPriceMutation.mutate({ spotId, price })
+  }
+
   const handleOpenCreateListing = (spot: DBParkingSpot) => {
     setSelectedSpotForListing(spot)
     setShowCreateListingDialog(true)
@@ -752,35 +781,38 @@ export default function MySpots() {
                 <p className="text-sm text-muted-foreground mb-4 break-words">{spot.description}</p>
               )}
 
+              {/* Default Price - Owners can set this */}
               <div className="mb-4">
-                <p className="text-xs text-muted-foreground">Price</p>
-                <p className="text-base md:text-lg font-semibold">Set when creating listings</p>
+                <p className="text-xs text-muted-foreground mb-1">Default Daily Rate</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">$</span>
+                  <Input
+                    type="number"
+                    placeholder="Set default price"
+                    defaultValue={spot.defaultPrice || ""}
+                    className="w-32 min-h-9"
+                    data-testid={`input-default-price-${spot.id}`}
+                    onBlur={(e) => {
+                      const newPrice = parseFloat(e.target.value)
+                      if (!isNaN(newPrice) && newPrice >= 0) {
+                        handleUpdateDefaultPrice(spot.id, newPrice)
+                      }
+                    }}
+                  />
+                  <span className="text-sm text-muted-foreground">per day</span>
+                </div>
               </div>
 
-
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-4 border-t">
-                {/* Only show status toggle for personal spots */}
-                {!spot.isBciManaged ? (
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor={`spot-toggle-${spot.id}`} className="text-sm">
-                      {spot.isActive ? 'Active' : 'Inactive'}
-                    </Label>
-                    <Switch
-                      id={`spot-toggle-${spot.id}`}
-                      checked={spot.isActive}
-                      onCheckedChange={() => handleToggleSpotStatus(spot.id)}
-                      data-testid={`switch-spot-${spot.id}`}
-                      className="min-h-11"
-                    />
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <Info className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Assigned by administrator</span>
-                  </div>
-                )}
+                {/* Show info for BCI-managed spots */}
+                <div className="flex items-center gap-2">
+                  <Info className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">
+                    {spot.isBciManaged ? "Assigned by BCI administrator" : "Personal spot"}
+                  </span>
+                </div>
                 <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
-                  {/* List My Spot button - enabled for all spots */}
+                  {/* Create Listing button - always active */}
                   <Button
                     variant="default"
                     size="sm"
@@ -789,7 +821,7 @@ export default function MySpots() {
                     className="w-full md:w-auto min-h-11"
                   >
                     <Plus className="h-4 w-4 mr-1" />
-                    List My Spot
+                    Create Listing
                   </Button>
                   <Button
                     variant="outline"
@@ -801,19 +833,6 @@ export default function MySpots() {
                     <Eye className="h-4 w-4 mr-1" />
                     View History
                   </Button>
-                  {/* Only show Edit button for personal spots */}
-                  {!spot.isBciManaged && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEditSpot(spot)}
-                      data-testid={`button-edit-${spot.id}`}
-                      className="w-full md:w-auto min-h-11"
-                    >
-                      <Edit className="h-4 w-4 mr-1" />
-                      Edit Spot
-                    </Button>
-                  )}
                 </div>
               </div>
             </CardContent>

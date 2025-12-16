@@ -1129,6 +1129,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update parking spot default price
+  app.patch("/api/my-spots/:id/default-price", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+      
+      const { defaultPrice } = req.body;
+      if (typeof defaultPrice !== 'number' || defaultPrice < 0) {
+        return res.status(400).json({ error: "Invalid default price" });
+      }
+      
+      // Check if spot belongs to the user
+      const existingSpot = await storage.getParkingSpot(id);
+      if (!existingSpot) {
+        return res.status(404).json({ error: "Parking spot not found" });
+      }
+      
+      if (existingSpot.ownerId !== userId) {
+        return res.status(403).json({ error: "Not authorized to update this parking spot" });
+      }
+      
+      const updatedSpot = await storage.updateParkingSpot(id, { defaultPrice: String(defaultPrice) });
+      
+      if (!updatedSpot) {
+        return res.status(404).json({ error: "Failed to update parking spot" });
+      }
+      
+      // Audit the default price update
+      await auditService.logAction("UPDATE", "parking_spot", {
+        entityId: updatedSpot.id,
+        message: `Updated default price for spot ${updatedSpot.spotNumber} to $${defaultPrice}`,
+        before: { defaultPrice: existingSpot.defaultPrice },
+        after: { defaultPrice: updatedSpot.defaultPrice }
+      });
+      
+      res.json(updatedSpot);
+    } catch (error) {
+      console.error("Error updating default price:", error);
+      res.status(500).json({ error: "Failed to update default price" });
+    }
+  });
+
   // Create spot listing
   app.post("/api/spot-listings", isAuthenticated, async (req: any, res) => {
     try {
@@ -1143,19 +1188,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ownerId: userId
       });
       
-      // PERMISSION CHECK: Prevent creating listings for BCI-managed spots
+      // PERMISSION CHECK: Verify spot ownership
       const spot = await storage.getParkingSpot(validatedData.spotId);
       if (!spot) {
         return res.status(404).json({ error: "Parking spot not found" });
       }
       
-      if (spot.isBciManaged) {
-        return res.status(403).json({ 
-          error: "Cannot create listings for BCI-managed spots. Contact administrator." 
-        });
-      }
-      
-      // Verify that the user owns the spot
+      // Verify that the user owns the spot (both BCI-managed and personal spots can be listed by owners)
       if (spot.ownerId !== userId) {
         return res.status(403).json({ 
           error: "You can only create listings for spots you own" 

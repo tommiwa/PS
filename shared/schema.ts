@@ -139,6 +139,7 @@ export const parkingSpots = pgTable("parking_spots", {
   isIndoor: boolean("is_indoor").notNull().default(false),
   ownerId: varchar("owner_id"), // References users.id - nullable for unallocated spots
   description: text("description"),
+  defaultPrice: decimal("default_price", { precision: 10, scale: 2 }), // Owner's default daily rate for listings
   isActive: boolean("is_active").notNull().default(true),
   isBookable: boolean("is_bookable").notNull().default(true), // Whether spot can be booked by renters
   isBciManaged: boolean("is_bci_managed").notNull().default(false), // BCI-managed spots (true) vs personal spots (false)
