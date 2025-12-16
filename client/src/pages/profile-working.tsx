@@ -54,7 +54,7 @@ import { insertPaymentPreferencesSchema } from "@shared/schema"
 
 // Waiting list enrollment form schema
 const waitingListFormSchema = z.object({
-  priority: z.number().min(1, "Priority must be at least 1").max(10, "Priority cannot exceed 10"),
+  priority: z.number().min(1).max(3), // 1=high, 2=medium, 3=low
   preferredSpotTypeId: z.number().nullable().optional()
 });
 
@@ -194,7 +194,7 @@ export default function Profile() {
   const waitingListForm = useForm<WaitingListFormData>({
     resolver: zodResolver(waitingListFormSchema),
     defaultValues: {
-      priority: 5,
+      priority: 2, // Default to Medium Priority
       preferredSpotTypeId: null
     }
   });
@@ -679,17 +679,22 @@ export default function Profile() {
                           name="priority"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Priority (1-10)</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  type="number" 
-                                  min={1} 
-                                  max={10}
-                                  {...field}
-                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
-                                  data-testid="input-priority-mobile"
-                                />
-                              </FormControl>
+                              <FormLabel>Priority</FormLabel>
+                              <Select 
+                                onValueChange={(value) => field.onChange(parseInt(value))}
+                                value={field.value?.toString()}
+                              >
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-priority-mobile">
+                                    <SelectValue placeholder="Select priority" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="1">High Priority</SelectItem>
+                                  <SelectItem value="2">Medium Priority</SelectItem>
+                                  <SelectItem value="3">Low Priority</SelectItem>
+                                </SelectContent>
+                              </Select>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -1213,17 +1218,22 @@ export default function Profile() {
                             name="priority"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Priority (1-10)</FormLabel>
-                                <FormControl>
-                                  <Input 
-                                    type="number" 
-                                    min={1} 
-                                    max={10}
-                                    {...field}
-                                    onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
-                                    data-testid="input-priority"
-                                  />
-                                </FormControl>
+                                <FormLabel>Priority</FormLabel>
+                                <Select 
+                                  onValueChange={(value) => field.onChange(parseInt(value))}
+                                  value={field.value?.toString()}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger data-testid="select-priority">
+                                      <SelectValue placeholder="Select priority" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="1">High Priority</SelectItem>
+                                    <SelectItem value="2">Medium Priority</SelectItem>
+                                    <SelectItem value="3">Low Priority</SelectItem>
+                                  </SelectContent>
+                                </Select>
                                 <FormMessage />
                               </FormItem>
                             )}
