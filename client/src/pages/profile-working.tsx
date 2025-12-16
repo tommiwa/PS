@@ -49,8 +49,16 @@ import {
 import { useAuth } from "@/contexts/auth-context"
 import { useTheme } from "@/contexts/theme-context"
 import { useLanguage } from "@/hooks/use-language"
-import type { Vehicle, WaitingList, NotificationPreferences, UpdateNotificationPreferences, PaymentPreferences, UpdatePaymentPreferences, ParkingSpot, Department } from "@shared/schema"
+import type { Vehicle, WaitingList, NotificationPreferences, UpdateNotificationPreferences, PaymentPreferences, UpdatePaymentPreferences, ParkingSpot, Department, SpotTypeTable } from "@shared/schema"
 import { insertPaymentPreferencesSchema } from "@shared/schema"
+
+// Waiting list enrollment form schema
+const waitingListFormSchema = z.object({
+  priority: z.number().min(1, "Priority must be at least 1").max(10, "Priority cannot exceed 10"),
+  preferredSpotTypeId: z.number().nullable().optional()
+});
+
+type WaitingListFormData = z.infer<typeof waitingListFormSchema>;
 
 // Vehicle form validation schema
 const vehicleSchema = z.object({
@@ -177,6 +185,20 @@ export default function Profile() {
     queryKey: ["/api/departments"],
   });
 
+  // Fetch spot types for waiting list form
+  const { data: spotTypes = [] } = useQuery<SpotTypeTable[]>({
+    queryKey: ["/api/spot-types"],
+  });
+
+  // Waiting list enrollment form
+  const waitingListForm = useForm<WaitingListFormData>({
+    resolver: zodResolver(waitingListFormSchema),
+    defaultValues: {
+      priority: 5,
+      preferredSpotTypeId: null
+    }
+  });
+
   // Update payment form when payment preferences are loaded
   useEffect(() => {
     if (paymentPreferences) {
@@ -270,18 +292,26 @@ export default function Profile() {
   });
 
   const createWaitingListMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (data: WaitingListFormData) => {
       if (!user) throw new Error("User not found");
       const response = await apiRequest(`/api/waiting-list`, { 
-        method: 'POST' 
+        method: 'POST',
+        body: {
+          priority: data.priority,
+          preferredSpotTypeId: data.preferredSpotTypeId || null
+        }
       });
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/user", user?.id] });
+      // Reset form and confirmation states
+      waitingListForm.reset();
+      setConfirmedHasSpotWarning(false);
+      setCancelledJoinAttempt(false);
       toast({
         title: "Joined Waiting List",
-        description: "You've been successfully added to the parking waiting list.",
+        description: "You're on the list! We'll notify you when a spot becomes available.",
         variant: "default"
       });
     },
@@ -454,8 +484,8 @@ export default function Profile() {
     }
   };
 
-  const handleJoinWaitingList = () => {
-    createWaitingListMutation.mutate();
+  const handleJoinWaitingList = (data: WaitingListFormData) => {
+    createWaitingListMutation.mutate(data);
   };
 
   const handleLeaveWaitingList = () => {
@@ -640,17 +670,69 @@ export default function Profile() {
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-6">
-                    <p className="text-muted-foreground mb-4">{t("waitingList.description")}</p>
-                    <Button 
-                      className="w-full h-12" 
-                      onClick={handleJoinWaitingList}
-                      disabled={createWaitingListMutation.isPending}
-                      data-testid="button-join-waiting-list-mobile"
-                    >
-                      {createWaitingListMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                      {t("waitingList.enrollButton")}
-                    </Button>
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">{t("waitingList.description")}</p>
+                    <Form {...waitingListForm}>
+                      <form onSubmit={waitingListForm.handleSubmit(handleJoinWaitingList)} className="space-y-4">
+                        <FormField
+                          control={waitingListForm.control}
+                          name="priority"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Priority (1-10)</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="number" 
+                                  min={1} 
+                                  max={10}
+                                  {...field}
+                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                                  data-testid="input-priority-mobile"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={waitingListForm.control}
+                          name="preferredSpotTypeId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Preferred Spot Type</FormLabel>
+                              <Select 
+                                onValueChange={(value) => field.onChange(value === "none" ? null : parseInt(value))}
+                                value={field.value?.toString() || "none"}
+                              >
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-spot-type-mobile">
+                                    <SelectValue placeholder="Select preferred spot type" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="none">No preference</SelectItem>
+                                  {spotTypes.map((type) => (
+                                    <SelectItem key={type.id} value={type.id.toString()}>
+                                      {type.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <Button 
+                          type="submit"
+                          className="w-full h-12" 
+                          disabled={createWaitingListMutation.isPending}
+                          data-testid="button-join-waiting-list-mobile"
+                        >
+                          {createWaitingListMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                          {t("waitingList.enrollButton")}
+                        </Button>
+                      </form>
+                    </Form>
                   </div>
                 )}
               </div>
@@ -1122,17 +1204,69 @@ export default function Profile() {
                       </div>
                     </div>
                   ) : (
-                    <div className="text-center py-6">
-                      <p className="text-muted-foreground mb-4">{t("waitingList.description")}</p>
-                      <Button 
-                        className="w-full h-12" 
-                        onClick={handleJoinWaitingList}
-                        disabled={createWaitingListMutation.isPending}
-                        data-testid="button-join-waiting-list"
-                      >
-                        {createWaitingListMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                        {t("waitingList.enrollButton")}
-                      </Button>
+                    <div className="space-y-4">
+                      <p className="text-sm text-muted-foreground">{t("waitingList.description")}</p>
+                      <Form {...waitingListForm}>
+                        <form onSubmit={waitingListForm.handleSubmit(handleJoinWaitingList)} className="space-y-4">
+                          <FormField
+                            control={waitingListForm.control}
+                            name="priority"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Priority (1-10)</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    type="number" 
+                                    min={1} 
+                                    max={10}
+                                    {...field}
+                                    onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                                    data-testid="input-priority"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={waitingListForm.control}
+                            name="preferredSpotTypeId"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Preferred Spot Type</FormLabel>
+                                <Select 
+                                  onValueChange={(value) => field.onChange(value === "none" ? null : parseInt(value))}
+                                  value={field.value?.toString() || "none"}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger data-testid="select-spot-type">
+                                      <SelectValue placeholder="Select preferred spot type" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="none">No preference</SelectItem>
+                                    {spotTypes.map((type) => (
+                                      <SelectItem key={type.id} value={type.id.toString()}>
+                                        {type.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <Button 
+                            type="submit"
+                            className="w-full h-12" 
+                            disabled={createWaitingListMutation.isPending}
+                            data-testid="button-join-waiting-list"
+                          >
+                            {createWaitingListMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                            {t("waitingList.enrollButton")}
+                          </Button>
+                        </form>
+                      </Form>
                     </div>
                   )}
                 </CardContent>
