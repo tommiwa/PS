@@ -892,6 +892,196 @@ BCI ParkShare Team`;
 };
 
 /**
+ * Waiting List Enrollment Notification - sent to user when they join the waiting list
+ */
+export const createWaitingListEnrollmentNotification = (
+  user: { name: string; email: string },
+  enrollmentDetails: {
+    priority: number;
+    preferredSpotType: string | null;
+    enrolledDate: Date;
+  }
+): EmailNotification => {
+  const priorityLabel = enrollmentDetails.priority === 1 ? "High" : enrollmentDetails.priority === 2 ? "Medium" : "Low";
+  const subject = `Parking Waiting List - You're On the List!`;
+  
+  const text = `Dear ${user.name},
+
+You have successfully joined the BCI ParkShare Waiting List!
+
+ENROLLMENT DETAILS:
+• Priority Level: ${priorityLabel}
+• Preferred Spot Type: ${enrollmentDetails.preferredSpotType || 'No preference'}
+• Enrolled Date: ${enrollmentDetails.enrolledDate.toLocaleDateString()}
+
+WHAT HAPPENS NEXT:
+1. We'll monitor spot availability that matches your preferences
+2. When a spot becomes available, we'll notify you immediately
+3. You'll have 48 hours to accept or decline the assignment
+4. Your position is based on your priority level and enrollment date
+
+You can view and manage your waiting list status in your profile settings.
+
+Best regards,
+BCI ParkShare Team`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Waiting List Confirmation</title>
+  <style>
+    .container { max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; }
+    .header { background: #2563eb; color: white; padding: 20px; text-align: center; }
+    .content { padding: 30px; background: #f8fafc; }
+    .details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2563eb; }
+    .next-steps { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; }
+    .footer { text-align: center; color: #64748b; padding: 20px; }
+    .priority-badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-weight: bold; }
+    .priority-high { background: #fef2f2; color: #dc2626; }
+    .priority-medium { background: #fef9c3; color: #ca8a04; }
+    .priority-low { background: #f0fdf4; color: #16a34a; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>You're On the Waiting List!</h1>
+    </div>
+    
+    <div class="content">
+      <p>Dear ${user.name},</p>
+      <p>You have successfully joined the BCI ParkShare Waiting List. We'll notify you as soon as a parking spot matching your preferences becomes available.</p>
+      
+      <div class="details">
+        <h3>Your Enrollment Details</h3>
+        <ul>
+          <li><strong>Priority Level:</strong> <span class="priority-badge priority-${priorityLabel.toLowerCase()}">${priorityLabel}</span></li>
+          <li><strong>Preferred Spot Type:</strong> ${enrollmentDetails.preferredSpotType || 'No preference'}</li>
+          <li><strong>Enrolled Date:</strong> ${enrollmentDetails.enrolledDate.toLocaleDateString()}</li>
+        </ul>
+      </div>
+      
+      <div class="next-steps">
+        <h3>What Happens Next?</h3>
+        <ol>
+          <li>We'll monitor spot availability that matches your preferences</li>
+          <li>When a spot becomes available, we'll notify you immediately</li>
+          <li>You'll have 48 hours to accept or decline the assignment</li>
+          <li>Your position is based on your priority level and enrollment date</li>
+        </ol>
+      </div>
+    </div>
+    
+    <div class="footer">
+      <p>Best regards,<br>BCI ParkShare Team</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  return {
+    to: user.email,
+    subject,
+    text,
+    html,
+    type: 'waiting_list_enrollment'
+  };
+};
+
+/**
+ * Waiting List Enrollment Admin Notification - sent to admin when someone joins the waiting list
+ */
+export const createWaitingListEnrollmentAdminNotification = (
+  admin: { name: string; email: string },
+  newMember: { name: string; email: string },
+  enrollmentDetails: {
+    priority: number;
+    preferredSpotType: string | null;
+    enrolledDate: Date;
+  }
+): EmailNotification => {
+  const priorityLabel = enrollmentDetails.priority === 1 ? "High" : enrollmentDetails.priority === 2 ? "Medium" : "Low";
+  const subject = `New Waiting List Enrollment - ${newMember.name}`;
+  
+  const text = `Dear ${admin.name},
+
+A new user has joined the parking waiting list.
+
+NEW MEMBER DETAILS:
+• Name: ${newMember.name}
+• Email: ${newMember.email}
+• Priority Level: ${priorityLabel}
+• Preferred Spot Type: ${enrollmentDetails.preferredSpotType || 'No preference'}
+• Enrolled Date: ${enrollmentDetails.enrolledDate.toLocaleDateString()}
+
+Please review the waiting list and assign spots as they become available.
+
+Best regards,
+BCI ParkShare System`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Waiting List Enrollment</title>
+  <style>
+    .container { max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; }
+    .header { background: #7c3aed; color: white; padding: 20px; text-align: center; }
+    .content { padding: 30px; background: #f8fafc; }
+    .member-details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #7c3aed; }
+    .footer { text-align: center; color: #64748b; padding: 20px; }
+    .priority-badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-weight: bold; }
+    .priority-high { background: #fef2f2; color: #dc2626; }
+    .priority-medium { background: #fef9c3; color: #ca8a04; }
+    .priority-low { background: #f0fdf4; color: #16a34a; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>New Waiting List Enrollment</h1>
+    </div>
+    
+    <div class="content">
+      <p>Dear ${admin.name},</p>
+      <p>A new user has joined the parking waiting list and may need a spot assignment.</p>
+      
+      <div class="member-details">
+        <h3>New Member Details</h3>
+        <ul>
+          <li><strong>Name:</strong> ${newMember.name}</li>
+          <li><strong>Email:</strong> <a href="mailto:${newMember.email}">${newMember.email}</a></li>
+          <li><strong>Priority Level:</strong> <span class="priority-badge priority-${priorityLabel.toLowerCase()}">${priorityLabel}</span></li>
+          <li><strong>Preferred Spot Type:</strong> ${enrollmentDetails.preferredSpotType || 'No preference'}</li>
+          <li><strong>Enrolled Date:</strong> ${enrollmentDetails.enrolledDate.toLocaleDateString()}</li>
+        </ul>
+      </div>
+      
+      <p>Please review the waiting list and assign spots as they become available.</p>
+    </div>
+    
+    <div class="footer">
+      <p>BCI ParkShare System</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  return {
+    to: admin.email,
+    subject,
+    text,
+    html,
+    type: 'waiting_list_admin'
+  };
+};
+
+/**
  * Send Email Notification
  */
 export async function sendEmailNotification(notification: EmailNotification): Promise<{ success: boolean; error?: string }> {

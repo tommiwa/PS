@@ -5364,6 +5364,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
         after: entry
       });
       
+      // Send email notifications for waiting list enrollment
+      try {
+        const { 
+          createWaitingListEnrollmentNotification, 
+          createWaitingListEnrollmentAdminNotification,
+          sendEmailNotification 
+        } = await import('./notification-service');
+        
+        // Get preferred spot type name if specified
+        let preferredSpotTypeName: string | null = null;
+        if (entry.preferredSpotTypeId) {
+          const spotType = await storage.getSpotType(entry.preferredSpotTypeId);
+          preferredSpotTypeName = spotType?.name || null;
+        }
+        
+        const enrollmentDetails = {
+          priority: entry.priority,
+          preferredSpotType: preferredSpotTypeName,
+          enrolledDate: entry.enrolledDate ? new Date(entry.enrolledDate) : new Date()
+        };
+        
+        // Send confirmation email to user
+        const userNotification = createWaitingListEnrollmentNotification(
+          { name: entry.userName, email: entry.userEmail },
+          enrollmentDetails
+        );
+        await sendEmailNotification(userNotification);
+        
+        // Send notification to all admins
+        const allUsers = await storage.getAllUsers();
+        const admins = allUsers.filter(u => u.roles?.includes('admin') && u.email);
+        
+        for (const admin of admins) {
+          const adminNotification = createWaitingListEnrollmentAdminNotification(
+            { name: admin.firstName || admin.email || 'Admin', email: admin.email! },
+            { name: entry.userName, email: entry.userEmail },
+            enrollmentDetails
+          );
+          await sendEmailNotification(adminNotification);
+        }
+        
+        console.log(`✓ Waiting list enrollment emails sent for ${entry.userName}`);
+      } catch (emailError) {
+        console.error('Failed to send waiting list enrollment emails:', emailError);
+        // Don't fail the request if email sending fails
+      }
+      
       res.json(entry);
     } catch (error) {
       if (error instanceof z.ZodError) {
