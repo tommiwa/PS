@@ -657,7 +657,7 @@ export default function Search() {
             Smart Parking Search
           </h1>
           <p className="text-sm md:text-base text-muted-foreground">
-            Find parking spots instantly with intelligent search across all BCI locations.
+            Find parking spots instantly with intelligent search at BCI Victoria.
           </p>
         </div>
       </div>
