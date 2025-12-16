@@ -834,65 +834,68 @@ export default function MySpots() {
                 <p className="text-sm text-muted-foreground mb-4 break-words">{spot.description}</p>
               )}
 
-              {/* Default Price and Payment Preferences - Owners can set these */}
-              <div className="mb-4 flex flex-col md:flex-row gap-4 md:gap-8">
-                {/* Default Daily Rate */}
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Default Daily Rate</p>
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground">$</span>
-                    <Input
-                      type="number"
-                      placeholder="Set default price"
-                      defaultValue={spot.defaultPrice || ""}
-                      className="w-32 min-h-9"
-                      data-testid={`input-default-price-${spot.id}`}
-                      onBlur={(e) => {
-                        const newPrice = parseFloat(e.target.value)
-                        if (!isNaN(newPrice) && newPrice >= 0) {
-                          handleUpdateDefaultPrice(spot.id, newPrice)
-                        }
-                      }}
-                    />
-                    <span className="text-sm text-muted-foreground">per day</span>
+              {/* Default Settings Section */}
+              <div className="mb-4 p-4 bg-muted/30 rounded-lg border">
+                <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wide">Default Settings</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Default Daily Rate */}
+                  <div>
+                    <p className="text-sm font-medium mb-2">Default Daily Rate</p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">$</span>
+                      <Input
+                        type="number"
+                        placeholder="Set price"
+                        defaultValue={spot.defaultPrice || ""}
+                        className="w-28 min-h-9"
+                        data-testid={`input-default-price-${spot.id}`}
+                        onBlur={(e) => {
+                          const newPrice = parseFloat(e.target.value)
+                          if (!isNaN(newPrice) && newPrice >= 0) {
+                            handleUpdateDefaultPrice(spot.id, newPrice)
+                          }
+                        }}
+                      />
+                      <span className="text-sm text-muted-foreground">per day</span>
+                    </div>
                   </div>
-                </div>
-                
-                {/* Payment Preferences */}
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Payment Method</p>
-                  <div className="flex items-center gap-2">
-                    {isLoadingPaymentPreferences ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : paymentPreferences ? (
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                          <CreditCard className="h-3 w-3 mr-1" />
-                          {paymentPreferences.paymentType === "interac_transfer" ? "Interac" : "Cash"}
-                        </Badge>
+                  
+                  {/* Default Payment Method */}
+                  <div>
+                    <p className="text-sm font-medium mb-2">Default Payment Method</p>
+                    <div className="flex items-center gap-2">
+                      {isLoadingPaymentPreferences ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : paymentPreferences ? (
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800">
+                            <CreditCard className="h-3 w-3 mr-1" />
+                            {paymentPreferences.paymentType === "interac_transfer" ? "Interac" : "Cash"}
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowPaymentDialog(true)}
+                            className="text-xs h-8"
+                            data-testid="button-edit-payment-method"
+                          >
+                            <Edit className="h-3 w-3 mr-1" />
+                            Edit
+                          </Button>
+                        </div>
+                      ) : (
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
                           onClick={() => setShowPaymentDialog(true)}
-                          className="text-xs h-8"
-                          data-testid="button-edit-payment-method"
+                          className="min-h-9"
+                          data-testid="button-set-payment-method"
                         >
-                          <Edit className="h-3 w-3 mr-1" />
-                          Edit
+                          <CreditCard className="h-4 w-4 mr-1" />
+                          Set Payment Method
                         </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowPaymentDialog(true)}
-                        className="min-h-9"
-                        data-testid="button-set-payment-method"
-                      >
-                        <CreditCard className="h-4 w-4 mr-1" />
-                        Set Payment Method
-                      </Button>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
