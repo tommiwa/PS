@@ -43,18 +43,18 @@ import { useState } from "react"
 // Group 1: Managing their own spots
 const ownerManagementItems = [
   {
-    title: "My Spot Listings",
-    url: "/my-listings",
-    icon: Calendar,
-    roles: ["owner"],
-    tooltip: "Spots you're renting out"
-  },
-  {
     title: "My Spots",
     url: "/my-spots",
     icon: Car,
     roles: ["owner"],
     tooltip: "Manage your parking spots"
+  },
+  {
+    title: "My Spot Listings",
+    url: "/my-listings",
+    icon: Calendar,
+    roles: ["owner"],
+    tooltip: "Spots you're renting out"
   },
   {
     title: "Dashboard",
@@ -515,10 +515,10 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
               </SidebarGroupContent>
             </SidebarGroup>
 
-            {/* Renting Group for Owners */}
+            {/* Renting Management Group for Owners */}
             <SidebarSeparator />
             <SidebarGroup>
-              <SidebarGroupLabel>Renting</SidebarGroupLabel>
+              <SidebarGroupLabel>Renting Management</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
                   {renderMenuItems(filteredOwnerRentingItems)}
