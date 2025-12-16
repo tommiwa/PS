@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
@@ -100,10 +101,8 @@ const createUserFormSchema = insertUserSchema.extend({
       message: "Phone number must be 10 digits"
     }),
   departmentId: z.number().int().positive("Department is required"),
-}).omit({
-  roles: true // Remove roles from schema since we'll use 'role' (singular) in the form
 }).extend({
-  role: z.string().optional(), // Add singular 'role' field for the form
+  roles: z.array(z.string()).min(1, "At least one role must be selected"), // Multi-select roles
   status: z.enum(["active", "suspended"]).optional() // Add status field
 });
 
@@ -216,7 +215,7 @@ export default function AdminUserManagement() {
       email: "",
       phone: "",
       departmentId: undefined,
-      role: "renter",
+      roles: ["renter"],
       memberSince: new Date().toISOString().split('T')[0]
     }
   })
@@ -230,7 +229,7 @@ export default function AdminUserManagement() {
       email: "",
       phone: "",
       departmentId: undefined,
-      role: "renter",
+      roles: ["renter"],
       memberSince: new Date().toISOString().split('T')[0]
     }
   })
@@ -278,15 +277,8 @@ export default function AdminUserManagement() {
   // Create user mutation
   const createUserMutation = useMutation({
     mutationFn: async (userData: CreateUserFormData): Promise<User> => {
-      // Transform role (singular string) to roles (array) for API
-      const apiData = {
-        ...userData,
-        roles: userData.role ? [userData.role] : ['renter'],
-      };
-      // Remove the singular 'role' field
-      delete (apiData as any).role;
-      
-      const response = await apiRequest('/api/users', { method: 'POST', body: apiData });
+      // Roles is already an array from the form
+      const response = await apiRequest('/api/users', { method: 'POST', body: userData });
       return await response.json();
     },
     onSuccess: (newUser: User) => {
@@ -453,15 +445,8 @@ export default function AdminUserManagement() {
   // Edit user mutation
   const editUserMutation = useMutation({
     mutationFn: async ({ userId, userData }: { userId: string, userData: Partial<InsertUser> }): Promise<User> => {
-      // Transform role (singular string) to roles (array) for API
-      const apiData = {
-        ...userData,
-        roles: (userData as any).role ? [(userData as any).role] : undefined,
-      };
-      // Remove the singular 'role' field
-      delete (apiData as any).role;
-      
-      const response = await apiRequest(`/api/users/${userId}`, { method: 'PUT', body: apiData });
+      // Roles is already an array from the form
+      const response = await apiRequest(`/api/users/${userId}`, { method: 'PUT', body: userData });
       return await response.json();
     },
     onSuccess: (updatedUser: User) => {
@@ -537,7 +522,7 @@ export default function AdminUserManagement() {
       email: user.email ?? "",
       phone: user.phone ?? "",
       departmentId: user.departmentId ?? undefined,
-      role: user.roles?.[0] ?? "renter", // Convert roles array to single role for form
+      roles: user.roles?.length ? user.roles : ["renter"], // Use full roles array for multi-select
       status: user.status === "deleted" ? "active" : (user.status ?? "active"), // Default deleted to active for editing
       memberSince: user.memberSince ?? new Date().toISOString().split('T')[0]
     })
@@ -894,29 +879,43 @@ export default function AdminUserManagement() {
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
-                      name="role"
+                      name="roles"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Role</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value || 'renter'}>
-                            <FormControl>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <SelectTrigger data-testid="select-role">
-                                    <SelectValue placeholder="Select role" />
-                                  </SelectTrigger>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  Admin: Full system access | Owner: Can list spots for rent | Renter: Can book available spots
-                                </TooltipContent>
-                              </Tooltip>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="renter">Renter</SelectItem>
-                              <SelectItem value="owner">Spot Owner</SelectItem>
-                              <SelectItem value="admin">Administrator</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <FormLabel>Roles</FormLabel>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex flex-col gap-2 p-3 border rounded-md" data-testid="checkbox-roles">
+                                {[
+                                  { value: "renter", label: "Renter", description: "Can book available spots" },
+                                  { value: "owner", label: "Spot Owner", description: "Can list spots for rent" },
+                                  { value: "admin", label: "Administrator", description: "Full system access" }
+                                ].map((role) => (
+                                  <div key={role.value} className="flex items-center gap-2">
+                                    <Checkbox
+                                      id={`role-${role.value}`}
+                                      checked={field.value?.includes(role.value) || false}
+                                      onCheckedChange={(checked) => {
+                                        const currentRoles = field.value || [];
+                                        if (checked) {
+                                          field.onChange([...currentRoles, role.value]);
+                                        } else {
+                                          field.onChange(currentRoles.filter((r: string) => r !== role.value));
+                                        }
+                                      }}
+                                      data-testid={`checkbox-role-${role.value}`}
+                                    />
+                                    <label htmlFor={`role-${role.value}`} className="text-sm cursor-pointer">
+                                      {role.label}
+                                    </label>
+                                  </div>
+                                ))}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              Select one or more roles for this user
+                            </TooltipContent>
+                          </Tooltip>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -1078,29 +1077,43 @@ export default function AdminUserManagement() {
                     />
                     <FormField
                       control={editForm.control}
-                      name="role"
+                      name="roles"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{t("admin.role")}</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value ?? ""} value={field.value ?? ""}>
-                            <FormControl>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <SelectTrigger data-testid="select-edit-role">
-                                    <SelectValue placeholder="Select role" />
-                                  </SelectTrigger>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  Changing roles affects user permissions and system access immediately
-                                </TooltipContent>
-                              </Tooltip>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="renter">Renter</SelectItem>
-                              <SelectItem value="owner">Owner</SelectItem>
-                              <SelectItem value="admin">Admin</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <FormLabel>{t("admin.role")}s</FormLabel>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex flex-col gap-2 p-3 border rounded-md" data-testid="checkbox-edit-roles">
+                                {[
+                                  { value: "renter", label: "Renter", description: "Can book available spots" },
+                                  { value: "owner", label: "Spot Owner", description: "Can list spots for rent" },
+                                  { value: "admin", label: "Administrator", description: "Full system access" }
+                                ].map((role) => (
+                                  <div key={role.value} className="flex items-center gap-2">
+                                    <Checkbox
+                                      id={`edit-role-${role.value}`}
+                                      checked={field.value?.includes(role.value) || false}
+                                      onCheckedChange={(checked) => {
+                                        const currentRoles = field.value || [];
+                                        if (checked) {
+                                          field.onChange([...currentRoles, role.value]);
+                                        } else {
+                                          field.onChange(currentRoles.filter((r: string) => r !== role.value));
+                                        }
+                                      }}
+                                      data-testid={`checkbox-edit-role-${role.value}`}
+                                    />
+                                    <label htmlFor={`edit-role-${role.value}`} className="text-sm cursor-pointer">
+                                      {role.label}
+                                    </label>
+                                  </div>
+                                ))}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              Changing roles affects user permissions and system access immediately
+                            </TooltipContent>
+                          </Tooltip>
                           <FormMessage />
                         </FormItem>
                       )}
