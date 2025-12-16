@@ -57,7 +57,7 @@ type DashboardScope = 'all' | 'bci';
 export default function Admin() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
-  const [dateRange, setDateRange] = useState("last-30-days")
+  const [dateRange, setDateRange] = useState("last-7-days")
   const [scope, setScope] = useState<DashboardScope>('all')
   const { cardsVisible, toggleCards, setCardsVisible } = useCardsVisibility('analytics')
   const { t } = useLanguage()
@@ -546,7 +546,19 @@ export default function Admin() {
     },
   } satisfies ChartConfig;
 
-  const isLoading = isLoadingUsers || isLoadingWaitingList || isLoadingSpots
+  const isLoading = isLoadingUsers || isLoadingWaitingList || isLoadingSpots || isLoadingAnalytics
+
+  // Show loading state when initial data is loading
+  if (isLoading && !allUsers.length && !allSpots.length) {
+    return (
+      <div className="flex items-center justify-center h-full min-h-[400px]" data-testid="page-admin-loading">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Loading dashboard data...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="p-4 md:p-6 space-y-6" data-testid="page-admin">

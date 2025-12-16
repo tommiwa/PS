@@ -10,8 +10,6 @@ import {
   Download,
   ChevronDown,
   ChevronRight,
-  Eye,
-  EyeOff,
   User,
   AlertCircle,
   CheckCircle,
@@ -39,7 +37,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import type { AuditLog, AuditAction, EntityType, UserRole } from "@shared/schema"
-import { useCardsVisibility } from "@/hooks/use-cards-visibility"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 
 // Available filter options
@@ -79,15 +76,6 @@ interface AuditLogsResponse {
   totalPages: number;
 }
 
-// Audit analytics interface
-interface AuditAnalytics {
-  totalLogsToday: number;
-  failedActions: number;
-  activeUsers: number;
-  systemHealth: number;
-  topActions: { action: string; count: number }[];
-  recentActivity: { count: number; timeframe: string };
-}
 
 export default function AdminAudits() {
   const { t } = useLanguage()
@@ -96,7 +84,6 @@ export default function AdminAudits() {
   const [pageSize] = useState(50);
   const [expandedRows, setExpandedRows] = useState<ExpandedRow>({});
   const [searchTerm, setSearchTerm] = useState("");
-  const { cardsVisible, toggleCards } = useCardsVisibility('audit-logs');
 
   // Build query parameters
   const queryParams = new URLSearchParams();
@@ -115,23 +102,6 @@ export default function AdminAudits() {
     // Fallback for when data is still loading or undefined
     select: (data) => data || { items: [], total: 0, page: 1, pageSize: 50, totalPages: 1 }
   });
-
-  // Fetch audit analytics
-  const { data: auditAnalytics, isLoading: isLoadingAnalytics } = useQuery<AuditAnalytics>({
-    queryKey: ["/api/admin/audit-analytics"],
-  });
-
-
-  // Default empty analytics when no real data is available
-  const defaultAnalytics: AuditAnalytics = {
-    totalLogsToday: 0,
-    failedActions: 0,
-    activeUsers: 0,
-    systemHealth: 0,
-    topActions: [],
-    recentActivity: { count: 0, timeframe: "today" }
-  };
-  const displayAnalytics = auditAnalytics || defaultAnalytics;
 
   // Handle search
   const handleSearch = () => {
@@ -247,22 +217,6 @@ export default function AdminAudits() {
         <div className="flex gap-2">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={toggleCards}
-                data-testid="button-toggle-cards"
-                aria-label={cardsVisible ? "Hide analytics cards" : "Show analytics cards"}
-              >
-                {cardsVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {cardsVisible ? 'Hide analytics cards' : 'Show analytics cards'}
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
               <Button 
                 variant="outline" 
                 onClick={() => refetch()}
@@ -295,139 +249,6 @@ export default function AdminAudits() {
           </Tooltip>
         </div>
       </div>
-
-      {/* Quick Analytics Cards */}
-      {cardsVisible && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" data-testid="analytics-cards">
-        <Card className="hover-elevate">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-sm font-medium">Total Logs Today</CardTitle>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-4 w-4 p-0"
-                    aria-label="Total logs today information"
-                  >
-                    <Info className="h-3 w-3 text-muted-foreground" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  View audit entries recorded today from all user actions
-                </TooltipContent>
-              </Tooltip>
-            </div>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" data-testid="stat-total-logs">
-              {displayAnalytics.totalLogsToday.toLocaleString()}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              System activities recorded
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover-elevate">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-sm font-medium">Failed Actions</CardTitle>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-4 w-4 p-0"
-                    aria-label="Failed actions information"
-                  >
-                    <Info className="h-3 w-3 text-muted-foreground" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  View failed actions requiring security investigation
-                </TooltipContent>
-              </Tooltip>
-            </div>
-            <AlertCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" data-testid="stat-failed-actions">
-              {displayAnalytics.failedActions}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Require investigation
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover-elevate">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-sm font-medium">Active Users</CardTitle>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-4 w-4 p-0"
-                    aria-label="Active users information"
-                  >
-                    <Info className="h-3 w-3 text-muted-foreground" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  View number of users with activity today
-                </TooltipContent>
-              </Tooltip>
-            </div>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" data-testid="stat-active-users">
-              {displayAnalytics.activeUsers}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Users active today
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover-elevate">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-sm font-medium">System Health</CardTitle>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-4 w-4 p-0"
-                    aria-label="System health information"
-                  >
-                    <Info className="h-3 w-3 text-muted-foreground" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  View overall system performance and security status
-                </TooltipContent>
-              </Tooltip>
-            </div>
-            <Shield className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" data-testid="stat-system-health">
-              {displayAnalytics.systemHealth}%
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Overall system status
-            </p>
-          </CardContent>
-        </Card>
-        </div>
-      )}
 
       {/* Search and Filters */}
       <Card className="hover-elevate">
