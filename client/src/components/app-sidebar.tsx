@@ -40,7 +40,8 @@ import { useToast } from "@/hooks/use-toast"
 import { useState } from "react"
 
 // Owner-specific navigation items - grouped by category
-const ownerParkingItems = [
+// Group 1: Managing their own spots
+const ownerManagementItems = [
   {
     title: "My Spot Listings",
     url: "/my-listings",
@@ -49,28 +50,11 @@ const ownerParkingItems = [
     tooltip: "Spots you're renting out"
   },
   {
-    title: "My Rentals",
-    url: "/my-rentals",
-    icon: CalendarCheck,
-    roles: ["owner"],
-    tooltip: "Spots you've booked from others"
-  },
-  {
     title: "My Spots",
     url: "/my-spots",
     icon: Car,
     roles: ["owner"],
     tooltip: "Manage your parking spots"
-  },
-]
-
-const ownerBrowseItems = [
-  {
-    title: "Find Parking",
-    url: "/search",
-    icon: Search,
-    roles: ["owner"],
-    tooltip: "Find Parking"
   },
   {
     title: "Dashboard",
@@ -82,6 +66,24 @@ const ownerBrowseItems = [
       owner: "Statistics",
       renter: "Statistics"
     }
+  },
+]
+
+// Group 2: Renting from others
+const ownerRentingItems = [
+  {
+    title: "Find Parking",
+    url: "/search",
+    icon: Search,
+    roles: ["owner"],
+    tooltip: "Find Parking"
+  },
+  {
+    title: "My Rentals",
+    url: "/my-rentals",
+    icon: CalendarCheck,
+    roles: ["owner"],
+    tooltip: "Spots you've booked from others"
   },
 ]
 
@@ -207,8 +209,8 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
   );
   
   // Owner-specific grouped items
-  const filteredOwnerParkingItems = isOwnerView ? ownerParkingItems : [];
-  const filteredOwnerBrowseItems = isOwnerView ? ownerBrowseItems : [];
+  const filteredOwnerManagementItems = isOwnerView ? ownerManagementItems : [];
+  const filteredOwnerRentingItems = isOwnerView ? ownerRentingItems : [];
   
   // Admin items only shown if effective role is admin (respects "view as")
   const filteredAdminCoreItems = effectiveRoles.includes("admin") 
@@ -503,23 +505,23 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
         {/* Owner-specific grouped navigation */}
         {isOwnerView ? (
           <>
-            {/* My Parking Group for Owners */}
+            {/* Spot Management Group for Owners */}
             <SidebarGroup>
-              <SidebarGroupLabel>My Parking</SidebarGroupLabel>
+              <SidebarGroupLabel>Spot Management</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {renderMenuItems(filteredOwnerParkingItems)}
+                  {renderMenuItems(filteredOwnerManagementItems)}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
 
-            {/* Browse Group for Owners */}
+            {/* Renting Group for Owners */}
             <SidebarSeparator />
             <SidebarGroup>
-              <SidebarGroupLabel>Browse</SidebarGroupLabel>
+              <SidebarGroupLabel>Renting</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {renderMenuItems(filteredOwnerBrowseItems)}
+                  {renderMenuItems(filteredOwnerRentingItems)}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
