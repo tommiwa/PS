@@ -363,7 +363,7 @@ function AuthenticatedApp() {
     <SidebarProvider style={style as React.CSSProperties}>
       <div className="flex h-screen w-full">
         <AppSidebar userRole={userRole} />
-        <div className="flex flex-col flex-1 min-w-0">
+        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
           <header className="flex items-center justify-between p-4 border-b bg-primary/10 border-primary/20 shadow-sm min-w-0">
             <div className="flex items-center gap-4">
               <Tooltip>
