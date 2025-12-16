@@ -394,7 +394,6 @@ export const vehicles = pgTable("vehicles", {
   make: text("make").notNull(),
   model: text("model").notNull(),
   year: integer("year").notNull(),
-  licensePlate: text("license_plate").notNull(),
   color: text("color"),
   isElectric: boolean("is_electric").notNull().default(false),
   isDefault: boolean("is_default").notNull().default(false), // If this is the user's primary vehicle
@@ -458,7 +457,7 @@ export interface AuthUser {
   vehicleInfo?: {
     make?: string;
     model?: string;
-    licensePlate?: string;
+    color?: string;
   };
   // Helper computed property for display name
   name?: string;
@@ -484,7 +483,7 @@ export const sampleUsers: Record<UserRole, AuthUser> = {
     vehicleInfo: {
       make: "Toyota",
       model: "Camry",
-      licensePlate: "ABC-123"
+      color: "Silver"
     }
   },
   owner: {
@@ -499,7 +498,7 @@ export const sampleUsers: Record<UserRole, AuthUser> = {
     vehicleInfo: {
       make: "Honda",
       model: "Civic",
-      licensePlate: "XYZ-789"
+      color: "Blue"
     }
   },
   admin: {
@@ -514,7 +513,7 @@ export const sampleUsers: Record<UserRole, AuthUser> = {
     vehicleInfo: {
       make: "BMW",
       model: "X3",
-      licensePlate: "DEF-456"
+      color: "Black"
     }
   }
 };

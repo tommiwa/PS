@@ -1611,7 +1611,6 @@ export class MemStorage implements IStorage {
       make: vehicle.make,
       model: vehicle.model,
       year: vehicle.year,
-      licensePlate: vehicle.licensePlate,
       color: vehicle.color ?? null,
       isElectric: vehicle.isElectric ?? false,
       isDefault: vehicle.isDefault ?? false,

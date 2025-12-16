@@ -22,7 +22,7 @@ interface BookingData {
   paymentMethod: string
   specialInstructions: string
   contactPhone: string
-  vehicleLicense: string
+  vehicleInfo: string
   spotId: string
 }
 
@@ -74,17 +74,20 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
     paymentMethod: "",
     specialInstructions: "",
     contactPhone: "", // Will be populated when auth loads
-    vehicleLicense: "" // Will be populated when auth loads
+    vehicleInfo: "" // Will be populated when auth loads (model + color)
   })
 
   // Auto-populate user fields from auth context when it loads (once only)
   useEffect(() => {
     if (authUser && !authDataHydratedRef.current) {
       authDataHydratedRef.current = true;
+      const vehicleDetails = authUser.vehicleInfo 
+        ? `${authUser.vehicleInfo.model || ''}${authUser.vehicleInfo.color ? ` (${authUser.vehicleInfo.color})` : ''}`.trim()
+        : "";
       setFormData(prev => ({
         ...prev,
         contactPhone: authUser.phone || "",
-        vehicleLicense: authUser.vehicleInfo?.licensePlate || ""
+        vehicleInfo: vehicleDetails
       }));
     }
   }, [authUser]);
@@ -188,9 +191,9 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
       errors.contactPhone = "Please enter a valid phone number"
     }
 
-    // Vehicle license validation
-    if (!formData.vehicleLicense.trim()) {
-      errors.vehicleLicense = "Vehicle license plate is required"
+    // Vehicle info validation
+    if (!formData.vehicleInfo.trim()) {
+      errors.vehicleInfo = "Vehicle information is required"
     }
 
     setValidationErrors(errors)
@@ -398,8 +401,8 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
               
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="vehicleLicense" className="text-sm">License Plate</Label>
-                  {authUser?.vehicleInfo?.licensePlate && (
+                  <Label htmlFor="vehicleInfo" className="text-sm">Vehicle (Model & Color)</Label>
+                  {authUser?.vehicleInfo?.model && (
                     <Badge variant="outline" className="text-xs h-5">
                       <User className="h-3 w-3 mr-1" />
                       Profile
@@ -409,16 +412,16 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
                 <div className="relative">
                   <Car className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="ABC-123"
-                    value={formData.vehicleLicense}
-                    onChange={(e) => updateFormData("vehicleLicense", e.target.value)}
+                    placeholder="e.g., Camry (Blue)"
+                    value={formData.vehicleInfo}
+                    onChange={(e) => updateFormData("vehicleInfo", e.target.value)}
                     required
-                    data-testid="input-vehicle-license"
+                    data-testid="input-vehicle-info"
                     className="pl-9"
                   />
                 </div>
-                {validationErrors.vehicleLicense && (
-                  <p className="text-sm text-destructive">{validationErrors.vehicleLicense}</p>
+                {validationErrors.vehicleInfo && (
+                  <p className="text-sm text-destructive">{validationErrors.vehicleInfo}</p>
                 )}
               </div>
             </div>

@@ -65,7 +65,6 @@ const vehicleSchema = z.object({
   make: z.string().min(1, "Vehicle make is required"),
   model: z.string().min(1, "Vehicle model is required"),
   year: z.number().min(1990, "Year must be 1990 or later").max(new Date().getFullYear() + 1, "Year cannot be in the future"),
-  licensePlate: z.string().min(1, "License plate is required"),
   color: z.string().optional(),
   isElectric: z.boolean().default(false),
   isDefault: z.boolean().default(false)
@@ -111,7 +110,6 @@ export default function Profile() {
       make: "",
       model: "",
       year: new Date().getFullYear(),
-      licensePlate: "",
       color: "",
       isElectric: false,
       isDefault: false
@@ -464,7 +462,6 @@ export default function Profile() {
       make: vehicle.make,
       model: vehicle.model,
       year: vehicle.year,
-      licensePlate: vehicle.licensePlate,
       color: vehicle.color || "",
       isElectric: vehicle.isElectric,
       isDefault: vehicle.isDefault
@@ -921,7 +918,7 @@ export default function Profile() {
                                 )}
                               </div>
                               <p className="text-sm text-muted-foreground">
-                                {vehicle.licensePlate} {vehicle.color && `• ${vehicle.color}`}
+                                {vehicle.color || "No color specified"}
                               </p>
                             </div>
                           </div>
@@ -1517,19 +1514,6 @@ export default function Profile() {
                                     )}
                                   />
                                 </div>
-                                <FormField
-                                  control={vehicleForm.control}
-                                  name="licensePlate"
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>License Plate</FormLabel>
-                                      <FormControl>
-                                        <Input className="min-h-11" placeholder="e.g., ABC-123" {...field} data-testid="input-vehicle-license" />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
                                 <div className="flex items-center gap-4">
                                   <FormField
                                     control={vehicleForm.control}
@@ -1683,24 +1667,6 @@ export default function Profile() {
                                     )}
                                   />
                                 </div>
-                                <FormField
-                                  control={vehicleForm.control}
-                                  name="licensePlate"
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel className="text-sm font-medium">License Plate</FormLabel>
-                                      <FormControl>
-                                        <Input 
-                                          placeholder="e.g., ABC-123" 
-                                          {...field} 
-                                          className="h-11"
-                                          data-testid="input-vehicle-license-desktop" 
-                                        />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
                                 <div className="grid grid-cols-2 gap-6">
                                   <FormField
                                     control={vehicleForm.control}
@@ -1808,7 +1774,7 @@ export default function Profile() {
                                     )}
                                   </div>
                                   <p className="text-sm text-muted-foreground">
-                                    {vehicle.licensePlate} {vehicle.color && `• ${vehicle.color}`}
+                                    {vehicle.color || "No color specified"}
                                   </p>
                                 </div>
                               </div>

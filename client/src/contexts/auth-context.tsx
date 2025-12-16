@@ -18,7 +18,7 @@ interface AuthUser {
   vehicleInfo?: { 
     make?: string; 
     model?: string; 
-    licensePlate?: string; 
+    color?: string; 
   };
 }
 
