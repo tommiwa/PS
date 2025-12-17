@@ -39,6 +39,7 @@ interface EnrichedSpotFromAPI extends DBParkingSpot {
   expiredDates?: string[] // Array of past unbooked dates
   isExpired?: boolean // True if all dates are expired
   bookedDates?: string[] // Array of dates that are already booked
+  isAvailable?: boolean // True if spot has future availability dates
   availability?: {
     date: string
   }
@@ -172,7 +173,9 @@ export default function Search() {
       isInside: spot.isIndoor,
       price: spot.dailyRate ? parseFloat(spot.dailyRate) : 25,
       owner: spot.owner ? `${spot.owner.firstName} ${spot.owner.lastName}` : getSpotOwner(spot.ownerId),
-      isAvailable: spot.isActive,
+      // Use API's isAvailable field which checks if spot has future availability dates
+      // Fallback to isActive only if isAvailable is not set (shouldn't happen with current API)
+      isAvailable: spot.isAvailable ?? spot.isActive,
       isBookable: spot.isBookable,
       // Explicitly preserve enriched availability data from API
       availabilityDates: spot.availabilityDates,
