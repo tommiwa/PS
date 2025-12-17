@@ -61,6 +61,8 @@ export default function AdminParkingManagement() {
   const [showReleaseSpotDialog, setShowReleaseSpotDialog] = useState(false)
   const [showAssignAvailableSpotDialog, setShowAssignAvailableSpotDialog] = useState(false)
   const [showCreateAvailabilityDialog, setShowCreateAvailabilityDialog] = useState(false)
+  const [showBulkSeatNumberDialog, setShowBulkSeatNumberDialog] = useState(false)
+  const [bulkSeatNumberData, setBulkSeatNumberData] = useState("")
   const [selectedSpot, setSelectedSpot] = useState<ParkingSpotWithUser | null>(null)
   const [selectedSpotForAssign, setSelectedSpotForAssign] = useState<ParkingSpotWithUser | null>(null)
   const [selectedSpotForRelease, setSelectedSpotForRelease] = useState<ParkingSpotWithUser | null>(null)
@@ -710,6 +712,34 @@ export default function AdminParkingManagement() {
     },
   });
 
+  // Bulk seat number update mutation
+  const bulkSeatNumberMutation = useMutation({
+    mutationFn: async (mappings: Array<{ spotNumber: string; seatNumber: string }>) => {
+      return apiRequest("/api/admin/spots/bulk-seat-numbers", {
+        method: "POST",
+        body: { mappings }
+      });
+    },
+    onSuccess: (response: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/all-spots"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] });
+      toast({
+        title: "Success",
+        description: response.message || `Updated ${response.updated} spots`,
+        variant: "success",
+      });
+      setShowBulkSeatNumberDialog(false);
+      setBulkSeatNumberData("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update seat numbers.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Helper functions
   const handleEditSpot = (spot: ParkingSpot) => {
     setSelectedSpot(spot);
@@ -1237,6 +1267,22 @@ export default function AdminParkingManagement() {
             </TooltipTrigger>
             <TooltipContent>
               Refresh all parking data and assignments
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline"
+                onClick={() => setShowBulkSeatNumberDialog(true)}
+                data-testid="button-bulk-seat-numbers"
+                aria-label="Bulk upload seat numbers"
+              >
+                <MapPin className="w-4 h-4 mr-2" />
+                Bulk Seat Numbers
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              Upload seat number mappings for floor plan links
             </TooltipContent>
           </Tooltip>
           <Tooltip>
@@ -3247,6 +3293,72 @@ export default function AdminParkingManagement() {
                 onClick={() => setShowCreateAvailabilityDialog(false)}
                 className="flex-1"
                 data-testid="button-cancel-create-availability"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Seat Number Upload Dialog */}
+      <Dialog open={showBulkSeatNumberDialog} onOpenChange={setShowBulkSeatNumberDialog}>
+        <DialogContent className="max-w-lg" data-testid="dialog-bulk-seat-numbers">
+          <DialogHeader>
+            <DialogTitle>Bulk Upload Seat Numbers</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Paste your mapping data below. Each line should have: SpotNumber,SeatNumber
+            </p>
+            <div className="bg-muted p-3 rounded-md text-xs font-mono">
+              <p>Example format:</p>
+              <p>A001,34478</p>
+              <p>A002,34479</p>
+              <p>A003,34480</p>
+            </div>
+            <textarea
+              className="w-full h-48 p-3 border rounded-md font-mono text-sm"
+              placeholder="SpotNumber,SeatNumber&#10;A001,34478&#10;A002,34479"
+              value={bulkSeatNumberData}
+              onChange={(e) => setBulkSeatNumberData(e.target.value)}
+              data-testid="textarea-bulk-seat-numbers"
+            />
+            <div className="flex gap-2">
+              <Button
+                onClick={() => {
+                  // Parse the CSV data
+                  const lines = bulkSeatNumberData.trim().split('\n').filter(line => line.trim());
+                  const mappings = lines.map(line => {
+                    const parts = line.split(',').map(p => p.trim());
+                    return { spotNumber: parts[0], seatNumber: parts[1] };
+                  }).filter(m => m.spotNumber && m.seatNumber);
+                  
+                  if (mappings.length === 0) {
+                    toast({
+                      title: "Error",
+                      description: "No valid mappings found. Each line should have SpotNumber,SeatNumber",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  
+                  bulkSeatNumberMutation.mutate(mappings);
+                }}
+                disabled={bulkSeatNumberMutation.isPending || !bulkSeatNumberData.trim()}
+                className="flex-1"
+                data-testid="button-submit-bulk-seat-numbers"
+              >
+                {bulkSeatNumberMutation.isPending ? "Updating..." : `Upload Mappings`}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowBulkSeatNumberDialog(false);
+                  setBulkSeatNumberData("");
+                }}
+                className="flex-1"
+                data-testid="button-cancel-bulk-seat-numbers"
               >
                 Cancel
               </Button>

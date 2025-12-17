@@ -4365,6 +4365,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk update seat numbers from mapping (Admin only)
+  app.post("/api/admin/spots/bulk-seat-numbers", requireAdmin, async (req, res) => {
+    try {
+      const { mappings } = req.body;
+      
+      if (!mappings || !Array.isArray(mappings)) {
+        return res.status(400).json({ error: "Invalid input: 'mappings' array required" });
+      }
+      
+      // Validate each mapping has spotNumber and seatNumber
+      const validMappings = mappings.filter((m: any) => m.spotNumber && m.seatNumber);
+      
+      if (validMappings.length === 0) {
+        return res.status(400).json({ error: "No valid mappings found. Each mapping needs spotNumber and seatNumber." });
+      }
+      
+      // Get all spots to find IDs by spotNumber
+      const allSpots = await db.select().from(parkingSpots);
+      const spotsByNumber = new Map(allSpots.map(s => [s.spotNumber, s]));
+      
+      let updated = 0;
+      let notFound: string[] = [];
+      
+      for (const mapping of validMappings) {
+        const spot = spotsByNumber.get(mapping.spotNumber);
+        if (spot) {
+          await db.update(parkingSpots)
+            .set({ seatNumber: String(mapping.seatNumber) })
+            .where(eq(parkingSpots.id, spot.id));
+          updated++;
+        } else {
+          notFound.push(mapping.spotNumber);
+        }
+      }
+      
+      // Audit the bulk seat number update
+      await auditService.logAction("BULK_UPDATE", "parking_spot", {
+        entityId: "seat_numbers",
+        message: `Bulk updated seat numbers for ${updated} spots`,
+        after: { 
+          updated,
+          notFound,
+          mappingsCount: validMappings.length
+        }
+      });
+      
+      res.json({ 
+        success: true, 
+        updated,
+        notFound,
+        message: `Updated ${updated} spots. ${notFound.length > 0 ? `Not found: ${notFound.join(', ')}` : ''}` 
+      });
+    } catch (error) {
+      console.error("Error bulk updating seat numbers:", error);
+      res.status(500).json({ error: "Failed to bulk update seat numbers" });
+    }
+  });
+
   // Bulk create spot listings (Admin only)
   app.post("/api/admin/bulk-create-listings", requireAdmin, async (req: any, res) => {
     try {
