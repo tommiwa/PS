@@ -1669,6 +1669,7 @@ export default function AdminParkingManagement() {
                               </Tooltip>
                             </div>
                           </SortableTableHeader>
+                          <TableHead>Map</TableHead>
                           <TableHead>{t("admin.parkingManagement.actions")}</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -1722,6 +1723,22 @@ export default function AdminParkingManagement() {
                                 <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100">{t("admin.parkingManagement.assigned")}</Badge>
                               ) : (
                                 <Badge variant="outline">{t("admin.parkingManagement.available")}</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {spot.mapLink ? (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="sm" asChild>
+                                      <a href={spot.mapLink} target="_blank" rel="noopener noreferrer">
+                                        <MapPin className="h-4 w-4 text-blue-500" />
+                                      </a>
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>View on floor plan</TooltipContent>
+                                </Tooltip>
+                              ) : (
+                                <span className="text-muted-foreground text-sm">—</span>
                               )}
                             </TableCell>
                             <TableCell>
