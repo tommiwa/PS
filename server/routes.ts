@@ -2752,9 +2752,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
       const oneYearAgoStr = oneYearAgo.toISOString().split('T')[0];
 
-      // Get user's owned spots
-      const allSpots = await storage.getParkingSpots();
-      const ownedSpots = allSpots.filter(spot => spot.assignedUserId === userId);
+      // Get user's owned spots (spots assigned to this user - either as owner or assignedUser)
+      const allSpots = await storage.getAllParkingSpots();
+      const ownedSpots = allSpots.filter(spot => 
+        spot.assignedUserId === userId || spot.ownerId === userId
+      );
 
       // Get all bookings for spots owned by this user (earnings)
       let totalEarnings = 0;
