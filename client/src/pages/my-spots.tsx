@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Car, MapPin, DollarSign, Clock, Edit, Plus, Eye, Users, TrendingUp, Grid, Trash2, Info, CreditCard, Loader2, ExternalLink } from "lucide-react"
+import { Car, MapPin, DollarSign, Clock, Edit, Plus, Eye, Users, TrendingUp, Grid, Trash2, Info, CreditCard, Loader2, ExternalLink, Map } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useConfirm, confirmations } from "@/hooks/use-confirm"
 import { useAuth } from "@/contexts/auth-context"
@@ -823,7 +823,7 @@ export default function MySpots() {
                                 className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors"
                                 data-testid={`link-floor-plan-${spot.id}`}
                               >
-                                <MapPin className="h-4 w-4 text-blue-600" />
+                                <Map className="h-4 w-4 text-blue-600" />
                               </a>
                             </TooltipTrigger>
                             <TooltipContent>View on floor plan (Seat {seatNum})</TooltipContent>
