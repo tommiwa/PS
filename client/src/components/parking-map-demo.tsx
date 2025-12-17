@@ -19,67 +19,78 @@ interface PathPoint {
   y: number;
 }
 
+// Spots positioned to match the grey circles on the floor plan
+// P32 is in the middle area, P33-P39 are along the bottom row near Pandora Ave
 const sampleSpots: ParkingSpot[] = [
-  { id: "1", number: "P32", x: 355, y: 295, status: "available", type: "regular" },
-  { id: "2", number: "P33", x: 395, y: 355, status: "available", type: "ev" },
-  { id: "3", number: "P34", x: 435, y: 355, status: "booked", type: "ev" },
-  { id: "4", number: "P35", x: 475, y: 355, status: "available", type: "regular" },
-  { id: "5", number: "P36", x: 520, y: 355, status: "reserved", type: "regular" },
-  { id: "6", number: "P37", x: 560, y: 355, status: "available", type: "ev" },
-  { id: "7", number: "P38", x: 600, y: 355, status: "available", type: "ev" },
-  { id: "8", number: "P39", x: 640, y: 355, status: "available", type: "regular" },
+  { id: "1", number: "P32", x: 355, y: 300, status: "available", type: "regular" },
+  // Bottom row - spots are close to the Pandora Ave wall (bottom edge)
+  { id: "2", number: "P33", x: 400, y: 385, status: "available", type: "ev" },
+  { id: "3", number: "P34", x: 440, y: 385, status: "booked", type: "ev" },
+  { id: "4", number: "P35", x: 480, y: 385, status: "available", type: "regular" },
+  { id: "5", number: "P36", x: 530, y: 385, status: "reserved", type: "regular" },
+  { id: "6", number: "P37", x: 575, y: 385, status: "available", type: "ev" },
+  { id: "7", number: "P38", x: 620, y: 385, status: "available", type: "ev" },
+  { id: "8", number: "P39", x: 665, y: 385, status: "available", type: "regular" },
 ];
 
-// Entrance at top right (blue outline circle)
-const entrancePoint: PathPoint = { x: 745, y: 95 };
+// Entrance at top right (blue outline circle) - positioned at Rotherham Plaza corner
+const entrancePoint: PathPoint = { x: 755, y: 90 };
 
-// Main driving lane waypoints - following the ACTUAL building contour shape
-// The path is NOT rectangular - it follows the angled building outline
+// Main driving lane waypoints - following the blue lines visible in the floor plan
+// The path traces the actual driving lane which follows the building perimeter
 const drivingLane = {
-  // Starting from entrance, going left along top
-  topRight: { x: 745, y: 95 },
-  topMiddle: { x: 280, y: 95 },
-  // Angled section following the building shape (near fitness facility)
-  angleStart: { x: 200, y: 95 },
-  angleCorner1: { x: 115, y: 140 },
-  // Down the left side (follows the angled building contour)
-  leftUpper: { x: 115, y: 180 },
-  leftMiddle: { x: 140, y: 240 },
-  leftLower: { x: 165, y: 290 },
-  // Bottom section
-  bottomCorner: { x: 190, y: 340 },
-  bottomLeft: { x: 280, y: 355 },
-  bottomMiddle: { x: 450, y: 355 },
-  bottomRight: { x: 680, y: 355 },
+  // Top edge along Cormorant St
+  topRight: { x: 755, y: 90 },
+  topMid: { x: 280, y: 90 },
+  
+  // Left side - follows the angled building shape (Douglas St side)
+  // The building has an irregular left edge with the fitness facility bump-out
+  leftCorner1: { x: 130, y: 90 },
+  leftAngle1: { x: 100, y: 120 },
+  leftSide1: { x: 100, y: 170 },
+  // Bump around fitness facility
+  fitnessCorner1: { x: 100, y: 210 },
+  fitnessCorner2: { x: 130, y: 250 },
+  fitnessCorner3: { x: 170, y: 290 },
+  
+  // Bottom left corner
+  bottomLeftCorner: { x: 200, y: 350 },
+  
+  // Bottom edge - driving lane along Pandora Ave
+  bottomRow: { x: 350, y: 370 },
+  bottomMid: { x: 500, y: 370 },
+  bottomRight: { x: 700, y: 370 },
 };
 
 const getPathToSpot = (spot: ParkingSpot): PathPoint[] => {
-  // Path follows the actual driving lanes shape from entrance
-  const path: PathPoint[] = [
+  // Path follows the perimeter driving lane
+  const basePath: PathPoint[] = [
     entrancePoint,
-    drivingLane.topMiddle,
-    drivingLane.angleStart,
-    drivingLane.angleCorner1,
-    drivingLane.leftUpper,
-    drivingLane.leftMiddle,
-    drivingLane.leftLower,
-    drivingLane.bottomCorner,
+    drivingLane.topMid,
+    drivingLane.leftCorner1,
+    drivingLane.leftAngle1,
+    drivingLane.leftSide1,
+    drivingLane.fitnessCorner1,
+    drivingLane.fitnessCorner2,
+    drivingLane.fitnessCorner3,
+    drivingLane.bottomLeftCorner,
   ];
   
-  // For P32 which is higher up (middle area)
+  // For P32 which is in the middle area
   if (spot.number === "P32") {
-    // Branch off earlier to reach P32
-    path.length = 6; // Keep up to leftMiddle
-    path.push({ x: 280, y: 270 });
+    // Branch off at fitness corner to reach P32
+    const path = basePath.slice(0, 7); // Up to fitnessCorner2
+    path.push({ x: 280, y: 280 });
     path.push({ x: spot.x, y: spot.y });
+    return path;
   } else {
-    // For bottom row spots (P33-P39)
-    path.push(drivingLane.bottomLeft);
-    path.push({ x: spot.x, y: 355 });
+    // For bottom row spots (P33-P39) - continue along bottom edge
+    const path = [...basePath];
+    path.push(drivingLane.bottomRow);
+    path.push({ x: spot.x, y: 370 });
     path.push({ x: spot.x, y: spot.y });
+    return path;
   }
-  
-  return path;
 };
 
 // Create smooth curved path using quadratic bezier curves at corners
