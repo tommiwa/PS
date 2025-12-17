@@ -141,6 +141,7 @@ export const parkingSpots = pgTable("parking_spots", {
   description: text("description"),
   defaultPrice: decimal("default_price", { precision: 10, scale: 2 }), // Owner's default daily rate for listings
   mapLink: text("map_link"), // External link to visual directory (e.g., office space software floor plan)
+  seatNumber: text("seat_number"), // Seat ID for dynamic map link generation (e.g., "34478")
   isActive: boolean("is_active").notNull().default(true),
   isBookable: boolean("is_bookable").notNull().default(true), // Whether spot can be booked by renters
   isBciManaged: boolean("is_bci_managed").notNull().default(false), // BCI-managed spots (true) vs personal spots (false)

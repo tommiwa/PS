@@ -170,7 +170,8 @@ export default function AdminParkingManagement() {
     isBciManaged: true,
     description: "",
     ownerId: null as string | null,
-    mapLink: "" as string | null
+    mapLink: "" as string | null,
+    seatNumber: "" as string | null
   })
   
   // Form state for add spot dialog
@@ -722,7 +723,8 @@ export default function AdminParkingManagement() {
       isBciManaged: spot.isBciManaged || false,
       description: spot.description || "",
       ownerId: spot.ownerId || null,
-      mapLink: spot.mapLink || ""
+      mapLink: spot.mapLink || "",
+      seatNumber: (spot as any).seatNumber || ""
     });
     setShowEditSpotDialog(true);
   };
@@ -1726,20 +1728,26 @@ export default function AdminParkingManagement() {
                               )}
                             </TableCell>
                             <TableCell>
-                              {spot.mapLink ? (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button variant="ghost" size="sm" asChild>
-                                      <a href={spot.mapLink} target="_blank" rel="noopener noreferrer">
-                                        <MapPin className="h-4 w-4 text-blue-500" />
-                                      </a>
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>View on floor plan</TooltipContent>
-                                </Tooltip>
-                              ) : (
-                                <span className="text-muted-foreground text-sm">—</span>
-                              )}
+                              {(() => {
+                                const seatNum = (spot as any).seatNumber;
+                                const mapUrl = seatNum 
+                                  ? `https://bci.officespacesoftware.com/visual-directory/floors/31/seats/${seatNum}`
+                                  : spot.mapLink;
+                                return mapUrl ? (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button variant="ghost" size="sm" asChild>
+                                        <a href={mapUrl} target="_blank" rel="noopener noreferrer">
+                                          <MapPin className="h-4 w-4 text-blue-500" />
+                                        </a>
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>View on floor plan{seatNum ? ` (Seat ${seatNum})` : ''}</TooltipContent>
+                                  </Tooltip>
+                                ) : (
+                                  <span className="text-muted-foreground text-sm">—</span>
+                                );
+                              })()}
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center justify-end gap-1">
@@ -2074,29 +2082,26 @@ export default function AdminParkingManagement() {
                             </Tooltip>
                           </TableCell>
                           <TableCell data-testid={`text-unallocated-spot-map-${spot.id}`}>
-                            {spot.mapLink ? (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    asChild
-                                  >
-                                    <a 
-                                      href={spot.mapLink} 
-                                      target="_blank" 
-                                      rel="noopener noreferrer"
-                                      data-testid={`link-map-${spot.id}`}
-                                    >
-                                      <MapPin className="h-4 w-4 text-blue-500" />
-                                    </a>
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>View on floor plan</TooltipContent>
-                              </Tooltip>
-                            ) : (
-                              <span className="text-muted-foreground text-sm">—</span>
-                            )}
+                            {(() => {
+                              const seatNum = (spot as any).seatNumber;
+                              const mapUrl = seatNum 
+                                ? `https://bci.officespacesoftware.com/visual-directory/floors/31/seats/${seatNum}`
+                                : spot.mapLink;
+                              return mapUrl ? (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="sm" asChild>
+                                      <a href={mapUrl} target="_blank" rel="noopener noreferrer" data-testid={`link-map-${spot.id}`}>
+                                        <MapPin className="h-4 w-4 text-blue-500" />
+                                      </a>
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>View on floor plan{seatNum ? ` (Seat ${seatNum})` : ''}</TooltipContent>
+                                </Tooltip>
+                              ) : (
+                                <span className="text-muted-foreground text-sm">—</span>
+                              );
+                            })()}
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center justify-end gap-1">
@@ -2262,20 +2267,26 @@ export default function AdminParkingManagement() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            {spot.mapLink ? (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button variant="ghost" size="sm" asChild>
-                                    <a href={spot.mapLink} target="_blank" rel="noopener noreferrer">
-                                      <MapPin className="h-4 w-4 text-blue-500" />
-                                    </a>
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>View on floor plan</TooltipContent>
-                              </Tooltip>
-                            ) : (
-                              <span className="text-muted-foreground text-sm">—</span>
-                            )}
+                            {(() => {
+                              const seatNum = (spot as any).seatNumber;
+                              const mapUrl = seatNum 
+                                ? `https://bci.officespacesoftware.com/visual-directory/floors/31/seats/${seatNum}`
+                                : spot.mapLink;
+                              return mapUrl ? (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="sm" asChild>
+                                      <a href={mapUrl} target="_blank" rel="noopener noreferrer">
+                                        <MapPin className="h-4 w-4 text-blue-500" />
+                                      </a>
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>View on floor plan{seatNum ? ` (Seat ${seatNum})` : ''}</TooltipContent>
+                                </Tooltip>
+                              ) : (
+                                <span className="text-muted-foreground text-sm">—</span>
+                              );
+                            })()}
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-1">
@@ -2416,20 +2427,26 @@ export default function AdminParkingManagement() {
                             )}
                           </TableCell>
                           <TableCell>
-                            {spot.mapLink ? (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button variant="ghost" size="sm" asChild>
-                                    <a href={spot.mapLink} target="_blank" rel="noopener noreferrer">
-                                      <MapPin className="h-4 w-4 text-blue-500" />
-                                    </a>
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>View on floor plan</TooltipContent>
-                              </Tooltip>
-                            ) : (
-                              <span className="text-muted-foreground text-sm">—</span>
-                            )}
+                            {(() => {
+                              const seatNum = (spot as any).seatNumber;
+                              const mapUrl = seatNum 
+                                ? `https://bci.officespacesoftware.com/visual-directory/floors/31/seats/${seatNum}`
+                                : spot.mapLink;
+                              return mapUrl ? (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="sm" asChild>
+                                      <a href={mapUrl} target="_blank" rel="noopener noreferrer">
+                                        <MapPin className="h-4 w-4 text-blue-500" />
+                                      </a>
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>View on floor plan{seatNum ? ` (Seat ${seatNum})` : ''}</TooltipContent>
+                                </Tooltip>
+                              ) : (
+                                <span className="text-muted-foreground text-sm">—</span>
+                              );
+                            })()}
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-1">
@@ -2728,14 +2745,14 @@ export default function AdminParkingManagement() {
               />
             </div>
             <div>
-              <label className="text-sm font-medium">Map Link</label>
+              <label className="text-sm font-medium">Seat Number</label>
               <Input
-                value={editFormData.mapLink || ""}
-                onChange={(e) => setEditFormData(prev => ({ ...prev, mapLink: e.target.value }))}
-                placeholder="https://bci.officespacesoftware.com/visual-directory/..."
-                data-testid="input-edit-spot-map-link"
+                value={editFormData.seatNumber || ""}
+                onChange={(e) => setEditFormData(prev => ({ ...prev, seatNumber: e.target.value }))}
+                placeholder="e.g., 34478"
+                data-testid="input-edit-spot-seat-number"
               />
-              <p className="text-xs text-muted-foreground mt-1">External link to floor plan/visual directory</p>
+              <p className="text-xs text-muted-foreground mt-1">Office space seat ID for floor plan link (e.g., 34478)</p>
             </div>
             <div className="flex gap-2 pt-4">
               <Button
