@@ -287,7 +287,7 @@ export default function AdminSpotBookingManagement() {
         queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-availability", scope] }),
         queryClient.invalidateQueries({ queryKey: ["/api/admin/active-bookings", scope] }),
         queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-payments", scope] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/past-bookings", scope] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/past-bookings"] }),
         queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-activity", scope] }),
         queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-analytics", scope] })
       ])
@@ -320,7 +320,7 @@ export default function AdminSpotBookingManagement() {
         queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-payments", scope] })
         break
       case "past":
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/past-bookings", scope] })
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/past-bookings"] })
         break
       case "activity":
         queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-activity", scope] })
@@ -347,11 +347,21 @@ export default function AdminSpotBookingManagement() {
     queryFn: () => fetch(`/api/admin/booking-activity?scope=${scope}&pageSize=100`).then(r => r.json())
   });
 
-  // Fetch past bookings (completed, cancelled, expired)
-  const { data: pastBookings = [], isLoading: isLoadingPastBookings } = useQuery<AdminBookingData[]>({
-    queryKey: ["/api/admin/past-bookings", scope],
-    queryFn: () => fetch(`/api/admin/past-bookings?scope=${scope}`).then(r => r.json())
+  // Fetch past bookings with server-side pagination (only when tab is active)
+  const { data: pastBookingsResponse, isLoading: isLoadingPastBookings } = useQuery<{
+    data: AdminBookingData[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }>({
+    queryKey: ["/api/admin/past-bookings", scope, pastBookingsPageIndex + 1, pastBookingsPageSize],
+    queryFn: () => fetch(`/api/admin/past-bookings?scope=${scope}&page=${pastBookingsPageIndex + 1}&limit=${pastBookingsPageSize}`).then(r => r.json()),
+    enabled: activeTab === 'past'
   });
+  
+  const pastBookings = pastBookingsResponse?.data ?? [];
+  const pastBookingsTotal = pastBookingsResponse?.total ?? 0;
 
   // Fetch booking availability
   const { data: bookingAvailability = [], isLoading: isLoadingAvailability } = useQuery<BookingAvailabilityData[]>({
@@ -679,11 +689,7 @@ export default function AdminSpotBookingManagement() {
   }, [sortedActiveBookings, activeBookingsPageIndex, activeBookingsPageSize])
 
 
-  const paginatedPastBookings = useMemo(() => {
-    const startIndex = pastBookingsPageIndex * pastBookingsPageSize
-    const endIndex = startIndex + pastBookingsPageSize
-    return sortedPastBookings.slice(startIndex, endIndex)
-  }, [sortedPastBookings, pastBookingsPageIndex, pastBookingsPageSize])
+  // paginatedPastBookings removed - now using server-side pagination via pastBookings directly
 
   const paginatedBookingActivity = useMemo(() => {
     const startIndex = bookingActivityPageIndex * bookingActivityPageSize
@@ -910,12 +916,10 @@ export default function AdminSpotBookingManagement() {
   }, [sortedActiveBookings.length, activeBookingsPageSize, activeBookingsPageIndex])
 
 
+  // Reset past bookings page when scope changes
   useEffect(() => {
-    const maxPage = Math.max(0, Math.ceil(sortedPastBookings.length / pastBookingsPageSize) - 1)
-    if (pastBookingsPageIndex > maxPage) {
-      setPastBookingsPageIndex(maxPage)
-    }
-  }, [sortedPastBookings.length, pastBookingsPageSize, pastBookingsPageIndex])
+    setPastBookingsPageIndex(0)
+  }, [scope])
 
   useEffect(() => {
     const maxPage = Math.max(0, Math.ceil(sortedBookingActivity.length / bookingActivityPageSize) - 1)
@@ -2213,14 +2217,14 @@ export default function AdminSpotBookingManagement() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Past Bookings ({sortedPastBookings.length})</CardTitle>
+                <CardTitle>Past Bookings ({pastBookingsTotal})</CardTitle>
                 <div className="flex gap-2">
                   <Button 
                     size="sm"
                     variant="outline" 
-                    disabled={sortedPastBookings.length === 0}
+                    disabled={pastBookings.length === 0}
                     onClick={() => {
-                      const success = quickExportBookingsPDF(sortedPastBookings, 'Past Bookings Report', (errorMessage) => {
+                      const success = quickExportBookingsPDF(pastBookings, `Past Bookings Report (Page ${pastBookingsPageIndex + 1})`, (errorMessage) => {
                         toast({
                           variant: "destructive",
                           title: "Export Failed",
@@ -2230,7 +2234,7 @@ export default function AdminSpotBookingManagement() {
                       if (success) {
                         toast({
                           title: "Export Successful",
-                          description: "PDF report has been downloaded successfully"
+                          description: "PDF report for current page has been downloaded successfully"
                         })
                       }
                     }}
@@ -2242,9 +2246,9 @@ export default function AdminSpotBookingManagement() {
                   <Button 
                     size="sm"
                     variant="outline" 
-                    disabled={sortedPastBookings.length === 0}
+                    disabled={pastBookings.length === 0}
                     onClick={() => {
-                      const success = quickExportBookingsExcel(sortedPastBookings, 'Past Bookings Report', (errorMessage) => {
+                      const success = quickExportBookingsExcel(pastBookings, `Past Bookings Report (Page ${pastBookingsPageIndex + 1})`, (errorMessage) => {
                         toast({
                           variant: "destructive",
                           title: "Export Failed",
@@ -2254,7 +2258,7 @@ export default function AdminSpotBookingManagement() {
                       if (success) {
                         toast({
                           title: "Export Successful",
-                          description: "Excel report has been downloaded successfully"
+                          description: "Excel report for current page has been downloaded successfully"
                         })
                       }
                     }}
@@ -2273,7 +2277,7 @@ export default function AdminSpotBookingManagement() {
                     <Skeleton key={i} className="h-16 w-full" />
                   ))}
                 </div>
-              ) : sortedPastBookings.length === 0 ? (
+              ) : pastBookingsTotal === 0 ? (
                 <div className="text-center py-8 text-muted-foreground" data-testid="empty-past-bookings">
                   <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>No past bookings found</p>
@@ -2340,7 +2344,7 @@ export default function AdminSpotBookingManagement() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {paginatedPastBookings.map((booking) => (
+                      {sortedPastBookings.map((booking) => (
                         <TableRow key={booking.id} data-testid={`row-past-booking-${booking.id}`}>
                           <TableCell className="font-medium" data-testid={`text-spot-${booking.id}`}>
                             <div>
@@ -2399,7 +2403,7 @@ export default function AdminSpotBookingManagement() {
                     </TableBody>
                   </Table>
                   <TablePagination
-                    totalCount={sortedPastBookings.length}
+                    totalCount={pastBookingsTotal}
                     pageSize={pastBookingsPageSize}
                     pageIndex={pastBookingsPageIndex}
                     onPageSizeChange={(size) => {
