@@ -26,7 +26,8 @@ import type {
   AnalyticsTopPerformersResponse,
   AnalyticsIssuesResponse,
   AnalyticsUsageResponse,
-  RenterStatisticsResponse
+  RenterStatisticsResponse,
+  OwnerStatisticsResponse
 } from "@shared/schema"
 import {
   LineChart,
@@ -122,6 +123,13 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Owner statistics query
+  const ownerStatsQuery = useQuery<OwnerStatisticsResponse>({
+    queryKey: ['/api/owner/statistics'],
+    enabled: effectiveRole === "owner",
+    staleTime: 5 * 60 * 1000,
+  });
+
   const isLoading = overviewQuery.isLoading || revenueQuery.isLoading || 
                    topPerformersQuery.isLoading || issuesQuery.isLoading || 
                    usageQuery.isLoading || renterStatsQuery.isLoading;
@@ -134,6 +142,7 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
     queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-usage'] });
     queryClient.invalidateQueries({ queryKey: ['/api/renter/statistics'] });
     queryClient.invalidateQueries({ queryKey: ['/api/renter/dashboard-stats'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/owner/statistics'] });
   };
 
   // Helper component for individual section error states
@@ -295,101 +304,139 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
         {/* Owner section - show only if viewing as owner */}
         {effectiveRole === "owner" && (
           <div className="space-y-6" data-testid="section-owner-dashboard">
-            <h2 className="text-2xl font-semibold">Spot Owner Dashboard</h2>
-            
-            {/* Owner's Rental Business Section */}
-            {(!activeFilter || activeFilter === "my-spots" || activeFilter === "month-earnings") && (
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-semibold">Your Spots - Recent Bookings</h3>
-                <Button size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  List Availability
-                </Button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {mockUpcomingBookings.map((booking) => (
-                  <BookingCard 
-                    key={booking.id} 
-                    booking={booking} 
-                    showRenterInfo={true}
-                  />
-                ))}
-              </div>
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-semibold">My Finances</h2>
+              <Button variant="outline" size="sm" onClick={handleRefresh} disabled={ownerStatsQuery.isLoading}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${ownerStatsQuery.isLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
             </div>
-            )}
             
-            {/* Owner Quick Actions */}
-            {(!activeFilter || activeFilter === "availability-listed") && (
-            <div>
-              <h3 className="text-xl font-semibold mb-4">Spot Management</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="hover-elevate cursor-pointer">
-                  <CardContent className="p-6 text-center">
-                    <Calendar className="h-8 w-8 mx-auto mb-2 text-primary" />
-                    <h3 className="font-medium">List Spot</h3>
-                    <p className="text-sm text-muted-foreground">Make your spot available</p>
-                  </CardContent>
-                </Card>
-                <Card className="hover-elevate cursor-pointer">
-                  <CardContent className="p-6 text-center">
-                    <Clock className="h-8 w-8 mx-auto mb-2 text-primary" />
-                    <h3 className="font-medium">Set Recurring</h3>
-                    <p className="text-sm text-muted-foreground">Weekly availability</p>
-                  </CardContent>
-                </Card>
-                <Card className="hover-elevate cursor-pointer">
-                  <CardContent className="p-6 text-center">
-                    <MapPin className="h-8 w-8 mx-auto mb-2 text-primary" />
-                    <h3 className="font-medium">Manage Spots</h3>
-                    <p className="text-sm text-muted-foreground">Edit spot details</p>
-                  </CardContent>
-                </Card>
+            {ownerStatsQuery.isLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Skeleton className="h-[140px]" />
+                <Skeleton className="h-[140px]" />
+                <Skeleton className="h-[140px]" />
+                <Skeleton className="h-[140px]" />
               </div>
-            </div>
-            )}
+            ) : ownerStatsQuery.error ? (
+              <Card className="border-destructive">
+                <CardContent className="p-6 text-center">
+                  <AlertTriangle className="h-8 w-8 mx-auto mb-2 text-destructive" />
+                  <p className="text-muted-foreground">Failed to load statistics. Please try again.</p>
+                  <Button variant="outline" size="sm" className="mt-4" onClick={handleRefresh}>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Retry
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : ownerStatsQuery.data ? (
+              <>
+                {/* Financial Summary Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Earnings This Month */}
+                  <Card className="border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-950/20">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-green-700 dark:text-green-400">Earned This Month</span>
+                        <TrendingUp className="h-5 w-5 text-green-600" />
+                      </div>
+                      <p className="text-3xl font-bold text-green-700 dark:text-green-400">
+                        ${ownerStatsQuery.data.earnings.thisMonth.toFixed(2)}
+                      </p>
+                      <p className="text-xs text-green-600/80 dark:text-green-500/80 mt-1">
+                        {ownerStatsQuery.data.earnings.thisMonthBookings} booking{ownerStatsQuery.data.earnings.thisMonthBookings !== 1 ? 's' : ''} this month
+                      </p>
+                    </CardContent>
+                  </Card>
 
-            {/* Renter Functionality for Owners */}
-            {(!activeFilter || activeFilter === "upcoming-bookings") && (
-            <div className="border-t pt-6">
-              <div className="flex items-center gap-2 mb-6">
-                <Car className="h-5 w-5 text-primary" />
-                <h3 className="text-xl font-semibold">Your Bookings - When You Need Parking</h3>
-              </div>
-              
-              <div className="space-y-6">
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-lg font-medium">Your Upcoming Bookings</h4>
-                    <Button size="sm" variant="outline">
-                      <Calendar className="h-4 w-4 mr-2" />
-                      View All
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {mockUpcomingBookings.slice(0, 2).map((booking) => (
-                      <BookingCard key={`renter-${booking.id}`} booking={booking} />
-                    ))}
-                  </div>
+                  {/* Total Earnings */}
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-muted-foreground">Total Earnings</span>
+                        <DollarSign className="h-5 w-5 text-primary" />
+                      </div>
+                      <p className="text-3xl font-bold text-primary">
+                        ${ownerStatsQuery.data.earnings.total.toFixed(2)}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        From {ownerStatsQuery.data.earnings.totalBookings} total bookings
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  {/* Spent This Month (if rented any) */}
+                  <Card className={ownerStatsQuery.data.spending.thisMonth > 0 ? "border-orange-200 bg-orange-50/50 dark:border-orange-800 dark:bg-orange-950/20" : ""}>
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={`text-sm font-medium ${ownerStatsQuery.data.spending.thisMonth > 0 ? 'text-orange-700 dark:text-orange-400' : 'text-muted-foreground'}`}>
+                          Spent This Month
+                        </span>
+                        <Car className={`h-5 w-5 ${ownerStatsQuery.data.spending.thisMonth > 0 ? 'text-orange-600' : 'text-muted-foreground'}`} />
+                      </div>
+                      <p className={`text-3xl font-bold ${ownerStatsQuery.data.spending.thisMonth > 0 ? 'text-orange-700 dark:text-orange-400' : 'text-muted-foreground'}`}>
+                        ${ownerStatsQuery.data.spending.thisMonth.toFixed(2)}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {ownerStatsQuery.data.spending.activeBookings > 0 
+                          ? `${ownerStatsQuery.data.spending.activeBookings} active booking${ownerStatsQuery.data.spending.activeBookings !== 1 ? 's' : ''}`
+                          : 'No spots rented'}
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  {/* Net This Month */}
+                  <Card className={ownerStatsQuery.data.thisMonthNet >= 0 ? "border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/20" : "border-red-200 bg-red-50/50 dark:border-red-800 dark:bg-red-950/20"}>
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={`text-sm font-medium ${ownerStatsQuery.data.thisMonthNet >= 0 ? 'text-blue-700 dark:text-blue-400' : 'text-red-700 dark:text-red-400'}`}>
+                          Net This Month
+                        </span>
+                        <BarChart3 className={`h-5 w-5 ${ownerStatsQuery.data.thisMonthNet >= 0 ? 'text-blue-600' : 'text-red-600'}`} />
+                      </div>
+                      <p className={`text-3xl font-bold ${ownerStatsQuery.data.thisMonthNet >= 0 ? 'text-blue-700 dark:text-blue-400' : 'text-red-700 dark:text-red-400'}`}>
+                        {ownerStatsQuery.data.thisMonthNet >= 0 ? '+' : ''}${ownerStatsQuery.data.thisMonthNet.toFixed(2)}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {ownerStatsQuery.data.ownedSpotsCount} spot{ownerStatsQuery.data.ownedSpotsCount !== 1 ? 's' : ''} owned
+                      </p>
+                    </CardContent>
+                  </Card>
                 </div>
-                
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-lg font-medium">Available Spots to Book</h4>
-                    <Button size="sm" variant="outline">
-                      <MapPin className="h-4 w-4 mr-2" />
-                      Search All
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {mockAvailableSpots.map((spot) => (
-                      <ParkingSpotCard key={spot.id} spot={spot} />
-                    ))}
-                  </div>
+
+                {/* Quick Links */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+                  <Link href="/my-spots">
+                    <Card className="hover-elevate cursor-pointer h-full">
+                      <CardContent className="p-6 text-center">
+                        <Calendar className="h-8 w-8 mx-auto mb-2 text-primary" />
+                        <h3 className="font-medium">Manage My Spots</h3>
+                        <p className="text-sm text-muted-foreground">List availability & view bookings</p>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                  <Link href="/my-bookings">
+                    <Card className="hover-elevate cursor-pointer h-full">
+                      <CardContent className="p-6 text-center">
+                        <Car className="h-8 w-8 mx-auto mb-2 text-primary" />
+                        <h3 className="font-medium">My Bookings</h3>
+                        <p className="text-sm text-muted-foreground">View your reservations</p>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                  <Link href="/find-parking">
+                    <Card className="hover-elevate cursor-pointer h-full">
+                      <CardContent className="p-6 text-center">
+                        <MapPin className="h-8 w-8 mx-auto mb-2 text-primary" />
+                        <h3 className="font-medium">Find Parking</h3>
+                        <p className="text-sm text-muted-foreground">Book a spot when needed</p>
+                      </CardContent>
+                    </Card>
+                  </Link>
                 </div>
-              </div>
-            </div>
-            )}
+              </>
+            ) : null}
           </div>
         )}
 

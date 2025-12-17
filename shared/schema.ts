@@ -676,6 +676,28 @@ export interface RenterStatisticsResponse {
   };
 }
 
+// Owner Statistics Response Type
+export interface OwnerStatisticsResponse {
+  earnings: {
+    total: number;
+    thisMonth: number;
+    pastYear: number;
+    totalBookings: number;
+    thisMonthBookings: number;
+    upcomingBookings: number;
+  };
+  spending: {
+    total: number;
+    thisMonth: number;
+    pastYear: number;
+    activeBookings: number;
+  };
+  ownedSpotsCount: number;
+  netBalance: number;
+  thisMonthNet: number;
+  generatedAt: string;
+}
+
 // Analytics API Response Types
 export interface AnalyticsOverviewResponse {
   totalRevenue: number;
