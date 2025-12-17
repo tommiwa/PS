@@ -1726,16 +1726,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             listingIdToType.set(listing.id, listing.listingType);
             
             if (listing.listingType === 'single' && listing.singleDate) {
-              // Single day listing
-              const dateStr = listing.singleDate;
+              // Single day listing - format Date object to YYYY-MM-DD string
+              const dateStr = await formatDateInTimezone(listing.singleDate);
               allDates.push(dateStr);
               dateToListing.set(dateStr, {
                 listingId: listing.id,
                 dailyRate: listing.dailyRate
               });
             } else if (listing.listingType === 'period' && listing.periodStartDate && listing.periodEndDate) {
-              // Period listing - expand to all dates in range
-              const dates = await generateDateRange(listing.periodStartDate, listing.periodEndDate);
+              // Period listing - expand to all dates in range (format Date objects first)
+              const startStr = await formatDateInTimezone(listing.periodStartDate);
+              const endStr = await formatDateInTimezone(listing.periodEndDate);
+              const dates = await generateDateRange(startStr, endStr);
               for (const dateStr of dates) {
                 allDates.push(dateStr);
                 // Only set if not already set (single day listings take precedence)
@@ -1826,6 +1828,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             isExpired: isExpired, // True if all dates are expired
             bookedDates: bookedDates, // Array of dates that are already booked
             dateToPrice: dateToPrice, // Map of date -> {listingId, dailyRate} for accurate pricing
+            isAvailable: availabilityDates.length > 0, // True if spot has future availability
             // Keep backward compatibility with single date
             availability: availabilityDates.length > 0 ? {
               date: availabilityDates[0]
