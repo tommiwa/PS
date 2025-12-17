@@ -304,137 +304,76 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
         {/* Owner section - show only if viewing as owner */}
         {effectiveRole === "owner" && (
           <div className="space-y-6" data-testid="section-owner-dashboard">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-semibold">My Finances</h2>
-              <Button variant="outline" size="sm" onClick={handleRefresh} disabled={ownerStatsQuery.isLoading}>
-                <RefreshCw className={`h-4 w-4 mr-2 ${ownerStatsQuery.isLoading ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
-            </div>
+            <h2 className="text-2xl font-semibold">Detailed Statistics</h2>
             
             {ownerStatsQuery.isLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Skeleton className="h-[140px]" />
-                <Skeleton className="h-[140px]" />
-                <Skeleton className="h-[140px]" />
-                <Skeleton className="h-[140px]" />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Skeleton className="h-[300px]" data-testid="skeleton-chart-1" />
               </div>
             ) : ownerStatsQuery.error ? (
-              <Card className="border-destructive">
-                <CardContent className="p-6 text-center">
-                  <AlertTriangle className="h-8 w-8 mx-auto mb-2 text-destructive" />
-                  <p className="text-muted-foreground">Failed to load statistics. Please try again.</p>
-                  <Button variant="outline" size="sm" className="mt-4" onClick={handleRefresh}>
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Retry
-                  </Button>
+              <Card className="border-destructive" data-testid="card-stats-error">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-destructive">
+                    <AlertTriangle className="h-5 w-5" />
+                    Failed to Load Statistics
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">
+                    We couldn't load your statistics. Please refresh the page or try again later.
+                  </p>
                 </CardContent>
               </Card>
             ) : ownerStatsQuery.data ? (
               <>
-                {/* Financial Summary Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {/* Earnings This Month */}
-                  <Card className="border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-950/20">
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-green-700 dark:text-green-400">Earned This Month</span>
-                        <TrendingUp className="h-5 w-5 text-green-600" />
-                      </div>
-                      <p className="text-3xl font-bold text-green-700 dark:text-green-400">
-                        ${ownerStatsQuery.data.earnings.thisMonth.toFixed(2)}
-                      </p>
-                      <p className="text-xs text-green-600/80 dark:text-green-500/80 mt-1">
-                        {ownerStatsQuery.data.earnings.thisMonthBookings} booking{ownerStatsQuery.data.earnings.thisMonthBookings !== 1 ? 's' : ''} this month
-                      </p>
-                    </CardContent>
-                  </Card>
-
-                  {/* Total Earnings */}
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-muted-foreground">Total Earnings</span>
-                        <DollarSign className="h-5 w-5 text-primary" />
-                      </div>
-                      <p className="text-3xl font-bold text-primary">
-                        ${ownerStatsQuery.data.earnings.total.toFixed(2)}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        From {ownerStatsQuery.data.earnings.totalBookings} total bookings
-                      </p>
-                    </CardContent>
-                  </Card>
-
-                  {/* Spent This Month (if rented any) */}
-                  <Card className={ownerStatsQuery.data.spending.thisMonth > 0 ? "border-orange-200 bg-orange-50/50 dark:border-orange-800 dark:bg-orange-950/20" : ""}>
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className={`text-sm font-medium ${ownerStatsQuery.data.spending.thisMonth > 0 ? 'text-orange-700 dark:text-orange-400' : 'text-muted-foreground'}`}>
-                          Spent This Month
-                        </span>
-                        <Car className={`h-5 w-5 ${ownerStatsQuery.data.spending.thisMonth > 0 ? 'text-orange-600' : 'text-muted-foreground'}`} />
-                      </div>
-                      <p className={`text-3xl font-bold ${ownerStatsQuery.data.spending.thisMonth > 0 ? 'text-orange-700 dark:text-orange-400' : 'text-muted-foreground'}`}>
-                        ${ownerStatsQuery.data.spending.thisMonth.toFixed(2)}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {ownerStatsQuery.data.spending.activeBookings > 0 
-                          ? `${ownerStatsQuery.data.spending.activeBookings} active booking${ownerStatsQuery.data.spending.activeBookings !== 1 ? 's' : ''}`
-                          : 'No spots rented'}
-                      </p>
-                    </CardContent>
-                  </Card>
-
-                  {/* Net This Month */}
-                  <Card className={ownerStatsQuery.data.thisMonthNet >= 0 ? "border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/20" : "border-red-200 bg-red-50/50 dark:border-red-800 dark:bg-red-950/20"}>
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className={`text-sm font-medium ${ownerStatsQuery.data.thisMonthNet >= 0 ? 'text-blue-700 dark:text-blue-400' : 'text-red-700 dark:text-red-400'}`}>
-                          Net This Month
-                        </span>
-                        <BarChart3 className={`h-5 w-5 ${ownerStatsQuery.data.thisMonthNet >= 0 ? 'text-blue-600' : 'text-red-600'}`} />
-                      </div>
-                      <p className={`text-3xl font-bold ${ownerStatsQuery.data.thisMonthNet >= 0 ? 'text-blue-700 dark:text-blue-400' : 'text-red-700 dark:text-red-400'}`}>
-                        {ownerStatsQuery.data.thisMonthNet >= 0 ? '+' : ''}${ownerStatsQuery.data.thisMonthNet.toFixed(2)}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {ownerStatsQuery.data.ownedSpotsCount} spot{ownerStatsQuery.data.ownedSpotsCount !== 1 ? 's' : ''} owned
-                      </p>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Quick Links */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
-                  <Link href="/my-spots">
-                    <Card className="hover-elevate cursor-pointer h-full">
-                      <CardContent className="p-6 text-center">
-                        <Calendar className="h-8 w-8 mx-auto mb-2 text-primary" />
-                        <h3 className="font-medium">Manage My Spots</h3>
-                        <p className="text-sm text-muted-foreground">List availability & view bookings</p>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                  <Link href="/my-bookings">
-                    <Card className="hover-elevate cursor-pointer h-full">
-                      <CardContent className="p-6 text-center">
-                        <Car className="h-8 w-8 mx-auto mb-2 text-primary" />
-                        <h3 className="font-medium">My Bookings</h3>
-                        <p className="text-sm text-muted-foreground">View your reservations</p>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                  <Link href="/find-parking">
-                    <Card className="hover-elevate cursor-pointer h-full">
-                      <CardContent className="p-6 text-center">
-                        <MapPin className="h-8 w-8 mx-auto mb-2 text-primary" />
-                        <h3 className="font-medium">Find Parking</h3>
-                        <p className="text-sm text-muted-foreground">Book a spot when needed</p>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                </div>
+                {/* Monthly Earnings Trends Chart */}
+                <Card data-testid="card-monthly-earnings">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5 text-primary" />
+                      Monthly Income & Spending Trends
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={ownerStatsQuery.data.monthlyEarnings}>
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                          <XAxis 
+                            dataKey="month" 
+                            className="text-xs" 
+                            tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                          />
+                          <YAxis 
+                            className="text-xs"
+                            tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                          />
+                          <RechartsTooltip 
+                            contentStyle={{
+                              backgroundColor: 'hsl(var(--popover))',
+                              border: '1px solid hsl(var(--border))',
+                              borderRadius: '6px'
+                            }}
+                            labelStyle={{ color: 'hsl(var(--popover-foreground))' }}
+                          />
+                          <Legend />
+                          <Bar 
+                            dataKey="earned" 
+                            fill="hsl(142, 76%, 36%)" 
+                            radius={[4, 4, 0, 0]}
+                            name="Income ($)"
+                          />
+                          <Bar 
+                            dataKey="spent" 
+                            fill="hsl(24, 94%, 50%)" 
+                            radius={[4, 4, 0, 0]}
+                            name="Spent ($)"
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
               </>
             ) : null}
           </div>

@@ -1,8 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { Car, Calendar, Clock, Users, TrendingUp, MapPin, AlertTriangle } from "lucide-react"
-import { UserRole, DashboardStatsResponse, RenterDashboardStatsResponse } from "@shared/schema"
+import { Car, Calendar, Clock, Users, TrendingUp, MapPin, AlertTriangle, DollarSign } from "lucide-react"
+import { UserRole, DashboardStatsResponse, RenterDashboardStatsResponse, OwnerStatisticsResponse } from "@shared/schema"
 import { useQuery } from "@tanstack/react-query"
 
 export interface DashboardStat {
@@ -47,8 +47,20 @@ export function DashboardStats({ userRole, onCardClick }: DashboardStatsProps) {
     refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
   });
 
-  const isLoading = adminLoading || renterLoading;
-  const error = adminError || renterError;
+  // Fetch real dashboard stats for owner users
+  const { 
+    data: ownerStats, 
+    isLoading: ownerLoading, 
+    error: ownerError 
+  } = useQuery<OwnerStatisticsResponse>({
+    queryKey: ["/api/owner/statistics"],
+    enabled: userRole === "owner", // Only fetch for owner users
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
+  });
+
+  const isLoading = adminLoading || renterLoading || ownerLoading;
+  const error = adminError || renterError || ownerError;
 
   // Helper function to format currency consistently
   const formatCurrency = (amount: number): string => {
@@ -133,35 +145,50 @@ export function DashboardStats({ userRole, onCardClick }: DashboardStatsProps) {
           }
         ]
       case "owner":
+        if (ownerError) {
+          return [
+            {
+              id: "error-state",
+              title: "Data Unavailable",
+              value: "--",
+              icon: createColorfulIcon(AlertTriangle, "bg-red-500", "Alert indicator - shows system errors or important notifications"),
+              description: "Error loading stats"
+            }
+          ];
+        }
+        
+        if (!ownerStats) {
+          return [];
+        }
+        
         return [
           {
-            id: "my-spots",
-            title: "My Spots",
-            value: 2,
-            icon: createColorfulIcon(Car, "bg-blue-500", "Parking spot metrics - tracks available and occupied spaces"),
-            description: "Owned parking spots"
+            id: "month-income",
+            title: "This Month Income",
+            value: formatCurrency(ownerStats.thisMonthIncome),
+            icon: createColorfulIcon(TrendingUp, "bg-green-500", "Income from your spots being rented by others"),
+            description: `${ownerStats.thisMonthIncomeBookings} booking${ownerStats.thisMonthIncomeBookings !== 1 ? 's' : ''}`
           },
           {
-            id: "month-earnings",
-            title: "This Month's Earnings",
-            value: "$450",
-            icon: createColorfulIcon(TrendingUp, "bg-orange-500", "Financial metrics - shows revenue and performance trends"),
-            description: "18 bookings",
-            trend: { value: 15, isPositive: true }
+            id: "month-spent",
+            title: "This Month Spent",
+            value: formatCurrency(ownerStats.thisMonthSpent),
+            icon: createColorfulIcon(DollarSign, "bg-orange-500", "Spending on spots you've rented from others"),
+            description: `${ownerStats.thisMonthSpentBookings} booking${ownerStats.thisMonthSpentBookings !== 1 ? 's' : ''}`
           },
           {
-            id: "upcoming-bookings",
-            title: "Upcoming Bookings",
-            value: 6,
-            icon: createColorfulIcon(Calendar, "bg-purple-500", "Booking metrics - tracks reservations and appointments"),
-            description: "Next 7 days"
+            id: "year-income",
+            title: "Past Year Income",
+            value: formatCurrency(ownerStats.pastYearIncome),
+            icon: createColorfulIcon(Calendar, "bg-blue-500", "Total income from your spots over the past 12 months"),
+            description: `${ownerStats.pastYearIncomeBookings} booking${ownerStats.pastYearIncomeBookings !== 1 ? 's' : ''}`
           },
           {
-            id: "availability-listed",
-            title: "Availability Listed",
-            value: "85%",
-            icon: createColorfulIcon(Clock, "bg-yellow-500", "Time-based metrics - tracks schedules and availability patterns"),
-            description: "This month"
+            id: "year-spent",
+            title: "Past Year Spent",
+            value: formatCurrency(ownerStats.pastYearSpent),
+            icon: createColorfulIcon(Car, "bg-purple-500", "Total spending on renting spots over the past 12 months"),
+            description: `${ownerStats.pastYearSpentBookings} booking${ownerStats.pastYearSpentBookings !== 1 ? 's' : ''}`
           }
         ]
       case "renter":
@@ -306,7 +333,7 @@ export function DashboardStats({ userRole, onCardClick }: DashboardStatsProps) {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="dashboard-stats">
-      {stats.map((stat) => (
+      {stats.map((stat: DashboardStat) => (
         <Tooltip key={stat.id}>
           <TooltipTrigger asChild>
             <Card 
