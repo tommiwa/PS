@@ -19,26 +19,52 @@ interface PathPoint {
 }
 
 const sampleSpots: ParkingSpot[] = [
-  { id: "1", number: "P32", x: 340, y: 290, status: "available" },
-  { id: "2", number: "P33", x: 380, y: 340, status: "available" },
-  { id: "3", number: "P34", x: 420, y: 340, status: "booked" },
-  { id: "4", number: "P35", x: 460, y: 340, status: "available" },
-  { id: "5", number: "P36", x: 500, y: 340, status: "reserved" },
-  { id: "6", number: "P37", x: 540, y: 340, status: "available" },
-  { id: "7", number: "P38", x: 580, y: 340, status: "available" },
-  { id: "8", number: "P39", x: 620, y: 340, status: "available" },
+  { id: "1", number: "P32", x: 355, y: 295, status: "available" },
+  { id: "2", number: "P33", x: 395, y: 355, status: "available" },
+  { id: "3", number: "P34", x: 435, y: 355, status: "booked" },
+  { id: "4", number: "P35", x: 475, y: 355, status: "available" },
+  { id: "5", number: "P36", x: 520, y: 355, status: "reserved" },
+  { id: "6", number: "P37", x: 560, y: 355, status: "available" },
+  { id: "7", number: "P38", x: 600, y: 355, status: "available" },
+  { id: "8", number: "P39", x: 640, y: 355, status: "available" },
 ];
 
-const entrancePoint: PathPoint = { x: 280, y: 120 };
+// Entrance at top right (blue outline circle)
+const entrancePoint: PathPoint = { x: 745, y: 95 };
+
+// Main driving lane waypoints (following the blue lines on the floor plan)
+const drivingLane = {
+  topRight: { x: 745, y: 95 },
+  topLeft: { x: 115, y: 95 },
+  leftTop: { x: 115, y: 155 },
+  leftMiddle: { x: 115, y: 270 },
+  leftBottom: { x: 115, y: 355 },
+  bottomLeft: { x: 355, y: 355 },
+  bottomMiddle: { x: 520, y: 355 },
+  bottomRight: { x: 745, y: 355 },
+};
 
 const getPathToSpot = (spot: ParkingSpot): PathPoint[] => {
-  return [
+  // Path follows the driving lanes: entrance (top right) → left across top → down left side → to spot
+  const path: PathPoint[] = [
     entrancePoint,
-    { x: 280, y: 200 },
-    { x: 280, y: 290 },
-    { x: spot.x, y: 290 },
-    { x: spot.x, y: spot.y },
+    drivingLane.topLeft,
+    drivingLane.leftTop,
+    drivingLane.leftMiddle,
   ];
+  
+  // For P32 which is higher up
+  if (spot.number === "P32") {
+    path.push({ x: 355, y: 270 });
+    path.push({ x: spot.x, y: spot.y });
+  } else {
+    // For bottom row spots (P33-P39)
+    path.push(drivingLane.leftBottom);
+    path.push({ x: spot.x, y: 355 });
+    path.push({ x: spot.x, y: spot.y });
+  }
+  
+  return path;
 };
 
 const pathToSvgPath = (points: PathPoint[]): string => {
@@ -115,17 +141,17 @@ export function ParkingMapDemo() {
             <circle
               cx={entrancePoint.x}
               cy={entrancePoint.y}
-              r="12"
-              fill="#ef4444"
-              stroke="white"
-              strokeWidth="2"
+              r="14"
+              fill="none"
+              stroke="#3b82f6"
+              strokeWidth="3"
             />
             <text
               x={entrancePoint.x}
-              y={entrancePoint.y - 18}
+              y={entrancePoint.y - 22}
               textAnchor="middle"
-              fill="#ef4444"
-              fontSize="12"
+              fill="#3b82f6"
+              fontSize="11"
               fontWeight="bold"
             >
               Entrance
@@ -140,8 +166,8 @@ export function ParkingMapDemo() {
                   strokeWidth="4"
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  strokeDasharray="1000"
-                  strokeDashoffset="1000"
+                  strokeDasharray="2000"
+                  strokeDashoffset="2000"
                   opacity="0.8"
                   className="animate-draw-path"
                 />
@@ -253,7 +279,7 @@ export function ParkingMapDemo() {
           }
         }
         .animate-draw-path {
-          animation: draw-path 1.5s ease-out forwards;
+          animation: draw-path 2.5s ease-out forwards;
         }
       `}</style>
     </Card>
