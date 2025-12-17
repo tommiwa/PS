@@ -820,14 +820,13 @@ export default function MySpots() {
                                 href={mapUrl} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                className="text-blue-500 hover:text-blue-700 text-sm flex items-center gap-1"
+                                className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors"
                                 data-testid={`link-floor-plan-${spot.id}`}
                               >
-                                <ExternalLink className="h-3 w-3" />
-                                View Floor Plan
+                                <MapPin className="h-4 w-4 text-blue-600" />
                               </a>
                             </TooltipTrigger>
-                            <TooltipContent>Open floor plan in new tab (Seat {seatNum})</TooltipContent>
+                            <TooltipContent>View on floor plan (Seat {seatNum})</TooltipContent>
                           </Tooltip>
                         ) : null;
                       })()}
