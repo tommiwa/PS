@@ -33,34 +33,48 @@ const sampleSpots: ParkingSpot[] = [
 // Entrance at top right (blue outline circle)
 const entrancePoint: PathPoint = { x: 745, y: 95 };
 
-// Main driving lane waypoints (following the blue lines on the floor plan)
+// Main driving lane waypoints - following the ACTUAL building contour shape
+// The path is NOT rectangular - it follows the angled building outline
 const drivingLane = {
+  // Starting from entrance, going left along top
   topRight: { x: 745, y: 95 },
-  topLeft: { x: 115, y: 95 },
-  leftTop: { x: 115, y: 155 },
-  leftMiddle: { x: 115, y: 270 },
-  leftBottom: { x: 115, y: 355 },
-  bottomLeft: { x: 355, y: 355 },
-  bottomMiddle: { x: 520, y: 355 },
-  bottomRight: { x: 745, y: 355 },
+  topMiddle: { x: 280, y: 95 },
+  // Angled section following the building shape (near fitness facility)
+  angleStart: { x: 200, y: 95 },
+  angleCorner1: { x: 115, y: 140 },
+  // Down the left side (follows the angled building contour)
+  leftUpper: { x: 115, y: 180 },
+  leftMiddle: { x: 140, y: 240 },
+  leftLower: { x: 165, y: 290 },
+  // Bottom section
+  bottomCorner: { x: 190, y: 340 },
+  bottomLeft: { x: 280, y: 355 },
+  bottomMiddle: { x: 450, y: 355 },
+  bottomRight: { x: 680, y: 355 },
 };
 
 const getPathToSpot = (spot: ParkingSpot): PathPoint[] => {
-  // Path follows the driving lanes: entrance (top right) → left across top → down left side → to spot
+  // Path follows the actual driving lanes shape from entrance
   const path: PathPoint[] = [
     entrancePoint,
-    drivingLane.topLeft,
-    drivingLane.leftTop,
+    drivingLane.topMiddle,
+    drivingLane.angleStart,
+    drivingLane.angleCorner1,
+    drivingLane.leftUpper,
     drivingLane.leftMiddle,
+    drivingLane.leftLower,
+    drivingLane.bottomCorner,
   ];
   
-  // For P32 which is higher up
+  // For P32 which is higher up (middle area)
   if (spot.number === "P32") {
-    path.push({ x: 355, y: 270 });
+    // Branch off earlier to reach P32
+    path.length = 6; // Keep up to leftMiddle
+    path.push({ x: 280, y: 270 });
     path.push({ x: spot.x, y: spot.y });
   } else {
     // For bottom row spots (P33-P39)
-    path.push(drivingLane.leftBottom);
+    path.push(drivingLane.bottomLeft);
     path.push({ x: spot.x, y: 355 });
     path.push({ x: spot.x, y: spot.y });
   }
