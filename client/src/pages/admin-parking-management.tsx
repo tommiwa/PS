@@ -36,7 +36,7 @@ import {
   Timer, Target, CheckCircle2, Search, Filter,
   Zap, Accessibility, Building, MoreHorizontal, Info, RefreshCw,
   Trash2, Edit, UserMinus, UserCheck, Download, FileText,
-  Eye, EyeOff, Layers, Sparkles, Loader2
+  Eye, EyeOff, Layers, Sparkles, Loader2, MapPin
 } from "lucide-react"
 import type { ParkingSpot, ParkingSpotWithUser, SpotType, Location, SpotTypeTable } from "@shared/schema"
 import { quickExportParkingSpotsPDF, quickExportParkingSpotsExcel } from "@/utils/export-utils"
@@ -169,7 +169,8 @@ export default function AdminParkingManagement() {
     isBookable: true,
     isBciManaged: true,
     description: "",
-    ownerId: null as string | null
+    ownerId: null as string | null,
+    mapLink: "" as string | null
   })
   
   // Form state for add spot dialog
@@ -720,7 +721,8 @@ export default function AdminParkingManagement() {
       isBookable: spot.isBookable !== false,
       isBciManaged: spot.isBciManaged || false,
       description: spot.description || "",
-      ownerId: spot.ownerId || null
+      ownerId: spot.ownerId || null,
+      mapLink: spot.mapLink || ""
     });
     setShowEditSpotDialog(true);
   };
@@ -1989,6 +1991,7 @@ export default function AdminParkingManagement() {
                         >
                           Management Type
                         </SortableTableHeader>
+                        <TableHead>Map</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -2052,6 +2055,31 @@ export default function AdminParkingManagement() {
                                   : "Personal: Owner can create listings and manage availability."}
                               </TooltipContent>
                             </Tooltip>
+                          </TableCell>
+                          <TableCell data-testid={`text-unallocated-spot-map-${spot.id}`}>
+                            {spot.mapLink ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    asChild
+                                  >
+                                    <a 
+                                      href={spot.mapLink} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      data-testid={`link-map-${spot.id}`}
+                                    >
+                                      <MapPin className="h-4 w-4 text-blue-500" />
+                                    </a>
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>View on floor plan</TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">—</span>
+                            )}
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center justify-end gap-1">
@@ -2182,6 +2210,7 @@ export default function AdminParkingManagement() {
                             </Tooltip>
                           </div>
                         </TableHead>
+                        <TableHead>Map</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -2214,6 +2243,22 @@ export default function AdminParkingManagement() {
                                 <Badge variant="secondary" className="bg-gray-50 text-gray-700 border-gray-200">Not Bookable</Badge>
                               )}
                             </div>
+                          </TableCell>
+                          <TableCell>
+                            {spot.mapLink ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="sm" asChild>
+                                    <a href={spot.mapLink} target="_blank" rel="noopener noreferrer">
+                                      <MapPin className="h-4 w-4 text-blue-500" />
+                                    </a>
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>View on floor plan</TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">—</span>
+                            )}
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-1">
@@ -2322,6 +2367,7 @@ export default function AdminParkingManagement() {
                             </Tooltip>
                           </div>
                         </TableHead>
+                        <TableHead>Map</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -2350,6 +2396,22 @@ export default function AdminParkingManagement() {
                               <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200">Assigned</Badge>
                             ) : (
                               <Badge variant="outline">Available</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {spot.mapLink ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="sm" asChild>
+                                    <a href={spot.mapLink} target="_blank" rel="noopener noreferrer">
+                                      <MapPin className="h-4 w-4 text-blue-500" />
+                                    </a>
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>View on floor plan</TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">—</span>
                             )}
                           </TableCell>
                           <TableCell>
@@ -2647,6 +2709,16 @@ export default function AdminParkingManagement() {
                 onChange={(e) => setEditFormData(prev => ({ ...prev, description: e.target.value }))}
                 data-testid="input-edit-spot-description"
               />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Map Link</label>
+              <Input
+                value={editFormData.mapLink || ""}
+                onChange={(e) => setEditFormData(prev => ({ ...prev, mapLink: e.target.value }))}
+                placeholder="https://bci.officespacesoftware.com/visual-directory/..."
+                data-testid="input-edit-spot-map-link"
+              />
+              <p className="text-xs text-muted-foreground mt-1">External link to floor plan/visual directory</p>
             </div>
             <div className="flex gap-2 pt-4">
               <Button
