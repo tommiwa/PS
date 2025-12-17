@@ -678,23 +678,19 @@ export interface RenterStatisticsResponse {
 
 // Owner Statistics Response Type
 export interface OwnerStatisticsResponse {
-  earnings: {
-    total: number;
-    thisMonth: number;
-    pastYear: number;
-    totalBookings: number;
-    thisMonthBookings: number;
-    upcomingBookings: number;
-  };
-  spending: {
-    total: number;
-    thisMonth: number;
-    pastYear: number;
-    activeBookings: number;
-  };
+  // This month stats (for top-level cards)
+  thisMonthIncome: number;
+  thisMonthIncomeBookings: number;
+  thisMonthSpent: number;
+  thisMonthSpentBookings: number;
+  pastYearIncome: number;
+  pastYearIncomeBookings: number;
+  pastYearSpent: number;
+  pastYearSpentBookings: number;
+  // Monthly trends for charts
+  monthlyEarnings: Array<{ month: string; earned: number; spent: number; net: number }>;
+  // Summary
   ownedSpotsCount: number;
-  netBalance: number;
-  thisMonthNet: number;
   generatedAt: string;
 }
 

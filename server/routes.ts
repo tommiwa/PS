@@ -2735,7 +2735,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get owner dashboard statistics (earnings and spending)
+  // Get owner dashboard statistics (earnings and spending) - simplified to match renter stats
   app.get("/api/owner/statistics", isAuthenticated, async (req: any, res) => {
     try {
       const userId = getAuthenticatedUserId(req);
@@ -2744,7 +2744,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const now = new Date();
-      const today = await getTodayInTimezone();
       const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
       
       // Calculate date range for past year
@@ -2758,43 +2757,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
         spot.assignedUserId === userId || spot.ownerId === userId
       );
 
-      // Get all bookings for spots owned by this user (earnings)
-      let totalEarnings = 0;
-      let thisMonthEarnings = 0;
-      let pastYearEarnings = 0;
-      let totalBookingsReceived = 0;
-      let thisMonthBookingsReceived = 0;
-      let upcomingBookingsAsOwner = 0;
+      // Initialize monthly data structure for past 6 months
+      const monthlyData: Map<string, { earned: number; spent: number }> = new Map();
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        monthlyData.set(monthKey, { earned: 0, spent: 0 });
+      }
 
+      // Track stats
+      let thisMonthIncome = 0;
+      let thisMonthIncomeBookings = 0;
+      let pastYearIncome = 0;
+      let pastYearIncomeBookings = 0;
+
+      // Get all bookings for spots owned by this user (earnings)
       for (const spot of ownedSpots) {
         const spotBookings = await storage.getBookingsBySpot(spot.id);
         
         for (const booking of spotBookings) {
           const bookingDate = booking.bookingDate.toString();
           const amount = parseFloat(booking.totalAmount?.toString() || '0');
-          
-          // Count confirmed bookings (not cancelled)
-          if (booking.status === 'confirmed') {
-            // Upcoming bookings (as owner)
-            if (bookingDate >= today) {
-              upcomingBookingsAsOwner++;
-            }
-          }
+          const bookingMonth = bookingDate.substring(0, 7); // YYYY-MM
           
           // Count paid/received bookings for earnings
           if (booking.paymentStatus === 'paid' || booking.paymentStatus === 'received') {
-            totalEarnings += amount;
-            totalBookingsReceived++;
-            
-            // This month earnings
+            // This month income
             if (bookingDate.startsWith(currentMonth)) {
-              thisMonthEarnings += amount;
-              thisMonthBookingsReceived++;
+              thisMonthIncome += amount;
+              thisMonthIncomeBookings++;
             }
             
-            // Past year earnings
+            // Past year income
             if (bookingDate >= oneYearAgoStr) {
-              pastYearEarnings += amount;
+              pastYearIncome += amount;
+              pastYearIncomeBookings++;
+            }
+            
+            // Monthly data for chart
+            if (monthlyData.has(bookingMonth)) {
+              const monthData = monthlyData.get(bookingMonth)!;
+              monthData.earned += amount;
             }
           }
         }
@@ -2803,55 +2806,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get user's spending (as a renter)
       const renterBookings = await storage.getBookingsByRenter(userId);
       
-      let totalSpent = 0;
       let thisMonthSpent = 0;
+      let thisMonthSpentBookings = 0;
       let pastYearSpent = 0;
-      let activeBookingsAsRenter = 0;
+      let pastYearSpentBookings = 0;
       
       for (const booking of renterBookings) {
         const bookingDate = booking.bookingDate.toString();
         const amount = parseFloat(booking.totalAmount?.toString() || '0');
-        
-        // Active bookings (confirmed and upcoming)
-        if (booking.status === 'confirmed' && bookingDate >= today) {
-          activeBookingsAsRenter++;
-        }
+        const bookingMonth = bookingDate.substring(0, 7); // YYYY-MM
         
         // Spending (paid bookings)
         if (booking.paymentStatus === 'paid' || booking.paymentStatus === 'received') {
-          totalSpent += amount;
-          
           if (bookingDate.startsWith(currentMonth)) {
             thisMonthSpent += amount;
+            thisMonthSpentBookings++;
           }
           
           if (bookingDate >= oneYearAgoStr) {
             pastYearSpent += amount;
+            pastYearSpentBookings++;
+          }
+          
+          // Monthly data for chart
+          if (monthlyData.has(bookingMonth)) {
+            const monthData = monthlyData.get(bookingMonth)!;
+            monthData.spent += amount;
           }
         }
       }
 
+      // Convert monthly data to array for chart
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const monthlyEarnings = Array.from(monthlyData.entries()).map(([monthKey, data]) => {
+        const [year, month] = monthKey.split('-');
+        return {
+          month: monthNames[parseInt(month) - 1],
+          earned: Number(data.earned.toFixed(2)),
+          spent: Number(data.spent.toFixed(2)),
+          net: Number((data.earned - data.spent).toFixed(2))
+        };
+      });
+
       res.json({
-        // Earnings (from spots you own)
-        earnings: {
-          total: Number(totalEarnings.toFixed(2)),
-          thisMonth: Number(thisMonthEarnings.toFixed(2)),
-          pastYear: Number(pastYearEarnings.toFixed(2)),
-          totalBookings: totalBookingsReceived,
-          thisMonthBookings: thisMonthBookingsReceived,
-          upcomingBookings: upcomingBookingsAsOwner
-        },
-        // Spending (as a renter)
-        spending: {
-          total: Number(totalSpent.toFixed(2)),
-          thisMonth: Number(thisMonthSpent.toFixed(2)),
-          pastYear: Number(pastYearSpent.toFixed(2)),
-          activeBookings: activeBookingsAsRenter
-        },
+        // This month stats
+        thisMonthIncome: Number(thisMonthIncome.toFixed(2)),
+        thisMonthIncomeBookings,
+        thisMonthSpent: Number(thisMonthSpent.toFixed(2)),
+        thisMonthSpentBookings,
+        // Past year stats
+        pastYearIncome: Number(pastYearIncome.toFixed(2)),
+        pastYearIncomeBookings,
+        pastYearSpent: Number(pastYearSpent.toFixed(2)),
+        pastYearSpentBookings,
+        // Monthly trends for chart
+        monthlyEarnings,
         // Summary
         ownedSpotsCount: ownedSpots.length,
-        netBalance: Number((totalEarnings - totalSpent).toFixed(2)),
-        thisMonthNet: Number((thisMonthEarnings - thisMonthSpent).toFixed(2)),
         generatedAt: now.toISOString()
       });
     } catch (error) {
