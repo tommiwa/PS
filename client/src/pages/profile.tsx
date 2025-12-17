@@ -259,20 +259,37 @@ export default function Profile() {
     queryKey: ["/api/spot-types"]
   });
 
+  // Helper to map preferredSpotType string to preferredSpotTypeId
+  const mapSpotTypeToId = (preferredSpotType: string | undefined): number | undefined => {
+    if (!preferredSpotType) return undefined;
+    
+    // Fallback mapping for common variations (form values → database slugs)
+    const slugMapping: Record<string, string> = {
+      'electric': 'ev-chargers',  // Form uses "electric" but DB slug is "ev-chargers"
+      'ev': 'ev-chargers',
+      'tesla': 'tesla-chargers',
+    };
+    
+    const normalizedType = preferredSpotType.toLowerCase();
+    const mappedSlug = slugMapping[normalizedType] || normalizedType;
+    
+    // Try to find matching spot type
+    const spotType = spotTypesList.find(st => 
+      st.name?.toLowerCase() === normalizedType ||
+      st.slug?.toLowerCase() === normalizedType ||
+      st.slug?.toLowerCase() === mappedSlug
+    );
+    
+    return spotType?.id;
+  };
+
   // Mutation for creating waiting list entry
   const createWaitingListMutation = useMutation({
     mutationFn: async (data: WaitingListForm) => {
       if (!user) throw new Error("User not found");
       
-      // Map preferredSpotType string to preferredSpotTypeId
-      let preferredSpotTypeId: number | undefined;
-      if (data.preferredSpotType) {
-        const spotType = spotTypesList.find(st => 
-          st.name?.toLowerCase() === data.preferredSpotType?.toLowerCase() ||
-          st.slug?.toLowerCase() === data.preferredSpotType?.toLowerCase()
-        );
-        preferredSpotTypeId = spotType?.id;
-      }
+      // Map preferredSpotType string to preferredSpotTypeId with fallback mapping
+      const preferredSpotTypeId = mapSpotTypeToId(data.preferredSpotType);
       
       const waitingListData: Partial<InsertWaitingList> = {
         userId: user.id,
@@ -1112,9 +1129,11 @@ export default function Profile() {
                                       </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                      <SelectItem value="regular">{t("spotType.regular")}</SelectItem>
-                                      <SelectItem value="electric">{t("spotType.electric")}</SelectItem>
-                                      <SelectItem value="accessible">{t("spotType.accessible")}</SelectItem>
+                                      {spotTypesList.filter(st => !['reserved', 'tesla-chargers'].includes(st.slug || '')).map(st => (
+                                        <SelectItem key={st.id} value={st.slug || st.name?.toLowerCase() || ''}>
+                                          {st.name}
+                                        </SelectItem>
+                                      ))}
                                     </SelectContent>
                                   </Select>
                                   <FormMessage />
@@ -1125,7 +1144,7 @@ export default function Profile() {
                             <Button 
                               type="submit"
                               className="w-full"
-                              disabled={createWaitingListMutation.isPending}
+                              disabled={createWaitingListMutation.isPending || spotTypesList.length === 0}
                               data-testid="button-submit-enrollment-inline"
                             >
                               {createWaitingListMutation.isPending && (
@@ -1682,9 +1701,11 @@ export default function Profile() {
                                   </Tooltip>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="regular">{t("spotType.regular")}</SelectItem>
-                                  <SelectItem value="electric">{t("spotType.electric")}</SelectItem>
-                                  <SelectItem value="accessible">{t("spotType.accessible")}</SelectItem>
+                                  {spotTypesList.filter(st => !['reserved', 'tesla-chargers'].includes(st.slug || '')).map(st => (
+                                    <SelectItem key={st.id} value={st.slug || st.name?.toLowerCase() || ''}>
+                                      {st.name}
+                                    </SelectItem>
+                                  ))}
                                 </SelectContent>
                               </Select>
                               <FormMessage />
@@ -1926,9 +1947,11 @@ export default function Profile() {
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="regular">{t("spotType.regular")}</SelectItem>
-                                  <SelectItem value="electric">{t("spotType.electric")}</SelectItem>
-                                  <SelectItem value="accessible">{t("spotType.accessible")}</SelectItem>
+                                  {spotTypesList.filter(st => !['reserved', 'tesla-chargers'].includes(st.slug || '')).map(st => (
+                                    <SelectItem key={st.id} value={st.slug || st.name?.toLowerCase() || ''}>
+                                      {st.name}
+                                    </SelectItem>
+                                  ))}
                                 </SelectContent>
                               </Select>
                               <FormMessage />
@@ -1940,7 +1963,7 @@ export default function Profile() {
                           type="submit"
                           size="sm"
                           className="w-full text-xs"
-                          disabled={createWaitingListMutation.isPending}
+                          disabled={createWaitingListMutation.isPending || spotTypesList.length === 0}
                           data-testid="button-submit-enrollment-card"
                         >
                           {createWaitingListMutation.isPending && (
@@ -2131,9 +2154,11 @@ export default function Profile() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="regular">{t("spotType.regular")}</SelectItem>
-                        <SelectItem value="electric">{t("spotType.electric")}</SelectItem>
-                        <SelectItem value="accessible">{t("spotType.accessible")}</SelectItem>
+                        {spotTypesList.filter(st => !['reserved', 'tesla-chargers'].includes(st.slug || '')).map(st => (
+                          <SelectItem key={st.id} value={st.slug || st.name?.toLowerCase() || ''}>
+                            {st.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -2152,7 +2177,7 @@ export default function Profile() {
                 </Button>
                 <Button 
                   type="submit"
-                  disabled={createWaitingListMutation.isPending}
+                  disabled={createWaitingListMutation.isPending || spotTypesList.length === 0}
                   data-testid="button-submit-enrollment"
                 >
                   {createWaitingListMutation.isPending && (
