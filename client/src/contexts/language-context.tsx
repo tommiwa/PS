@@ -72,9 +72,9 @@ const translations: Record<Language, Translations> = {
     "notifications.systemMaintenance.description": "Get notified about system maintenance",
 
     // Waiting List
-    "waitingList.title": "Parking Waiting List",
-    "waitingList.description": "Join the waiting list to be notified when parking spots become available.",
-    "waitingList.enrollButton": "Join Waiting List",
+    "waitingList.title": "Permanent Spot Request",
+    "waitingList.description": "Request a BCI-assigned parking spot for long-term use (minimum 6-month commitment). This is not for daily bookings - use 'Find Parking' for short-term needs.",
+    "waitingList.enrollButton": "Request Permanent Spot",
     "waitingList.enrolled": "You're on the list!",
     "waitingList.notEnrolled": "Not enrolled",
     "waitingList.spotType": "Spot Type",
@@ -82,9 +82,9 @@ const translations: Record<Language, Translations> = {
     "waitingList.priority": "Priority",
     "waitingList.edit": "Edit",
     "waitingList.leave": "Leave",
-    "waitingList.editPreferences": "Edit Waiting List Preferences",
-    "waitingList.joinTitle": "Join the Waiting List",
-    "waitingList.joinDescription": "Get notified when spots become available.",
+    "waitingList.editPreferences": "Edit Request Preferences",
+    "waitingList.joinTitle": "Request a Permanent Parking Spot",
+    "waitingList.joinDescription": "Submit a request for a BCI-assigned spot with a minimum 6-month commitment.",
     "waitingList.form.preferredSpotType": "Preferred Spot Type",
     "waitingList.form.preferredBuilding": "Preferred Building", 
     "waitingList.form.priority": "Priority Level",
@@ -112,7 +112,7 @@ const translations: Record<Language, Translations> = {
 
     // Tooltips
     "tooltip.tabs.notifications": "Manage your email and push notification preferences",
-    "tooltip.tabs.waitingList": "Join the waiting list to be notified when parking spots become available",
+    "tooltip.tabs.waitingList": "Request a permanent BCI-assigned parking spot (minimum 6-month commitment)",
     "tooltip.tabs.vehicles": "Add and manage your vehicles for parking spot bookings",
     "tooltip.tabs.appSettings": "Configure privacy, security, and application display settings",
     
@@ -123,7 +123,7 @@ const translations: Record<Language, Translations> = {
     "tooltip.notifications.weeklyReports": "Receive weekly summaries of your parking activity, savings, and system updates",
     "tooltip.notifications.systemMaintenance": "Get notified about scheduled system maintenance that may affect parking availability",
     
-    "tooltip.waitingList.enroll": "Join the waiting list to receive notifications when parking spots matching your preferences become available",
+    "tooltip.waitingList.enroll": "Submit a request for a permanent BCI-assigned parking spot - requires minimum 6-month commitment",
     "tooltip.waitingList.reason": "Optional brief explanation for your parking need - helps administrators prioritize requests",
     "tooltip.waitingList.cancel": "Cancel changes and return to viewing your current waiting list preferences",
     "tooltip.waitingList.save": "Save your updated waiting list preferences - this may change your position in the queue",
@@ -680,9 +680,9 @@ const translations: Record<Language, Translations> = {
     "notifications.systemMaintenance.description": "Être notifié de la maintenance du système",
 
     // Waiting List
-    "waitingList.title": "Liste d'Attente de Parking",
-    "waitingList.description": "Rejoignez la liste d'attente pour être notifié lorsque des places de parking se libèrent.",
-    "waitingList.enrollButton": "Rejoindre la Liste d'Attente",
+    "waitingList.title": "Demande de Place Permanente",
+    "waitingList.description": "Demandez une place de parking attribuée par BCI pour une utilisation à long terme (engagement minimum de 6 mois). Ce n'est pas pour les réservations quotidiennes - utilisez 'Trouver un Parking' pour les besoins à court terme.",
+    "waitingList.enrollButton": "Demander une Place Permanente",
     "waitingList.enrolled": "Vous êtes sur la liste !",
     "waitingList.notEnrolled": "Non inscrit",
     "waitingList.spotType": "Type de Place",
@@ -690,9 +690,9 @@ const translations: Record<Language, Translations> = {
     "waitingList.priority": "Priorité",
     "waitingList.edit": "Modifier",
     "waitingList.leave": "Quitter",
-    "waitingList.editPreferences": "Modifier les Préférences de Liste d'Attente",
-    "waitingList.joinTitle": "Rejoindre la Liste d'Attente",
-    "waitingList.joinDescription": "Soyez notifié lorsque des places deviennent disponibles.",
+    "waitingList.editPreferences": "Modifier les Préférences de Demande",
+    "waitingList.joinTitle": "Demander une Place de Parking Permanente",
+    "waitingList.joinDescription": "Soumettez une demande pour une place attribuée par BCI avec un engagement minimum de 6 mois.",
     "waitingList.form.preferredSpotType": "Type de Place Préféré",
     "waitingList.form.preferredBuilding": "Bâtiment Préféré",
     "waitingList.form.priority": "Niveau de Priorité",
@@ -720,7 +720,7 @@ const translations: Record<Language, Translations> = {
 
     // Tooltips
     "tooltip.tabs.notifications": "Gérez vos préférences de notifications par email et push",
-    "tooltip.tabs.waitingList": "Rejoignez la liste d'attente pour être notifié des places de parking disponibles",
+    "tooltip.tabs.waitingList": "Demandez une place de parking permanente attribuée par BCI (engagement minimum de 6 mois)",
     "tooltip.tabs.vehicles": "Ajoutez et gérez vos véhicules pour les réservations de places",
     "tooltip.tabs.appSettings": "Configurez la confidentialité, la sécurité et les paramètres d'affichage",
     
@@ -731,7 +731,7 @@ const translations: Record<Language, Translations> = {
     "tooltip.notifications.weeklyReports": "Recevez des résumés hebdomadaires de votre activité de parking, économies et mises à jour système",
     "tooltip.notifications.systemMaintenance": "Soyez notifié de la maintenance système programmée qui peut affecter la disponibilité du parking",
     
-    "tooltip.waitingList.enroll": "Rejoignez la liste d'attente pour recevoir des notifications lorsque des places correspondant à vos préférences deviennent disponibles",
+    "tooltip.waitingList.enroll": "Soumettez une demande pour une place de parking permanente attribuée par BCI - engagement minimum de 6 mois requis",
     "tooltip.waitingList.reason": "Explication optionnelle de votre besoin de parking - aide les administrateurs à prioriser les demandes",
     "tooltip.waitingList.cancel": "Annulez les modifications et revenez à la visualisation de vos préférences actuelles de liste d'attente",
     "tooltip.waitingList.save": "Enregistrez vos préférences de liste d'attente mises à jour - cela peut changer votre position dans la file",
