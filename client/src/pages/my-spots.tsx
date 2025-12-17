@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Car, MapPin, DollarSign, Clock, Edit, Plus, Eye, Users, TrendingUp, Grid, Trash2, Info, CreditCard, Loader2 } from "lucide-react"
+import { Car, MapPin, DollarSign, Clock, Edit, Plus, Eye, Users, TrendingUp, Grid, Trash2, Info, CreditCard, Loader2, ExternalLink } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useConfirm, confirmations } from "@/hooks/use-confirm"
 import { useAuth } from "@/contexts/auth-context"
@@ -803,10 +803,35 @@ export default function MySpots() {
                         </TooltipContent>
                       </Tooltip>
                     </div>
-                    <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1 break-words">
-                      <MapPin className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
-                      {getLocationById(spot.locationId)}
-                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-sm text-muted-foreground flex items-center gap-1 break-words">
+                        <MapPin className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
+                        {getLocationById(spot.locationId)}
+                      </p>
+                      {(() => {
+                        const seatNum = (spot as any).seatNumber;
+                        const mapUrl = seatNum 
+                          ? `https://bci.officespacesoftware.com/visual-directory/floors/31/seats/${seatNum}`
+                          : null;
+                        return mapUrl ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <a 
+                                href={mapUrl} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-blue-500 hover:text-blue-700 text-sm flex items-center gap-1"
+                                data-testid={`link-floor-plan-${spot.id}`}
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                View Floor Plan
+                              </a>
+                            </TooltipTrigger>
+                            <TooltipContent>Open floor plan in new tab (Seat {seatNum})</TooltipContent>
+                          </Tooltip>
+                        ) : null;
+                      })()}
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 justify-between md:justify-end">
