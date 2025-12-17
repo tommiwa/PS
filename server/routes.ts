@@ -2735,6 +2735,129 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get owner dashboard statistics (earnings and spending)
+  app.get("/api/owner/statistics", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      const now = new Date();
+      const today = await getTodayInTimezone();
+      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      
+      // Calculate date range for past year
+      const oneYearAgo = new Date(now);
+      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+      const oneYearAgoStr = oneYearAgo.toISOString().split('T')[0];
+
+      // Get user's owned spots
+      const allSpots = await storage.getParkingSpots();
+      const ownedSpots = allSpots.filter(spot => spot.assignedUserId === userId);
+
+      // Get all bookings for spots owned by this user (earnings)
+      let totalEarnings = 0;
+      let thisMonthEarnings = 0;
+      let pastYearEarnings = 0;
+      let totalBookingsReceived = 0;
+      let thisMonthBookingsReceived = 0;
+      let upcomingBookingsAsOwner = 0;
+
+      for (const spot of ownedSpots) {
+        const spotBookings = await storage.getBookingsBySpot(spot.id);
+        
+        for (const booking of spotBookings) {
+          const bookingDate = booking.bookingDate.toString();
+          const amount = parseFloat(booking.totalAmount?.toString() || '0');
+          
+          // Count confirmed bookings (not cancelled)
+          if (booking.status === 'confirmed') {
+            // Upcoming bookings (as owner)
+            if (bookingDate >= today) {
+              upcomingBookingsAsOwner++;
+            }
+          }
+          
+          // Count paid/received bookings for earnings
+          if (booking.paymentStatus === 'paid' || booking.paymentStatus === 'received') {
+            totalEarnings += amount;
+            totalBookingsReceived++;
+            
+            // This month earnings
+            if (bookingDate.startsWith(currentMonth)) {
+              thisMonthEarnings += amount;
+              thisMonthBookingsReceived++;
+            }
+            
+            // Past year earnings
+            if (bookingDate >= oneYearAgoStr) {
+              pastYearEarnings += amount;
+            }
+          }
+        }
+      }
+
+      // Get user's spending (as a renter)
+      const renterBookings = await storage.getBookingsByRenter(userId);
+      
+      let totalSpent = 0;
+      let thisMonthSpent = 0;
+      let pastYearSpent = 0;
+      let activeBookingsAsRenter = 0;
+      
+      for (const booking of renterBookings) {
+        const bookingDate = booking.bookingDate.toString();
+        const amount = parseFloat(booking.totalAmount?.toString() || '0');
+        
+        // Active bookings (confirmed and upcoming)
+        if (booking.status === 'confirmed' && bookingDate >= today) {
+          activeBookingsAsRenter++;
+        }
+        
+        // Spending (paid bookings)
+        if (booking.paymentStatus === 'paid' || booking.paymentStatus === 'received') {
+          totalSpent += amount;
+          
+          if (bookingDate.startsWith(currentMonth)) {
+            thisMonthSpent += amount;
+          }
+          
+          if (bookingDate >= oneYearAgoStr) {
+            pastYearSpent += amount;
+          }
+        }
+      }
+
+      res.json({
+        // Earnings (from spots you own)
+        earnings: {
+          total: Number(totalEarnings.toFixed(2)),
+          thisMonth: Number(thisMonthEarnings.toFixed(2)),
+          pastYear: Number(pastYearEarnings.toFixed(2)),
+          totalBookings: totalBookingsReceived,
+          thisMonthBookings: thisMonthBookingsReceived,
+          upcomingBookings: upcomingBookingsAsOwner
+        },
+        // Spending (as a renter)
+        spending: {
+          total: Number(totalSpent.toFixed(2)),
+          thisMonth: Number(thisMonthSpent.toFixed(2)),
+          pastYear: Number(pastYearSpent.toFixed(2)),
+          activeBookings: activeBookingsAsRenter
+        },
+        // Summary
+        ownedSpotsCount: ownedSpots.length,
+        netBalance: Number((totalEarnings - totalSpent).toFixed(2)),
+        thisMonthNet: Number((thisMonthEarnings - thisMonthSpent).toFixed(2)),
+        generatedAt: now.toISOString()
+      });
+    } catch (error) {
+      console.error("Error fetching owner statistics:", error);
+      res.status(500).json({ error: "Failed to fetch owner statistics" });
+    }
+  });
+
   // Analytics API endpoints (Admin only)
   app.get("/api/admin/analytics-overview", requireAdmin, async (req, res) => {
     try {
