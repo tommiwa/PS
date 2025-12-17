@@ -302,7 +302,7 @@ export interface IStorage {
   getBookingAvailability(isBciOnly?: boolean): Promise<BookingAvailabilityData[]>;
   getPendingPaymentBookings(isBciOnly?: boolean): Promise<PendingPaymentData[]>;
   getActiveBookings(isBciOnly?: boolean): Promise<AdminBookingData[]>;
-  getPastBookings(isBciOnly?: boolean): Promise<AdminBookingData[]>;
+  getPastBookings(isBciOnly?: boolean, page?: number, limit?: number): Promise<{ data: AdminBookingData[]; total: number; page: number; limit: number; totalPages: number }>;
   
   // Dispute operations
   createDispute(dispute: InsertDispute): Promise<Dispute>;
@@ -3002,8 +3002,22 @@ export class MemStorage implements IStorage {
     });
   }
 
-  async getPastBookings(isBciOnly?: boolean): Promise<AdminBookingData[]> {
+  async getPastBookings(isBciOnly?: boolean, page: number = 1, limit: number = 20): Promise<{ data: AdminBookingData[]; total: number; page: number; limit: number; totalPages: number }> {
     const today = new Date().toISOString().split('T')[0];
+    const offset = (page - 1) * limit;
+    
+    // First get the total count for pagination
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM bookings b
+      LEFT JOIN parking_spots ps ON b.spot_id = ps.id
+      WHERE 
+        (b.booking_date < '${today}' OR b.status = 'completed' OR b.status = 'cancelled')
+        ${isBciOnly ? 'AND ps.is_bci_managed = true' : ''}
+    `;
+    
+    const countResults = await db.execute(sqlOp`${sqlOp.raw(countQuery)}`);
+    const total = parseInt((countResults as any).rows?.[0]?.total || '0', 10);
     
     // Build raw SQL query with proper table aliases and joins to avoid N+1
     const query = `
@@ -3025,14 +3039,15 @@ export class MemStorage implements IStorage {
       LEFT JOIN departments renter_dept ON renter.department_id = renter_dept.id
       LEFT JOIN departments owner_dept ON owner.department_id = owner_dept.id
       WHERE 
-        (b.booking_date < $1 OR b.status = 'completed' OR b.status = 'cancelled')
+        (b.booking_date < '${today}' OR b.status = 'completed' OR b.status = 'cancelled')
         ${isBciOnly ? 'AND ps.is_bci_managed = true' : ''}
       ORDER BY b.booking_date DESC
+      LIMIT ${limit} OFFSET ${offset}
     `;
     
-    const results = await db.execute(sqlOp`${sqlOp.raw(query.replace('$1', `'${today}'`))}`);
+    const results = await db.execute(sqlOp`${sqlOp.raw(query)}`);
     
-    return ((results as any).rows || []).map((row: any) => {
+    const data = ((results as any).rows || []).map((row: any) => {
       const renterName = row.renter_first_name && row.renter_last_name 
         ? `${row.renter_first_name} ${row.renter_last_name}`
         : row.renter_email || 'Unknown';
@@ -3067,6 +3082,14 @@ export class MemStorage implements IStorage {
         lastActivity: new Date(row.updated_at).toISOString()
       };
     });
+    
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    };
   }
 
   // Dispute operations

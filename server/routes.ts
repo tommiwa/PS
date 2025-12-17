@@ -3105,13 +3105,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get past bookings (completed/cancelled or past dates) (Admin only)
+  // Get past bookings (completed/cancelled or past dates) with server-side pagination (Admin only)
   app.get("/api/admin/past-bookings", requireAdmin, async (req, res) => {
     try {
       const scope = req.query.scope as string | undefined;
       const isBciOnly = scope === 'bci';
-      const pastBookings = await storage.getPastBookings(isBciOnly);
-      res.json(pastBookings);
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      
+      // Validate pagination params
+      const validPage = Math.max(1, page);
+      const validLimit = Math.min(100, Math.max(1, limit)); // Max 100 per page
+      
+      const result = await storage.getPastBookings(isBciOnly, validPage, validLimit);
+      res.json(result);
     } catch (error) {
       console.error("Error fetching past bookings:", error);
       res.status(500).json({ error: "Failed to fetch past bookings" });
