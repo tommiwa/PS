@@ -1776,8 +1776,10 @@ export default function AdminParkingManagement() {
                             <TableCell>
                               {(() => {
                                 const seatNum = (spot as any).seatNumber;
-                                const mapUrl = seatNum 
-                                  ? `https://bci.officespacesoftware.com/visual-directory/floors/31/seats/${seatNum}`
+                                const location = locations.find(loc => loc.id === spot.locationId);
+                                const floorPlanBaseUrl = (location as any)?.floorPlanBaseUrl;
+                                const mapUrl = seatNum && floorPlanBaseUrl
+                                  ? `${floorPlanBaseUrl}${seatNum}`
                                   : spot.mapLink;
                                 return mapUrl ? (
                                   <Tooltip>
@@ -2130,8 +2132,10 @@ export default function AdminParkingManagement() {
                           <TableCell data-testid={`text-unallocated-spot-map-${spot.id}`}>
                             {(() => {
                               const seatNum = (spot as any).seatNumber;
-                              const mapUrl = seatNum 
-                                ? `https://bci.officespacesoftware.com/visual-directory/floors/31/seats/${seatNum}`
+                              const location = locations.find(loc => loc.id === spot.locationId);
+                              const floorPlanBaseUrl = (location as any)?.floorPlanBaseUrl;
+                              const mapUrl = seatNum && floorPlanBaseUrl
+                                ? `${floorPlanBaseUrl}${seatNum}`
                                 : spot.mapLink;
                               return mapUrl ? (
                                 <Tooltip>
@@ -2315,8 +2319,10 @@ export default function AdminParkingManagement() {
                           <TableCell>
                             {(() => {
                               const seatNum = (spot as any).seatNumber;
-                              const mapUrl = seatNum 
-                                ? `https://bci.officespacesoftware.com/visual-directory/floors/31/seats/${seatNum}`
+                              const location = locations.find(loc => loc.id === spot.locationId);
+                              const floorPlanBaseUrl = (location as any)?.floorPlanBaseUrl;
+                              const mapUrl = seatNum && floorPlanBaseUrl
+                                ? `${floorPlanBaseUrl}${seatNum}`
                                 : spot.mapLink;
                               return mapUrl ? (
                                 <Tooltip>
@@ -2475,8 +2481,10 @@ export default function AdminParkingManagement() {
                           <TableCell>
                             {(() => {
                               const seatNum = (spot as any).seatNumber;
-                              const mapUrl = seatNum 
-                                ? `https://bci.officespacesoftware.com/visual-directory/floors/31/seats/${seatNum}`
+                              const location = locations.find(loc => loc.id === spot.locationId);
+                              const floorPlanBaseUrl = (location as any)?.floorPlanBaseUrl;
+                              const mapUrl = seatNum && floorPlanBaseUrl
+                                ? `${floorPlanBaseUrl}${seatNum}`
                                 : spot.mapLink;
                               return mapUrl ? (
                                 <Tooltip>
