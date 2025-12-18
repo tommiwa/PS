@@ -3550,6 +3550,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: `Cannot cancel ${booking.status} booking` });
       }
 
+      // Check 24-hour cancellation policy
+      const bookingDate = new Date(booking.bookingDate + 'T00:00:00');
+      const now = new Date();
+      const hoursUntilBooking = (bookingDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+      
+      if (hoursUntilBooking < 24) {
+        return res.status(400).json({ 
+          error: "Cancellations must be made at least 24 hours before the booking date. Please contact support if you need assistance." 
+        });
+      }
+
       const cancelledBooking = await storage.cancelBookingWithReason(id, "Cancelled by renter");
       
       await auditService.logAction("CANCEL", "booking", {

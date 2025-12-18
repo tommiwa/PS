@@ -265,12 +265,19 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
   const handleCancelBooking = async (bookingId: string) => {
     const booking = mockBookings.find(b => b.id === bookingId) as any
     
+    // Check 24-hour cancellation policy
+    const bookingDate = new Date(booking?.bookingDate + 'T00:00:00')
+    const now = new Date()
+    const hoursUntilBooking = (bookingDate.getTime() - now.getTime()) / (1000 * 60 * 60)
+    const canCancel = hoursUntilBooking >= 24
+    
     const confirmed = await confirm(confirmations.cancelBooking(
       booking ? `Spot ${booking.spotNumber || booking.spotId?.slice(-8) || 'Unknown'}` : undefined,
-      booking?.bookingDate
+      booking?.bookingDate,
+      canCancel
     ))
     
-    if (confirmed) {
+    if (confirmed && canCancel) {
       cancelBookingMutation.mutate(bookingId)
     }
   }
@@ -833,6 +840,12 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     const isCompleted = booking.status === "completed" || (booking.status === "confirmed" && paymentStatus === 'received' && booking.bookingDate < today)
     const isCancelled = booking.status === "cancelled"
     
+    // 24-hour cancellation policy check
+    const bookingDate = new Date(booking.bookingDate + 'T00:00:00')
+    const now = new Date()
+    const hoursUntilBooking = (bookingDate.getTime() - now.getTime()) / (1000 * 60 * 60)
+    const canCancelWithin24Hours = hoursUntilBooking >= 24
+    
     // Get status badge with color
     const getBookingStatusBadge = () => {
       const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
@@ -1008,13 +1021,18 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                     size="sm"
                     onClick={() => handleCancelBooking(booking.id)}
                     data-testid={`button-cancel-${booking.id}`}
-                    className="flex-1 lg:flex-none text-destructive hover:text-destructive"
+                    className={`flex-1 lg:flex-none ${canCancelWithin24Hours ? 'text-destructive hover:text-destructive' : 'text-muted-foreground cursor-not-allowed'}`}
+                    disabled={!canCancelWithin24Hours}
                   >
                     <XCircle className="h-4 w-4 mr-2" />
                     <span className="hidden sm:inline">Cancel</span>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Cancel Booking</TooltipContent>
+                <TooltipContent>
+                  {canCancelWithin24Hours 
+                    ? "Cancel Booking" 
+                    : "Cancellation not allowed within 24 hours of booking date"}
+                </TooltipContent>
               </Tooltip>
             )}
             
