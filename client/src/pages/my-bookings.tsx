@@ -18,7 +18,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient"
 import type { Booking, SpotListing } from "@shared/schema"
 import { useConfirm, confirmations } from "@/hooks/use-confirm"
 import { useToast } from "@/hooks/use-toast"
-import { quickExportBookingsPDF, quickExportBookingsExcel } from "@/utils/export-utils"
+import { quickExportBookingsPDF, quickExportBookingsExcel, generateParkingReceiptPDF } from "@/utils/export-utils"
 import { getErrorMessage } from "@/lib/error-utils"
 
 interface MyBookingsProps {
@@ -384,7 +384,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     }
 
     // Create receipt data - adjust based on whether it's owner or renter viewing
-    const receiptData = [{
+    const receiptData = {
       spotNumber: booking.spotNumber || 'N/A',
       spotLocation: booking.location || 'N/A',
       renterName: isOwnerReceipt ? booking.renterName : (user?.firstName + ' ' + user?.lastName || 'N/A'),
@@ -393,10 +393,11 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
       status: booking.status || 'N/A',
       dailyRate: booking.dailyRate || 0,
       bookingDate: booking.bookingDate || booking.date || 'N/A',
-      paymentStatus: booking.paymentStatus || 'pending'
-    }]
+      paymentStatus: booking.paymentStatus || 'pending',
+      bookingId: booking.id || bookingId
+    }
 
-    quickExportBookingsPDF(receiptData, `receipt-${booking.spotNumber || bookingId}`)
+    generateParkingReceiptPDF(receiptData, `parking-receipt-${booking.spotNumber || bookingId}`)
     
     toast({
       title: "Receipt Downloaded",

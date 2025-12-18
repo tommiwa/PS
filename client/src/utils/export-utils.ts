@@ -1029,3 +1029,164 @@ export const quickExportLockerAssignmentHistoryExcel = (history: any[], title?: 
     return false
   }
 }
+
+// Parking Receipt PDF Generator - styled like a parking ticket
+export interface ReceiptData {
+  spotNumber: string
+  spotLocation: string
+  renterName: string
+  renterEmail: string
+  ownerName: string
+  status: string
+  dailyRate: number | string
+  bookingDate: string
+  paymentStatus: string
+  bookingId?: string
+}
+
+export const generateParkingReceiptPDF = (receipt: ReceiptData, filename?: string) => {
+  const doc = new jsPDF('portrait', 'mm', [100, 180]) // Smaller receipt-like size
+  
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const centerX = pageWidth / 2
+  
+  // Colors
+  const darkGray = '#333333'
+  const lightGray = '#888888'
+  
+  let y = 15
+  
+  // === HEADER: Car icon box + Title ===
+  // Draw dashed rectangle for car icon
+  doc.setDrawColor(darkGray)
+  doc.setLineDashPattern([2, 2], 0)
+  doc.setLineWidth(0.5)
+  doc.rect(15, y, 30, 20)
+  
+  // Draw simple car icon (top view)
+  doc.setFillColor(darkGray)
+  // Car body
+  doc.roundedRect(22, y + 5, 16, 10, 2, 2, 'F')
+  // Wheels
+  doc.rect(20, y + 6, 3, 3, 'F')
+  doc.rect(37, y + 6, 3, 3, 'F')
+  doc.rect(20, y + 11, 3, 3, 'F')
+  doc.rect(37, y + 11, 3, 3, 'F')
+  
+  // Title
+  doc.setLineDashPattern([], 0)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(16)
+  doc.setTextColor(darkGray)
+  doc.text('Parking Receipt', 50, y + 12)
+  
+  y += 30
+  
+  // === MAIN CONTENT BOX ===
+  // Draw dashed border around content
+  doc.setDrawColor(lightGray)
+  doc.setLineDashPattern([3, 3], 0)
+  doc.setLineWidth(0.3)
+  doc.rect(10, y, pageWidth - 20, 100)
+  
+  y += 10
+  
+  // Location/Address
+  doc.setLineDashPattern([], 0)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(11)
+  doc.setTextColor(darkGray)
+  doc.text('Address', centerX, y, { align: 'center' })
+  y += 5
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(9)
+  doc.setTextColor(lightGray)
+  // Split long location into multiple lines
+  const locationLines = doc.splitTextToSize(receipt.spotLocation || 'N/A', pageWidth - 30)
+  doc.text(locationLines, centerX, y, { align: 'center' })
+  y += locationLines.length * 4 + 5
+  
+  // Ticket Number
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(10)
+  doc.setTextColor(darkGray)
+  const ticketNum = receipt.bookingId ? receipt.bookingId.slice(0, 8).toUpperCase() : '000000'
+  doc.text(`Ticket#: ${ticketNum}`, centerX, y, { align: 'center' })
+  y += 10
+  
+  // Horizontal separator
+  doc.setDrawColor(lightGray)
+  doc.setLineDashPattern([2, 2], 0)
+  doc.line(15, y, pageWidth - 15, y)
+  y += 8
+  
+  // Date and Time row
+  doc.setLineDashPattern([], 0)
+  doc.setFontSize(9)
+  const bookingDateStr = receipt.bookingDate || 'N/A'
+  doc.text(`Date: ${bookingDateStr}`, 20, y)
+  doc.setFont('helvetica', 'bold')
+  doc.text('Time: Full Day', pageWidth - 20, y, { align: 'right' })
+  y += 10
+  
+  // Duration
+  doc.setFont('helvetica', 'normal')
+  doc.text('Duration:', centerX - 10, y, { align: 'right' })
+  doc.setFont('helvetica', 'bold')
+  doc.text('1 Day', centerX - 5, y, { align: 'left' })
+  y += 12
+  
+  // Horizontal separator
+  doc.setDrawColor(lightGray)
+  doc.setLineDashPattern([2, 2], 0)
+  doc.line(15, y, pageWidth - 15, y)
+  y += 10
+  
+  // PAID amount (large)
+  doc.setLineDashPattern([], 0)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(22)
+  doc.setTextColor(darkGray)
+  const amount = typeof receipt.dailyRate === 'number' ? receipt.dailyRate : parseFloat(receipt.dailyRate) || 0
+  doc.text(`PAID: $${amount.toFixed(2)}`, centerX, y, { align: 'center' })
+  y += 12
+  
+  // Payment status
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(lightGray)
+  const paymentLabel = receipt.paymentStatus === 'received' ? 'Payment Confirmed' : 
+                       receipt.paymentStatus === 'paid' ? 'Payment Sent' : 'Payment Pending'
+  doc.text(`Status: ${paymentLabel}`, centerX, y, { align: 'center' })
+  y += 12
+  
+  // Horizontal separator
+  doc.setDrawColor(lightGray)
+  doc.setLineDashPattern([2, 2], 0)
+  doc.line(15, y, pageWidth - 15, y)
+  y += 8
+  
+  // Thank you message
+  doc.setLineDashPattern([], 0)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(11)
+  doc.setTextColor(darkGray)
+  doc.text('THANK YOU', centerX, y, { align: 'center' })
+  y += 5
+  doc.text('AND DRIVE SAFELY', centerX, y, { align: 'center' })
+  
+  // Footer with spot info
+  y += 15
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(8)
+  doc.setTextColor(lightGray)
+  doc.text(`Spot: ${receipt.spotNumber || 'N/A'} | Renter: ${receipt.renterName || 'N/A'}`, centerX, y, { align: 'center' })
+  y += 4
+  doc.text('BCI ParkShare', centerX, y, { align: 'center' })
+  
+  // Save PDF
+  const outputFilename = filename || `parking-receipt-${ticketNum}`
+  doc.save(`${outputFilename}.pdf`)
+  
+  return true
+}
