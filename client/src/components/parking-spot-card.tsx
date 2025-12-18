@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import { MapPin, Car, Zap, Accessibility, Building, User, Clock, Calendar } from "lucide-react"
+import { MapPin, Car, Zap, Accessibility, Building, User, Clock, Calendar, ExternalLink } from "lucide-react"
 import type { ParkingSpot, ParkingSpotWithUser } from "@shared/schema"
 import { useAuth } from "@/contexts/auth-context"
 import { useLock } from "@/contexts/LockContext"
@@ -26,6 +26,7 @@ type SpotWithLock = (ParkingSpot | ParkingSpotWithUser) & {
   locationName?: string
   spotTypeName?: string
   dateToPrice?: Record<string, { listingId: string; dailyRate: number }>
+  floorPlanBaseUrl?: string | null
 }
 
 interface ParkingSpotCardProps {
@@ -192,6 +193,25 @@ export function ParkingSpotCard({
                 {locationName || `Location ID: ${spot.locationId}`}
                 {spot.isIndoor && " • Indoor"}
               </span>
+              {spot.floorPlanBaseUrl && spot.seatNumber && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <a
+                      href={`${spot.floorPlanBaseUrl}${spot.seatNumber}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-primary hover:underline ml-1"
+                      data-testid={`link-floor-plan-${spot.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>View on floor plan</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
             </div>
           </div>
           {getSpotTypeBadge()}

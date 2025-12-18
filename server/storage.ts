@@ -948,12 +948,13 @@ export class MemStorage implements IStorage {
   private async enrichSpotWithSafeUserInfo(spot: ParkingSpot): Promise<ParkingSpotWithSafeUserData> {
     const enrichedSpot: ParkingSpotWithSafeUserData = { ...spot };
     
-    // Join location details to construct name
+    // Join location details to construct name and get floor plan URL
     const locationResult = await db
       .select({ 
         office: locations.office,
         building: locations.building,
-        level: locations.level
+        level: locations.level,
+        floorPlanBaseUrl: locations.floorPlanBaseUrl
       })
       .from(locations)
       .where(eq(locations.id, spot.locationId))
@@ -962,6 +963,7 @@ export class MemStorage implements IStorage {
     if (locationResult.length > 0) {
       const loc = locationResult[0];
       enrichedSpot.locationName = `${loc.office} - ${loc.building}, ${loc.level}`;
+      enrichedSpot.floorPlanBaseUrl = loc.floorPlanBaseUrl;
     }
     
     // Join spot type name

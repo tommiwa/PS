@@ -182,6 +182,7 @@ export interface ParkingSpotWithSafeUserData extends ParkingSpot {
   bookedDates?: string[];
   availability?: { date: string };
   activeLock?: any;
+  floorPlanBaseUrl?: string | null;
 }
 
 // Spot Listings Table
