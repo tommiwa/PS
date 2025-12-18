@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { SpotListingForm } from "@/components/spot-listing-form"
 import { EnhancedFilters, type FilterConfig, type FilterValues } from "@/components/ui/enhanced-filters"
-import { Calendar, Search, Filter, Download, Clock, CheckCircle, CheckCircle2, XCircle, Car, MapPin, DollarSign, AlertTriangle, Plus, Edit, Trash2, CreditCard, Info, Activity, Building, Ban, Eye, FileText } from "lucide-react"
+import { Calendar, Search, Filter, Download, Clock, CheckCircle, CheckCircle2, XCircle, Car, MapPin, DollarSign, AlertTriangle, Plus, Edit, Trash2, CreditCard, Info, Building, Ban, Eye, FileText } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { isPastDate } from "@/utils/date-utils"
 import { useMutation, useQuery } from "@tanstack/react-query"
@@ -1394,7 +1394,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
 
       {/* Enhanced Status-Based Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="flex md:grid overflow-x-auto md:overflow-x-visible flex-nowrap md:grid-cols-4 w-full h-auto gap-1">
+        <TabsList className="flex md:grid overflow-x-auto md:overflow-x-visible flex-nowrap md:grid-cols-3 w-full h-auto gap-1">
           <TabsTrigger value="active" className="gap-2 flex-shrink-0 md:flex-shrink min-h-11" data-testid="tab-active">
             <CheckCircle2 className="h-4 w-4 !text-green-600" />
             Active ({activeItems.length})
@@ -1406,10 +1406,6 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
           <TabsTrigger value="completed" className="gap-2 flex-shrink-0 md:flex-shrink min-h-11" data-testid="tab-completed">
             <CheckCircle2 className="h-4 w-4 !text-slate-600" />
             Completed ({completedItems.length})
-          </TabsTrigger>
-          <TabsTrigger value="all" className="gap-2 flex-shrink-0 md:flex-shrink min-h-11" data-testid="tab-all">
-            <Activity className="h-4 w-4 !text-purple-600" />
-            All ({sortedItems.length})
           </TabsTrigger>
         </TabsList>
         
@@ -1473,29 +1469,6 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
           ) : (
             <div className="space-y-3 md:space-y-4">
               {completedItems.map((item) => (
-                isOwnerView ? renderOwnerListingWithPayment(item) : renderRenterBooking(item)
-              ))}
-            </div>
-          )}
-        </TabsContent>
-        
-        
-        <TabsContent value="all" className="w-full space-y-3 md:space-y-4">
-          {sortedItems.length === 0 ? (
-            <Card>
-              <CardContent className="p-6 md:p-8 text-center">
-                <Calendar className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-3 md:mb-4 text-muted-foreground" />
-                <h3 className="text-base md:text-lg font-semibold mb-2">
-                  {isOwnerView ? "No listings found" : "No bookings found"}
-                </h3>
-                <p className="text-sm md:text-base text-muted-foreground">
-                  Try adjusting your search or filters to find your {isOwnerView ? "listings" : "bookings"}.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-3 md:space-y-4">
-              {sortedItems.map((item) => (
                 isOwnerView ? renderOwnerListingWithPayment(item) : renderRenterBooking(item)
               ))}
             </div>
