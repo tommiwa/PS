@@ -19,6 +19,7 @@ import type { Booking, SpotListing } from "@shared/schema"
 import { useConfirm, confirmations } from "@/hooks/use-confirm"
 import { useToast } from "@/hooks/use-toast"
 import { quickExportBookingsPDF, quickExportBookingsExcel } from "@/utils/export-utils"
+import { getErrorMessage } from "@/lib/error-utils"
 
 interface MyBookingsProps {
   viewMode?: 'listings' | 'rentals';
@@ -276,7 +277,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     onError: (error: any) => {
       toast({
         title: "Cancellation Failed",
-        description: error.message || "Failed to cancel booking. Please try again.",
+        description: getErrorMessage(error, "Failed to cancel booking. Please try again."),
         variant: "destructive",
       })
     }
@@ -329,7 +330,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     onError: (error: any) => {
       toast({
         title: "Payment Update Failed",
-        description: error.message || "Failed to mark payment. Please try again.",
+        description: getErrorMessage(error, "Failed to mark payment. Please try again."),
         variant: "destructive",
       })
     }
@@ -569,7 +570,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     onError: (error: any) => {
       toast({
         title: "Payment Update Failed",
-        description: error.message || "Failed to confirm payment. Please try again.",
+        description: getErrorMessage(error, "Failed to confirm payment. Please try again."),
         variant: "destructive",
       })
     }

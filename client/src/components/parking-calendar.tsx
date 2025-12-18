@@ -22,6 +22,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { useLock } from "@/contexts/LockContext"
 import { useToast } from "@/hooks/use-toast"
 import { apiRequest } from "@/lib/queryClient"
+import { getErrorMessage } from "@/lib/error-utils"
 
 // Simple local date formatter for calendar date comparisons
 // Uses local date components to avoid timezone shifts that cause day-off-by-one issues
@@ -395,14 +396,16 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
       onBookSpot(spot.id)
     } catch (error: any) {
       console.error('[Calendar] Lock acquisition failed:', error);
-      const errorMessage = error.message || "";
-      if (errorMessage.includes('409') || errorMessage.includes('SPOT_ALREADY_LOCKED')) {
+      const rawMessage = error?.message || "";
+      const friendlyMessage = getErrorMessage(error, "Could not reserve spot. Please try again.");
+      
+      if (rawMessage.includes('409') || rawMessage.includes('SPOT_ALREADY_LOCKED')) {
         toast({
           title: "Spot Already Reserved",
           description: "Another user is currently booking this spot. Please try again.",
           variant: "destructive"
         });
-      } else if (errorMessage.includes('USER_HAS_ACTIVE_LOCK')) {
+      } else if (rawMessage.includes('USER_HAS_ACTIVE_LOCK')) {
         toast({
           title: "Active Reservation",
           description: "You already have an active reservation on another spot. Please complete or cancel it first.",
@@ -411,7 +414,7 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
       } else {
         toast({
           title: "Lock Failed",
-          description: "Could not reserve spot. Please try again.",
+          description: friendlyMessage,
           variant: "destructive"
         });
       }

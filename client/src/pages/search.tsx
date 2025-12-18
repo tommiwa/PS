@@ -19,6 +19,7 @@ import { type ParkingSpot as DBParkingSpot, type SpotTypeTable } from "@shared/s
 import { useToast } from "@/hooks/use-toast"
 import { useLock } from "@/contexts/LockContext"
 import { useAuth } from "@/contexts/auth-context"
+import { getErrorMessage } from "@/lib/error-utils"
 
 // Location type from database
 interface Location {
@@ -268,7 +269,7 @@ export default function Search() {
       queryClient.invalidateQueries({ queryKey: ['/api/available-spots'] })
     },
     onError: (error: any) => {
-      const errorMessage = error.message || "Failed to create booking. Please try again.";
+      const errorMessage = getErrorMessage(error, "Failed to create booking. Please try again.");
       
       // Check if lock expired
       if (errorMessage.toLowerCase().includes('lock')) {
@@ -370,15 +371,17 @@ export default function Search() {
         setShowBookingForm(true);
       } catch (error: any) {
         console.error('[handleBookSpot] Lock acquisition failed:', error);
-        // Lock acquisition failed
-        const errorMessage = error.message || "";
-        if (errorMessage.includes('409') || errorMessage.includes('SPOT_ALREADY_LOCKED')) {
+        // Lock acquisition failed - check error message for specific codes
+        const rawMessage = error?.message || "";
+        const friendlyMessage = getErrorMessage(error, "Could not reserve spot. Please try again.");
+        
+        if (rawMessage.includes('409') || rawMessage.includes('SPOT_ALREADY_LOCKED')) {
           toast({
             title: "Spot Already Reserved",
             description: "Another user is currently booking this spot. Please try again.",
             variant: "destructive"
           });
-        } else if (errorMessage.includes('USER_HAS_ACTIVE_LOCK')) {
+        } else if (rawMessage.includes('USER_HAS_ACTIVE_LOCK')) {
           toast({
             title: "Active Reservation",
             description: "You already have an active reservation on another spot. Please complete or cancel it first.",
@@ -387,7 +390,7 @@ export default function Search() {
         } else {
           toast({
             title: "Lock Failed",
-            description: "Could not reserve spot. Please try again.",
+            description: friendlyMessage,
             variant: "destructive"
           });
         }
