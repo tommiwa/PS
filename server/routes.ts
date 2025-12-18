@@ -1135,6 +1135,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const userId = getAuthenticatedUserId(req);
       if (!userId) {
+        console.log(`[default-price] Auth failed for spot ${id} - no userId from session`);
         return res.status(401).json({ error: "User not authenticated" });
       }
       
@@ -1148,6 +1149,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!existingSpot) {
         return res.status(404).json({ error: "Parking spot not found" });
       }
+      
+      // Log for debugging production authorization issues
+      console.log(`[default-price] Spot ${id}: ownerId=${existingSpot.ownerId}, userId=${userId}, match=${existingSpot.ownerId === userId}`);
       
       if (existingSpot.ownerId !== userId) {
         return res.status(403).json({ error: "Not authorized to update this parking spot" });
