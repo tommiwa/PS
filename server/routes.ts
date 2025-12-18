@@ -1672,7 +1672,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           date: displayDate,
           price: listing.dailyRate,
           renterName,
-          paymentReceived: booking?.paymentReceived || false
+          bookingId: booking?.id || null,
+          totalAmount: booking?.totalAmount || listing.dailyRate,
+          renterVehicle: booking ? `${booking.notes || 'N/A'}` : null,
+          paymentReceived: booking?.paymentReceived || false,
+          paymentStatus: booking?.paymentStatus || null
         };
       }));
       
@@ -1719,8 +1723,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           location: locationName,
           spotType: spotTypeName,
           ownerName: owner ? `${owner.firstName} ${owner.lastName}` : 'Unknown',
-          // Get payment status text
-          paymentStatus: booking.paymentReceived ? 'Paid' : 'Pending'
+          // Use actual paymentStatus enum from booking (pending, paid, received)
+          paymentStatus: booking.paymentStatus || 'pending'
         };
       }));
       
