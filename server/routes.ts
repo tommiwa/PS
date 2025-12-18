@@ -2323,12 +2323,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Note: Removed taxable_benefit check as it's not in the SpotType enum
 
+      // NOTE: Temporarily disabled for testing - allow booking own spots
       // Additional validation: Ensure user is not booking their own spot
-      if (spot.ownerId === userId) {
-        return res.status(400).json({ 
-          error: "You cannot book your own parking spot" 
-        });
-      }
+      // if (spot.ownerId === userId) {
+      //   return res.status(400).json({ 
+      //     error: "You cannot book your own parking spot" 
+      //   });
+      // }
 
       // CRITICAL: Check for active lock BEFORE creating booking
       let [activeLock] = await db
