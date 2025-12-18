@@ -208,9 +208,9 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
         }
         
         // Fallback to old single date format for backward compatibility
+        // Use string comparison to avoid timezone issues (new Date("YYYY-MM-DD") creates midnight UTC)
         if (spot.availability?.date) {
-          const spotDate = new Date(spot.availability.date);
-          return isSameDay(spotDate, date);
+          return spot.availability.date === checkDate;
         }
         
         // If no specific availability date, don't show the spot
@@ -218,9 +218,9 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
       }
       
       // For unavailable spots, only show on their specific booking date if available
+      // Use string comparison to avoid timezone issues
       if (spot.availability?.date) {
-        const spotDate = new Date(spot.availability.date);
-        return isSameDay(spotDate, date);
+        return spot.availability.date === checkDate;
       }
       return false;
     });
@@ -278,7 +278,8 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
       case "reserved":
         return "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900 dark:text-orange-200"
       default:
-        return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900 dark:text-gray-200"
+        // Regular available spots - light blue (sky) color
+        return "bg-sky-100 text-sky-800 border border-sky-200 dark:bg-sky-900/30 dark:text-sky-200 dark:border-sky-700"
     }
   }
 
