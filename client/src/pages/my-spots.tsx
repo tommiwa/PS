@@ -547,6 +547,21 @@ export default function MySpots() {
 
   const handleOpenCreateListing = (spot: DBParkingSpot) => {
     setSelectedSpotForListing(spot)
+    // Pre-populate form with spot's default price if available
+    setListingFormData(prev => ({
+      ...prev,
+      dailyRate: spot.defaultPrice || "",
+      // Reset other fields for new listing
+      listingType: "single",
+      singleDate: "",
+      periodStartDate: "",
+      periodEndDate: "",
+      recurringStartDate: "",
+      recurringEndDate: "",
+      daysOfWeek: [],
+      notes: "",
+      status: "active"
+    }))
     setShowCreateListingDialog(true)
   }
 
