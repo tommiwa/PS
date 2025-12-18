@@ -1,6 +1,6 @@
 -- ============================================
 -- BCI ParkShare Production Data Population Script
--- Generated: 2025-12-18T00:41:25.381Z
+-- Generated: 2025-12-18T00:51:29.244Z
 -- ============================================
 
 -- IMPORTANT: Review this script before running!
@@ -53,7 +53,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Jon Perry',
   'jon.perry@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'infrastructure' LIMIT 1),
   true,
   NOW()
@@ -61,8 +61,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -70,7 +70,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Adam Myles',
   'adam.myles@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'capital-markets-credit-investments' LIMIT 1),
   true,
   NOW()
@@ -78,8 +78,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -87,7 +87,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Debra Martin',
   'debra.martin@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'technology' LIMIT 1),
   true,
   NOW()
@@ -95,8 +95,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -104,7 +104,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Murray Duncan',
   'murray.duncan@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'finance' LIMIT 1),
   true,
   NOW()
@@ -112,8 +112,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -121,7 +121,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Sara Heck',
   'sara.heck@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'investment-operations' LIMIT 1),
   true,
   NOW()
@@ -129,8 +129,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -138,7 +138,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Jeff Coates',
   'jeff.coates@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'infrastructure-renewable-resources' LIMIT 1),
   true,
   NOW()
@@ -146,8 +146,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -155,7 +155,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Steven Henderson',
   'steven.henderson@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'investment-strategy-risk' LIMIT 1),
   true,
   NOW()
@@ -163,8 +163,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -172,7 +172,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Tony Payne',
   'tony.payne@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'technology' LIMIT 1),
   true,
   NOW()
@@ -180,8 +180,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -189,7 +189,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Lincoln Webb',
   'lincoln.webb@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'infrastructure' LIMIT 1),
   true,
   NOW()
@@ -197,8 +197,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -206,7 +206,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Jeremy Trickett',
   'jeremy.trickett@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'legal' LIMIT 1),
   true,
   NOW()
@@ -214,8 +214,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -223,7 +223,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Rechelle Effendy',
   'rechelle.effendy@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'finance' LIMIT 1),
   true,
   NOW()
@@ -231,8 +231,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -240,7 +240,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Norine Hale',
   'norine.hale@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'human-resources' LIMIT 1),
   true,
   NOW()
@@ -248,8 +248,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -257,7 +257,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Samir Ben Tekaya',
   'samir.tekaya@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'investment-strategy-risk' LIMIT 1),
   true,
   NOW()
@@ -265,8 +265,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -274,7 +274,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Mark Johnston',
   'mark.johnston@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'private-equity' LIMIT 1),
   true,
   NOW()
@@ -282,8 +282,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -291,7 +291,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Winston Lin',
   'winston.lin@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'finance' LIMIT 1),
   true,
   NOW()
@@ -299,8 +299,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -308,7 +308,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'David Dobell',
   'david.dobell@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'capital-markets-credit-investments' LIMIT 1),
   true,
   NOW()
@@ -316,8 +316,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -325,7 +325,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Ke Min',
   'ke.min@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'investment-strategy-risk' LIMIT 1),
   true,
   NOW()
@@ -333,8 +333,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -342,7 +342,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Rod Prat',
   'rod.prat@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'capital-markets-credit-investments' LIMIT 1),
   true,
   NOW()
@@ -350,8 +350,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -359,7 +359,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Jeff Morris',
   'jeff.morris@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'capital-markets-credit-investments' LIMIT 1),
   true,
   NOW()
@@ -367,8 +367,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -376,7 +376,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'David McGowan',
   'david.mcgowan@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'investment-strategy-risk' LIMIT 1),
   true,
   NOW()
@@ -384,8 +384,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -393,7 +393,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Daryl Thompson',
   'daryl.thompson@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'finance' LIMIT 1),
   true,
   NOW()
@@ -401,8 +401,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -410,7 +410,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Amandeep Hundal',
   'amandeep.hundal@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'capital-markets-credit-investments' LIMIT 1),
   true,
   NOW()
@@ -418,8 +418,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -427,7 +427,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Samir Dhrolia',
   'samir.dhrolia@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'capital-markets-credit-investments' LIMIT 1),
   true,
   NOW()
@@ -435,8 +435,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -444,7 +444,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Jennifer Hartfield',
   'jennifer.hartfield@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'corporate-operations' LIMIT 1),
   true,
   NOW()
@@ -452,8 +452,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -461,7 +461,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Jeff Antonik',
   'jeff.antonik@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'capital-markets-credit-investments' LIMIT 1),
   true,
   NOW()
@@ -469,8 +469,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -478,7 +478,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Denis Miron',
   'denis.miron@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'capital-markets-credit-investments' LIMIT 1),
   true,
   NOW()
@@ -486,8 +486,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -495,7 +495,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Lindsay Wakelin',
   'lindsay.wakelin@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'investment-operations' LIMIT 1),
   true,
   NOW()
@@ -503,8 +503,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -512,7 +512,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Himani Gambhir',
   'himani.gambhir@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'investment-strategy-risk' LIMIT 1),
   true,
   NOW()
@@ -520,8 +520,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -529,7 +529,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Jerry Divoky',
   'jerry.divoky@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'infrastructure' LIMIT 1),
   true,
   NOW()
@@ -537,8 +537,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -546,7 +546,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Chelsea Gagne',
   'chelsea.gagne@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'corporate-operations' LIMIT 1),
   true,
   NOW()
@@ -554,8 +554,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -563,7 +563,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'COO Parking Spot #2',
   'coo.#2@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'corporate-operations' LIMIT 1),
   true,
   NOW()
@@ -571,8 +571,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -580,7 +580,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Gordon Fyfe',
   'gordon.fyfe@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'office-of-the-ceo' LIMIT 1),
   true,
   NOW()
@@ -588,8 +588,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -597,7 +597,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Shauna Lukaitis',
   'shauna.lukaitis@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'corporate-operations' LIMIT 1),
   true,
   NOW()
@@ -605,8 +605,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -614,7 +614,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Daniel Garant',
   'daniel.garant@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'capital-markets-credit-investments' LIMIT 1),
   true,
   NOW()
@@ -622,8 +622,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -631,7 +631,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Umar Malik',
   'umar.malik@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'private-equity' LIMIT 1),
   true,
   NOW()
@@ -639,8 +639,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -648,7 +648,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Ramy Rayes',
   'ramy.rayes@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'investment-strategy-risk' LIMIT 1),
   true,
   NOW()
@@ -656,8 +656,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -665,7 +665,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Michel Drolet',
   'michel.drolet@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'credit-risk-analytics' LIMIT 1),
   true,
   NOW()
@@ -673,8 +673,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -682,7 +682,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Monique Brosseau',
   'monique.brosseau@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'investment-operations' LIMIT 1),
   true,
   NOW()
@@ -690,8 +690,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -699,7 +699,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Jessica Goddard',
   'jessica.goddard@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'finance' LIMIT 1),
   true,
   NOW()
@@ -707,8 +707,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -716,7 +716,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Andrew Morris',
   'andrew.morris@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'finance' LIMIT 1),
   true,
   NOW()
@@ -724,8 +724,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -733,7 +733,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Joel McCallum',
   'joel.mccallum@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'investment-operations' LIMIT 1),
   true,
   NOW()
@@ -741,8 +741,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -750,7 +750,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Kelly Chaplin',
   'kelly.chaplin@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'private-equity' LIMIT 1),
   true,
   NOW()
@@ -758,8 +758,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -767,7 +767,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Valentyn Shmygelskyy',
   'valentyn.shmygelskyy@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'private-equity' LIMIT 1),
   true,
   NOW()
@@ -775,8 +775,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -784,7 +784,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Ian Wanke',
   'ian.wanke@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'private-equity' LIMIT 1),
   true,
   NOW()
@@ -792,8 +792,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -801,7 +801,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Lindsay Holland',
   'lindsay.holland@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'legal-affairs-general-counsel' LIMIT 1),
   true,
   NOW()
@@ -809,8 +809,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -818,7 +818,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Brianna Wright',
   'brianna.wright@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'only-for-the-month-of-january-then-sarah-fung' LIMIT 1),
   true,
   NOW()
@@ -826,8 +826,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -835,7 +835,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'P2',
   'p2@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'general' LIMIT 1),
   true,
   NOW()
@@ -843,8 +843,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -852,7 +852,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Susan Golyak',
   'susan.golyak@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'capital-markets-credit-investments' LIMIT 1),
   true,
   NOW()
@@ -860,8 +860,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -869,7 +869,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Taylor MacDougal',
   'taylor.macdougal@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'capital-markets-credit-investments' LIMIT 1),
   true,
   NOW()
@@ -877,8 +877,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -886,7 +886,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Hind Breen',
   'hind.breen@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'legal-affairs-general-counsel' LIMIT 1),
   true,
   NOW()
@@ -894,8 +894,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -903,7 +903,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Jill O Connell',
   'jill.connell@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'human-resources' LIMIT 1),
   true,
   NOW()
@@ -911,8 +911,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -920,7 +920,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Bhupinder Dulku',
   'bhupinder.dulku@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'investment-strategy-risk' LIMIT 1),
   true,
   NOW()
@@ -928,8 +928,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -937,7 +937,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Evan Mitchell',
   'evan.mitchell@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'capital-markets-credit-investments' LIMIT 1),
   true,
   NOW()
@@ -945,8 +945,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -954,7 +954,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Lana Meyer',
   'lana.meyer@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'finance' LIMIT 1),
   true,
   NOW()
@@ -962,8 +962,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -971,7 +971,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Donna Mueller',
   'donna.mueller@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'finance' LIMIT 1),
   true,
   NOW()
@@ -979,8 +979,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -988,7 +988,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Bob Sangha',
   'bob.sangha@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'investment-operations' LIMIT 1),
   true,
   NOW()
@@ -996,8 +996,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1005,7 +1005,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Natalie Fairbrother',
   'natalie.fairbrother@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'finance' LIMIT 1),
   true,
   NOW()
@@ -1013,8 +1013,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1022,7 +1022,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Michelle Loveless',
   'michelle.loveless@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'human-resources' LIMIT 1),
   true,
   NOW()
@@ -1030,8 +1030,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1039,7 +1039,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Matt Murray',
   'matt.murray@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'investment-strategy-risk' LIMIT 1),
   true,
   NOW()
@@ -1047,8 +1047,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1056,7 +1056,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Emily Lapinski',
   'emily.lapinski@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'general' LIMIT 1),
   true,
   NOW()
@@ -1064,8 +1064,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1073,7 +1073,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Scott Bulmer',
   'scott.bulmer@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'technology' LIMIT 1),
   true,
   NOW()
@@ -1081,8 +1081,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1090,7 +1090,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Maren Rix',
   'maren.rix@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'finance' LIMIT 1),
   true,
   NOW()
@@ -1098,8 +1098,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1107,7 +1107,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Eric Wan',
   'eric.wan@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'capital-markets-credit-investments' LIMIT 1),
   true,
   NOW()
@@ -1115,8 +1115,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1124,7 +1124,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Michael Cavallin',
   'michael.cavallin@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'technology' LIMIT 1),
   true,
   NOW()
@@ -1132,8 +1132,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1141,7 +1141,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Maria Hla-Tin',
   'maria.hla-tin@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'office-of-the-ceo' LIMIT 1),
   true,
   NOW()
@@ -1149,8 +1149,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1158,7 +1158,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Andrea Zhang',
   'andrea.zhang@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'capital-markets-credit-investments' LIMIT 1),
   true,
   NOW()
@@ -1166,8 +1166,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1175,7 +1175,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Elizabeth Slawinska',
   'elizabeth.slawinska@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'capital-markets-credit-investments' LIMIT 1),
   true,
   NOW()
@@ -1183,8 +1183,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1192,7 +1192,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Devin Blackmore',
   'devin.blackmore@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'finance' LIMIT 1),
   true,
   NOW()
@@ -1200,8 +1200,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1209,7 +1209,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Talya Christbason',
   'talya.christbason@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'technology' LIMIT 1),
   true,
   NOW()
@@ -1217,8 +1217,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1226,7 +1226,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Hardeep Bamara',
   'hardeep.bamara@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'capital-markets-credit-investments' LIMIT 1),
   true,
   NOW()
@@ -1234,8 +1234,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1243,7 +1243,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Caglar Somek',
   'caglar.somek@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'capital-markets-credit-investments' LIMIT 1),
   true,
   NOW()
@@ -1251,8 +1251,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1260,7 +1260,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Michael Mercier',
   'michael.mercier@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'legal' LIMIT 1),
   true,
   NOW()
@@ -1268,8 +1268,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1277,7 +1277,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Johann Kuntze',
   'johann.kuntze@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'investment-strategy-risk' LIMIT 1),
   true,
   NOW()
@@ -1285,8 +1285,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1294,7 +1294,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Saina Singera',
   'saina.singera@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'finance' LIMIT 1),
   true,
   NOW()
@@ -1302,8 +1302,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1311,7 +1311,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Amy Chang',
   'amy.chang@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'capital-markets-credit-investments' LIMIT 1),
   true,
   NOW()
@@ -1319,8 +1319,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1328,7 +1328,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Sean Mcllmoyle',
   'sean.mcllmoyle@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'finance' LIMIT 1),
   true,
   NOW()
@@ -1336,8 +1336,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1345,7 +1345,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Cameron Elford',
   'cameron.elford@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'technology' LIMIT 1),
   true,
   NOW()
@@ -1353,8 +1353,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1362,7 +1362,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Tannis Harper',
   'tannis.harper@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'human-resources' LIMIT 1),
   true,
   NOW()
@@ -1370,8 +1370,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1379,7 +1379,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Megan Scholz',
   'megan.scholz@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'compliance' LIMIT 1),
   true,
   NOW()
@@ -1387,8 +1387,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1396,7 +1396,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'WPS',
   'wps@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'general' LIMIT 1),
   true,
   NOW()
@@ -1404,8 +1404,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1413,7 +1413,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Matthew Kaeshammer',
   'matthew.kaeshammer@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'finance' LIMIT 1),
   true,
   NOW()
@@ -1421,8 +1421,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1430,7 +1430,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Teeravit Chintawongvanich',
   'teeravit.chintawongvanich@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'credit-risk-analytics' LIMIT 1),
   true,
   NOW()
@@ -1438,8 +1438,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1447,7 +1447,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Armon Alamolhoda',
   'armon.alamolhoda@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'capital-markets-credit-investments' LIMIT 1),
   true,
   NOW()
@@ -1455,8 +1455,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1464,7 +1464,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Baldeep Waraich',
   'baldeep.waraich@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'technology' LIMIT 1),
   true,
   NOW()
@@ -1472,8 +1472,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1481,7 +1481,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Jenny Gan',
   'jenny.gan@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'finance' LIMIT 1),
   true,
   NOW()
@@ -1489,8 +1489,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1498,7 +1498,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Steve Fedberg',
   'steve.fedberg@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'technology' LIMIT 1),
   true,
   NOW()
@@ -1506,8 +1506,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1515,7 +1515,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'John Lee',
   'john.lee@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'private-equity' LIMIT 1),
   true,
   NOW()
@@ -1523,8 +1523,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1532,7 +1532,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Paul Hodson',
   'paul.hodson@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'technology' LIMIT 1),
   true,
   NOW()
@@ -1540,8 +1540,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1549,7 +1549,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Gerard Daniel',
   'gerard.daniel@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'corporate-investment-risk' LIMIT 1),
   true,
   NOW()
@@ -1557,8 +1557,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1566,7 +1566,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Chris Reid',
   'chris.reid@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'investment-strategy-risk' LIMIT 1),
   true,
   NOW()
@@ -1574,8 +1574,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1583,7 +1583,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Lauren Fradgley',
   'lauren.fradgley@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'capital-markets-credit-investments' LIMIT 1),
   true,
   NOW()
@@ -1591,8 +1591,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1600,7 +1600,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Lisa Whish',
   'lisa.whish@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'legal' LIMIT 1),
   true,
   NOW()
@@ -1608,8 +1608,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1617,7 +1617,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Mihail Garchev',
   'mihail.garchev@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'investment-strategy-risk' LIMIT 1),
   true,
   NOW()
@@ -1625,8 +1625,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1634,7 +1634,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Karen Ward',
   'karen.ward@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'human-resources' LIMIT 1),
   true,
   NOW()
@@ -1642,8 +1642,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1651,7 +1651,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Sarah Dorrington',
   'sarah.dorrington@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'capital-markets-credit-investments' LIMIT 1),
   true,
   NOW()
@@ -1659,8 +1659,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1668,7 +1668,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Allison Knowles',
   'allison.knowles@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'investment-operations' LIMIT 1),
   true,
   NOW()
@@ -1676,8 +1676,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1685,7 +1685,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Asad Rawra',
   'asad.rawra@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'private-equity' LIMIT 1),
   true,
   NOW()
@@ -1693,8 +1693,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1702,7 +1702,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Maggie Sewagudde-Peden',
   'maggie.sewagudde-peden@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'investment-operations' LIMIT 1),
   true,
   NOW()
@@ -1710,8 +1710,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1719,7 +1719,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Sarah Wilde Moreau',
   'sarah.moreau@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'private-equity' LIMIT 1),
   true,
   NOW()
@@ -1727,8 +1727,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1736,7 +1736,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'David Antonik',
   'david.antonik@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'credit-risk-analytics' LIMIT 1),
   true,
   NOW()
@@ -1744,8 +1744,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1753,7 +1753,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Rob Blazey',
   'rob.blazey@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'investment-strategy-risk' LIMIT 1),
   true,
   NOW()
@@ -1761,8 +1761,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1770,7 +1770,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Sarah Cunningham',
   'sarah.cunningham@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'legal' LIMIT 1),
   true,
   NOW()
@@ -1778,8 +1778,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1787,7 +1787,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Jesus Alva',
   'jesus.alva@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'investment-operations' LIMIT 1),
   true,
   NOW()
@@ -1795,8 +1795,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1804,7 +1804,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Cathy Lin',
   'cathy.lin@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'legal' LIMIT 1),
   true,
   NOW()
@@ -1812,8 +1812,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1821,7 +1821,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Allan Ashford',
   'allan.ashford@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'legal' LIMIT 1),
   true,
   NOW()
@@ -1829,8 +1829,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1838,7 +1838,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Wendy Ramlochan',
   'wendy.ramlochan@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'investment-strategy-risk' LIMIT 1),
   true,
   NOW()
@@ -1846,8 +1846,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1855,7 +1855,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Aaron Leskiw',
   'aaron.leskiw@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'technology' LIMIT 1),
   true,
   NOW()
@@ -1863,8 +1863,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1872,7 +1872,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Hazlitt Gill',
   'hazlitt.gill@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'capital-markets-credit-investments' LIMIT 1),
   true,
   NOW()
@@ -1880,8 +1880,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1889,7 +1889,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Miriam Abdelli',
   'miriam.abdelli@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'investment-strategy-risk' LIMIT 1),
   true,
   NOW()
@@ -1897,8 +1897,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1906,7 +1906,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Gina Dennison',
   'gina.dennison@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'investment-operations' LIMIT 1),
   true,
   NOW()
@@ -1914,8 +1914,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1923,7 +1923,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Rachel Vaughan',
   'rachel.vaughan@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'investment-strategy-risk' LIMIT 1),
   true,
   NOW()
@@ -1931,8 +1931,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1940,7 +1940,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Daisy Klaibert',
   'daisy.klaibert@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'capital-markets-credit-investments' LIMIT 1),
   true,
   NOW()
@@ -1948,8 +1948,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1957,7 +1957,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Alan Cooper',
   'alan.cooper@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'capital-markets-credit-investments' LIMIT 1),
   true,
   NOW()
@@ -1965,8 +1965,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 
@@ -1974,7 +1974,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   'Tyler Folliott',
   'tyler.folliott@bci.ca',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = 'capital-markets-credit-investments' LIMIT 1),
   true,
   NOW()
@@ -1982,8 +1982,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);
 

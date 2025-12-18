@@ -176,7 +176,7 @@ INSERT INTO users (name, email, roles, department, is_active, created_at)
 VALUES (
   '${safeName}',
   '${user.email}',
-  ARRAY['owner', 'renter']::text[],
+  '{"owner","renter"}',
   (SELECT id FROM departments WHERE slug = '${deptSlug}' LIMIT 1),
   true,
   NOW()
@@ -184,8 +184,8 @@ VALUES (
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   roles = CASE 
-    WHEN NOT ('owner' = ANY(users.roles)) THEN array_append(users.roles, 'owner')
-    ELSE users.roles
+    WHEN 'owner' = ANY(users.roles) THEN users.roles
+    ELSE users.roles || '{"owner"}'
   END,
   department = COALESCE(EXCLUDED.department, users.department);`);
   });
