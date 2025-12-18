@@ -45,6 +45,18 @@ function generateEmail(name: string): string {
   return `${parts[0]}@bci.ca`;
 }
 
+// Helper to split name into first and last
+function splitName(fullName: string): { firstName: string; lastName: string } {
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return {
+      firstName: parts[0],
+      lastName: parts.slice(1).join(' ')
+    };
+  }
+  return { firstName: fullName.trim(), lastName: '' };
+}
+
 // Helper to normalize department names
 function normalizeDepartment(dept: string | undefined): string {
   if (!dept) return 'General';
@@ -94,13 +106,15 @@ const departments = [...new Set(
 )].sort();
 
 // Build users list (only those with names)
-const usersMap = new Map<string, { name: string; email: string; department: string }>();
+const usersMap = new Map<string, { firstName: string; lastName: string; email: string; department: string }>();
 data.forEach(row => {
   const name = row['FIRST NAME LAST NAME']?.trim();
   if (name) {
     const email = generateEmail(name);
+    const { firstName, lastName } = splitName(name);
     usersMap.set(email, {
-      name,
+      firstName,
+      lastName,
       email,
       department: normalizeDepartment(row['DEPARTMENT'])
     });
@@ -150,17 +164,17 @@ ON CONFLICT (slug) DO UPDATE SET
   is_active = EXCLUDED.is_active;
 `);
   
-  // Departments
+  // Departments - using name only (no slug column)
   lines.push('-- ============================================');
   lines.push('-- 2. DEPARTMENTS');
   lines.push('-- ============================================');
   departments.forEach(dept => {
-    const slug = dept.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-    lines.push(`INSERT INTO departments (name, slug, is_active) VALUES ('${dept.replace(/'/g, "''")}', '${slug}', true) ON CONFLICT (slug) DO NOTHING;`);
+    const safeDept = dept.replace(/'/g, "''");
+    lines.push(`INSERT INTO departments (name) VALUES ('${safeDept}') ON CONFLICT (name) DO NOTHING;`);
   });
   lines.push('');
   
-  // Users
+  // Users - using first_name, last_name, department_id
   lines.push('-- ============================================');
   lines.push('-- 3. USERS');
   lines.push('-- ============================================');
@@ -169,29 +183,33 @@ ON CONFLICT (slug) DO UPDATE SET
   lines.push('');
   
   users.forEach(user => {
-    const safeName = user.name.replace(/'/g, "''");
-    const deptSlug = user.department.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const safeFirstName = user.firstName.replace(/'/g, "''");
+    const safeLastName = user.lastName.replace(/'/g, "''");
+    const safeDept = user.department.replace(/'/g, "''");
     lines.push(`
-INSERT INTO users (name, email, roles, department, is_active, created_at)
+INSERT INTO users (id, email, first_name, last_name, roles, department_id, status, created_at)
 VALUES (
-  '${safeName}',
+  gen_random_uuid(),
   '${user.email}',
-  '{"owner","renter"}',
-  (SELECT id FROM departments WHERE slug = '${deptSlug}' LIMIT 1),
-  true,
+  '${safeFirstName}',
+  '${safeLastName}',
+  ARRAY['owner', 'renter']::text[],
+  (SELECT id FROM departments WHERE name = '${safeDept}' LIMIT 1),
+  'active',
   NOW()
 )
 ON CONFLICT (email) DO UPDATE SET
-  name = EXCLUDED.name,
+  first_name = COALESCE(users.first_name, EXCLUDED.first_name),
+  last_name = COALESCE(users.last_name, EXCLUDED.last_name),
   roles = CASE 
     WHEN 'owner' = ANY(users.roles) THEN users.roles
-    ELSE users.roles || '{"owner"}'
+    ELSE array_append(users.roles, 'owner')
   END,
-  department = COALESCE(EXCLUDED.department, users.department);`);
+  department_id = COALESCE(users.department_id, EXCLUDED.department_id);`);
   });
   lines.push('');
   
-  // Parking Spots
+  // Parking Spots - using owner_id instead of assigned_user_id
   lines.push('-- ============================================');
   lines.push('-- 4. PARKING SPOTS');
   lines.push('-- ============================================');
@@ -203,15 +221,17 @@ ON CONFLICT (email) DO UPDATE SET
     const desc = spot.description ? `'${spot.description.replace(/'/g, "''")}'` : 'NULL';
     lines.push(`
 INSERT INTO parking_spots (
+  id,
   spot_number,
   seat_number,
   location_id,
   spot_type_id,
   is_active,
   is_bci_managed,
-  notes
+  description
 )
 VALUES (
+  gen_random_uuid(),
   '${spot.spotCode}',
   '${spot.stallNumber}',
   1,
@@ -223,21 +243,19 @@ VALUES (
 ON CONFLICT (spot_number) DO UPDATE SET
   seat_number = EXCLUDED.seat_number,
   spot_type_id = EXCLUDED.spot_type_id,
-  notes = EXCLUDED.notes;`);
+  description = EXCLUDED.description;`);
   });
   lines.push('');
   
-  // Spot Assignments
+  // Spot Assignments - using owner_id
   lines.push('-- ============================================');
-  lines.push('-- 5. SPOT ASSIGNMENTS');
+  lines.push('-- 5. SPOT ASSIGNMENTS (owner_id)');
   lines.push('-- ============================================');
   
   spots.filter(s => s.assignedUserEmail).forEach(spot => {
     lines.push(`
 UPDATE parking_spots
-SET 
-  assigned_user_id = (SELECT id FROM users WHERE email = '${spot.assignedUserEmail}' LIMIT 1),
-  is_available = false
+SET owner_id = (SELECT id FROM users WHERE email = '${spot.assignedUserEmail}' LIMIT 1)
 WHERE spot_number = '${spot.spotCode}'
   AND (SELECT id FROM users WHERE email = '${spot.assignedUserEmail}' LIMIT 1) IS NOT NULL;`);
   });
@@ -257,7 +275,7 @@ WHERE spot_number = '${spot.spotCode}'
   lines.push('-- Verify the data:');
   lines.push('-- SELECT COUNT(*) FROM users;');
   lines.push('-- SELECT COUNT(*) FROM parking_spots;');
-  lines.push('-- SELECT COUNT(*) FROM parking_spots WHERE assigned_user_id IS NOT NULL;');
+  lines.push('-- SELECT COUNT(*) FROM parking_spots WHERE owner_id IS NOT NULL;');
   
   return lines.join('\n');
 }
@@ -325,7 +343,7 @@ async function main() {
       // Verify counts
       const userCount = await dbClient('SELECT COUNT(*) FROM users');
       const spotCount = await dbClient('SELECT COUNT(*) FROM parking_spots');
-      const assignedCount = await dbClient('SELECT COUNT(*) FROM parking_spots WHERE assigned_user_id IS NOT NULL');
+      const assignedCount = await dbClient('SELECT COUNT(*) FROM parking_spots WHERE owner_id IS NOT NULL');
       
       console.log(`\nVerification:`);
       console.log(`  - Users in DB: ${userCount[0].count}`);
