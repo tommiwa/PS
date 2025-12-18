@@ -72,6 +72,25 @@ export async function formatDateInTimezone(
     return formatInTimeZone(`${date}T00:00:00`, timezone, formatStr);
   }
   
+  // Handle Date objects from database DATE columns
+  // These are typically midnight UTC and need special handling to avoid off-by-one errors
+  if (date instanceof Date) {
+    // Extract UTC date components to get the actual date stored in the database
+    // This avoids timezone conversion issues where midnight UTC becomes previous day in PST
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    
+    // If format is just YYYY-MM-DD, return directly without further conversion
+    if (formatStr === 'yyyy-MM-dd') {
+      return dateStr;
+    }
+    
+    // For other formats, use the date string with timezone formatting
+    return formatInTimeZone(`${dateStr}T12:00:00`, timezone, formatStr);
+  }
+  
   const dateObj = typeof date === 'string' ? parseISO(date) : date;
   return formatInTimeZone(dateObj, timezone, formatStr);
 }

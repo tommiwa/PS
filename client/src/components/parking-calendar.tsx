@@ -262,8 +262,8 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
       // Owner's listings - warm gold/amber color
       return "bg-amber-50 text-amber-900 border-amber-300 dark:bg-amber-900/30 dark:text-amber-100 dark:border-amber-700"
     } else {
-      // Others' listings - neutral gray
-      return "bg-gray-50 text-gray-900 border-gray-200 dark:bg-gray-800/50 dark:text-gray-100 dark:border-gray-600"
+      // Others' available listings - light blue color
+      return "bg-sky-50 text-sky-900 border-sky-200 dark:bg-sky-900/30 dark:text-sky-100 dark:border-sky-700"
     }
   }
 
