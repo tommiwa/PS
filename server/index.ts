@@ -105,191 +105,176 @@ app.use((req, res, next) => {
       const activeTerms = await storage.getActiveTermsVersion();
       
       if (!activeTerms) {
-        const initialTermsContent = `# BCI ParkShare Platform - Terms and Conditions of Use
+        const initialTermsContent = `# BCI ParkShare
 
-**Effective Date: October 7, 2025**
+## Terms and Conditions
 
-These Terms and Conditions ("Terms") govern your use of the BCI ParkShare platform ("Platform"). By accessing or using this Platform, you acknowledge that you have read, understood, and agree to be bound by these Terms.
+**Effective Date: December 16, 2024**
 
----
+These Terms and Conditions ("Terms") govern your use of BCI's ParkShare application (the "App"). In these Terms, "we," "us," and "our" refer to BCI. "You" and "your" refer to the User accessing or using the App. By accessing or using the App, you agree to be bound by these Terms.
 
-## 1. Platform Description and Purpose
-
-The BCI ParkShare Platform is an internal corporate facility management tool designed to facilitate peer-to-peer parking spot sharing among BCI employees. The Platform serves solely as a connection mechanism between parking spot owners and prospective renters.
-
-**Key Platform Characteristics:**
-- **Facilitator Role**: BCI provides the technological infrastructure to enable employee-to-employee parking arrangements
-- **Non-Intermediary Status**: BCI does not participate in, manage, or oversee individual parking transactions
-- **Employee-Exclusive Access**: Platform usage is restricted to current BCI employees with valid credentials
+Please read our Privacy Notice, which describes how we collect and use personal information.
 
 ---
 
-## 2. Financial Transactions and Payment Disclaimer
+## Definitions
 
-### 2.1 Direct Payment Arrangements
-All financial transactions, including payment terms, methods, amounts, and timing, are established and executed directly between the parking spot owner and the renter. BCI does not:
-- Process, facilitate, or hold any payments
-- Establish or recommend pricing structures
-- Mediate payment disputes or disagreements
-- Guarantee payment completion or fulfillment
-
-### 2.2 Financial Liability Limitation
-BCI expressly disclaims all liability and responsibility for any financial matters arising from parking spot arrangements, including but not limited to payment defaults, refund disputes, or pricing disagreements.
+- **"App"** means BCI's ParkShare application.
+- **"BCI"** means British Columbia Investment Management Corporation.
+- **"Tenant"** means a User who lists their parking stall through the App.
+- **"Subtenant"** means a User who books a parking stall through the App.
+- **"Sublease Agreement"** means the agreement between a Tenant and BCI governing the terms and conditions under which the Tenant is permitted to sublease their parking stall.
+- **"User"** means any BCI personnel who access or use the App, whether as a Tenant or Subtenant.
 
 ---
 
-## 3. Parking Spot Availability and Access
+## Access and Use
 
-### 3.1 Availability Management
-Parking spot availability is managed exclusively by individual spot owners. BCI is not responsible for:
-- Spot availability accuracy or real-time updates
-- Booking cancellations or modifications
-- Schedule conflicts or double-bookings
-- Availability misrepresentations
+Subject to and conditioned on your compliance with these Terms, BCI grants you the right to access and use the App solely for the purpose of listing or booking parking stalls as contemplated herein.
 
-### 3.2 Access Control and Coordination
-**Current Access Infrastructure:**
-- Physical access to parking facilities utilizes existing BCI employee access card systems
-- The Platform does not integrate with or control automated access systems
-- Users must coordinate physical access arrangements independently
-- BCI does not manage, monitor, or guarantee parking facility access through this Platform
+For Tenants, use of the App is also subject to the terms of your Sublease Agreement. In the event of any conflict between these Terms and your Sublease Agreement, your Sublease Agreement shall prevail. Nothing in these Terms modifies, amends, or supersedes any obligation or right under your Sublease Agreement.
 
 ---
 
-## 4. Liability Limitations and Risk Acknowledgment
+## Listing Parking Stalls
 
-### 4.1 Comprehensive Liability Disclaimer
-BCI, its officers, directors, employees, and affiliated entities shall not be held liable for any losses, damages, claims, or expenses arising from Platform use, including but not limited to:
-- Vehicle damage, theft, vandalism, or towing
-- Personal injury or property damage
-- Financial losses or disputes
-- Access issues or facility-related incidents
-- Data breaches or privacy concerns
+Tenants may list their parking stall for temporary use by other BCI personnel through the App, subject to the following conditions:
 
-### 4.2 User Risk Assumption
-By using this Platform, you expressly acknowledge and accept that:
-- All parking arrangements are undertaken at your sole risk
-- You are responsible for your personal security and property protection
-- BCI provides no warranties, guarantees, or assurances regarding Platform outcomes
-- You waive any claims against BCI related to parking arrangements facilitated through this Platform
+- The Tenant may only list the parking stall assigned to them under their Sublease Agreement.
+- The Tenant may not list their parking stall to the same Subtenant for more than six (6) consecutive months.
+- The Tenant remains fully responsible for all obligations under their Sublease Agreement, including any damage or non-compliance caused by Subtenants.
 
 ---
 
-## 5. User Responsibilities and Conduct Standards
+## Pricing Restrictions
 
-### 5.1 Spot Owner Obligations
-As a parking spot owner, you agree to:
-- Maintain accurate and current spot availability information
-- Provide clear, complete location and access instructions
-- Honor confirmed bookings or provide timely cancellation notice
-- Communicate professionally and respond promptly to inquiries
-- Comply with all applicable BCI policies and facility regulations
-
-### 5.2 Renter Obligations
-As a parking spot renter, you agree to:
-- Verify all arrangement details directly with the spot owner
-- Use parking facilities respectfully and in accordance with agreed terms
-- Leave parking spots in their original condition
-- Adhere to all posted regulations and time restrictions
-- Report any issues or concerns promptly
-
-### 5.3 Universal User Standards
-All Platform users must:
-- Provide accurate, current contact and account information
-- Engage in professional, courteous communication
-- Resolve disputes directly with the other party through good-faith negotiation
-- Comply with all BCI corporate policies, facility rules, and applicable laws
-- Refrain from fraudulent, abusive, or unauthorized Platform usage
+The price charged for a parking stall listing must not exceed the pro-rated amount that the Tenant pays for the stall under their Sublease Agreement.
 
 ---
 
-## 6. Platform Access and Account Management
+## Booking and Cancellations
 
-### 6.1 Eligibility Requirements
-Platform access is restricted to current BCI employees with active employment status and valid corporate credentials.
+Subtenants may book available parking stalls through the App subject to availability. Bookings are made on a daily basis and may cover one or more consecutive days. Each booked day entitles the Subtenant to use the parking stall until 11:59 p.m. on that day.
 
-### 6.2 Account Integrity
-Users must:
-- Maintain account information accuracy and currency
-- Safeguard login credentials and prevent unauthorized access
-- Utilize the Platform in good faith and for legitimate purposes only
-- Immediately notify BCI of suspected security breaches
+Both Tenants and Subtenants must provide a minimum of twenty-four (24) hours' notice for any cancellation.
 
-### 6.3 Suspension and Termination Rights
-BCI reserves the right to suspend or terminate user accounts at its sole discretion, including but not limited to cases involving:
-- Terms violations or policy breaches
-- Fraudulent or abusive conduct
-- Security concerns or unauthorized access
-- Employment termination or status changes
+BCI reserves the right to cancel any booking at its sole discretion.
 
 ---
 
-## 7. Modifications and Platform Continuity
+## Payment
 
-### 7.1 Terms Amendments
-BCI reserves the right to modify, update, or revise these Terms at any time without prior notice. Material changes will be communicated through appropriate channels. Continued Platform use following Terms modifications constitutes acceptance of the updated Terms.
+BCI does not process or guarantee any payments between Users. All payment arrangements between Tenants and Subtenants are made outside the App and are the sole responsibility of the parties involved.
 
-### 7.2 Platform Availability
-BCI may, at its sole discretion:
-- Suspend, discontinue, or terminate the Platform without notice or liability
-- Modify Platform features, functionality, or access parameters
-- Implement maintenance periods or service interruptions
-- Alter operational procedures or technical requirements
+Users must settle all payments within thirty (30) days of the booking date. Users may not make bookings through the App until all outstanding payments are settled.
+
+Users are responsible for resolving any payment disputes directly with one another.
 
 ---
 
-## 8. Dispute Resolution
+## User Conduct and Record-Keeping
 
-All disputes arising from parking arrangements must be resolved directly between the involved parties. BCI:
-- Does not mediate, arbitrate, or adjudicate user disputes
-- Provides no dispute resolution services or mechanisms
-- Bears no responsibility for conflict outcomes or resolutions
-- Recommends professional legal counsel for unresolved disputes
+Users are responsible for maintaining their own records of all bookings, cancellations, and payments made through or in connection with the App.
 
 ---
 
-## 9. Data Privacy and Information Security
+## Liability and Indemnification
 
-User data collection, processing, and protection are governed by BCI's Corporate Privacy Policy and Information Security Standards. By using this Platform, you acknowledge and consent to data handling practices as outlined in applicable corporate policies.
+BCI provides the App on an "as is" basis and makes no warranties, express or implied, regarding its availability, accuracy, or fitness for any particular purpose.
 
----
+BCI is not responsible or liable for any injury, death, property damage, theft, disappearance, or any other loss occurring in, on, or about the parking facility in connection with use of the App.
 
-## 10. Governing Law and Jurisdiction
-
-These Terms shall be governed by and construed in accordance with applicable federal and state laws. Any legal actions or proceedings arising from these Terms or Platform use shall be subject to the exclusive jurisdiction of courts in BCI's principal place of business.
+Users are responsible for, and shall reimburse BCI for, any claims, damages, or liabilities arising from their use of the App or any parking stall booked or listed through the App, including any damage to property owned, leased, or managed by BCI. Any disputes between Tenants and Subtenants regarding damage or liability are solely between those parties, and BCI has no obligation to mediate, investigate, or resolve such disputes.
 
 ---
 
-## 11. Severability and Entire Agreement
+## Suspension and Termination
 
-If any provision of these Terms is found to be unenforceable or invalid, such provision shall be limited or eliminated to the minimum extent necessary, and the remaining provisions shall remain in full force and effect. These Terms constitute the entire agreement between users and BCI regarding Platform use and supersede all prior agreements or understandings.
+BCI may suspend or terminate a User's access to the App at any time, with or without cause, including for:
 
----
+- violation of these Terms;
+- violation of the User's Sublease Agreement;
+- misuse of the App; or
+- any conduct that BCI determines, in its sole discretion, is detrimental to other Users or BCI.
 
-## 12. Acknowledgment and Acceptance
-
-By using the BCI ParkShare Platform, you acknowledge that:
-
-✓ You have read and understood these Terms in their entirety
-✓ You accept all risks associated with peer-to-peer parking arrangements
-✓ You agree to resolve all matters directly with other Platform users
-✓ You release BCI from all liability related to Platform use and parking arrangements
-✓ You commit to conducting all activities in accordance with these Terms and applicable policies
-✓ You understand that BCI acts solely as a platform provider without involvement in individual transactions
+Termination of a User's Sublease Agreement will automatically terminate their access to the App as a Tenant.
 
 ---
 
-## Contact Information
+## Amendments
 
-For technical support, account issues, or Terms-related inquiries, please contact:
-
-**BCI WorkPlace Services**  
-Email: workplaceservices@bci.ca  
-Phone: (778) 410-7100
+BCI may amend these Terms at any time by posting updated Terms through the App. Continued use of the App following any amendment constitutes acceptance of the amended Terms.
 
 ---
 
-*Terms Version 1.0 | Last Updated: October 7, 2025 | © 2025 BCI Corporation*`;
+## General Provisions
+
+These Terms are governed by the laws of British Columbia and the federal laws of Canada applicable therein.
+
+If any provision of these Terms is found to be invalid or unenforceable, the remaining provisions shall continue in full force and effect.
+
+BCI's failure to enforce any right or provision of these Terms shall not constitute a waiver of such right or provision.
+
+---
+
+## Contact
+
+Questions regarding these Terms or the App should be directed to workplaceservices@bci.ca.
+
+---
+
+**By using the App, you acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions.**
+
+---
+
+# ParkShare Privacy Notice
+
+**Last Updated: December 16, 2024**
+
+This Privacy Notice explains how we collect, use, disclose and protect your personal information when you use BCI's ParkShare application (the "App"). In this Privacy Notice, "we," "us," and "our" refer to BCI. "You" and "your" refer to the individual using the App.
+
+By using the App, you acknowledge and agree to the collection, use, and disclosure of your personal information as described in this ParkShare Privacy Notice and in BCI's Privacy Notice - Canada. All personal information will be collected, used and disclosed in accordance with the Freedom of Information and Protection of Privacy Act (British Columbia) ("FIPPA").
+
+---
+
+## Information We Collect
+
+BCI collects the following personal information through the App:
+
+- **Identification information**, including your name, work email, department, and vehicle details such as make and colour
+- **Booking and listing information**, including dates, times, parking stall numbers, and the identity of other users involved in each transaction
+- **Cancellation records**, including dates, times, and whether cancellations were made within the required notice period
+- **Payment dispute information**, including complaints received or made and their resolution status
+- **App usage information**, including login timestamps and activity logs
+
+For clarity, if you make a payment via Interac, the individual whose stall you have booked may see your Interac email ID, but this information is not collected or visible to BCI.
+
+---
+
+## How We Use Your Information
+
+BCI collects this personal information for the following purposes:
+
+- to administer and operate the App, including facilitating bookings between users
+- to investigate and enforce breaches of these Terms
+- to improve the App and related services
+- for any other purpose specified in BCI's Privacy Notice – Canada
+
+---
+
+## Disclosure of Information
+
+BCI will use and disclose your personal information only for the purposes described in this ParkShare Privacy Notice, for purposes consistent with those purposes, or as otherwise permitted or required under FIPPA. Your personal information may be disclosed to other users to the extent necessary to facilitate bookings (for example, when you book a stall, the individual whose stall you have booked will see your name).
+
+---
+
+## Contact
+
+If you have questions about the collection of your personal information through the App, please refer to BCI's Privacy Notice – Canada or contact BCI's Privacy Officer at privacy@bci.ca.
+
+---
+
+*Terms Version 2.0 | Last Updated: December 16, 2024 | © 2024 BCI Corporation*`;
 
         await storage.createTermsVersion({
           version: 1,
