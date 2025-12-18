@@ -1056,22 +1056,35 @@ export const generateParkingReceiptPDF = (receipt: ReceiptData, filename?: strin
   
   let y = 15
   
-  // === HEADER: Car icon box + Title ===
-  // Draw dashed rectangle for car icon
+  // === HEADER: ParkShare Logo + Title ===
+  // Draw dashed rectangle for logo
   doc.setDrawColor(darkGray)
   doc.setLineDashPattern([2, 2], 0)
   doc.setLineWidth(0.5)
   doc.rect(15, y, 30, 20)
   
-  // Draw simple car icon (top view)
+  // Draw ParkShare logo (car with parking shelter/roof)
   doc.setFillColor(darkGray)
-  // Car body
-  doc.roundedRect(22, y + 5, 16, 10, 2, 2, 'F')
+  doc.setLineDashPattern([], 0)
+  
+  // Shelter/roof structure (like a carport)
+  doc.setLineWidth(1.5)
+  doc.setDrawColor(darkGray)
+  // Roof line
+  doc.line(20, y + 5, 40, y + 5)
+  // Support pillars
+  doc.line(22, y + 5, 22, y + 8)
+  doc.line(38, y + 5, 38, y + 8)
+  
+  // Car body (simplified sedan shape)
+  doc.setFillColor(darkGray)
+  // Main body
+  doc.roundedRect(23, y + 11, 14, 6, 1, 1, 'F')
+  // Cabin/roof
+  doc.roundedRect(26, y + 8, 8, 4, 1, 1, 'F')
   // Wheels
-  doc.rect(20, y + 6, 3, 3, 'F')
-  doc.rect(37, y + 6, 3, 3, 'F')
-  doc.rect(20, y + 11, 3, 3, 'F')
-  doc.rect(37, y + 11, 3, 3, 'F')
+  doc.circle(26, y + 17, 2, 'F')
+  doc.circle(34, y + 17, 2, 'F')
   
   // Title
   doc.setLineDashPattern([], 0)
