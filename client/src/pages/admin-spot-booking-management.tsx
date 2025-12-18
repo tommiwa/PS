@@ -322,9 +322,6 @@ export default function AdminSpotBookingManagement() {
       case "past":
         queryClient.invalidateQueries({ queryKey: ["/api/admin/past-bookings"] })
         break
-      case "activity":
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-activity", scope] })
-        break
     }
   }, [activeTab, scope])
 
@@ -1454,7 +1451,7 @@ export default function AdminSpotBookingManagement() {
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="availability" data-testid="tab-booking-availability" className="gap-2">
             <CalendarCheck className="h-4 w-4 !text-green-600" />
             Booking Availability
@@ -1470,10 +1467,6 @@ export default function AdminSpotBookingManagement() {
           <TabsTrigger value="past" data-testid="tab-past-bookings" className="gap-2">
             <Calendar className="h-4 w-4 !text-slate-600" />
             Past Bookings
-          </TabsTrigger>
-          <TabsTrigger value="activity" data-testid="tab-recent-activity" className="gap-2">
-            <Activity className="h-4 w-4 !text-purple-600" />
-            Recent Activity
           </TabsTrigger>
         </TabsList>
 
@@ -2417,194 +2410,6 @@ export default function AdminSpotBookingManagement() {
             </CardContent>
           </Card>
         </TabsContent>
-
-        {/* Recent Activity Tab */}
-        <TabsContent value="activity" className="space-y-4">
-          {/* Enhanced Filters for Booking Activity */}
-          <EnhancedFilters
-            searchValue={activitySearchTerm}
-            onSearchChange={setActivitySearchTerm}
-            filterConfigs={activityFilterConfigs}
-            filterValues={activityFilterValues}
-            onFilterChange={handleActivityFilterChange}
-            onClearFilters={handleClearActivityFilters}
-            searchPlaceholder="Search activity by actor, description, or details..."
-            className="hover-elevate"
-          />
-          
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="h-5 w-5" />
-                  Recent Booking Activity ({sortedBookingActivity.length})
-                </CardTitle>
-                <div className="flex gap-2">
-                  <Button 
-                    size="sm"
-                    variant="outline" 
-                    disabled={sortedBookingActivity.length === 0}
-                    onClick={() => {
-                      const success = quickExportBookingActivityPDF(sortedBookingActivity, 'Booking Activity Report', (errorMessage) => {
-                        toast({
-                          variant: "destructive",
-                          title: "Export Failed",
-                          description: errorMessage
-                        })
-                      }, scope)
-                      if (success) {
-                        toast({
-                          title: "Export Successful",
-                          description: "PDF report has been downloaded successfully"
-                        })
-                      }
-                    }}
-                    data-testid="button-export-activity-pdf"
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    PDF
-                  </Button>
-                  <Button 
-                    size="sm"
-                    variant="outline" 
-                    disabled={sortedBookingActivity.length === 0}
-                    onClick={() => {
-                      const success = quickExportBookingActivityExcel(sortedBookingActivity, 'Booking Activity Report', (errorMessage) => {
-                        toast({
-                          variant: "destructive",
-                          title: "Export Failed",
-                          description: errorMessage
-                        })
-                      }, scope)
-                      if (success) {
-                        toast({
-                          title: "Export Successful",
-                          description: "Excel report has been downloaded successfully"
-                        })
-                      }
-                    }}
-                    data-testid="button-export-activity-excel"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Excel
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {isLoadingActivity ? (
-                <div className="space-y-4">
-                  {[...Array(5)].map((_, i) => (
-                    <Skeleton key={i} className="h-16 w-full" />
-                  ))}
-                </div>
-              ) : sortedBookingActivity.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground" data-testid="empty-booking-activity">
-                  <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No booking activity found</p>
-                  <p className="text-sm">
-                    {scope === 'bci' 
-                      ? 'No activity found for BCI-managed bookings. Switch to "All Spots" to see all booking activity.' 
-                      : 'Booking activity will appear here as users interact with the system.'}
-                  </p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table data-testid="table-booking-activity">
-                    <TableHeader>
-                      <TableRow>
-                        <SortableTableHeader
-                          column="type"
-                          currentSortColumn={activitySortState.column}
-                          currentSortDirection={activitySortState.direction}
-                          onSort={handleActivitySort}
-                        >
-                          Activity Type
-                        </SortableTableHeader>
-                        <SortableTableHeader
-                          column="actorName"
-                          currentSortColumn={activitySortState.column}
-                          currentSortDirection={activitySortState.direction}
-                          onSort={handleActivitySort}
-                        >
-                          Actor
-                        </SortableTableHeader>
-                        <SortableTableHeader
-                          column="description"
-                          currentSortColumn={activitySortState.column}
-                          currentSortDirection={activitySortState.direction}
-                          onSort={handleActivitySort}
-                        >
-                          Description
-                        </SortableTableHeader>
-                        <SortableTableHeader
-                          column="success"
-                          currentSortColumn={activitySortState.column}
-                          currentSortDirection={activitySortState.direction}
-                          onSort={handleActivitySort}
-                        >
-                          Result
-                        </SortableTableHeader>
-                        <SortableTableHeader
-                          column="timestamp"
-                          currentSortColumn={activitySortState.column}
-                          currentSortDirection={activitySortState.direction}
-                          onSort={handleActivitySort}
-                        >
-                          Timestamp
-                        </SortableTableHeader>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {paginatedBookingActivity.map((activity: any, index) => (
-                        <TableRow key={activity.id || index} data-testid={`row-activity-${activity.id || index}`}>
-                          <TableCell data-testid={`text-activity-type-${activity.id || index}`}>
-                            <div className="flex items-center gap-2">
-                              <Activity className="h-4 w-4 text-muted-foreground" />
-                              <Badge variant="outline">
-                                {activity.type?.replace('_', ' ').toUpperCase() || 'UNKNOWN'}
-                              </Badge>
-                            </div>
-                          </TableCell>
-                          <TableCell data-testid={`text-actor-${activity.id || index}`}>
-                            <p className="font-medium">{activity.actorName || 'System'}</p>
-                          </TableCell>
-                          <TableCell data-testid={`text-description-${activity.id || index}`}>
-                            <p className="text-sm">{activity.description || 'No description available'}</p>
-                            {activity.details && (
-                              <p className="text-xs text-muted-foreground mt-1">{activity.details}</p>
-                            )}
-                          </TableCell>
-                          <TableCell data-testid={`badge-result-${activity.id || index}`}>
-                            <Badge 
-                              variant={activity.success ? 'default' : 'destructive'}
-                            >
-                              {activity.success ? 'SUCCESS' : 'FAILURE'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell data-testid={`text-timestamp-${activity.id || index}`}>
-                            {activity.timestamp ? new Date(activity.timestamp).toLocaleString() : 'Unknown'}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                  <TablePagination
-                    totalCount={sortedBookingActivity.length}
-                    pageSize={bookingActivityPageSize}
-                    pageIndex={bookingActivityPageIndex}
-                    onPageSizeChange={(size) => {
-                      setBookingActivityPageSize(size)
-                      setBookingActivityPageIndex(0)
-                    }}
-                    onPageIndexChange={setBookingActivityPageIndex}
-                  />
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
       </Tabs>
 
       {/* Booking Details Dialog */}
