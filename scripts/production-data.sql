@@ -1,6 +1,6 @@
 -- ============================================
 -- BCI ParkShare Production Data Population Script
--- Generated: 2025-12-18T00:56:20.040Z
+-- Generated: 2025-12-18T00:58:01.520Z
 -- ============================================
 
 -- IMPORTANT: Review this script before running!
@@ -2346,7 +2346,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P32',
   '32',
@@ -2355,11 +2355,13 @@ VALUES (
   true,
   true,
   'Electric Vehicle Parking *TESLA*'
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P32');
+
+UPDATE parking_spots SET
+  seat_number = '32',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'tesla-chargers' LIMIT 1),
+  description = 'Electric Vehicle Parking *TESLA*'
+WHERE spot_number = 'P32';
 
 INSERT INTO parking_spots (
   id,
@@ -2371,7 +2373,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P33',
   '33',
@@ -2380,11 +2382,13 @@ VALUES (
   true,
   true,
   'Electric Vehicle Parking *TESLA*'
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P33');
+
+UPDATE parking_spots SET
+  seat_number = '33',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'tesla-chargers' LIMIT 1),
+  description = 'Electric Vehicle Parking *TESLA*'
+WHERE spot_number = 'P33';
 
 INSERT INTO parking_spots (
   id,
@@ -2396,7 +2400,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P34',
   '34',
@@ -2405,11 +2409,13 @@ VALUES (
   true,
   true,
   'Electric Vehicle Parking *TESLA*'
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P34');
+
+UPDATE parking_spots SET
+  seat_number = '34',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'tesla-chargers' LIMIT 1),
+  description = 'Electric Vehicle Parking *TESLA*'
+WHERE spot_number = 'P34';
 
 INSERT INTO parking_spots (
   id,
@@ -2421,7 +2427,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P37',
   '37',
@@ -2430,11 +2436,13 @@ VALUES (
   true,
   true,
   'Electric Vehicle Parking'
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P37');
+
+UPDATE parking_spots SET
+  seat_number = '37',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'ev-chargers' LIMIT 1),
+  description = 'Electric Vehicle Parking'
+WHERE spot_number = 'P37';
 
 INSERT INTO parking_spots (
   id,
@@ -2446,7 +2454,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P38',
   '38',
@@ -2455,11 +2463,13 @@ VALUES (
   true,
   true,
   'Electric Vehicle Parking'
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P38');
+
+UPDATE parking_spots SET
+  seat_number = '38',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'ev-chargers' LIMIT 1),
+  description = 'Electric Vehicle Parking'
+WHERE spot_number = 'P38';
 
 INSERT INTO parking_spots (
   id,
@@ -2471,7 +2481,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P39',
   '39',
@@ -2480,11 +2490,13 @@ VALUES (
   true,
   true,
   'Electric Vehicle Parking'
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P39');
+
+UPDATE parking_spots SET
+  seat_number = '39',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'ev-chargers' LIMIT 1),
+  description = 'Electric Vehicle Parking'
+WHERE spot_number = 'P39';
 
 INSERT INTO parking_spots (
   id,
@@ -2496,7 +2508,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P40',
   '40',
@@ -2505,11 +2517,13 @@ VALUES (
   true,
   true,
   'Electric Vehicle Parking'
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P40');
+
+UPDATE parking_spots SET
+  seat_number = '40',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'ev-chargers' LIMIT 1),
+  description = 'Electric Vehicle Parking'
+WHERE spot_number = 'P40';
 
 INSERT INTO parking_spots (
   id,
@@ -2521,7 +2535,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P41',
   '41',
@@ -2530,11 +2544,13 @@ VALUES (
   true,
   true,
   'Electric Vehicle Parking'
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P41');
+
+UPDATE parking_spots SET
+  seat_number = '41',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'ev-chargers' LIMIT 1),
+  description = 'Electric Vehicle Parking'
+WHERE spot_number = 'P41';
 
 INSERT INTO parking_spots (
   id,
@@ -2546,7 +2562,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P42',
   '42',
@@ -2555,11 +2571,13 @@ VALUES (
   true,
   true,
   'EV stall'
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P42');
+
+UPDATE parking_spots SET
+  seat_number = '42',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'ev-chargers' LIMIT 1),
+  description = 'EV stall'
+WHERE spot_number = 'P42';
 
 INSERT INTO parking_spots (
   id,
@@ -2571,7 +2589,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P43',
   '43',
@@ -2580,11 +2598,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P43');
+
+UPDATE parking_spots SET
+  seat_number = '43',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P43';
 
 INSERT INTO parking_spots (
   id,
@@ -2596,7 +2616,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P44',
   '44',
@@ -2605,11 +2625,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P44');
+
+UPDATE parking_spots SET
+  seat_number = '44',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P44';
 
 INSERT INTO parking_spots (
   id,
@@ -2621,7 +2643,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P45',
   '45',
@@ -2630,11 +2652,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P45');
+
+UPDATE parking_spots SET
+  seat_number = '45',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P45';
 
 INSERT INTO parking_spots (
   id,
@@ -2646,7 +2670,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P46',
   '46',
@@ -2655,11 +2679,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P46');
+
+UPDATE parking_spots SET
+  seat_number = '46',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P46';
 
 INSERT INTO parking_spots (
   id,
@@ -2671,7 +2697,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P47',
   '47',
@@ -2680,11 +2706,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P47');
+
+UPDATE parking_spots SET
+  seat_number = '47',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P47';
 
 INSERT INTO parking_spots (
   id,
@@ -2696,7 +2724,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P48',
   '48',
@@ -2705,11 +2733,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P48');
+
+UPDATE parking_spots SET
+  seat_number = '48',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P48';
 
 INSERT INTO parking_spots (
   id,
@@ -2721,7 +2751,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P49',
   '49',
@@ -2730,11 +2760,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P49');
+
+UPDATE parking_spots SET
+  seat_number = '49',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P49';
 
 INSERT INTO parking_spots (
   id,
@@ -2746,7 +2778,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P50',
   '50',
@@ -2755,11 +2787,13 @@ VALUES (
   true,
   true,
   'Capital Markets & Credit Investments Spot'
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P50');
+
+UPDATE parking_spots SET
+  seat_number = '50',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = 'Capital Markets & Credit Investments Spot'
+WHERE spot_number = 'P50';
 
 INSERT INTO parking_spots (
   id,
@@ -2771,7 +2805,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P51',
   '51',
@@ -2780,11 +2814,13 @@ VALUES (
   true,
   true,
   'Electric Vehicle Parking'
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P51');
+
+UPDATE parking_spots SET
+  seat_number = '51',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'ev-chargers' LIMIT 1),
+  description = 'Electric Vehicle Parking'
+WHERE spot_number = 'P51';
 
 INSERT INTO parking_spots (
   id,
@@ -2796,7 +2832,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P52',
   '52',
@@ -2805,11 +2841,13 @@ VALUES (
   true,
   true,
   'Electric Vehicle Parking'
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P52');
+
+UPDATE parking_spots SET
+  seat_number = '52',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'ev-chargers' LIMIT 1),
+  description = 'Electric Vehicle Parking'
+WHERE spot_number = 'P52';
 
 INSERT INTO parking_spots (
   id,
@@ -2821,7 +2859,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P53',
   '53',
@@ -2830,11 +2868,13 @@ VALUES (
   true,
   true,
   'Electric Vehicle Parking'
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P53');
+
+UPDATE parking_spots SET
+  seat_number = '53',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'ev-chargers' LIMIT 1),
+  description = 'Electric Vehicle Parking'
+WHERE spot_number = 'P53';
 
 INSERT INTO parking_spots (
   id,
@@ -2846,7 +2886,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P54',
   '54',
@@ -2855,11 +2895,13 @@ VALUES (
   true,
   true,
   'Electric Vehicle Parking'
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P54');
+
+UPDATE parking_spots SET
+  seat_number = '54',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'ev-chargers' LIMIT 1),
+  description = 'Electric Vehicle Parking'
+WHERE spot_number = 'P54';
 
 INSERT INTO parking_spots (
   id,
@@ -2871,7 +2913,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P55',
   '55',
@@ -2880,11 +2922,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P55');
+
+UPDATE parking_spots SET
+  seat_number = '55',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P55';
 
 INSERT INTO parking_spots (
   id,
@@ -2896,7 +2940,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P56',
   '56',
@@ -2905,11 +2949,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P56');
+
+UPDATE parking_spots SET
+  seat_number = '56',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P56';
 
 INSERT INTO parking_spots (
   id,
@@ -2921,7 +2967,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P57',
   '57',
@@ -2930,11 +2976,13 @@ VALUES (
   true,
   true,
   'Capital Markets & Credit Investments Spot'
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P57');
+
+UPDATE parking_spots SET
+  seat_number = '57',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = 'Capital Markets & Credit Investments Spot'
+WHERE spot_number = 'P57';
 
 INSERT INTO parking_spots (
   id,
@@ -2946,7 +2994,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P58',
   '58',
@@ -2955,11 +3003,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P58');
+
+UPDATE parking_spots SET
+  seat_number = '58',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P58';
 
 INSERT INTO parking_spots (
   id,
@@ -2971,7 +3021,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P59',
   '59',
@@ -2980,11 +3030,13 @@ VALUES (
   true,
   true,
   'Capital Markets & Credit Investments Spot'
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P59');
+
+UPDATE parking_spots SET
+  seat_number = '59',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = 'Capital Markets & Credit Investments Spot'
+WHERE spot_number = 'P59';
 
 INSERT INTO parking_spots (
   id,
@@ -2996,7 +3048,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P60',
   '60',
@@ -3005,11 +3057,13 @@ VALUES (
   true,
   true,
   'Capital Markets & Credit Investments Spot'
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P60');
+
+UPDATE parking_spots SET
+  seat_number = '60',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = 'Capital Markets & Credit Investments Spot'
+WHERE spot_number = 'P60';
 
 INSERT INTO parking_spots (
   id,
@@ -3021,7 +3075,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P61',
   '61',
@@ -3030,11 +3084,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P61');
+
+UPDATE parking_spots SET
+  seat_number = '61',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P61';
 
 INSERT INTO parking_spots (
   id,
@@ -3046,7 +3102,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P62',
   '62',
@@ -3055,11 +3111,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P62');
+
+UPDATE parking_spots SET
+  seat_number = '62',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P62';
 
 INSERT INTO parking_spots (
   id,
@@ -3071,7 +3129,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P84',
   '84',
@@ -3080,11 +3138,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P84');
+
+UPDATE parking_spots SET
+  seat_number = '84',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P84';
 
 INSERT INTO parking_spots (
   id,
@@ -3096,7 +3156,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P85',
   '85',
@@ -3105,11 +3165,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P85');
+
+UPDATE parking_spots SET
+  seat_number = '85',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P85';
 
 INSERT INTO parking_spots (
   id,
@@ -3121,7 +3183,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P86',
   '86',
@@ -3130,11 +3192,13 @@ VALUES (
   true,
   true,
   'FOR BOARD MEMBER USE / Wheelchair Parking'
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P86');
+
+UPDATE parking_spots SET
+  seat_number = '86',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'accessible' LIMIT 1),
+  description = 'FOR BOARD MEMBER USE / Wheelchair Parking'
+WHERE spot_number = 'P86';
 
 INSERT INTO parking_spots (
   id,
@@ -3146,7 +3210,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P87',
   '87',
@@ -3155,11 +3219,13 @@ VALUES (
   true,
   true,
   'CEO PARKING - Electric - EV'
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P87');
+
+UPDATE parking_spots SET
+  seat_number = '87',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'ev-chargers' LIMIT 1),
+  description = 'CEO PARKING - Electric - EV'
+WHERE spot_number = 'P87';
 
 INSERT INTO parking_spots (
   id,
@@ -3171,7 +3237,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P88',
   '88',
@@ -3180,11 +3246,13 @@ VALUES (
   true,
   true,
   'COO PARKING - Electric - EV'
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P88');
+
+UPDATE parking_spots SET
+  seat_number = '88',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'ev-chargers' LIMIT 1),
+  description = 'COO PARKING - Electric - EV'
+WHERE spot_number = 'P88';
 
 INSERT INTO parking_spots (
   id,
@@ -3196,7 +3264,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P89',
   '89',
@@ -3205,11 +3273,13 @@ VALUES (
   true,
   true,
   'EVP PARKING'
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P89');
+
+UPDATE parking_spots SET
+  seat_number = '89',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'ev-chargers' LIMIT 1),
+  description = 'EVP PARKING'
+WHERE spot_number = 'P89';
 
 INSERT INTO parking_spots (
   id,
@@ -3221,7 +3291,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P90',
   '90',
@@ -3230,11 +3300,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P90');
+
+UPDATE parking_spots SET
+  seat_number = '90',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P90';
 
 INSERT INTO parking_spots (
   id,
@@ -3246,7 +3318,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P91',
   '91',
@@ -3255,11 +3327,13 @@ VALUES (
   true,
   true,
   'EVP PARKING - Electric - EV'
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P91');
+
+UPDATE parking_spots SET
+  seat_number = '91',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'ev-chargers' LIMIT 1),
+  description = 'EVP PARKING - Electric - EV'
+WHERE spot_number = 'P91';
 
 INSERT INTO parking_spots (
   id,
@@ -3271,7 +3345,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P92',
   '92',
@@ -3280,11 +3354,13 @@ VALUES (
   true,
   true,
   'SVP PARKING - Electric - EV'
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P92');
+
+UPDATE parking_spots SET
+  seat_number = '92',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'ev-chargers' LIMIT 1),
+  description = 'SVP PARKING - Electric - EV'
+WHERE spot_number = 'P92';
 
 INSERT INTO parking_spots (
   id,
@@ -3296,7 +3372,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P93',
   '93',
@@ -3305,11 +3381,13 @@ VALUES (
   true,
   true,
   'SVP PARKING - Electric - EV'
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P93');
+
+UPDATE parking_spots SET
+  seat_number = '93',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'ev-chargers' LIMIT 1),
+  description = 'SVP PARKING - Electric - EV'
+WHERE spot_number = 'P93';
 
 INSERT INTO parking_spots (
   id,
@@ -3321,7 +3399,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P94',
   '94',
@@ -3330,11 +3408,13 @@ VALUES (
   true,
   true,
   'EVP PARKING - Electric - EV'
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P94');
+
+UPDATE parking_spots SET
+  seat_number = '94',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'ev-chargers' LIMIT 1),
+  description = 'EVP PARKING - Electric - EV'
+WHERE spot_number = 'P94';
 
 INSERT INTO parking_spots (
   id,
@@ -3346,7 +3426,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P95',
   '95',
@@ -3355,11 +3435,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P95');
+
+UPDATE parking_spots SET
+  seat_number = '95',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P95';
 
 INSERT INTO parking_spots (
   id,
@@ -3371,7 +3453,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P96',
   '96',
@@ -3380,11 +3462,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P96');
+
+UPDATE parking_spots SET
+  seat_number = '96',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P96';
 
 INSERT INTO parking_spots (
   id,
@@ -3396,7 +3480,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P97',
   '97',
@@ -3405,11 +3489,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P97');
+
+UPDATE parking_spots SET
+  seat_number = '97',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P97';
 
 INSERT INTO parking_spots (
   id,
@@ -3421,7 +3507,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P98',
   '98',
@@ -3430,11 +3516,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P98');
+
+UPDATE parking_spots SET
+  seat_number = '98',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P98';
 
 INSERT INTO parking_spots (
   id,
@@ -3446,7 +3534,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P99',
   '99',
@@ -3455,11 +3543,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P99');
+
+UPDATE parking_spots SET
+  seat_number = '99',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P99';
 
 INSERT INTO parking_spots (
   id,
@@ -3471,7 +3561,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P100',
   '100',
@@ -3480,11 +3570,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P100');
+
+UPDATE parking_spots SET
+  seat_number = '100',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P100';
 
 INSERT INTO parking_spots (
   id,
@@ -3496,7 +3588,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P101',
   '101',
@@ -3505,11 +3597,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P101');
+
+UPDATE parking_spots SET
+  seat_number = '101',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P101';
 
 INSERT INTO parking_spots (
   id,
@@ -3521,7 +3615,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P102',
   '102',
@@ -3530,11 +3624,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P102');
+
+UPDATE parking_spots SET
+  seat_number = '102',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P102';
 
 INSERT INTO parking_spots (
   id,
@@ -3546,7 +3642,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'undefined',
   'undefined',
@@ -3555,11 +3651,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'undefined');
+
+UPDATE parking_spots SET
+  seat_number = 'undefined',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'undefined';
 
 INSERT INTO parking_spots (
   id,
@@ -3571,7 +3669,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P134',
   '134',
@@ -3580,11 +3678,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P134');
+
+UPDATE parking_spots SET
+  seat_number = '134',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P134';
 
 INSERT INTO parking_spots (
   id,
@@ -3596,7 +3696,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P135',
   '135',
@@ -3605,11 +3705,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P135');
+
+UPDATE parking_spots SET
+  seat_number = '135',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P135';
 
 INSERT INTO parking_spots (
   id,
@@ -3621,7 +3723,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P136',
   '136',
@@ -3630,11 +3732,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P136');
+
+UPDATE parking_spots SET
+  seat_number = '136',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P136';
 
 INSERT INTO parking_spots (
   id,
@@ -3646,7 +3750,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P137',
   '137',
@@ -3655,11 +3759,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P137');
+
+UPDATE parking_spots SET
+  seat_number = '137',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P137';
 
 INSERT INTO parking_spots (
   id,
@@ -3671,7 +3777,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P138',
   '138',
@@ -3680,11 +3786,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P138');
+
+UPDATE parking_spots SET
+  seat_number = '138',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P138';
 
 INSERT INTO parking_spots (
   id,
@@ -3696,7 +3804,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P139',
   '139',
@@ -3705,11 +3813,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P139');
+
+UPDATE parking_spots SET
+  seat_number = '139',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P139';
 
 INSERT INTO parking_spots (
   id,
@@ -3721,7 +3831,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P140',
   '140',
@@ -3730,11 +3840,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P140');
+
+UPDATE parking_spots SET
+  seat_number = '140',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P140';
 
 INSERT INTO parking_spots (
   id,
@@ -3746,7 +3858,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P141',
   '141',
@@ -3755,11 +3867,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P141');
+
+UPDATE parking_spots SET
+  seat_number = '141',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P141';
 
 INSERT INTO parking_spots (
   id,
@@ -3771,7 +3885,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P142',
   '142',
@@ -3780,11 +3894,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P142');
+
+UPDATE parking_spots SET
+  seat_number = '142',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P142';
 
 INSERT INTO parking_spots (
   id,
@@ -3796,7 +3912,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P143',
   '143',
@@ -3805,11 +3921,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P143');
+
+UPDATE parking_spots SET
+  seat_number = '143',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P143';
 
 INSERT INTO parking_spots (
   id,
@@ -3821,7 +3939,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P144',
   '144',
@@ -3830,11 +3948,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P144');
+
+UPDATE parking_spots SET
+  seat_number = '144',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P144';
 
 INSERT INTO parking_spots (
   id,
@@ -3846,7 +3966,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P145',
   '145',
@@ -3855,11 +3975,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P145');
+
+UPDATE parking_spots SET
+  seat_number = '145',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P145';
 
 INSERT INTO parking_spots (
   id,
@@ -3871,7 +3993,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P146',
   '146',
@@ -3880,11 +4002,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P146');
+
+UPDATE parking_spots SET
+  seat_number = '146',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P146';
 
 INSERT INTO parking_spots (
   id,
@@ -3896,7 +4020,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P147',
   '147',
@@ -3905,11 +4029,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P147');
+
+UPDATE parking_spots SET
+  seat_number = '147',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P147';
 
 INSERT INTO parking_spots (
   id,
@@ -3921,7 +4047,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P148',
   '148',
@@ -3930,11 +4056,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P148');
+
+UPDATE parking_spots SET
+  seat_number = '148',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P148';
 
 INSERT INTO parking_spots (
   id,
@@ -3946,7 +4074,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P149',
   '149',
@@ -3955,11 +4083,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P149');
+
+UPDATE parking_spots SET
+  seat_number = '149',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P149';
 
 INSERT INTO parking_spots (
   id,
@@ -3971,7 +4101,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P150',
   '150',
@@ -3980,11 +4110,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P150');
+
+UPDATE parking_spots SET
+  seat_number = '150',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P150';
 
 INSERT INTO parking_spots (
   id,
@@ -3996,7 +4128,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P151',
   '151',
@@ -4005,11 +4137,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P151');
+
+UPDATE parking_spots SET
+  seat_number = '151',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P151';
 
 INSERT INTO parking_spots (
   id,
@@ -4021,7 +4155,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P152',
   '152',
@@ -4030,11 +4164,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P152');
+
+UPDATE parking_spots SET
+  seat_number = '152',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P152';
 
 INSERT INTO parking_spots (
   id,
@@ -4046,7 +4182,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P153',
   '153',
@@ -4055,11 +4191,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P153');
+
+UPDATE parking_spots SET
+  seat_number = '153',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P153';
 
 INSERT INTO parking_spots (
   id,
@@ -4071,7 +4209,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P154',
   '154',
@@ -4080,11 +4218,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P154');
+
+UPDATE parking_spots SET
+  seat_number = '154',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P154';
 
 INSERT INTO parking_spots (
   id,
@@ -4096,7 +4236,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P155',
   '155',
@@ -4105,11 +4245,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P155');
+
+UPDATE parking_spots SET
+  seat_number = '155',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P155';
 
 INSERT INTO parking_spots (
   id,
@@ -4121,7 +4263,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P156',
   '156',
@@ -4130,11 +4272,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P156');
+
+UPDATE parking_spots SET
+  seat_number = '156',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P156';
 
 INSERT INTO parking_spots (
   id,
@@ -4146,7 +4290,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P157',
   '157',
@@ -4155,11 +4299,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P157');
+
+UPDATE parking_spots SET
+  seat_number = '157',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P157';
 
 INSERT INTO parking_spots (
   id,
@@ -4171,7 +4317,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P158',
   '158',
@@ -4180,11 +4326,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P158');
+
+UPDATE parking_spots SET
+  seat_number = '158',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P158';
 
 INSERT INTO parking_spots (
   id,
@@ -4196,7 +4344,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P159',
   '159',
@@ -4205,11 +4353,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P159');
+
+UPDATE parking_spots SET
+  seat_number = '159',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P159';
 
 INSERT INTO parking_spots (
   id,
@@ -4221,7 +4371,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P160',
   '160',
@@ -4230,11 +4380,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P160');
+
+UPDATE parking_spots SET
+  seat_number = '160',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P160';
 
 INSERT INTO parking_spots (
   id,
@@ -4246,7 +4398,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P161',
   '161',
@@ -4255,11 +4407,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P161');
+
+UPDATE parking_spots SET
+  seat_number = '161',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P161';
 
 INSERT INTO parking_spots (
   id,
@@ -4271,7 +4425,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P162',
   '162',
@@ -4280,11 +4434,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P162');
+
+UPDATE parking_spots SET
+  seat_number = '162',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P162';
 
 INSERT INTO parking_spots (
   id,
@@ -4296,7 +4452,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P163',
   '163',
@@ -4305,11 +4461,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P163');
+
+UPDATE parking_spots SET
+  seat_number = '163',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P163';
 
 INSERT INTO parking_spots (
   id,
@@ -4321,7 +4479,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P164',
   '164',
@@ -4330,11 +4488,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P164');
+
+UPDATE parking_spots SET
+  seat_number = '164',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P164';
 
 INSERT INTO parking_spots (
   id,
@@ -4346,7 +4506,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P165',
   '165',
@@ -4355,11 +4515,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P165');
+
+UPDATE parking_spots SET
+  seat_number = '165',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P165';
 
 INSERT INTO parking_spots (
   id,
@@ -4371,7 +4533,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P166',
   '166',
@@ -4380,11 +4542,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P166');
+
+UPDATE parking_spots SET
+  seat_number = '166',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P166';
 
 INSERT INTO parking_spots (
   id,
@@ -4396,7 +4560,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P167',
   '167',
@@ -4405,11 +4569,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P167');
+
+UPDATE parking_spots SET
+  seat_number = '167',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P167';
 
 INSERT INTO parking_spots (
   id,
@@ -4421,7 +4587,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P168',
   '168',
@@ -4430,11 +4596,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P168');
+
+UPDATE parking_spots SET
+  seat_number = '168',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P168';
 
 INSERT INTO parking_spots (
   id,
@@ -4446,7 +4614,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P169',
   '169',
@@ -4455,11 +4623,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P169');
+
+UPDATE parking_spots SET
+  seat_number = '169',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P169';
 
 INSERT INTO parking_spots (
   id,
@@ -4471,7 +4641,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P170',
   '170',
@@ -4480,11 +4650,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P170');
+
+UPDATE parking_spots SET
+  seat_number = '170',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P170';
 
 INSERT INTO parking_spots (
   id,
@@ -4496,7 +4668,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P171',
   '171',
@@ -4505,11 +4677,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P171');
+
+UPDATE parking_spots SET
+  seat_number = '171',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P171';
 
 INSERT INTO parking_spots (
   id,
@@ -4521,7 +4695,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P172',
   '172',
@@ -4530,11 +4704,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P172');
+
+UPDATE parking_spots SET
+  seat_number = '172',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P172';
 
 INSERT INTO parking_spots (
   id,
@@ -4546,7 +4722,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P173',
   '173',
@@ -4555,11 +4731,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P173');
+
+UPDATE parking_spots SET
+  seat_number = '173',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P173';
 
 INSERT INTO parking_spots (
   id,
@@ -4571,7 +4749,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P174',
   '174',
@@ -4580,11 +4758,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P174');
+
+UPDATE parking_spots SET
+  seat_number = '174',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P174';
 
 INSERT INTO parking_spots (
   id,
@@ -4596,7 +4776,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P175',
   '175',
@@ -4605,11 +4785,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P175');
+
+UPDATE parking_spots SET
+  seat_number = '175',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P175';
 
 INSERT INTO parking_spots (
   id,
@@ -4621,7 +4803,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P176',
   '176',
@@ -4630,11 +4812,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P176');
+
+UPDATE parking_spots SET
+  seat_number = '176',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P176';
 
 INSERT INTO parking_spots (
   id,
@@ -4646,7 +4830,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P177',
   '177',
@@ -4655,11 +4839,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P177');
+
+UPDATE parking_spots SET
+  seat_number = '177',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P177';
 
 INSERT INTO parking_spots (
   id,
@@ -4671,7 +4857,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P181',
   '181',
@@ -4680,11 +4866,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P181');
+
+UPDATE parking_spots SET
+  seat_number = '181',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P181';
 
 INSERT INTO parking_spots (
   id,
@@ -4696,7 +4884,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P182',
   '182',
@@ -4705,11 +4893,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P182');
+
+UPDATE parking_spots SET
+  seat_number = '182',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P182';
 
 INSERT INTO parking_spots (
   id,
@@ -4721,7 +4911,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P183',
   '183',
@@ -4730,11 +4920,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P183');
+
+UPDATE parking_spots SET
+  seat_number = '183',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P183';
 
 INSERT INTO parking_spots (
   id,
@@ -4746,7 +4938,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P184',
   '184',
@@ -4755,11 +4947,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P184');
+
+UPDATE parking_spots SET
+  seat_number = '184',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P184';
 
 INSERT INTO parking_spots (
   id,
@@ -4771,7 +4965,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P185',
   '185',
@@ -4780,11 +4974,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P185');
+
+UPDATE parking_spots SET
+  seat_number = '185',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P185';
 
 INSERT INTO parking_spots (
   id,
@@ -4796,7 +4992,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P186',
   '186',
@@ -4805,11 +5001,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P186');
+
+UPDATE parking_spots SET
+  seat_number = '186',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P186';
 
 INSERT INTO parking_spots (
   id,
@@ -4821,7 +5019,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P187',
   '187',
@@ -4830,11 +5028,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P187');
+
+UPDATE parking_spots SET
+  seat_number = '187',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P187';
 
 INSERT INTO parking_spots (
   id,
@@ -4846,7 +5046,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P188',
   '188',
@@ -4855,11 +5055,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P188');
+
+UPDATE parking_spots SET
+  seat_number = '188',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P188';
 
 INSERT INTO parking_spots (
   id,
@@ -4871,7 +5073,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P189',
   '189',
@@ -4880,11 +5082,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P189');
+
+UPDATE parking_spots SET
+  seat_number = '189',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P189';
 
 INSERT INTO parking_spots (
   id,
@@ -4896,7 +5100,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P190',
   '190',
@@ -4905,11 +5109,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P190');
+
+UPDATE parking_spots SET
+  seat_number = '190',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P190';
 
 INSERT INTO parking_spots (
   id,
@@ -4921,7 +5127,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P191',
   '191',
@@ -4930,11 +5136,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P191');
+
+UPDATE parking_spots SET
+  seat_number = '191',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P191';
 
 INSERT INTO parking_spots (
   id,
@@ -4946,7 +5154,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P192',
   '192',
@@ -4955,11 +5163,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P192');
+
+UPDATE parking_spots SET
+  seat_number = '192',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P192';
 
 INSERT INTO parking_spots (
   id,
@@ -4971,7 +5181,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P193',
   '193',
@@ -4980,11 +5190,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P193');
+
+UPDATE parking_spots SET
+  seat_number = '193',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P193';
 
 INSERT INTO parking_spots (
   id,
@@ -4996,7 +5208,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P194',
   '194',
@@ -5005,11 +5217,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P194');
+
+UPDATE parking_spots SET
+  seat_number = '194',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P194';
 
 INSERT INTO parking_spots (
   id,
@@ -5021,7 +5235,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P195',
   '195',
@@ -5030,11 +5244,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P195');
+
+UPDATE parking_spots SET
+  seat_number = '195',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P195';
 
 INSERT INTO parking_spots (
   id,
@@ -5046,7 +5262,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P196',
   '196',
@@ -5055,11 +5271,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P196');
+
+UPDATE parking_spots SET
+  seat_number = '196',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P196';
 
 INSERT INTO parking_spots (
   id,
@@ -5071,7 +5289,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P197',
   '197',
@@ -5080,11 +5298,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P197');
+
+UPDATE parking_spots SET
+  seat_number = '197',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P197';
 
 INSERT INTO parking_spots (
   id,
@@ -5096,7 +5316,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P198',
   '198',
@@ -5105,11 +5325,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P198');
+
+UPDATE parking_spots SET
+  seat_number = '198',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P198';
 
 INSERT INTO parking_spots (
   id,
@@ -5121,7 +5343,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P199',
   '199',
@@ -5130,11 +5352,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P199');
+
+UPDATE parking_spots SET
+  seat_number = '199',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P199';
 
 INSERT INTO parking_spots (
   id,
@@ -5146,7 +5370,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P200',
   '200',
@@ -5155,11 +5379,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P200');
+
+UPDATE parking_spots SET
+  seat_number = '200',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P200';
 
 INSERT INTO parking_spots (
   id,
@@ -5171,7 +5397,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P201',
   '201',
@@ -5180,11 +5406,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P201');
+
+UPDATE parking_spots SET
+  seat_number = '201',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P201';
 
 INSERT INTO parking_spots (
   id,
@@ -5196,7 +5424,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P202',
   '202',
@@ -5205,11 +5433,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P202');
+
+UPDATE parking_spots SET
+  seat_number = '202',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P202';
 
 INSERT INTO parking_spots (
   id,
@@ -5221,7 +5451,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P203',
   '203',
@@ -5230,11 +5460,13 @@ VALUES (
   true,
   true,
   'Capital Markets & Credit Investments Spot'
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P203');
+
+UPDATE parking_spots SET
+  seat_number = '203',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = 'Capital Markets & Credit Investments Spot'
+WHERE spot_number = 'P203';
 
 INSERT INTO parking_spots (
   id,
@@ -5246,7 +5478,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   'P204',
   '204',
@@ -5255,11 +5487,13 @@ VALUES (
   true,
   true,
   NULL
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = 'P204');
+
+UPDATE parking_spots SET
+  seat_number = '204',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = 'regular' LIMIT 1),
+  description = NULL
+WHERE spot_number = 'P204';
 
 -- ============================================
 -- 5. SPOT ASSIGNMENTS (owner_id)

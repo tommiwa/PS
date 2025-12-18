@@ -219,6 +219,7 @@ ON CONFLICT (email) DO UPDATE SET
   
   spots.forEach(spot => {
     const desc = spot.description ? `'${spot.description.replace(/'/g, "''")}'` : 'NULL';
+    // Use INSERT with WHERE NOT EXISTS since spot_number has no unique constraint
     lines.push(`
 INSERT INTO parking_spots (
   id,
@@ -230,7 +231,7 @@ INSERT INTO parking_spots (
   is_bci_managed,
   description
 )
-VALUES (
+SELECT
   gen_random_uuid(),
   '${spot.spotCode}',
   '${spot.stallNumber}',
@@ -239,11 +240,15 @@ VALUES (
   true,
   true,
   ${desc}
-)
-ON CONFLICT (spot_number) DO UPDATE SET
-  seat_number = EXCLUDED.seat_number,
-  spot_type_id = EXCLUDED.spot_type_id,
-  description = EXCLUDED.description;`);
+WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = '${spot.spotCode}');`);
+
+    // Update existing spots
+    lines.push(`
+UPDATE parking_spots SET
+  seat_number = '${spot.stallNumber}',
+  spot_type_id = (SELECT id FROM spot_types WHERE slug = '${spot.spotTypeSlug}' LIMIT 1),
+  description = ${desc}
+WHERE spot_number = '${spot.spotCode}';`);
   });
   lines.push('');
   
