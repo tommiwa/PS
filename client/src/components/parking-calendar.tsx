@@ -22,7 +22,12 @@ import { useAuth } from "@/contexts/auth-context"
 import { useLock } from "@/contexts/LockContext"
 import { useToast } from "@/hooks/use-toast"
 import { apiRequest } from "@/lib/queryClient"
-import { formatDateForDB } from "@/lib/timezone"
+
+// Simple local date formatter for calendar date comparisons
+// Uses local date components to avoid timezone shifts that cause day-off-by-one issues
+const formatLocalDate = (date: Date): string => {
+  return format(date, 'yyyy-MM-dd');
+}
 
 type CalendarView = "day" | "week" | "month"
 
@@ -80,40 +85,36 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
   }
   const [dateSpotMap, setDateSpotMap] = useState<Map<string, DateSpotData>>(new Map())
 
-  // Pre-compute spot data for visible dates using timezone-aware formatting
+  // Pre-compute spot data for visible dates using local date formatting
   useEffect(() => {
-    const computeSpotData = async () => {
-      const visibleDates = getVisibleDates();
-      const newMap = new Map<string, DateSpotData>();
+    const visibleDates = getVisibleDates();
+    const newMap = new Map<string, DateSpotData>();
 
-      for (const date of visibleDates) {
-        const spotsForDate = await getSpotsForDate(date);
-        const spotData = new Map<string, {
-          price: number;
-          isExpired: boolean;
-          isBooked: boolean;
-          isLocked: boolean;
-        }>();
+    for (const date of visibleDates) {
+      const spotsForDate = getSpotsForDate(date);
+      const spotData = new Map<string, {
+        price: number;
+        isExpired: boolean;
+        isBooked: boolean;
+        isLocked: boolean;
+      }>();
 
-        for (const spot of spotsForDate) {
-          const price = await getPriceForDate(spot, date);
-          const isExpired = await isSpotExpiredOnDate(spot, date);
-          const isBooked = await isSpotBookedOnDate(spot, date);
-          const isLocked = await isSpotLockedByOther(spot, date);
-          
-          spotData.set(spot.id, { price, isExpired, isBooked, isLocked });
-        }
-
-        newMap.set(date.toISOString(), {
-          spots: spotsForDate,
-          spotData
-        });
+      for (const spot of spotsForDate) {
+        const price = getPriceForDate(spot, date);
+        const isExpired = isSpotExpiredOnDate(spot, date);
+        const isBooked = isSpotBookedOnDate(spot, date);
+        const isLocked = isSpotLockedByOther(spot, date);
+        
+        spotData.set(spot.id, { price, isExpired, isBooked, isLocked });
       }
 
-      setDateSpotMap(newMap);
-    };
+      newMap.set(date.toISOString(), {
+        spots: spotsForDate,
+        spotData
+      });
+    }
 
-    computeSpotData();
+    setDateSpotMap(newMap);
   }, [currentDate, view, spots, lockedListings, userActiveLock, isOwnerView])
 
   const navigateDate = (direction: "prev" | "next") => {
@@ -163,8 +164,8 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
   }
 
   // Get the correct price for a spot on a specific date
-  const getPriceForDate = async (spot: ParkingSpot, date: Date): Promise<number> => {
-    const dateStr = await formatDateForDB(date);
+  const getPriceForDate = (spot: ParkingSpot, date: Date): number => {
+    const dateStr = formatLocalDate(date);
     
     // Use dateToPrice mapping if available
     if (spot.dateToPrice && spot.dateToPrice[dateStr]) {
@@ -176,21 +177,21 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
   }
 
   // Helper to check if a spot is expired on a specific date
-  const isSpotExpiredOnDate = async (spot: ParkingSpot, date: Date): Promise<boolean> => {
+  const isSpotExpiredOnDate = (spot: ParkingSpot, date: Date): boolean => {
     if (!spot.expiredDates || spot.expiredDates.length === 0) {
       return false;
     }
-    const checkDate = await formatDateForDB(date);
+    const checkDate = formatLocalDate(date);
     return spot.expiredDates.includes(checkDate);
   }
 
-  const getSpotsForDate = async (date: Date) => {
-    const checkDate = await formatDateForDB(date);
+  const getSpotsForDate = (date: Date): ParkingSpot[] => {
+    const checkDate = formatLocalDate(date);
     
-    const filtered = await Promise.all(spots.map(async (spot) => {
+    return spots.filter((spot) => {
       // Filter out non-bookable spots (reserved) unless in owner view
       if (!isOwnerView && spot.isBookable === false) {
-        return null;
+        return false;
       }
 
       // Show available spots on their specific availability OR expired dates
@@ -203,28 +204,26 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
         
         // Show if available OR expired (expired will be greyed out in rendering)
         if (isAvailableOnDate || isExpiredOnDate) {
-          return spot;
+          return true;
         }
         
         // Fallback to old single date format for backward compatibility
         if (spot.availability?.date) {
           const spotDate = new Date(spot.availability.date);
-          return isSameDay(spotDate, date) ? spot : null;
+          return isSameDay(spotDate, date);
         }
         
         // If no specific availability date, don't show the spot
-        return null;
+        return false;
       }
       
       // For unavailable spots, only show on their specific booking date if available
       if (spot.availability?.date) {
         const spotDate = new Date(spot.availability.date);
-        return isSameDay(spotDate, date) ? spot : null;
+        return isSameDay(spotDate, date);
       }
-      return null;
-    }));
-    
-    return filtered.filter((spot): spot is ParkingSpot => spot !== null);
+      return false;
+    });
   }
 
   const getSpotTypeIcon = (type: string) => {
@@ -301,23 +300,23 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
   }
 
   // Helper to check if a spot is booked on a specific date
-  const isSpotBookedOnDate = async (spot: ParkingSpot, date: Date): Promise<boolean> => {
+  const isSpotBookedOnDate = (spot: ParkingSpot, date: Date): boolean => {
     if (!spot.bookedDates || spot.bookedDates.length === 0) {
       return false
     }
-    const checkDate = await formatDateForDB(date);
+    const checkDate = formatLocalDate(date);
     return spot.bookedDates.includes(checkDate)
   }
 
   // Helper to check if a spot is locked by another user on a specific date
-  const isSpotLockedByOther = async (spot: ParkingSpot, date: Date): Promise<boolean> => {
+  const isSpotLockedByOther = (spot: ParkingSpot, date: Date): boolean => {
     // Check if spot has listingId (required for composite key)
     if (!spot.listingId) {
       return false;
     }
     
     // Create composite key: listingId|date  
-    const dateStr = await formatDateForDB(date);
+    const dateStr = formatLocalDate(date);
     const compositeKey = `${spot.listingId}|${dateStr}`;
     
     // Check if this specific listing+date is locked
@@ -338,17 +337,17 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
     const dateToCheck = clickedDate || currentDate
     
     // Prevent booking spots that are already booked on this date
-    if (await isSpotBookedOnDate(spot, dateToCheck)) {
+    if (isSpotBookedOnDate(spot, dateToCheck)) {
       return; // Don't allow booking already booked spots
     }
     
     // Prevent clicking spots locked by another user on this specific date
-    if (await isSpotLockedByOther(spot, dateToCheck)) {
+    if (isSpotLockedByOther(spot, dateToCheck)) {
       return; // Don't allow booking locked spots
     }
     
     // Prevent booking expired spots (past unbooked dates)
-    if (await isSpotExpiredOnDate(spot, dateToCheck)) {
+    if (isSpotExpiredOnDate(spot, dateToCheck)) {
       return; // Don't allow booking expired spots
     }
     
@@ -365,7 +364,7 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
     // First, acquire lock for this spot on this date
     setIsAcquiringLock(true);
     try {
-      const dateStr = await formatDateForDB(dateToCheck);
+      const dateStr = formatLocalDate(dateToCheck);
       
       // Get the listingId and dailyRate for this specific date from the spot's dateToPrice map
       const priceInfo = spot.dateToPrice?.[dateStr];
