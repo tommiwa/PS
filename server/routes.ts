@@ -1237,10 +1237,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Verify that the user owns the spot (both BCI-managed and personal spots can be listed by owners)
+      // Log for debugging production authorization issues
+      console.log(`[spot-listings] Creating listing for spot ${validatedData.spotId}: ownerId=${spot.ownerId}, userId=${userId}, match=${spot.ownerId === userId}`);
+      
+      // Auto-sync owner_id if user legitimately owns spot via email but has mismatched ID
       if (spot.ownerId !== userId) {
-        return res.status(403).json({ 
-          error: "You can only create listings for spots you own" 
-        });
+        // Check if user's email matches the current owner's email (legacy data fix)
+        const currentUser = await storage.getUser(userId);
+        if (spot.ownerId && currentUser?.email) {
+          const spotOwner = await storage.getUser(spot.ownerId);
+          if (spotOwner?.email === currentUser.email) {
+            // Same email, different ID - auto-correct the owner_id
+            console.log(`[spot-listings] Auto-syncing owner_id for spot ${validatedData.spotId}: ${spot.ownerId} → ${userId} (same email: ${currentUser.email})`);
+            await storage.updateParkingSpot(validatedData.spotId, { ownerId: userId });
+          } else {
+            return res.status(403).json({ 
+              error: "You can only create listings for spots you own" 
+            });
+          }
+        } else {
+          return res.status(403).json({ 
+            error: "You can only create listings for spots you own" 
+          });
+        }
       }
       
       const newListing = await storage.createSpotListing(validatedData);
@@ -1790,8 +1809,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   });
                 }
               }
+            } else if (listing.listingType === 'recurring' && listing.recurringStartDate && listing.recurringEndDate && listing.daysOfWeek) {
+              // Recurring listing - expand to all dates that fall on specified days of week
+              const startStr = await formatDateInTimezone(listing.recurringStartDate);
+              const endStr = await formatDateInTimezone(listing.recurringEndDate);
+              const allDatesInRange = await generateDateRange(startStr, endStr);
+              
+              // Map day names to JS day numbers (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+              const dayNameToNumber: Record<string, number> = {
+                'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3,
+                'thursday': 4, 'friday': 5, 'saturday': 6
+              };
+              
+              // Convert listing's daysOfWeek array to a Set of day numbers for quick lookup
+              const allowedDays = new Set(
+                (listing.daysOfWeek as string[]).map(day => dayNameToNumber[day.toLowerCase()])
+              );
+              
+              // Filter dates to only those that fall on the specified days
+              for (const dateStr of allDatesInRange) {
+                const [year, month, day] = dateStr.split('-').map(Number);
+                const date = new Date(year, month - 1, day);
+                const dayOfWeek = date.getDay();
+                
+                if (allowedDays.has(dayOfWeek)) {
+                  allDates.push(dateStr);
+                  // Only set if not already set (single day listings take precedence)
+                  if (!dateToListing.has(dateStr)) {
+                    dateToListing.set(dateStr, {
+                      listingId: listing.id,
+                      dailyRate: listing.dailyRate
+                    });
+                  }
+                }
+              }
             }
-            // TODO: Handle recurring listings
           }
           
           // Remove duplicate dates and sort
