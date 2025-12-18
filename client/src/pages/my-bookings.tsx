@@ -210,31 +210,51 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
 
   if (isOwnerView) {
     // For owners - categorize their listings using status and payment workflow
-    // Active: listings that are available or booked (but not awaiting payment confirmation)
+    const today = new Date().toISOString().split('T')[0]
+    
+    // Active: listings that are available OR booked for today/future (regardless of payment status)
     activeItems = listings.filter((l: any) => 
       l.status === "available" || 
-      (l.status === "booked" && (!l.paymentStatus || l.paymentStatus === 'pending'))
+      (l.status === "booked" && l.date >= today)
     )
     pendingItems = [] // Owners don't have pending bookings in this context
-    // Payment Pending: booked listings where renter has marked as paid, awaiting owner confirmation
+    
+    // Payment Pending: booked listings where payment is not yet confirmed
+    // - paymentStatus = 'pending' (awaiting renter payment)
+    // - paymentStatus = 'paid' (awaiting owner confirmation)
     paymentPendingItems = listings.filter((l: any) => 
-      l.status === "booked" && l.paymentStatus === 'paid'
+      l.status === "booked" && (l.paymentStatus === 'pending' || l.paymentStatus === 'paid')
     )
-    completedItems = listings.filter((l: SpotListing) => l.status === "used")
+    
+    // Completed: used listings OR listings where payment was confirmed
+    completedItems = listings.filter((l: any) => 
+      l.status === "used" || l.paymentStatus === 'received'
+    )
     cancelledItems = listings.filter((l: SpotListing) => l.status === "cancelled")
     unusedItems = listings.filter((l: SpotListing) => l.status === "unused")
   } else {
     // For renters - categorize their bookings
     const today = new Date().toISOString().split('T')[0]
-    activeItems = mockBookings.filter((b: Booking) => b.status === "confirmed" && b.bookingDate >= today)
+    
+    // Active: confirmed bookings for today or future dates (regardless of payment status)
+    activeItems = mockBookings.filter((b: Booking) => 
+      b.status === "confirmed" && b.bookingDate >= today
+    )
     pendingItems = mockBookings.filter((b: Booking) => b.status === "pending") 
+    
+    // Payment Pending: all bookings where payment is not yet confirmed by owner
+    // - paymentStatus = 'pending' (awaiting renter payment)
+    // - paymentStatus = 'paid' (awaiting owner confirmation)
+    // Includes both active and past bookings
     paymentPendingItems = mockBookings.filter((b: Booking) => {
       const paymentStatus = b.paymentStatus || 'pending'
-      return b.status === "confirmed" && paymentStatus === 'pending' && b.bookingDate >= today
+      return b.status === "confirmed" && (paymentStatus === 'pending' || paymentStatus === 'paid')
     })
+    
+    // Completed: bookings where owner has confirmed payment (paymentStatus = 'received')
     completedItems = mockBookings.filter((b: Booking) => {
       const paymentStatus = b.paymentStatus || 'pending'
-      return b.status === "completed" || (b.status === "confirmed" && paymentStatus === 'received' && b.bookingDate < today)
+      return b.status === "completed" || paymentStatus === 'received'
     })
     cancelledItems = mockBookings.filter((b: Booking) => b.status === "cancelled")
     unusedItems = [] // Renters don't have unused items
