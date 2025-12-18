@@ -351,7 +351,28 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
   }
 
   const handleDownloadReceipt = (bookingId: string) => {
-    const booking = mockBookings.find(b => b.id === bookingId) as any
+    // For renters: look in bookings; for owners: look in listings (which have embedded booking info)
+    let booking = mockBookings.find(b => b.id === bookingId) as any
+    let isOwnerReceipt = false
+    
+    // If not found in bookings, check listings (for owner view)
+    if (!booking && isOwnerView) {
+      const listing = listings.find((l: any) => l.bookingId === bookingId || l.id === bookingId) as any
+      if (listing && listing.isBooked) {
+        booking = {
+          id: listing.bookingId || listing.id,
+          spotNumber: listing.spot?.spotNumber || 'N/A',
+          location: listing.spot?.location || 'N/A',
+          renterName: listing.renterName || 'N/A',
+          renterEmail: listing.renterEmail || 'N/A',
+          status: listing.bookingStatus || listing.status || 'N/A',
+          dailyRate: listing.dailyRate || listing.price || 0,
+          bookingDate: listing.date || 'N/A',
+          paymentStatus: listing.paymentStatus || 'pending'
+        }
+        isOwnerReceipt = true
+      }
+    }
     
     if (!booking) {
       toast({
@@ -362,13 +383,13 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
       return
     }
 
-    // Create receipt data
+    // Create receipt data - adjust based on whether it's owner or renter viewing
     const receiptData = [{
       spotNumber: booking.spotNumber || 'N/A',
       spotLocation: booking.location || 'N/A',
-      renterName: user?.firstName + ' ' + user?.lastName || 'N/A',
-      renterEmail: user?.email || 'N/A',
-      ownerName: booking.ownerName || booking.owner || 'N/A',
+      renterName: isOwnerReceipt ? booking.renterName : (user?.firstName + ' ' + user?.lastName || 'N/A'),
+      renterEmail: isOwnerReceipt ? booking.renterEmail : (user?.email || 'N/A'),
+      ownerName: isOwnerReceipt ? (user?.firstName + ' ' + user?.lastName || 'N/A') : (booking.ownerName || booking.owner || 'N/A'),
       status: booking.status || 'N/A',
       dailyRate: booking.dailyRate || 0,
       bookingDate: booking.bookingDate || booking.date || 'N/A',
