@@ -280,15 +280,14 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
   // Mutation for renter marking payment as paid (pending → paid)
   const markPaidMutation = useMutation({
     mutationFn: async (bookingId: string) => {
-      return apiRequest(`/api/bookings/${bookingId}/payment`, { 
-        method: 'PATCH',
-        body: { paymentStatus: 'paid' }
+      return apiRequest(`/api/bookings/${bookingId}/mark-paid`, { 
+        method: 'POST'
       })
     },
     onSuccess: () => {
       toast({
-        title: "Payment Marked as Paid",
-        description: "You've marked the payment as sent. Waiting for owner confirmation.",
+        title: "Payment Marked as Sent",
+        description: "You've marked your payment as sent. Waiting for owner to confirm receipt.",
       })
       queryClient.invalidateQueries({ queryKey: ['/api/my-listings'] })
       queryClient.invalidateQueries({ queryKey: ['/api/my-bookings'] })
@@ -518,12 +517,11 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     }
   })
 
-  // Mutation for owner confirming payment received (paid → received)
+  // Mutation for owner confirming payment received (paid → received, status → completed)
   const markPaymentMutation = useMutation({
     mutationFn: async (bookingId: string) => {
-      return apiRequest(`/api/bookings/${bookingId}/payment`, { 
-        method: 'PATCH', 
-        body: { paymentStatus: 'received' } 
+      return apiRequest(`/api/bookings/${bookingId}/confirm-payment`, { 
+        method: 'POST'
       })
     },
     onSuccess: () => {
@@ -699,16 +697,16 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
             >
               <Eye className="h-4 w-4" />
             </Button>
-            {listing.status === "used" && listing.paymentStatus === "paid" && (
+            {listing.status === "booked" && listing.paymentStatus === "paid" && (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => handleMarkPayment(listing.id)}
+                onClick={() => handleMarkPayment(listing.bookingId || listing.id)}
                 disabled={markPaymentMutation.isPending}
                 data-testid={`button-payment-${listing.id}`}
                 title="Confirm Payment Received"
               >
-                <CheckCircle className="h-4 w-4" />
+                <CheckCircle className="h-4 w-4 text-green-600" />
               </Button>
             )}
           </div>
@@ -746,9 +744,19 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               No revenue
             </Badge>
           )}
-          {listing.paymentStatus === "received" && listing.status === "used" && (
-            <Badge variant="outline" className="text-xs text-green-600">
-              Paid
+          {listing.paymentStatus === "received" && (
+            <Badge variant="outline" className="text-xs bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200">
+              Payment Complete
+            </Badge>
+          )}
+          {listing.paymentStatus === "paid" && listing.status === "booked" && (
+            <Badge variant="outline" className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200">
+              Awaiting Your Confirmation
+            </Badge>
+          )}
+          {listing.paymentStatus === "pending" && listing.status === "booked" && (
+            <Badge variant="outline" className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200">
+              Payment Pending
             </Badge>
           )}
         </div>
@@ -871,9 +879,9 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
             <p className="text-xs text-muted-foreground">Payment</p>
             <Badge 
               variant={paymentStatus === 'received' ? 'default' : paymentStatus === 'paid' ? 'secondary' : 'outline'} 
-              className="text-xs"
+              className={`text-xs ${paymentStatus === 'received' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200' : paymentStatus === 'paid' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200' : ''}`}
             >
-              {paymentStatus === 'pending' ? 'Pending' : paymentStatus === 'paid' ? 'Paid' : 'Received'}
+              {paymentStatus === 'pending' ? 'Payment Pending' : paymentStatus === 'paid' ? 'Awaiting Owner Confirmation' : 'Payment Complete'}
             </Badge>
           </div>
         </div>
