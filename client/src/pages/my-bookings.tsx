@@ -1036,17 +1036,19 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
             {isActive && !isCancelled && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleCancelBooking(booking.id)}
-                    data-testid={`button-cancel-${booking.id}`}
-                    className={`flex-1 lg:flex-none ${canCancelWithin24Hours ? 'text-destructive hover:text-destructive' : 'text-muted-foreground cursor-not-allowed'}`}
-                    disabled={!canCancelWithin24Hours}
-                  >
-                    <XCircle className="h-4 w-4 mr-2" />
-                    <span className="hidden sm:inline">Cancel</span>
-                  </Button>
+                  <span className="flex-1 lg:flex-none">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleCancelBooking(booking.id)}
+                      data-testid={`button-cancel-${booking.id}`}
+                      className={`w-full ${canCancelWithin24Hours ? 'text-destructive hover:text-destructive' : 'text-muted-foreground opacity-50 cursor-not-allowed'}`}
+                      disabled={!canCancelWithin24Hours}
+                    >
+                      <XCircle className="h-4 w-4 mr-2" />
+                      <span className="hidden sm:inline">Cancel</span>
+                    </Button>
+                  </span>
                 </TooltipTrigger>
                 <TooltipContent>
                   {canCancelWithin24Hours 
