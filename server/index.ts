@@ -5,8 +5,8 @@ import { auditService } from "./audit-service";
 import { dbAuditStorage as auditStorage } from "./audit-storage";
 import { initTimezone } from "./timezone";
 import { db } from "./db";
-import { spotLocks } from "@shared/schema";
-import { and, eq, lt } from "drizzle-orm";
+import { spotLocks, spotListings, bookings } from "@shared/schema";
+import { and, eq, lt, inArray, notInArray, sql, isNull, or } from "drizzle-orm";
 import { setupWebSocket, broadcastLockEvent } from "./websocket";
 
 const app = express();
@@ -375,6 +375,68 @@ Phone: (778) 410-7100
   // Set up interval to run audit cleanup every 24 hours (86400000 ms)
   setInterval(cleanupOldAuditLogs, 86400000);
   log("Audit log cleanup job scheduled (runs daily, 1-year retention)");
+
+  // Background cleanup job for expired (past unbooked) listings
+  // Marks single-date listings that are past and not booked as "unused"
+  async function markExpiredListingsAsUnused() {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayStr = today.toISOString().split('T')[0];
+      
+      // Get all single-date listings that are past their date and still "available"
+      const expiredSingleListings = await db
+        .update(spotListings)
+        .set({ status: 'unused' })
+        .where(and(
+          eq(spotListings.listingType, 'single'),
+          eq(spotListings.status, 'available'),
+          lt(spotListings.singleDate, todayStr)
+        ))
+        .returning();
+      
+      // Get period listings that have ended and are still "available"
+      const expiredPeriodListings = await db
+        .update(spotListings)
+        .set({ status: 'unused' })
+        .where(and(
+          eq(spotListings.listingType, 'period'),
+          eq(spotListings.status, 'available'),
+          lt(spotListings.periodEndDate, todayStr)
+        ))
+        .returning();
+      
+      // Get recurring listings that have ended and are still "available"
+      const expiredRecurringListings = await db
+        .update(spotListings)
+        .set({ status: 'unused' })
+        .where(and(
+          eq(spotListings.listingType, 'recurring'),
+          eq(spotListings.status, 'available'),
+          lt(spotListings.recurringEndDate, todayStr)
+        ))
+        .returning();
+      
+      const totalExpired = expiredSingleListings.length + expiredPeriodListings.length + expiredRecurringListings.length;
+      
+      if (totalExpired > 0) {
+        console.log(`[Listing Expiration] Marked ${totalExpired} listing(s) as unused (${expiredSingleListings.length} single, ${expiredPeriodListings.length} period, ${expiredRecurringListings.length} recurring)`);
+      }
+      
+      return totalExpired;
+    } catch (error) {
+      console.error("[Listing Expiration] Error marking expired listings:", error);
+      return 0;
+    }
+  }
+  
+  // Run listing expiration cleanup once on startup
+  log("Running initial listing expiration cleanup...");
+  await markExpiredListingsAsUnused();
+  
+  // Set up interval to run listing expiration every hour (3600000 ms)
+  setInterval(markExpiredListingsAsUnused, 3600000);
+  log("Listing expiration job scheduled (runs hourly)");
   
   const server = await registerRoutes(app);
 
