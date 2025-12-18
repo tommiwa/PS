@@ -1055,27 +1055,31 @@ export const generateParkingReceiptPDF = (receipt: ReceiptData, filename?: strin
   const darkGray = '#333333'
   const lightGray = '#888888'
   
-  let y = 15
+  let y = 10
   
-  // === HEADER: ParkShare Logo + Title ===
-  // Add the ParkShare logo image
+  // === HEADER: Centered ParkShare Logo + Title ===
+  // Add the ParkShare logo image centered at top
+  const logoSize = 28
+  const logoX = centerX - (logoSize / 2)
   try {
-    doc.addImage(PARKSHARE_LOGO_BASE64, 'PNG', 15, y, 25, 25)
+    doc.addImage(PARKSHARE_LOGO_BASE64, 'PNG', logoX, y, logoSize, logoSize)
   } catch (e) {
-    // Fallback: draw a simple circle with car outline if image fails
+    // Fallback: draw a simple circle if image fails
     doc.setDrawColor(darkGray)
     doc.setLineWidth(1)
-    doc.circle(27.5, y + 12.5, 12)
+    doc.circle(centerX, y + (logoSize / 2), logoSize / 2)
   }
   
-  // Title
+  y += logoSize + 5
+  
+  // Title centered under logo
   doc.setLineDashPattern([], 0)
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(16)
+  doc.setFontSize(14)
   doc.setTextColor(darkGray)
-  doc.text('Parking Receipt', 50, y + 12)
+  doc.text('ParkShare Receipt', centerX, y, { align: 'center' })
   
-  y += 30
+  y += 10
   
   // === MAIN CONTENT BOX ===
   // Draw dashed border around content
