@@ -1089,6 +1089,12 @@ export class MemStorage implements IStorage {
   }
 
   async createSpotListing(insertListing: InsertSpotListing): Promise<SpotListing> {
+    // Validate status - only allow valid statuses, default to "available"
+    const validStatuses = ["available", "booked", "used", "unused", "cancelled"];
+    const status = validStatuses.includes(insertListing.status as string) 
+      ? (insertListing.status as ListingStatus) 
+      : "available";
+    
     const [listing] = await db.insert(spotListings).values({
       spotId: insertListing.spotId,
       ownerId: insertListing.ownerId!,
@@ -1100,15 +1106,27 @@ export class MemStorage implements IStorage {
       recurringEndDate: insertListing.recurringEndDate ?? null,
       daysOfWeek: insertListing.daysOfWeek ?? null,
       dailyRate: insertListing.dailyRate,
-      status: (insertListing.status as ListingStatus) ?? "available",
+      status: status,
       notes: insertListing.notes ?? null,
     }).returning();
+    
+    // Auto-enable bookability on the spot when a listing is created
+    // This ensures spots become bookable when owners list them
+    await db.update(parkingSpots)
+      .set({ isBookable: true })
+      .where(eq(parkingSpots.id, insertListing.spotId));
     
     return listing;
   }
 
   async bulkCreateSpotListings(spotIds: string[], listingData: Omit<InsertSpotListing, 'spotId' | 'ownerId'>, ownerId: string): Promise<SpotListing[]> {
     if (spotIds.length === 0) return [];
+
+    // Validate status - only allow valid statuses, default to "available"
+    const validStatuses = ["available", "booked", "used", "unused", "cancelled"];
+    const status = validStatuses.includes(listingData.status as string) 
+      ? (listingData.status as ListingStatus) 
+      : "available";
 
     const createdListings: SpotListing[] = [];
     
@@ -1125,12 +1143,17 @@ export class MemStorage implements IStorage {
         recurringEndDate: listingData.recurringEndDate ?? null,
         daysOfWeek: listingData.daysOfWeek ?? null,
         dailyRate: listingData.dailyRate,
-        status: (listingData.status as ListingStatus) ?? "available",
+        status: status,
         notes: listingData.notes ?? null,
       }).returning();
 
       if (listing[0]) {
         createdListings.push(listing[0]);
+        
+        // Auto-enable bookability on the spot when a listing is created
+        await db.update(parkingSpots)
+          .set({ isBookable: true })
+          .where(eq(parkingSpots.id, spotId));
       }
     }
 
