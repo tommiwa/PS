@@ -209,10 +209,17 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
   let activeItems: (Booking | SpotListing)[], pendingItems: (Booking | SpotListing)[], paymentPendingItems: (Booking | SpotListing)[], completedItems: (Booking | SpotListing)[], cancelledItems: (Booking | SpotListing)[], unusedItems: (Booking | SpotListing)[]
 
   if (isOwnerView) {
-    // For owners - categorize their listings using new status values
-    activeItems = listings.filter((l: SpotListing) => l.status === "available" || l.status === "booked")
+    // For owners - categorize their listings using status and payment workflow
+    // Active: listings that are available or booked (but not awaiting payment confirmation)
+    activeItems = listings.filter((l: any) => 
+      l.status === "available" || 
+      (l.status === "booked" && (!l.paymentStatus || l.paymentStatus === 'pending'))
+    )
     pendingItems = [] // Owners don't have pending bookings in this context
-    paymentPendingItems = [] // Not applicable for owners
+    // Payment Pending: booked listings where renter has marked as paid, awaiting owner confirmation
+    paymentPendingItems = listings.filter((l: any) => 
+      l.status === "booked" && l.paymentStatus === 'paid'
+    )
     completedItems = listings.filter((l: SpotListing) => l.status === "used")
     cancelledItems = listings.filter((l: SpotListing) => l.status === "cancelled")
     unusedItems = listings.filter((l: SpotListing) => l.status === "unused")
@@ -573,214 +580,162 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     }
   }
 
-  // Owner listing with edit/delete actions (for Active tab)
-  const renderOwnerListingWithActions = (listing: any) => (
-    <div key={listing.id} className="border rounded-lg p-3 md:p-4">
-      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3 mb-4">
-        <div className="flex items-center gap-3">
-          {getStatusIcon(listing.status)}
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold break-words">Spot {listing.spotNumber}</h3>
-            <p className="text-sm text-muted-foreground break-words">{listing.location}</p>
+  // Unified Owner listing render function with proper action buttons based on status and payment
+  const renderOwnerListing = (listing: any) => {
+    const paymentStatus = listing.paymentStatus || null
+    const canEdit = listing.status === "available" || (listing.status === "booked" && paymentStatus !== 'paid')
+    const canCancel = listing.status === "available" || (listing.status === "booked" && paymentStatus !== 'paid')
+    const canConfirmPayment = listing.status === "booked" && paymentStatus === 'paid'
+    const isCompleted = listing.status === "used" || paymentStatus === 'received'
+    
+    // Payment status badge text
+    const getPaymentBadge = () => {
+      if (!paymentStatus || listing.status === "available") return null
+      if (paymentStatus === 'pending' && listing.status === "booked") {
+        return <Badge variant="outline" className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200">Awaiting Renter Payment</Badge>
+      }
+      if (paymentStatus === 'paid') {
+        return <Badge variant="outline" className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200">Confirm Payment</Badge>
+      }
+      if (paymentStatus === 'received') {
+        return <Badge variant="outline" className="text-xs bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200">Payment Complete</Badge>
+      }
+      return null
+    }
+    
+    return (
+      <div key={listing.id} className="border rounded-lg p-3 md:p-4">
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3 mb-4">
+          <div className="flex items-center gap-3">
+            {getStatusIcon(listing.status)}
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold break-words">Spot {listing.spot?.spotNumber || listing.spotNumber || 'Unknown'}</h3>
+              <p className="text-sm text-muted-foreground break-words">{listing.spot?.location || listing.location || 'Unknown'}</p>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge 
-            variant={listing.status === "used" || listing.status === "booked" ? "default" : 
-                    listing.status === "available" ? "secondary" : 
-                    listing.status === "unused" ? "destructive" : "outline"}
-          >
-            {listing.status}
-          </Badge>
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleViewDetails(listing)}
-              data-testid={`button-view-${listing.id}`}
-              title="View Bookings"
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge 
+              variant={listing.status === "used" || listing.status === "booked" ? "default" : 
+                      listing.status === "available" ? "secondary" : 
+                      listing.status === "unused" ? "destructive" : "outline"}
             >
-              <Eye className="h-4 w-4" />
-            </Button>
-            {(listing.status === "available" || listing.status === "booked") && (
-              <>
+              {listing.status}
+            </Badge>
+            {getPaymentBadge()}
+            <div className="flex justify-end gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleViewDetails(listing)}
+                data-testid={`button-view-${listing.id}`}
+                title="View Details"
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
+              {canEdit && (
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size="icon"
                   onClick={() => handleEditListing(listing)}
                   data-testid={`button-edit-listing-${listing.id}`}
                   title="Edit Listing"
                 >
                   <Edit className="h-4 w-4" />
                 </Button>
+              )}
+              {canCancel && (
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size="icon"
                   onClick={() => handleDeleteListing(listing)}
                   data-testid={`button-cancel-listing-${listing.id}`}
                   title="Cancel Listing"
                 >
-                  <XCircle className="h-4 w-4" />
+                  <XCircle className="h-4 w-4 text-red-500" />
                 </Button>
-              </>
-            )}
+              )}
+              {canConfirmPayment && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleMarkPayment(listing.bookingId || listing.id)}
+                  disabled={markPaymentMutation.isPending}
+                  data-testid={`button-confirm-payment-${listing.id}`}
+                  title="Confirm Payment Received"
+                >
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                </Button>
+              )}
+              {isCompleted && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleDownloadReceipt(listing.bookingId || listing.id)}
+                  data-testid={`button-download-receipt-${listing.id}`}
+                  title="Download Receipt"
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </div>
         </div>
+        
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-3 mb-3">
+          <div>
+            <p className="text-xs text-muted-foreground">Date</p>
+            <p className="text-sm font-medium truncate">{listing.date}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Duration</p>
+            <p className="text-xs truncate">Full Day</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">
+              {listing.status === "unused" || listing.status === "available" ? "Renter" : "Renter"}
+            </p>
+            <p className="text-sm font-medium truncate">
+              {listing.renterName || (listing.status === "available" ? "Not booked yet" : "N/A")}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Spot Type</p>
+            <p className="text-sm font-medium truncate capitalize">
+              {listing.spot?.spotType || "Regular"}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Price</p>
+            <p className="text-sm font-medium">${listing.totalAmount || listing.price || listing.dailyRate}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Status</p>
+            <p className="text-xs truncate">
+              {listing.status === "unused" && "Listed but unused"}
+              {listing.status === "used" && "Successfully rented"}
+              {listing.status === "booked" && paymentStatus === 'paid' && "Awaiting your confirmation"}
+              {listing.status === "booked" && paymentStatus !== 'paid' && "Currently booked"}
+              {listing.status === "available" && "Available for booking"}
+              {listing.status === "cancelled" && "Cancelled"}
+            </p>
+          </div>
+        </div>
+        
+        {listing.status === "unused" && (
+          <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+            <div className="flex items-center gap-2 text-sm text-orange-700 dark:text-orange-300 break-words">
+              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+              This spot was listed for {listing.date} but was not booked by anyone.
+            </div>
+          </div>
+        )}
       </div>
-      
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-3 mb-3">
-        <div>
-          <p className="text-xs text-muted-foreground">Date</p>
-          <p className="text-sm font-medium truncate">{listing.date}</p>
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground">Duration</p>
-          <p className="text-xs truncate">Full Day</p>
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground">
-            {listing.status === "unused" ? "No Renter" : "Renter"}
-          </p>
-          <p className="text-sm font-medium truncate">
-            {listing.renterName || "Not booked"}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground">Spot Type</p>
-          <p className="text-sm font-medium truncate capitalize">
-            {listing.spot?.spotType || "Regular"}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground">Price</p>
-          <p className="text-sm font-medium">${listing.totalAmount || listing.price}</p>
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground">Status</p>
-          <p className="text-xs truncate">
-            {listing.status === "unused" && "Listed but unused"}
-            {listing.status === "used" && "Successfully rented"}
-            {listing.status === "booked" && "Currently booked"}
-            {listing.status === "available" && "Available for booking"}
-          </p>
-        </div>
-      </div>
-    </div>
-  )
+    )
+  }
 
-  // Owner listing with payment management (for All tab)
-  const renderOwnerListingWithPayment = (listing: any) => (
-    <div key={listing.id} className="border rounded-lg p-3 md:p-4">
-      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3 mb-4">
-        <div className="flex items-center gap-3">
-          {getStatusIcon(listing.status)}
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold break-words">Spot {listing.spot?.spotNumber || 'Unknown'}</h3>
-            <p className="text-sm text-muted-foreground break-words">{listing.spot?.location || 'Unknown'}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge 
-            variant={listing.status === "used" || listing.status === "booked" ? "default" : 
-                    listing.status === "available" ? "secondary" : 
-                    listing.status === "unused" ? "destructive" : "outline"}
-          >
-            {listing.status}
-          </Badge>
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleViewDetails(listing)}
-              data-testid={`button-view-${listing.id}`}
-              title="View Bookings"
-            >
-              <Eye className="h-4 w-4" />
-            </Button>
-            {listing.status === "booked" && listing.paymentStatus === "paid" && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleMarkPayment(listing.bookingId || listing.id)}
-                disabled={markPaymentMutation.isPending}
-                data-testid={`button-payment-${listing.id}`}
-                title="Confirm Payment Received"
-              >
-                <CheckCircle className="h-4 w-4 text-green-600" />
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-      
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-3 mb-3">
-        <div>
-          <p className="text-xs text-muted-foreground">Date</p>
-          <p className="text-sm font-medium truncate">{listing.date}</p>
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground">Duration</p>
-          <p className="text-xs truncate">Full Day</p>
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground">
-            {listing.status === "unused" ? "No Renter" : "Renter"}
-          </p>
-          <p className="text-sm font-medium truncate">
-            {listing.renterName || "Not booked"}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground">Vehicle</p>
-          <p className="text-sm font-medium truncate">
-            {listing.renterVehicle || "N/A"}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground">Price</p>
-          <p className="text-sm font-medium">${listing.totalAmount || listing.price}</p>
-          {listing.status === "unused" && (
-            <Badge variant="outline" className="text-xs text-orange-600">
-              No revenue
-            </Badge>
-          )}
-          {listing.paymentStatus === "received" && (
-            <Badge variant="outline" className="text-xs bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200">
-              Payment Complete
-            </Badge>
-          )}
-          {listing.paymentStatus === "paid" && listing.status === "booked" && (
-            <Badge variant="outline" className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200">
-              Awaiting Your Confirmation
-            </Badge>
-          )}
-          {listing.paymentStatus === "pending" && listing.status === "booked" && (
-            <Badge variant="outline" className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200">
-              Payment Pending
-            </Badge>
-          )}
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground">Status</p>
-          <p className="text-xs truncate">
-            {listing.status === "unused" && "Listed but unused"}
-            {listing.status === "used" && "Successfully rented"}
-            {listing.status === "booked" && "Currently booked"}
-            {listing.status === "available" && "Available for booking"}
-          </p>
-        </div>
-      </div>
-      
-      {listing.status === "unused" && (
-        <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-          <div className="flex items-center gap-2 text-sm text-orange-700 dark:text-orange-300 break-words">
-            <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-            This spot was listed for {listing.date} but was not booked by anyone.
-          </div>
-        </div>
-      )}
-    </div>
-  )
+  // Backward compatibility aliases - all use unified render function
+  const renderOwnerListingWithActions = renderOwnerListing
+  const renderOwnerListingWithPayment = renderOwnerListing
 
   const renderRenterBooking = (booking: any) => {
     const today = new Date().toISOString().split('T')[0]
