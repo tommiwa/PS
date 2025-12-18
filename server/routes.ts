@@ -1627,28 +1627,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Get booking information for this listing
         const listingBookings = await storage.getBookingsByListing(listing.id);
         
-        // Find the most relevant booking based on listing status
+        // Find active booking for this listing (not cancelled)
         let booking = null;
         
         if (listingBookings.length > 0) {
-          if (listing.status === 'booked' || listing.status === 'used') {
-            // Get the most recent active booking (confirmed or completed)
-            // Sort by booking date descending to get the most recent one
-            const activeBookings = listingBookings
-              .filter(b => b.status === 'confirmed' || b.status === 'completed')
-              .sort((a, b) => new Date(b.bookingDate).getTime() - new Date(a.bookingDate).getTime());
-            
-            booking = activeBookings[0] || null;
-          }
-          // For "available" or "unused" status, booking remains null
+          // Get any non-cancelled booking for this listing
+          // Sort by booking date descending to get the most recent one
+          const activeBookings = listingBookings
+            .filter(b => b.status !== 'cancelled')
+            .sort((a, b) => new Date(b.bookingDate).getTime() - new Date(a.bookingDate).getTime());
+          
+          booking = activeBookings[0] || null;
         }
         
         let renterName = null;
+        let renterEmail = null;
         
         if (booking) {
           const renter = await storage.getUser(booking.renterId);
           if (renter) {
             renterName = `${renter.firstName} ${renter.lastName}`;
+            renterEmail = renter.email;
           }
         }
         
@@ -1662,6 +1661,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           displayDate = listing.recurringStartDate;
         }
         
+        // Determine if this listing is effectively booked
+        const isBooked = booking !== null;
+        
         return {
           ...listing,
           spot: {
@@ -1672,7 +1674,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           date: displayDate,
           price: listing.dailyRate,
           renterName,
+          renterEmail,
+          isBooked,
           bookingId: booking?.id || null,
+          bookingStatus: booking?.status || null,
           totalAmount: booking?.totalAmount || listing.dailyRate,
           renterVehicle: booking ? `${booking.notes || 'N/A'}` : null,
           paymentReceived: booking?.paymentReceived || false,

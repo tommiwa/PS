@@ -611,12 +611,14 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
   // Unified Owner listing render function with proper action buttons based on status and payment
   const renderOwnerListing = (listing: any) => {
     const paymentStatus = listing.paymentStatus || null
-    const canEdit = listing.status === "available" || (listing.status === "booked" && paymentStatus !== 'paid')
-    const canCancel = listing.status === "available" || (listing.status === "booked" && paymentStatus !== 'paid')
-    const canConfirmPayment = listing.status === "booked" && paymentStatus === 'paid'
+    // Use isBooked from API to determine actual booking status (not just listing.status from database)
+    const effectivelyBooked = listing.isBooked || listing.status === "booked"
+    const canEdit = !effectivelyBooked || (effectivelyBooked && paymentStatus !== 'paid')
+    const canCancel = !effectivelyBooked
+    const canConfirmPayment = effectivelyBooked && paymentStatus === 'paid'
     const isCompleted = listing.status === "used" || paymentStatus === 'received'
     
-    // Get status badge with color
+    // Get status badge with color - use effectivelyBooked for accurate display
     const getStatusBadge = () => {
       const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
         available: { bg: "bg-emerald-100 dark:bg-emerald-900/40", text: "text-emerald-700 dark:text-emerald-300", label: "Available" },
@@ -625,7 +627,9 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
         unused: { bg: "bg-amber-100 dark:bg-amber-900/40", text: "text-amber-700 dark:text-amber-300", label: "Unused" },
         cancelled: { bg: "bg-red-100 dark:bg-red-900/40", text: "text-red-700 dark:text-red-300", label: "Cancelled" },
       }
-      const config = statusConfig[listing.status] || statusConfig.available
+      // If effectively booked but status says available, show as booked
+      const displayStatus = effectivelyBooked && listing.status === 'available' ? 'booked' : listing.status
+      const config = statusConfig[displayStatus] || statusConfig.available
       return (
         <Badge variant="outline" className={`${config.bg} ${config.text} border-0 font-medium`}>
           {config.label}
