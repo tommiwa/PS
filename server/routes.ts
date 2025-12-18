@@ -1060,8 +1060,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Parking spot not found" });
       }
       
+      // Auto-sync owner_id if user legitimately owns spot via email but has mismatched ID
       if (existingSpot.ownerId !== userId) {
-        return res.status(403).json({ error: "Not authorized to update this parking spot" });
+        const currentUser = await storage.getUser(userId);
+        if (existingSpot.ownerId && currentUser?.email) {
+          const spotOwner = await storage.getUser(existingSpot.ownerId);
+          if (spotOwner?.email === currentUser.email) {
+            console.log(`[my-spots] Auto-syncing owner_id for spot ${id}: ${existingSpot.ownerId} → ${userId}`);
+            await storage.updateParkingSpot(id, { ownerId: userId });
+          } else {
+            return res.status(403).json({ error: "Not authorized to update this parking spot" });
+          }
+        } else {
+          return res.status(403).json({ error: "Not authorized to update this parking spot" });
+        }
       }
       
       // Validate request body
@@ -1106,8 +1118,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Parking spot not found" });
       }
       
+      // Auto-sync owner_id if user legitimately owns spot via email but has mismatched ID
       if (existingSpot.ownerId !== userId) {
-        return res.status(403).json({ error: "Not authorized to delete this parking spot" });
+        const currentUser = await storage.getUser(userId);
+        if (existingSpot.ownerId && currentUser?.email) {
+          const spotOwner = await storage.getUser(existingSpot.ownerId);
+          if (spotOwner?.email === currentUser.email) {
+            console.log(`[my-spots] Auto-syncing owner_id for spot ${id}: ${existingSpot.ownerId} → ${userId}`);
+            await storage.updateParkingSpot(id, { ownerId: userId });
+          } else {
+            return res.status(403).json({ error: "Not authorized to delete this parking spot" });
+          }
+        } else {
+          return res.status(403).json({ error: "Not authorized to delete this parking spot" });
+        }
       }
       
       const deleted = await storage.deleteParkingSpot(id);
@@ -1153,8 +1177,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Log for debugging production authorization issues
       console.log(`[default-price] Spot ${id}: ownerId=${existingSpot.ownerId}, userId=${userId}, match=${existingSpot.ownerId === userId}`);
       
+      // Auto-sync owner_id if user legitimately owns spot via email but has mismatched ID
       if (existingSpot.ownerId !== userId) {
-        return res.status(403).json({ error: "Not authorized to update this parking spot" });
+        // Check if user's email matches the current owner's email (legacy data fix)
+        const currentUser = await storage.getUser(userId);
+        if (existingSpot.ownerId && currentUser?.email) {
+          const spotOwner = await storage.getUser(existingSpot.ownerId);
+          if (spotOwner?.email === currentUser.email) {
+            // Same email, different ID - auto-correct the owner_id
+            console.log(`[default-price] Auto-syncing owner_id for spot ${id}: ${existingSpot.ownerId} → ${userId} (same email: ${currentUser.email})`);
+            await storage.updateParkingSpot(id, { ownerId: userId });
+          } else {
+            return res.status(403).json({ error: "Not authorized to update this parking spot" });
+          }
+        } else {
+          return res.status(403).json({ error: "Not authorized to update this parking spot" });
+        }
       }
       
       const updatedSpot = await storage.updateParkingSpot(id, { defaultPrice: String(defaultPrice) });
