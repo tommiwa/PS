@@ -76,7 +76,8 @@ const locationFormSchema = insertLocationSchema.extend({
   level: z.string().min(1, "Level is required"),
   address: z.string().optional(),
   timezone: z.string().default("America/Vancouver"),
-  isActive: z.boolean().default(true)
+  isActive: z.boolean().default(true),
+  floorPlanBaseUrl: z.string().optional()
 });
 
 type LocationFormData = z.infer<typeof locationFormSchema>;
@@ -176,7 +177,8 @@ export default function AdminDataManagement() {
       level: "",
       address: "",
       timezone: "America/Vancouver",
-      isActive: true
+      isActive: true,
+      floorPlanBaseUrl: ""
     }
   })
 
@@ -188,7 +190,8 @@ export default function AdminDataManagement() {
       level: "",
       address: "",
       timezone: "America/Vancouver",
-      isActive: true
+      isActive: true,
+      floorPlanBaseUrl: ""
     }
   })
 
@@ -791,7 +794,8 @@ export default function AdminDataManagement() {
       level: location.level,
       address: location.address || "",
       timezone: location.timezone,
-      isActive: location.isActive
+      isActive: location.isActive,
+      floorPlanBaseUrl: location.floorPlanBaseUrl || ""
     });
     setShowEditLocationDialog(true);
   };
@@ -1307,6 +1311,26 @@ export default function AdminDataManagement() {
                                 />
                               </FormControl>
                               <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={addLocationForm.control}
+                          name="floorPlanBaseUrl"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Floor Plan Base URL (Optional)</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="https://example.com/visual-directory/floors/18/seats/" 
+                                  {...field} 
+                                  data-testid="input-location-floor-plan-url"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                              <p className="text-xs text-muted-foreground">
+                                Base URL for floor plan software. Seat number will be appended.
+                              </p>
                             </FormItem>
                           )}
                         />
@@ -2023,6 +2047,26 @@ export default function AdminDataManagement() {
                       />
                     </FormControl>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editLocationForm.control}
+                name="floorPlanBaseUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Floor Plan Base URL (Optional)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="https://example.com/visual-directory/floors/18/seats/" 
+                        {...field} 
+                        data-testid="input-edit-location-floor-plan-url"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                    <p className="text-xs text-muted-foreground">
+                      Base URL for floor plan software. Seat number will be appended.
+                    </p>
                   </FormItem>
                 )}
               />

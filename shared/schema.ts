@@ -902,6 +902,10 @@ export const locations = pgTable("locations", {
   address: text("address"),
   timezone: text("timezone").notNull().default("America/Vancouver"),
   isActive: boolean("is_active").notNull().default(true),
+  // Floor plan integration - base URL for external floor plan software
+  // Format: https://example.com/visual-directory/floors/{floorId}/seats/
+  // The seat number will be appended to this URL
+  floorPlanBaseUrl: text("floor_plan_base_url"),
   // Geocoding fields for address validation
   placeId: text("place_id").unique(),
   latitude: decimal("latitude", { precision: 10, scale: 7 }),
@@ -919,6 +923,7 @@ export const insertLocationSchema = createInsertSchema(locations).pick({
   address: true,
   timezone: true,
   isActive: true,
+  floorPlanBaseUrl: true,
   placeId: true,
   latitude: true,
   longitude: true,
