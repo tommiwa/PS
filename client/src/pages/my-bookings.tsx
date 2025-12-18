@@ -588,148 +588,236 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     const canConfirmPayment = listing.status === "booked" && paymentStatus === 'paid'
     const isCompleted = listing.status === "used" || paymentStatus === 'received'
     
-    // Payment status badge text
-    const getPaymentBadge = () => {
-      if (!paymentStatus || listing.status === "available") return null
-      if (paymentStatus === 'pending' && listing.status === "booked") {
-        return <Badge variant="outline" className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200">Awaiting Renter Payment</Badge>
+    // Get status badge with color
+    const getStatusBadge = () => {
+      const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
+        available: { bg: "bg-emerald-100 dark:bg-emerald-900/40", text: "text-emerald-700 dark:text-emerald-300", label: "Available" },
+        booked: { bg: "bg-blue-100 dark:bg-blue-900/40", text: "text-blue-700 dark:text-blue-300", label: "Booked" },
+        used: { bg: "bg-slate-100 dark:bg-slate-800", text: "text-slate-700 dark:text-slate-300", label: "Completed" },
+        unused: { bg: "bg-amber-100 dark:bg-amber-900/40", text: "text-amber-700 dark:text-amber-300", label: "Unused" },
+        cancelled: { bg: "bg-red-100 dark:bg-red-900/40", text: "text-red-700 dark:text-red-300", label: "Cancelled" },
       }
-      if (paymentStatus === 'paid') {
-        return <Badge variant="outline" className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200">Confirm Payment</Badge>
-      }
-      if (paymentStatus === 'received') {
-        return <Badge variant="outline" className="text-xs bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200">Payment Complete</Badge>
-      }
-      return null
+      const config = statusConfig[listing.status] || statusConfig.available
+      return (
+        <Badge variant="outline" className={`${config.bg} ${config.text} border-0 font-medium`}>
+          {config.label}
+        </Badge>
+      )
     }
     
     return (
-      <div key={listing.id} className="border rounded-lg p-3 md:p-4">
-        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3 mb-4">
-          <div className="flex items-center gap-3">
-            {getStatusIcon(listing.status)}
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold break-words">Spot {listing.spot?.spotNumber || listing.spotNumber || 'Unknown'}</h3>
-              <p className="text-sm text-muted-foreground break-words">{listing.spot?.location || listing.location || 'Unknown'}</p>
+      <Card key={listing.id} className="overflow-hidden">
+        <div className="flex flex-col lg:flex-row">
+          {/* Main Content */}
+          <div className="flex-1 p-4">
+            {/* Header Row */}
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <Car className="h-5 w-5 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-base">Spot {listing.spot?.spotNumber || listing.spotNumber || 'Unknown'}</h3>
+                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
+                    <span className="truncate">{listing.spot?.location || listing.location || 'Unknown'}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {getStatusBadge()}
+              </div>
             </div>
+            
+            {/* Info Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+              <div className="flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-md bg-muted/50 flex items-center justify-center flex-shrink-0">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Date</p>
+                  <p className="text-sm font-medium truncate">{listing.date}</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-md bg-muted/50 flex items-center justify-center flex-shrink-0">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Duration</p>
+                  <p className="text-sm font-medium">Full Day</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-md bg-muted/50 flex items-center justify-center flex-shrink-0">
+                  <Building className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Spot Type</p>
+                  <p className="text-sm font-medium capitalize truncate">{listing.spot?.spotType || "Regular"}</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-md bg-muted/50 flex items-center justify-center flex-shrink-0">
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Price</p>
+                  <p className="text-sm font-semibold text-primary">${listing.totalAmount || listing.price || listing.dailyRate}</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-md bg-muted/50 flex items-center justify-center flex-shrink-0">
+                  {listing.renterName ? (
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Renter</p>
+                  <p className={`text-sm font-medium truncate ${listing.renterName ? '' : 'text-muted-foreground italic'}`}>
+                    {listing.renterName || "Not booked yet"}
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Payment Status Banner (if applicable) */}
+            {listing.status === "booked" && paymentStatus && (
+              <div className={`mt-4 p-3 rounded-lg flex items-center gap-3 ${
+                paymentStatus === 'pending' ? 'bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800' :
+                paymentStatus === 'paid' ? 'bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800' :
+                'bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800'
+              }`}>
+                {paymentStatus === 'pending' && (
+                  <>
+                    <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                    <span className="text-sm text-amber-700 dark:text-amber-300">Awaiting renter payment</span>
+                  </>
+                )}
+                {paymentStatus === 'paid' && (
+                  <>
+                    <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                    <span className="text-sm text-blue-700 dark:text-blue-300">Renter has paid - please confirm receipt</span>
+                  </>
+                )}
+                {paymentStatus === 'received' && (
+                  <>
+                    <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+                    <span className="text-sm text-green-700 dark:text-green-300">Payment confirmed</span>
+                  </>
+                )}
+              </div>
+            )}
+            
+            {/* Unused Warning */}
+            {listing.status === "unused" && (
+              <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center gap-3">
+                <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                <span className="text-sm text-amber-700 dark:text-amber-300">This spot was not booked for {listing.date}</span>
+              </div>
+            )}
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Badge 
-              variant={listing.status === "used" || listing.status === "booked" ? "default" : 
-                      listing.status === "available" ? "secondary" : 
-                      listing.status === "unused" ? "destructive" : "outline"}
-            >
-              {listing.status}
-            </Badge>
-            {getPaymentBadge()}
-            <div className="flex justify-end gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleViewDetails(listing)}
-                data-testid={`button-view-${listing.id}`}
-                title="View Details"
-              >
-                <Eye className="h-4 w-4" />
-              </Button>
-              {canEdit && (
+          
+          {/* Actions Column */}
+          <div className="lg:w-32 border-t lg:border-t-0 lg:border-l bg-muted/20 p-3 lg:p-4 flex lg:flex-col items-center lg:items-stretch justify-center gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
-                  size="icon"
-                  onClick={() => handleEditListing(listing)}
-                  data-testid={`button-edit-listing-${listing.id}`}
-                  title="Edit Listing"
+                  size="sm"
+                  onClick={() => handleViewDetails(listing)}
+                  data-testid={`button-view-${listing.id}`}
+                  className="flex-1 lg:flex-none"
                 >
-                  <Edit className="h-4 w-4" />
+                  <Eye className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">View</span>
                 </Button>
-              )}
-              {canCancel && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleDeleteListing(listing)}
-                  data-testid={`button-cancel-listing-${listing.id}`}
-                  title="Cancel Listing"
-                >
-                  <XCircle className="h-4 w-4 text-red-500" />
-                </Button>
-              )}
-              {canConfirmPayment && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleMarkPayment(listing.bookingId || listing.id)}
-                  disabled={markPaymentMutation.isPending}
-                  data-testid={`button-confirm-payment-${listing.id}`}
-                  title="Confirm Payment Received"
-                >
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                </Button>
-              )}
-              {isCompleted && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleDownloadReceipt(listing.bookingId || listing.id)}
-                  data-testid={`button-download-receipt-${listing.id}`}
-                  title="Download Receipt"
-                >
-                  <Download className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
+              </TooltipTrigger>
+              <TooltipContent>View Details</TooltipContent>
+            </Tooltip>
+            
+            {canEdit && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleEditListing(listing)}
+                    data-testid={`button-edit-listing-${listing.id}`}
+                    className="flex-1 lg:flex-none"
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    <span className="hidden sm:inline">Edit</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Edit Listing</TooltipContent>
+              </Tooltip>
+            )}
+            
+            {canCancel && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDeleteListing(listing)}
+                    data-testid={`button-cancel-listing-${listing.id}`}
+                    className="flex-1 lg:flex-none text-destructive hover:text-destructive"
+                  >
+                    <XCircle className="h-4 w-4 mr-2" />
+                    <span className="hidden sm:inline">Cancel</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Cancel Listing</TooltipContent>
+              </Tooltip>
+            )}
+            
+            {canConfirmPayment && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => handleMarkPayment(listing.bookingId || listing.id)}
+                    disabled={markPaymentMutation.isPending}
+                    data-testid={`button-confirm-payment-${listing.id}`}
+                    className="flex-1 lg:flex-none bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    <span className="hidden sm:inline">Confirm</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Confirm Payment Received</TooltipContent>
+              </Tooltip>
+            )}
+            
+            {isCompleted && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDownloadReceipt(listing.bookingId || listing.id)}
+                    data-testid={`button-download-receipt-${listing.id}`}
+                    className="flex-1 lg:flex-none"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    <span className="hidden sm:inline">Receipt</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Download Receipt</TooltipContent>
+              </Tooltip>
+            )}
           </div>
         </div>
-        
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-3 mb-3">
-          <div>
-            <p className="text-xs text-muted-foreground">Date</p>
-            <p className="text-sm font-medium truncate">{listing.date}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Duration</p>
-            <p className="text-xs truncate">Full Day</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">
-              {listing.status === "unused" || listing.status === "available" ? "Renter" : "Renter"}
-            </p>
-            <p className="text-sm font-medium truncate">
-              {listing.renterName || (listing.status === "available" ? "Not booked yet" : "N/A")}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Spot Type</p>
-            <p className="text-sm font-medium truncate capitalize">
-              {listing.spot?.spotType || "Regular"}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Price</p>
-            <p className="text-sm font-medium">${listing.totalAmount || listing.price || listing.dailyRate}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Status</p>
-            <p className="text-xs truncate">
-              {listing.status === "unused" && "Listed but unused"}
-              {listing.status === "used" && "Successfully rented"}
-              {listing.status === "booked" && paymentStatus === 'paid' && "Awaiting your confirmation"}
-              {listing.status === "booked" && paymentStatus !== 'paid' && "Currently booked"}
-              {listing.status === "available" && "Available for booking"}
-              {listing.status === "cancelled" && "Cancelled"}
-            </p>
-          </div>
-        </div>
-        
-        {listing.status === "unused" && (
-          <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-            <div className="flex items-center gap-2 text-sm text-orange-700 dark:text-orange-300 break-words">
-              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-              This spot was listed for {listing.date} but was not booked by anyone.
-            </div>
-          </div>
-        )}
-      </div>
+      </Card>
     )
   }
 
@@ -743,104 +831,213 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     const paymentStatus = booking.paymentStatus || 'pending'
     const canMarkPaid = booking.status === "confirmed" && paymentStatus === 'pending' && booking.bookingDate >= today
     const isCompleted = booking.status === "completed" || (booking.status === "confirmed" && paymentStatus === 'received' && booking.bookingDate < today)
+    const isCancelled = booking.status === "cancelled"
+    
+    // Get status badge with color
+    const getBookingStatusBadge = () => {
+      const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
+        confirmed: { bg: "bg-emerald-100 dark:bg-emerald-900/40", text: "text-emerald-700 dark:text-emerald-300", label: "Confirmed" },
+        pending: { bg: "bg-amber-100 dark:bg-amber-900/40", text: "text-amber-700 dark:text-amber-300", label: "Pending" },
+        completed: { bg: "bg-slate-100 dark:bg-slate-800", text: "text-slate-700 dark:text-slate-300", label: "Completed" },
+        cancelled: { bg: "bg-red-100 dark:bg-red-900/40", text: "text-red-700 dark:text-red-300", label: "Cancelled" },
+      }
+      const config = statusConfig[booking.status] || statusConfig.pending
+      return (
+        <Badge variant="outline" className={`${config.bg} ${config.text} border-0 font-medium`}>
+          {config.label}
+        </Badge>
+      )
+    }
     
     return (
-      <div key={booking.id} className="border rounded-lg p-3 md:p-4">
-        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3 mb-4">
-          <div className="flex items-center gap-3">
-            {getStatusIcon(booking.status)}
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold break-words">Spot {booking.spotNumber}</h3>
-              <p className="text-sm text-muted-foreground break-words">{booking.location}</p>
+      <Card key={booking.id} className="overflow-hidden">
+        <div className="flex flex-col lg:flex-row">
+          {/* Main Content */}
+          <div className="flex-1 p-4">
+            {/* Header Row */}
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <Car className="h-5 w-5 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-base">Spot {booking.spotNumber}</h3>
+                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
+                    <span className="truncate">{booking.location}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {getBookingStatusBadge()}
+              </div>
             </div>
+            
+            {/* Info Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+              <div className="flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-md bg-muted/50 flex items-center justify-center flex-shrink-0">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Date</p>
+                  <p className="text-sm font-medium truncate">{booking.bookingDate}</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-md bg-muted/50 flex items-center justify-center flex-shrink-0">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Duration</p>
+                  <p className="text-sm font-medium">Full Day</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-md bg-muted/50 flex items-center justify-center flex-shrink-0">
+                  <Building className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Spot Type</p>
+                  <p className="text-sm font-medium capitalize truncate">{booking.spotType || "Regular"}</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-md bg-muted/50 flex items-center justify-center flex-shrink-0">
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Price</p>
+                  <p className="text-sm font-semibold text-primary">${booking.totalAmount || booking.dailyRate}</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-md bg-muted/50 flex items-center justify-center flex-shrink-0">
+                  <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Owner</p>
+                  <p className="text-sm font-medium truncate">{booking.ownerName || "N/A"}</p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Payment Status Banner */}
+            {booking.status === "confirmed" && (
+              <div className={`mt-4 p-3 rounded-lg flex items-center gap-3 ${
+                paymentStatus === 'pending' ? 'bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800' :
+                paymentStatus === 'paid' ? 'bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800' :
+                'bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800'
+              }`}>
+                {paymentStatus === 'pending' && (
+                  <>
+                    <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                    <span className="text-sm text-amber-700 dark:text-amber-300">Payment pending - please mark as paid after transfer</span>
+                  </>
+                )}
+                {paymentStatus === 'paid' && (
+                  <>
+                    <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                    <span className="text-sm text-blue-700 dark:text-blue-300">Awaiting owner confirmation</span>
+                  </>
+                )}
+                {paymentStatus === 'received' && (
+                  <>
+                    <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+                    <span className="text-sm text-green-700 dark:text-green-300">Payment confirmed by owner</span>
+                  </>
+                )}
+              </div>
+            )}
+            
+            {/* Cancelled Warning */}
+            {isCancelled && (
+              <div className="mt-4 p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-3">
+                <XCircle className="h-4 w-4 text-red-600 dark:text-red-400 flex-shrink-0" />
+                <span className="text-sm text-red-700 dark:text-red-300">This booking was cancelled</span>
+              </div>
+            )}
           </div>
-          <div className="flex items-center gap-2">
-            <Badge 
-              variant={booking.status === "confirmed" ? "default" : 
-                      booking.status === "pending" ? "secondary" : "destructive"}
-            >
-              {booking.status}
-            </Badge>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleViewDetails(booking)}
-                data-testid={`button-view-details-${booking.id}`}
-                title="View Details"
-              >
-                <Eye className="h-4 w-4" />
-              </Button>
-              {isActive && (
+          
+          {/* Actions Column */}
+          <div className="lg:w-32 border-t lg:border-t-0 lg:border-l bg-muted/20 p-3 lg:p-4 flex lg:flex-col items-center lg:items-stretch justify-center gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleCancelBooking(booking.id)}
-                  data-testid={`button-cancel-${booking.id}`}
-                  title="Cancel Booking"
+                  onClick={() => handleViewDetails(booking)}
+                  data-testid={`button-view-details-${booking.id}`}
+                  className="flex-1 lg:flex-none"
                 >
-                  <XCircle className="h-4 w-4" />
+                  <Eye className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">View</span>
                 </Button>
-              )}
-              {canMarkPaid && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleMarkPaid(booking.id)}
-                  data-testid={`button-mark-paid-${booking.id}`}
-                  title="Mark as Paid"
-                  disabled={markPaidMutation.isPending}
-                >
-                  <DollarSign className="h-4 w-4" />
-                </Button>
-              )}
-              {isCompleted && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleDownloadReceipt(booking.id)}
-                  data-testid={`button-download-receipt-${booking.id}`}
-                  title="Download Receipt"
-                >
-                  <Download className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
+              </TooltipTrigger>
+              <TooltipContent>View Details</TooltipContent>
+            </Tooltip>
+            
+            {canMarkPaid && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => handleMarkPaid(booking.id)}
+                    data-testid={`button-mark-paid-${booking.id}`}
+                    disabled={markPaidMutation.isPending}
+                    className="flex-1 lg:flex-none bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    <DollarSign className="h-4 w-4 mr-2" />
+                    <span className="hidden sm:inline">Pay</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Mark as Paid</TooltipContent>
+              </Tooltip>
+            )}
+            
+            {isActive && !isCancelled && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleCancelBooking(booking.id)}
+                    data-testid={`button-cancel-${booking.id}`}
+                    className="flex-1 lg:flex-none text-destructive hover:text-destructive"
+                  >
+                    <XCircle className="h-4 w-4 mr-2" />
+                    <span className="hidden sm:inline">Cancel</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Cancel Booking</TooltipContent>
+              </Tooltip>
+            )}
+            
+            {isCompleted && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDownloadReceipt(booking.id)}
+                    data-testid={`button-download-receipt-${booking.id}`}
+                    className="flex-1 lg:flex-none"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    <span className="hidden sm:inline">Receipt</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Download Receipt</TooltipContent>
+              </Tooltip>
+            )}
           </div>
         </div>
-        
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-3 mb-3">
-          <div>
-            <p className="text-xs text-muted-foreground">Date</p>
-            <p className="text-sm font-medium truncate">{booking.bookingDate}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Duration</p>
-            <p className="text-xs truncate">Full Day</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Owner</p>
-            <p className="text-sm font-medium truncate">{booking.ownerName}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Spot Type</p>
-            <p className="text-sm font-medium truncate capitalize">{booking.spotType}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Price</p>
-            <p className="text-sm font-medium">${booking.totalAmount || booking.dailyRate}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Payment</p>
-            <Badge 
-              variant={paymentStatus === 'received' ? 'default' : paymentStatus === 'paid' ? 'secondary' : 'outline'} 
-              className={`text-xs ${paymentStatus === 'received' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200' : paymentStatus === 'paid' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200' : ''}`}
-            >
-              {paymentStatus === 'pending' ? 'Payment Pending' : paymentStatus === 'paid' ? 'Awaiting Owner Confirmation' : 'Payment Complete'}
-            </Badge>
-          </div>
-        </div>
-      </div>
+      </Card>
     )
   }
 
