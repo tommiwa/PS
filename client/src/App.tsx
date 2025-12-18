@@ -21,6 +21,7 @@ import { ConfirmProvider } from "@/hooks/use-confirm";
 import { NotificationCenter } from "@/components/notification-center";
 import { LogOut, Loader2, FileText, CheckCircle2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import parkShareLogo from "@assets/logo.png";
 
 // Pages
 import Dashboard from "@/pages/dashboard";
@@ -377,9 +378,12 @@ function AuthenticatedApp() {
                   <p>Toggle sidebar navigation - hide or show the main menu</p>
                 </TooltipContent>
               </Tooltip>
-              <div className="hidden md:block">
-<h2 className="text-lg font-semibold text-primary">BCI ParkShare</h2>
-                <p className="text-sm text-muted-foreground">Spot Sharing Application</p>
+              <div className="hidden md:flex items-center gap-3">
+                <img src={parkShareLogo} alt="ParkShare Logo" className="h-10 w-10" />
+                <div>
+                  <h2 className="text-lg font-semibold text-primary">BCI ParkShare</h2>
+                  <p className="text-sm text-muted-foreground">Spot Sharing Application</p>
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-3">
