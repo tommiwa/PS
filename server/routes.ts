@@ -1230,6 +1230,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ownerId: userId
       });
       
+      // DATE VALIDATION: Ensure all dates are today or in the future
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayStr = today.toISOString().split('T')[0];
+      
+      const isPastDate = (dateStr: string | null | undefined): boolean => {
+        if (!dateStr) return false;
+        return dateStr < todayStr;
+      };
+      
+      // Validate based on listing type
+      if (validatedData.listingType === 'single') {
+        if (isPastDate(validatedData.singleDate)) {
+          return res.status(400).json({ 
+            error: "Cannot create listing for past dates. Please select today or a future date."
+          });
+        }
+      } else if (validatedData.listingType === 'period') {
+        if (isPastDate(validatedData.periodStartDate)) {
+          return res.status(400).json({ 
+            error: "Period start date cannot be in the past. Please select today or a future date."
+          });
+        }
+        if (isPastDate(validatedData.periodEndDate)) {
+          return res.status(400).json({ 
+            error: "Period end date cannot be in the past."
+          });
+        }
+      } else if (validatedData.listingType === 'recurring') {
+        if (isPastDate(validatedData.recurringStartDate)) {
+          return res.status(400).json({ 
+            error: "Recurring start date cannot be in the past. Please select today or a future date."
+          });
+        }
+      }
+      
       // PERMISSION CHECK: Verify spot ownership
       const spot = await storage.getParkingSpot(validatedData.spotId);
       if (!spot) {
@@ -3585,6 +3621,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error processing refund:", error);
       res.status(500).json({ error: "Failed to process refund" });
+    }
+  });
+
+  // ============ BOOKING WORKFLOW ENDPOINTS ============
+
+  // POST /api/bookings/:id/mark-paid - Renter marks payment as sent
+  app.post("/api/bookings/:id/mark-paid", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = getAuthenticatedUserId(req);
+      
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      const booking = await storage.getBooking(id);
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      // Check if booking belongs to the user (as renter)
+      if (booking.renterId !== userId) {
+        return res.status(403).json({ error: "Not authorized to update this booking" });
+      }
+
+      // Validate current state - can only mark paid if status is confirmed and payment is pending
+      if (booking.status !== 'confirmed') {
+        return res.status(400).json({ error: `Cannot mark payment for ${booking.status} booking` });
+      }
+
+      if (booking.paymentStatus !== 'pending') {
+        return res.status(400).json({ error: `Payment already marked as ${booking.paymentStatus}` });
+      }
+
+      // Update payment status to "paid"
+      const updatedBooking = await storage.updateBooking(id, { 
+        paymentStatus: 'paid' as any
+      });
+      
+      await auditService.logAction("UPDATE", "booking", {
+        entityId: id,
+        message: `Booking ${id} - Renter marked payment as sent`,
+        before: { paymentStatus: booking.paymentStatus },
+        after: { paymentStatus: 'paid' }
+      });
+
+      res.json(updatedBooking);
+    } catch (error) {
+      console.error("Error marking payment:", error);
+      res.status(500).json({ error: "Failed to mark payment" });
+    }
+  });
+
+  // POST /api/bookings/:id/confirm-payment - Owner confirms payment received (moves to completed)
+  app.post("/api/bookings/:id/confirm-payment", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = getAuthenticatedUserId(req);
+      
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      const booking = await storage.getBooking(id);
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      // Check if booking belongs to the user (as owner) or user is admin
+      const user = await storage.getUser(userId);
+      const isAdmin = user?.role === 'admin';
+      
+      if (booking.ownerId !== userId && !isAdmin) {
+        return res.status(403).json({ error: "Not authorized to confirm payment for this booking" });
+      }
+
+      // Validate current state - can only confirm if payment status is "paid"
+      if (booking.paymentStatus !== 'paid') {
+        return res.status(400).json({ 
+          error: booking.paymentStatus === 'pending' 
+            ? "Renter must mark payment as sent first" 
+            : `Payment already ${booking.paymentStatus}`
+        });
+      }
+
+      // Update payment status to "received" and booking status to "completed"
+      const updatedBooking = await storage.updateBooking(id, { 
+        paymentStatus: 'received' as any,
+        status: 'completed' as any,
+        paymentReceived: true
+      });
+
+      // Update the related listing status to "used" if this was a single-date booking
+      if (booking.listingId) {
+        try {
+          await storage.updateSpotListing(booking.listingId, { status: 'used' as any });
+        } catch (listingError) {
+          console.error("Error updating listing status:", listingError);
+          // Don't fail the whole operation if listing update fails
+        }
+      }
+      
+      await auditService.logAction("UPDATE", "booking", {
+        entityId: id,
+        message: `Booking ${id} - Owner confirmed payment received, booking completed`,
+        before: { paymentStatus: booking.paymentStatus, status: booking.status },
+        after: { paymentStatus: 'received', status: 'completed' }
+      });
+
+      res.json(updatedBooking);
+    } catch (error) {
+      console.error("Error confirming payment:", error);
+      res.status(500).json({ error: "Failed to confirm payment" });
     }
   });
 
