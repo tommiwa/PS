@@ -62,7 +62,22 @@ Preferred communication style: Simple, everyday language.
 
 ### Third-party Services
 - **Neon Database**: Serverless PostgreSQL
-- **SendGrid**: Email service
+- **Email Service**: Dual-provider support with automatic failover
+  - **Microsoft 365 Graph API** (Primary): Uses Azure AD app registration for corporate email delivery from @bci.ca domain
+  - **SendGrid** (Secondary/Fallback): Alternative email provider with API key authentication
+  - **Provider Priority**: MS365 is used first if configured; SendGrid is used as fallback or if MS365 is not configured
+  - **Mock Mode**: When neither provider is configured, emails are logged to console for development
+
+### Email Configuration (Environment Variables)
+**Microsoft 365 (Recommended for corporate use):**
+- `MS365_TENANT_ID`: Azure AD tenant ID
+- `MS365_CLIENT_ID`: Application (client) ID from Azure app registration
+- `MS365_CLIENT_SECRET`: Client secret from Azure app registration
+- `MS365_SENDER_EMAIL`: The M365 mailbox to send from (e.g., noreply@bci.ca)
+
+**SendGrid (Alternative):**
+- `SENDGRID_API_KEY`: SendGrid API key
+- `SENDGRID_FROM_EMAIL`: Sender email address (default: noreply@bci.ca)
 
 ### Key Libraries
 - **@tanstack/react-query**: Server state management

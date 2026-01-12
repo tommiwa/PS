@@ -1,26 +1,136 @@
 // Notification Service - handles email and in-app notifications
-// Using blueprint:javascript_sendgrid integration for email functionality
+// Supports both SendGrid and Microsoft 365 Graph API for email functionality
 
 import { MailService } from '@sendgrid/mail';
+import { ConfidentialClientApplication, Configuration } from '@azure/msal-node';
+import axios from 'axios';
 import type { WaitingList, ParkingSpot, AuthUser } from '@shared/schema';
 import { storage } from './storage';
 
-// Development mode check - will use mock notifications if API key not available
-const isDevelopment = !process.env.SENDGRID_API_KEY;
+// Email provider configuration
+type EmailProvider = 'ms365' | 'sendgrid' | 'mock';
+
+// Check which email providers are configured
+const MS365_CONFIGURED = !!(
+  process.env.MS365_TENANT_ID &&
+  process.env.MS365_CLIENT_ID &&
+  process.env.MS365_CLIENT_SECRET &&
+  process.env.MS365_SENDER_EMAIL
+);
+const SENDGRID_CONFIGURED = !!process.env.SENDGRID_API_KEY;
+
+// Determine which provider to use (MS365 takes priority if both are configured)
+const activeProvider: EmailProvider = MS365_CONFIGURED ? 'ms365' : (SENDGRID_CONFIGURED ? 'sendgrid' : 'mock');
 
 let mailService: MailService | null = null;
+let msalClient: ConfidentialClientApplication | null = null;
 
-// Initialize SendGrid only if API key is available
-if (process.env.SENDGRID_API_KEY) {
+// Initialize SendGrid if configured
+if (SENDGRID_CONFIGURED) {
   try {
     mailService = new MailService();
-    mailService.setApiKey(process.env.SENDGRID_API_KEY);
+    mailService.setApiKey(process.env.SENDGRID_API_KEY!);
     console.log('✓ SendGrid initialized successfully');
   } catch (error) {
     console.error('❌ SendGrid initialization failed:', error);
   }
+}
+
+// Initialize Microsoft 365 Graph API if configured
+if (MS365_CONFIGURED) {
+  try {
+    const msalConfig: Configuration = {
+      auth: {
+        clientId: process.env.MS365_CLIENT_ID!,
+        authority: `https://login.microsoftonline.com/${process.env.MS365_TENANT_ID}`,
+        clientSecret: process.env.MS365_CLIENT_SECRET!
+      }
+    };
+    msalClient = new ConfidentialClientApplication(msalConfig);
+    console.log('✓ Microsoft 365 Graph API initialized successfully');
+  } catch (error) {
+    console.error('❌ Microsoft 365 initialization failed:', error);
+  }
+}
+
+// Log the active email provider
+if (activeProvider === 'ms365') {
+  console.log('📧 Email provider: Microsoft 365 Graph API');
+} else if (activeProvider === 'sendgrid') {
+  console.log('📧 Email provider: SendGrid');
 } else {
-  console.log('⚠️  SENDGRID_API_KEY not found - using mock notifications for development');
+  console.log('⚠️  No email provider configured - using mock notifications for development');
+}
+
+// Helper function to get MS365 access token
+async function getMS365AccessToken(): Promise<string> {
+  if (!msalClient) {
+    throw new Error('MS365 client not initialized');
+  }
+  
+  const tokenRequest = {
+    scopes: ['https://graph.microsoft.com/.default']
+  };
+  
+  const response = await msalClient.acquireTokenByClientCredential(tokenRequest);
+  if (!response?.accessToken) {
+    throw new Error('Failed to acquire MS365 access token');
+  }
+  
+  return response.accessToken;
+}
+
+// Send email via Microsoft 365 Graph API
+async function sendEmailViaMS365(
+  to: string,
+  subject: string,
+  text: string,
+  html: string
+): Promise<void> {
+  const accessToken = await getMS365AccessToken();
+  const senderEmail = process.env.MS365_SENDER_EMAIL!;
+  
+  const emailPayload = {
+    message: {
+      subject: subject,
+      body: {
+        contentType: 'HTML',
+        content: html
+      },
+      toRecipients: [
+        {
+          emailAddress: {
+            address: to
+          }
+        }
+      ]
+    },
+    saveToSentItems: true
+  };
+  
+  await axios.post(
+    `https://graph.microsoft.com/v1.0/users/${senderEmail}/sendMail`,
+    emailPayload,
+    {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      }
+    }
+  );
+}
+
+// Export helper function to check email provider status
+export function getEmailProviderStatus(): { 
+  provider: EmailProvider; 
+  ms365Available: boolean; 
+  sendgridAvailable: boolean;
+} {
+  return {
+    provider: activeProvider,
+    ms365Available: MS365_CONFIGURED,
+    sendgridAvailable: SENDGRID_CONFIGURED
+  };
 }
 
 export interface EmailNotification {
@@ -1084,10 +1194,10 @@ BCI ParkShare System`;
 /**
  * Send Email Notification
  */
-export async function sendEmailNotification(notification: EmailNotification): Promise<{ success: boolean; error?: string }> {
+export async function sendEmailNotification(notification: EmailNotification): Promise<{ success: boolean; error?: string; provider?: EmailProvider }> {
   try {
-    if (isDevelopment || !mailService) {
-      // Mock notification for development
+    // Mock notification if no provider is configured
+    if (activeProvider === 'mock') {
       console.log('📧 MOCK EMAIL NOTIFICATION:');
       console.log(`To: ${notification.to}`);
       console.log(`Subject: ${notification.subject}`);
@@ -1097,20 +1207,52 @@ export async function sendEmailNotification(notification: EmailNotification): Pr
       // Simulate email sending delay
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      return { success: true };
+      return { success: true, provider: 'mock' };
     }
 
-    // Production email sending with SendGrid
-    await mailService.send({
-      to: notification.to,
-      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@bci.ca',
-      subject: notification.subject,
-      text: notification.text,
-      html: notification.html,
-    });
+    // Try Microsoft 365 first if it's the active provider
+    if (activeProvider === 'ms365' && msalClient) {
+      try {
+        await sendEmailViaMS365(
+          notification.to,
+          notification.subject,
+          notification.text,
+          notification.html
+        );
+        console.log(`✓ Email sent via MS365 to ${notification.to}: ${notification.subject}`);
+        return { success: true, provider: 'ms365' };
+      } catch (ms365Error) {
+        console.error('❌ MS365 email failed, attempting SendGrid fallback:', ms365Error);
+        // Fall through to SendGrid if available
+        if (mailService) {
+          await mailService.send({
+            to: notification.to,
+            from: process.env.SENDGRID_FROM_EMAIL || 'noreply@bci.ca',
+            subject: notification.subject,
+            text: notification.text,
+            html: notification.html,
+          });
+          console.log(`✓ Email sent via SendGrid (fallback) to ${notification.to}: ${notification.subject}`);
+          return { success: true, provider: 'sendgrid' };
+        }
+        throw ms365Error;
+      }
+    }
 
-    console.log(`✓ Email sent to ${notification.to}: ${notification.subject}`);
-    return { success: true };
+    // Use SendGrid if it's the active provider
+    if (activeProvider === 'sendgrid' && mailService) {
+      await mailService.send({
+        to: notification.to,
+        from: process.env.SENDGRID_FROM_EMAIL || 'noreply@bci.ca',
+        subject: notification.subject,
+        text: notification.text,
+        html: notification.html,
+      });
+      console.log(`✓ Email sent via SendGrid to ${notification.to}: ${notification.subject}`);
+      return { success: true, provider: 'sendgrid' };
+    }
+
+    throw new Error('No email provider available');
     
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
