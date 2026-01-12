@@ -926,6 +926,69 @@ export default function Profile() {
             </AccordionContent>
           </AccordionItem>
 
+          {/* Payment Preferences Section - Only for Owners */}
+          {isOwner() && (
+            <AccordionItem value="payment-preferences" className="border rounded-lg px-4">
+              <AccordionTrigger className="hover:no-underline py-4 min-h-[44px]">
+                <div className="flex items-center justify-between w-full mr-4">
+                  <div className="flex items-center gap-3">
+                    <CreditCard className="h-5 w-5 text-primary flex-shrink-0" />
+                    <div className="text-left">
+                      <h3 className="font-medium text-sm md:text-base">Payment Preferences</h3>
+                      <p className="text-xs md:text-sm text-muted-foreground break-words">
+                        {paymentPreferences?.paymentType === "cash" ? "Cash" : "Interac Transfer"}
+                        {paymentPreferences?.paymentInstructions ? " • Instructions set" : ""}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="pb-4 md:pb-6">
+                <div className="space-y-3 md:space-y-4">
+                  {isLoadingPaymentPreferences ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        Set how you want to receive payment when others book your parking spots.
+                      </p>
+                      <div className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <CreditCard className="h-4 w-4" />
+                            <Label>Payment Type</Label>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {paymentPreferences?.paymentType === "cash" ? "Cash" : "Interac Transfer"}
+                          </p>
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setShowPaymentPreferencesDrawer(true)}
+                          data-testid="button-edit-payment-preferences"
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit
+                        </Button>
+                      </div>
+                      {paymentPreferences?.paymentInstructions && (
+                        <div className="p-4 border rounded-lg">
+                          <Label className="text-sm font-medium">Payment Instructions</Label>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {paymentPreferences.paymentInstructions}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          )}
+
           {/* App Settings Section */}
           <AccordionItem value="app-settings" className="border rounded-lg px-4">
             <AccordionTrigger className="hover:no-underline py-4 min-h-[44px]">
@@ -1802,6 +1865,97 @@ export default function Profile() {
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
+
+      {/* Payment Preferences Dialog */}
+      <Dialog open={showPaymentPreferencesDrawer} onOpenChange={setShowPaymentPreferencesDrawer}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              Payment Preferences
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Set how you want to receive payment when others book your parking spots.
+            </p>
+            <Form {...paymentForm}>
+              <form onSubmit={paymentForm.handleSubmit(handleSubmitPaymentPreferences)} className="space-y-4">
+                <FormField
+                  control={paymentForm.control}
+                  name="paymentType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Payment Type</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-payment-type">
+                            <SelectValue placeholder="Select payment type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="interac_transfer">Interac Transfer</SelectItem>
+                          <SelectItem value="cash">Cash</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={paymentForm.control}
+                  name="paymentInstructions"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Payment Instructions</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder={paymentForm.watch("paymentType") === "cash" 
+                            ? "e.g., Please leave cash in an envelope in my mailbox at desk 4B"
+                            : "e.g., Send Interac e-Transfer to john.doe@email.com, no security question needed"
+                          }
+                          className="min-h-[100px]"
+                          {...field}
+                          value={field.value ?? ""}
+                          data-testid="textarea-payment-instructions"
+                        />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        This will be shown to renters when they book your spot.
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </form>
+            </Form>
+          </div>
+          <DialogFooter className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowPaymentPreferencesDrawer(false)}
+              data-testid="button-cancel-payment-preferences"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={paymentForm.handleSubmit(handleSubmitPaymentPreferences)}
+              disabled={updatePaymentPreferencesMutation.isPending}
+              data-testid="button-save-payment-preferences"
+            >
+              {updatePaymentPreferencesMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Preferences"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
