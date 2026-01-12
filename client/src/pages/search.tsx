@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import { MapPin, Filter, SortAsc, Calendar, Grid, Sparkles, Loader2 } from "lucide-react"
+import { MapPin, Filter, SortAsc, Calendar, Grid, Sparkles, Loader2, RefreshCw } from "lucide-react"
 import { isPastDate } from "@/utils/date-utils"
 import { apiRequest } from "@/lib/queryClient"
 import { type ParkingSpot as DBParkingSpot, type SpotTypeTable } from "@shared/schema"
@@ -107,7 +107,7 @@ export default function Search() {
   const { user } = useAuth()
 
   // Fetch available parking spots from API - using enriched type that includes availabilityDates and bookedDates
-  const { data: dbSpots = [], isLoading, error } = useQuery<EnrichedSpotFromAPI[]>({
+  const { data: dbSpots = [], isLoading, isFetching, error, refetch } = useQuery<EnrichedSpotFromAPI[]>({
     queryKey: ['/api/available-spots']
   })
 
@@ -705,6 +705,23 @@ export default function Search() {
               <h2 className="text-lg md:text-xl font-semibold">
                 {getResultsLabel()}
               </h2>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => refetch()}
+                    disabled={isLoading || isFetching}
+                    className="h-8 w-8"
+                    data-testid="button-refresh-availability"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Refresh available spots</p>
+                </TooltipContent>
+              </Tooltip>
               {getActiveFilterCount() > 0 && (
                 <Tooltip>
                   <TooltipTrigger asChild>
