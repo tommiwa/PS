@@ -1961,7 +1961,6 @@ export default function AdminParkingManagement() {
                         <div className="flex gap-2">
                           <Button
                             size="sm"
-                            variant="outline"
                             onClick={() => {
                               // Get selected spot details to check for non-bookable spots
                               const selectedSpotDetails = unallocatedSpots.filter(spot => selectedSpots.has(spot.id));
