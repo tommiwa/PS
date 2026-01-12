@@ -668,7 +668,7 @@ export default function Search() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4 mb-4">
           <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
-            <TabsList className="grid w-full md:w-[200px] grid-cols-2">
+            <TabsList className="hidden md:grid w-full md:w-[200px] grid-cols-2">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <TabsTrigger 
@@ -799,7 +799,7 @@ export default function Search() {
           )}
         </TabsContent>
 
-        <TabsContent value="calendar" className="space-y-4">
+        <TabsContent value="calendar" className="hidden md:block space-y-4">
           <Card className="h-[600px]">
             <CardContent className="p-0 h-full">
               <ParkingCalendar
