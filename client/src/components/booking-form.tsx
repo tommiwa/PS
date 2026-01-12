@@ -257,8 +257,8 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
 
   return (
     <div className="w-full" data-testid="card-booking-form">
-      {/* Header Section */}
-      <div className="border-b bg-muted/30 px-6 py-4">
+      {/* Spot Information Section - Highlighted Container */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 border-b border-blue-200 dark:border-blue-800 px-6 py-4">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
@@ -275,7 +275,7 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
                 <MapPin className="h-4 w-4" />
                 {spot.location}
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-1 text-lg font-semibold text-primary">
                   <DollarSign className="h-5 w-5" />
                   {spot.price}/day
@@ -283,6 +283,12 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
                 <div className="text-sm text-muted-foreground">
                   Owner: <span className="font-medium text-foreground">{(spot as any).assignedUserName || "BCI Managed"}</span>
                 </div>
+              </div>
+              {/* Booking Date Info */}
+              <div className="flex items-center gap-2 mt-1 text-sm">
+                <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <span className="font-medium">{formData.date}</span>
+                <span className="text-muted-foreground">(Full day: 12:00 AM - 11:59 PM)</span>
               </div>
             </div>
           </div>
@@ -303,38 +309,38 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
         </div>
       </div>
 
-      {/* Form Section */}
+      {/* Owner's Payment Instructions - If available */}
+      {ownerPaymentPreferences?.paymentInstructions && (
+        <div className="bg-green-50 dark:bg-green-950/30 border-b border-green-200 dark:border-green-800 px-6 py-3">
+          <div className="flex items-start gap-2">
+            <CreditCard className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                Owner's Payment Instructions
+              </p>
+              <p className="text-sm text-green-700 dark:text-green-300 mt-1">
+                {ownerPaymentPreferences.paymentInstructions}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Form Section - Input Container */}
       <div className="px-6 py-5">
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Date and Payment Method - Side by Side */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Date Selection */}
-            <div className="space-y-2">
-              <Label htmlFor="date" className="text-sm font-semibold">Booking Date</Label>
-              <Input
-                type="date"
-                value={formData.date}
-                min={getTodayString()}
-                onChange={(e) => updateFormData("date", e.target.value)}
-                required
-                disabled={true}
-                readOnly={true}
-                data-testid="input-booking-date"
-                className="bg-muted cursor-not-allowed"
-              />
-              {(dateError || validationErrors.date) && (
-                <p className="flex items-center gap-1.5 text-sm text-destructive">
-                  <AlertTriangle className="h-3.5 w-3.5" />
-                  {dateError || validationErrors.date}
-                </p>
-              )}
-            </div>
+          {/* Your Booking Details - Highlighted Input Container */}
+          <div className="rounded-lg border-2 border-dashed border-muted-foreground/25 bg-muted/20 p-4 space-y-4">
+            <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+              <Info className="h-4 w-4" />
+              Your Booking Details
+            </h3>
 
-            {/* Payment Method */}
+            {/* Payment Method Selection */}
             <div className="space-y-2">
               <Label htmlFor="paymentMethod" className="text-sm font-semibold">Payment Method</Label>
               <Select value={formData.paymentMethod} onValueChange={(value) => updateFormData("paymentMethod", value)}>
-                <SelectTrigger data-testid="select-payment-method">
+                <SelectTrigger data-testid="select-payment-method" className="bg-background">
                   <SelectValue placeholder="Select payment method" />
                 </SelectTrigger>
                 <SelectContent>
@@ -345,36 +351,18 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
               {validationErrors.paymentMethod && (
                 <p className="text-sm text-destructive">{validationErrors.paymentMethod}</p>
               )}
+              {ownerPaymentPreferences && !ownerPaymentPreferences.paymentInstructions && (
+                <p className="text-xs text-muted-foreground">
+                  Owner prefers: {ownerPaymentPreferences.paymentType === "interac_transfer" ? "Interac Transfer" : "Cash"}
+                </p>
+              )}
             </div>
-          </div>
 
-          {/* Info boxes - full width, no side padding */}
-          <div className="rounded-md bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 px-3 py-2">
-            <p className="flex items-center gap-1.5 text-xs text-blue-700 dark:text-blue-300">
-              <Calendar className="h-3.5 w-3.5" />
-              Full day reservation (12:00 AM - 11:59 PM)
-            </p>
-          </div>
-
-          {ownerPaymentPreferences && (
-            <div className="rounded-md bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 px-3 py-2">
-              <p className="flex items-center gap-1.5 text-xs text-green-700 dark:text-green-300">
-                <CreditCard className="h-3.5 w-3.5" />
-                Owner prefers: <span className="font-medium">{ownerPaymentPreferences.paymentType === "interac_transfer" ? "Interac Transfer" : "Cash"}</span>
-              </p>
-            </div>
-          )}
-
-          <Separator />
-
-          {/* Contact Information */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-semibold">Contact Information</h3>
-            
+            {/* Contact Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="contactPhone" className="text-sm">Phone Number</Label>
+                  <Label htmlFor="contactPhone" className="text-sm font-semibold">Phone Number</Label>
                   {authUser?.phone && (
                     <Badge variant="outline" className="text-xs h-5">
                       <User className="h-3 w-3 mr-1" />
@@ -391,7 +379,7 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
                     onChange={(e) => updateFormData("contactPhone", e.target.value)}
                     required
                     data-testid="input-contact-phone"
-                    className="pl-9"
+                    className="pl-9 bg-background"
                   />
                 </div>
                 {validationErrors.contactPhone && (
@@ -401,7 +389,7 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
               
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="vehicleInfo" className="text-sm">Vehicle (Model & Color)</Label>
+                  <Label htmlFor="vehicleInfo" className="text-sm font-semibold">Vehicle (Model & Color)</Label>
                   {authUser?.vehicleInfo?.model && (
                     <Badge variant="outline" className="text-xs h-5">
                       <User className="h-3 w-3 mr-1" />
@@ -417,7 +405,7 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
                     onChange={(e) => updateFormData("vehicleInfo", e.target.value)}
                     required
                     data-testid="input-vehicle-info"
-                    className="pl-9"
+                    className="pl-9 bg-background"
                   />
                 </div>
                 {validationErrors.vehicleInfo && (
@@ -425,20 +413,18 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
                 )}
               </div>
             </div>
-          </div>
 
-          <Separator />
-
-          {/* Special Instructions */}
-          <div className="space-y-2">
-            <Label htmlFor="specialInstructions" className="text-sm font-semibold">Special Instructions <span className="text-muted-foreground font-normal">(Optional)</span></Label>
-            <Textarea
-              placeholder="Any special instructions or notes for the spot owner..."
-              value={formData.specialInstructions}
-              onChange={(e) => updateFormData("specialInstructions", e.target.value)}
-              className="min-h-20 resize-none"
-              data-testid="textarea-instructions"
-            />
+            {/* Special Instructions */}
+            <div className="space-y-2">
+              <Label htmlFor="specialInstructions" className="text-sm font-semibold">Special Instructions <span className="text-muted-foreground font-normal">(Optional)</span></Label>
+              <Textarea
+                placeholder="Any special instructions or notes for the spot owner..."
+                value={formData.specialInstructions}
+                onChange={(e) => updateFormData("specialInstructions", e.target.value)}
+                className="min-h-20 resize-none bg-background"
+                data-testid="textarea-instructions"
+              />
+            </div>
           </div>
 
           {/* Legal Notice */}
