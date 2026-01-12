@@ -1310,8 +1310,8 @@ export default function MySpots() {
               <Textarea
                 id="payment-instructions"
                 placeholder={paymentFormData.paymentType === "interac_transfer" 
-                  ? "e.g., Send to email@example.com" 
-                  : "e.g., Meet at Building A lobby"}
+                  ? "e.g., Send Interac e-Transfer to john.doe@email.com\nNo security question needed (auto-deposit enabled)" 
+                  : "e.g., Please leave cash in an envelope in my mailbox at desk 4B\nOr arrange to meet in Building A lobby"}
                 value={paymentFormData.paymentInstructions}
                 onChange={(e) => setPaymentFormData(prev => ({ ...prev, paymentInstructions: e.target.value }))}
                 className="min-h-24"
