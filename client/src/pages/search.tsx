@@ -100,17 +100,11 @@ export default function Search() {
   const [selectedSpot, setSelectedSpot] = useState<DisplaySpot | null>(null)
   const [showBookingForm, setShowBookingForm] = useState(false)
   const [sortBy, setSortBy] = useState("price")
-  const [activeTab, setActiveTab] = useState<string>("calendar")
+  const [activeTab, setActiveTab] = useState<string>("tiles")
   const [isAcquiringLock, setIsAcquiringLock] = useState(false)
   const { toast } = useToast()
   const { userActiveLock, lockedListings, acquireLock, releaseLock, clearUserLock } = useLock()
   const { user } = useAuth()
-  
-  // Set default tab based on screen size after mount: mobile shows tiles, desktop shows calendar
-  useEffect(() => {
-    const isMobile = window.innerWidth < 768
-    setActiveTab(isMobile ? "tiles" : "calendar")
-  }, [])
 
   // Fetch available parking spots from API - using enriched type that includes availabilityDates and bookedDates
   const { data: dbSpots = [], isLoading, error } = useQuery<EnrichedSpotFromAPI[]>({
@@ -676,7 +670,11 @@ export default function Search() {
             <TabsList className="grid w-full md:w-[200px] grid-cols-2">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <TabsTrigger value="tiles" className="flex items-center gap-2" data-testid="tab-tiles">
+                  <TabsTrigger 
+                    value="tiles" 
+                    className="flex items-center gap-2 data-[state=active]:bg-blue-500 data-[state=active]:text-white" 
+                    data-testid="tab-tiles"
+                  >
                     <Grid className="h-4 w-4" />
                     Tiles
                   </TabsTrigger>
@@ -687,7 +685,11 @@ export default function Search() {
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <TabsTrigger value="calendar" className="flex items-center gap-2" data-testid="tab-calendar">
+                  <TabsTrigger 
+                    value="calendar" 
+                    className="flex items-center gap-2 data-[state=active]:bg-emerald-500 data-[state=active]:text-white" 
+                    data-testid="tab-calendar"
+                  >
                     <Calendar className="h-4 w-4" />
                     Calendar
                   </TabsTrigger>
