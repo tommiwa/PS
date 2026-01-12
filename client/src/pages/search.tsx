@@ -673,7 +673,7 @@ export default function Search() {
                 <TooltipTrigger asChild>
                   <TabsTrigger 
                     value="tiles" 
-                    className="flex items-center gap-2 data-[state=active]:bg-blue-500 data-[state=active]:text-white" 
+                    className="flex items-center gap-2 data-[state=active]:!bg-blue-500 data-[state=active]:!text-white data-[state=active]:!shadow-none" 
                     data-testid="tab-tiles"
                   >
                     <Grid className="h-4 w-4" />
@@ -688,7 +688,7 @@ export default function Search() {
                 <TooltipTrigger asChild>
                   <TabsTrigger 
                     value="calendar" 
-                    className="flex items-center gap-2 data-[state=active]:bg-emerald-500 data-[state=active]:text-white" 
+                    className="flex items-center gap-2 data-[state=active]:!bg-emerald-500 data-[state=active]:!text-white data-[state=active]:!shadow-none" 
                     data-testid="tab-calendar"
                   >
                     <Calendar className="h-4 w-4" />
