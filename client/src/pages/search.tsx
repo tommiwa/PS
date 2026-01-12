@@ -584,10 +584,11 @@ export default function Search() {
     switch (sortBy) {
       case "price":
         return a.price - b.price
-      case "location":
-        return a.location.localeCompare(b.location)
-      case "distance":
-        return a.isInside === b.isInside ? 0 : a.isInside ? -1 : 1
+      case "date":
+        // Sort by earliest availability date
+        const aDate = a.availabilityDates?.[0] || ''
+        const bDate = b.availabilityDates?.[0] || ''
+        return aDate.localeCompare(bDate)
       default:
         return 0
     }
@@ -739,12 +740,11 @@ export default function Search() {
                     data-testid="select-sort"
                   >
                     <option value="price">Price (Low to High)</option>
-                    <option value="location">Location</option>
-                    <option value="distance">Distance</option>
+                    <option value="date">Date (Earliest First)</option>
                   </select>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Sort parking spots by price (cheapest first), location (alphabetical), or distance (indoor spots first)</p>
+                  <p>Sort parking spots by price (cheapest first) or by earliest availability date</p>
                 </TooltipContent>
               </Tooltip>
               <Tooltip>
