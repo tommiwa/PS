@@ -7,7 +7,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { RoleSwitcher } from "@/components/role-switcher";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -399,6 +399,9 @@ function AuthenticatedApp() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Avatar className="h-8 w-8 cursor-pointer">
+                      {user.profileImageUrl && (
+                        <AvatarImage src={user.profileImageUrl} alt={userName} />
+                      )}
                       <AvatarFallback className="text-sm">
                         {getInitials(userName)}
                       </AvatarFallback>
