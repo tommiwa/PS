@@ -2058,14 +2058,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Execute lock acquisition in atomic transaction
       const result = await db.transaction(async (tx) => {
-        // Step 1: Check for existing active locks on this listing+date combination (with row-level lock)
+        // Step 1: Check for existing active non-expired locks on this listing+date combination (with row-level lock)
         const existingLock = await tx
           .select()
           .from(spotLocks)
           .where(and(
             eq(spotLocks.listingId, listingId),
             eq(spotLocks.bookingDate, bookingDate),
-            eq(spotLocks.status, 'active')
+            eq(spotLocks.status, 'active'),
+            gt(spotLocks.expiresAt, new Date()) // Only consider non-expired locks
           ))
           .for('update');
         
@@ -2073,13 +2074,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           throw new Error('SPOT_ALREADY_LOCKED');
         }
         
-        // Step 2: Check if user already has an active lock (enforce one lock per user)
+        // Step 2: Check if user already has an active lock that hasn't expired (enforce one lock per user)
         const userActiveLock = await tx
           .select()
           .from(spotLocks)
           .where(and(
             eq(spotLocks.userId, userId),
-            eq(spotLocks.status, 'active')
+            eq(spotLocks.status, 'active'),
+            gt(spotLocks.expiresAt, new Date()) // Only consider non-expired locks
           ));
         
         if (userActiveLock.length > 0) {
