@@ -285,7 +285,7 @@ export default function AdminParkingManagement() {
     singleDate: undefined as Date | undefined,
     periodStartDate: undefined as Date | undefined,
     periodEndDate: undefined as Date | undefined,
-    dailyRate: ""
+    dailyRate: "16"
   })
   
   // Fetch unallocated spots
@@ -426,7 +426,7 @@ export default function AdminParkingManagement() {
         singleDate: undefined,
         periodStartDate: undefined,
         periodEndDate: undefined,
-        dailyRate: ""
+        dailyRate: "16"
       });
       handleClearSelection();
     },
