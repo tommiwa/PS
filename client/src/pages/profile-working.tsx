@@ -1912,8 +1912,8 @@ export default function Profile() {
                       <FormControl>
                         <Textarea 
                           placeholder={paymentForm.watch("paymentType") === "cash" 
-                            ? "e.g., Please leave cash in an envelope in my mailbox at desk 4B"
-                            : "e.g., Send Interac e-Transfer to john.doe@email.com, no security question needed"
+                            ? "e.g., Please leave cash in an envelope in my mailbox at desk 4B\nOr arrange to meet at BCI main Building Lobby"
+                            : "e.g., Send Interac e-Transfer to john.doe@email.com\nNo security question needed (auto-deposit enabled)"
                           }
                           className="min-h-[100px]"
                           {...field}
