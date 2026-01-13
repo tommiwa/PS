@@ -265,11 +265,13 @@ export function ParkingSpotCard({
             </div>
           </div>
           {spot.availability?.date && (
-            <div className="text-right">
-              <div className="text-xs text-muted-foreground mb-1">Available</div>
-              <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+            <div className="text-right px-3 py-2 bg-primary/10 rounded-lg border border-primary/20">
+              <div className="text-xs text-muted-foreground mb-0.5">Available</div>
+              <div className="flex items-center justify-end gap-1.5">
                 <Calendar className="h-4 w-4 text-primary" />
-                {formatDateFromDB(spot.availability.date)}
+                <span className="text-base font-bold text-foreground" data-testid={`text-date-${spot.id}`}>
+                  {formatDateFromDB(spot.availability.date)}
+                </span>
               </div>
             </div>
           )}
