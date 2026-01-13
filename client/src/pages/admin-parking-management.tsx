@@ -1171,7 +1171,11 @@ export default function AdminParkingManagement() {
       },
       electric: { 
         className: "bg-green-50 text-green-700 border-green-200 hover:bg-green-100", 
-        label: "EV Charging" 
+        label: "Electric" 
+      },
+      "Electric": { 
+        className: "bg-green-50 text-green-700 border-green-200 hover:bg-green-100", 
+        label: "Electric" 
       },
       "EV Chargers": { 
         className: "bg-green-50 text-green-700 border-green-200 hover:bg-green-100", 
@@ -1179,7 +1183,11 @@ export default function AdminParkingManagement() {
       },
       tesla_ev: { 
         className: "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100", 
-        label: "Tesla Charger" 
+        label: "Tesla Electric" 
+      },
+      "Tesla Electric": { 
+        className: "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100", 
+        label: "Tesla Electric" 
       },
       "Tesla Chargers": { 
         className: "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100", 
