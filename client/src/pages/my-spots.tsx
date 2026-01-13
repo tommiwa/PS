@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react"
+import { useLocation } from "wouter"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { apiRequest, queryClient } from "@/lib/queryClient"
 import type { ParkingSpot as DBParkingSpot, InsertParkingSpot, InsertSpotListing, Location, SpotTypeTable, PaymentPreferences } from "@shared/schema"
@@ -490,9 +491,11 @@ export default function MySpots() {
     // Handle spot activation/deactivation
   }
 
+  const [, setLocation] = useLocation()
+  
   const handleViewBookingHistory = (spotId: string) => {
-    console.log('View booking history for spot:', spotId)
-    // Navigate to spot booking history
+    // Navigate to My Spot Listings page
+    setLocation('/my-listings')
   }
 
   // Mutation to update default price
