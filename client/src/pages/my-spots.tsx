@@ -303,7 +303,10 @@ export default function MySpots() {
         method: 'POST',
         body: listingData
       })
-      if (!response.ok) throw new Error('Failed to create listing')
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to create listing')
+      }
       return response.json()
     },
     onSuccess: () => {
