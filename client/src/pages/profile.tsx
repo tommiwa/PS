@@ -1040,10 +1040,15 @@ export default function Profile() {
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
-                      <CarIcon className="h-5 w-5" />
-                      {t("vehicles.title")}
-                    </CardTitle>
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <CarIcon className="h-5 w-5" />
+                        {t("vehicles.title")}
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Manage your vehicles for quick booking with license plate auto-fill.
+                      </p>
+                    </div>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
@@ -1184,6 +1189,9 @@ export default function Profile() {
                     <Settings className="h-5 w-5" />
                     {t("profile.tabs.appSettings")}
                   </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Customize your app experience with language and theme preferences.
+                  </p>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="space-y-4">
