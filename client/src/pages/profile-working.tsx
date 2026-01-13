@@ -86,7 +86,7 @@ type PaymentPreferencesForm = z.infer<typeof paymentPreferencesSchema>;
 type ProfileEditForm = z.infer<typeof profileEditSchema>;
 
 export default function Profile() {
-  const { user, isOwner, isRenter, isAdmin } = useAuth()
+  const { user, isOwner, isRenter, isAdmin, refreshUser } = useAuth()
   const [, setLocation] = useLocation()
   const { toast } = useToast()
   const { theme, setTheme } = useTheme()
@@ -521,7 +521,9 @@ export default function Profile() {
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      // Refresh the auth context user data (this updates department, name, etc.)
+      await refreshUser();
+      // Also invalidate React Query caches for related data
       await queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id] });
       await queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "vehicles"] });
       await queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "notification-preferences"] });
