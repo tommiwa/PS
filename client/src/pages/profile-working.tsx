@@ -78,7 +78,7 @@ const profileEditSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Valid email is required"),
   phone: z.string().min(1, "Phone number is required"),
-  department: z.string().min(1, "Department is required")
+  departmentId: z.string().min(1, "Department is required")
 });
 
 type VehicleForm = z.infer<typeof vehicleSchema>;
@@ -132,7 +132,7 @@ export default function Profile() {
       name: "",
       email: "",
       phone: "",
-      department: ""
+      departmentId: ""
     }
   });
 
@@ -495,20 +495,26 @@ export default function Profile() {
       name: user?.name || "",
       email: user?.email || "",
       phone: user?.phone || "",
-      department: user?.department || ""
+      departmentId: user?.departmentId?.toString() || ""
     });
     setShowProfileEditDrawer(true);
   };
 
   const handleSubmitProfile = (data: ProfileEditForm) => {
+    // Split name into firstName and lastName for backend
+    const nameParts = data.name.trim().split(/\s+/);
+    const firstName = nameParts[0] || "";
+    const lastName = nameParts.slice(1).join(" ") || "";
+    
     const backendData = {
-      name: data.name,
+      firstName,
+      lastName,
       email: data.email,
       phone: data.phone,
-      department: data.department
+      departmentId: parseInt(data.departmentId, 10)
     };
     
-    updateProfileMutation.mutate(backendData);
+    updateProfileMutation.mutate(backendData as any);
   };
 
   if (!user) {
@@ -1772,7 +1778,7 @@ export default function Profile() {
                 
                 <FormField
                   control={profileForm.control}
-                  name="department"
+                  name="departmentId"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{t("profile.department")}</FormLabel>
@@ -1787,14 +1793,8 @@ export default function Profile() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {/* Show current value if it's not in the departments list (backwards compatibility) */}
-                          {field.value && !departments.some(dept => dept.name === field.value) && (
-                            <SelectItem value={field.value}>
-                              {field.value} (legacy)
-                            </SelectItem>
-                          )}
                           {departments.map(dept => (
-                            <SelectItem key={dept.id} value={dept.name}>
+                            <SelectItem key={dept.id} value={dept.id.toString()}>
                               {dept.name}
                             </SelectItem>
                           ))}
