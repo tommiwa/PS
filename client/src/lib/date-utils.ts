@@ -1,5 +1,5 @@
 /**
- * Format a date string from the database (YYYY-MM-DD) to display format (MM/DD/YYYY)
+ * Format a date string from the database (YYYY-MM-DD) to display format (DD Mon YYYY)
  * without timezone conversion issues.
  * 
  * Database dates are stored as date-only strings (e.g., "2025-10-16").
@@ -14,8 +14,11 @@ export function formatDateFromDB(dateString: string | null | undefined): string 
   // Parse the date components directly (YYYY-MM-DD format)
   const [year, month, day] = dateString.split('-').map(Number);
   
-  // Return in MM/DD/YYYY format (month is 1-indexed in the string)
-  return `${month.toString().padStart(2, '0')}/${day.toString().padStart(2, '0')}/${year}`;
+  // Month abbreviations
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  
+  // Return in DD Mon YYYY format (e.g., "02 Jan 2026")
+  return `${day.toString().padStart(2, '0')} ${months[month - 1]} ${year}`;
 }
 
 /**
