@@ -1250,10 +1250,15 @@ export default function Profile() {
               <Card>
                 <CardHeader className="p-4 md:p-6">
                   <div className="flex items-center justify-between flex-wrap gap-3">
-                    <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
-                      <Car className="h-5 w-5 md:h-6 md:w-6" />
-                      My Vehicles
-                    </CardTitle>
+                    <div>
+                      <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+                        <Car className="h-5 w-5 md:h-6 md:w-6" />
+                        My Vehicles
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Manage your vehicles for quick booking with license plate auto-fill.
+                      </p>
+                    </div>
 {/* Mobile Vehicle Form - Drawer */}
                     <div className="md:hidden">
                       <Drawer open={showAddVehicleDrawer} onOpenChange={setShowAddVehicleDrawer}>
@@ -1636,61 +1641,16 @@ export default function Profile() {
                     Notifications
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4 md:space-y-6 p-4 md:p-6">
-                  {isLoadingPreferences ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-6 w-6 animate-spin" />
+                <CardContent className="p-4 md:p-6">
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="rounded-full bg-muted p-4 mb-4">
+                      <Clock className="h-8 w-8 text-muted-foreground" />
                     </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between p-4 border rounded-lg">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <Mail className="h-4 w-4" />
-                            <Label>Email Notifications</Label>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            Receive email notifications for bookings and updates
-                          </p>
-                        </div>
-                        <Switch 
-                          checked={notificationPreferences?.emailNotifications ?? true}
-                          onCheckedChange={(checked) => handlePreferenceChange({ emailNotifications: checked })}
-                          data-testid="switch-email-notifications"
-                          disabled={updateNotificationPreferencesMutation.isPending}
-                        />
-                      </div>
-                      
-                      {(notificationPreferences?.emailNotifications ?? true) && (
-                        <div className="space-y-3">
-                          <Separator />
-                          <h4 className="font-medium text-sm text-muted-foreground">Email Types</h4>
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between p-3 border rounded-lg">
-                              <Label htmlFor="booking-confirmations">Booking Confirmations</Label>
-                              <Switch 
-                                id="booking-confirmations" 
-                                checked={notificationPreferences?.bookingConfirmations ?? true}
-                                onCheckedChange={(checked) => handlePreferenceChange({ bookingConfirmations: checked })}
-                                data-testid="switch-booking-confirmations"
-                                disabled={updateNotificationPreferencesMutation.isPending}
-                              />
-                            </div>
-                            <div className="flex items-center justify-between p-3 border rounded-lg">
-                              <Label htmlFor="payment-reminders">Payment Reminders</Label>
-                              <Switch 
-                                id="payment-reminders" 
-                                checked={notificationPreferences?.paymentReminders ?? true}
-                                onCheckedChange={(checked) => handlePreferenceChange({ paymentReminders: checked })}
-                                data-testid="switch-payment-reminders"
-                                disabled={updateNotificationPreferencesMutation.isPending}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                    <h3 className="text-lg font-semibold mb-2">Coming Soon</h3>
+                    <p className="text-sm text-muted-foreground max-w-sm">
+                      Notification preferences will be available in a future update. Stay tuned!
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -1703,6 +1663,9 @@ export default function Profile() {
                     <Settings className="h-5 w-5 md:h-6 md:w-6" />
                     {t("profile.tabs.appSettings")}
                   </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Customize your app experience with language and theme preferences.
+                  </p>
                 </CardHeader>
                 <CardContent className="space-y-4 md:space-y-6 p-4 md:p-6">
                   <div className="space-y-4">
