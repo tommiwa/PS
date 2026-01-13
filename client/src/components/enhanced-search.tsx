@@ -27,17 +27,15 @@ interface EnhancedSearchProps {
 }
 
 const SEARCH_SUGGESTIONS = [
-  "Victoria 750 pandora ave electric",
-  "tesla charging spots",
-  "accessible spots under $25", 
-  "inside spots",
+  "spots under $16",
   "electric charging",
-  "parking level 1",
-  "parking level 2",
-  "accessible tomorrow",
-  "regular spots Victoria",
-  "tesla ev charger",
-  "reserved spots"
+  "tesla charger",
+  "accessible spots",
+  "indoor parking",
+  "level 1",
+  "level 2",
+  "Victoria office",
+  "regular spots"
 ]
 
 const QUICK_FILTERS = [
@@ -464,7 +462,7 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
             className="hidden md:block h-auto p-0 text-sm text-muted-foreground hover:bg-transparent hover:text-muted-foreground text-left justify-start"
             data-testid="text-search-examples"
           >
-            <span className="font-medium">Try searching:</span> "tesla ev charger", "accessible under $25", "level 1 inside", or "electric charging"
+            <span className="font-medium">Try searching:</span> "tesla charger", "accessible under $16", "level 1 inside", or "electric charging"
           </Button>
         </TooltipTrigger>
         <TooltipContent>
