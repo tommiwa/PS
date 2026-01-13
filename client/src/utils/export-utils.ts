@@ -1,7 +1,7 @@
-import jsPDF from 'jspdf'
+import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import ExcelJS from 'exceljs'
-// @ts-ignore
+// @ts-expect-error - file-saver types not compatible
 import { saveAs } from 'file-saver'
 import { PARKSHARE_LOGO_BASE64 } from './logo-constant'
 
