@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { SpotListingForm } from "@/components/spot-listing-form"
 import { EnhancedFilters, type FilterConfig, type FilterValues } from "@/components/ui/enhanced-filters"
-import { Calendar, Search, Filter, Download, Clock, CheckCircle, CheckCircle2, XCircle, Car, MapPin, DollarSign, AlertTriangle, Plus, Edit, Trash2, CreditCard, Info, Building, Ban, Eye, FileText } from "lucide-react"
+import { Calendar, Search, Filter, Download, Clock, CheckCircle, CheckCircle2, XCircle, Car, MapPin, DollarSign, AlertTriangle, Plus, Edit, Trash2, CreditCard, Info, Building, Ban, Eye, FileText, CalendarCheck, Receipt } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { isPastDate } from "@/utils/date-utils"
 import { useMutation, useQuery } from "@tanstack/react-query"
@@ -1410,11 +1410,14 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
         </TabsList>
         
         <TabsContent value="active" className="w-full space-y-3 md:space-y-4">
-          <p className="text-sm text-muted-foreground">
-            {isOwnerView 
-              ? "Your listed spots that are available for booking or have confirmed reservations." 
-              : "Your confirmed bookings that are ready to use on the scheduled date."}
-          </p>
+          <div className="flex items-start gap-2 rounded-lg border bg-muted/40 dark:bg-muted/20 px-3 py-2">
+            <CalendarCheck className="h-4 w-4 mt-0.5 text-green-600 dark:text-green-400 flex-shrink-0" />
+            <p className="text-sm text-muted-foreground">
+              {isOwnerView 
+                ? "Your listed spots that are available for booking or have confirmed reservations." 
+                : "Your confirmed bookings that are ready to use on the scheduled date."}
+            </p>
+          </div>
           {activeItems.length === 0 ? (
             <Card>
               <CardContent className="p-6 md:p-8 text-center">
@@ -1437,11 +1440,17 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
         </TabsContent>
 
         <TabsContent value="payment-pending" className="w-full space-y-3 md:space-y-4">
-          <p className="text-sm text-muted-foreground">
+          <div className="flex items-start gap-2 rounded-lg border bg-muted/40 dark:bg-muted/20 px-3 py-2">
             {isOwnerView 
-              ? "Confirm when you've received payment from renters for these bookings." 
-              : "Complete payment for these bookings to finalize your reservation."}
-          </p>
+              ? <Receipt className="h-4 w-4 mt-0.5 text-orange-600 dark:text-orange-400 flex-shrink-0" />
+              : <CreditCard className="h-4 w-4 mt-0.5 text-orange-600 dark:text-orange-400 flex-shrink-0" />
+            }
+            <p className="text-sm text-muted-foreground">
+              {isOwnerView 
+                ? "Confirm when you've received payment from renters for these bookings." 
+                : "Complete payment for these bookings to finalize your reservation."}
+            </p>
+          </div>
           {paymentPendingItems.length === 0 ? (
             <Card>
               <CardContent className="p-6 md:p-8 text-center">
@@ -1464,11 +1473,14 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
         </TabsContent>
 
         <TabsContent value="completed" className="w-full space-y-3 md:space-y-4">
-          <p className="text-sm text-muted-foreground">
-            {isOwnerView 
-              ? "Past bookings where your spots were used and payments received." 
-              : "Your past bookings with completed payments."}
-          </p>
+          <div className="flex items-start gap-2 rounded-lg border bg-muted/40 dark:bg-muted/20 px-3 py-2">
+            <CheckCircle2 className="h-4 w-4 mt-0.5 text-slate-600 dark:text-slate-400 flex-shrink-0" />
+            <p className="text-sm text-muted-foreground">
+              {isOwnerView 
+                ? "Past bookings where your spots were used and payments received." 
+                : "Your past bookings with completed payments."}
+            </p>
+          </div>
           {completedItems.length === 0 ? (
             <Card>
               <CardContent className="p-6 md:p-8 text-center">
