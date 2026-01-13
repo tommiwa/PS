@@ -1046,7 +1046,7 @@ export default function Profile() {
                         {t("vehicles.title")}
                       </CardTitle>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Manage your vehicles for quick booking with license plate auto-fill.
+                        Manage your vehicles for quick booking with model and color auto-fill.
                       </p>
                     </div>
                     <Tooltip>
