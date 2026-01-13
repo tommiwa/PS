@@ -954,8 +954,8 @@ export default function AdminLockerManagement() {
                       size="sm"
                       variant="outline" 
                       disabled={bciManagedLockers.length === 0}
-                      onClick={() => {
-                        const success = quickExportLockersExcel(bciManagedLockers, 'All BCI Managed Lockers Report', (errorMessage) => {
+                      onClick={async () => {
+                        const success = await quickExportLockersExcel(bciManagedLockers, 'All BCI Managed Lockers Report', (errorMessage) => {
                           toast({
                             variant: "destructive",
                             title: "Export Failed",
@@ -1164,8 +1164,8 @@ export default function AdminLockerManagement() {
                       size="sm"
                       variant="outline" 
                       disabled={availableBciLockers.length === 0}
-                      onClick={() => {
-                        const success = quickExportLockersExcel(availableBciLockers, 'Available BCI Managed Lockers Report', (errorMessage) => {
+                      onClick={async () => {
+                        const success = await quickExportLockersExcel(availableBciLockers, 'Available BCI Managed Lockers Report', (errorMessage) => {
                           toast({
                             variant: "destructive",
                             title: "Export Failed",
@@ -1312,8 +1312,8 @@ export default function AdminLockerManagement() {
                       size="sm"
                       variant="outline" 
                       disabled={assignedLockers.length === 0}
-                      onClick={() => {
-                        const success = quickExportLockersExcel(assignedLockers, 'Assigned Lockers Report', (errorMessage) => {
+                      onClick={async () => {
+                        const success = await quickExportLockersExcel(assignedLockers, 'Assigned Lockers Report', (errorMessage) => {
                           toast({
                             variant: "destructive",
                             title: "Export Failed",
