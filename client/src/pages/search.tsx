@@ -192,11 +192,26 @@ export default function Search() {
           if (spot.bookedDates?.includes(date)) return false;
           
           // Exclude dates locked by other users (check using composite key)
-          if (spot.listingId) {
-            const compositeKey = `${spot.listingId}|${date}`;
+          // Get the date-specific listingId from dateToPrice if available
+          const dateToPrice = (spot as any).dateToPrice;
+          const dateListingId = dateToPrice?.[date]?.listingId || spot.listingId;
+          
+          if (dateListingId) {
+            const compositeKey = `${dateListingId}|${date}`;
             const lock = lockedListings.get(compositeKey);
             
             if (lock) {
+              // FIX: Also check if lock has expired by time to handle race conditions
+              // This prevents spots from vanishing when userActiveLock is cleared
+              // but lockedListings hasn't been updated yet
+              const lockExpireTime = new Date(lock.expiresAt).getTime();
+              const isLockExpired = lockExpireTime <= Date.now();
+              
+              if (isLockExpired) {
+                // Lock has expired by time - don't filter out this date
+                return true;
+              }
+              
               // Check if it's the current user's lock by comparing lockId
               const isMyLock = userActiveLock?.lockId === lock.lockId;
               // Filter out if locked by someone else
