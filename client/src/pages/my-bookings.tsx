@@ -1410,6 +1410,11 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
         </TabsList>
         
         <TabsContent value="active" className="w-full space-y-3 md:space-y-4">
+          <p className="text-sm text-muted-foreground">
+            {isOwnerView 
+              ? "Your listed spots that are available for booking or have confirmed reservations." 
+              : "Your confirmed bookings that are ready to use on the scheduled date."}
+          </p>
           {activeItems.length === 0 ? (
             <Card>
               <CardContent className="p-6 md:p-8 text-center">
@@ -1432,6 +1437,11 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
         </TabsContent>
 
         <TabsContent value="payment-pending" className="w-full space-y-3 md:space-y-4">
+          <p className="text-sm text-muted-foreground">
+            {isOwnerView 
+              ? "Confirm when you've received payment from renters for these bookings." 
+              : "Complete payment for these bookings to finalize your reservation."}
+          </p>
           {paymentPendingItems.length === 0 ? (
             <Card>
               <CardContent className="p-6 md:p-8 text-center">
@@ -1454,6 +1464,11 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
         </TabsContent>
 
         <TabsContent value="completed" className="w-full space-y-3 md:space-y-4">
+          <p className="text-sm text-muted-foreground">
+            {isOwnerView 
+              ? "Past bookings where your spots were used and payments received." 
+              : "Your past bookings with completed payments."}
+          </p>
           {completedItems.length === 0 ? (
             <Card>
               <CardContent className="p-6 md:p-8 text-center">
