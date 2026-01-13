@@ -1310,7 +1310,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
           )}
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button onClick={handleDownloadHistory} variant="outline" data-testid="button-download-history" className="w-full md:w-auto min-h-11">
+              <Button onClick={handleDownloadHistory} variant="outline" data-testid="button-download-history" className="hidden md:inline-flex md:w-auto min-h-11">
                 <Download className="h-4 w-4 mr-2" />
                 Download History
               </Button>
