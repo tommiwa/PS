@@ -878,142 +878,16 @@ export default function Profile() {
                     {t("notifications.title")}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  {isLoadingPreferences ? (
-                    <div className="flex items-center justify-center p-8">
-                      <div className="text-sm text-muted-foreground">{t("profile.loadingPreferences")}</div>
+                <CardContent>
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="rounded-full bg-muted p-4 mb-4">
+                      <Clock className="h-8 w-8 text-muted-foreground" />
                     </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <Mail className="h-4 w-4" />
-                            <Label>{t("notifications.emailNotifications")}</Label>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {t("notifications.emailNotifications.description")}
-                          </p>
-                        </div>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Switch 
-                              checked={notificationPreferences?.emailNotifications ?? true}
-                              onCheckedChange={(checked) => handlePreferenceChange({ emailNotifications: checked })}
-                              data-testid="switch-email-notifications"
-                              disabled={updateNotificationPreferencesMutation.isPending}
-                            />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{t("tooltip.notifications.emailToggle")}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                      
-                      {(notificationPreferences?.emailNotifications ?? true) && (
-                        <>
-                          <Separator />
-                          <div className="space-y-4 pl-6">
-                            <h4 className="font-medium text-sm text-muted-foreground">{t("profile.emailNotificationTypes")}</h4>
-                            <div className="space-y-3">
-                              <div className="flex items-center justify-between">
-                                <Label htmlFor="booking-confirmations">{t("notifications.bookingConfirmations")}</Label>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Switch 
-                                      id="booking-confirmations" 
-                                      checked={notificationPreferences?.bookingConfirmations ?? true}
-                                      onCheckedChange={(checked) => handlePreferenceChange({ bookingConfirmations: checked })}
-                                      data-testid="switch-booking-confirmations"
-                                      disabled={updateNotificationPreferencesMutation.isPending}
-                                    />
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>{t("tooltip.notifications.bookingConfirmations")}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <Label htmlFor="payment-reminders">{t("notifications.paymentReminders")}</Label>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Switch 
-                                      id="payment-reminders" 
-                                      checked={notificationPreferences?.paymentReminders ?? true}
-                                      onCheckedChange={(checked) => handlePreferenceChange({ paymentReminders: checked })}
-                                      data-testid="switch-payment-reminders"
-                                      disabled={updateNotificationPreferencesMutation.isPending}
-                                    />
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>{t("tooltip.notifications.paymentReminders")}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <Label htmlFor="spot-availability">{t("notifications.spotAvailability")}</Label>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Switch 
-                                      id="spot-availability" 
-                                      checked={notificationPreferences?.spotAvailability ?? true}
-                                      onCheckedChange={(checked) => handlePreferenceChange({ spotAvailability: checked })}
-                                      data-testid="switch-spot-availability"
-                                      disabled={updateNotificationPreferencesMutation.isPending}
-                                    />
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>{t("tooltip.notifications.spotAvailability")}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <Label htmlFor="weekly-reports">Weekly Summary Reports</Label>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Switch 
-                                      id="weekly-reports" 
-                                      checked={notificationPreferences?.weeklyReports ?? true}
-                                      onCheckedChange={(checked) => handlePreferenceChange({ weeklyReports: checked })}
-                                      data-testid="switch-weekly-reports"
-                                      disabled={updateNotificationPreferencesMutation.isPending}
-                                    />
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>{t("tooltip.notifications.weeklyReports")}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <Label htmlFor="system-maintenance">System Maintenance Alerts</Label>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Switch 
-                                      id="system-maintenance" 
-                                      checked={notificationPreferences?.systemMaintenance ?? true}
-                                      onCheckedChange={(checked) => handlePreferenceChange({ systemMaintenance: checked })}
-                                      data-testid="switch-system-maintenance"
-                                      disabled={updateNotificationPreferencesMutation.isPending}
-                                    />
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>{t("tooltip.notifications.systemMaintenance")}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </div>
-                            </div>
-                          </div>
-                        </>
-                      )}
-                      
-                      {updateNotificationPreferencesMutation.isPending && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary"></div>
-                          <span>Saving preferences...</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                    <h3 className="text-lg font-semibold mb-2">Coming Soon</h3>
+                    <p className="text-sm text-muted-foreground max-w-sm">
+                      Notification preferences will be available in a future update. Stay tuned!
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
