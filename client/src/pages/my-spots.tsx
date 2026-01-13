@@ -174,6 +174,12 @@ export default function MySpots() {
     enabled: !!user?.id
   })
 
+  // Fetch max daily rate config for validation
+  const { data: maxDailyRateConfig } = useQuery<{ key: string; value: string } | null>({
+    queryKey: ["/api/app-configs", "max_daily_rate"],
+  })
+  const maxDailyRate = maxDailyRateConfig?.value ? parseFloat(maxDailyRateConfig.value) : null
+
   // Payment dialog state
   const [showPaymentDialog, setShowPaymentDialog] = useState(false)
   const [paymentFormData, setPaymentFormData] = useState({
@@ -881,18 +887,28 @@ export default function MySpots() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Default Daily Rate */}
                   <div>
-                    <p className="text-sm font-medium mb-2">Default Daily Rate</p>
+                    <p className="text-sm font-medium mb-2">Default Daily Rate {maxDailyRate && <span className="text-muted-foreground font-normal">(max ${maxDailyRate})</span>}</p>
                     <div className="flex items-center gap-2">
                       <span className="text-muted-foreground">$</span>
                       <Input
                         type="number"
                         placeholder="Set price"
                         defaultValue={spot.defaultPrice || ""}
+                        max={maxDailyRate || undefined}
                         className="w-28 min-h-9"
                         data-testid={`input-default-price-${spot.id}`}
                         onBlur={(e) => {
                           const newPrice = parseFloat(e.target.value)
                           if (!isNaN(newPrice) && newPrice >= 0) {
+                            if (maxDailyRate && newPrice > maxDailyRate) {
+                              toast({
+                                title: "Price Exceeds Limit",
+                                description: `Daily rate cannot exceed $${maxDailyRate}. Please enter a lower amount.`,
+                                variant: "destructive"
+                              })
+                              e.target.value = spot.defaultPrice || ""
+                              return
+                            }
                             handleUpdateDefaultPrice(spot.id, newPrice)
                           }
                         }}
@@ -1221,17 +1237,30 @@ export default function MySpots() {
 
               {/* Daily Rate */}
               <div>
-                <Label htmlFor="daily-rate">Daily Rate</Label>
+                <Label htmlFor="daily-rate">Daily Rate {maxDailyRate && <span className="text-muted-foreground font-normal">(max ${maxDailyRate})</span>}</Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
                   <Input 
                     id="daily-rate"
                     type="number"
                     min="0"
+                    max={maxDailyRate || undefined}
                     step="0.01"
                     placeholder="0.00"
                     value={listingFormData.dailyRate}
-                    onChange={(e) => setListingFormData(prev => ({ ...prev, dailyRate: e.target.value }))}
+                    onChange={(e) => {
+                      const value = e.target.value
+                      const numValue = parseFloat(value)
+                      if (maxDailyRate && !isNaN(numValue) && numValue > maxDailyRate) {
+                        toast({
+                          title: "Price Exceeds Limit",
+                          description: `Daily rate cannot exceed $${maxDailyRate}. Please enter a lower amount.`,
+                          variant: "destructive"
+                        })
+                        return
+                      }
+                      setListingFormData(prev => ({ ...prev, dailyRate: value }))
+                    }}
                     className="pl-7 min-h-11"
                     data-testid="input-daily-rate"
                   />

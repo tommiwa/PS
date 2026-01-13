@@ -1168,6 +1168,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid default price" });
       }
       
+      // PRICE LIMIT CHECK: Validate default price against max_daily_rate config
+      const maxDailyRateConfig = await storage.getAppConfigValue('max_daily_rate');
+      const maxDailyRate = maxDailyRateConfig ? parseFloat(maxDailyRateConfig) : null;
+      if (maxDailyRate && defaultPrice > maxDailyRate) {
+        return res.status(400).json({ 
+          error: `Daily rate cannot exceed $${maxDailyRate}. Please enter a rate of $${maxDailyRate} or less.`
+        });
+      }
+      
       // Check if spot belongs to the user
       const existingSpot = await storage.getParkingSpot(id);
       if (!existingSpot) {
@@ -1266,6 +1275,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // PRICE LIMIT CHECK: Validate daily rate against max_daily_rate config
+      const maxDailyRateConfig = await storage.getAppConfigValue('max_daily_rate');
+      const maxDailyRate = maxDailyRateConfig ? parseFloat(maxDailyRateConfig) : null;
+      if (maxDailyRate && validatedData.dailyRate > maxDailyRate) {
+        return res.status(400).json({ 
+          error: `Daily rate cannot exceed $${maxDailyRate}. Please enter a rate of $${maxDailyRate} or less.`
+        });
+      }
+
       // PERMISSION CHECK: Verify spot ownership
       const spot = await storage.getParkingSpot(validatedData.spotId);
       if (!spot) {
