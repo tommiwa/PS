@@ -1041,17 +1041,18 @@ export default function AdminParkingManagement() {
   }, [bookableSpots.length, bookableSpotsPageSize, bookableSpotsPageIndex])
   
   // Filter configuration for parking management
+  // NOTE: Filter values must match database spot_types.name exactly for filtering to work
   const parkingFilterConfigs: FilterConfig[] = [
     {
       key: "spotType",
       label: "Spot Type",
       type: "select",
       options: [
-        { value: "regular", label: "Regular" },
-        { value: "electric", label: "EV" },
-        { value: "tesla_ev", label: "Tesla Charger" },
-        { value: "accessible", label: "Accessible" },
-        { value: "reserved", label: "Reserved" }
+        { value: "Regular", label: "Regular" },
+        { value: "Electric", label: "EV" },
+        { value: "Tesla Electric", label: "Tesla Charger" },
+        { value: "Accessible", label: "Accessible" },
+        { value: "Reserved", label: "Reserved" }
       ]
     },
     {
@@ -1081,17 +1082,18 @@ export default function AdminParkingManagement() {
   ]
 
   // Filter configuration for available spots
+  // NOTE: Filter values must match database spot_types.name exactly for filtering to work
   const availableSpotsFilterConfigs: FilterConfig[] = [
     {
       key: "spotType",
       label: "Spot Type",
       type: "select",
       options: [
-        { value: "regular", label: "Regular" },
-        { value: "electric", label: "EV" },
-        { value: "tesla_ev", label: "Tesla Charger" },
-        { value: "accessible", label: "Accessible" },
-        { value: "reserved", label: "Reserved" }
+        { value: "Regular", label: "Regular" },
+        { value: "Electric", label: "EV" },
+        { value: "Tesla Electric", label: "Tesla Charger" },
+        { value: "Accessible", label: "Accessible" },
+        { value: "Reserved", label: "Reserved" }
       ]
     },
     {
