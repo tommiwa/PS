@@ -2901,8 +2901,8 @@ export class MemStorage implements IStorage {
   }
 
   async getPendingPaymentBookings(isBciOnly?: boolean): Promise<PendingPaymentData[]> {
-    // Build raw SQL query with proper table aliases and joins to avoid N+1
-    const query = `
+    // Use parameterized query with Drizzle sql template literals
+    const baseQuery = sqlOp`
       SELECT 
         b.*,
         ps.spot_number, ps.location_id, ps.is_bci_managed,
@@ -2919,11 +2919,11 @@ export class MemStorage implements IStorage {
       WHERE 
         b.payment_status = 'paid'
         AND b.status != 'cancelled'
-        ${isBciOnly ? 'AND ps.is_bci_managed = true' : ''}
+        ${isBciOnly ? sqlOp`AND ps.is_bci_managed = true` : sqlOp``}
       ORDER BY b.created_at DESC
     `;
     
-    const results = await db.execute(sqlOp`${sqlOp.raw(query)}`);
+    const results = await db.execute(baseQuery);
     
     return ((results as any).rows || []).map((row: any) => {
       const renterName = row.renter_first_name && row.renter_last_name 
