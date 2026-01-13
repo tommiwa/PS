@@ -55,7 +55,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
         { value: "active", label: "Active" },
         { value: "completed", label: "Completed" },
         { value: "cancelled", label: "Cancelled" },
-        { value: "payment-pending", label: "Payment Pending" }
+        { value: "payment-pending", label: "Awaiting Payment" }
       ]
     },
     {
@@ -1305,14 +1305,14 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                   data-testid="card-stat-payment"
                 >
                   <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Pending Payment</CardTitle>
+                    <CardTitle className="text-sm font-medium">Awaiting Payment</CardTitle>
                     <div className="rounded-full border-2 border-orange-400 p-2">
                       <DollarSign className="h-4 w-4 text-orange-600" />
                     </div>
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">{paymentPendingItems.length}</div>
-                    <p className="text-xs text-orange-600">Awaiting payment confirmation</p>
+                    <p className="text-xs text-orange-600">Bookings requiring payment</p>
                   </CardContent>
                 </Card>
               </TooltipTrigger>
@@ -1401,7 +1401,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
           </TabsTrigger>
           <TabsTrigger value="payment-pending" className="gap-2 flex-shrink-0 md:flex-shrink min-h-11" data-testid="tab-payment">
             <DollarSign className="h-4 w-4 !text-orange-600" />
-            Payment Pending ({paymentPendingItems.length})
+            {isOwnerView ? `Confirm Payment (${paymentPendingItems.length})` : `Awaiting Payment (${paymentPendingItems.length})`}
           </TabsTrigger>
           <TabsTrigger value="completed" className="gap-2 flex-shrink-0 md:flex-shrink min-h-11" data-testid="tab-completed">
             <CheckCircle2 className="h-4 w-4 !text-slate-600" />

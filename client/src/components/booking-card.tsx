@@ -69,7 +69,7 @@ export function BookingCard({
 
   const getPaymentBadge = () => {
     const paymentConfig = {
-      pending: { variant: "secondary" as const, label: "Payment Pending", tooltip: "Payment not yet sent - you need to process payment for this booking" },
+      pending: { variant: "secondary" as const, label: "Awaiting Payment", tooltip: "Payment not yet sent - you need to process payment for this booking" },
       sent: { variant: "default" as const, label: "Payment Sent", tooltip: "Payment sent to spot owner - waiting for confirmation of receipt" },
       received: { variant: "default" as const, label: "Payment Received", tooltip: "Payment received by spot owner - transaction completed" },
       completed: { variant: "default" as const, label: "Completed", tooltip: "Booking and payment fully completed - no further action needed" }
