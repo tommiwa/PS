@@ -66,38 +66,75 @@ export function ParkingSpotCard({
     }
   }
 
-  // Map spot type name to icon
-  const getSpotTypeIcon = (spotTypeName?: string) => {
-    if (!spotTypeName) return <Car className="h-4 w-4" />
+  // Get spot type color classes - matching calendar colors for consistency
+  const getSpotTypeColors = (spotTypeName?: string): { badge: string; iconColor: string } => {
+    if (!spotTypeName) {
+      return { 
+        badge: "bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600", 
+        iconColor: "text-gray-600 dark:text-gray-400" 
+      };
+    }
     
     const lowerType = spotTypeName.toLowerCase();
-    if (lowerType.includes('electric') || lowerType.includes('ev')) {
-      return <Zap className="h-4 w-4" />
-    }
+    
     if (lowerType.includes('tesla')) {
-      return <Zap className="h-4 w-4 text-red-600" />
+      return { 
+        badge: "bg-red-100 text-red-700 border-red-200 hover:bg-red-200 dark:bg-red-900/50 dark:text-red-300 dark:border-red-700", 
+        iconColor: "text-red-600 dark:text-red-400" 
+      };
+    }
+    if (lowerType.includes('electric') || lowerType.includes('ev')) {
+      return { 
+        badge: "bg-green-100 text-green-700 border-green-200 hover:bg-green-200 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700", 
+        iconColor: "text-green-600 dark:text-green-400" 
+      };
     }
     if (lowerType.includes('accessible')) {
-      return <Accessibility className="h-4 w-4" />
+      return { 
+        badge: "bg-purple-100 text-purple-700 border-purple-200 hover:bg-purple-200 dark:bg-purple-900/50 dark:text-purple-300 dark:border-purple-700", 
+        iconColor: "text-purple-600 dark:text-purple-400" 
+      };
     }
     if (lowerType.includes('reserved')) {
-      return <Building className="h-4 w-4" />
+      return { 
+        badge: "bg-orange-100 text-orange-700 border-orange-200 hover:bg-orange-200 dark:bg-orange-900/50 dark:text-orange-300 dark:border-orange-700", 
+        iconColor: "text-orange-600 dark:text-orange-400" 
+      };
     }
-    return <Car className="h-4 w-4" />
+    
+    // Regular spots - gray
+    return { 
+      badge: "bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600", 
+      iconColor: "text-gray-600 dark:text-gray-400" 
+    };
+  }
+
+  // Map spot type name to icon with color
+  const getSpotTypeIcon = (spotTypeName?: string) => {
+    const { iconColor } = getSpotTypeColors(spotTypeName);
+    
+    if (!spotTypeName) return <Car className={`h-4 w-4 ${iconColor}`} />
+    
+    const lowerType = spotTypeName.toLowerCase();
+    if (lowerType.includes('tesla')) {
+      return <Zap className={`h-4 w-4 ${iconColor}`} />
+    }
+    if (lowerType.includes('electric') || lowerType.includes('ev')) {
+      return <Zap className={`h-4 w-4 ${iconColor}`} />
+    }
+    if (lowerType.includes('accessible')) {
+      return <Accessibility className={`h-4 w-4 ${iconColor}`} />
+    }
+    if (lowerType.includes('reserved')) {
+      return <Building className={`h-4 w-4 ${iconColor}`} />
+    }
+    return <Car className={`h-4 w-4 ${iconColor}`} />
   }
 
   const getSpotTypeBadge = () => {
     const spotTypeName = spot.spotTypeName;
     const displayName = spotTypeName || "Regular";
-    
-    // Determine variant based on type name
-    let variant: "default" | "secondary" = "secondary";
-    if (spotTypeName) {
-      const lowerType = spotTypeName.toLowerCase();
-      if (lowerType.includes('electric') || lowerType.includes('tesla') || lowerType.includes('accessible')) {
-        variant = "default";
-      }
-    }
+    const { badge: badgeColors } = getSpotTypeColors(spotTypeName);
     
     // Determine tooltip text
     let tooltipText = "Standard parking spot - suitable for all vehicle types";
@@ -118,7 +155,7 @@ export function ParkingSpotCard({
       <Tooltip>
         <TooltipTrigger asChild>
           <div data-testid={`badge-spot-type-${spotTypeName || 'regular'}-${spot.id}`}>
-            <Badge variant={variant} className="gap-1">
+            <Badge variant="outline" className={`gap-1 ${badgeColors}`}>
               {getSpotTypeIcon(spotTypeName)}
               {displayName}
             </Badge>
