@@ -150,9 +150,9 @@ export default function AdminReportsPage() {
             {isDateRangeValid && (
               <ReportActions
                 reportType="spot-assignments"
-                onExport={() => {
+                onExport={async () => {
                   if (!spotAssignmentsQuery.data) return;
-                  exportSpotAssignmentsReport(spotAssignmentsQuery.data);
+                  await exportSpotAssignmentsReport(spotAssignmentsQuery.data);
                 }}
                 filters={filters}
               />
@@ -181,9 +181,9 @@ export default function AdminReportsPage() {
             {isDateRangeValid && (
               <ReportActions
                 reportType="utilization"
-                onExport={() => {
+                onExport={async () => {
                   if (!utilizationQuery.data) return;
-                  exportUtilizationReport(utilizationQuery.data);
+                  await exportUtilizationReport(utilizationQuery.data);
                 }}
                 filters={filters}
               />

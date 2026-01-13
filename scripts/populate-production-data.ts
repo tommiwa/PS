@@ -15,14 +15,9 @@
  */
 
 import { neon } from '@neondatabase/serverless';
-import XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import path from 'path';
 import fs from 'fs';
-
-// Read the Excel file
-const workbook = XLSX.readFile(path.join(process.cwd(), 'attached_assets/Parking_Spot_Allocation_for_Lijin_1766018327520.xlsx'));
-const sheet = workbook.Sheets['Sheet1'];
-const rawData = XLSX.utils.sheet_to_json(sheet);
 
 interface ExcelRow {
   'STALL ': number;
@@ -32,10 +27,6 @@ interface ExcelRow {
   'SPOT DESCRIPTION'?: string;
 }
 
-// Type the data
-const data = rawData as ExcelRow[];
-
-// Helper to generate email from name
 function generateEmail(name: string): string {
   const cleaned = name.trim().toLowerCase();
   const parts = cleaned.split(/\s+/);
@@ -45,7 +36,6 @@ function generateEmail(name: string): string {
   return `${parts[0]}@bci.ca`;
 }
 
-// Helper to split name into first and last
 function splitName(fullName: string): { firstName: string; lastName: string } {
   const parts = fullName.trim().split(/\s+/);
   if (parts.length >= 2) {
@@ -57,12 +47,10 @@ function splitName(fullName: string): { firstName: string; lastName: string } {
   return { firstName: fullName.trim(), lastName: '' };
 }
 
-// Helper to normalize department names
 function normalizeDepartment(dept: string | undefined): string {
   if (!dept) return 'General';
   const cleaned = dept.trim();
   
-  // Normalize common variations
   const mappings: Record<string, string> = {
     'IRR': 'Infrastructure & Renewable Resources',
     'ISR': 'Investment Strategy & Risk',
@@ -85,7 +73,6 @@ function normalizeDepartment(dept: string | undefined): string {
   return mappings[cleaned] || cleaned;
 }
 
-// Helper to determine spot type from description
 function getSpotTypeSlug(description: string | undefined): string {
   if (!description) return 'regular';
   const desc = description.toLowerCase().trim();
@@ -98,44 +85,74 @@ function getSpotTypeSlug(description: string | undefined): string {
   return 'regular';
 }
 
-// Build unique departments list
-const departments = [...new Set(
-  data
-    .map(r => normalizeDepartment(r['DEPARTMENT']))
-    .filter(d => d && d !== 'General')
-)].sort();
-
-// Build users list (only those with names)
-const usersMap = new Map<string, { firstName: string; lastName: string; email: string; department: string }>();
-data.forEach(row => {
-  const name = row['FIRST NAME LAST NAME']?.trim();
-  if (name) {
-    const email = generateEmail(name);
-    const { firstName, lastName } = splitName(name);
-    usersMap.set(email, {
-      firstName,
-      lastName,
-      email,
-      department: normalizeDepartment(row['DEPARTMENT'])
-    });
+async function readExcelFile(): Promise<ExcelRow[]> {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.readFile(path.join(process.cwd(), 'attached_assets/Parking_Spot_Allocation_for_Lijin_1766018327520.xlsx'));
+  
+  const worksheet = workbook.getWorksheet('Sheet1');
+  if (!worksheet) {
+    throw new Error('Sheet1 not found in workbook');
   }
-});
-const users = Array.from(usersMap.values());
+  
+  const data: ExcelRow[] = [];
+  const headers: string[] = [];
+  
+  worksheet.eachRow((row, rowNumber) => {
+    if (rowNumber === 1) {
+      row.eachCell((cell, colNumber) => {
+        headers[colNumber] = String(cell.value || '');
+      });
+    } else {
+      const rowData: any = {};
+      row.eachCell((cell, colNumber) => {
+        const header = headers[colNumber];
+        if (header) {
+          rowData[header] = cell.value;
+        }
+      });
+      if (Object.keys(rowData).length > 0) {
+        data.push(rowData as ExcelRow);
+      }
+    }
+  });
+  
+  return data;
+}
 
-// Build spots list with assignments
-const spots = data.map(row => {
-  const name = row['FIRST NAME LAST NAME']?.trim();
-  return {
-    stallNumber: row['STALL '],
-    spotCode: row['SPOT'],
-    spotTypeSlug: getSpotTypeSlug(row['SPOT DESCRIPTION']),
-    assignedUserEmail: name ? generateEmail(name) : null,
-    description: row['SPOT DESCRIPTION']?.trim() || null
-  };
-});
+function generateSQL(data: ExcelRow[]): string {
+  const departments = [...new Set(
+    data
+      .map(r => normalizeDepartment(r['DEPARTMENT']))
+      .filter(d => d && d !== 'General')
+  )].sort();
 
-// Generate SQL script
-function generateSQL(): string {
+  const usersMap = new Map<string, { firstName: string; lastName: string; email: string; department: string }>();
+  data.forEach(row => {
+    const name = row['FIRST NAME LAST NAME']?.toString().trim();
+    if (name) {
+      const email = generateEmail(name);
+      const { firstName, lastName } = splitName(name);
+      usersMap.set(email, {
+        firstName,
+        lastName,
+        email,
+        department: normalizeDepartment(row['DEPARTMENT'])
+      });
+    }
+  });
+  const users = Array.from(usersMap.values());
+
+  const spots = data.map(row => {
+    const name = row['FIRST NAME LAST NAME']?.toString().trim();
+    return {
+      stallNumber: row['STALL '],
+      spotCode: row['SPOT'],
+      spotTypeSlug: getSpotTypeSlug(row['SPOT DESCRIPTION']),
+      assignedUserEmail: name ? generateEmail(name) : null,
+      description: row['SPOT DESCRIPTION']?.toString().trim() || null
+    };
+  });
+
   const lines: string[] = [];
   
   lines.push('-- ============================================');
@@ -147,7 +164,6 @@ function generateSQL(): string {
   lines.push('-- This will insert data into your production database.');
   lines.push('');
   
-  // Spot Types
   lines.push('-- ============================================');
   lines.push('-- 1. SPOT TYPES');
   lines.push('-- ============================================');
@@ -164,7 +180,6 @@ ON CONFLICT (slug) DO UPDATE SET
   is_active = EXCLUDED.is_active;
 `);
   
-  // Departments - using name only (no slug column)
   lines.push('-- ============================================');
   lines.push('-- 2. DEPARTMENTS');
   lines.push('-- ============================================');
@@ -174,7 +189,6 @@ ON CONFLICT (slug) DO UPDATE SET
   });
   lines.push('');
   
-  // Users - using first_name, last_name, department_id
   lines.push('-- ============================================');
   lines.push('-- 3. USERS');
   lines.push('-- ============================================');
@@ -209,7 +223,6 @@ ON CONFLICT (email) DO UPDATE SET
   });
   lines.push('');
   
-  // Parking Spots - using owner_id instead of assigned_user_id
   lines.push('-- ============================================');
   lines.push('-- 4. PARKING SPOTS');
   lines.push('-- ============================================');
@@ -219,7 +232,6 @@ ON CONFLICT (email) DO UPDATE SET
   
   spots.forEach(spot => {
     const desc = spot.description ? `'${spot.description.replace(/'/g, "''")}'` : 'NULL';
-    // Use INSERT with WHERE NOT EXISTS since spot_number has no unique constraint
     lines.push(`
 INSERT INTO parking_spots (
   id,
@@ -242,7 +254,6 @@ SELECT
   ${desc}
 WHERE NOT EXISTS (SELECT 1 FROM parking_spots WHERE spot_number = '${spot.spotCode}');`);
 
-    // Update existing spots
     lines.push(`
 UPDATE parking_spots SET
   seat_number = '${spot.stallNumber}',
@@ -252,7 +263,6 @@ WHERE spot_number = '${spot.spotCode}';`);
   });
   lines.push('');
   
-  // Spot Assignments - using owner_id
   lines.push('-- ============================================');
   lines.push('-- 5. SPOT ASSIGNMENTS (owner_id)');
   lines.push('-- ============================================');
@@ -266,7 +276,6 @@ WHERE spot_number = '${spot.spotCode}'
   });
   lines.push('');
   
-  // Summary
   lines.push('-- ============================================');
   lines.push('-- SUMMARY');
   lines.push('-- ============================================');
@@ -285,21 +294,43 @@ WHERE spot_number = '${spot.spotCode}'
   return lines.join('\n');
 }
 
-// Main execution
 async function main() {
-  const sql = generateSQL();
+  const data = await readExcelFile();
+  const sql = generateSQL(data);
   
-  // Write the SQL file
   const outputPath = path.join(process.cwd(), 'scripts/production-data.sql');
   fs.writeFileSync(outputPath, sql);
   
+  const departments = [...new Set(
+    data
+      .map(r => normalizeDepartment(r['DEPARTMENT']))
+      .filter(d => d && d !== 'General')
+  )].sort();
+
+  const usersMap = new Map<string, any>();
+  data.forEach(row => {
+    const name = row['FIRST NAME LAST NAME']?.toString().trim();
+    if (name) {
+      const email = generateEmail(name);
+      usersMap.set(email, true);
+    }
+  });
+
+  const spots = data.map(row => {
+    const name = row['FIRST NAME LAST NAME']?.toString().trim();
+    return {
+      spotTypeSlug: getSpotTypeSlug(row['SPOT DESCRIPTION']),
+      assignedUserEmail: name ? generateEmail(name) : null,
+    };
+  });
+
   console.log('='.repeat(60));
   console.log('Production Data Population Script Generated');
   console.log('='.repeat(60));
   console.log(`\nOutput file: ${outputPath}`);
   console.log(`\nStatistics:`);
   console.log(`  - Departments: ${departments.length}`);
-  console.log(`  - Users: ${users.length}`);
+  console.log(`  - Users: ${usersMap.size}`);
   console.log(`  - Parking Spots: ${spots.length}`);
   console.log(`  - Assigned Spots: ${spots.filter(s => s.assignedUserEmail).length}`);
   console.log(`  - Unassigned Spots: ${spots.filter(s => !s.assignedUserEmail).length}`);
@@ -319,7 +350,6 @@ async function main() {
   console.log(`  3. Execute the SQL script`);
   console.log(`\nAlternatively, set PRODUCTION_DATABASE_URL and run with --execute flag`);
   
-  // If --execute flag is passed and PRODUCTION_DATABASE_URL is set
   if (process.argv.includes('--execute') && process.env.PRODUCTION_DATABASE_URL) {
     console.log('\n' + '='.repeat(60));
     console.log('EXECUTING AGAINST PRODUCTION DATABASE');
@@ -328,7 +358,6 @@ async function main() {
     const dbClient = neon(process.env.PRODUCTION_DATABASE_URL);
     
     try {
-      // Execute each statement
       const statements = sql.split(';').filter(s => s.trim() && !s.trim().startsWith('--'));
       
       for (let i = 0; i < statements.length; i++) {
@@ -345,7 +374,6 @@ async function main() {
       
       console.log('\n\nExecution complete!');
       
-      // Verify counts
       const userCount = await dbClient('SELECT COUNT(*) FROM users');
       const spotCount = await dbClient('SELECT COUNT(*) FROM parking_spots');
       const assignedCount = await dbClient('SELECT COUNT(*) FROM parking_spots WHERE owner_id IS NOT NULL');

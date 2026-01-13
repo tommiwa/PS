@@ -688,3 +688,571 @@ export const quickExportLocationsExcel = async (locations: any[], title?: string
     return false
   }
 }
+
+export const exportLockersData = (lockers: any[], title: string = 'Locker Management Report') => {
+  const columns: ExportColumn[] = [
+    { header: 'Locker ID', dataKey: 'id', width: 15 },
+    { header: 'Locker Number', dataKey: 'lockerNumber', width: 15 },
+    { header: 'Location', dataKey: 'locationName', width: 25 },
+    { header: 'Type', dataKey: 'lockerTypeName', width: 15 },
+    { header: 'Status', dataKey: 'status', width: 12, formatter: (status) => status?.toUpperCase() || 'AVAILABLE' },
+    { header: 'Assigned User', dataKey: 'assignedUserName', width: 20 },
+    { header: 'User Email', dataKey: 'assignedUserEmail', width: 25 },
+    { header: 'Department', dataKey: 'assignedUserDepartment', width: 20 },
+    { header: 'BCI Managed', dataKey: 'isBciManaged', width: 12, formatter: (managed) => managed ? 'Yes' : 'No' },
+    { header: 'Active', dataKey: 'isActive', width: 10, formatter: (active) => active ? 'Yes' : 'No' }
+  ]
+
+  const exportData: ExportData = {
+    title,
+    subtitle: 'Locker Inventory and Assignment Report',
+    data: lockers,
+    columns,
+    filename: `lockers-report-${new Date().toISOString().split('T')[0]}`,
+    summary: {
+      totalRecords: lockers.length,
+      additionalStats: [
+        { label: 'Available', value: lockers.filter(l => !l.assignedUserId).length },
+        { label: 'Assigned', value: lockers.filter(l => l.assignedUserId).length },
+        { label: 'BCI Managed', value: lockers.filter(l => l.isBciManaged).length }
+      ]
+    }
+  }
+
+  return exportData
+}
+
+export const quickExportLockersPDF = (lockers: any[], title?: string, onError?: (message: string) => void) => {
+  try {
+    if (!lockers || lockers.length === 0) {
+      const message = 'No locker data available to export'
+      if (onError) onError(message)
+      return false
+    }
+    const exportData = exportLockersData(lockers, title)
+    exportToPDF(exportData)
+    return true
+  } catch (error) {
+    console.error('Error exporting lockers to PDF:', error)
+    const message = error instanceof Error ? error.message : 'Failed to export lockers to PDF'
+    if (onError) onError(message)
+    return false
+  }
+}
+
+export const quickExportLockersExcel = async (lockers: any[], title?: string, onError?: (message: string) => void) => {
+  try {
+    if (!lockers || lockers.length === 0) {
+      const message = 'No locker data available to export'
+      if (onError) onError(message)
+      return false
+    }
+    const exportData = exportLockersData(lockers, title)
+    await exportToExcel(exportData)
+    return true
+  } catch (error) {
+    console.error('Error exporting lockers to Excel:', error)
+    const message = error instanceof Error ? error.message : 'Failed to export lockers to Excel'
+    if (onError) onError(message)
+    return false
+  }
+}
+
+export const exportLockerWaitlistData = (waitlist: any[], title: string = 'Locker Waitlist Report') => {
+  const columns: ExportColumn[] = [
+    { header: 'ID', dataKey: 'id', width: 15 },
+    { header: 'User Name', dataKey: 'userName', width: 20 },
+    { header: 'User Email', dataKey: 'userEmail', width: 25 },
+    { header: 'Department', dataKey: 'userDepartment', width: 20 },
+    { header: 'Location', dataKey: 'locationName', width: 20 },
+    { header: 'Locker Type', dataKey: 'lockerTypeName', width: 15 },
+    { header: 'Priority', dataKey: 'priority', width: 10 },
+    { header: 'Status', dataKey: 'status', width: 12, formatter: (status) => status?.toUpperCase() || 'ACTIVE' },
+    { header: 'Request Date', dataKey: 'requestDate', width: 15, formatter: (date) => date ? new Date(date).toLocaleDateString() : 'N/A' }
+  ]
+
+  const exportData: ExportData = {
+    title,
+    subtitle: 'Locker Waitlist Management Report',
+    data: waitlist,
+    columns,
+    filename: `locker-waitlist-report-${new Date().toISOString().split('T')[0]}`,
+    summary: {
+      totalRecords: waitlist.length,
+      additionalStats: [
+        { label: 'Active Requests', value: waitlist.filter(w => w.status === 'active').length },
+        { label: 'Pending', value: waitlist.filter(w => w.status === 'pending').length }
+      ]
+    }
+  }
+
+  return exportData
+}
+
+export const quickExportLockerWaitlistPDF = (waitlist: any[], title?: string, onError?: (message: string) => void) => {
+  try {
+    if (!waitlist || waitlist.length === 0) {
+      const message = 'No waitlist data available to export'
+      if (onError) onError(message)
+      return false
+    }
+    const exportData = exportLockerWaitlistData(waitlist, title)
+    exportToPDF(exportData)
+    return true
+  } catch (error) {
+    console.error('Error exporting locker waitlist to PDF:', error)
+    const message = error instanceof Error ? error.message : 'Failed to export locker waitlist to PDF'
+    if (onError) onError(message)
+    return false
+  }
+}
+
+export const quickExportLockerWaitlistExcel = async (waitlist: any[], title?: string, onError?: (message: string) => void) => {
+  try {
+    if (!waitlist || waitlist.length === 0) {
+      const message = 'No waitlist data available to export'
+      if (onError) onError(message)
+      return false
+    }
+    const exportData = exportLockerWaitlistData(waitlist, title)
+    await exportToExcel(exportData)
+    return true
+  } catch (error) {
+    console.error('Error exporting locker waitlist to Excel:', error)
+    const message = error instanceof Error ? error.message : 'Failed to export locker waitlist to Excel'
+    if (onError) onError(message)
+    return false
+  }
+}
+
+export const exportLockerAssignmentHistoryData = (history: any[], title: string = 'Locker Assignment History') => {
+  const columns: ExportColumn[] = [
+    { header: 'ID', dataKey: 'id', width: 15 },
+    { header: 'Locker Number', dataKey: 'lockerNumber', width: 15 },
+    { header: 'Location', dataKey: 'locationName', width: 20 },
+    { header: 'User Name', dataKey: 'userName', width: 20 },
+    { header: 'User Email', dataKey: 'userEmail', width: 25 },
+    { header: 'Action', dataKey: 'action', width: 12, formatter: (action) => action?.toUpperCase() || 'N/A' },
+    { header: 'Actor', dataKey: 'actorName', width: 20 },
+    { header: 'Date', dataKey: 'createdAt', width: 18, formatter: (date) => date ? new Date(date).toLocaleString() : 'N/A' },
+    { header: 'Notes', dataKey: 'notes', width: 30 }
+  ]
+
+  const exportData: ExportData = {
+    title,
+    subtitle: 'Locker Assignment History Report',
+    data: history,
+    columns,
+    filename: `locker-assignment-history-${new Date().toISOString().split('T')[0]}`,
+    summary: {
+      totalRecords: history.length,
+      additionalStats: [
+        { label: 'Assignments', value: history.filter(h => h.action === 'assigned').length },
+        { label: 'Unassignments', value: history.filter(h => h.action === 'unassigned').length }
+      ]
+    }
+  }
+
+  return exportData
+}
+
+export const quickExportLockerAssignmentHistoryPDF = (history: any[], title?: string, onError?: (message: string) => void) => {
+  try {
+    if (!history || history.length === 0) {
+      const message = 'No history data available to export'
+      if (onError) onError(message)
+      return false
+    }
+    const exportData = exportLockerAssignmentHistoryData(history, title)
+    exportToPDF(exportData)
+    return true
+  } catch (error) {
+    console.error('Error exporting locker history to PDF:', error)
+    const message = error instanceof Error ? error.message : 'Failed to export locker history to PDF'
+    if (onError) onError(message)
+    return false
+  }
+}
+
+export const quickExportLockerAssignmentHistoryExcel = async (history: any[], title?: string, onError?: (message: string) => void) => {
+  try {
+    if (!history || history.length === 0) {
+      const message = 'No history data available to export'
+      if (onError) onError(message)
+      return false
+    }
+    const exportData = exportLockerAssignmentHistoryData(history, title)
+    await exportToExcel(exportData)
+    return true
+  } catch (error) {
+    console.error('Error exporting locker history to Excel:', error)
+    const message = error instanceof Error ? error.message : 'Failed to export locker history to Excel'
+    if (onError) onError(message)
+    return false
+  }
+}
+
+export interface ParkingReceiptData {
+  spotNumber: string
+  spotLocation: string
+  renterName: string
+  renterEmail: string
+  ownerName: string
+  status: string
+  dailyRate: number
+  bookingDate: string
+  paymentStatus: string
+  bookingId: string
+}
+
+export const generateParkingReceiptPDF = (receiptData: ParkingReceiptData, filename: string): void => {
+  const doc = new jsPDF('portrait', 'mm', 'a4')
+  const pageWidth = doc.internal.pageSize.getWidth()
+  
+  doc.setFillColor(BCI_COLORS.primary)
+  doc.rect(20, 10, 60, 25, 'F')
+  
+  doc.setTextColor(255, 255, 255)
+  doc.setFontSize(24)
+  doc.setFont('helvetica', 'bold')
+  doc.text('BCI', 50, 25, { align: 'center' })
+  
+  doc.setFontSize(8)
+  doc.setFont('helvetica', 'normal')
+  doc.text('Parking Management', 50, 30, { align: 'center' })
+  
+  doc.setTextColor(BCI_COLORS.text)
+  doc.setFontSize(20)
+  doc.setFont('helvetica', 'bold')
+  doc.text('Parking Receipt', 90, 25)
+  
+  const now = new Date()
+  const dateStr = now.toLocaleDateString()
+  const timeStr = now.toLocaleTimeString()
+  
+  doc.setFontSize(10)
+  doc.setTextColor(BCI_COLORS.secondary)
+  doc.text(`Generated: ${dateStr} at ${timeStr}`, pageWidth - 20, 20, { align: 'right' })
+  
+  doc.setDrawColor(BCI_COLORS.mediumGray)
+  doc.setLineWidth(0.5)
+  doc.line(20, 40, pageWidth - 20, 40)
+  
+  let yPos = 55
+  
+  doc.setFontSize(14)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(BCI_COLORS.primary)
+  doc.text('Receipt Details', 20, yPos)
+  yPos += 12
+  
+  doc.setFontSize(11)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(BCI_COLORS.text)
+  
+  const labelX = 20
+  const valueX = 80
+  const lineHeight = 8
+  
+  const details = [
+    { label: 'Booking ID:', value: receiptData.bookingId },
+    { label: 'Spot Number:', value: receiptData.spotNumber },
+    { label: 'Location:', value: receiptData.spotLocation },
+    { label: 'Renter Name:', value: receiptData.renterName },
+    { label: 'Renter Email:', value: receiptData.renterEmail },
+    { label: 'Owner Name:', value: receiptData.ownerName },
+    { label: 'Booking Date:', value: receiptData.bookingDate },
+    { label: 'Status:', value: receiptData.status.toUpperCase() },
+    { label: 'Daily Rate:', value: `$${receiptData.dailyRate}` },
+    { label: 'Payment Status:', value: receiptData.paymentStatus.toUpperCase() }
+  ]
+  
+  details.forEach(detail => {
+    doc.setFont('helvetica', 'bold')
+    doc.text(detail.label, labelX, yPos)
+    doc.setFont('helvetica', 'normal')
+    doc.text(String(detail.value), valueX, yPos)
+    yPos += lineHeight
+  })
+  
+  yPos += 10
+  doc.setDrawColor(BCI_COLORS.mediumGray)
+  doc.line(20, yPos, pageWidth - 20, yPos)
+  yPos += 15
+  
+  doc.setFontSize(10)
+  doc.setTextColor(BCI_COLORS.secondary)
+  doc.text('Thank you for using BCI ParkShare!', pageWidth / 2, yPos, { align: 'center' })
+  yPos += 8
+  doc.setFontSize(8)
+  doc.text('This receipt was automatically generated. Please keep it for your records.', pageWidth / 2, yPos, { align: 'center' })
+  
+  const pageHeight = doc.internal.pageSize.getHeight()
+  doc.setDrawColor(BCI_COLORS.mediumGray)
+  doc.line(20, pageHeight - 20, pageWidth - 20, pageHeight - 20)
+  doc.setFontSize(8)
+  doc.text('BCI ParkShare - Confidential Receipt', 20, pageHeight - 15)
+  
+  doc.save(`${filename}.pdf`)
+}
+
+export const exportBookingActivityData = (activities: any[], title: string = 'Booking Activity Report') => {
+  const columns: ExportColumn[] = [
+    { header: 'Activity ID', dataKey: 'id', width: 15 },
+    { header: 'Booking ID', dataKey: 'bookingId', width: 15 },
+    { header: 'Action', dataKey: 'action', width: 15 },
+    { header: 'User Name', dataKey: 'userName', width: 20 },
+    { header: 'User Email', dataKey: 'userEmail', width: 25 },
+    { header: 'Details', dataKey: 'details', width: 40 },
+    { header: 'Timestamp', dataKey: 'timestamp', width: 18, formatter: (date) => date ? new Date(date).toLocaleString() : 'N/A' }
+  ]
+
+  const exportData: ExportData = {
+    title,
+    subtitle: 'Booking Activity Log Report',
+    data: activities,
+    columns,
+    filename: `booking-activity-report-${new Date().toISOString().split('T')[0]}`,
+    summary: {
+      totalRecords: activities.length
+    }
+  }
+
+  return exportData
+}
+
+export const quickExportBookingActivityPDF = (activities: any[], title?: string, onError?: (message: string) => void) => {
+  try {
+    if (!activities || activities.length === 0) {
+      const message = 'No booking activity data available to export'
+      if (onError) onError(message)
+      return false
+    }
+    const exportData = exportBookingActivityData(activities, title)
+    exportToPDF(exportData)
+    return true
+  } catch (error) {
+    console.error('Error exporting booking activity to PDF:', error)
+    const message = error instanceof Error ? error.message : 'Failed to export booking activity to PDF'
+    if (onError) onError(message)
+    return false
+  }
+}
+
+export const quickExportBookingActivityExcel = async (activities: any[], title?: string, onError?: (message: string) => void) => {
+  try {
+    if (!activities || activities.length === 0) {
+      const message = 'No booking activity data available to export'
+      if (onError) onError(message)
+      return false
+    }
+    const exportData = exportBookingActivityData(activities, title)
+    await exportToExcel(exportData)
+    return true
+  } catch (error) {
+    console.error('Error exporting booking activity to Excel:', error)
+    const message = error instanceof Error ? error.message : 'Failed to export booking activity to Excel'
+    if (onError) onError(message)
+    return false
+  }
+}
+
+export const exportLockersData = (lockers: any[], title: string = 'Lockers Report') => {
+  const columns: ExportColumn[] = [
+    { header: 'Locker ID', dataKey: 'id', width: 15 },
+    { header: 'Locker Number', dataKey: 'lockerNumber', width: 15 },
+    { header: 'Location', dataKey: 'locationName', width: 25 },
+    { header: 'Locker Type', dataKey: 'lockerTypeName', width: 15 },
+    { header: 'Status', dataKey: 'status', width: 12, formatter: (status) => status?.toUpperCase() || 'AVAILABLE' },
+    { header: 'Assigned User', dataKey: 'assignedUserName', width: 20 },
+    { header: 'Assigned Email', dataKey: 'assignedUserEmail', width: 25 },
+    { header: 'Department', dataKey: 'assignedUserDepartment', width: 20 },
+    { header: 'Active', dataKey: 'isActive', width: 10, formatter: (active) => active ? 'Yes' : 'No' }
+  ]
+
+  const exportData: ExportData = {
+    title,
+    subtitle: 'Locker Management Report',
+    data: lockers,
+    columns,
+    filename: `lockers-report-${new Date().toISOString().split('T')[0]}`,
+    summary: {
+      totalRecords: lockers.length,
+      additionalStats: [
+        { label: 'Available Lockers', value: lockers.filter(l => !l.assignedUserId).length },
+        { label: 'Assigned Lockers', value: lockers.filter(l => l.assignedUserId).length },
+        { label: 'Active Lockers', value: lockers.filter(l => l.isActive).length }
+      ]
+    }
+  }
+
+  return exportData
+}
+
+export const quickExportLockersPDF = (lockers: any[], title?: string, onError?: (message: string) => void) => {
+  try {
+    if (!lockers || lockers.length === 0) {
+      const message = 'No locker data available to export'
+      if (onError) onError(message)
+      return false
+    }
+    const exportData = exportLockersData(lockers, title)
+    exportToPDF(exportData)
+    return true
+  } catch (error) {
+    console.error('Error exporting lockers to PDF:', error)
+    const message = error instanceof Error ? error.message : 'Failed to export lockers to PDF'
+    if (onError) onError(message)
+    return false
+  }
+}
+
+export const quickExportLockersExcel = async (lockers: any[], title?: string, onError?: (message: string) => void) => {
+  try {
+    if (!lockers || lockers.length === 0) {
+      const message = 'No locker data available to export'
+      if (onError) onError(message)
+      return false
+    }
+    const exportData = exportLockersData(lockers, title)
+    await exportToExcel(exportData)
+    return true
+  } catch (error) {
+    console.error('Error exporting lockers to Excel:', error)
+    const message = error instanceof Error ? error.message : 'Failed to export lockers to Excel'
+    if (onError) onError(message)
+    return false
+  }
+}
+
+export const exportLockerWaitlistData = (waitlist: any[], title: string = 'Locker Waitlist Report') => {
+  const columns: ExportColumn[] = [
+    { header: 'ID', dataKey: 'id', width: 15 },
+    { header: 'User Name', dataKey: 'userName', width: 20 },
+    { header: 'User Email', dataKey: 'userEmail', width: 25 },
+    { header: 'Department', dataKey: 'userDepartment', width: 20 },
+    { header: 'Location', dataKey: 'locationName', width: 25 },
+    { header: 'Locker Type', dataKey: 'lockerTypeName', width: 15 },
+    { header: 'Priority', dataKey: 'priority', width: 10 },
+    { header: 'Status', dataKey: 'status', width: 12, formatter: (status) => status?.toUpperCase() || 'ACTIVE' },
+    { header: 'Enrolled Date', dataKey: 'createdAt', width: 18, formatter: (date) => date ? new Date(date).toLocaleDateString() : 'N/A' }
+  ]
+
+  const exportData: ExportData = {
+    title,
+    subtitle: 'Locker Waitlist Management Report',
+    data: waitlist,
+    columns,
+    filename: `locker-waitlist-report-${new Date().toISOString().split('T')[0]}`,
+    summary: {
+      totalRecords: waitlist.length,
+      additionalStats: [
+        { label: 'Active Requests', value: waitlist.filter(w => w.status === 'active').length }
+      ]
+    }
+  }
+
+  return exportData
+}
+
+export const quickExportLockerWaitlistPDF = (waitlist: any[], title?: string, onError?: (message: string) => void) => {
+  try {
+    if (!waitlist || waitlist.length === 0) {
+      const message = 'No locker waitlist data available to export'
+      if (onError) onError(message)
+      return false
+    }
+    const exportData = exportLockerWaitlistData(waitlist, title)
+    exportToPDF(exportData)
+    return true
+  } catch (error) {
+    console.error('Error exporting locker waitlist to PDF:', error)
+    const message = error instanceof Error ? error.message : 'Failed to export locker waitlist to PDF'
+    if (onError) onError(message)
+    return false
+  }
+}
+
+export const quickExportLockerWaitlistExcel = async (waitlist: any[], title?: string, onError?: (message: string) => void) => {
+  try {
+    if (!waitlist || waitlist.length === 0) {
+      const message = 'No locker waitlist data available to export'
+      if (onError) onError(message)
+      return false
+    }
+    const exportData = exportLockerWaitlistData(waitlist, title)
+    await exportToExcel(exportData)
+    return true
+  } catch (error) {
+    console.error('Error exporting locker waitlist to Excel:', error)
+    const message = error instanceof Error ? error.message : 'Failed to export locker waitlist to Excel'
+    if (onError) onError(message)
+    return false
+  }
+}
+
+export const exportLockerAssignmentHistoryData = (history: any[], title: string = 'Locker Assignment History Report') => {
+  const columns: ExportColumn[] = [
+    { header: 'ID', dataKey: 'id', width: 15 },
+    { header: 'Locker Number', dataKey: 'lockerNumber', width: 15 },
+    { header: 'Location', dataKey: 'locationName', width: 25 },
+    { header: 'User Name', dataKey: 'userName', width: 20 },
+    { header: 'User Email', dataKey: 'userEmail', width: 25 },
+    { header: 'Action', dataKey: 'action', width: 15, formatter: (action) => action?.toUpperCase() || '-' },
+    { header: 'Performed By', dataKey: 'actorName', width: 20 },
+    { header: 'Timestamp', dataKey: 'createdAt', width: 18, formatter: (date) => date ? new Date(date).toLocaleString() : 'N/A' }
+  ]
+
+  const exportData: ExportData = {
+    title,
+    subtitle: 'Locker Assignment History Report',
+    data: history,
+    columns,
+    filename: `locker-assignment-history-report-${new Date().toISOString().split('T')[0]}`,
+    summary: {
+      totalRecords: history.length,
+      additionalStats: [
+        { label: 'Assignments', value: history.filter(h => h.action === 'assigned').length },
+        { label: 'Unassignments', value: history.filter(h => h.action === 'unassigned').length }
+      ]
+    }
+  }
+
+  return exportData
+}
+
+export const quickExportLockerAssignmentHistoryPDF = (history: any[], title?: string, onError?: (message: string) => void) => {
+  try {
+    if (!history || history.length === 0) {
+      const message = 'No locker assignment history data available to export'
+      if (onError) onError(message)
+      return false
+    }
+    const exportData = exportLockerAssignmentHistoryData(history, title)
+    exportToPDF(exportData)
+    return true
+  } catch (error) {
+    console.error('Error exporting locker assignment history to PDF:', error)
+    const message = error instanceof Error ? error.message : 'Failed to export locker assignment history to PDF'
+    if (onError) onError(message)
+    return false
+  }
+}
+
+export const quickExportLockerAssignmentHistoryExcel = async (history: any[], title?: string, onError?: (message: string) => void) => {
+  try {
+    if (!history || history.length === 0) {
+      const message = 'No locker assignment history data available to export'
+      if (onError) onError(message)
+      return false
+    }
+    const exportData = exportLockerAssignmentHistoryData(history, title)
+    await exportToExcel(exportData)
+    return true
+  } catch (error) {
+    console.error('Error exporting locker assignment history to Excel:', error)
+    const message = error instanceof Error ? error.message : 'Failed to export locker assignment history to Excel'
+    if (onError) onError(message)
+    return false
+  }
+}

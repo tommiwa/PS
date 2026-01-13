@@ -339,8 +339,8 @@ export function AdminUsersTable({
                 size="sm"
                 variant="outline" 
                 disabled={users.length === 0}
-                onClick={() => {
-                  const success = quickExportUsersExcel(users, t("admin.userDirectoryReport"), (errorMessage) => {
+                onClick={async () => {
+                  const success = await quickExportUsersExcel(users, t("admin.userDirectoryReport"), (errorMessage) => {
                     toast({
                       variant: "destructive",
                       title: t("export.failed"),

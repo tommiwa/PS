@@ -666,8 +666,8 @@ export default function AdminWaitingList() {
                 size="sm"
                 variant="outline" 
                 disabled={sortedWaitingList.length === 0}
-                onClick={() => {
-                  const success = quickExportWaitingListExcel(sortedWaitingList, 'Waiting List Report', (errorMessage) => {
+                onClick={async () => {
+                  const success = await quickExportWaitingListExcel(sortedWaitingList, 'Waiting List Report', (errorMessage) => {
                     toast({
                       variant: "destructive",
                       title: "Export Failed",

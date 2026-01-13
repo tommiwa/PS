@@ -130,11 +130,12 @@ export async function exportUtilizationReport(data: ReportUtilizationResponse, d
     headerRow.font = { bold: true };
     
     data.dailyOccupancy.forEach(day => {
+      const occupancyRate = day.totalSpots > 0 ? (day.occupiedSpots / day.totalSpots) * 100 : 0;
       dailySheet.addRow([
         day.date,
         day.occupiedSpots,
         day.totalSpots,
-        `${day.occupancyRate.toFixed(2)}%`
+        `${occupancyRate.toFixed(2)}%`
       ]);
     });
     

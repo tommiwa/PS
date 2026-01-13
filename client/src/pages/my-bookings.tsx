@@ -483,7 +483,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     }
   }
   
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     const title = isOwnerView ? 'My Spot Listings History' : 'My Booking History'
     
     // Transform data for export (both bookings and listings can be treated similarly)
@@ -524,7 +524,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
       }
     })
     
-    const success = quickExportBookingsExcel(exportData, title, (errorMessage) => {
+    const success = await quickExportBookingsExcel(exportData, title, (errorMessage) => {
       toast({
         variant: "destructive",
         title: "Export Failed",

@@ -1584,8 +1584,8 @@ export default function AdminParkingManagement() {
                         size="sm"
                         variant="outline" 
                         disabled={sortedSpots.length === 0}
-                        onClick={() => {
-                          const success = quickExportParkingSpotsExcel(sortedSpots, 'Parking Spots Report', (errorMessage) => {
+                        onClick={async () => {
+                          const success = await quickExportParkingSpotsExcel(sortedSpots, 'Parking Spots Report', (errorMessage) => {
                             toast({
                               variant: "destructive",
                               title: "Export Failed",
@@ -1927,8 +1927,8 @@ export default function AdminParkingManagement() {
                         size="sm"
                         variant="outline" 
                         disabled={sortedAvailableSpots.length === 0}
-                        onClick={() => {
-                          const success = quickExportParkingSpotsExcel(sortedAvailableSpots, 'Available Spots Report', (errorMessage) => {
+                        onClick={async () => {
+                          const success = await quickExportParkingSpotsExcel(sortedAvailableSpots, 'Available Spots Report', (errorMessage) => {
                             toast({
                               variant: "destructive",
                               title: "Export Failed",

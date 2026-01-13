@@ -59,7 +59,7 @@ import {
   Loader2
 } from "lucide-react"
 import type { Booking, BookingStatus, ParkingSpot } from "@shared/schema"
-import { quickExportBookingsPDF, quickExportBookingsExcel, quickExportBookingActivityPDF, quickExportBookingActivityExcel } from "@/utils/export-utils"
+import { quickExportBookingsPDF, quickExportBookingsExcel } from "@/utils/export-utils"
 
 // Define BookingScope type
 type BookingScope = 'all' | 'bci';
@@ -1315,8 +1315,8 @@ export default function AdminSpotBookingManagement() {
               <Button 
                 variant="outline" 
                 disabled={filteredActiveBookings.length === 0}
-                onClick={() => {
-                  const success = quickExportBookingsExcel(sortedActiveBookings, 'Active Bookings Report', (errorMessage) => {
+                onClick={async () => {
+                  const success = await quickExportBookingsExcel(sortedActiveBookings, 'Active Bookings Report', (errorMessage) => {
                     toast({
                       variant: "destructive",
                       title: "Export Failed",
@@ -1691,8 +1691,8 @@ export default function AdminSpotBookingManagement() {
                     size="sm"
                     variant="outline" 
                     disabled={sortedActiveBookings.length === 0}
-                    onClick={() => {
-                      const success = quickExportBookingsExcel(sortedActiveBookings, 'Active Bookings Report', (errorMessage) => {
+                    onClick={async () => {
+                      const success = await quickExportBookingsExcel(sortedActiveBookings, 'Active Bookings Report', (errorMessage) => {
                         toast({
                           variant: "destructive",
                           title: "Export Failed",
@@ -2240,8 +2240,8 @@ export default function AdminSpotBookingManagement() {
                     size="sm"
                     variant="outline" 
                     disabled={pastBookings.length === 0}
-                    onClick={() => {
-                      const success = quickExportBookingsExcel(pastBookings, `Past Bookings Report (Page ${pastBookingsPageIndex + 1})`, (errorMessage) => {
+                    onClick={async () => {
+                      const success = await quickExportBookingsExcel(pastBookings, `Past Bookings Report (Page ${pastBookingsPageIndex + 1})`, (errorMessage) => {
                         toast({
                           variant: "destructive",
                           title: "Export Failed",
