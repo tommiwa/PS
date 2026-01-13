@@ -137,8 +137,8 @@ export default function Search() {
     const typeMap: Record<string, DisplaySpot['type']> = {
       'regular': 'regular',
       'accessible': 'accessible',
-      'ev-chargers': 'electric',
-      'tesla-chargers': 'tesla_ev',
+      'electric': 'electric',
+      'tesla-electric': 'tesla_ev',
       'reserved': 'reserved'
     }
     

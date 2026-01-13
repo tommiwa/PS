@@ -245,15 +245,16 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
   const getSpotTypeLabel = (type: string) => {
     switch (type) {
       case "electric":
-        return "EV"
+        return "Electric"
       case "tesla_ev":
         return "Tesla"
       case "accessible":
         return "Accessible"
       case "reserved":
         return "Reserved"
+      case "regular":
       default:
-        return null
+        return "Regular"
     }
   }
 
