@@ -590,9 +590,9 @@ export default function Search() {
     return spot.bookedDates.includes(spotDate)
   }
 
-  // Use baseFilteredSpots for tiles view but filter out booked spots to sync with calendar
-  // Use filteredSpots for calendar when date is selected (date-specific view)
-  const spotsForTiles = baseFilteredSpots.filter(spot => !isSpotBooked(spot))
+  // Use filteredSpots for tiles view when date is selected, otherwise use baseFilteredSpots
+  // Also filter out booked spots to sync with calendar
+  const spotsForTiles = (searchCriteria.date ? filteredSpots : baseFilteredSpots).filter(spot => !isSpotBooked(spot))
   const spotsForCalendar = searchCriteria.date ? filteredSpots : baseFilteredSpots
   
   const sortedSpots = [...spotsForTiles].sort((a, b) => {
