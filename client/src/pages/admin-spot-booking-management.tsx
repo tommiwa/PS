@@ -1238,14 +1238,26 @@ export default function AdminSpotBookingManagement() {
 
   return (
     <div className="p-6 space-y-6" data-testid="page-admin-booking-management">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">{t('admin.spotBookingManagement.title')}</h1>
           <p className="text-muted-foreground">
             {t('admin.spotBookingManagement.description')}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Select
+            value={scope}
+            onValueChange={(value) => setScope(value as BookingScope)}
+          >
+            <SelectTrigger className="w-[180px]" data-testid="select-scope">
+              <SelectValue placeholder="Select scope" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all" data-testid="option-scope-all">All Spots</SelectItem>
+              <SelectItem value="bci" data-testid="option-scope-bci">BCI-Managed Only</SelectItem>
+            </SelectContent>
+          </Select>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button 
