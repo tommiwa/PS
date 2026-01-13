@@ -1777,9 +1777,15 @@ export default function Profile() {
                     <FormItem>
                       <FormLabel>{t("profile.emailAddress")}</FormLabel>
                       <FormControl>
-                        <Input className="min-h-11" type="email" placeholder="Enter your email" {...field} data-testid="input-profile-email" />
+                        <Input 
+                          className="min-h-11 bg-muted/50" 
+                          type="email" 
+                          {...field} 
+                          disabled 
+                          data-testid="input-profile-email" 
+                        />
                       </FormControl>
-                      <FormMessage />
+                      <p className="text-xs text-muted-foreground">{t("profile.managedByIT")}</p>
                     </FormItem>
                   )}
                 />
