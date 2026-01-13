@@ -153,6 +153,7 @@ const translations: Record<Language, Translations> = {
     "tooltip.profile.department": "Your department information is managed by HR and cannot be changed here",
     "tooltip.profile.bio": "Optional brief description visible to other users based on privacy settings",
     "tooltip.profile.changePhoto": "Upload a new profile photo (JPG, PNG or GIF, max 2MB)",
+    "tooltip.profile.refresh": "Refresh profile data from the server",
     
     "tooltip.security.twoFactor": "Enable two-factor authentication for enhanced account security",
     "tooltip.security.loginAlerts": "Receive notifications when someone logs into your account from a new device",
@@ -761,6 +762,7 @@ const translations: Record<Language, Translations> = {
     "tooltip.profile.department": "Les informations de votre département sont gérées par les RH et ne peuvent pas être modifiées ici",
     "tooltip.profile.bio": "Description optionnelle visible par les autres utilisateurs selon les paramètres de confidentialité",
     "tooltip.profile.changePhoto": "Téléchargez une nouvelle photo de profil (JPG, PNG ou GIF, max 2MB)",
+    "tooltip.profile.refresh": "Actualiser les données du profil depuis le serveur",
     
     "tooltip.security.twoFactor": "Activez l'authentification à deux facteurs pour une sécurité de compte renforcée",
     "tooltip.security.loginAlerts": "Recevez des notifications lorsque quelqu'un se connecte à votre compte depuis un nouvel appareil",
