@@ -636,10 +636,10 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     const paymentStatus = listing.paymentStatus || null
     // Use isBooked from API to determine actual booking status (not just listing.status from database)
     const effectivelyBooked = listing.isBooked || listing.status === "booked"
-    const canEdit = !effectivelyBooked || (effectivelyBooked && paymentStatus !== 'paid')
-    const canCancel = !effectivelyBooked
-    const canConfirmPayment = effectivelyBooked && paymentStatus === 'paid'
     const isCompleted = listing.status === "used" || paymentStatus === 'received'
+    const canEdit = !effectivelyBooked && !isCompleted
+    const canCancel = !effectivelyBooked && !isCompleted
+    const canConfirmPayment = effectivelyBooked && paymentStatus === 'paid' && !isCompleted
     
     // Get status badge with color - use effectivelyBooked for accurate display
     const getStatusBadge = () => {
@@ -1111,19 +1111,20 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
 
   // Compact row render for owner listings
   const renderOwnerListingCompact = (listing: any) => {
-    const today = new Date().toISOString().split('T')[0]
-    const isBooked = listing.status === "booked"
-    const isUsed = listing.status === "used"
-    const paymentStatus = listing.paymentStatus || 'pending'
+    const paymentStatus = listing.paymentStatus || null
+    const effectivelyBooked = listing.isBooked || listing.status === "booked"
+    const isCompleted = listing.status === "used" || paymentStatus === 'received'
+    const canEdit = !effectivelyBooked && !isCompleted
     
     const getStatusBadge = () => {
       const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
         available: { bg: "bg-emerald-100 dark:bg-emerald-900/40", text: "text-emerald-700 dark:text-emerald-300", label: "Available" },
         booked: { bg: "bg-blue-100 dark:bg-blue-900/40", text: "text-blue-700 dark:text-blue-300", label: "Booked" },
-        used: { bg: "bg-slate-100 dark:bg-slate-800", text: "text-slate-700 dark:text-slate-300", label: "Used" },
+        used: { bg: "bg-slate-100 dark:bg-slate-800", text: "text-slate-700 dark:text-slate-300", label: "Completed" },
         expired: { bg: "bg-red-100 dark:bg-red-900/40", text: "text-red-700 dark:text-red-300", label: "Expired" },
       }
-      const config = statusConfig[listing.status] || statusConfig.available
+      const displayStatus = effectivelyBooked && listing.status === 'available' ? 'booked' : listing.status
+      const config = statusConfig[displayStatus] || statusConfig.available
       return <Badge variant="outline" className={`${config.bg} ${config.text} border-0 text-xs`}>{config.label}</Badge>
     }
     
@@ -1144,9 +1145,14 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
             <Button variant="ghost" size="icon" onClick={() => handleViewDetails(listing)} data-testid={`compact-view-${listing.id}`}>
               <Eye className="h-4 w-4" />
             </Button>
-            {listing.status === "available" && (
+            {canEdit && (
               <Button variant="ghost" size="icon" onClick={() => handleEditListing(listing)} data-testid={`compact-edit-${listing.id}`}>
                 <Edit className="h-4 w-4" />
+              </Button>
+            )}
+            {isCompleted && (
+              <Button variant="ghost" size="icon" onClick={() => handleDownloadReceipt(listing.bookingId || listing.id)} data-testid={`compact-receipt-${listing.id}`}>
+                <Download className="h-4 w-4" />
               </Button>
             )}
           </div>
