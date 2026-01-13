@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { SpotListingForm } from "@/components/spot-listing-form"
 import { EnhancedFilters, type FilterConfig, type FilterValues } from "@/components/ui/enhanced-filters"
-import { Calendar, Search, Filter, Download, Clock, CheckCircle, CheckCircle2, XCircle, Car, MapPin, DollarSign, AlertTriangle, Plus, Edit, Trash2, CreditCard, Info, Building, Ban, Eye, FileText, CalendarCheck, Receipt } from "lucide-react"
+import { Calendar, Search, Filter, Download, Clock, CheckCircle, CheckCircle2, XCircle, Car, MapPin, DollarSign, AlertTriangle, Plus, Edit, Trash2, CreditCard, Info, Building, Ban, Eye, FileText, CalendarCheck, Receipt, LayoutGrid, List } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { isPastDate } from "@/utils/date-utils"
 import { useMutation, useQuery } from "@tanstack/react-query"
@@ -42,6 +42,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
   const [showViewDetails, setShowViewDetails] = useState(false)
   const [showExportDialog, setShowExportDialog] = useState(false)
   const [activeTab, setActiveTab] = useState("active")
+  const [isCompactView, setIsCompactView] = useState(false)
   const { confirm } = useConfirm()
   const { toast } = useToast()
 
@@ -1108,6 +1109,97 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     )
   }
 
+  // Compact row render for owner listings
+  const renderOwnerListingCompact = (listing: any) => {
+    const today = new Date().toISOString().split('T')[0]
+    const isBooked = listing.status === "booked"
+    const isUsed = listing.status === "used"
+    const paymentStatus = listing.paymentStatus || 'pending'
+    
+    const getStatusBadge = () => {
+      const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
+        available: { bg: "bg-emerald-100 dark:bg-emerald-900/40", text: "text-emerald-700 dark:text-emerald-300", label: "Available" },
+        booked: { bg: "bg-blue-100 dark:bg-blue-900/40", text: "text-blue-700 dark:text-blue-300", label: "Booked" },
+        used: { bg: "bg-slate-100 dark:bg-slate-800", text: "text-slate-700 dark:text-slate-300", label: "Used" },
+        expired: { bg: "bg-red-100 dark:bg-red-900/40", text: "text-red-700 dark:text-red-300", label: "Expired" },
+      }
+      const config = statusConfig[listing.status] || statusConfig.available
+      return <Badge variant="outline" className={`${config.bg} ${config.text} border-0 text-xs`}>{config.label}</Badge>
+    }
+    
+    return (
+      <div key={listing.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card hover-elevate">
+        <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
+          <Car className="h-4 w-4 text-primary" />
+        </div>
+        <div className="flex-1 min-w-0 grid grid-cols-2 md:grid-cols-5 gap-2 items-center">
+          <div className="min-w-0">
+            <p className="font-medium text-sm truncate">Spot {listing.spotNumber}</p>
+            <p className="text-xs text-muted-foreground truncate">{listing.locationName}</p>
+          </div>
+          <div className="hidden md:block text-sm text-muted-foreground">{listing.availableDate}</div>
+          <div className="hidden md:block text-sm font-medium text-primary">${listing.dailyRate}</div>
+          <div className="flex justify-end md:justify-start">{getStatusBadge()}</div>
+          <div className="flex justify-end gap-1">
+            <Button variant="ghost" size="icon" onClick={() => handleViewDetails(listing)} data-testid={`compact-view-${listing.id}`}>
+              <Eye className="h-4 w-4" />
+            </Button>
+            {listing.status === "available" && (
+              <Button variant="ghost" size="icon" onClick={() => handleEditListing(listing)} data-testid={`compact-edit-${listing.id}`}>
+                <Edit className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Compact row render for renter bookings
+  const renderRenterBookingCompact = (booking: any) => {
+    const today = new Date().toISOString().split('T')[0]
+    const paymentStatus = booking.paymentStatus || 'pending'
+    const canMarkPaid = booking.status === "confirmed" && paymentStatus === 'pending' && booking.bookingDate >= today
+    
+    const getStatusBadge = () => {
+      const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
+        confirmed: { bg: "bg-emerald-100 dark:bg-emerald-900/40", text: "text-emerald-700 dark:text-emerald-300", label: "Confirmed" },
+        pending: { bg: "bg-amber-100 dark:bg-amber-900/40", text: "text-amber-700 dark:text-amber-300", label: "Pending" },
+        completed: { bg: "bg-slate-100 dark:bg-slate-800", text: "text-slate-700 dark:text-slate-300", label: "Completed" },
+        cancelled: { bg: "bg-red-100 dark:bg-red-900/40", text: "text-red-700 dark:text-red-300", label: "Cancelled" },
+      }
+      const config = statusConfig[booking.status] || statusConfig.pending
+      return <Badge variant="outline" className={`${config.bg} ${config.text} border-0 text-xs`}>{config.label}</Badge>
+    }
+    
+    return (
+      <div key={booking.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card hover-elevate">
+        <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
+          <Car className="h-4 w-4 text-primary" />
+        </div>
+        <div className="flex-1 min-w-0 grid grid-cols-2 md:grid-cols-5 gap-2 items-center">
+          <div className="min-w-0">
+            <p className="font-medium text-sm truncate">Spot {booking.spotNumber}</p>
+            <p className="text-xs text-muted-foreground truncate">{booking.location}</p>
+          </div>
+          <div className="hidden md:block text-sm text-muted-foreground">{booking.bookingDate}</div>
+          <div className="hidden md:block text-sm font-medium text-primary">${booking.totalAmount || booking.dailyRate}</div>
+          <div className="flex justify-end md:justify-start">{getStatusBadge()}</div>
+          <div className="flex justify-end gap-1">
+            <Button variant="ghost" size="icon" onClick={() => handleViewDetails(booking)} data-testid={`compact-view-${booking.id}`}>
+              <Eye className="h-4 w-4" />
+            </Button>
+            {canMarkPaid && (
+              <Button variant="default" size="icon" onClick={() => handleMarkPaid(booking.id)} data-testid={`compact-pay-${booking.id}`}>
+                <DollarSign className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // Show loading state while fetching data
   if (isLoadingBookings || isLoadingListings) {
     return (
@@ -1162,6 +1254,22 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
             </TooltipTrigger>
             <TooltipContent>
               <p>Export your {isOwnerView ? 'listing' : 'booking'} history as a PDF or Excel file for record keeping</p>
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                onClick={() => setIsCompactView(!isCompactView)} 
+                variant="outline" 
+                size="icon"
+                data-testid="button-toggle-view"
+                className="min-h-11 min-w-11"
+              >
+                {isCompactView ? <LayoutGrid className="h-4 w-4" /> : <List className="h-4 w-4" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{isCompactView ? 'Switch to card view' : 'Switch to compact view'}</p>
             </TooltipContent>
           </Tooltip>
         </div>
@@ -1430,6 +1538,12 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                 </p>
               </CardContent>
             </Card>
+          ) : isCompactView ? (
+            <div className="space-y-2">
+              {activeItems.map((item) => (
+                isOwnerView ? renderOwnerListingCompact(item) : renderRenterBookingCompact(item)
+              ))}
+            </div>
           ) : (
             <div className="space-y-3 md:space-y-4">
               {activeItems.map((item) => (
@@ -1463,6 +1577,12 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                 </p>
               </CardContent>
             </Card>
+          ) : isCompactView ? (
+            <div className="space-y-2">
+              {paymentPendingItems.map((item) => (
+                isOwnerView ? renderOwnerListingCompact(item) : renderRenterBookingCompact(item)
+              ))}
+            </div>
           ) : (
             <div className="space-y-3 md:space-y-4">
               {paymentPendingItems.map((item) => (
@@ -1493,6 +1613,12 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                 </p>
               </CardContent>
             </Card>
+          ) : isCompactView ? (
+            <div className="space-y-2">
+              {completedItems.map((item) => (
+                isOwnerView ? renderOwnerListingCompact(item) : renderRenterBookingCompact(item)
+              ))}
+            </div>
           ) : (
             <div className="space-y-3 md:space-y-4">
               {completedItems.map((item) => (
