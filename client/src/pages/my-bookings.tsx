@@ -634,12 +634,24 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
   // Unified Owner listing render function with proper action buttons based on status and payment
   const renderOwnerListing = (listing: any) => {
     const paymentStatus = listing.paymentStatus || null
+    const today = new Date().toISOString().split('T')[0]
+    const listingDate = listing.availableDate || listing.date
+    const isPastDate = listingDate < today
+    
     // Use isBooked from API to determine actual booking status (not just listing.status from database)
     const effectivelyBooked = listing.isBooked || listing.status === "booked"
     const isCompleted = listing.status === "used" || paymentStatus === 'received'
-    const canEdit = !effectivelyBooked && !isCompleted
-    const canCancel = !effectivelyBooked && !isCompleted
-    const canConfirmPayment = effectivelyBooked && paymentStatus === 'paid' && !isCompleted
+    const isCancelled = listing.status === "cancelled"
+    const isUnused = listing.status === "unused"
+    
+    // Action visibility rules:
+    // - canEdit: Only for available listings that are NOT past, NOT booked, NOT completed, NOT cancelled
+    // - canCancel: Only for available/future listings that are NOT booked, NOT completed, NOT cancelled, NOT past
+    // - canConfirmPayment: Only for booked listings where renter has paid but owner hasn't confirmed
+    // - showReceipt: Only for completed listings
+    const canEdit = listing.status === "available" && !isPastDate && !effectivelyBooked && !isCompleted && !isCancelled
+    const canCancel = listing.status === "available" && !isPastDate && !effectivelyBooked && !isCompleted && !isCancelled
+    const canConfirmPayment = effectivelyBooked && paymentStatus === 'paid' && !isCompleted && !isCancelled
     
     // Get status badge with color - use effectivelyBooked for accurate display
     const getStatusBadge = () => {
@@ -882,17 +894,26 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
 
   const renderRenterBooking = (booking: any) => {
     const today = new Date().toISOString().split('T')[0]
-    const isActive = booking.status === "confirmed" && booking.bookingDate >= today
     const paymentStatus = booking.paymentStatus || 'pending'
-    const canMarkPaid = booking.status === "confirmed" && paymentStatus === 'pending' && booking.bookingDate >= today
-    const isCompleted = booking.status === "completed" || (booking.status === "confirmed" && paymentStatus === 'received' && booking.bookingDate < today)
+    const isPastDate = booking.bookingDate < today
+    
+    // Status checks
+    const isCompleted = booking.status === "completed" || (booking.status === "confirmed" && paymentStatus === 'received')
     const isCancelled = booking.status === "cancelled"
+    const isActive = booking.status === "confirmed" && !isPastDate && !isCompleted
     
     // 24-hour cancellation policy check
     const bookingDate = new Date(booking.bookingDate + 'T00:00:00')
     const now = new Date()
     const hoursUntilBooking = (bookingDate.getTime() - now.getTime()) / (1000 * 60 * 60)
     const canCancelWithin24Hours = hoursUntilBooking >= 24
+    
+    // Action visibility rules:
+    // - canMarkPaid: Only for confirmed, future bookings with pending payment (not completed, not cancelled, not past)
+    // - canCancel: Only for confirmed bookings that are 24+ hours away (not completed, not cancelled, not past)
+    // - showReceipt: Only for completed bookings
+    const canMarkPaid = booking.status === "confirmed" && paymentStatus === 'pending' && !isPastDate && !isCompleted && !isCancelled
+    const canCancel = booking.status === "confirmed" && canCancelWithin24Hours && !isPastDate && !isCompleted && !isCancelled
     
     // Get status badge with color
     const getBookingStatusBadge = () => {
@@ -1061,28 +1082,21 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               </Tooltip>
             )}
             
-            {isActive && !isCancelled && (
+            {canCancel && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="flex-1 lg:flex-none">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleCancelBooking(booking.id)}
-                      data-testid={`button-cancel-${booking.id}`}
-                      className={`w-full ${canCancelWithin24Hours ? 'text-destructive hover:text-destructive' : 'text-muted-foreground opacity-50 cursor-not-allowed'}`}
-                      disabled={!canCancelWithin24Hours}
-                    >
-                      <XCircle className="h-4 w-4 mr-2" />
-                      <span className="hidden sm:inline">Cancel</span>
-                    </Button>
-                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleCancelBooking(booking.id)}
+                    data-testid={`button-cancel-${booking.id}`}
+                    className="flex-1 lg:flex-none text-destructive hover:text-destructive"
+                  >
+                    <XCircle className="h-4 w-4 mr-2" />
+                    <span className="hidden sm:inline">Cancel</span>
+                  </Button>
                 </TooltipTrigger>
-                <TooltipContent>
-                  {canCancelWithin24Hours 
-                    ? "Cancel Booking" 
-                    : "Cancellation not allowed within 24 hours of booking date"}
-                </TooltipContent>
+                <TooltipContent>Cancel Booking</TooltipContent>
               </Tooltip>
             )}
             
@@ -1112,16 +1126,25 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
   // Compact row render for owner listings
   const renderOwnerListingCompact = (listing: any) => {
     const paymentStatus = listing.paymentStatus || null
+    const today = new Date().toISOString().split('T')[0]
+    const listingDate = listing.availableDate || listing.date
+    const isPastDate = listingDate < today
+    
     const effectivelyBooked = listing.isBooked || listing.status === "booked"
     const isCompleted = listing.status === "used" || paymentStatus === 'received'
-    const canEdit = !effectivelyBooked && !isCompleted
+    const isCancelled = listing.status === "cancelled"
+    
+    // Same logic as card view
+    const canEdit = listing.status === "available" && !isPastDate && !effectivelyBooked && !isCompleted && !isCancelled
+    const canConfirmPayment = effectivelyBooked && paymentStatus === 'paid' && !isCompleted && !isCancelled
     
     const getStatusBadge = () => {
       const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
         available: { bg: "bg-emerald-100 dark:bg-emerald-900/40", text: "text-emerald-700 dark:text-emerald-300", label: "Available" },
         booked: { bg: "bg-blue-100 dark:bg-blue-900/40", text: "text-blue-700 dark:text-blue-300", label: "Booked" },
         used: { bg: "bg-slate-100 dark:bg-slate-800", text: "text-slate-700 dark:text-slate-300", label: "Completed" },
-        expired: { bg: "bg-red-100 dark:bg-red-900/40", text: "text-red-700 dark:text-red-300", label: "Expired" },
+        cancelled: { bg: "bg-red-100 dark:bg-red-900/40", text: "text-red-700 dark:text-red-300", label: "Cancelled" },
+        unused: { bg: "bg-amber-100 dark:bg-amber-900/40", text: "text-amber-700 dark:text-amber-300", label: "Unused" },
       }
       const displayStatus = effectivelyBooked && listing.status === 'available' ? 'booked' : listing.status
       const config = statusConfig[displayStatus] || statusConfig.available
@@ -1135,11 +1158,11 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
         </div>
         <div className="flex-1 min-w-0 grid grid-cols-2 md:grid-cols-5 gap-2 items-center">
           <div className="min-w-0">
-            <p className="font-medium text-sm truncate">Spot {listing.spotNumber}</p>
-            <p className="text-xs text-muted-foreground truncate">{listing.locationName}</p>
+            <p className="font-medium text-sm truncate">Spot {listing.spot?.spotNumber || listing.spotNumber || 'Unknown'}</p>
+            <p className="text-xs text-muted-foreground truncate">{listing.spot?.location || listing.locationName || 'Unknown'}</p>
           </div>
-          <div className="hidden md:block text-sm text-muted-foreground">{listing.availableDate}</div>
-          <div className="hidden md:block text-sm font-medium text-primary">${listing.dailyRate}</div>
+          <div className="hidden md:block text-sm text-muted-foreground">{listingDate}</div>
+          <div className="hidden md:block text-sm font-medium text-primary">${listing.totalAmount || listing.price || listing.dailyRate}</div>
           <div className="flex justify-end md:justify-start">{getStatusBadge()}</div>
           <div className="flex justify-end gap-1">
             <Button variant="ghost" size="icon" onClick={() => handleViewDetails(listing)} data-testid={`compact-view-${listing.id}`}>
@@ -1148,6 +1171,11 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
             {canEdit && (
               <Button variant="ghost" size="icon" onClick={() => handleEditListing(listing)} data-testid={`compact-edit-${listing.id}`}>
                 <Edit className="h-4 w-4" />
+              </Button>
+            )}
+            {canConfirmPayment && (
+              <Button size="icon" onClick={() => handleMarkPayment(listing.bookingId || listing.id)} data-testid={`compact-confirm-${listing.id}`} className="bg-green-600 hover:bg-green-700 text-white">
+                <CheckCircle className="h-4 w-4" />
               </Button>
             )}
             {isCompleted && (
@@ -1165,7 +1193,21 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
   const renderRenterBookingCompact = (booking: any) => {
     const today = new Date().toISOString().split('T')[0]
     const paymentStatus = booking.paymentStatus || 'pending'
-    const canMarkPaid = booking.status === "confirmed" && paymentStatus === 'pending' && booking.bookingDate >= today
+    const isPastDate = booking.bookingDate < today
+    
+    // Status checks - same as card view
+    const isCompleted = booking.status === "completed" || (booking.status === "confirmed" && paymentStatus === 'received')
+    const isCancelled = booking.status === "cancelled"
+    
+    // 24-hour cancellation policy check
+    const bookingDate = new Date(booking.bookingDate + 'T00:00:00')
+    const now = new Date()
+    const hoursUntilBooking = (bookingDate.getTime() - now.getTime()) / (1000 * 60 * 60)
+    const canCancelWithin24Hours = hoursUntilBooking >= 24
+    
+    // Same action logic as card view
+    const canMarkPaid = booking.status === "confirmed" && paymentStatus === 'pending' && !isPastDate && !isCompleted && !isCancelled
+    const canCancel = booking.status === "confirmed" && canCancelWithin24Hours && !isPastDate && !isCompleted && !isCancelled
     
     const getStatusBadge = () => {
       const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
@@ -1196,8 +1238,18 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               <Eye className="h-4 w-4" />
             </Button>
             {canMarkPaid && (
-              <Button variant="default" size="icon" onClick={() => handleMarkPaid(booking.id)} data-testid={`compact-pay-${booking.id}`}>
+              <Button size="icon" onClick={() => handleMarkPaid(booking.id)} data-testid={`compact-pay-${booking.id}`} className="bg-blue-600 hover:bg-blue-700 text-white">
                 <DollarSign className="h-4 w-4" />
+              </Button>
+            )}
+            {canCancel && (
+              <Button variant="ghost" size="icon" onClick={() => handleCancelBooking(booking.id)} data-testid={`compact-cancel-${booking.id}`} className="text-destructive hover:text-destructive">
+                <XCircle className="h-4 w-4" />
+              </Button>
+            )}
+            {isCompleted && (
+              <Button variant="ghost" size="icon" onClick={() => handleDownloadReceipt(booking.id)} data-testid={`compact-receipt-${booking.id}`}>
+                <Download className="h-4 w-4" />
               </Button>
             )}
           </div>
