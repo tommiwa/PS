@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 // @ts-ignore
 import { saveAs } from 'file-saver';
 import type {
@@ -11,98 +11,84 @@ import type {
   SpotAssignmentReportResponse
 } from '@shared/schema';
 
-// Helper function to create styled worksheet header
-function createReportHeader(ws: XLSX.WorkSheet, title: string, dateRange: ReportDateRange, scope: string) {
-  // Title row
-  XLSX.utils.sheet_add_aoa(ws, [[title]], { origin: 'A1' });
-  
-  // Date range row
-  const scopeLabel = scope === 'bci' ? 'BCI-Managed' : 'All';
-  XLSX.utils.sheet_add_aoa(ws, [[`Date Range: ${dateRange.from} to ${dateRange.to} | Scope: ${scopeLabel}`]], { origin: 'A2' });
-  
-  // Generated timestamp
-  XLSX.utils.sheet_add_aoa(ws, [[`Generated: ${new Date().toLocaleString()}`]], { origin: 'A3' });
-  
-  // Empty row for spacing
-  XLSX.utils.sheet_add_aoa(ws, [['']], { origin: 'A4' });
-}
-
-// Export Overview Report
-export function exportOverviewReport(data: ReportOverviewResponse, dateRange?: ReportDateRange) {
-  const wb = XLSX.utils.book_new();
-  const wsData: any[][] = [];
+export async function exportOverviewReport(data: ReportOverviewResponse, dateRange?: ReportDateRange) {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Overview');
   
   const range = dateRange || data.dateRange;
   
-  // Title and metadata
-  wsData.push(['BCI ParkShare - Overview Report']);
-  wsData.push([`Date Range: ${range.from} to ${range.to} | Scope: ${data.scope.toUpperCase()}`]);
-  wsData.push([`Generated: ${new Date().toLocaleString()}`]);
-  wsData.push(['']); // Empty row
+  worksheet.mergeCells('A1:B1');
+  const titleCell = worksheet.getCell('A1');
+  titleCell.value = 'BCI ParkShare - Overview Report';
+  titleCell.font = { bold: true, size: 16 };
   
-  // Summary Metrics
-  wsData.push(['SUMMARY METRICS']);
-  wsData.push(['Metric', 'Value']);
-  wsData.push(['Total Spots', data.summary.totalSpots]);
-  wsData.push(['Active Bookings', data.summary.activeBookings]);
-  wsData.push(['Total Revenue', `$${data.summary.totalRevenue.toFixed(2)}`]);
-  wsData.push(['Active Users', data.summary.activeUsers]);
-  wsData.push(['Waitlist Count', data.summary.waitlistCount]);
-  wsData.push(['Utilization Rate', `${data.summary.utilizationRate.toFixed(2)}%`]);
-  wsData.push(['']); // Empty row
+  worksheet.mergeCells('A2:B2');
+  worksheet.getCell('A2').value = `Date Range: ${range.from} to ${range.to} | Scope: ${data.scope.toUpperCase()}`;
   
-  // Quick Stats
-  wsData.push(['QUICK STATS']);
-  wsData.push(['Metric', 'Value']);
-  wsData.push(['Today Bookings', data.quickStats.todayBookings]);
-  wsData.push(['This Week Revenue', `$${data.quickStats.thisWeekRevenue.toFixed(2)}`]);
-  wsData.push(['Pending Payments', data.quickStats.pendingPayments]);
-  wsData.push(['Active Disputes', data.quickStats.activeDisputes]);
+  worksheet.getCell('A3').value = `Generated: ${new Date().toLocaleString()}`;
   
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  worksheet.addRow([]);
   
-  // Set column widths
-  ws['!cols'] = [{ wch: 25 }, { wch: 20 }];
+  const summaryHeaderRow = worksheet.addRow(['SUMMARY METRICS']);
+  summaryHeaderRow.getCell(1).font = { bold: true, size: 14 };
   
-  XLSX.utils.book_append_sheet(wb, ws, 'Overview');
+  worksheet.addRow(['Metric', 'Value']);
+  worksheet.addRow(['Total Spots', data.summary.totalSpots]);
+  worksheet.addRow(['Active Bookings', data.summary.activeBookings]);
+  worksheet.addRow(['Total Revenue', `$${data.summary.totalRevenue.toFixed(2)}`]);
+  worksheet.addRow(['Active Users', data.summary.activeUsers]);
+  worksheet.addRow(['Waitlist Count', data.summary.waitlistCount]);
+  worksheet.addRow(['Utilization Rate', `${data.summary.utilizationRate.toFixed(2)}%`]);
   
-  // Save file
-  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  worksheet.addRow([]);
+  
+  const quickStatsRow = worksheet.addRow(['QUICK STATS']);
+  quickStatsRow.getCell(1).font = { bold: true, size: 14 };
+  
+  worksheet.addRow(['Metric', 'Value']);
+  worksheet.addRow(['Today Bookings', data.quickStats.todayBookings]);
+  worksheet.addRow(['This Week Revenue', `$${data.quickStats.thisWeekRevenue.toFixed(2)}`]);
+  worksheet.addRow(['Pending Payments', data.quickStats.pendingPayments]);
+  worksheet.addRow(['Active Disputes', data.quickStats.activeDisputes]);
+  
+  worksheet.getColumn(1).width = 25;
+  worksheet.getColumn(2).width = 20;
+  
+  const buffer = await workbook.xlsx.writeBuffer();
   const scopeSuffix = data.scope === 'bci' ? '-bci' : '';
-  saveAs(new Blob([wbout]), `overview-report${scopeSuffix}-${new Date().toISOString().split('T')[0]}.xlsx`);
+  saveAs(new Blob([buffer]), `overview-report${scopeSuffix}-${new Date().toISOString().split('T')[0]}.xlsx`);
 }
 
-// Export Utilization Report
-export function exportUtilizationReport(data: ReportUtilizationResponse, dateRange?: ReportDateRange) {
-  const wb = XLSX.utils.book_new();
+export async function exportUtilizationReport(data: ReportUtilizationResponse, dateRange?: ReportDateRange) {
+  const workbook = new ExcelJS.Workbook();
   const range = dateRange || data.dateRange;
   
-  // Summary sheet
-  const summaryData: any[][] = [];
-  summaryData.push(['BCI ParkShare - Utilization Report']);
-  summaryData.push([`Date Range: ${range.from} to ${range.to} | Scope: ${data.scope.toUpperCase()}`]);
-  summaryData.push([`Generated: ${new Date().toLocaleString()}`]);
-  summaryData.push(['']);
+  const summarySheet = workbook.addWorksheet('Summary');
+  summarySheet.mergeCells('A1:D1');
+  const titleCell = summarySheet.getCell('A1');
+  titleCell.value = 'BCI ParkShare - Utilization Report';
+  titleCell.font = { bold: true, size: 16 };
   
-  summaryData.push(['SPOT USAGE']);
-  summaryData.push(['Metric', 'Value']);
-  summaryData.push(['Total Spots', data.spotUsage.totalSpots]);
-  summaryData.push(['Allocated Spots', data.spotUsage.allocatedSpots]);
-  summaryData.push(['Unallocated Spots', data.spotUsage.unallocatedSpots]);
-  summaryData.push(['Bookable Spots', data.spotUsage.bookableSpots]);
-  summaryData.push(['Utilization Rate', `${data.spotUsage.utilizationRate.toFixed(2)}%`]);
+  summarySheet.addRow([]);
+  const spotUsageRow = summarySheet.addRow(['SPOT USAGE']);
+  spotUsageRow.getCell(1).font = { bold: true };
   
-  const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
-  wsSummary['!cols'] = [{ wch: 25 }, { wch: 20 }];
-  XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+  summarySheet.addRow(['Total Spots', data.spotUsage.totalSpots]);
+  summarySheet.addRow(['Allocated Spots', data.spotUsage.allocatedSpots]);
+  summarySheet.addRow(['Unallocated Spots', data.spotUsage.unallocatedSpots]);
+  summarySheet.addRow(['Bookable Spots', data.spotUsage.bookableSpots]);
+  summarySheet.addRow(['Utilization Rate', `${data.spotUsage.utilizationRate.toFixed(2)}%`]);
   
-  // Location breakdown sheet
+  summarySheet.getColumn(1).width = 25;
+  summarySheet.getColumn(2).width = 20;
+  
   if (data.locationBreakdown.length > 0) {
-    const locData: any[][] = [];
-    locData.push(['Location', 'Total Spots', 'Occupied Spots', 'Occupancy Rate', 'Revenue']);
+    const locSheet = workbook.addWorksheet('Locations');
+    const headerRow = locSheet.addRow(['Location', 'Total Spots', 'Occupied Spots', 'Occupancy Rate', 'Revenue']);
+    headerRow.font = { bold: true };
     
     data.locationBreakdown.forEach(loc => {
-      locData.push([
+      locSheet.addRow([
         loc.location,
         loc.totalSpots,
         loc.occupiedSpots,
@@ -111,18 +97,20 @@ export function exportUtilizationReport(data: ReportUtilizationResponse, dateRan
       ]);
     });
     
-    const wsLoc = XLSX.utils.aoa_to_sheet(locData);
-    wsLoc['!cols'] = [{ wch: 40 }, { wch: 15 }, { wch: 18 }, { wch: 18 }, { wch: 15 }];
-    XLSX.utils.book_append_sheet(wb, wsLoc, 'Locations');
+    locSheet.getColumn(1).width = 40;
+    locSheet.getColumn(2).width = 15;
+    locSheet.getColumn(3).width = 18;
+    locSheet.getColumn(4).width = 18;
+    locSheet.getColumn(5).width = 15;
   }
   
-  // Spot type breakdown sheet
   if (data.spotTypeBreakdown.length > 0) {
-    const typeData: any[][] = [];
-    typeData.push(['Type', 'Count', 'Booked Count', 'Utilization Rate']);
+    const typeSheet = workbook.addWorksheet('Spot Types');
+    const headerRow = typeSheet.addRow(['Type', 'Count', 'Booked Count', 'Utilization Rate']);
+    headerRow.font = { bold: true };
     
     data.spotTypeBreakdown.forEach(type => {
-      typeData.push([
+      typeSheet.addRow([
         type.type,
         type.count,
         type.bookedCount,
@@ -130,18 +118,19 @@ export function exportUtilizationReport(data: ReportUtilizationResponse, dateRan
       ]);
     });
     
-    const wsType = XLSX.utils.aoa_to_sheet(typeData);
-    wsType['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 18 }, { wch: 20 }];
-    XLSX.utils.book_append_sheet(wb, wsType, 'Spot Types');
+    typeSheet.getColumn(1).width = 25;
+    typeSheet.getColumn(2).width = 15;
+    typeSheet.getColumn(3).width = 18;
+    typeSheet.getColumn(4).width = 20;
   }
   
-  // Daily occupancy sheet
   if (data.dailyOccupancy.length > 0) {
-    const dailyData: any[][] = [];
-    dailyData.push(['Date', 'Occupied Spots', 'Total Spots', 'Occupancy Rate']);
+    const dailySheet = workbook.addWorksheet('Daily Occupancy');
+    const headerRow = dailySheet.addRow(['Date', 'Occupied Spots', 'Total Spots', 'Occupancy Rate']);
+    headerRow.font = { bold: true };
     
     data.dailyOccupancy.forEach(day => {
-      dailyData.push([
+      dailySheet.addRow([
         day.date,
         day.occupiedSpots,
         day.totalSpots,
@@ -149,48 +138,53 @@ export function exportUtilizationReport(data: ReportUtilizationResponse, dateRan
       ]);
     });
     
-    const wsDaily = XLSX.utils.aoa_to_sheet(dailyData);
-    wsDaily['!cols'] = [{ wch: 15 }, { wch: 18 }, { wch: 15 }, { wch: 18 }];
-    XLSX.utils.book_append_sheet(wb, wsDaily, 'Daily Occupancy');
+    dailySheet.getColumn(1).width = 15;
+    dailySheet.getColumn(2).width = 18;
+    dailySheet.getColumn(3).width = 15;
+    dailySheet.getColumn(4).width = 18;
   }
   
-  // Save file
-  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const buffer = await workbook.xlsx.writeBuffer();
   const scopeSuffix = data.scope === 'bci' ? '-bci' : '';
-  saveAs(new Blob([wbout]), `utilization-report${scopeSuffix}-${new Date().toISOString().split('T')[0]}.xlsx`);
+  saveAs(new Blob([buffer]), `utilization-report${scopeSuffix}-${new Date().toISOString().split('T')[0]}.xlsx`);
 }
 
-// Export Revenue Report
-export function exportRevenueReport(data: ReportRevenueResponse, dateRange?: ReportDateRange) {
-  const wb = XLSX.utils.book_new();
+export async function exportRevenueReport(data: ReportRevenueResponse, dateRange?: ReportDateRange) {
+  const workbook = new ExcelJS.Workbook();
   const range = dateRange || data.dateRange;
   
-  // Summary sheet
-  const summaryData: any[][] = [];
-  summaryData.push(['BCI ParkShare - Revenue Report']);
-  summaryData.push([`Date Range: ${range.from} to ${range.to} | Scope: ${data.scope.toUpperCase()}`]);
-  summaryData.push([`Generated: ${new Date().toLocaleString()}`]);
-  summaryData.push(['']);
+  const summarySheet = workbook.addWorksheet('Summary');
+  summarySheet.mergeCells('A1:B1');
+  const titleCell = summarySheet.getCell('A1');
+  titleCell.value = 'BCI ParkShare - Revenue Report';
+  titleCell.font = { bold: true, size: 16 };
   
-  summaryData.push(['REVENUE SUMMARY']);
-  summaryData.push(['Metric', 'Value']);
-  summaryData.push(['Total Revenue', `$${data.summary.totalRevenue.toFixed(2)}`]);
-  summaryData.push(['Owner Earnings (85%)', `$${data.summary.ownerEarnings.toFixed(2)}`]);
-  summaryData.push(['BCI Revenue (15%)', `$${data.summary.bciRevenue.toFixed(2)}`]);
-  summaryData.push(['Average Booking Value', `$${data.summary.averageBookingValue.toFixed(2)}`]);
-  summaryData.push(['Total Bookings', data.summary.totalBookings]);
+  summarySheet.mergeCells('A2:B2');
+  summarySheet.getCell('A2').value = `Date Range: ${range.from} to ${range.to} | Scope: ${data.scope.toUpperCase()}`;
   
-  const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
-  wsSummary['!cols'] = [{ wch: 30 }, { wch: 20 }];
-  XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+  summarySheet.getCell('A3').value = `Generated: ${new Date().toLocaleString()}`;
   
-  // Monthly trends sheet
+  summarySheet.addRow([]);
+  const revSummaryRow = summarySheet.addRow(['REVENUE SUMMARY']);
+  revSummaryRow.getCell(1).font = { bold: true };
+  
+  summarySheet.addRow(['Metric', 'Value']);
+  summarySheet.addRow(['Total Revenue', `$${data.summary.totalRevenue.toFixed(2)}`]);
+  summarySheet.addRow(['Owner Earnings (85%)', `$${data.summary.ownerEarnings.toFixed(2)}`]);
+  summarySheet.addRow(['BCI Revenue (15%)', `$${data.summary.bciRevenue.toFixed(2)}`]);
+  summarySheet.addRow(['Average Booking Value', `$${data.summary.averageBookingValue.toFixed(2)}`]);
+  summarySheet.addRow(['Total Bookings', data.summary.totalBookings]);
+  
+  summarySheet.getColumn(1).width = 30;
+  summarySheet.getColumn(2).width = 20;
+  
   if (data.monthlyTrends.length > 0) {
-    const trendsData: any[][] = [];
-    trendsData.push(['Month', 'Revenue', 'Bookings', 'Average Value']);
+    const trendsSheet = workbook.addWorksheet('Monthly Trends');
+    const headerRow = trendsSheet.addRow(['Month', 'Revenue', 'Bookings', 'Average Value']);
+    headerRow.font = { bold: true };
     
     data.monthlyTrends.forEach(month => {
-      trendsData.push([
+      trendsSheet.addRow([
         month.month,
         `$${month.revenue.toFixed(2)}`,
         month.bookings,
@@ -198,18 +192,19 @@ export function exportRevenueReport(data: ReportRevenueResponse, dateRange?: Rep
       ]);
     });
     
-    const wsTrends = XLSX.utils.aoa_to_sheet(trendsData);
-    wsTrends['!cols'] = [{ wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 18 }];
-    XLSX.utils.book_append_sheet(wb, wsTrends, 'Monthly Trends');
+    trendsSheet.getColumn(1).width = 15;
+    trendsSheet.getColumn(2).width = 15;
+    trendsSheet.getColumn(3).width = 15;
+    trendsSheet.getColumn(4).width = 18;
   }
   
-  // Revenue by location sheet
   if (data.revenueByLocation.length > 0) {
-    const locData: any[][] = [];
-    locData.push(['Location', 'Revenue', 'Bookings', 'Average Rate']);
+    const locSheet = workbook.addWorksheet('Revenue by Location');
+    const headerRow = locSheet.addRow(['Location', 'Revenue', 'Bookings', 'Average Rate']);
+    headerRow.font = { bold: true };
     
     data.revenueByLocation.forEach(loc => {
-      locData.push([
+      locSheet.addRow([
         loc.location,
         `$${loc.revenue.toFixed(2)}`,
         loc.bookings,
@@ -217,109 +212,116 @@ export function exportRevenueReport(data: ReportRevenueResponse, dateRange?: Rep
       ]);
     });
     
-    const wsLoc = XLSX.utils.aoa_to_sheet(locData);
-    wsLoc['!cols'] = [{ wch: 40 }, { wch: 15 }, { wch: 15 }, { wch: 18 }];
-    XLSX.utils.book_append_sheet(wb, wsLoc, 'Revenue by Location');
+    locSheet.getColumn(1).width = 40;
+    locSheet.getColumn(2).width = 15;
+    locSheet.getColumn(3).width = 15;
+    locSheet.getColumn(4).width = 18;
   }
   
-  // Revenue by spot type sheet
   if (data.revenueBySpotType.length > 0) {
-    const typeData: any[][] = [];
-    typeData.push(['Spot Type', 'Revenue', 'Bookings']);
+    const typeSheet = workbook.addWorksheet('Revenue by Type');
+    const headerRow = typeSheet.addRow(['Spot Type', 'Revenue', 'Bookings']);
+    headerRow.font = { bold: true };
     
     data.revenueBySpotType.forEach(type => {
-      typeData.push([
+      typeSheet.addRow([
         type.type,
         `$${type.revenue.toFixed(2)}`,
         type.bookings
       ]);
     });
     
-    const wsType = XLSX.utils.aoa_to_sheet(typeData);
-    wsType['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 15 }];
-    XLSX.utils.book_append_sheet(wb, wsType, 'Revenue by Type');
+    typeSheet.getColumn(1).width = 25;
+    typeSheet.getColumn(2).width = 15;
+    typeSheet.getColumn(3).width = 15;
   }
   
-  // Top earners sheet
   if (data.topEarners.length > 0) {
-    const earnersData: any[][] = [];
-    earnersData.push(['Owner Name', 'Total Earnings', 'Bookings Count']);
+    const earnersSheet = workbook.addWorksheet('Top Earners');
+    const headerRow = earnersSheet.addRow(['Owner Name', 'Total Earnings', 'Bookings Count']);
+    headerRow.font = { bold: true };
     
     data.topEarners.forEach(earner => {
-      earnersData.push([
+      earnersSheet.addRow([
         earner.ownerName,
         `$${earner.totalEarnings.toFixed(2)}`,
         earner.bookingsCount
       ]);
     });
     
-    const wsEarners = XLSX.utils.aoa_to_sheet(earnersData);
-    wsEarners['!cols'] = [{ wch: 30 }, { wch: 18 }, { wch: 18 }];
-    XLSX.utils.book_append_sheet(wb, wsEarners, 'Top Earners');
+    earnersSheet.getColumn(1).width = 30;
+    earnersSheet.getColumn(2).width = 18;
+    earnersSheet.getColumn(3).width = 18;
   }
   
-  // Save file
-  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const buffer = await workbook.xlsx.writeBuffer();
   const scopeSuffix = data.scope === 'bci' ? '-bci' : '';
-  saveAs(new Blob([wbout]), `revenue-report${scopeSuffix}-${new Date().toISOString().split('T')[0]}.xlsx`);
+  saveAs(new Blob([buffer]), `revenue-report${scopeSuffix}-${new Date().toISOString().split('T')[0]}.xlsx`);
 }
 
-// Export User Compliance Report
-export function exportUserComplianceReport(data: ReportUserComplianceResponse, dateRange?: ReportDateRange) {
-  const wb = XLSX.utils.book_new();
+export async function exportUserComplianceReport(data: ReportUserComplianceResponse, dateRange?: ReportDateRange) {
+  const workbook = new ExcelJS.Workbook();
   const range = dateRange || data.dateRange;
   
-  // Summary sheet
-  const summaryData: any[][] = [];
-  summaryData.push(['BCI ParkShare - User & Compliance Report']);
-  summaryData.push([`Date Range: ${range.from} to ${range.to} | Scope: ${data.scope.toUpperCase()}`]);
-  summaryData.push([`Generated: ${new Date().toLocaleString()}`]);
-  summaryData.push(['']);
+  const summarySheet = workbook.addWorksheet('Summary');
+  summarySheet.mergeCells('A1:B1');
+  const titleCell = summarySheet.getCell('A1');
+  titleCell.value = 'BCI ParkShare - User & Compliance Report';
+  titleCell.font = { bold: true, size: 16 };
   
-  summaryData.push(['USER ACTIVITY']);
-  summaryData.push(['Metric', 'Value']);
-  summaryData.push(['Total Users', data.userActivity.totalUsers]);
-  summaryData.push(['Active Users', data.userActivity.activeUsers]);
-  summaryData.push(['New Registrations', data.userActivity.newRegistrations]);
-  summaryData.push(['Suspended Users', data.userActivity.suspendedUsers]);
-  summaryData.push(['Deleted Users', data.userActivity.deletedUsers]);
-  summaryData.push(['']);
+  summarySheet.mergeCells('A2:B2');
+  summarySheet.getCell('A2').value = `Date Range: ${range.from} to ${range.to} | Scope: ${data.scope.toUpperCase()}`;
   
-  summaryData.push(['TERMS COMPLIANCE']);
-  summaryData.push(['Metric', 'Value']);
-  summaryData.push(['Accepted Latest Terms', data.termsCompliance.acceptedLatestTerms]);
-  summaryData.push(['Pending Acceptance', data.termsCompliance.pendingAcceptance]);
-  summaryData.push(['Compliance Rate', `${data.termsCompliance.complianceRate.toFixed(2)}%`]);
+  summarySheet.getCell('A3').value = `Generated: ${new Date().toLocaleString()}`;
   
-  const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
-  wsSummary['!cols'] = [{ wch: 25 }, { wch: 20 }];
-  XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+  summarySheet.addRow([]);
+  const userActivityRow = summarySheet.addRow(['USER ACTIVITY']);
+  userActivityRow.getCell(1).font = { bold: true };
   
-  // Role distribution sheet
+  summarySheet.addRow(['Metric', 'Value']);
+  summarySheet.addRow(['Total Users', data.userActivity.totalUsers]);
+  summarySheet.addRow(['Active Users', data.userActivity.activeUsers]);
+  summarySheet.addRow(['New Registrations', data.userActivity.newRegistrations]);
+  summarySheet.addRow(['Suspended Users', data.userActivity.suspendedUsers]);
+  summarySheet.addRow(['Deleted Users', data.userActivity.deletedUsers]);
+  
+  summarySheet.addRow([]);
+  const termsRow = summarySheet.addRow(['TERMS COMPLIANCE']);
+  termsRow.getCell(1).font = { bold: true };
+  
+  summarySheet.addRow(['Metric', 'Value']);
+  summarySheet.addRow(['Accepted Latest Terms', data.termsCompliance.acceptedLatestTerms]);
+  summarySheet.addRow(['Pending Acceptance', data.termsCompliance.pendingAcceptance]);
+  summarySheet.addRow(['Compliance Rate', `${data.termsCompliance.complianceRate.toFixed(2)}%`]);
+  
+  summarySheet.getColumn(1).width = 25;
+  summarySheet.getColumn(2).width = 20;
+  
   if (data.roleDistribution.length > 0) {
-    const roleData: any[][] = [];
-    roleData.push(['Role', 'Count', 'Percentage']);
+    const rolesSheet = workbook.addWorksheet('Role Distribution');
+    const headerRow = rolesSheet.addRow(['Role', 'Count', 'Percentage']);
+    headerRow.font = { bold: true };
     
     data.roleDistribution.forEach(role => {
-      roleData.push([
+      rolesSheet.addRow([
         role.role,
         role.count,
         `${role.percentage.toFixed(2)}%`
       ]);
     });
     
-    const wsRole = XLSX.utils.aoa_to_sheet(roleData);
-    wsRole['!cols'] = [{ wch: 20 }, { wch: 15 }, { wch: 15 }];
-    XLSX.utils.book_append_sheet(wb, wsRole, 'Role Distribution');
+    rolesSheet.getColumn(1).width = 20;
+    rolesSheet.getColumn(2).width = 15;
+    rolesSheet.getColumn(3).width = 15;
   }
   
-  // Department breakdown sheet
   if (data.departmentBreakdown.length > 0) {
-    const deptData: any[][] = [];
-    deptData.push(['Department', 'User Count', 'Active Users', 'Spots Owned', 'Bookings Made']);
+    const deptSheet = workbook.addWorksheet('Departments');
+    const headerRow = deptSheet.addRow(['Department', 'User Count', 'Active Users', 'Spots Owned', 'Bookings Made']);
+    headerRow.font = { bold: true };
     
     data.departmentBreakdown.forEach(dept => {
-      deptData.push([
+      deptSheet.addRow([
         dept.department,
         dept.userCount,
         dept.activeUsers,
@@ -328,49 +330,55 @@ export function exportUserComplianceReport(data: ReportUserComplianceResponse, d
       ]);
     });
     
-    const wsDept = XLSX.utils.aoa_to_sheet(deptData);
-    wsDept['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 18 }];
-    XLSX.utils.book_append_sheet(wb, wsDept, 'Departments');
+    deptSheet.getColumn(1).width = 25;
+    deptSheet.getColumn(2).width = 15;
+    deptSheet.getColumn(3).width = 15;
+    deptSheet.getColumn(4).width = 15;
+    deptSheet.getColumn(5).width = 18;
   }
   
-  // Save file
-  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const buffer = await workbook.xlsx.writeBuffer();
   const scopeSuffix = data.scope === 'bci' ? '-bci' : '';
-  saveAs(new Blob([wbout]), `user-compliance-report${scopeSuffix}-${new Date().toISOString().split('T')[0]}.xlsx`);
+  saveAs(new Blob([buffer]), `user-compliance-report${scopeSuffix}-${new Date().toISOString().split('T')[0]}.xlsx`);
 }
 
-// Export Waitlist Performance Report
-export function exportWaitlistPerformanceReport(data: ReportWaitlistPerformanceResponse, dateRange?: ReportDateRange) {
-  const wb = XLSX.utils.book_new();
+export async function exportWaitlistPerformanceReport(data: ReportWaitlistPerformanceResponse, dateRange?: ReportDateRange) {
+  const workbook = new ExcelJS.Workbook();
   const range = dateRange || data.dateRange;
   
-  // Summary sheet
-  const summaryData: any[][] = [];
-  summaryData.push(['BCI ParkShare - Waitlist Performance Report']);
-  summaryData.push([`Date Range: ${range.from} to ${range.to} | Scope: ${data.scope.toUpperCase()}`]);
-  summaryData.push([`Generated: ${new Date().toLocaleString()}`]);
-  summaryData.push(['']);
+  const summarySheet = workbook.addWorksheet('Summary');
+  summarySheet.mergeCells('A1:B1');
+  const titleCell = summarySheet.getCell('A1');
+  titleCell.value = 'BCI ParkShare - Waitlist Performance Report';
+  titleCell.font = { bold: true, size: 16 };
   
-  summaryData.push(['WAITLIST SUMMARY']);
-  summaryData.push(['Metric', 'Value']);
-  summaryData.push(['Total Requests', data.summary.totalRequests]);
-  summaryData.push(['Active Requests', data.summary.activeRequests]);
-  summaryData.push(['Assigned Requests', data.summary.assignedRequests]);
-  summaryData.push(['Cancelled Requests', data.summary.cancelledRequests]);
-  summaryData.push(['Average Wait Time (days)', data.summary.averageWaitTime]);
-  summaryData.push(['Fulfillment Rate', `${data.summary.fulfillmentRate.toFixed(2)}%`]);
+  summarySheet.mergeCells('A2:B2');
+  summarySheet.getCell('A2').value = `Date Range: ${range.from} to ${range.to} | Scope: ${data.scope.toUpperCase()}`;
   
-  const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
-  wsSummary['!cols'] = [{ wch: 30 }, { wch: 20 }];
-  XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+  summarySheet.getCell('A3').value = `Generated: ${new Date().toLocaleString()}`;
   
-  // Priority breakdown sheet
+  summarySheet.addRow([]);
+  const waitlistRow = summarySheet.addRow(['WAITLIST SUMMARY']);
+  waitlistRow.getCell(1).font = { bold: true };
+  
+  summarySheet.addRow(['Metric', 'Value']);
+  summarySheet.addRow(['Total Requests', data.summary.totalRequests]);
+  summarySheet.addRow(['Active Requests', data.summary.activeRequests]);
+  summarySheet.addRow(['Assigned Requests', data.summary.assignedRequests]);
+  summarySheet.addRow(['Cancelled Requests', data.summary.cancelledRequests]);
+  summarySheet.addRow(['Average Wait Time (days)', data.summary.averageWaitTime]);
+  summarySheet.addRow(['Fulfillment Rate', `${data.summary.fulfillmentRate.toFixed(2)}%`]);
+  
+  summarySheet.getColumn(1).width = 30;
+  summarySheet.getColumn(2).width = 20;
+  
   if (data.priorityBreakdown.length > 0) {
-    const priorityData: any[][] = [];
-    priorityData.push(['Priority', 'Count', 'Avg Wait Days', 'Fulfillment Rate']);
+    const prioritySheet = workbook.addWorksheet('Priority Breakdown');
+    const headerRow = prioritySheet.addRow(['Priority', 'Count', 'Avg Wait Days', 'Fulfillment Rate']);
+    headerRow.font = { bold: true };
     
     data.priorityBreakdown.forEach(priority => {
-      priorityData.push([
+      prioritySheet.addRow([
         priority.priorityLabel,
         priority.count,
         priority.averageWaitDays,
@@ -378,18 +386,19 @@ export function exportWaitlistPerformanceReport(data: ReportWaitlistPerformanceR
       ]);
     });
     
-    const wsPriority = XLSX.utils.aoa_to_sheet(priorityData);
-    wsPriority['!cols'] = [{ wch: 15 }, { wch: 15 }, { wch: 18 }, { wch: 20 }];
-    XLSX.utils.book_append_sheet(wb, wsPriority, 'Priority Breakdown');
+    prioritySheet.getColumn(1).width = 15;
+    prioritySheet.getColumn(2).width = 15;
+    prioritySheet.getColumn(3).width = 18;
+    prioritySheet.getColumn(4).width = 20;
   }
   
-  // Spot type preferences sheet
   if (data.spotTypePreferences.length > 0) {
-    const typeData: any[][] = [];
-    typeData.push(['Spot Type', 'Request Count', 'Fulfilled Count', 'Fulfillment Rate']);
+    const typeSheet = workbook.addWorksheet('Spot Preferences');
+    const headerRow = typeSheet.addRow(['Spot Type', 'Request Count', 'Fulfilled Count', 'Fulfillment Rate']);
+    headerRow.font = { bold: true };
     
     data.spotTypePreferences.forEach(type => {
-      typeData.push([
+      typeSheet.addRow([
         type.spotType,
         type.requestCount,
         type.fulfilledCount,
@@ -397,18 +406,19 @@ export function exportWaitlistPerformanceReport(data: ReportWaitlistPerformanceR
       ]);
     });
     
-    const wsType = XLSX.utils.aoa_to_sheet(typeData);
-    wsType['!cols'] = [{ wch: 25 }, { wch: 18 }, { wch: 18 }, { wch: 20 }];
-    XLSX.utils.book_append_sheet(wb, wsType, 'Spot Preferences');
+    typeSheet.getColumn(1).width = 25;
+    typeSheet.getColumn(2).width = 18;
+    typeSheet.getColumn(3).width = 18;
+    typeSheet.getColumn(4).width = 20;
   }
   
-  // Department requests sheet
   if (data.departmentRequests.length > 0) {
-    const deptData: any[][] = [];
-    deptData.push(['Department', 'Active Requests', 'Assigned Requests', 'Avg Wait Days']);
+    const deptSheet = workbook.addWorksheet('Department Requests');
+    const headerRow = deptSheet.addRow(['Department', 'Active Requests', 'Assigned Requests', 'Avg Wait Days']);
+    headerRow.font = { bold: true };
     
     data.departmentRequests.forEach(dept => {
-      deptData.push([
+      deptSheet.addRow([
         dept.department,
         dept.activeRequests,
         dept.assignedRequests,
@@ -416,36 +426,41 @@ export function exportWaitlistPerformanceReport(data: ReportWaitlistPerformanceR
       ]);
     });
     
-    const wsDept = XLSX.utils.aoa_to_sheet(deptData);
-    wsDept['!cols'] = [{ wch: 25 }, { wch: 18 }, { wch: 20 }, { wch: 18 }];
-    XLSX.utils.book_append_sheet(wb, wsDept, 'Department Requests');
+    deptSheet.getColumn(1).width = 25;
+    deptSheet.getColumn(2).width = 18;
+    deptSheet.getColumn(3).width = 20;
+    deptSheet.getColumn(4).width = 18;
   }
   
-  // Save file
-  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const buffer = await workbook.xlsx.writeBuffer();
   const scopeSuffix = data.scope === 'bci' ? '-bci' : '';
-  saveAs(new Blob([wbout]), `waitlist-performance-report${scopeSuffix}-${new Date().toISOString().split('T')[0]}.xlsx`);
+  saveAs(new Blob([buffer]), `waitlist-performance-report${scopeSuffix}-${new Date().toISOString().split('T')[0]}.xlsx`);
 }
 
-// Export Spot Assignments Report
-export function exportSpotAssignmentsReport(data: SpotAssignmentReportResponse, dateRange?: ReportDateRange) {
-  const wb = XLSX.utils.book_new();
+export async function exportSpotAssignmentsReport(data: SpotAssignmentReportResponse, dateRange?: ReportDateRange) {
+  const workbook = new ExcelJS.Workbook();
   const range = dateRange || data.dateRange;
   
-  const wsData: any[][] = [];
+  const worksheet = workbook.addWorksheet('Spot Assignments');
   
-  // Title and metadata
-  wsData.push(['BCI ParkShare - Spot Assignment Report']);
-  wsData.push([`Date Range: ${range.from} to ${range.to} | Scope: ${data.scope.toUpperCase()}`]);
-  wsData.push([`Generated: ${new Date().toLocaleString()}`]);
-  wsData.push(['']); // Empty row
+  worksheet.mergeCells('A1:I1');
+  const titleCell = worksheet.getCell('A1');
+  titleCell.value = 'BCI ParkShare - Spot Assignment Report';
+  titleCell.font = { bold: true, size: 16 };
   
-  // Headers
-  wsData.push(['Action', 'User Name', 'Email', 'Department', 'Spot Number', 'Location', 'Spot Type', 'Effective Date', 'Assigned/Removed By']);
+  worksheet.mergeCells('A2:I2');
+  const scopeLabel = data.scope === 'bci' ? 'BCI-Managed' : 'All';
+  worksheet.getCell('A2').value = `Date Range: ${range.from} to ${range.to} | Scope: ${scopeLabel}`;
   
-  // Data rows
+  worksheet.getCell('A3').value = `Generated: ${new Date().toLocaleString()}`;
+  
+  worksheet.addRow([]);
+  
+  const headerRow = worksheet.addRow(['Action', 'User Name', 'Email', 'Department', 'Spot Number', 'Location', 'Spot Type', 'Effective Date', 'Assigned/Removed By']);
+  headerRow.font = { bold: true };
+  
   data.assignments.forEach(assignment => {
-    wsData.push([
+    worksheet.addRow([
       assignment.action === 'assigned' ? 'Assigned' : 'Unassigned',
       `${assignment.user.firstName} ${assignment.user.lastName}`,
       assignment.user.email,
@@ -458,25 +473,17 @@ export function exportSpotAssignmentsReport(data: SpotAssignmentReportResponse, 
     ]);
   });
   
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  worksheet.getColumn(1).width = 12;
+  worksheet.getColumn(2).width = 25;
+  worksheet.getColumn(3).width = 30;
+  worksheet.getColumn(4).width = 20;
+  worksheet.getColumn(5).width = 12;
+  worksheet.getColumn(6).width = 25;
+  worksheet.getColumn(7).width = 15;
+  worksheet.getColumn(8).width = 15;
+  worksheet.getColumn(9).width = 25;
   
-  // Set column widths
-  ws['!cols'] = [
-    { wch: 12 },  // Action
-    { wch: 25 },  // User Name
-    { wch: 30 },  // Email
-    { wch: 20 },  // Department
-    { wch: 12 },  // Spot Number
-    { wch: 25 },  // Location
-    { wch: 15 },  // Spot Type
-    { wch: 15 },  // Effective Date
-    { wch: 25 }   // Assigned/Removed By
-  ];
-  
-  XLSX.utils.book_append_sheet(wb, ws, 'Spot Assignments');
-  
-  // Save file
-  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const buffer = await workbook.xlsx.writeBuffer();
   const scopeSuffix = data.scope === 'bci' ? '-bci' : '';
-  saveAs(new Blob([wbout]), `spot-assignments-report${scopeSuffix}-${new Date().toISOString().split('T')[0]}.xlsx`);
+  saveAs(new Blob([buffer]), `spot-assignments-report${scopeSuffix}-${new Date().toISOString().split('T')[0]}.xlsx`);
 }
