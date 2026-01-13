@@ -341,38 +341,33 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
         <PopoverTrigger asChild>
           <div className="flex gap-2 items-center">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Input
-                    ref={inputRef}
-                    type="text"
-                    placeholder="Search parking spots... (e.g., 'Victoria electric $20-30')"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    onFocus={() => setFocused(true)}
-                    onBlur={() => setTimeout(() => setFocused(false), 200)}
-                    className={`pl-10 min-h-[44px] md:h-12 text-base ${query ? 'pr-12' : 'pr-4'}`}
-                    data-testid="input-enhanced-search"
-                  />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Search using natural language</p>
-                </TooltipContent>
-              </Tooltip>
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />
+              <Input
+                ref={inputRef}
+                type="text"
+                placeholder="Search parking spots... (e.g., 'Victoria electric $20-30')"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onFocus={() => setFocused(true)}
+                onBlur={() => setTimeout(() => setFocused(false), 200)}
+                className={`pl-10 min-h-[44px] md:h-12 text-base ${query ? 'pr-10' : 'pr-4'}`}
+                data-testid="input-enhanced-search"
+                title="Search using natural language"
+              />
               {query && (
-                <Button
+                <button
                   type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearSearch}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    clearSearch()
+                  }}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 flex items-center justify-center text-muted-foreground hover:text-foreground z-10"
                   data-testid="button-clear-search"
                   title="Clear search and filters"
                 >
                   <X className="h-4 w-4" />
-                </Button>
+                </button>
               )}
             </div>
             
