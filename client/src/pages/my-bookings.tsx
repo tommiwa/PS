@@ -642,7 +642,6 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     const effectivelyBooked = listing.isBooked || listing.status === "booked"
     const isCompleted = listing.status === "used" || paymentStatus === 'received'
     const isCancelled = listing.status === "cancelled"
-    const isUnused = listing.status === "unused"
     
     // Action visibility rules:
     // - canEdit: Only for available listings that are NOT past, NOT booked, NOT completed, NOT cancelled
@@ -1136,6 +1135,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     
     // Same logic as card view
     const canEdit = listing.status === "available" && !isPastDate && !effectivelyBooked && !isCompleted && !isCancelled
+    const canCancel = listing.status === "available" && !isPastDate && !effectivelyBooked && !isCompleted && !isCancelled
     const canConfirmPayment = effectivelyBooked && paymentStatus === 'paid' && !isCompleted && !isCancelled
     
     const getStatusBadge = () => {
@@ -1171,6 +1171,11 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
             {canEdit && (
               <Button variant="ghost" size="icon" onClick={() => handleEditListing(listing)} data-testid={`compact-edit-${listing.id}`}>
                 <Edit className="h-4 w-4" />
+              </Button>
+            )}
+            {canCancel && (
+              <Button variant="ghost" size="icon" onClick={() => handleDeleteListing(listing)} data-testid={`compact-cancel-${listing.id}`} className="text-destructive hover:text-destructive">
+                <XCircle className="h-4 w-4" />
               </Button>
             )}
             {canConfirmPayment && (
