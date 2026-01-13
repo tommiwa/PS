@@ -1565,16 +1565,41 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
 
       {/* Enhanced Status-Based Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="flex md:grid overflow-x-auto md:overflow-x-visible flex-nowrap md:grid-cols-3 w-full h-auto gap-1">
-          <TabsTrigger value="active" className="gap-2 flex-shrink-0 md:flex-shrink min-h-11" data-testid="tab-active">
+        {/* Mobile: Scrollable tabs with fade indicators */}
+        <div className="relative md:hidden">
+          {/* Left fade indicator */}
+          <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
+          {/* Right fade indicator */}
+          <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
+          <TabsList className="flex overflow-x-auto scrollbar-hide snap-x snap-mandatory w-full h-auto gap-1 px-4">
+            <TabsTrigger value="active" className="gap-1.5 flex-shrink-0 min-h-10 px-3 snap-start" data-testid="tab-active">
+              <CheckCircle2 className="h-4 w-4 !text-green-600" />
+              <span>Active</span>
+              <Badge variant="secondary" className="ml-0.5 h-5 px-1.5 text-xs">{activeItems.length}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="payment-pending" className="gap-1.5 flex-shrink-0 min-h-10 px-3 snap-start" data-testid="tab-payment">
+              <DollarSign className="h-4 w-4 !text-orange-600" />
+              <span>{isOwnerView ? 'Confirm' : 'Pay'}</span>
+              <Badge variant="secondary" className="ml-0.5 h-5 px-1.5 text-xs">{paymentPendingItems.length}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="completed" className="gap-1.5 flex-shrink-0 min-h-10 px-3 snap-start" data-testid="tab-completed">
+              <CheckCircle2 className="h-4 w-4 !text-slate-600" />
+              <span>Done</span>
+              <Badge variant="secondary" className="ml-0.5 h-5 px-1.5 text-xs">{completedItems.length}</Badge>
+            </TabsTrigger>
+          </TabsList>
+        </div>
+        {/* Desktop: Grid layout */}
+        <TabsList className="hidden md:grid md:grid-cols-3 w-full h-auto gap-1">
+          <TabsTrigger value="active" className="gap-2 min-h-11" data-testid="tab-active-desktop">
             <CheckCircle2 className="h-4 w-4 !text-green-600" />
             Active ({activeItems.length})
           </TabsTrigger>
-          <TabsTrigger value="payment-pending" className="gap-2 flex-shrink-0 md:flex-shrink min-h-11" data-testid="tab-payment">
+          <TabsTrigger value="payment-pending" className="gap-2 min-h-11" data-testid="tab-payment-desktop">
             <DollarSign className="h-4 w-4 !text-orange-600" />
             {isOwnerView ? `Confirm Payment (${paymentPendingItems.length})` : `Awaiting Payment (${paymentPendingItems.length})`}
           </TabsTrigger>
-          <TabsTrigger value="completed" className="gap-2 flex-shrink-0 md:flex-shrink min-h-11" data-testid="tab-completed">
+          <TabsTrigger value="completed" className="gap-2 min-h-11" data-testid="tab-completed-desktop">
             <CheckCircle2 className="h-4 w-4 !text-slate-600" />
             Completed ({completedItems.length})
           </TabsTrigger>
