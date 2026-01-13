@@ -102,6 +102,7 @@ export default function Profile() {
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null)
   const [showSpotWarning, setShowSpotWarning] = useState(false)
   const [showJoinForm, setShowJoinForm] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   // Vehicle form
   const vehicleForm = useForm<VehicleForm>({
@@ -517,6 +518,23 @@ export default function Profile() {
     updateProfileMutation.mutate(backendData as any);
   };
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "vehicles"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "notification-preferences"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "payment-preferences"] });
+      toast({
+        title: "Refreshed",
+        description: "Profile data has been refreshed."
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   if (!user) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -569,6 +587,8 @@ export default function Profile() {
               memberSince: new Date().getFullYear().toString()
             }}
             onEditProfile={handleEditProfile}
+            onRefresh={handleRefresh}
+            isRefreshing={isRefreshing}
             showEditButton={true}
           />
         </div>
