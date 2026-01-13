@@ -287,7 +287,7 @@ export function ParkingSpotCard({
           <div className="flex-1 min-w-0">
             <div className="text-xs text-muted-foreground">Owned By</div>
             <div className="text-sm font-medium truncate" data-testid={`text-assigned-user-${spot.id}`}>
-              {spot.assignedUserName || "BCI Managed"}
+              {spot.assignedUserName || "BCI Workplace Services"}
             </div>
           </div>
         </div>
