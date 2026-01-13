@@ -142,20 +142,3 @@ export const userTypeDescriptions: Record<AvailableUserRoles, { title: string; d
     ]
   }
 };
-
-// Default demo credentials for easy login
-export const demoCredentials: Record<AvailableUserRoles, { email: string; password: string }> = {
-  renter: {
-    email: "michael.rodriguez@bci.ca",
-    password: "demo123"
-  },
-  // DISABLED FOR V1: Spot owner login functionality disabled
-  // owner: {
-  //   email: "sarah.chen@bci.ca", 
-  //   password: "demo123"
-  // },
-  admin: {
-    email: "david.thompson@bci.ca",
-    password: "admin123"
-  }
-};
