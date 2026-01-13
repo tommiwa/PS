@@ -1520,8 +1520,8 @@ export default function AdminLockerManagement() {
                       size="sm"
                       variant="outline" 
                       disabled={filteredWaitlist.length === 0}
-                      onClick={() => {
-                        const success = quickExportLockerWaitlistExcel(filteredWaitlist, 'Locker Waitlist Report', (errorMessage) => {
+                      onClick={async () => {
+                        const success = await quickExportLockerWaitlistExcel(filteredWaitlist, 'Locker Waitlist Report', (errorMessage) => {
                           toast({
                             variant: "destructive",
                             title: "Export Failed",
