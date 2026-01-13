@@ -1326,7 +1326,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                 variant="outline" 
                 size="icon"
                 data-testid="button-toggle-view"
-                className="min-h-11 min-w-11"
+                className="hidden md:inline-flex min-h-11 min-w-11"
               >
                 {isCompactView ? <LayoutGrid className="h-4 w-4" /> : <List className="h-4 w-4" />}
               </Button>
