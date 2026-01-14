@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useReportFilters } from '@/components/reports/useReportFilters';
 import { exportSharedPoolUsageReport, exportSpotAssignmentsReport } from '@/utils/report-export';
-import { AlertCircle, FileSpreadsheet, ChevronDown, ChevronRight, UserPlus, Car } from 'lucide-react';
+import { AlertCircle, FileSpreadsheet, ChevronDown, ChevronRight, Car, UserPlus } from 'lucide-react';
 import type { SharedPoolUsageReportResponse, SpotAssignmentReportResponse } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -19,12 +19,10 @@ import {
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 
 export default function AdminReportsPage() {
   const { filters, setDateFrom, setDateTo } = useReportFilters();
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
-  const [expandedAssignmentUsers, setExpandedAssignmentUsers] = useState<Set<string>>(new Set());
 
   const today = new Date().toISOString().split('T')[0];
   const sharedPoolDateTo = filters.dateTo > today ? today : filters.dateTo;
@@ -62,33 +60,8 @@ export default function AdminReportsPage() {
     enabled: isDateRangeValid
   });
 
-  // Group assignments by user for collapsible view
-  const assignmentsByUser = spotAssignmentQuery.data?.assignments.reduce((acc, assignment) => {
-    const userId = assignment.user.id;
-    if (!acc[userId]) {
-      acc[userId] = {
-        user: assignment.user,
-        assignments: []
-      };
-    }
-    acc[userId].assignments.push(assignment);
-    return acc;
-  }, {} as Record<string, { user: typeof spotAssignmentQuery.data.assignments[0]['user']; assignments: typeof spotAssignmentQuery.data.assignments }>) || {};
-
   const toggleUser = (userId: string) => {
     setExpandedUsers(prev => {
-      const next = new Set(prev);
-      if (next.has(userId)) {
-        next.delete(userId);
-      } else {
-        next.add(userId);
-      }
-      return next;
-    });
-  };
-
-  const toggleAssignmentUser = (userId: string) => {
-    setExpandedAssignmentUsers(prev => {
       const next = new Set(prev);
       if (next.has(userId)) {
         next.delete(userId);
@@ -107,14 +80,6 @@ export default function AdminReportsPage() {
 
   const collapseAll = () => {
     setExpandedUsers(new Set());
-  };
-
-  const expandAllAssignments = () => {
-    setExpandedAssignmentUsers(new Set(Object.keys(assignmentsByUser)));
-  };
-
-  const collapseAllAssignments = () => {
-    setExpandedAssignmentUsers(new Set());
   };
 
   return (
@@ -335,24 +300,10 @@ export default function AdminReportsPage() {
             ) : spotAssignmentQuery.data ? (
               <Card data-testid="spot-assignments-table">
                 <CardHeader>
-                  <div className="flex justify-between items-start flex-wrap gap-2">
-                    <div>
-                      <CardTitle>New Permanent Spot Assignments</CardTitle>
-                      <CardDescription>
-                        {spotAssignmentQuery.data.totalCount} assignment{spotAssignmentQuery.data.totalCount !== 1 ? 's' : ''} in selected period
-                      </CardDescription>
-                    </div>
-                    {Object.keys(assignmentsByUser).length > 0 && (
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={expandAllAssignments}>
-                          Expand All
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={collapseAllAssignments}>
-                          Collapse All
-                        </Button>
-                      </div>
-                    )}
-                  </div>
+                  <CardTitle>New Spot Assignments</CardTitle>
+                  <CardDescription>
+                    {spotAssignmentQuery.data.totalCount} assignment{spotAssignmentQuery.data.totalCount !== 1 ? 's' : ''} in selected period
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {spotAssignmentQuery.data.assignments.length === 0 ? (
@@ -363,7 +314,6 @@ export default function AdminReportsPage() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="w-10"></TableHead>
                           <TableHead>Effective Date</TableHead>
                           <TableHead>Spot</TableHead>
                           <TableHead>Location</TableHead>
@@ -374,57 +324,22 @@ export default function AdminReportsPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {Object.entries(assignmentsByUser).map(([userId, { user, assignments }]) => {
-                          const isExpanded = expandedAssignmentUsers.has(userId);
-                          const sortedAssignments = [...assignments].sort((a, b) => 
-                            new Date(b.effectiveAt).getTime() - new Date(a.effectiveAt).getTime()
-                          );
-                          
-                          return (
-                            <>
-                              {/* User summary row */}
-                              <TableRow 
-                                key={userId}
-                                className="bg-muted/50 cursor-pointer hover-elevate"
-                                onClick={() => toggleAssignmentUser(userId)}
-                              >
-                                <TableCell className="w-10">
-                                  {isExpanded ? (
-                                    <ChevronDown className="h-4 w-4" />
-                                  ) : (
-                                    <ChevronRight className="h-4 w-4" />
-                                  )}
-                                </TableCell>
-                                <TableCell colSpan={4}>
-                                  <Badge variant="secondary">
-                                    {assignments.length} spot{assignments.length !== 1 ? 's' : ''} assigned
-                                  </Badge>
-                                </TableCell>
-                                <TableCell className="font-semibold">
-                                  {user.firstName} {user.lastName}
-                                </TableCell>
-                                <TableCell>{user.email}</TableCell>
-                                <TableCell>{user.department}</TableCell>
-                              </TableRow>
-                              
-                              {/* Individual assignment rows (shown when expanded) */}
-                              {isExpanded && sortedAssignments.map((assignment) => (
-                                <TableRow key={assignment.id} className="bg-background">
-                                  <TableCell></TableCell>
-                                  <TableCell>{new Date(assignment.effectiveAt).toLocaleDateString()}</TableCell>
-                                  <TableCell className="font-medium">{assignment.spot.spotNumber}</TableCell>
-                                  <TableCell>{assignment.spot.location}</TableCell>
-                                  <TableCell>{assignment.spot.spotType}</TableCell>
-                                  <TableCell className="text-muted-foreground">
-                                    {user.firstName} {user.lastName}
-                                  </TableCell>
-                                  <TableCell className="text-muted-foreground">{user.email}</TableCell>
-                                  <TableCell className="text-muted-foreground">{user.department}</TableCell>
-                                </TableRow>
-                              ))}
-                            </>
-                          );
-                        })}
+                        {spotAssignmentQuery.data.assignments
+                          .slice()
+                          .sort((a, b) => new Date(b.effectiveAt).getTime() - new Date(a.effectiveAt).getTime())
+                          .map((assignment) => (
+                            <TableRow key={assignment.id}>
+                              <TableCell>{new Date(assignment.effectiveAt).toLocaleDateString()}</TableCell>
+                              <TableCell className="font-medium">{assignment.spot.spotNumber}</TableCell>
+                              <TableCell>{assignment.spot.location}</TableCell>
+                              <TableCell>{assignment.spot.spotType}</TableCell>
+                              <TableCell className="font-semibold">
+                                {assignment.user.firstName} {assignment.user.lastName}
+                              </TableCell>
+                              <TableCell>{assignment.user.email}</TableCell>
+                              <TableCell>{assignment.user.department}</TableCell>
+                            </TableRow>
+                          ))}
                       </TableBody>
                     </Table>
                   )}

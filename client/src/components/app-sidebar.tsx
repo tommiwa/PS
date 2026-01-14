@@ -163,11 +163,11 @@ const adminOperationsItems = [
 // Admin Reporting items
 const adminAnalyticsItems = [
   {
-    title: "Shared Pool Usage",
+    title: "Payroll Reports",
     url: "/admin/reports",
     icon: DollarSign,
     roles: ["admin"],
-    tooltip: "Shared Pool Usage Report"
+    tooltip: "Payroll Reports"
   },
 ]
 
