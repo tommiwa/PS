@@ -2853,8 +2853,10 @@ export class MemStorage implements IStorage {
         // Get spot type name
         const spotTypeName = spotType?.name || 'Unknown';
         
-        // Construct owner name
-        const ownerName = owner ? `${owner.firstName || ''} ${owner.lastName || ''}`.trim() || owner.email : 'Unknown';
+        // Construct owner name - show "BCI Workplace Services" for BCI-managed spots
+        const ownerName = spot.isBciManaged 
+          ? 'BCI Workplace Services' 
+          : (owner ? `${owner.firstName || ''} ${owner.lastName || ''}`.trim() || owner.email : 'Unknown');
         
         // Calculate availableFrom and availableTo based on listing type
         let availableFrom = '';
@@ -2929,9 +2931,12 @@ export class MemStorage implements IStorage {
       const renterName = row.renter_first_name && row.renter_last_name 
         ? `${row.renter_first_name} ${row.renter_last_name}`
         : row.renter_email || 'Unknown';
-      const ownerName = row.owner_first_name && row.owner_last_name 
-        ? `${row.owner_first_name} ${row.owner_last_name}`
-        : row.owner_email || 'Unknown';
+      // Show "BCI Workplace Services" for BCI-managed spots
+      const ownerName = row.is_bci_managed 
+        ? 'BCI Workplace Services'
+        : (row.owner_first_name && row.owner_last_name 
+            ? `${row.owner_first_name} ${row.owner_last_name}`
+            : row.owner_email || 'Unknown');
       
       const spotLocation = row.building && row.level
         ? `${row.building} - ${row.level}`
@@ -2949,7 +2954,7 @@ export class MemStorage implements IStorage {
         renterName,
         renterEmail: row.renter_email || '',
         ownerName,
-        ownerEmail: row.owner_email || '',
+        ownerEmail: row.is_bci_managed ? '' : (row.owner_email || ''),
         bookingDate: row.booking_date,
         totalAmount: Number(row.total_amount),
         daysOverdue,
@@ -2994,9 +2999,12 @@ export class MemStorage implements IStorage {
       const renterName = row.renter_first_name && row.renter_last_name 
         ? `${row.renter_first_name} ${row.renter_last_name}`
         : row.renter_email || 'Unknown';
-      const ownerName = row.owner_first_name && row.owner_last_name 
-        ? `${row.owner_first_name} ${row.owner_last_name}`
-        : row.owner_email || 'Unknown';
+      // Show "BCI Workplace Services" for BCI-managed spots
+      const ownerName = row.is_bci_managed 
+        ? 'BCI Workplace Services'
+        : (row.owner_first_name && row.owner_last_name 
+            ? `${row.owner_first_name} ${row.owner_last_name}`
+            : row.owner_email || 'Unknown');
       
       const spotLocation = row.building && row.level
         ? `${row.building} - ${row.level}`
@@ -3010,8 +3018,8 @@ export class MemStorage implements IStorage {
         renterEmail: row.renter_email || '',
         renterDepartment: row.renter_department || '',
         ownerName,
-        ownerEmail: row.owner_email || '',
-        ownerDepartment: row.owner_department || '',
+        ownerEmail: row.is_bci_managed ? '' : (row.owner_email || ''),
+        ownerDepartment: row.is_bci_managed ? '' : (row.owner_department || ''),
         bookingDate: row.booking_date,
         dailyRate: Number(row.daily_rate),
         totalAmount: Number(row.total_amount),
@@ -3076,9 +3084,12 @@ export class MemStorage implements IStorage {
       const renterName = row.renter_first_name && row.renter_last_name 
         ? `${row.renter_first_name} ${row.renter_last_name}`
         : row.renter_email || 'Unknown';
-      const ownerName = row.owner_first_name && row.owner_last_name 
-        ? `${row.owner_first_name} ${row.owner_last_name}`
-        : row.owner_email || 'Unknown';
+      // Show "BCI Workplace Services" for BCI-managed spots
+      const ownerName = row.is_bci_managed 
+        ? 'BCI Workplace Services'
+        : (row.owner_first_name && row.owner_last_name 
+            ? `${row.owner_first_name} ${row.owner_last_name}`
+            : row.owner_email || 'Unknown');
       
       const spotLocation = row.building && row.level
         ? `${row.building} - ${row.level}`
@@ -3092,8 +3103,8 @@ export class MemStorage implements IStorage {
         renterEmail: row.renter_email || '',
         renterDepartment: row.renter_department || '',
         ownerName,
-        ownerEmail: row.owner_email || '',
-        ownerDepartment: row.owner_department || '',
+        ownerEmail: row.is_bci_managed ? '' : (row.owner_email || ''),
+        ownerDepartment: row.is_bci_managed ? '' : (row.owner_department || ''),
         bookingDate: row.booking_date,
         dailyRate: Number(row.daily_rate),
         totalAmount: Number(row.total_amount),
