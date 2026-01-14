@@ -897,12 +897,7 @@ export class MemStorage implements IStorage {
       enrichedSpot.spotTypeName = spotTypeResult[0].name;
     }
     
-    // For BCI-managed spots, show "BCI Workplace Services" as owner
-    if (spot.isBciManaged) {
-      enrichedSpot.assignedUserName = 'BCI Workplace Services';
-      enrichedSpot.assignedUserEmail = undefined;
-      enrichedSpot.assignedUserDepartment = undefined;
-    } else if (spot.ownerId) {
+    if (spot.ownerId) {
       // Query database for user with department join
       const userResult = await db
         .select({
@@ -982,11 +977,7 @@ export class MemStorage implements IStorage {
       enrichedSpot.spotTypeName = spotTypeResult[0].name;
     }
     
-    // For BCI-managed spots, show "BCI Workplace Services" as owner
-    if (spot.isBciManaged) {
-      enrichedSpot.assignedUserName = 'BCI Workplace Services';
-      enrichedSpot.assignedUserDepartment = undefined;
-    } else if (spot.ownerId) {
+    if (spot.ownerId) {
       // Query database for user with department join
       const userResult = await db
         .select({
