@@ -1233,10 +1233,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "User not authenticated" });
       }
       
+      // Check if user is an admin
+      const user = await storage.getUser(userId);
+      const isAdmin = user?.roles?.includes('admin') ?? false;
+      
       // Validate request body
       const validatedData = insertSpotListingSchema.parse({
         ...req.body,
-        ownerId: userId
+        ownerId: userId,
+        createdBy: userId,
+        createdByAdmin: isAdmin
       });
       
       // DATE VALIDATION: Ensure all dates are today or in the future
@@ -3732,7 +3738,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check if booking belongs to the user (as owner) or user is admin
       const user = await storage.getUser(userId);
-      const isAdmin = user?.role === 'admin';
+      const isAdmin = user?.roles?.includes('admin') ?? false;
       
       if (booking.ownerId !== userId && !isAdmin) {
         return res.status(403).json({ error: "Not authorized to confirm payment for this booking" });

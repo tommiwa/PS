@@ -1260,7 +1260,7 @@ export default function AdminSpotBookingManagement() {
               }`}
             >
               <Building2 className="h-4 w-4" />
-              BCI-Managed
+              BCI-Listed
             </button>
             <button
               onClick={() => setScope('all')}
@@ -1272,7 +1272,7 @@ export default function AdminSpotBookingManagement() {
               }`}
             >
               <Globe className="h-4 w-4" />
-              All Spots
+              All Listings
             </button>
           </div>
           <Tooltip>
