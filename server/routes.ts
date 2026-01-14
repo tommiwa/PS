@@ -4111,7 +4111,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/admin/spot-types - Create spot type (admin only)
   app.post("/api/admin/spot-types", requireAdmin, async (req, res) => {
     try {
-      const { name, slug, description, isActive } = req.body;
+      const { name, slug, description, bciChargingAmount, isActive } = req.body;
       
       if (!name || !slug) {
         return res.status(400).json({ error: "Name and slug are required" });
@@ -4121,6 +4121,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: name.trim(),
         slug: slug.trim().toLowerCase(),
         description: description?.trim(),
+        bciChargingAmount: bciChargingAmount || "0",
         isActive: isActive ?? true
       });
       res.status(201).json(spotType);
@@ -4137,7 +4138,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/admin/spot-types/:id", requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const { name, slug, description, isActive } = req.body;
+      const { name, slug, description, bciChargingAmount, isActive } = req.body;
       
       if (isNaN(id)) {
         return res.status(400).json({ error: "Invalid spot type ID" });
@@ -4147,6 +4148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (name !== undefined) updates.name = name.trim();
       if (slug !== undefined) updates.slug = slug.trim().toLowerCase();
       if (description !== undefined) updates.description = description?.trim();
+      if (bciChargingAmount !== undefined) updates.bciChargingAmount = bciChargingAmount;
       if (isActive !== undefined) updates.isActive = isActive;
       
       const spotType = await storage.updateSpotType(id, updates);

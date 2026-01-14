@@ -87,6 +87,7 @@ const spotTypeFormSchema = insertSpotTypeSchema.extend({
   name: z.string().min(1, "Name is required"),
   slug: z.string().min(1, "Slug is required"),
   description: z.string().optional(),
+  bciChargingAmount: z.string().optional().default("0"),
   isActive: z.boolean().default(true)
 });
 
@@ -202,6 +203,7 @@ export default function AdminDataManagement() {
       name: "",
       slug: "",
       description: "",
+      bciChargingAmount: "0",
       isActive: true
     }
   })
@@ -212,6 +214,7 @@ export default function AdminDataManagement() {
       name: "",
       slug: "",
       description: "",
+      bciChargingAmount: "0",
       isActive: true
     }
   })
@@ -829,6 +832,7 @@ export default function AdminDataManagement() {
       name: spotType.name,
       slug: spotType.slug,
       description: spotType.description || "",
+      bciChargingAmount: spotType.bciChargingAmount || "0",
       isActive: spotType.isActive
     });
     setShowEditSpotTypeDialog(true);
@@ -1622,6 +1626,26 @@ export default function AdminDataManagement() {
                         />
                         <FormField
                           control={addSpotTypeForm.control}
+                          name="bciChargingAmount"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>BCI Charging Amount ($)</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  placeholder="0.00" 
+                                  {...field} 
+                                  data-testid="input-spot-type-bci-charging"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={addSpotTypeForm.control}
                           name="isActive"
                           render={({ field }) => (
                             <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
@@ -1721,6 +1745,7 @@ export default function AdminDataManagement() {
                         </Button>
                       </TableHead>
                       <TableHead>Description</TableHead>
+                      <TableHead>BCI Charging ($)</TableHead>
                       <TableHead>
                         <Button 
                           variant="ghost" 
@@ -1749,7 +1774,7 @@ export default function AdminDataManagement() {
                   <TableBody>
                     {filteredAndSortedSpotTypes.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                           No spot types found. {(spotTypeNameFilter || spotTypeSlugFilter || spotTypeStatusFilter) ? "Try adjusting your filters." : "Create your first spot type to get started."}
                         </TableCell>
                       </TableRow>
@@ -1764,6 +1789,9 @@ export default function AdminDataManagement() {
                           </TableCell>
                           <TableCell data-testid={`text-spot-type-description-${spotType.id}`}>
                             {spotType.description || "-"}
+                          </TableCell>
+                          <TableCell data-testid={`text-spot-type-bci-charging-${spotType.id}`}>
+                            ${parseFloat(spotType.bciChargingAmount || "0").toFixed(2)}
                           </TableCell>
                           <TableCell data-testid={`text-spot-type-status-${spotType.id}`}>
                             {spotType.isActive ? "Active" : "Inactive"}
@@ -2168,6 +2196,26 @@ export default function AdminDataManagement() {
                         placeholder="Enter description" 
                         {...field} 
                         data-testid="input-edit-spot-type-description"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editSpotTypeForm.control}
+                name="bciChargingAmount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>BCI Charging Amount ($)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00" 
+                        {...field} 
+                        data-testid="input-edit-spot-type-bci-charging"
                       />
                     </FormControl>
                     <FormMessage />

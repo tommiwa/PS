@@ -943,6 +943,7 @@ export const spotTypesTable = pgTable("spot_types", {
   name: text("name").notNull().unique(),
   slug: text("slug").notNull().unique(),
   description: text("description"),
+  bciChargingAmount: decimal("bci_charging_amount", { precision: 10, scale: 2 }).default("0"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -952,6 +953,7 @@ export const insertSpotTypeSchema = createInsertSchema(spotTypesTable).pick({
   name: true,
   slug: true,
   description: true,
+  bciChargingAmount: true,
   isActive: true,
 });
 
