@@ -8,7 +8,8 @@ import type {
   ReportUserComplianceResponse,
   ReportWaitlistPerformanceResponse,
   ReportDateRange,
-  SpotAssignmentReportResponse
+  SpotAssignmentReportResponse,
+  SharedPoolUsageReportResponse
 } from "@shared/schema";
 
 // Zod schema for report query parameters
@@ -819,5 +820,124 @@ export async function getSpotAssignmentReport(req: Request, res: Response) {
     }
     console.error("Error generating spot assignment report:", error);
     res.status(500).json({ error: "Failed to generate spot assignment report" });
+  }
+}
+
+// GET /api/admin/reports/shared-pool-usage - Shared Pool Usage Report for salary deductions
+export async function getSharedPoolUsageReport(req: Request, res: Response) {
+  try {
+    const sharedPoolQuerySchema = z.object({
+      from: z.string().refine(val => !isNaN(Date.parse(val)), "Invalid from date"),
+      to: z.string().refine(val => !isNaN(Date.parse(val)), "Invalid to date")
+    });
+    
+    const { from, to } = sharedPoolQuerySchema.parse(req.query);
+    const today = new Date().toISOString().split('T')[0];
+    
+    const dateRange = {
+      from,
+      to: to > today ? today : to
+    };
+    
+    const [allSpots, allBookings, allUsers, locations, departments] = await Promise.all([
+      storage.getAllParkingSpots(),
+      storage.getAllBookings(),
+      storage.getAllUsers(),
+      storage.getAllLocations?.() || [],
+      storage.getAllDepartments?.() || []
+    ]);
+    
+    const sharedPoolSpots = allSpots.filter(s => s.isBciManaged === true && s.ownerId === null);
+    const sharedPoolSpotIds = new Set(sharedPoolSpots.map(s => s.id));
+    
+    const filteredBookings = allBookings.filter((b: any) => {
+      const bookingDate = b.bookingDate;
+      const isInDateRange = bookingDate >= dateRange.from && bookingDate <= dateRange.to;
+      const isPast = bookingDate < today;
+      const isSharedPoolSpot = sharedPoolSpotIds.has(b.spotId);
+      const isValidStatus = b.status === 'confirmed' || b.status === 'completed';
+      
+      return isInDateRange && isPast && isSharedPoolSpot && isValidStatus;
+    });
+    
+    const userBookingsMap = new Map<string, {
+      userId: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      department: string;
+      bookings: Array<{
+        bookingId: string;
+        spotNumber: string;
+        location: string;
+        bookingDate: string;
+        amount: number;
+      }>;
+      totalAmount: number;
+    }>();
+    
+    filteredBookings.forEach((booking: any) => {
+      const user = allUsers.find(u => u.id === booking.renterId);
+      const spot = sharedPoolSpots.find(s => s.id === booking.spotId);
+      const location = locations.find((l: any) => l.id === spot?.locationId);
+      const department = departments.find((d: any) => d.id === user?.departmentId);
+      
+      if (!user || !spot) return;
+      
+      const locationName = location 
+        ? `${location.office} - ${location.building}, ${location.level}`
+        : 'Unknown';
+      
+      if (!userBookingsMap.has(user.id)) {
+        userBookingsMap.set(user.id, {
+          userId: user.id,
+          firstName: user.firstName || '',
+          lastName: user.lastName || '',
+          email: user.email || '',
+          department: department?.name || 'Unknown',
+          bookings: [],
+          totalAmount: 0
+        });
+      }
+      
+      const userData = userBookingsMap.get(user.id)!;
+      const amount = Number(booking.dailyRate) || 0;
+      
+      userData.bookings.push({
+        bookingId: booking.id,
+        spotNumber: spot.spotNumber,
+        location: locationName,
+        bookingDate: booking.bookingDate,
+        amount
+      });
+      userData.totalAmount += amount;
+    });
+    
+    const usageByUser = Array.from(userBookingsMap.values()).map(userData => ({
+      ...userData,
+      bookingCount: userData.bookings.length
+    })).sort((a, b) => b.totalAmount - a.totalAmount);
+    
+    const totalBookings = filteredBookings.length;
+    const totalAmount = usageByUser.reduce((sum, u) => sum + u.totalAmount, 0);
+    const uniqueUsers = usageByUser.length;
+    
+    const response: SharedPoolUsageReportResponse = {
+      usageByUser,
+      summary: {
+        totalBookings,
+        totalAmount,
+        uniqueUsers
+      },
+      dateRange
+    };
+    
+    res.json(response);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: "Invalid query parameters", details: error.errors });
+    }
+    console.error("Error generating shared pool usage report:", error);
+    res.status(500).json({ error: "Failed to generate shared pool usage report" });
   }
 }

@@ -59,7 +59,8 @@ import {
   getReportRevenue,
   getReportUserCompliance,
   getReportWaitlistPerformance,
-  getSpotAssignmentReport
+  getSpotAssignmentReport,
+  getSharedPoolUsageReport
 } from "./reports-controller";
 import { sendReportEmail, isEmailServiceAvailable } from "./report-service";
 import { getTodayInTimezone, formatDateInTimezone, isDateInPast, isDateTodayOrFuture } from "./timezone";
@@ -6845,6 +6846,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/reports/user-compliance", requireAdmin, getReportUserCompliance);
   app.get("/api/admin/reports/waitlist-performance", requireAdmin, getReportWaitlistPerformance);
   app.get("/api/admin/reports/spot-assignments", requireAdmin, getSpotAssignmentReport);
+  app.get("/api/admin/reports/shared-pool-usage", requireAdmin, getSharedPoolUsageReport);
   
   // Email report endpoint
   app.post("/api/admin/reports/:type/email", requireAdmin, async (req: Request, res: Response) => {

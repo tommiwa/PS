@@ -1353,6 +1353,32 @@ export interface SpotAssignmentReportResponse {
   scope: 'all' | 'bci';
 }
 
+// Shared Pool Usage Report Response - For salary deductions
+export interface SharedPoolUsageReportResponse {
+  usageByUser: Array<{
+    userId: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    department: string;
+    bookings: Array<{
+      bookingId: string;
+      spotNumber: string;
+      location: string;
+      bookingDate: string;
+      amount: number;
+    }>;
+    totalAmount: number;
+    bookingCount: number;
+  }>;
+  summary: {
+    totalBookings: number;
+    totalAmount: number;
+    uniqueUsers: number;
+  };
+  dateRange: { from: string; to: string };
+}
+
 // App Configurations Table - System-wide settings
 export const appConfigs = pgTable("app_configs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

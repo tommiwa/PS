@@ -6,7 +6,8 @@ import type {
   ReportRevenueResponse,
   ReportUserComplianceResponse,
   ReportWaitlistPerformanceResponse,
-  SpotAssignmentReportResponse
+  SpotAssignmentReportResponse,
+  SharedPoolUsageReportResponse
 } from '@shared/schema';
 
 // Initialize SendGrid if API key is available
@@ -367,6 +368,95 @@ async function generateSpotAssignmentExcel(data: SpotAssignmentReportResponse): 
   worksheet.getColumn(7).width = 15;
   worksheet.getColumn(8).width = 15;
   worksheet.getColumn(9).width = 25;
+
+  return await workbook.xlsx.writeBuffer() as Buffer;
+}
+
+// Generate Excel buffer for Shared Pool Usage Report
+export async function generateSharedPoolUsageExcel(data: SharedPoolUsageReportResponse): Promise<Buffer> {
+  const workbook = new ExcelJS.Workbook();
+  
+  // Summary Sheet
+  const summarySheet = workbook.addWorksheet('Summary');
+  summarySheet.mergeCells('A1:D1');
+  const titleCell = summarySheet.getCell('A1');
+  titleCell.value = 'BCI ParkShare - Shared Pool Usage Report';
+  titleCell.font = { bold: true, size: 16 };
+  titleCell.alignment = { horizontal: 'center' };
+
+  summarySheet.mergeCells('A2:D2');
+  summarySheet.getCell('A2').value = `Date Range: ${data.dateRange.from} to ${data.dateRange.to}`;
+  summarySheet.getCell('A2').alignment = { horizontal: 'center' };
+
+  summarySheet.mergeCells('A3:D3');
+  summarySheet.getCell('A3').value = `For Salary Deduction Processing`;
+  summarySheet.getCell('A3').font = { italic: true };
+  summarySheet.getCell('A3').alignment = { horizontal: 'center' };
+
+  summarySheet.addRow([]);
+  summarySheet.addRow(['REPORT SUMMARY']);
+  summarySheet.getRow(5).font = { bold: true, size: 14 };
+
+  summarySheet.addRow(['Total Bookings', data.summary.totalBookings]);
+  summarySheet.addRow(['Total Amount Owed', `$${data.summary.totalAmount.toFixed(2)}`]);
+  summarySheet.addRow(['Unique Users', data.summary.uniqueUsers]);
+
+  summarySheet.addRow([]);
+  summarySheet.addRow(['USER SUMMARY']);
+  summarySheet.getRow(10).font = { bold: true, size: 14 };
+
+  const userHeaderRow = summarySheet.addRow(['Name', 'Email', 'Department', 'Bookings', 'Total Amount']);
+  userHeaderRow.font = { bold: true };
+
+  data.usageByUser.forEach(user => {
+    summarySheet.addRow([
+      `${user.firstName} ${user.lastName}`,
+      user.email,
+      user.department,
+      user.bookingCount,
+      `$${user.totalAmount.toFixed(2)}`
+    ]);
+  });
+
+  summarySheet.getColumn(1).width = 30;
+  summarySheet.getColumn(2).width = 35;
+  summarySheet.getColumn(3).width = 20;
+  summarySheet.getColumn(4).width = 12;
+  summarySheet.getColumn(5).width = 15;
+
+  // Detail Sheet
+  const detailSheet = workbook.addWorksheet('Booking Details');
+  detailSheet.mergeCells('A1:G1');
+  const detailTitle = detailSheet.getCell('A1');
+  detailTitle.value = 'Shared Pool Booking Details';
+  detailTitle.font = { bold: true, size: 16 };
+  detailTitle.alignment = { horizontal: 'center' };
+
+  detailSheet.addRow([]);
+  const detailHeaderRow = detailSheet.addRow(['User Name', 'Email', 'Department', 'Spot Number', 'Location', 'Booking Date', 'Amount']);
+  detailHeaderRow.font = { bold: true };
+
+  data.usageByUser.forEach(user => {
+    user.bookings.forEach(booking => {
+      detailSheet.addRow([
+        `${user.firstName} ${user.lastName}`,
+        user.email,
+        user.department,
+        booking.spotNumber,
+        booking.location,
+        booking.bookingDate,
+        `$${booking.amount.toFixed(2)}`
+      ]);
+    });
+  });
+
+  detailSheet.getColumn(1).width = 30;
+  detailSheet.getColumn(2).width = 35;
+  detailSheet.getColumn(3).width = 20;
+  detailSheet.getColumn(4).width = 15;
+  detailSheet.getColumn(5).width = 35;
+  detailSheet.getColumn(6).width = 15;
+  detailSheet.getColumn(7).width = 12;
 
   return await workbook.xlsx.writeBuffer() as Buffer;
 }
