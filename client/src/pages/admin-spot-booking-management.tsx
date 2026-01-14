@@ -198,16 +198,16 @@ export default function AdminSpotBookingManagement() {
   const [location, setLocation] = useLocation()
   const searchParams = useSearch()
   
-  // Initialize scope from URL parameter, defaulting to 'bci' (BCI-managed) if not specified
+  // Initialize scope from URL parameter, defaulting to 'all' (All Spots) if not specified
   const urlScope = new URLSearchParams(searchParams).get('scope') as BookingScope | null
   const [scope, setScope] = useState<BookingScope>(
-    urlScope === 'all' ? 'all' : 'bci'
+    urlScope === 'bci' ? 'bci' : 'all'
   )
   
   // Update URL when scope changes (without page reload)
   useEffect(() => {
     const params = new URLSearchParams(searchParams)
-    if (scope === 'bci') {
+    if (scope === 'all') {
       params.delete('scope')
     } else {
       params.set('scope', scope)
@@ -1251,18 +1251,6 @@ export default function AdminSpotBookingManagement() {
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex rounded-lg border border-border overflow-hidden" data-testid="tabs-scope">
             <button
-              onClick={() => setScope('bci')}
-              data-testid="tab-scope-bci"
-              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all border-b-2 ${
-                scope === 'bci' 
-                  ? 'bg-background border-b-primary text-primary' 
-                  : 'bg-muted/40 border-b-transparent text-muted-foreground hover:text-foreground hover:bg-muted/60'
-              }`}
-            >
-              <Building2 className="h-4 w-4" />
-              BCI-Managed
-            </button>
-            <button
               onClick={() => setScope('all')}
               data-testid="tab-scope-all"
               className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all border-b-2 ${
@@ -1273,6 +1261,18 @@ export default function AdminSpotBookingManagement() {
             >
               <Globe className="h-4 w-4" />
               All Spots
+            </button>
+            <button
+              onClick={() => setScope('bci')}
+              data-testid="tab-scope-bci"
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all border-b-2 ${
+                scope === 'bci' 
+                  ? 'bg-background border-b-primary text-primary' 
+                  : 'bg-muted/40 border-b-transparent text-muted-foreground hover:text-foreground hover:bg-muted/60'
+              }`}
+            >
+              <Building2 className="h-4 w-4" />
+              BCI-Managed
             </button>
           </div>
           <Tooltip>
