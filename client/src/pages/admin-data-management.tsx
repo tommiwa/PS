@@ -229,7 +229,7 @@ export default function AdminDataManagement() {
     queryKey: ["/api/spot-types"],
   });
 
-  const { data: appConfigs = [], isLoading: isLoadingConfigs } = useQuery<AppConfig[]>({
+  const { data: appConfigs = [], isLoading: isLoadingConfigs, isError: isErrorConfigs, error: configsError } = useQuery<AppConfig[]>({
     queryKey: ["/api/admin/app-configs"],
   });
 
@@ -1844,6 +1844,10 @@ export default function AdminDataManagement() {
                   <Skeleton className="h-10 w-full" />
                   <Skeleton className="h-10 w-full" />
                 </div>
+              ) : isErrorConfigs ? (
+                <div className="text-center text-red-500 py-8">
+                  Failed to load settings. {configsError instanceof Error ? configsError.message : 'Please try refreshing the page.'}
+                </div>
               ) : (
                 <Table>
                   <TableHeader>
@@ -1865,7 +1869,7 @@ export default function AdminDataManagement() {
                       paginatedConfigs.map((config) => (
                         <TableRow key={config.key} data-testid={`row-config-${config.key}`}>
                           <TableCell className="font-medium" data-testid={`text-config-label-${config.key}`}>
-                            {config.label}
+                            {config.label || config.key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
                           </TableCell>
                           <TableCell data-testid={`text-config-value-${config.key}`}>
                             {config.dataType === 'number' && config.key.includes('timeout') 
