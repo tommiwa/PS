@@ -56,7 +56,9 @@ import {
   FileText,
   Info,
   AlertCircle,
-  Loader2
+  Loader2,
+  Building2,
+  Globe
 } from "lucide-react"
 import type { Booking, BookingStatus, ParkingSpot } from "@shared/schema"
 import { quickExportBookingsPDF, quickExportBookingsExcel } from "@/utils/export-utils"
@@ -195,16 +197,16 @@ export default function AdminSpotBookingManagement() {
   const [location, setLocation] = useLocation()
   const searchParams = useSearch()
   
-  // Initialize scope from URL parameter, defaulting to 'all' if not specified
+  // Initialize scope from URL parameter, defaulting to 'bci' (BCI-managed) if not specified
   const urlScope = new URLSearchParams(searchParams).get('scope') as BookingScope | null
   const [scope, setScope] = useState<BookingScope>(
-    urlScope === 'bci' ? 'bci' : 'all'
+    urlScope === 'all' ? 'all' : 'bci'
   )
   
   // Update URL when scope changes (without page reload)
   useEffect(() => {
     const params = new URLSearchParams(searchParams)
-    if (scope === 'all') {
+    if (scope === 'bci') {
       params.delete('scope')
     } else {
       params.set('scope', scope)
@@ -1250,12 +1252,32 @@ export default function AdminSpotBookingManagement() {
             value={scope}
             onValueChange={(value) => setScope(value as BookingScope)}
           >
-            <SelectTrigger className="w-[180px]" data-testid="select-scope">
-              <SelectValue placeholder="Select scope" />
+            <SelectTrigger 
+              className="w-[200px] bg-primary/5 border-primary/20 hover:bg-primary/10 hover:border-primary/30 transition-colors font-medium" 
+              data-testid="select-scope"
+            >
+              <div className="flex items-center gap-2">
+                {scope === 'bci' ? (
+                  <Building2 className="h-4 w-4 text-primary" />
+                ) : (
+                  <Globe className="h-4 w-4 text-muted-foreground" />
+                )}
+                <SelectValue placeholder="Select scope" />
+              </div>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all" data-testid="option-scope-all">All Spots</SelectItem>
-              <SelectItem value="bci" data-testid="option-scope-bci">BCI-Managed Only</SelectItem>
+              <SelectItem value="bci" data-testid="option-scope-bci">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-primary" />
+                  <span>BCI-Managed Only</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="all" data-testid="option-scope-all">
+                <div className="flex items-center gap-2">
+                  <Globe className="h-4 w-4 text-muted-foreground" />
+                  <span>All Spots</span>
+                </div>
+              </SelectItem>
             </SelectContent>
           </Select>
           <Tooltip>
