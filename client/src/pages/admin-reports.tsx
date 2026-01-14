@@ -1,10 +1,11 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useReportFilters } from '@/components/reports/useReportFilters';
 import { exportSharedPoolUsageReport } from '@/utils/report-export';
-import { AlertCircle, FileSpreadsheet } from 'lucide-react';
+import { AlertCircle, FileSpreadsheet, ChevronDown, ChevronRight } from 'lucide-react';
 import type { SharedPoolUsageReportResponse } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,6 +21,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function AdminReportsPage() {
   const { filters, setDateFrom, setDateTo } = useReportFilters();
+  const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
 
   const today = new Date().toISOString().split('T')[0];
   const sharedPoolDateTo = filters.dateTo > today ? today : filters.dateTo;
@@ -39,15 +41,27 @@ export default function AdminReportsPage() {
     enabled: isDateRangeValid
   });
 
-  // Flatten bookings data to show individual rows
-  const flattenedBookings = sharedPoolUsageQuery.data?.usageByUser.flatMap(user =>
-    user.bookings.map(booking => ({
-      ...booking,
-      userName: `${user.firstName} ${user.lastName}`,
-      email: user.email,
-      department: user.department
-    }))
-  ).sort((a, b) => b.bookingDate.localeCompare(a.bookingDate)) || [];
+  const toggleUser = (userId: string) => {
+    setExpandedUsers(prev => {
+      const next = new Set(prev);
+      if (next.has(userId)) {
+        next.delete(userId);
+      } else {
+        next.add(userId);
+      }
+      return next;
+    });
+  };
+
+  const expandAll = () => {
+    if (sharedPoolUsageQuery.data) {
+      setExpandedUsers(new Set(sharedPoolUsageQuery.data.usageByUser.map(u => u.userId)));
+    }
+  };
+
+  const collapseAll = () => {
+    setExpandedUsers(new Set());
+  };
 
   return (
     <div className="flex-1 space-y-6 p-6" data-testid="page-admin-reports">
@@ -128,13 +142,27 @@ export default function AdminReportsPage() {
         ) : sharedPoolUsageQuery.data ? (
           <Card data-testid="shared-pool-usage-table">
             <CardHeader>
-              <CardTitle>Booking Details</CardTitle>
-              <CardDescription>
-                {sharedPoolUsageQuery.data.summary.totalBookings} bookings | ${sharedPoolUsageQuery.data.summary.totalAmount.toFixed(2)} total
-              </CardDescription>
+              <div className="flex justify-between items-start flex-wrap gap-2">
+                <div>
+                  <CardTitle>Usage by Employee</CardTitle>
+                  <CardDescription>
+                    {sharedPoolUsageQuery.data.summary.totalBookings} bookings | ${sharedPoolUsageQuery.data.summary.totalAmount.toFixed(2)} total
+                  </CardDescription>
+                </div>
+                {sharedPoolUsageQuery.data.usageByUser.length > 0 && (
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={expandAll}>
+                      Expand All
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={collapseAll}>
+                      Collapse All
+                    </Button>
+                  </div>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
-              {flattenedBookings.length === 0 ? (
+              {sharedPoolUsageQuery.data.usageByUser.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   No shared pool usage found for the selected date range.
                 </div>
@@ -142,6 +170,7 @@ export default function AdminReportsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-10"></TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Spot</TableHead>
                       <TableHead>Location</TableHead>
@@ -152,17 +181,58 @@ export default function AdminReportsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {flattenedBookings.map((booking) => (
-                      <TableRow key={booking.bookingId}>
-                        <TableCell>{booking.bookingDate}</TableCell>
-                        <TableCell className="font-medium">{booking.spotNumber}</TableCell>
-                        <TableCell>{booking.location}</TableCell>
-                        <TableCell>{booking.userName}</TableCell>
-                        <TableCell>{booking.email}</TableCell>
-                        <TableCell>{booking.department}</TableCell>
-                        <TableCell className="text-right">${booking.amount.toFixed(2)}</TableCell>
-                      </TableRow>
-                    ))}
+                    {sharedPoolUsageQuery.data.usageByUser.map((user) => {
+                      const isExpanded = expandedUsers.has(user.userId);
+                      const sortedBookings = [...user.bookings].sort((a, b) => 
+                        b.bookingDate.localeCompare(a.bookingDate)
+                      );
+                      
+                      return (
+                        <>
+                          {/* User summary row */}
+                          <TableRow 
+                            key={user.userId}
+                            className="bg-muted/50 cursor-pointer hover-elevate"
+                            onClick={() => toggleUser(user.userId)}
+                          >
+                            <TableCell className="w-10">
+                              {isExpanded ? (
+                                <ChevronDown className="h-4 w-4" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4" />
+                              )}
+                            </TableCell>
+                            <TableCell colSpan={3} className="font-medium">
+                              {user.bookingCount} booking{user.bookingCount !== 1 ? 's' : ''}
+                            </TableCell>
+                            <TableCell className="font-semibold">
+                              {user.firstName} {user.lastName}
+                            </TableCell>
+                            <TableCell>{user.email}</TableCell>
+                            <TableCell>{user.department}</TableCell>
+                            <TableCell className="text-right font-semibold">
+                              ${user.totalAmount.toFixed(2)}
+                            </TableCell>
+                          </TableRow>
+                          
+                          {/* Individual booking rows (shown when expanded) */}
+                          {isExpanded && sortedBookings.map((booking) => (
+                            <TableRow key={booking.bookingId} className="bg-background">
+                              <TableCell></TableCell>
+                              <TableCell>{booking.bookingDate}</TableCell>
+                              <TableCell className="font-medium">{booking.spotNumber}</TableCell>
+                              <TableCell>{booking.location}</TableCell>
+                              <TableCell className="text-muted-foreground">
+                                {user.firstName} {user.lastName}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground">{user.email}</TableCell>
+                              <TableCell className="text-muted-foreground">{user.department}</TableCell>
+                              <TableCell className="text-right">${booking.amount.toFixed(2)}</TableCell>
+                            </TableRow>
+                          ))}
+                        </>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               )}
