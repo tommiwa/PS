@@ -5376,6 +5376,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           {
             key: 'lock_timeout_ms',
             value: '30000',
+            label: 'Lock Timeout',
             dataType: 'number',
             category: 'booking',
             description: 'Duration in seconds for how long a booking lock is held before it automatically expires. Users must complete their booking within this time.'
@@ -5383,6 +5384,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           {
             key: 'max_daily_rate',
             value: '18',
+            label: 'Maximum Daily Rate',
             dataType: 'number',
             category: 'booking',
             description: 'Maximum allowed daily rate for parking spot listings. Owners and admins cannot set rates higher than this amount.'
@@ -5390,6 +5392,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           {
             key: 'timezone',
             value: 'America/Los_Angeles',
+            label: 'Application Timezone',
             dataType: 'string',
             category: 'system',
             description: 'The timezone used for displaying and calculating all dates and times in the application (e.g., America/Los_Angeles for PST/PDT)'
