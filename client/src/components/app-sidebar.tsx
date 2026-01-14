@@ -159,8 +159,16 @@ const adminOperationsItems = [
   },
 ]
 
-// Admin Analytics & Audit items (empty - Reports moved to Dashboard, Audit Logs moved to Operations)
-const adminAnalyticsItems: typeof adminOperationsItems = []
+// Admin Analytics & Reporting items
+const adminAnalyticsItems = [
+  {
+    title: "Reports",
+    url: "/admin/reports",
+    icon: BarChart3,
+    roles: ["admin"],
+    tooltip: "Analytics & Reports"
+  },
+]
 
 // Admin Configuration items
 const adminConfigurationItems = [
