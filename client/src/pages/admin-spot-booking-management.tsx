@@ -1249,30 +1249,32 @@ export default function AdminSpotBookingManagement() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <ToggleGroup
-            type="single"
-            value={scope}
-            onValueChange={(value) => value && setScope(value as BookingScope)}
-            className="inline-flex rounded-lg border border-border bg-muted/40 p-1"
-            data-testid="toggle-scope"
-          >
-            <ToggleGroupItem
-              value="bci"
-              data-testid="option-scope-bci"
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm"
+          <div className="flex rounded-lg border border-border overflow-hidden" data-testid="tabs-scope">
+            <button
+              onClick={() => setScope('bci')}
+              data-testid="tab-scope-bci"
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all border-b-2 ${
+                scope === 'bci' 
+                  ? 'bg-background border-b-primary text-primary' 
+                  : 'bg-muted/40 border-b-transparent text-muted-foreground hover:text-foreground hover:bg-muted/60'
+              }`}
             >
               <Building2 className="h-4 w-4" />
               BCI-Managed
-            </ToggleGroupItem>
-            <ToggleGroupItem
-              value="all"
-              data-testid="option-scope-all"
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm"
+            </button>
+            <button
+              onClick={() => setScope('all')}
+              data-testid="tab-scope-all"
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all border-b-2 ${
+                scope === 'all' 
+                  ? 'bg-background border-b-primary text-primary' 
+                  : 'bg-muted/40 border-b-transparent text-muted-foreground hover:text-foreground hover:bg-muted/60'
+              }`}
             >
               <Globe className="h-4 w-4" />
               All Spots
-            </ToggleGroupItem>
-          </ToggleGroup>
+            </button>
+          </div>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button 
