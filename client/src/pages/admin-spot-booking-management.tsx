@@ -1308,68 +1308,6 @@ export default function AdminSpotBookingManagement() {
               Refresh all booking data and payment status
             </TooltipContent>
           </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="outline" 
-                disabled={filteredActiveBookings.length === 0}
-                onClick={() => {
-                  const success = quickExportBookingsPDF(sortedActiveBookings, 'Active Bookings Report', (errorMessage) => {
-                    toast({
-                      variant: "destructive",
-                      title: "Export Failed",
-                      description: errorMessage
-                    })
-                  }, scope)
-                  if (success) {
-                    toast({
-                      title: "Export Successful",
-                      description: "PDF report has been downloaded successfully"
-                    })
-                  }
-                }}
-                data-testid="button-export-pdf"
-                aria-label="Export active bookings to PDF"
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                {t('common.exportPDF')}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              Export active booking data to PDF report
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="outline" 
-                disabled={filteredActiveBookings.length === 0}
-                onClick={async () => {
-                  const success = await quickExportBookingsExcel(sortedActiveBookings, 'Active Bookings Report', (errorMessage) => {
-                    toast({
-                      variant: "destructive",
-                      title: "Export Failed",
-                      description: errorMessage
-                    })
-                  }, scope)
-                  if (success) {
-                    toast({
-                      title: "Export Successful",
-                      description: "Excel report has been downloaded successfully"
-                    })
-                  }
-                }}
-                data-testid="button-export-excel"
-                aria-label="Export active bookings to Excel"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                {t('common.exportExcel')}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              Export active booking data to Excel spreadsheet
-            </TooltipContent>
-          </Tooltip>
         </div>
       </div>
 
