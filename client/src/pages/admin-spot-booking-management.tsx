@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -1248,38 +1249,30 @@ export default function AdminSpotBookingManagement() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Select
+          <ToggleGroup
+            type="single"
             value={scope}
-            onValueChange={(value) => setScope(value as BookingScope)}
+            onValueChange={(value) => value && setScope(value as BookingScope)}
+            className="inline-flex rounded-lg border border-border bg-muted/40 p-1"
+            data-testid="toggle-scope"
           >
-            <SelectTrigger 
-              className="w-[200px] bg-primary/5 border-primary/20 hover:bg-primary/10 hover:border-primary/30 transition-colors font-medium" 
-              data-testid="select-scope"
+            <ToggleGroupItem
+              value="bci"
+              data-testid="option-scope-bci"
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm"
             >
-              <div className="flex items-center gap-2">
-                {scope === 'bci' ? (
-                  <Building2 className="h-4 w-4 text-primary" />
-                ) : (
-                  <Globe className="h-4 w-4 text-muted-foreground" />
-                )}
-                <SelectValue placeholder="Select scope" />
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="bci" data-testid="option-scope-bci">
-                <div className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-primary" />
-                  <span>BCI-Managed Only</span>
-                </div>
-              </SelectItem>
-              <SelectItem value="all" data-testid="option-scope-all">
-                <div className="flex items-center gap-2">
-                  <Globe className="h-4 w-4 text-muted-foreground" />
-                  <span>All Spots</span>
-                </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
+              <Building2 className="h-4 w-4" />
+              BCI-Managed
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              value="all"
+              data-testid="option-scope-all"
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm"
+            >
+              <Globe className="h-4 w-4" />
+              All Spots
+            </ToggleGroupItem>
+          </ToggleGroup>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button 
