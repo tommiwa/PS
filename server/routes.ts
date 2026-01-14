@@ -5381,13 +5381,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             description: 'Duration in seconds for how long a booking lock is held before it automatically expires. Users must complete their booking within this time.'
           },
           {
-            key: 'map_link_base_url',
-            value: 'https://bci.officespacesoftware.com/visual-directory/floors/31/seats/',
-            dataType: 'string',
-            category: 'system',
-            description: 'Base URL for generating parking spot map links. Seat number is appended to this URL.'
-          },
-          {
             key: 'max_daily_rate',
             value: '18',
             dataType: 'number',
