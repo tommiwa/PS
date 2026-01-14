@@ -15,7 +15,8 @@ import {
   FileText,
   Database,
   Lock,
-  Clock
+  Clock,
+  DollarSign
 } from "lucide-react"
 import { Link, useLocation, useRoute } from "wouter"
 import {
@@ -159,14 +160,14 @@ const adminOperationsItems = [
   },
 ]
 
-// Admin Analytics & Reporting items
+// Admin Reporting items
 const adminAnalyticsItems = [
   {
-    title: "Reports",
+    title: "Shared Pool Usage",
     url: "/admin/reports",
-    icon: BarChart3,
+    icon: DollarSign,
     roles: ["admin"],
-    tooltip: "Analytics & Reports"
+    tooltip: "Shared Pool Usage Report"
   },
 ]
 
@@ -576,12 +577,12 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
           </>
         )}
 
-        {/* Admin Analytics & Audit - Only shown when viewing as admin */}
+        {/* Admin Reporting - Only shown when viewing as admin */}
         {filteredAdminAnalyticsItems.length > 0 && (
           <>
             <SidebarSeparator />
             <SidebarGroup>
-              <SidebarGroupLabel>Analytics & Audit</SidebarGroupLabel>
+              <SidebarGroupLabel>Reporting</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
                   {renderMenuItems(filteredAdminAnalyticsItems)}
