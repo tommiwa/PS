@@ -318,6 +318,7 @@ export default function AdminReportsPage() {
                           <TableHead>Spot</TableHead>
                           <TableHead>Location</TableHead>
                           <TableHead>Spot Type</TableHead>
+                          <TableHead>Monthly Fee</TableHead>
                           <TableHead>Name</TableHead>
                           <TableHead>Email</TableHead>
                           <TableHead>Department</TableHead>
@@ -333,6 +334,7 @@ export default function AdminReportsPage() {
                               <TableCell className="font-medium">{assignment.spot.spotNumber}</TableCell>
                               <TableCell>{assignment.spot.location}</TableCell>
                               <TableCell>{assignment.spot.spotType}</TableCell>
+                              <TableCell>${parseFloat(assignment.spot.monthlyFee ?? "0").toFixed(2)}</TableCell>
                               <TableCell className="font-semibold">
                                 {assignment.user.firstName} {assignment.user.lastName}
                               </TableCell>
