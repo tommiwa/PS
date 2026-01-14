@@ -41,12 +41,6 @@ import {
 import type { ParkingSpot, ParkingSpotWithUser, SpotType, Location, SpotTypeTable } from "@shared/schema"
 import { quickExportParkingSpotsPDF, quickExportParkingSpotsExcel } from "@/utils/export-utils"
 
-// Standard parking locations (preferred for new spots)
-const STANDARD_PARKING_LOCATIONS = [
-  { value: "Victoria - 750 Pandora Ave, Parking Level 1", label: "Victoria - 750 Pandora Ave, Parking Level 1" },
-  { value: "Victoria - 750 Pandora Ave, Parking Level 2", label: "Victoria - 750 Pandora Ave, Parking Level 2" }
-];
-
 export default function AdminParkingManagement() {
   const { t } = useLanguage()
   const { toast } = useToast()
@@ -298,9 +292,6 @@ export default function AdminParkingManagement() {
     queryKey: ["/api/admin/all-spots"],
   });
 
-  // Use only standard parking locations (no existing locations)
-  const allLocationOptions = STANDARD_PARKING_LOCATIONS;
-
   // Fetch all users for dropdown selection
   const { data: allUsers = [], isLoading: isLoadingUsers, error: usersError } = useQuery<any[]>({
     queryKey: ["/api/admin/users"],
@@ -314,6 +305,14 @@ export default function AdminParkingManagement() {
   const { data: spotTypes = [], isLoading: isLoadingSpotTypes } = useQuery<SpotTypeTable[]>({
     queryKey: ["/api/spot-types"],
   });
+
+  // Generate location options dynamically from fetched locations
+  const allLocationOptions = useMemo(() => {
+    return locations.map(loc => ({
+      value: `${loc.office} - ${loc.building}, ${loc.level}`,
+      label: `${loc.office} - ${loc.building}, ${loc.level}`
+    }));
+  }, [locations]);
 
   // Search users for direct assignment (only triggers when query >= 3 chars)
   const { data: searchedUsers = [], isLoading: isSearchingUsers } = useQuery<Array<{
