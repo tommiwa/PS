@@ -5366,7 +5366,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/admin/app-configs - Get all app configurations (Admin only)
   app.get("/api/admin/app-configs", requireAdmin, async (req, res) => {
     try {
-      const configs = await storage.getAllAppConfigs();
+      let configs = await storage.getAllAppConfigs();
+      
+      // Auto-initialize default configs if none exist
+      if (configs.length === 0) {
+        const defaultConfigs = [
+          {
+            key: 'lock_timeout_ms',
+            value: '30000',
+            dataType: 'number',
+            category: 'booking',
+            description: 'Duration in seconds for how long a booking lock is held before it automatically expires. Users must complete their booking within this time.'
+          },
+          {
+            key: 'map_link_base_url',
+            value: 'https://bci.officespacesoftware.com/visual-directory/floors/31/seats/',
+            dataType: 'string',
+            category: 'system',
+            description: 'Base URL for generating parking spot map links. Seat number is appended to this URL.'
+          },
+          {
+            key: 'max_daily_rate',
+            value: '18',
+            dataType: 'number',
+            category: 'booking',
+            description: 'Maximum allowed daily rate for parking spot listings. Owners and admins cannot set rates higher than this amount.'
+          },
+          {
+            key: 'timezone',
+            value: 'America/Los_Angeles',
+            dataType: 'string',
+            category: 'system',
+            description: 'The timezone used for displaying and calculating all dates and times in the application (e.g., America/Los_Angeles for PST/PDT)'
+          }
+        ];
+        
+        for (const config of defaultConfigs) {
+          await storage.createAppConfig(config);
+        }
+        
+        configs = await storage.getAllAppConfigs();
+      }
+      
       res.json(configs);
     } catch (error) {
       console.error("Error fetching app configs:", error);
