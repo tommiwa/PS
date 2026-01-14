@@ -853,11 +853,11 @@ export async function getSharedPoolUsageReport(req: Request, res: Response) {
     const filteredBookings = allBookings.filter((b: any) => {
       const bookingDate = b.bookingDate;
       const isInDateRange = bookingDate >= dateRange.from && bookingDate <= dateRange.to;
-      const isPast = bookingDate < today;
+      const isPastOrToday = bookingDate <= today; // Include today's completed bookings
       const isSharedPoolSpot = sharedPoolSpotIds.has(b.spotId);
       const isValidStatus = b.status === 'confirmed' || b.status === 'completed';
       
-      return isInDateRange && isPast && isSharedPoolSpot && isValidStatus;
+      return isInDateRange && isPastOrToday && isSharedPoolSpot && isValidStatus;
     });
     
     const userBookingsMap = new Map<string, {
