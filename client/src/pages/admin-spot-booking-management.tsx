@@ -727,7 +727,7 @@ export default function AdminSpotBookingManagement() {
       label: "User Role",
       type: "select",
       options: [
-        { value: "owner", label: "Owner" },
+        { value: "owner", label: "Assigned To" },
         { value: "renter", label: "Renter" }
       ]
     },
@@ -1506,7 +1506,7 @@ export default function AdminSpotBookingManagement() {
                           currentSortDirection={availabilitySortState.direction}
                           onSort={handleAvailabilitySort}
                         >
-                          Owner
+                          Assigned To
                         </SortableTableHeader>
                         <SortableTableHeader
                           column="dailyRate"
@@ -1725,7 +1725,7 @@ export default function AdminSpotBookingManagement() {
                         currentSortDirection={sortState.direction}
                         onSort={handleSort}
                       >
-                        Owner
+                        Assigned To
                       </SortableTableHeader>
                       <SortableTableHeader
                         column="bookingDate"
@@ -1958,7 +1958,7 @@ export default function AdminSpotBookingManagement() {
                           currentSortDirection={pendingPaymentsSortState.direction}
                           onSort={handlePendingPaymentsSort}
                         >
-                          Owner
+                          Assigned To
                         </SortableTableHeader>
                         <SortableTableHeader
                           column="bookingDate"
@@ -2274,7 +2274,7 @@ export default function AdminSpotBookingManagement() {
                           currentSortDirection={pastBookingsSortState.direction}
                           onSort={handlePastBookingsSort}
                         >
-                          Owner
+                          Assigned To
                         </SortableTableHeader>
                         <SortableTableHeader
                           column="bookingDate"
@@ -2424,7 +2424,7 @@ export default function AdminSpotBookingManagement() {
                     <p className="text-sm text-muted-foreground" data-testid="text-renter-department">{selectedBooking.renterDepartment}</p>
                   </div>
                   <div>
-                    <Label>Owner</Label>
+                    <Label>Assigned To</Label>
                     <p className="font-medium" data-testid="text-owner-name">{selectedBooking.ownerName}</p>
                     <p className="text-sm text-muted-foreground" data-testid="text-owner-email">{selectedBooking.ownerEmail}</p>
                     <p className="text-sm text-muted-foreground" data-testid="text-owner-department">{selectedBooking.ownerDepartment}</p>
@@ -2722,7 +2722,7 @@ export default function AdminSpotBookingManagement() {
                   <Badge variant="outline">{selectedAvailabilityListing.spotTypeName}</Badge>
                 </div>
                 <div>
-                  <Label>Owner</Label>
+                  <Label>Assigned To</Label>
                   <p className="font-medium">{selectedAvailabilityListing.ownerName}</p>
                 </div>
               </div>
@@ -2852,7 +2852,7 @@ export default function AdminSpotBookingManagement() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="renter">Renter</SelectItem>
-                  <SelectItem value="owner">Owner</SelectItem>
+                  <SelectItem value="owner">Assigned To</SelectItem>
                 </SelectContent>
               </Select>
             </div>
