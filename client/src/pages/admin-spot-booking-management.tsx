@@ -1272,7 +1272,7 @@ export default function AdminSpotBookingManagement() {
               }`}
             >
               <Building2 className="h-4 w-4" />
-              BCI-Managed
+              Shared Pool
             </button>
           </div>
           <Tooltip>
@@ -1467,7 +1467,7 @@ export default function AdminSpotBookingManagement() {
                   <p>No available spots found</p>
                   <p className="text-sm">
                     {scope === 'bci' 
-                      ? 'No BCI-managed spot availability listings found. Switch to "All Spots" to see system-wide availability.' 
+                      ? 'No shared pool spot availability listings found. Switch to "All Spots" to see system-wide availability.' 
                       : 'Spot availability listings will appear here.'}
                   </p>
                 </div>
@@ -1694,7 +1694,7 @@ export default function AdminSpotBookingManagement() {
                   <p>No active bookings found</p>
                   <p className="text-sm">
                     {scope === 'bci' 
-                      ? 'No active BCI-managed bookings found. Switch to "All Spots" to see all active bookings in the system.' 
+                      ? 'No active shared pool bookings found. Switch to "All Spots" to see all active bookings in the system.' 
                       : 'Active bookings will appear here.'}
                   </p>
                 </div>
@@ -1927,7 +1927,7 @@ export default function AdminSpotBookingManagement() {
                   <p>No pending payments found</p>
                   <p className="text-sm">
                     {scope === 'bci' 
-                      ? 'No pending payments for BCI-managed bookings. Switch to "All Spots" to see all pending payments.' 
+                      ? 'No pending payments for shared pool bookings. Switch to "All Spots" to see all pending payments.' 
                       : 'Bookings with pending payments will appear here.'}
                   </p>
                 </div>
@@ -2243,7 +2243,7 @@ export default function AdminSpotBookingManagement() {
                   <p>No past bookings found</p>
                   <p className="text-sm">
                     {scope === 'bci' 
-                      ? 'No past BCI-managed bookings found. Switch to "All Spots" to see all past bookings in the system.' 
+                      ? 'No past shared pool bookings found. Switch to "All Spots" to see all past bookings in the system.' 
                       : 'Completed, cancelled, and expired bookings will appear here.'}
                   </p>
                 </div>
