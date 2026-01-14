@@ -5367,9 +5367,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/app-configs", requireAdmin, async (req, res) => {
     try {
       let configs = await storage.getAllAppConfigs();
+      console.log(`[AppConfigs] Found ${configs.length} existing configs`);
       
       // Auto-initialize default configs if none exist
       if (configs.length === 0) {
+        console.log("[AppConfigs] No configs found, initializing defaults...");
         const defaultConfigs = [
           {
             key: 'lock_timeout_ms',
@@ -5402,10 +5404,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ];
         
         for (const config of defaultConfigs) {
-          await storage.createAppConfig(config);
+          try {
+            await storage.createAppConfig(config);
+            console.log(`[AppConfigs] Created config: ${config.key}`);
+          } catch (createError) {
+            console.error(`[AppConfigs] Failed to create config ${config.key}:`, createError);
+          }
         }
         
         configs = await storage.getAllAppConfigs();
+        console.log(`[AppConfigs] After initialization: ${configs.length} configs`);
       }
       
       res.json(configs);
