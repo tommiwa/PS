@@ -1,77 +1,70 @@
--- Script to create/update parking spots 140-204 (excluding 152, 163, 178-180)
+-- Script to update parking spots 140-204 (excluding 152, 163, 178-180)
 -- Sets location to Level 2 (location_id = 2) and prefixes spot numbers with "P"
 
--- First, update existing spots 201-204 to have P prefix
-UPDATE parking_spots SET spot_number = 'P' || spot_number WHERE spot_number IN ('201', '202', '203', '204');
+-- Update spots 140-151 to Level 2 with P prefix
+UPDATE parking_spots SET location_id = 2, spot_number = 'P140' WHERE spot_number = '140';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P141' WHERE spot_number = '141';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P142' WHERE spot_number = '142';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P143' WHERE spot_number = '143';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P144' WHERE spot_number = '144';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P145' WHERE spot_number = '145';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P146' WHERE spot_number = '146';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P147' WHERE spot_number = '147';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P148' WHERE spot_number = '148';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P149' WHERE spot_number = '149';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P150' WHERE spot_number = '150';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P151' WHERE spot_number = '151';
 
--- Insert spots 140-151 (P140-P151)
-INSERT INTO parking_spots (id, spot_number, location_id, spot_type_id, is_bci_managed, is_active, is_bookable)
-VALUES
-  ('spot-P140', 'P140', 2, 1, true, true, true),
-  ('spot-P141', 'P141', 2, 1, true, true, true),
-  ('spot-P142', 'P142', 2, 1, true, true, true),
-  ('spot-P143', 'P143', 2, 1, true, true, true),
-  ('spot-P144', 'P144', 2, 1, true, true, true),
-  ('spot-P145', 'P145', 2, 1, true, true, true),
-  ('spot-P146', 'P146', 2, 1, true, true, true),
-  ('spot-P147', 'P147', 2, 1, true, true, true),
-  ('spot-P148', 'P148', 2, 1, true, true, true),
-  ('spot-P149', 'P149', 2, 1, true, true, true),
-  ('spot-P150', 'P150', 2, 1, true, true, true),
-  ('spot-P151', 'P151', 2, 1, true, true, true);
+-- Update spots 153-162 to Level 2 with P prefix
+UPDATE parking_spots SET location_id = 2, spot_number = 'P153' WHERE spot_number = '153';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P154' WHERE spot_number = '154';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P155' WHERE spot_number = '155';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P156' WHERE spot_number = '156';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P157' WHERE spot_number = '157';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P158' WHERE spot_number = '158';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P159' WHERE spot_number = '159';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P160' WHERE spot_number = '160';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P161' WHERE spot_number = '161';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P162' WHERE spot_number = '162';
 
--- Insert spots 153-162 (P153-P162)
-INSERT INTO parking_spots (id, spot_number, location_id, spot_type_id, is_bci_managed, is_active, is_bookable)
-VALUES
-  ('spot-P153', 'P153', 2, 1, true, true, true),
-  ('spot-P154', 'P154', 2, 1, true, true, true),
-  ('spot-P155', 'P155', 2, 1, true, true, true),
-  ('spot-P156', 'P156', 2, 1, true, true, true),
-  ('spot-P157', 'P157', 2, 1, true, true, true),
-  ('spot-P158', 'P158', 2, 1, true, true, true),
-  ('spot-P159', 'P159', 2, 1, true, true, true),
-  ('spot-P160', 'P160', 2, 1, true, true, true),
-  ('spot-P161', 'P161', 2, 1, true, true, true),
-  ('spot-P162', 'P162', 2, 1, true, true, true);
+-- Update spots 164-177 to Level 2 with P prefix
+UPDATE parking_spots SET location_id = 2, spot_number = 'P164' WHERE spot_number = '164';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P165' WHERE spot_number = '165';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P166' WHERE spot_number = '166';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P167' WHERE spot_number = '167';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P168' WHERE spot_number = '168';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P169' WHERE spot_number = '169';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P170' WHERE spot_number = '170';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P171' WHERE spot_number = '171';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P172' WHERE spot_number = '172';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P173' WHERE spot_number = '173';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P174' WHERE spot_number = '174';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P175' WHERE spot_number = '175';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P176' WHERE spot_number = '176';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P177' WHERE spot_number = '177';
 
--- Insert spots 164-177 (P164-P177)
-INSERT INTO parking_spots (id, spot_number, location_id, spot_type_id, is_bci_managed, is_active, is_bookable)
-VALUES
-  ('spot-P164', 'P164', 2, 1, true, true, true),
-  ('spot-P165', 'P165', 2, 1, true, true, true),
-  ('spot-P166', 'P166', 2, 1, true, true, true),
-  ('spot-P167', 'P167', 2, 1, true, true, true),
-  ('spot-P168', 'P168', 2, 1, true, true, true),
-  ('spot-P169', 'P169', 2, 1, true, true, true),
-  ('spot-P170', 'P170', 2, 1, true, true, true),
-  ('spot-P171', 'P171', 2, 1, true, true, true),
-  ('spot-P172', 'P172', 2, 1, true, true, true),
-  ('spot-P173', 'P173', 2, 1, true, true, true),
-  ('spot-P174', 'P174', 2, 1, true, true, true),
-  ('spot-P175', 'P175', 2, 1, true, true, true),
-  ('spot-P176', 'P176', 2, 1, true, true, true),
-  ('spot-P177', 'P177', 2, 1, true, true, true);
-
--- Insert spots 181-200 (P181-P200)
-INSERT INTO parking_spots (id, spot_number, location_id, spot_type_id, is_bci_managed, is_active, is_bookable)
-VALUES
-  ('spot-P181', 'P181', 2, 1, true, true, true),
-  ('spot-P182', 'P182', 2, 1, true, true, true),
-  ('spot-P183', 'P183', 2, 1, true, true, true),
-  ('spot-P184', 'P184', 2, 1, true, true, true),
-  ('spot-P185', 'P185', 2, 1, true, true, true),
-  ('spot-P186', 'P186', 2, 1, true, true, true),
-  ('spot-P187', 'P187', 2, 1, true, true, true),
-  ('spot-P188', 'P188', 2, 1, true, true, true),
-  ('spot-P189', 'P189', 2, 1, true, true, true),
-  ('spot-P190', 'P190', 2, 1, true, true, true),
-  ('spot-P191', 'P191', 2, 1, true, true, true),
-  ('spot-P192', 'P192', 2, 1, true, true, true),
-  ('spot-P193', 'P193', 2, 1, true, true, true),
-  ('spot-P194', 'P194', 2, 1, true, true, true),
-  ('spot-P195', 'P195', 2, 1, true, true, true),
-  ('spot-P196', 'P196', 2, 1, true, true, true),
-  ('spot-P197', 'P197', 2, 1, true, true, true),
-  ('spot-P198', 'P198', 2, 1, true, true, true),
-  ('spot-P199', 'P199', 2, 1, true, true, true),
-  ('spot-P200', 'P200', 2, 1, true, true, true);
+-- Update spots 181-204 to Level 2 with P prefix
+UPDATE parking_spots SET location_id = 2, spot_number = 'P181' WHERE spot_number = '181';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P182' WHERE spot_number = '182';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P183' WHERE spot_number = '183';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P184' WHERE spot_number = '184';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P185' WHERE spot_number = '185';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P186' WHERE spot_number = '186';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P187' WHERE spot_number = '187';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P188' WHERE spot_number = '188';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P189' WHERE spot_number = '189';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P190' WHERE spot_number = '190';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P191' WHERE spot_number = '191';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P192' WHERE spot_number = '192';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P193' WHERE spot_number = '193';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P194' WHERE spot_number = '194';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P195' WHERE spot_number = '195';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P196' WHERE spot_number = '196';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P197' WHERE spot_number = '197';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P198' WHERE spot_number = '198';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P199' WHERE spot_number = '199';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P200' WHERE spot_number = '200';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P201' WHERE spot_number = '201';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P202' WHERE spot_number = '202';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P203' WHERE spot_number = '203';
+UPDATE parking_spots SET location_id = 2, spot_number = 'P204' WHERE spot_number = '204';
