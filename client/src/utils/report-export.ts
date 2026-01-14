@@ -445,12 +445,12 @@ export async function exportSpotAssignmentsReport(data: SpotAssignmentReportResp
   
   const worksheet = workbook.addWorksheet('Spot Assignments');
   
-  worksheet.mergeCells('A1:I1');
+  worksheet.mergeCells('A1:J1');
   const titleCell = worksheet.getCell('A1');
   titleCell.value = 'BCI ParkShare - Spot Assignment Report';
   titleCell.font = { bold: true, size: 16 };
   
-  worksheet.mergeCells('A2:I2');
+  worksheet.mergeCells('A2:J2');
   const scopeLabel = data.scope === 'bci' ? 'BCI-Managed' : 'All';
   worksheet.getCell('A2').value = `Date Range: ${range.from} to ${range.to} | Scope: ${scopeLabel}`;
   
@@ -458,7 +458,7 @@ export async function exportSpotAssignmentsReport(data: SpotAssignmentReportResp
   
   worksheet.addRow([]);
   
-  const headerRow = worksheet.addRow(['Action', 'User Name', 'Email', 'Department', 'Spot Number', 'Location', 'Spot Type', 'Effective Date', 'Assigned/Removed By']);
+  const headerRow = worksheet.addRow(['Action', 'User Name', 'Email', 'Department', 'Spot Number', 'Location', 'Spot Type', 'Monthly Fee', 'Effective Date', 'Assigned/Removed By']);
   headerRow.font = { bold: true };
   
   data.assignments.forEach(assignment => {
@@ -470,6 +470,7 @@ export async function exportSpotAssignmentsReport(data: SpotAssignmentReportResp
       assignment.spot.spotNumber,
       assignment.spot.location,
       assignment.spot.spotType,
+      `$${parseFloat(assignment.spot.monthlyFee ?? "0").toFixed(2)}`,
       new Date(assignment.effectiveAt).toLocaleDateString(),
       assignment.actor ? `${assignment.actor.firstName} ${assignment.actor.lastName}` : 'System'
     ]);
@@ -483,7 +484,8 @@ export async function exportSpotAssignmentsReport(data: SpotAssignmentReportResp
   worksheet.getColumn(6).width = 25;
   worksheet.getColumn(7).width = 15;
   worksheet.getColumn(8).width = 15;
-  worksheet.getColumn(9).width = 25;
+  worksheet.getColumn(9).width = 15;
+  worksheet.getColumn(10).width = 25;
   
   const buffer = await workbook.xlsx.writeBuffer();
   const scopeSuffix = data.scope === 'bci' ? '-bci' : '';

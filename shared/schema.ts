@@ -1320,6 +1320,7 @@ export interface SpotAssignmentHistoryWithDetails extends SpotAssignmentHistory 
     spotNumber: string;
     location: string;
     spotType: string;
+    monthlyFee: string;
   };
   actor: {
     firstName: string;
@@ -1344,6 +1345,7 @@ export interface SpotAssignmentReportResponse {
       spotNumber: string;
       location: string;
       spotType: string;
+      monthlyFee: string;
     };
     actor: {
       firstName: string;

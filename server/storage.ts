@@ -3407,6 +3407,7 @@ export class MemStorage implements IStorage {
         spotNumber: parkingSpots.spotNumber,
         spotLocation: locations.office,
         spotType: spotTypesTable.name,
+        spotMonthlyFee: spotTypesTable.bciChargingAmount,
         // Actor details (join separately)
         actorFirstName: sqlOp<string | null>`actor.first_name`,
         actorLastName: sqlOp<string | null>`actor.last_name`,
@@ -3445,6 +3446,7 @@ export class MemStorage implements IStorage {
         spotNumber: row.spotNumber,
         location: row.spotLocation,
         spotType: row.spotType,
+        monthlyFee: String(row.spotMonthlyFee ?? "0"),
       },
       actor: row.actorFirstName && row.actorLastName ? {
         firstName: row.actorFirstName,

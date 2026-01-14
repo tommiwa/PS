@@ -1629,7 +1629,7 @@ export default function AdminDataManagement() {
                           name="bciChargingAmount"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>BCI Charging Amount ($)</FormLabel>
+                              <FormLabel>Monthly Fee ($)</FormLabel>
                               <FormControl>
                                 <Input 
                                   type="number"
@@ -1637,7 +1637,7 @@ export default function AdminDataManagement() {
                                   min="0"
                                   placeholder="0.00" 
                                   {...field} 
-                                  data-testid="input-spot-type-bci-charging"
+                                  data-testid="input-spot-type-monthly-fee"
                                 />
                               </FormControl>
                               <FormMessage />
@@ -1745,7 +1745,7 @@ export default function AdminDataManagement() {
                         </Button>
                       </TableHead>
                       <TableHead>Description</TableHead>
-                      <TableHead>BCI Charging ($)</TableHead>
+                      <TableHead>Monthly Fee ($)</TableHead>
                       <TableHead>
                         <Button 
                           variant="ghost" 
@@ -2207,7 +2207,7 @@ export default function AdminDataManagement() {
                 name="bciChargingAmount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>BCI Charging Amount ($)</FormLabel>
+                    <FormLabel>Monthly Fee ($)</FormLabel>
                     <FormControl>
                       <Input 
                         type="number"
@@ -2215,7 +2215,7 @@ export default function AdminDataManagement() {
                         min="0"
                         placeholder="0.00" 
                         {...field} 
-                        data-testid="input-edit-spot-type-bci-charging"
+                        data-testid="input-edit-spot-type-monthly-fee"
                       />
                     </FormControl>
                     <FormMessage />

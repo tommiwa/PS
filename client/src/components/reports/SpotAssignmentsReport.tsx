@@ -118,6 +118,8 @@ export function SpotAssignmentsReport({ data, isLoading }: SpotAssignmentsReport
                     <TableHead>Department</TableHead>
                     <TableHead>Spot Number</TableHead>
                     <TableHead>Location</TableHead>
+                    <TableHead>Spot Type</TableHead>
+                    <TableHead>Monthly Fee</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>By</TableHead>
                   </TableRow>
@@ -160,6 +162,12 @@ export function SpotAssignmentsReport({ data, isLoading }: SpotAssignmentsReport
                           <MapPin className="h-3 w-3" />
                           {assignment.spot.location}
                         </div>
+                      </TableCell>
+                      <TableCell data-testid={`text-spot-type-${assignment.id}`}>
+                        {assignment.spot.spotType}
+                      </TableCell>
+                      <TableCell data-testid={`text-monthly-fee-${assignment.id}`}>
+                        ${parseFloat(assignment.spot.monthlyFee ?? "0").toFixed(2)}
                       </TableCell>
                       <TableCell data-testid={`text-date-${assignment.id}`}>
                         {format(new Date(assignment.effectiveAt), 'MMM d, yyyy')}
