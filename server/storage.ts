@@ -2890,10 +2890,10 @@ export class MemStorage implements IStorage {
     // Filter out null entries (where spot was not found)
     const validListings = enrichedListings.filter((item): item is NonNullable<typeof item> => item !== null);
     
-    // Filter by BCI-listed (admin-created) listings if requested
+    // Filter by BCI-managed spots if requested
     if (isBciOnly) {
       return validListings
-        .filter(item => item.listing.createdByAdmin === true)
+        .filter(item => item.spot.isBciManaged)
         .map(item => item.enrichedData);
     }
     
@@ -2910,18 +2910,16 @@ export class MemStorage implements IStorage {
         renter.id as renter_id, renter.first_name as renter_first_name, 
         renter.last_name as renter_last_name, renter.email as renter_email,
         owner.id as owner_id, owner.first_name as owner_first_name, 
-        owner.last_name as owner_last_name, owner.email as owner_email,
-        sl.created_by_admin
+        owner.last_name as owner_last_name, owner.email as owner_email
       FROM bookings b
       LEFT JOIN parking_spots ps ON b.spot_id = ps.id
       LEFT JOIN locations l ON ps.location_id = l.id
       LEFT JOIN users renter ON b.renter_id = renter.id
       LEFT JOIN users owner ON b.owner_id = owner.id
-      LEFT JOIN spot_listings sl ON b.listing_id = sl.id
       WHERE 
         b.payment_status = 'paid'
         AND b.status != 'cancelled'
-        ${isBciOnly ? sqlOp`AND sl.created_by_admin = true` : sqlOp``}
+        ${isBciOnly ? sqlOp`AND ps.is_bci_managed = true` : sqlOp``}
       ORDER BY b.created_at DESC
     `;
     
@@ -2975,8 +2973,7 @@ export class MemStorage implements IStorage {
         owner.id as owner_id, owner.first_name as owner_first_name, 
         owner.last_name as owner_last_name, owner.email as owner_email,
         renter_dept.name as renter_department,
-        owner_dept.name as owner_department,
-        sl.created_by_admin
+        owner_dept.name as owner_department
       FROM bookings b
       LEFT JOIN parking_spots ps ON b.spot_id = ps.id
       LEFT JOIN locations l ON ps.location_id = l.id
@@ -2984,11 +2981,10 @@ export class MemStorage implements IStorage {
       LEFT JOIN users owner ON b.owner_id = owner.id
       LEFT JOIN departments renter_dept ON renter.department_id = renter_dept.id
       LEFT JOIN departments owner_dept ON owner.department_id = owner_dept.id
-      LEFT JOIN spot_listings sl ON b.listing_id = sl.id
       WHERE 
         (b.status = 'confirmed' OR b.status = 'pending')
         AND b.booking_date >= ${today}
-        ${isBciOnly ? sqlOp`AND sl.created_by_admin = true` : sqlOp``}
+        ${isBciOnly ? sqlOp`AND ps.is_bci_managed = true` : sqlOp``}
       ORDER BY b.booking_date ASC
     `;
     
@@ -3040,10 +3036,9 @@ export class MemStorage implements IStorage {
       SELECT COUNT(*) as total
       FROM bookings b
       LEFT JOIN parking_spots ps ON b.spot_id = ps.id
-      LEFT JOIN spot_listings sl ON b.listing_id = sl.id
       WHERE 
         (b.booking_date < ${today} OR b.status = 'completed' OR b.status = 'cancelled')
-        ${isBciOnly ? sqlOp`AND sl.created_by_admin = true` : sqlOp``}
+        ${isBciOnly ? sqlOp`AND ps.is_bci_managed = true` : sqlOp``}
     `;
     
     const countResults = await db.execute(countQuery);
@@ -3060,8 +3055,7 @@ export class MemStorage implements IStorage {
         owner.id as owner_id, owner.first_name as owner_first_name, 
         owner.last_name as owner_last_name, owner.email as owner_email,
         renter_dept.name as renter_department,
-        owner_dept.name as owner_department,
-        sl.created_by_admin
+        owner_dept.name as owner_department
       FROM bookings b
       LEFT JOIN parking_spots ps ON b.spot_id = ps.id
       LEFT JOIN locations l ON ps.location_id = l.id
@@ -3069,10 +3063,9 @@ export class MemStorage implements IStorage {
       LEFT JOIN users owner ON b.owner_id = owner.id
       LEFT JOIN departments renter_dept ON renter.department_id = renter_dept.id
       LEFT JOIN departments owner_dept ON owner.department_id = owner_dept.id
-      LEFT JOIN spot_listings sl ON b.listing_id = sl.id
       WHERE 
         (b.booking_date < ${today} OR b.status = 'completed' OR b.status = 'cancelled')
-        ${isBciOnly ? sqlOp`AND sl.created_by_admin = true` : sqlOp``}
+        ${isBciOnly ? sqlOp`AND ps.is_bci_managed = true` : sqlOp``}
       ORDER BY b.booking_date DESC
       LIMIT ${limit} OFFSET ${offset}
     `;
