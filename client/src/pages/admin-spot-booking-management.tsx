@@ -1259,8 +1259,8 @@ export default function AdminSpotBookingManagement() {
                   : 'bg-muted/40 border-b-transparent text-muted-foreground hover:text-foreground hover:bg-muted/60'
               }`}
             >
-              <Globe className="h-4 w-4" />
-              All Spots
+              <Users className="h-4 w-4" />
+              Assigned Spots
             </button>
             <button
               onClick={() => setScope('bci')}
@@ -1467,7 +1467,7 @@ export default function AdminSpotBookingManagement() {
                   <p>No available spots found</p>
                   <p className="text-sm">
                     {scope === 'bci' 
-                      ? 'No shared pool spot availability listings found. Switch to "All Spots" to see system-wide availability.' 
+                      ? 'No shared pool spot availability listings found. Switch to "Assigned Spots" to see employee-assigned spot availability.' 
                       : 'Spot availability listings will appear here.'}
                   </p>
                 </div>
@@ -1694,7 +1694,7 @@ export default function AdminSpotBookingManagement() {
                   <p>No active bookings found</p>
                   <p className="text-sm">
                     {scope === 'bci' 
-                      ? 'No active shared pool bookings found. Switch to "All Spots" to see all active bookings in the system.' 
+                      ? 'No active shared pool bookings found. Switch to "Assigned Spots" to see employee-assigned spot bookings.' 
                       : 'Active bookings will appear here.'}
                   </p>
                 </div>
@@ -1927,7 +1927,7 @@ export default function AdminSpotBookingManagement() {
                   <p>No pending payments found</p>
                   <p className="text-sm">
                     {scope === 'bci' 
-                      ? 'No pending payments for shared pool bookings. Switch to "All Spots" to see all pending payments.' 
+                      ? 'No pending payments for shared pool bookings. Switch to "Assigned Spots" to see employee-assigned spot payments.' 
                       : 'Bookings with pending payments will appear here.'}
                   </p>
                 </div>
@@ -2243,7 +2243,7 @@ export default function AdminSpotBookingManagement() {
                   <p>No past bookings found</p>
                   <p className="text-sm">
                     {scope === 'bci' 
-                      ? 'No past shared pool bookings found. Switch to "All Spots" to see all past bookings in the system.' 
+                      ? 'No past shared pool bookings found. Switch to "Assigned Spots" to see employee-assigned spot history.' 
                       : 'Completed, cancelled, and expired bookings will appear here.'}
                   </p>
                 </div>

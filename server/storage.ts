@@ -2894,14 +2894,19 @@ export class MemStorage implements IStorage {
     // Filter out null entries (where spot was not found)
     const validListings = enrichedListings.filter((item): item is NonNullable<typeof item> => item !== null);
     
-    // Filter by shared pool spots if requested (BCI-managed AND no owner assigned)
+    // Filter by scope:
+    // - Shared Pool (isBciOnly=true): BCI-managed AND no owner assigned
+    // - Assigned Spots (isBciOnly=false): everything NOT in shared pool (ensures no data loss)
     if (isBciOnly) {
       return validListings
         .filter(item => item.spot.isBciManaged && !item.spot.ownerId)
         .map(item => item.enrichedData);
     }
     
-    return validListings.map(item => item.enrichedData);
+    // Assigned Spots: everything NOT in shared pool (has owner OR is not BCI-managed)
+    return validListings
+      .filter(item => item.spot.ownerId !== null || !item.spot.isBciManaged)
+      .map(item => item.enrichedData);
   }
 
   async getPendingPaymentBookings(isBciOnly?: boolean): Promise<PendingPaymentData[]> {
@@ -2927,7 +2932,7 @@ export class MemStorage implements IStorage {
       WHERE 
         b.payment_status = 'paid'
         AND b.status != 'cancelled'
-        ${isBciOnly ? sqlOp`AND ps.is_bci_managed = true AND ps.owner_id IS NULL` : sqlOp``}
+        ${isBciOnly ? sqlOp`AND ps.is_bci_managed = true AND ps.owner_id IS NULL` : sqlOp`AND (ps.owner_id IS NOT NULL OR ps.is_bci_managed = false)`}
       ORDER BY b.created_at DESC
     `;
     
@@ -3001,7 +3006,7 @@ export class MemStorage implements IStorage {
       WHERE 
         (b.status = 'confirmed' OR b.status = 'pending')
         AND b.booking_date >= ${today}
-        ${isBciOnly ? sqlOp`AND ps.is_bci_managed = true AND ps.owner_id IS NULL` : sqlOp``}
+        ${isBciOnly ? sqlOp`AND ps.is_bci_managed = true AND ps.owner_id IS NULL` : sqlOp`AND (ps.owner_id IS NOT NULL OR ps.is_bci_managed = false)`}
       ORDER BY b.booking_date ASC
     `;
     
@@ -3059,7 +3064,7 @@ export class MemStorage implements IStorage {
       LEFT JOIN parking_spots ps ON b.spot_id = ps.id
       WHERE 
         (b.booking_date < ${today} OR b.status = 'completed' OR b.status = 'cancelled')
-        ${isBciOnly ? sqlOp`AND ps.is_bci_managed = true AND ps.owner_id IS NULL` : sqlOp``}
+        ${isBciOnly ? sqlOp`AND ps.is_bci_managed = true AND ps.owner_id IS NULL` : sqlOp`AND (ps.owner_id IS NOT NULL OR ps.is_bci_managed = false)`}
     `;
     
     const countResults = await db.execute(countQuery);
@@ -3092,7 +3097,7 @@ export class MemStorage implements IStorage {
       LEFT JOIN departments spot_owner_dept ON spot_owner.department_id = spot_owner_dept.id
       WHERE 
         (b.booking_date < ${today} OR b.status = 'completed' OR b.status = 'cancelled')
-        ${isBciOnly ? sqlOp`AND ps.is_bci_managed = true AND ps.owner_id IS NULL` : sqlOp``}
+        ${isBciOnly ? sqlOp`AND ps.is_bci_managed = true AND ps.owner_id IS NULL` : sqlOp`AND (ps.owner_id IS NOT NULL OR ps.is_bci_managed = false)`}
       ORDER BY b.booking_date DESC
       LIMIT ${limit} OFFSET ${offset}
     `;
