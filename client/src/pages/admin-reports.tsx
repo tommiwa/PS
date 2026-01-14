@@ -39,6 +39,16 @@ export default function AdminReportsPage() {
     enabled: isDateRangeValid
   });
 
+  // Flatten bookings data to show individual rows
+  const flattenedBookings = sharedPoolUsageQuery.data?.usageByUser.flatMap(user =>
+    user.bookings.map(booking => ({
+      ...booking,
+      userName: `${user.firstName} ${user.lastName}`,
+      email: user.email,
+      department: user.department
+    }))
+  ).sort((a, b) => b.bookingDate.localeCompare(a.bookingDate)) || [];
+
   return (
     <div className="flex-1 space-y-6 p-6" data-testid="page-admin-reports">
       <div className="flex justify-between items-start flex-wrap gap-4">
@@ -118,13 +128,13 @@ export default function AdminReportsPage() {
         ) : sharedPoolUsageQuery.data ? (
           <Card data-testid="shared-pool-usage-table">
             <CardHeader>
-              <CardTitle>Usage by User</CardTitle>
+              <CardTitle>Booking Details</CardTitle>
               <CardDescription>
                 {sharedPoolUsageQuery.data.summary.totalBookings} bookings | ${sharedPoolUsageQuery.data.summary.totalAmount.toFixed(2)} total
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {sharedPoolUsageQuery.data.usageByUser.length === 0 ? (
+              {flattenedBookings.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   No shared pool usage found for the selected date range.
                 </div>
@@ -132,25 +142,25 @@ export default function AdminReportsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Spot</TableHead>
+                      <TableHead>Location</TableHead>
                       <TableHead>Name</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Department</TableHead>
-                      <TableHead className="text-center">Bookings</TableHead>
-                      <TableHead className="text-right">Total Amount</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {sharedPoolUsageQuery.data.usageByUser.map((user) => (
-                      <TableRow key={user.userId}>
-                        <TableCell className="font-medium">
-                          {user.firstName} {user.lastName}
-                        </TableCell>
-                        <TableCell>{user.email}</TableCell>
-                        <TableCell>{user.department}</TableCell>
-                        <TableCell className="text-center">{user.bookingCount}</TableCell>
-                        <TableCell className="text-right font-semibold">
-                          ${user.totalAmount.toFixed(2)}
-                        </TableCell>
+                    {flattenedBookings.map((booking) => (
+                      <TableRow key={booking.bookingId}>
+                        <TableCell>{booking.bookingDate}</TableCell>
+                        <TableCell className="font-medium">{booking.spotNumber}</TableCell>
+                        <TableCell>{booking.location}</TableCell>
+                        <TableCell>{booking.userName}</TableCell>
+                        <TableCell>{booking.email}</TableCell>
+                        <TableCell>{booking.department}</TableCell>
+                        <TableCell className="text-right">${booking.amount.toFixed(2)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
