@@ -1094,7 +1094,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               </div>
             </div>
             
-            {/* Payment Status Banner */}
+            {/* Payment/Booking Status Banner */}
             {booking.status === "confirmed" && (
               <div className={`mt-4 p-3 rounded-lg flex items-center justify-between gap-3 ${
                 paymentStatus === 'pending' ? 'bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800' :
@@ -1111,13 +1111,13 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                   {paymentStatus === 'paid' && (
                     <>
                       <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                      <span className="text-sm text-blue-700 dark:text-blue-300">Awaiting owner confirmation</span>
+                      <span className="text-sm text-blue-700 dark:text-blue-300">Payment sent - awaiting owner confirmation</span>
                     </>
                   )}
                   {paymentStatus === 'received' && (
                     <>
                       <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0" />
-                      <span className="text-sm text-green-700 dark:text-green-300">Payment confirmed by owner</span>
+                      <span className="text-sm text-green-700 dark:text-green-300">Booking confirmed - Ready to use on scheduled date</span>
                     </>
                   )}
                 </div>
