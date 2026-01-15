@@ -63,32 +63,61 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
   // Filter and sort logic for both renters and owners
   const allItems: (Booking | SpotListing)[] = isOwnerView ? listings : mockBookings
 
-  // Simple text search function
+  // Simple text search function - searches all displayed fields
   const filterBySearch = (items: (Booking | SpotListing)[]) => {
     if (!searchTerm || searchTerm.trim() === '') return items
     
     const search = searchTerm.toLowerCase()
     return items.filter((item: Booking | SpotListing) => {
       if (isOwnerView) {
-        // For owners (SpotListing) - search by user-facing fields
+        // For owners (SpotListing) - search all displayed fields:
+        // Spot number, location, spot type, renter name, date, price, status
         const listing = item as any
+        const spotNumber = ((listing.spot?.spotNumber ?? listing.spotNumber ?? "") as string).toLowerCase()
+        const location = ((listing.spot?.location ?? listing.locationName ?? "") as string).toLowerCase()
+        const spotType = ((listing.spot?.spotType ?? listing.spotType ?? "") as string).toLowerCase()
+        const renterName = ((listing.renterName ?? "") as string).toLowerCase()
+        const renterEmail = ((listing.renterEmail ?? "") as string).toLowerCase()
+        const date = (listing.singleDate ?? listing.date ?? "").toLowerCase()
+        const price = String(listing.totalAmount ?? listing.dailyRate ?? listing.price ?? "")
+        const status = (listing.status ?? "").toLowerCase()
+        const paymentStatus = (listing.paymentStatus ?? "").toLowerCase()
+        
         return (
-          ((listing.spot?.spotNumber ?? "") as string).toLowerCase().includes(search) ||
-          ((listing.spot?.location ?? "") as string).toLowerCase().includes(search) ||
-          ((listing.spot?.spotType ?? "") as string).toLowerCase().includes(search) ||
-          ((listing.renterName ?? "") as string).toLowerCase().includes(search) ||
-          (listing.singleDate ?? "").toLowerCase().includes(search) ||
-          String(listing.dailyRate ?? "").includes(search)
+          spotNumber.includes(search) ||
+          location.includes(search) ||
+          spotType.includes(search) ||
+          renterName.includes(search) ||
+          renterEmail.includes(search) ||
+          date.includes(search) ||
+          price.includes(search) ||
+          status.includes(search) ||
+          paymentStatus.includes(search)
         )
       } else {
-        // For renters (Booking) - search by booking ID, spot ID, or date
-        const booking = item as Booking
+        // For renters (Booking) - search all displayed fields:
+        // Spot number, location, owner name, date, spot type, price, status
+        const booking = item as any
+        const spotNumber = ((booking.spotNumber ?? "") as string).toLowerCase()
+        const location = ((booking.location ?? "") as string).toLowerCase()
+        const ownerName = ((booking.ownerName ?? "") as string).toLowerCase()
+        const bookingDate = (booking.bookingDate ?? "").toLowerCase()
+        const spotType = ((booking.spotType ?? "") as string).toLowerCase()
+        const price = String(booking.totalAmount ?? booking.dailyRate ?? "")
+        const status = (booking.status ?? "").toLowerCase()
+        const paymentStatus = (booking.paymentStatus ?? "").toLowerCase()
+        const notes = ((booking.notes ?? "") as string).toLowerCase()
+        
         return (
-          (booking.id ?? "").toLowerCase().includes(search) ||
-          (booking.spotId ?? "").toLowerCase().includes(search) ||
-          (booking.bookingDate ?? "").toLowerCase().includes(search) ||
-          String(booking.dailyRate ?? "").includes(search) ||
-          (booking.notes ?? "").toLowerCase().includes(search)
+          spotNumber.includes(search) ||
+          location.includes(search) ||
+          ownerName.includes(search) ||
+          bookingDate.includes(search) ||
+          spotType.includes(search) ||
+          price.includes(search) ||
+          status.includes(search) ||
+          paymentStatus.includes(search) ||
+          notes.includes(search)
         )
       }
     })
