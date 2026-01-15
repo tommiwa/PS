@@ -10,7 +10,7 @@ import { storage } from "./storage";
 import { auditService } from "./audit-service";
 import { db } from "./db";
 import { users, parkingSpots, termsVersions, type User } from "@shared/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 
 // Extend Express Session to include viewAsRole
 declare module 'express-session' {
@@ -80,11 +80,14 @@ async function upsertUser(
   const existingDbUser = await db.select().from(users).where(eq(users.id, userId)).then(rows => rows[0]);
   
   // Also check by email in case admin pre-created this user with a different ID
+  // Use case-insensitive comparison to prevent duplicate users with different email cases
   let existingEmailUser = null;
   if (!existingDbUser && userEmail) {
-    existingEmailUser = await db.select().from(users).where(eq(users.email, userEmail)).then(rows => rows[0]);
+    existingEmailUser = await db.select().from(users)
+      .where(sql`LOWER(${users.email}) = LOWER(${userEmail})`)
+      .then(rows => rows[0]);
     if (existingEmailUser) {
-      console.log(`[UPSERT] Found user by email with different ID: ${existingEmailUser.id} → ${userId}`);
+      console.log(`[UPSERT] Found user by email (case-insensitive) with different ID: ${existingEmailUser.id} → ${userId}`);
     }
   }
   
