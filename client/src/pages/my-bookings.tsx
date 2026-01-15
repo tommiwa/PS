@@ -1710,19 +1710,19 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
         
         <TabsContent value="active" className="w-full space-y-3 md:space-y-4">
           {/* Search Input */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="relative flex items-center">
+            <Search className="absolute left-3 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
             <Input
               placeholder={`Search by spot, location${isOwnerView ? ', renter' : ''}...`}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 pr-9"
+              className="pl-10 pr-10 w-full"
             />
             {searchTerm && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                className="absolute right-1 h-7 w-7 z-10"
                 onClick={() => setSearchTerm("")}
               >
                 <X className="h-4 w-4" />
@@ -1766,19 +1766,19 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
 
         <TabsContent value="payment-pending" className="w-full space-y-3 md:space-y-4">
           {/* Search Input */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="relative flex items-center">
+            <Search className="absolute left-3 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
             <Input
               placeholder={`Search by spot, location${isOwnerView ? ', renter' : ''}...`}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 pr-9"
+              className="pl-10 pr-10 w-full"
             />
             {searchTerm && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                className="absolute right-1 h-7 w-7 z-10"
                 onClick={() => setSearchTerm("")}
               >
                 <X className="h-4 w-4" />
@@ -1825,19 +1825,19 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
 
         <TabsContent value="completed" className="w-full space-y-3 md:space-y-4">
           {/* Search Input */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="relative flex items-center">
+            <Search className="absolute left-3 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
             <Input
               placeholder={`Search by spot, location${isOwnerView ? ', renter' : ''}...`}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 pr-9"
+              className="pl-10 pr-10 w-full"
             />
             {searchTerm && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                className="absolute right-1 h-7 w-7 z-10"
                 onClick={() => setSearchTerm("")}
               >
                 <X className="h-4 w-4" />
