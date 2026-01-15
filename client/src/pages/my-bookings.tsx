@@ -572,7 +572,18 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
       return apiRequest(`/api/listings/${id}`, { method: 'DELETE' })
     },
     onSuccess: () => {
+      toast({
+        title: "Listing Deleted",
+        description: "The unused listing has been removed.",
+      })
       queryClient.invalidateQueries({ queryKey: ['/api/my-listings'] })
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Delete Failed",
+        description: getErrorMessage(error, "Only unused listings can be deleted."),
+        variant: "destructive",
+      })
     }
   })
 
@@ -782,11 +793,23 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               </div>
             )}
             
-            {/* Unused Warning */}
+            {/* Unused Warning with Delete Option */}
             {listing.status === "unused" && (
-              <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center gap-3">
-                <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
-                <span className="text-sm text-amber-700 dark:text-amber-300">This spot was not booked for {listing.date}</span>
+              <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                  <span className="text-sm text-amber-700">This spot was not booked for {listing.date}</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDeleteListing(listing)}
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  data-testid={`button-delete-unused-${listing.id}`}
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Delete
+                </Button>
               </div>
             )}
           </div>

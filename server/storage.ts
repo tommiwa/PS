@@ -63,7 +63,7 @@ import { auditDecorator } from "./audit-service";
 import { type IAuditStorage } from "./audit-storage";
 import { db } from "./db";
 import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, locations, spotTypesTable, termsVersions, spotAssignmentHistory, lockers, lockerWaitlist, lockerAssignmentHistory, lockerTypesTable, appConfigs } from "@shared/schema";
-import { eq, or, ilike, asc, and, notExists, sql as sqlOp, count, desc, inArray } from "drizzle-orm";
+import { eq, or, ilike, asc, and, notExists, sql as sqlOp, count, desc, inArray, isNull } from "drizzle-orm";
 
 // Storage interface with comprehensive CRUD methods
 export interface IStorage {
@@ -1065,7 +1065,8 @@ export class MemStorage implements IStorage {
   }
 
   async getSpotListingsByOwner(ownerId: string): Promise<SpotListing[]> {
-    const listings = await db.select().from(spotListings).where(eq(spotListings.ownerId, ownerId));
+    const listings = await db.select().from(spotListings)
+      .where(and(eq(spotListings.ownerId, ownerId), isNull(spotListings.deletedAt)));
     
     // Update memory cache for performance
     listings.forEach(listing => this.spotListings.set(listing.id, listing));
@@ -1073,7 +1074,8 @@ export class MemStorage implements IStorage {
   }
 
   async getSpotListingsBySpot(spotId: string): Promise<SpotListing[]> {
-    const listings = await db.select().from(spotListings).where(eq(spotListings.spotId, spotId));
+    const listings = await db.select().from(spotListings)
+      .where(and(eq(spotListings.spotId, spotId), isNull(spotListings.deletedAt)));
     
     // Update memory cache for performance
     listings.forEach(listing => this.spotListings.set(listing.id, listing));
@@ -1081,11 +1083,12 @@ export class MemStorage implements IStorage {
   }
 
   async getAllSpotListings(): Promise<SpotListing[]> {
-    return await db.select().from(spotListings);
+    return await db.select().from(spotListings).where(isNull(spotListings.deletedAt));
   }
 
   async getActiveSpotListings(): Promise<SpotListing[]> {
-    return await db.select().from(spotListings).where(eq(spotListings.status, "available"));
+    return await db.select().from(spotListings)
+      .where(and(eq(spotListings.status, "available"), isNull(spotListings.deletedAt)));
   }
 
   async createSpotListing(insertListing: InsertSpotListing): Promise<SpotListing> {
@@ -1178,10 +1181,12 @@ export class MemStorage implements IStorage {
   }
 
   async deleteSpotListing(id: string): Promise<boolean> {
-    const deleted = await db.delete(spotListings)
+    // Soft delete - set deletedAt timestamp instead of hard delete
+    const updated = await db.update(spotListings)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
       .where(eq(spotListings.id, id))
       .returning();
-    return deleted.length > 0;
+    return updated.length > 0;
   }
 
   // Booking operations

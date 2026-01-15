@@ -1621,7 +1621,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete listing
+  // Delete listing (soft delete - only for unused listings)
   app.delete("/api/listings/:id", isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
@@ -1638,6 +1638,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (existingListing.ownerId !== userId) {
         return res.status(403).json({ error: "Not authorized to delete this listing" });
+      }
+      
+      // Only allow deleting unused listings
+      if (existingListing.status !== 'unused') {
+        return res.status(400).json({ error: "Only unused listings can be deleted" });
       }
       
       const deleted = await storage.deleteListing(id);

@@ -222,6 +222,7 @@ export const spotListings = pgTable("spot_listings", {
   createdByAdmin: boolean("created_by_admin").default(false), // True if listing was created by an admin
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp - null means active
 });
 
 export const insertSpotListingSchema = createInsertSchema(spotListings).omit({
