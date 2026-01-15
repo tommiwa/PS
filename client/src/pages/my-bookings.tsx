@@ -230,11 +230,16 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     // Waiting Payment / Past: Shows:
     // 1. All booked listings (any date) - waiting for payment or awaiting confirmation
     // 2. Expired/past date listings that weren't booked
+    // EXCLUDES: completed items (status === 'used' OR paymentStatus === 'received')
     paymentPendingItems = listings.filter((l: any) => {
       const listingDate = getListingDate(l)
       const isPastDate = listingDate < today
       const isBooked = l.status === "booked" || l.isBooked
       const isExpiredAvailable = l.status === "available" && isPastDate && !l.isBooked
+      
+      // Exclude completed items from this tab
+      const isCompleted = l.status === "used" || l.paymentStatus === 'received'
+      if (isCompleted) return false
       
       // Include if booked (any date) OR if expired available (past date, not booked)
       return isBooked || isExpiredAvailable
