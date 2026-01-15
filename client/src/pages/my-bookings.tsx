@@ -710,31 +710,27 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
             </div>
             
             {/* Primary Focus: Booking Status & Renter */}
-            <div className={`p-3 rounded-lg mb-3 ${
-              effectivelyBooked 
-                ? 'bg-blue-50/80 border border-blue-200' 
-                : 'bg-blue-50/40 border border-blue-100'
-            }`}>
+            <div className="p-3 rounded-lg mb-3 bg-muted/30">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   {effectivelyBooked ? (
                     <>
-                      <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                        <User className="h-5 w-5 text-blue-600" />
+                      <div className="h-10 w-10 rounded-full bg-muted/50 flex items-center justify-center flex-shrink-0">
+                        <User className="h-5 w-5 text-foreground/70" />
                       </div>
                       <div>
-                        <p className="text-xs text-blue-600 font-medium uppercase tracking-wide">Booked By</p>
-                        <p className="text-lg font-bold text-blue-900">{listing.renterName || "Unknown Renter"}</p>
+                        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Booked By</p>
+                        <p className="text-lg font-bold">{listing.renterName || "Unknown Renter"}</p>
                       </div>
                     </>
                   ) : (
                     <>
-                      <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
-                        <Clock className="h-5 w-5 text-blue-400" />
+                      <div className="h-10 w-10 rounded-full bg-muted/50 flex items-center justify-center flex-shrink-0">
+                        <Clock className="h-5 w-5 text-foreground/60" />
                       </div>
                       <div>
-                        <p className="text-xs text-blue-500 font-medium uppercase tracking-wide">Status</p>
-                        <p className="text-lg font-bold text-blue-700">Open for Booking</p>
+                        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Status</p>
+                        <p className="text-lg font-bold">Open for Booking</p>
                       </div>
                     </>
                   )}
