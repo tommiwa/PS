@@ -214,9 +214,9 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     // For owners - categorize their listings using status and payment workflow
     const today = new Date().toISOString().split('T')[0]
     
-    // Active: ONLY listings that are available (open for booking) - NOT booked ones
+    // Active: All active listings - both available (open for booking) AND booked ones
     activeItems = listings.filter((l: any) => 
-      l.status === "available" && !l.isBooked
+      l.status === "available" || l.status === "booked" || l.isBooked
     )
     pendingItems = [] // Owners don't have pending bookings in this context
     
