@@ -665,7 +665,9 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     const isPastDate = listingDate < today
     
     // Use isBooked from API to determine actual booking status (not just listing.status from database)
-    const effectivelyBooked = listing.isBooked || listing.status === "booked"
+    // IMPORTANT: "unused" status means the listing expired without being booked - never show as booked
+    const isUnused = listing.status === "unused"
+    const effectivelyBooked = !isUnused && (listing.isBooked || listing.status === "booked")
     const isCompleted = listing.status === "used" || paymentStatus === 'received'
     const isCancelled = listing.status === "cancelled"
     
@@ -746,7 +748,17 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
             <div className="p-3 rounded-lg mb-3 bg-muted/30">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  {effectivelyBooked || isCompleted ? (
+                  {isUnused ? (
+                    <>
+                      <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                        <AlertTriangle className="h-5 w-5 text-amber-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Status</p>
+                        <p className="text-lg font-bold text-amber-700">Expired - Not Booked</p>
+                      </div>
+                    </>
+                  ) : effectivelyBooked || isCompleted ? (
                     <>
                       <div className="h-10 w-10 rounded-full bg-muted/50 flex items-center justify-center flex-shrink-0">
                         <User className="h-5 w-5 text-foreground/70" />
@@ -771,7 +783,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                   )}
                 </div>
                 <div className="text-right">
-                  <p className="text-xs text-muted-foreground">{isCompleted ? "You Earned" : "You'll Earn"}</p>
+                  <p className="text-xs text-muted-foreground">{isCompleted ? "You Earned" : isUnused ? "Listed At" : "You'll Earn"}</p>
                   <p className="text-xl font-bold text-primary">${listing.totalAmount || listing.price || listing.dailyRate}</p>
                 </div>
               </div>
@@ -789,39 +801,31 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               <span className="capitalize">{listing.spot?.spotType || "Regular"}</span>
             </div>
             
-            {/* Payment Status Banner (if applicable) */}
-            {(effectivelyBooked || isCompleted) && paymentStatus && (
+            {/* Payment Status Banner (if applicable) - only for actually booked items, not unused */}
+            {!isUnused && (effectivelyBooked || isCompleted) && paymentStatus && (
               <div className={`mt-4 p-3 rounded-lg flex items-center gap-3 ${
-                paymentStatus === 'pending' ? 'bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800' :
-                paymentStatus === 'paid' ? 'bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800' :
-                'bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800'
+                paymentStatus === 'pending' ? 'bg-amber-50 border border-amber-200' :
+                paymentStatus === 'paid' ? 'bg-blue-50 border border-blue-200' :
+                'bg-green-50 border border-green-200'
               }`}>
                 {paymentStatus === 'pending' && (
                   <>
-                    <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
-                    <span className="text-sm text-amber-700 dark:text-amber-300">Awaiting renter payment</span>
+                    <Clock className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                    <span className="text-sm text-amber-700">Awaiting renter payment</span>
                   </>
                 )}
                 {paymentStatus === 'paid' && (
                   <>
-                    <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                    <span className="text-sm text-blue-700 dark:text-blue-300">Renter has paid - please confirm receipt</span>
+                    <Info className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                    <span className="text-sm text-blue-700">Renter has paid - please confirm receipt</span>
                   </>
                 )}
                 {paymentStatus === 'received' && (
                   <>
-                    <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0" />
-                    <span className="text-sm text-green-700 dark:text-green-300">Payment confirmed</span>
+                    <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
+                    <span className="text-sm text-green-700">Payment confirmed</span>
                   </>
                 )}
-              </div>
-            )}
-            
-            {/* Unused Warning */}
-            {listing.status === "unused" && (
-              <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-3">
-                <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0" />
-                <span className="text-sm text-amber-700">This spot was not booked for {listing.date}</span>
               </div>
             )}
           </div>
@@ -1195,7 +1199,9 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     const listingDate = listing.availableDate || listing.date
     const isPastDate = listingDate < today
     
-    const effectivelyBooked = listing.isBooked || listing.status === "booked"
+    // IMPORTANT: "unused" status means the listing expired without being booked - never show as booked
+    const isUnused = listing.status === "unused"
+    const effectivelyBooked = !isUnused && (listing.isBooked || listing.status === "booked")
     const isCompleted = listing.status === "used" || paymentStatus === 'received'
     const isCancelled = listing.status === "cancelled"
     
@@ -1252,7 +1258,9 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
           <div className="hidden md:block text-sm text-muted-foreground">{listingDate}</div>
           {/* Renter - EMPHASIZED */}
           <div className="hidden md:block min-w-0">
-            {effectivelyBooked || isCompleted ? (
+            {isUnused ? (
+              <p className="text-sm font-medium text-amber-600">Expired</p>
+            ) : effectivelyBooked || isCompleted ? (
               <p className="text-sm font-semibold text-foreground truncate">{listing.renterName || "Renter"}</p>
             ) : (
               <p className="text-sm text-blue-500 font-medium">Open</p>
