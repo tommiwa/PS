@@ -752,17 +752,23 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     const canNotify = effectivelyBooked && (paymentStatus === 'pending' || !paymentStatus) && !isCompleted && !isCancelled
     const canConfirmPayment = effectivelyBooked && paymentStatus === 'paid' && !isCompleted && !isCancelled
     
-    // Get status badge with color - use effectivelyBooked for accurate display
+    // Get status badge with color - prioritize isCompleted for consistent display
     const getStatusBadge = () => {
       const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
         available: { bg: "bg-emerald-100 dark:bg-emerald-900/40", text: "text-emerald-700 dark:text-emerald-300", label: "Available" },
         booked: { bg: "bg-blue-100 dark:bg-blue-900/40", text: "text-blue-700 dark:text-blue-300", label: "Booked" },
+        completed: { bg: "bg-slate-100 dark:bg-slate-800", text: "text-slate-700 dark:text-slate-300", label: "Completed" },
         used: { bg: "bg-slate-100 dark:bg-slate-800", text: "text-slate-700 dark:text-slate-300", label: "Completed" },
         unused: { bg: "bg-amber-100 dark:bg-amber-900/40", text: "text-amber-700 dark:text-amber-300", label: "Unused" },
         cancelled: { bg: "bg-red-100 dark:bg-red-900/40", text: "text-red-700 dark:text-red-300", label: "Cancelled" },
       }
-      // If effectively booked but status says available, show as booked
-      const displayStatus = effectivelyBooked && listing.status === 'available' ? 'booked' : listing.status
+      // Prioritize: completed > cancelled > booked > available
+      let displayStatus = listing.status
+      if (isCompleted) {
+        displayStatus = 'completed'
+      } else if (effectivelyBooked && listing.status === 'available') {
+        displayStatus = 'booked'
+      }
       const config = statusConfig[displayStatus] || statusConfig.available
       return (
         <Badge variant="outline" className={`${config.bg} ${config.text} border-0 font-medium`}>
@@ -812,13 +818,15 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
             <div className="p-3 rounded-lg mb-3 bg-muted/30">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  {effectivelyBooked ? (
+                  {effectivelyBooked || isCompleted ? (
                     <>
                       <div className="h-10 w-10 rounded-full bg-muted/50 flex items-center justify-center flex-shrink-0">
                         <User className="h-5 w-5 text-foreground/70" />
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Booked By</p>
+                        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                          {isCompleted ? "Rented To" : "Booked By"}
+                        </p>
                         <p className="text-lg font-bold">{listing.renterName || "Unknown Renter"}</p>
                       </div>
                     </>
@@ -835,7 +843,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                   )}
                 </div>
                 <div className="text-right">
-                  <p className="text-xs text-muted-foreground">You'll Earn</p>
+                  <p className="text-xs text-muted-foreground">{isCompleted ? "You Earned" : "You'll Earn"}</p>
                   <p className="text-xl font-bold text-primary">${listing.totalAmount || listing.price || listing.dailyRate}</p>
                 </div>
               </div>
@@ -854,7 +862,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
             </div>
             
             {/* Payment Status Banner (if applicable) */}
-            {listing.status === "booked" && paymentStatus && (
+            {(effectivelyBooked || isCompleted) && paymentStatus && (
               <div className={`mt-4 p-3 rounded-lg flex items-center gap-3 ${
                 paymentStatus === 'pending' ? 'bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800' :
                 paymentStatus === 'paid' ? 'bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800' :
