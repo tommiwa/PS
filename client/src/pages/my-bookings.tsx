@@ -214,18 +214,19 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     // For owners - categorize their listings using status and payment workflow
     const today = new Date().toISOString().split('T')[0]
     
-    // Active: listings that are available OR booked for today/future (regardless of payment status)
+    // Active: ONLY listings that are available (open for booking) - NOT booked ones
     activeItems = listings.filter((l: any) => 
-      l.status === "available" || 
-      (l.status === "booked" && l.date >= today)
+      l.status === "available" && !l.isBooked
     )
     pendingItems = [] // Owners don't have pending bookings in this context
     
-    // Payment Pending: booked listings where payment is not yet confirmed
+    // Payment Pending: ALL booked listings where payment is not yet confirmed
     // - paymentStatus = 'pending' (awaiting renter payment)
     // - paymentStatus = 'paid' (awaiting owner confirmation)
+    // This includes both today/future AND past booked listings awaiting payment
     paymentPendingItems = listings.filter((l: any) => 
-      l.status === "booked" && (l.paymentStatus === 'pending' || l.paymentStatus === 'paid')
+      (l.status === "booked" || l.isBooked) && 
+      (l.paymentStatus === 'pending' || l.paymentStatus === 'paid' || !l.paymentStatus)
     )
     
     // Completed: used listings OR listings where payment was confirmed
@@ -671,8 +672,21 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
       )
     }
     
+    // Determine card accent color based on status
+    const getCardAccentColor = () => {
+      if (isCancelled) return 'border-l-4 border-l-red-400'
+      if (isCompleted) return 'border-l-4 border-l-slate-400'
+      if (listing.status === 'unused') return 'border-l-4 border-l-amber-400'
+      if (effectivelyBooked) {
+        if (paymentStatus === 'paid') return 'border-l-4 border-l-blue-500' // Awaiting confirmation
+        if (paymentStatus === 'pending') return 'border-l-4 border-l-amber-500' // Awaiting payment
+        return 'border-l-4 border-l-blue-400' // Booked
+      }
+      return 'border-l-4 border-l-emerald-400' // Available
+    }
+
     return (
-      <Card key={listing.id} className="overflow-hidden">
+      <Card key={listing.id} className={`overflow-hidden ${getCardAccentColor()}`}>
         <div className="flex flex-col lg:flex-row">
           {/* Main Content */}
           <div className="flex-1 p-4">
@@ -904,8 +918,18 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
       )
     }
     
+    // Determine card accent color based on status
+    const getCardAccentColor = () => {
+      if (isCancelled) return 'border-l-4 border-l-red-400'
+      if (isCompleted) return 'border-l-4 border-l-slate-400'
+      if (paymentStatus === 'paid') return 'border-l-4 border-l-blue-500' // Paid, awaiting confirmation
+      if (paymentStatus === 'pending') return 'border-l-4 border-l-amber-500' // Pending payment
+      if (isActive) return 'border-l-4 border-l-emerald-400' // Active/confirmed
+      return 'border-l-4 border-l-blue-400'
+    }
+
     return (
-      <Card key={booking.id} className="overflow-hidden">
+      <Card key={booking.id} className={`overflow-hidden ${getCardAccentColor()}`}>
         <div className="flex flex-col lg:flex-row">
           {/* Main Content */}
           <div className="flex-1 p-4">
@@ -1125,8 +1149,21 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
       return <Badge variant="outline" className={`${config.bg} ${config.text} border-0 text-xs`}>{config.label}</Badge>
     }
     
+    // Determine row accent color based on status
+    const getRowAccentColor = () => {
+      if (isCancelled) return 'border-l-4 border-l-red-400'
+      if (isCompleted) return 'border-l-4 border-l-slate-400'
+      if (listing.status === 'unused') return 'border-l-4 border-l-amber-400'
+      if (effectivelyBooked) {
+        if (paymentStatus === 'paid') return 'border-l-4 border-l-blue-500'
+        if (paymentStatus === 'pending') return 'border-l-4 border-l-amber-500'
+        return 'border-l-4 border-l-blue-400'
+      }
+      return 'border-l-4 border-l-emerald-400'
+    }
+
     return (
-      <div key={listing.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card hover-elevate">
+      <div key={listing.id} className={`flex items-center gap-3 p-3 rounded-lg border bg-card hover-elevate ${getRowAccentColor()}`}>
         <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
           <Car className="h-4 w-4 text-primary" />
         </div>
@@ -1208,8 +1245,19 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
       return <Badge variant="outline" className={`${config.bg} ${config.text} border-0 text-xs`}>{config.label}</Badge>
     }
     
+    // Determine row accent color based on status
+    const isActive = booking.status === "confirmed" && !isPastDate && !isCompleted
+    const getRowAccentColor = () => {
+      if (isCancelled) return 'border-l-4 border-l-red-400'
+      if (isCompleted) return 'border-l-4 border-l-slate-400'
+      if (paymentStatus === 'paid') return 'border-l-4 border-l-blue-500'
+      if (paymentStatus === 'pending') return 'border-l-4 border-l-amber-500'
+      if (isActive) return 'border-l-4 border-l-emerald-400'
+      return 'border-l-4 border-l-blue-400'
+    }
+
     return (
-      <div key={booking.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card hover-elevate">
+      <div key={booking.id} className={`flex items-center gap-3 p-3 rounded-lg border bg-card hover-elevate ${getRowAccentColor()}`}>
         <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
           <Car className="h-4 w-4 text-primary" />
         </div>
