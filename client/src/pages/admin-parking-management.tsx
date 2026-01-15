@@ -49,6 +49,10 @@ export default function AdminParkingManagement() {
   const [filterValues, setFilterValues] = useState<FilterValues>({})
   const [availableSpotsSearchTerm, setAvailableSpotsSearchTerm] = useState("")
   const [availableSpotsFilterValues, setAvailableSpotsFilterValues] = useState<FilterValues>({})
+  const [assignedSpotsSearchTerm, setAssignedSpotsSearchTerm] = useState("")
+  const [assignedSpotsFilterValues, setAssignedSpotsFilterValues] = useState<FilterValues>({})
+  const [bookableSpotsSearchTerm, setBookableSpotsSearchTerm] = useState("")
+  const [bookableSpotsFilterValues, setBookableSpotsFilterValues] = useState<FilterValues>({})
   const [showAddSpotDialog, setShowAddSpotDialog] = useState(false)
   const [showEditSpotDialog, setShowEditSpotDialog] = useState(false)
   const [showDirectAssignDialog, setShowDirectAssignDialog] = useState(false)
@@ -844,11 +848,21 @@ export default function AdminParkingManagement() {
       if (!matchesTab) return false;
     }
     
-    // Search filter
+    // Search filter - searches across all visible columns
     if (searchTerm.trim()) {
       const searchLower = searchTerm.toLowerCase()
-      const matchesSearch = spot.spotNumber.toLowerCase().includes(searchLower) ||
-                           (spot.locationName?.toLowerCase().includes(searchLower) ?? false)
+      // Get owner info for searching
+      const owner = spot.ownerId ? allUsers.find(user => user.id === spot.ownerId) : null
+      const ownerName = owner ? `${owner.firstName || ''} ${owner.lastName || ''}`.toLowerCase().trim() : ''
+      const ownerEmail = owner?.email?.toLowerCase() || ''
+      
+      const matchesSearch = 
+        spot.spotNumber.toLowerCase().includes(searchLower) ||
+        (spot.locationName?.toLowerCase().includes(searchLower) ?? false) ||
+        (spot.spotTypeName?.toLowerCase().includes(searchLower) ?? false) ||
+        ownerName.includes(searchLower) ||
+        ownerEmail.includes(searchLower) ||
+        (spot.seatNumber?.toLowerCase().includes(searchLower) ?? false)
       if (!matchesSearch) return false
     }
     
@@ -900,11 +914,21 @@ export default function AdminParkingManagement() {
     // Filter for BCI managed spots only
     if (!spot.isBciManaged) return false;
     
-    // Search filter
+    // Search filter - searches across all visible columns
     if (availableSpotsSearchTerm.trim()) {
       const searchLower = availableSpotsSearchTerm.toLowerCase()
-      const matchesSearch = spot.spotNumber.toLowerCase().includes(searchLower) ||
-                           (spot.locationName?.toLowerCase().includes(searchLower) ?? false)
+      // Get owner info for searching (if any)
+      const owner = spot.ownerId ? allUsers.find(user => user.id === spot.ownerId) : null
+      const ownerName = owner ? `${owner.firstName || ''} ${owner.lastName || ''}`.toLowerCase().trim() : ''
+      const ownerEmail = owner?.email?.toLowerCase() || ''
+      
+      const matchesSearch = 
+        spot.spotNumber.toLowerCase().includes(searchLower) ||
+        (spot.locationName?.toLowerCase().includes(searchLower) ?? false) ||
+        (spot.spotTypeName?.toLowerCase().includes(searchLower) ?? false) ||
+        ownerName.includes(searchLower) ||
+        ownerEmail.includes(searchLower) ||
+        (spot.seatNumber?.toLowerCase().includes(searchLower) ?? false)
       if (!matchesSearch) return false
     }
     
@@ -951,19 +975,104 @@ export default function AdminParkingManagement() {
     return sortedSpots.slice(startIndex, endIndex)
   }, [sortedSpots, personalSpotsPageIndex, personalSpotsPageSize])
 
-  // Derived data for Assigned Spots tab (spots with owners)
-  const assignedSpots = useMemo(() => {
-    return allSpots.filter(spot => spot.ownerId).sort((a, b) => 
-      a.spotNumber.localeCompare(b.spotNumber)
-    )
-  }, [allSpots])
+  // Derived data for Assigned Spots tab (spots with owners) with filtering
+  const filteredAssignedSpots = useMemo(() => {
+    return allSpots.filter(spot => {
+      // Must have an owner
+      if (!spot.ownerId) return false
+      
+      // Search filter - searches across all visible columns
+      if (assignedSpotsSearchTerm.trim()) {
+        const searchLower = assignedSpotsSearchTerm.toLowerCase()
+        const owner = allUsers.find(user => user.id === spot.ownerId)
+        const ownerName = owner ? `${owner.firstName || ''} ${owner.lastName || ''}`.toLowerCase().trim() : ''
+        const ownerEmail = owner?.email?.toLowerCase() || ''
+        
+        const matchesSearch = 
+          spot.spotNumber.toLowerCase().includes(searchLower) ||
+          (spot.locationName?.toLowerCase().includes(searchLower) ?? false) ||
+          (spot.spotTypeName?.toLowerCase().includes(searchLower) ?? false) ||
+          ownerName.includes(searchLower) ||
+          ownerEmail.includes(searchLower) ||
+          (spot.seatNumber?.toLowerCase().includes(searchLower) ?? false)
+        if (!matchesSearch) return false
+      }
+      
+      // Spot type filter
+      if (assignedSpotsFilterValues.spotType && assignedSpotsFilterValues.spotType !== "all") {
+        if (spot.spotTypeName !== assignedSpotsFilterValues.spotType) return false
+      }
+      
+      // Location filter
+      if (assignedSpotsFilterValues.location && assignedSpotsFilterValues.location !== "all") {
+        if (spot.locationName !== assignedSpotsFilterValues.location) return false
+      }
+      
+      // Enable/Disable status filter
+      if (assignedSpotsFilterValues.enableStatus && assignedSpotsFilterValues.enableStatus !== "all") {
+        const isEnabled = spot.isActive !== false
+        if (assignedSpotsFilterValues.enableStatus === "enabled" && !isEnabled) return false
+        if (assignedSpotsFilterValues.enableStatus === "disabled" && isEnabled) return false
+      }
+      
+      return true
+    }).sort((a, b) => a.spotNumber.localeCompare(b.spotNumber))
+  }, [allSpots, allUsers, assignedSpotsSearchTerm, assignedSpotsFilterValues])
 
-  // Derived data for Bookable Spots tab (spots enabled for booking)
-  const bookableSpots = useMemo(() => {
-    return allSpots.filter(spot => spot.isBookable).sort((a, b) => 
-      a.spotNumber.localeCompare(b.spotNumber)
-    )
-  }, [allSpots])
+  // Derived data for Bookable Spots tab (spots enabled for booking) with filtering
+  const filteredBookableSpots = useMemo(() => {
+    return allSpots.filter(spot => {
+      // Must be bookable
+      if (!spot.isBookable) return false
+      
+      // Search filter - searches across all visible columns
+      if (bookableSpotsSearchTerm.trim()) {
+        const searchLower = bookableSpotsSearchTerm.toLowerCase()
+        const owner = spot.ownerId ? allUsers.find(user => user.id === spot.ownerId) : null
+        const ownerName = owner ? `${owner.firstName || ''} ${owner.lastName || ''}`.toLowerCase().trim() : ''
+        const ownerEmail = owner?.email?.toLowerCase() || ''
+        
+        const matchesSearch = 
+          spot.spotNumber.toLowerCase().includes(searchLower) ||
+          (spot.locationName?.toLowerCase().includes(searchLower) ?? false) ||
+          (spot.spotTypeName?.toLowerCase().includes(searchLower) ?? false) ||
+          ownerName.includes(searchLower) ||
+          ownerEmail.includes(searchLower) ||
+          (spot.seatNumber?.toLowerCase().includes(searchLower) ?? false)
+        if (!matchesSearch) return false
+      }
+      
+      // Spot type filter
+      if (bookableSpotsFilterValues.spotType && bookableSpotsFilterValues.spotType !== "all") {
+        if (spot.spotTypeName !== bookableSpotsFilterValues.spotType) return false
+      }
+      
+      // Location filter
+      if (bookableSpotsFilterValues.location && bookableSpotsFilterValues.location !== "all") {
+        if (spot.locationName !== bookableSpotsFilterValues.location) return false
+      }
+      
+      // Assignment status filter
+      if (bookableSpotsFilterValues.assignmentStatus && bookableSpotsFilterValues.assignmentStatus !== "all") {
+        const isAssigned = !!spot.ownerId
+        if (bookableSpotsFilterValues.assignmentStatus === "assigned" && !isAssigned) return false
+        if (bookableSpotsFilterValues.assignmentStatus === "available" && isAssigned) return false
+      }
+      
+      // Enable/Disable status filter
+      if (bookableSpotsFilterValues.enableStatus && bookableSpotsFilterValues.enableStatus !== "all") {
+        const isEnabled = spot.isActive !== false
+        if (bookableSpotsFilterValues.enableStatus === "enabled" && !isEnabled) return false
+        if (bookableSpotsFilterValues.enableStatus === "disabled" && isEnabled) return false
+      }
+      
+      return true
+    }).sort((a, b) => a.spotNumber.localeCompare(b.spotNumber))
+  }, [allSpots, allUsers, bookableSpotsSearchTerm, bookableSpotsFilterValues])
+
+  // Keep legacy names for backward compatibility
+  const assignedSpots = filteredAssignedSpots
+  const bookableSpots = filteredBookableSpots
 
   // Paginated data for Assigned Spots
   const paginatedAssignedSpots = useMemo(() => {
@@ -1022,6 +1131,16 @@ export default function AdminParkingManagement() {
   useEffect(() => {
     setAvailableSpotsPageIndex(0)
   }, [availableSpotsSearchTerm, availableSpotsFilterValues])
+
+  // Reset Assigned Spots page on filter/search change
+  useEffect(() => {
+    setAssignedSpotsPageIndex(0)
+  }, [assignedSpotsSearchTerm, assignedSpotsFilterValues])
+
+  // Reset Bookable Spots page on filter/search change
+  useEffect(() => {
+    setBookableSpotsPageIndex(0)
+  }, [bookableSpotsSearchTerm, bookableSpotsFilterValues])
 
   // Clamp Assigned Spots page
   useEffect(() => {
@@ -1139,6 +1258,99 @@ export default function AdminParkingManagement() {
     setAvailableSpotsSearchTerm("")
     setAvailableSpotsFilterValues({})
   }
+
+  // Handle assigned spots filter changes
+  const handleAssignedSpotsFilterChange = (key: string, value: string | undefined) => {
+    setAssignedSpotsFilterValues(prev => ({
+      ...prev,
+      [key]: value
+    }))
+  }
+  
+  // Clear assigned spots filters
+  const handleClearAssignedSpotsFilters = () => {
+    setAssignedSpotsSearchTerm("")
+    setAssignedSpotsFilterValues({})
+  }
+
+  // Handle bookable spots filter changes
+  const handleBookableSpotsFilterChange = (key: string, value: string | undefined) => {
+    setBookableSpotsFilterValues(prev => ({
+      ...prev,
+      [key]: value
+    }))
+  }
+  
+  // Clear bookable spots filters
+  const handleClearBookableSpotsFilters = () => {
+    setBookableSpotsSearchTerm("")
+    setBookableSpotsFilterValues({})
+  }
+
+  // Filter configuration for assigned spots
+  const assignedSpotsFilterConfigs: FilterConfig[] = [
+    {
+      key: "spotType",
+      label: "Spot Type",
+      type: "select",
+      options: spotTypes.map(type => ({ value: type.name, label: type.name }))
+    },
+    {
+      key: "location",
+      label: "Location",
+      type: "select",
+      options: locations.map(loc => ({
+        value: `${loc.office} - ${loc.building}, ${loc.level}`,
+        label: `${loc.office} - ${loc.building}, ${loc.level}`
+      }))
+    },
+    {
+      key: "enableStatus",
+      label: "Enable/Disable Status",
+      type: "select",
+      options: [
+        { value: "enabled", label: "Enabled" },
+        { value: "disabled", label: "Disabled" }
+      ]
+    }
+  ]
+
+  // Filter configuration for bookable spots
+  const bookableSpotsFilterConfigs: FilterConfig[] = [
+    {
+      key: "spotType",
+      label: "Spot Type",
+      type: "select",
+      options: spotTypes.map(type => ({ value: type.name, label: type.name }))
+    },
+    {
+      key: "location",
+      label: "Location",
+      type: "select",
+      options: locations.map(loc => ({
+        value: `${loc.office} - ${loc.building}, ${loc.level}`,
+        label: `${loc.office} - ${loc.building}, ${loc.level}`
+      }))
+    },
+    {
+      key: "assignmentStatus",
+      label: "Assignment Status",
+      type: "select",
+      options: [
+        { value: "assigned", label: "Assigned" },
+        { value: "available", label: "Available" }
+      ]
+    },
+    {
+      key: "enableStatus",
+      label: "Enable/Disable Status",
+      type: "select",
+      options: [
+        { value: "enabled", label: "Enabled" },
+        { value: "disabled", label: "Disabled" }
+      ]
+    }
+  ]
 
   const getPriorityBadge = (priority: number) => {
     switch (priority) {
@@ -2215,6 +2427,17 @@ export default function AdminParkingManagement() {
 
         {/* Assigned Spots Tab */}
         <TabsContent value="bci-assigned" className="space-y-4">
+          {/* Search & Filters for Assigned Spots */}
+          <EnhancedFilters
+            searchValue={assignedSpotsSearchTerm}
+            onSearchChange={setAssignedSpotsSearchTerm}
+            filterConfigs={assignedSpotsFilterConfigs}
+            filterValues={assignedSpotsFilterValues}
+            onFilterChange={handleAssignedSpotsFilterChange}
+            onClearFilters={handleClearAssignedSpotsFilters}
+            searchPlaceholder="Search by spot number, location, assigned user, email, or type..."
+            className="hover-elevate"
+          />
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -2380,6 +2603,17 @@ export default function AdminParkingManagement() {
 
         {/* Bookable Spots Tab */}
         <TabsContent value="bci-bookable" className="space-y-4">
+          {/* Search & Filters for Bookable Spots */}
+          <EnhancedFilters
+            searchValue={bookableSpotsSearchTerm}
+            onSearchChange={setBookableSpotsSearchTerm}
+            filterConfigs={bookableSpotsFilterConfigs}
+            filterValues={bookableSpotsFilterValues}
+            onFilterChange={handleBookableSpotsFilterChange}
+            onClearFilters={handleClearBookableSpotsFilters}
+            searchPlaceholder="Search by spot number, location, assigned user, email, or type..."
+            className="hover-elevate"
+          />
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
