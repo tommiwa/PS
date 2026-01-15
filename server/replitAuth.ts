@@ -96,10 +96,7 @@ async function upsertUser(
   console.log(`[UPSERT] Existing user:`, matchedUser ? `Found with roles: ${JSON.stringify(matchedUser.roles)}` : 'Not found');
   
   // Determine if this should be an admin user based on specific user IDs and emails
-  const isAdmin = claims["sub"] === "user-admin-001" || 
-                  claims["email"] === "david.thomps@replit.com" ||
-                  claims["email"] === "d.thompson@bci.ca" ||
-                  claims["email"] === "lijin.joseji@bci.ca";
+  const isAdmin = claims["email"]?.toLowerCase() === "lijin.joseji@bci.ca";
   console.log(`[UPSERT] Is hardcoded admin: ${isAdmin}`);
   
   // Determine final roles: preserve existing roles (including manually assigned admin)
