@@ -153,6 +153,9 @@ export default function AdminDataManagement() {
   // Pagination state - App Configs
   const [configPageIndex, setConfigPageIndex] = useState(0)
   const [configPageSize, setConfigPageSize] = useState(10)
+  
+  // Active tab state
+  const [activeTab, setActiveTab] = useState("departments")
 
   // Department forms
   const addDepartmentForm = useForm<DepartmentFormData>({
@@ -923,7 +926,10 @@ export default function AdminDataManagement() {
 
       {cardsVisible && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="data-management-cards">
-          <Card className="hover-elevate">
+          <Card 
+            className="hover-elevate cursor-pointer active-elevate-2"
+            onClick={() => setActiveTab("departments")}
+          >
             <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Departments</CardTitle>
               <div className="rounded-full border-2 border-blue-400 p-2">
@@ -947,7 +953,10 @@ export default function AdminDataManagement() {
             </CardContent>
           </Card>
 
-          <Card className="hover-elevate">
+          <Card 
+            className="hover-elevate cursor-pointer active-elevate-2"
+            onClick={() => setActiveTab("locations")}
+          >
             <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Locations</CardTitle>
               <div className="rounded-full border-2 border-green-400 p-2">
@@ -971,7 +980,10 @@ export default function AdminDataManagement() {
             </CardContent>
           </Card>
 
-          <Card className="hover-elevate">
+          <Card 
+            className="hover-elevate cursor-pointer active-elevate-2"
+            onClick={() => setActiveTab("spot-types")}
+          >
             <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Spot Types</CardTitle>
               <div className="rounded-full border-2 border-purple-400 p-2">
@@ -995,11 +1007,14 @@ export default function AdminDataManagement() {
             </CardContent>
           </Card>
 
-          <Card className="hover-elevate">
+          <Card 
+            className="hover-elevate cursor-pointer active-elevate-2"
+            onClick={() => setActiveTab("app-configs")}
+          >
             <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Locations</CardTitle>
+              <CardTitle className="text-sm font-medium">App Settings</CardTitle>
               <div className="rounded-full border-2 border-amber-400 p-2">
-                <MapPin className="h-4 w-4 text-amber-600" />
+                <Database className="h-4 w-4 text-amber-600" />
               </div>
             </CardHeader>
             <CardContent>
@@ -1013,7 +1028,7 @@ export default function AdminDataManagement() {
                   <div className="text-2xl font-bold" data-testid="text-active-locations">
                     {activeLocations}
                   </div>
-                  <p className="text-xs text-muted-foreground">Active</p>
+                  <p className="text-xs text-muted-foreground">Active Locations</p>
                 </>
               )}
             </CardContent>
@@ -1021,7 +1036,7 @@ export default function AdminDataManagement() {
         </div>
       )}
 
-      <Tabs defaultValue="departments" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="departments" data-testid="tab-departments" className="gap-2">
             <Building2 className="h-4 w-4 !text-blue-600" />
