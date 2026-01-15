@@ -68,6 +68,92 @@ import { getTodayInTimezone, formatDateInTimezone, isDateInPast, isDateTodayOrFu
 // Lock duration configuration
 const LOCK_DURATION_MS = 120000; // 2 minutes (120 seconds)
 
+// Listing date validation constants
+const MAX_FUTURE_MONTHS = 6;
+
+// Helper function to get all dates covered by a listing
+function getListingDates(listing: {
+  listingType: string;
+  singleDate?: string | null;
+  periodStartDate?: string | null;
+  periodEndDate?: string | null;
+  recurringStartDate?: string | null;
+  recurringEndDate?: string | null;
+  daysOfWeek?: number[] | null;
+}): string[] {
+  const dates: string[] = [];
+  
+  if (listing.listingType === 'single' && listing.singleDate) {
+    dates.push(listing.singleDate);
+  } else if (listing.listingType === 'period' && listing.periodStartDate && listing.periodEndDate) {
+    // Generate all dates in the period
+    const start = new Date(listing.periodStartDate);
+    const end = new Date(listing.periodEndDate);
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      dates.push(d.toISOString().split('T')[0]);
+    }
+  } else if (listing.listingType === 'recurring' && listing.recurringStartDate && listing.daysOfWeek?.length) {
+    // Generate dates for recurring listing (up to end date or 6 months)
+    const start = new Date(listing.recurringStartDate);
+    const maxFutureDate = new Date();
+    maxFutureDate.setMonth(maxFutureDate.getMonth() + MAX_FUTURE_MONTHS);
+    const end = listing.recurringEndDate 
+      ? new Date(Math.min(new Date(listing.recurringEndDate).getTime(), maxFutureDate.getTime()))
+      : maxFutureDate;
+    
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const dayOfWeek = d.getDay(); // 0=Sunday, 1=Monday, etc.
+      if (listing.daysOfWeek.includes(dayOfWeek)) {
+        dates.push(d.toISOString().split('T')[0]);
+      }
+    }
+  }
+  
+  return dates;
+}
+
+// Helper function to check if two listings have overlapping dates
+function checkListingOverlap(
+  newListing: {
+    listingType: string;
+    singleDate?: string | null;
+    periodStartDate?: string | null;
+    periodEndDate?: string | null;
+    recurringStartDate?: string | null;
+    recurringEndDate?: string | null;
+    daysOfWeek?: number[] | null;
+  },
+  existingListing: {
+    listingType: string;
+    singleDate?: string | null;
+    periodStartDate?: string | null;
+    periodEndDate?: string | null;
+    recurringStartDate?: string | null;
+    recurringEndDate?: string | null;
+    daysOfWeek?: number[] | null;
+  }
+): string[] {
+  const newDates = new Set(getListingDates(newListing));
+  const existingDates = getListingDates(existingListing);
+  
+  // Find overlapping dates
+  return existingDates.filter(date => newDates.has(date));
+}
+
+// Helper to calculate max allowed future date (6 months from today)
+function getMaxFutureDate(): Date {
+  const maxDate = new Date();
+  maxDate.setMonth(maxDate.getMonth() + MAX_FUTURE_MONTHS);
+  maxDate.setHours(23, 59, 59, 999);
+  return maxDate;
+}
+
+// Helper to validate date is not beyond 6 months
+function isDateBeyondMaxFuture(dateStr: string): boolean {
+  const date = new Date(dateStr);
+  return date > getMaxFutureDate();
+}
+
 // Zod schemas for admin endpoints
 const toggleBookabilitySchema = z.object({
   spotId: z.string().min(1, "spotId is required"),
@@ -1272,6 +1358,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (isPastDate(validatedData.recurringStartDate)) {
           return res.status(400).json({ 
             error: "Recurring start date cannot be in the past. Please select today or a future date."
+          });
+        }
+      }
+      
+      // MAX FUTURE DATE VALIDATION: Ensure dates are within 6 months from today
+      const maxFutureDateStr = getMaxFutureDate().toISOString().split('T')[0];
+      if (validatedData.listingType === 'single') {
+        if (validatedData.singleDate && isDateBeyondMaxFuture(validatedData.singleDate)) {
+          return res.status(400).json({ 
+            error: `Cannot create listings more than ${MAX_FUTURE_MONTHS} months in the future. Maximum allowed date is ${maxFutureDateStr}.`
+          });
+        }
+      } else if (validatedData.listingType === 'period') {
+        if (validatedData.periodStartDate && isDateBeyondMaxFuture(validatedData.periodStartDate)) {
+          return res.status(400).json({ 
+            error: `Period start date cannot be more than ${MAX_FUTURE_MONTHS} months in the future. Maximum allowed date is ${maxFutureDateStr}.`
+          });
+        }
+        if (validatedData.periodEndDate && isDateBeyondMaxFuture(validatedData.periodEndDate)) {
+          return res.status(400).json({ 
+            error: `Period end date cannot be more than ${MAX_FUTURE_MONTHS} months in the future. Maximum allowed date is ${maxFutureDateStr}.`
+          });
+        }
+      } else if (validatedData.listingType === 'recurring') {
+        if (validatedData.recurringStartDate && isDateBeyondMaxFuture(validatedData.recurringStartDate)) {
+          return res.status(400).json({ 
+            error: `Recurring start date cannot be more than ${MAX_FUTURE_MONTHS} months in the future. Maximum allowed date is ${maxFutureDateStr}.`
+          });
+        }
+        if (validatedData.recurringEndDate && isDateBeyondMaxFuture(validatedData.recurringEndDate)) {
+          return res.status(400).json({ 
+            error: `Recurring end date cannot be more than ${MAX_FUTURE_MONTHS} months in the future. Maximum allowed date is ${maxFutureDateStr}.`
+          });
+        }
+        // For recurring without end date, we auto-bound to 6 months for overlap checking.
+        // Require end date for recurring listings to ensure clear boundaries
+        if (!validatedData.recurringEndDate) {
+          // Auto-set the end date to 6 months from now for recurring listings
+          validatedData.recurringEndDate = maxFutureDateStr;
+        }
+      }
+      
+      // OVERLAP CHECK: Ensure no duplicate or overlapping listings for the same spot
+      const existingListings = await storage.getSpotListingsBySpot(validatedData.spotId);
+      const activeListings = existingListings.filter(l => l.status === 'available' || l.status === 'booked');
+      
+      for (const existingListing of activeListings) {
+        const overlappingDates = checkListingOverlap(
+          {
+            listingType: validatedData.listingType,
+            singleDate: validatedData.singleDate,
+            periodStartDate: validatedData.periodStartDate,
+            periodEndDate: validatedData.periodEndDate,
+            recurringStartDate: validatedData.recurringStartDate,
+            recurringEndDate: validatedData.recurringEndDate,
+            daysOfWeek: validatedData.daysOfWeek
+          },
+          existingListing
+        );
+        
+        if (overlappingDates.length > 0) {
+          const spot = await storage.getParkingSpot(validatedData.spotId);
+          const overlapCount = overlappingDates.length;
+          const sampleDates = overlappingDates.slice(0, 3).join(', ');
+          const moreText = overlapCount > 3 ? ` and ${overlapCount - 3} more date(s)` : '';
+          
+          return res.status(409).json({ 
+            error: `This spot already has a listing that overlaps with the dates you selected. Conflicting dates: ${sampleDates}${moreText}. Please remove the existing listing first or choose different dates.`
           });
         }
       }
@@ -4873,52 +5027,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Unauthorized" });
       }
       
-      // Helper function to check if two date ranges overlap
-      const checkOverlap = (
-        listing1: { listingType: string; singleDate?: string | null; periodStartDate?: string | null; periodEndDate?: string | null },
-        listing2: { listingType: string; singleDate?: string | null; periodStartDate?: string | null; periodEndDate?: string | null }
-      ): boolean => {
-        // Single vs Single
-        if (listing1.listingType === 'single' && listing2.listingType === 'single') {
-          return listing1.singleDate === listing2.singleDate;
+      // DATE VALIDATION: Ensure all dates are today or in the future
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayStr = today.toISOString().split('T')[0];
+      
+      if (listingType === 'single') {
+        if (singleDate && singleDate < todayStr) {
+          return res.status(400).json({ 
+            error: "Cannot create listing for past dates. Please select today or a future date."
+          });
         }
-        
-        // Single vs Period
-        if (listing1.listingType === 'single' && listing2.listingType === 'period') {
-          return listing1.singleDate! >= listing2.periodStartDate! && listing1.singleDate! <= listing2.periodEndDate!;
+      } else if (listingType === 'period') {
+        if (periodStartDate && periodStartDate < todayStr) {
+          return res.status(400).json({ 
+            error: "Period start date cannot be in the past. Please select today or a future date."
+          });
         }
-        if (listing1.listingType === 'period' && listing2.listingType === 'single') {
-          return listing2.singleDate! >= listing1.periodStartDate! && listing2.singleDate! <= listing1.periodEndDate!;
+        if (periodEndDate && periodEndDate < todayStr) {
+          return res.status(400).json({ 
+            error: "Period end date cannot be in the past."
+          });
         }
-        
-        // Period vs Period
-        if (listing1.listingType === 'period' && listing2.listingType === 'period') {
-          return listing1.periodStartDate! <= listing2.periodEndDate! && listing2.periodStartDate! <= listing1.periodEndDate!;
+      }
+      
+      // MAX FUTURE DATE VALIDATION: Ensure dates are within 6 months from today
+      const maxFutureDateStr = getMaxFutureDate().toISOString().split('T')[0];
+      if (listingType === 'single') {
+        if (singleDate && isDateBeyondMaxFuture(singleDate)) {
+          return res.status(400).json({ 
+            error: `Cannot create listings more than ${MAX_FUTURE_MONTHS} months in the future. Maximum allowed date is ${maxFutureDateStr}.`
+          });
         }
-        
-        return false;
-      };
+      } else if (listingType === 'period') {
+        if (periodStartDate && isDateBeyondMaxFuture(periodStartDate)) {
+          return res.status(400).json({ 
+            error: `Period start date cannot be more than ${MAX_FUTURE_MONTHS} months in the future. Maximum allowed date is ${maxFutureDateStr}.`
+          });
+        }
+        if (periodEndDate && isDateBeyondMaxFuture(periodEndDate)) {
+          return res.status(400).json({ 
+            error: `Period end date cannot be more than ${MAX_FUTURE_MONTHS} months in the future. Maximum allowed date is ${maxFutureDateStr}.`
+          });
+        }
+      }
       
       // Check for overlapping listings on each spot
       for (const spotId of spotIds) {
-        const existingListings = await storage.getActiveSpotListings();
-        const spotListings = existingListings.filter(l => l.spotId === spotId);
+        const existingListings = await storage.getSpotListingsBySpot(spotId);
+        const activeListings = existingListings.filter(l => l.status === 'available' || l.status === 'booked');
         
         const newListing = {
           listingType,
           singleDate: singleDate || null,
           periodStartDate: periodStartDate || null,
-          periodEndDate: periodEndDate || null
+          periodEndDate: periodEndDate || null,
+          recurringStartDate: null,
+          recurringEndDate: null,
+          daysOfWeek: null
         };
         
-        for (const existing of spotListings) {
-          if (checkOverlap(newListing, existing)) {
+        for (const existing of activeListings) {
+          const overlappingDates = checkListingOverlap(newListing, existing);
+          
+          if (overlappingDates.length > 0) {
             const spot = await storage.getParkingSpot(spotId);
-            const dateDesc = listingType === 'single' 
-              ? singleDate 
-              : `${periodStartDate} to ${periodEndDate}`;
+            const overlapCount = overlappingDates.length;
+            const sampleDates = overlappingDates.slice(0, 3).join(', ');
+            const moreText = overlapCount > 3 ? ` and ${overlapCount - 3} more date(s)` : '';
+            
             return res.status(409).json({ 
-              error: `Spot ${spot?.spotNumber || spotId} already has a listing that overlaps with ${dateDesc}. Please remove the existing listing first or choose different dates.` 
+              error: `Spot ${spot?.spotNumber || spotId} already has a listing that overlaps with the dates you selected. Conflicting dates: ${sampleDates}${moreText}. Please remove the existing listing first or choose different dates.`
             });
           }
         }
