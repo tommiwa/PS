@@ -33,7 +33,7 @@ import { TablePagination } from "@/components/shared/TablePagination"
 import { 
   Users, Car, Clock, AlertTriangle, TrendingUp, Plus, 
   ListOrdered, CalendarDays,
-  Timer, Target, CheckCircle2, Search, Filter,
+  Timer, Target, CheckCircle2, Search, Filter, Check, ChevronsUpDown,
   Zap, Accessibility, Building, MoreHorizontal, Info, RefreshCw,
   Trash2, Edit, UserMinus, UserCheck, Download, FileText,
   Eye, EyeOff, Layers, Sparkles, Loader2, MapPin
@@ -73,6 +73,7 @@ export default function AdminParkingManagement() {
   const [selectedUserForWaiting, setSelectedUserForWaiting] = useState("")
   const [selectedUserForAssign, setSelectedUserForAssign] = useState("")
   const [selectedUserForAvailableSpot, setSelectedUserForAvailableSpot] = useState("")
+  const [userPickerOpen, setUserPickerOpen] = useState(false)
   const [assignAvailableSpotFormData, setAssignAvailableSpotFormData] = useState({
     isBciManaged: true
   })
@@ -3266,7 +3267,13 @@ export default function AdminParkingManagement() {
       </Dialog>
 
       {/* Assign Available Spot to User Dialog */}
-      <Dialog open={showAssignAvailableSpotDialog} onOpenChange={setShowAssignAvailableSpotDialog}>
+      <Dialog open={showAssignAvailableSpotDialog} onOpenChange={(open) => {
+        setShowAssignAvailableSpotDialog(open);
+        if (!open) {
+          setUserPickerOpen(false);
+          setSelectedUserForAvailableSpot("");
+        }
+      }}>
         <DialogContent className="max-w-md" data-testid="dialog-assign-available-spot">
           <DialogHeader>
             <DialogTitle>Assign Available Spot</DialogTitle>
@@ -3277,21 +3284,57 @@ export default function AdminParkingManagement() {
                 <p>Assigning parking spot <strong>{selectedAvailableSpot.spotNumber}</strong> at {selectedAvailableSpot.locationName}</p>
                 <div>
                   <label className="text-sm font-medium">Select User</label>
-                  <Select 
-                    value={selectedUserForAvailableSpot} 
-                    onValueChange={setSelectedUserForAvailableSpot}
-                  >
-                    <SelectTrigger data-testid="select-user-for-available-spot">
-                      <SelectValue placeholder="Choose user to assign spot to..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {allUsers.map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.name} ({user.email}) - {user.department}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover open={userPickerOpen} onOpenChange={setUserPickerOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={userPickerOpen}
+                        className="w-full justify-between font-normal"
+                        data-testid="select-user-for-available-spot"
+                      >
+                        {selectedUserForAvailableSpot ? (
+                          (() => {
+                            const user = allUsers.find(u => u.id === selectedUserForAvailableSpot);
+                            return user ? `${user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim()} (${user.email})` : "Select user...";
+                          })()
+                        ) : (
+                          "Search and select user..."
+                        )}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[400px] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Type to search users by name or email..." />
+                        <CommandList>
+                          <CommandEmpty>No user found.</CommandEmpty>
+                          <CommandGroup>
+                            {allUsers.map((user) => (
+                              <CommandItem
+                                key={user.id}
+                                value={`${user.name || ''} ${user.firstName || ''} ${user.lastName || ''} ${user.email || ''} ${user.department || ''}`}
+                                onSelect={() => {
+                                  setSelectedUserForAvailableSpot(user.id);
+                                  setUserPickerOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={`mr-2 h-4 w-4 ${
+                                    selectedUserForAvailableSpot === user.id ? "opacity-100" : "opacity-0"
+                                  }`}
+                                />
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim()}</span>
+                                  <span className="text-xs text-muted-foreground">{user.email} - {user.department || 'Unknown'}</span>
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div className="flex gap-2 pt-4">
                   <Button
