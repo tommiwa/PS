@@ -1582,6 +1582,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const { dailyRate, singleDate, notes } = req.body;
       
+      // DATE VALIDATION: Ensure date is today or in the future (same as create)
+      if (singleDate) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayStr = today.toISOString().split('T')[0];
+        
+        if (singleDate < todayStr) {
+          return res.status(400).json({ 
+            error: "Cannot update listing to a past date. Please select today or a future date."
+          });
+        }
+        
+        // MAX FUTURE DATE VALIDATION: Ensure date is within 6 months from today
+        const maxFutureDateStr = getMaxFutureDate().toISOString().split('T')[0];
+        if (isDateBeyondMaxFuture(singleDate)) {
+          return res.status(400).json({ 
+            error: `Cannot update listing to more than ${MAX_FUTURE_MONTHS} months in the future. Maximum allowed date is ${maxFutureDateStr}.`
+          });
+        }
+      }
+      
+      // PRICE LIMIT CHECK: Validate daily rate against max_daily_rate config (same as create)
+      if (dailyRate !== undefined) {
+        const maxDailyRateConfig = await storage.getAppConfigValue('max_daily_rate');
+        const maxDailyRate = maxDailyRateConfig ? parseFloat(maxDailyRateConfig) : null;
+        if (maxDailyRate && parseFloat(dailyRate) > maxDailyRate) {
+          return res.status(400).json({ 
+            error: `Daily rate cannot exceed $${maxDailyRate}. Please enter a rate of $${maxDailyRate} or less.`
+          });
+        }
+      }
+      
       // Check for duplicate listing if date is being changed
       if (singleDate && singleDate !== existingListing.singleDate) {
         // Get all listings for this spot and check for date conflict
