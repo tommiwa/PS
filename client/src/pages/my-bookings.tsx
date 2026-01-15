@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { SpotListingForm } from "@/components/spot-listing-form"
 import { EnhancedFilters, type FilterConfig, type FilterValues } from "@/components/ui/enhanced-filters"
-import { Calendar, Search, Filter, Download, Clock, CheckCircle, CheckCircle2, XCircle, Car, MapPin, DollarSign, AlertTriangle, Plus, Edit, Trash2, CreditCard, Info, Building, Ban, Eye, FileText, CalendarCheck, Receipt, LayoutGrid, List, User } from "lucide-react"
+import { Calendar, Search, Filter, Download, Clock, CheckCircle, CheckCircle2, XCircle, Car, MapPin, DollarSign, AlertTriangle, Plus, Edit, Trash2, CreditCard, Info, Building, Ban, Eye, FileText, CalendarCheck, Receipt, LayoutGrid, List, User, Bell } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { isPastDate } from "@/utils/date-utils"
 import { useMutation, useQuery } from "@tanstack/react-query"
@@ -671,6 +671,41 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     }
   }
 
+  // Mutation for sending payment reminder notification
+  const sendPaymentReminderMutation = useMutation({
+    mutationFn: async (bookingId: string) => {
+      return apiRequest(`/api/bookings/${bookingId}/payment-reminder`, { 
+        method: 'POST'
+      })
+    },
+    onSuccess: () => {
+      toast({
+        title: "Reminder Sent",
+        description: "Payment reminder has been sent to the renter.",
+      })
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Send Reminder",
+        description: getErrorMessage(error, "Could not send payment reminder. Please try again."),
+        variant: "destructive",
+      })
+    }
+  })
+
+  const handleSendPaymentReminder = async (bookingId: string, renterName: string) => {
+    const confirmed = await confirm({
+      title: "Send Payment Reminder",
+      description: `Send a payment reminder notification to ${renterName}?`,
+      confirmText: "Send Reminder",
+      cancelText: "Cancel"
+    })
+    
+    if (confirmed) {
+      sendPaymentReminderMutation.mutate(bookingId)
+    }
+  }
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "confirmed":
@@ -704,10 +739,12 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     // Action visibility rules:
     // - canEdit: Only for available listings that are NOT past, NOT booked, NOT completed, NOT cancelled
     // - canCancel: Only for available/future listings that are NOT booked, NOT completed, NOT cancelled, NOT past
+    // - canNotify: Booked but payment pending - can send reminder to renter
     // - canConfirmPayment: Only for booked listings where renter has paid but owner hasn't confirmed
     // - showReceipt: Only for completed listings
     const canEdit = listing.status === "available" && !isPastDate && !effectivelyBooked && !isCompleted && !isCancelled
     const canCancel = listing.status === "available" && !isPastDate && !effectivelyBooked && !isCompleted && !isCancelled
+    const canNotify = effectivelyBooked && (paymentStatus === 'pending' || !paymentStatus) && !isCompleted && !isCancelled
     const canConfirmPayment = effectivelyBooked && paymentStatus === 'paid' && !isCompleted && !isCancelled
     
     // Get status badge with color - use effectivelyBooked for accurate display
@@ -883,6 +920,25 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>Cancel Listing</TooltipContent>
+              </Tooltip>
+            )}
+            
+            {canNotify && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleSendPaymentReminder(listing.bookingId || listing.id, listing.renterName || "Renter")}
+                    disabled={sendPaymentReminderMutation.isPending}
+                    data-testid={`button-notify-${listing.id}`}
+                    className="flex-1 lg:flex-none text-amber-600 hover:text-amber-700"
+                  >
+                    <Bell className="h-4 w-4 mr-2" />
+                    <span className="hidden sm:inline">Notify</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Send Payment Reminder</TooltipContent>
               </Tooltip>
             )}
             

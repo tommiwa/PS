@@ -3939,6 +3939,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/bookings/:id/payment-reminder - Owner sends payment reminder to renter
+  app.post("/api/bookings/:id/payment-reminder", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = getAuthenticatedUserId(req);
+      
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      const booking = await storage.getBooking(id);
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      // Check if booking belongs to the user (as owner) or user is admin
+      const user = await storage.getUser(userId);
+      const isAdmin = user?.roles?.includes('admin') ?? false;
+      
+      if (booking.ownerId !== userId && !isAdmin) {
+        return res.status(403).json({ error: "Not authorized to send reminder for this booking" });
+      }
+
+      // Validate current state - can only send reminder if payment is pending
+      if (booking.paymentStatus !== 'pending') {
+        return res.status(400).json({ 
+          error: booking.paymentStatus === 'paid' 
+            ? "Renter has already marked payment as sent" 
+            : `Payment already ${booking.paymentStatus}`
+        });
+      }
+
+      // Get renter info for notification
+      const renter = await storage.getUser(booking.renterId!);
+      if (!renter) {
+        return res.status(404).json({ error: "Renter not found" });
+      }
+
+      // Get spot info
+      const spot = await storage.getParkingSpot(booking.spotId);
+
+      // Send payment reminder notification to renter using the notification service
+      const { sendPaymentReminderNotification: sendReminder } = await import('./notification-service');
+      await sendReminder(
+        { name: renter.name || renter.email || 'Renter', email: renter.email || '', id: renter.id },
+        {
+          bookingId: id,
+          spotNumber: spot?.spotNumber || 'Unknown',
+          amount: parseFloat(booking.totalAmount?.toString() || booking.dailyRate?.toString() || '0'),
+          dueDate: new Date(booking.bookingDate)
+        }
+      );
+      
+      await auditService.logAction("UPDATE", "booking", {
+        entityId: id,
+        message: `Payment reminder sent for booking ${id} to renter ${renter.email}`,
+        after: { action: 'payment_reminder_sent', renterId: booking.renterId }
+      });
+
+      res.json({ success: true, message: "Payment reminder sent successfully" });
+    } catch (error) {
+      console.error("Error sending payment reminder:", error);
+      res.status(500).json({ error: "Failed to send payment reminder" });
+    }
+  });
+
   // GET /api/admin/disputes - List disputes with filters (Admin only)
   app.get("/api/admin/disputes", requireAdmin, async (req, res) => {
     try {
