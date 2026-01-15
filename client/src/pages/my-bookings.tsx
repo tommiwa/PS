@@ -217,27 +217,27 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     // Helper to get listing date
     const getListingDate = (l: any) => l.date || l.singleDate || ''
     
-    // Active: Current/future dates only - both available and booked
-    // Shows listings where date >= today
+    // Active: ONLY current/future dates that are AVAILABLE (open for booking, not yet booked)
+    // Once booked, it moves to the second tab
     activeItems = listings.filter((l: any) => {
       const listingDate = getListingDate(l)
       const isFutureOrToday = listingDate >= today
-      const isActiveStatus = l.status === "available" || l.status === "booked" || l.isBooked
-      return isActiveStatus && isFutureOrToday
+      const isAvailable = l.status === "available" && !l.isBooked
+      return isAvailable && isFutureOrToday
     })
     pendingItems = [] // Owners don't have pending bookings in this context
     
-    // Payment Pending / Past: Shows listings that are:
-    // 1. Past dates (any status - available becomes "unused", booked needs payment)
-    // 2. OR booked listings awaiting payment (any date)
+    // Waiting Payment / Past: Shows:
+    // 1. All booked listings (any date) - waiting for payment or awaiting confirmation
+    // 2. Expired/past date listings that weren't booked
     paymentPendingItems = listings.filter((l: any) => {
       const listingDate = getListingDate(l)
       const isPastDate = listingDate < today
       const isBooked = l.status === "booked" || l.isBooked
-      const isAwaitingPayment = isBooked && (l.paymentStatus === 'pending' || l.paymentStatus === 'paid' || !l.paymentStatus)
+      const isExpiredAvailable = l.status === "available" && isPastDate && !l.isBooked
       
-      // Include if past date OR if booked and awaiting payment
-      return isPastDate || isAwaitingPayment
+      // Include if booked (any date) OR if expired available (past date, not booked)
+      return isBooked || isExpiredAvailable
     })
     
     // Completed: used listings OR listings where payment was confirmed
