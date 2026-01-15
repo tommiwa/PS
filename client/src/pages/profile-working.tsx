@@ -717,7 +717,7 @@ export default function Profile() {
                                 </FormControl>
                                 <SelectContent>
                                   <SelectItem value="none">No preference</SelectItem>
-                                  {spotTypes.map((type) => (
+                                  {spotTypes.filter(type => type.name.toLowerCase() !== 'reserved').map((type) => (
                                     <SelectItem key={type.id} value={type.id.toString()}>
                                       {type.name}
                                     </SelectItem>
@@ -1213,7 +1213,7 @@ export default function Profile() {
                                   </FormControl>
                                   <SelectContent>
                                     <SelectItem value="none">No preference</SelectItem>
-                                    {spotTypes.map((type) => (
+                                    {spotTypes.filter(type => type.name.toLowerCase() !== 'reserved').map((type) => (
                                       <SelectItem key={type.id} value={type.id.toString()}>
                                         {type.name}
                                       </SelectItem>
