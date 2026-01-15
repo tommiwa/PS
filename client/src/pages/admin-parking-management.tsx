@@ -413,6 +413,8 @@ export default function AdminParkingManagement() {
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/all-spots"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/available-spots"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/spot-listings"] });
       
       const dateDescription = variables.listingType === "single" 
         ? `for ${variables.singleDate}`
