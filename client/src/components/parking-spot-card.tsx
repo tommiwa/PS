@@ -210,7 +210,7 @@ export function ParkingSpotCard({
       data-testid={`card-parking-spot-${spot.id}`}
     >
       {/* Header Section with Spot Number and Type */}
-      <div className="p-4 pb-3 bg-gradient-to-r from-blue-50/60 to-transparent border-b">
+      <div className="p-4 pb-3 bg-gradient-to-r from-blue-100 to-blue-50/30 border-b">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2">
@@ -256,7 +256,7 @@ export function ParkingSpotCard({
       </div>
 
       {/* Price and Date Section */}
-      <div className="p-4 pb-3 bg-gradient-to-r from-green-50/40 to-transparent">
+      <div className="p-4 pb-3 bg-gradient-to-r from-green-100/80 to-green-50/30">
         <div className="flex items-center justify-between gap-4">
           <div>
             <div className="text-xs text-muted-foreground mb-1">Daily Rate</div>
@@ -279,8 +279,8 @@ export function ParkingSpotCard({
       </div>
 
       {/* Owner Section */}
-      <div className="px-4 pb-4 pt-3 bg-gradient-to-r from-slate-50/50 to-transparent">
-        <div className="flex items-center gap-2 p-3 bg-white/60 border border-slate-100 rounded-md">
+      <div className="px-4 pb-4 pt-3 bg-gradient-to-r from-slate-100 to-slate-50/30">
+        <div className="flex items-center gap-2 p-3 bg-white border border-slate-200 rounded-md shadow-sm">
           <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
             <User className="h-4 w-4 text-slate-500" />
           </div>
