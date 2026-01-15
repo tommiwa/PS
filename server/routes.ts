@@ -1680,8 +1680,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate request body
       const validatedData = insertSpotListingSchema.partial().parse(req.body);
       
-      // Check for duplicate listing if date is being changed
+      // DATE VALIDATION: Ensure date is today or in the future (same as create/PUT)
       const newDate = validatedData.singleDate;
+      if (newDate) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayStr = today.toISOString().split('T')[0];
+        
+        if (newDate < todayStr) {
+          return res.status(400).json({ 
+            error: "Cannot update listing to a past date. Please select today or a future date."
+          });
+        }
+        
+        // MAX FUTURE DATE VALIDATION: Ensure date is within 6 months from today
+        const maxFutureDateStr = getMaxFutureDate().toISOString().split('T')[0];
+        if (isDateBeyondMaxFuture(newDate)) {
+          return res.status(400).json({ 
+            error: `Cannot update listing to more than ${MAX_FUTURE_MONTHS} months in the future. Maximum allowed date is ${maxFutureDateStr}.`
+          });
+        }
+      }
+      
+      // PRICE LIMIT CHECK: Validate daily rate against max_daily_rate config (same as create/PUT)
+      if (validatedData.dailyRate !== undefined) {
+        const maxDailyRateConfig = await storage.getAppConfigValue('max_daily_rate');
+        const maxDailyRate = maxDailyRateConfig ? parseFloat(maxDailyRateConfig) : null;
+        const rateValue = typeof validatedData.dailyRate === 'string' 
+          ? parseFloat(validatedData.dailyRate) 
+          : validatedData.dailyRate;
+        if (maxDailyRate && rateValue > maxDailyRate) {
+          return res.status(400).json({ 
+            error: `Daily rate cannot exceed $${maxDailyRate}. Please enter a rate of $${maxDailyRate} or less.`
+          });
+        }
+      }
+      
+      // Check for duplicate listing if date is being changed
       const currentDate = existingListing.singleDate;
       
       if (newDate && newDate !== currentDate) {
