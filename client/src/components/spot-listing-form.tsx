@@ -38,6 +38,8 @@ interface SpotListingFormProps {
 }
 
 export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListingFormProps) {
+  // When editing, always treat as single day since each listing day is independent
+  const isEditMode = !!initialData
   const [listingType, setListingType] = useState<"single" | "period" | "recurring">("single")
   const [formData, setFormData] = useState({
     spotId: "",
@@ -74,9 +76,8 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
   // Populate form with initial data when editing an existing listing
   useEffect(() => {
     if (initialData && userSpots.length > 0) {
-      // Set listing type
-      const type = initialData.listingType || "single"
-      setListingType(type as "single" | "period" | "recurring")
+      // In edit mode, always use single day type since each listing is treated independently
+      setListingType("single")
       
       // Find and set the spot
       const spotId = initialData.spotId || initialData.spot?.id || ""
@@ -147,8 +148,8 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
       errors.price = "Valid price is required"
     }
 
-    // Date validations based on listing type
-    if (listingType === "single") {
+    // Date validations - in edit mode, always validate single day only
+    if (isEditMode || listingType === "single") {
       if (!formData.date) {
         errors.date = "Date is required"
       }
@@ -187,31 +188,54 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
     setIsSubmitting(true)
     
     try {
-      // Create listing via API
-      const listingData = {
-        spotId: formData.spotId,
-        listingType,
-        price: parseFloat(formData.price),
-        singleDate: listingType === "single" ? formData.date : null,
-        periodStartDate: listingType === "period" ? formData.startDate : null,
-        periodEndDate: listingType === "period" ? formData.endDate : null,
-        recurringStartDate: listingType === "recurring" ? formData.recurringStartDate : null,
-        recurringEndDate: listingType === "recurring" ? formData.recurringEndDate || null : null,
-        daysOfWeek: listingType === "recurring" ? formData.recurringDays : null,
-        notes: formData.description || null
+      if (isEditMode) {
+        // Update existing listing - only single day fields since each listing is independent
+        const updateData = {
+          dailyRate: formData.price,
+          singleDate: formData.date,
+          notes: formData.description || null
+        }
+
+        const listingId = initialData.id
+        const response = await fetch(`/api/spot-listings/${listingId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updateData)
+        })
+
+        if (!response.ok) {
+          throw new Error("Failed to update listing. Please try again.")
+        }
+
+        console.log('Updated spot listing:', { listingId, ...updateData })
+      } else {
+        // Create new listing via API
+        const listingData = {
+          spotId: formData.spotId,
+          listingType,
+          price: parseFloat(formData.price),
+          singleDate: listingType === "single" ? formData.date : null,
+          periodStartDate: listingType === "period" ? formData.startDate : null,
+          periodEndDate: listingType === "period" ? formData.endDate : null,
+          recurringStartDate: listingType === "recurring" ? formData.recurringStartDate : null,
+          recurringEndDate: listingType === "recurring" ? formData.recurringEndDate || null : null,
+          daysOfWeek: listingType === "recurring" ? formData.recurringDays : null,
+          notes: formData.description || null
+        }
+
+        const response = await fetch('/api/spot-listings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(listingData)
+        })
+
+        if (!response.ok) {
+          throw new Error("Failed to create listing. Please try again.")
+        }
+
+        console.log('Submitting spot listing:', { ...formData, listingType })
       }
-
-      const response = await fetch('/api/spot-listings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(listingData)
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to create listing. Please try again.")
-      }
-
-      console.log('Submitting spot listing:', { ...formData, listingType })
+      
       onSubmit({ ...formData, listingType })
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : "An unexpected error occurred")
@@ -243,40 +267,42 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
 
   return (
     <div className="space-y-6">
-      {/* Listing Type Selection */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Choose Listing Type
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <RadioGroup value={listingType} onValueChange={(value: string) => setListingType(value as "single" | "period" | "recurring")} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="single" id="single" />
-              <Label htmlFor="single" className="cursor-pointer flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                Single Day
-              </Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="period" id="period" />
-              <Label htmlFor="period" className="cursor-pointer flex items-center gap-2">
-                <CalendarDays className="h-4 w-4" />
-                Date Range
-              </Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="recurring" id="recurring" />
-              <Label htmlFor="recurring" className="cursor-pointer flex items-center gap-2">
-                <Repeat className="h-4 w-4" />
-                Recurring Days
-              </Label>
-            </div>
-          </RadioGroup>
-        </CardContent>
-      </Card>
+      {/* Listing Type Selection - Only show when creating new listing, not when editing */}
+      {!isEditMode && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Choose Listing Type
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RadioGroup value={listingType} onValueChange={(value: string) => setListingType(value as "single" | "period" | "recurring")} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="single" id="single" />
+                <Label htmlFor="single" className="cursor-pointer flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  Single Day
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="period" id="period" />
+                <Label htmlFor="period" className="cursor-pointer flex items-center gap-2">
+                  <CalendarDays className="h-4 w-4" />
+                  Date Range
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="recurring" id="recurring" />
+                <Label htmlFor="recurring" className="cursor-pointer flex items-center gap-2">
+                  <Repeat className="h-4 w-4" />
+                  Recurring Days
+                </Label>
+              </div>
+            </RadioGroup>
+          </CardContent>
+        </Card>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Spot Details */}
@@ -289,33 +315,59 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="spotId">Select Your Parking Spot *</Label>
-                {spotsLoading ? (
-                  <div className="text-sm text-muted-foreground">Loading your spots...</div>
-                ) : userSpots.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">
-                    No spots found. Please add a spot in "My Spots" first.
-                  </div>
-                ) : (
-                  <Select value={formData.spotId} onValueChange={handleSpotSelection}>
-                    <SelectTrigger data-testid="select-parking-spot">
-                      <SelectValue placeholder="Select your parking spot" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {userSpots.map((spot) => (
-                        <SelectItem key={spot.id} value={spot.id}>
-                          {spot.spotNumber} - {spot.locationName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-                {validationErrors.spotId && (
-                  <p className="text-sm text-red-600">{validationErrors.spotId}</p>
-                )}
-              </div>
-              {selectedSpot && (
+              {isEditMode ? (
+                /* In edit mode, show spot info as read-only */
+                <div className="space-y-2">
+                  <Label>Parking Spot</Label>
+                  {selectedSpot ? (
+                    <div className="p-3 bg-muted rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        {getSpotTypeIcon(selectedSpot.spotTypeName)}
+                        <span className="font-semibold">{selectedSpot.spotNumber}</span>
+                        <Badge variant="outline">{selectedSpot.spotTypeName}</Badge>
+                        {selectedSpot.isIndoor && <Badge variant="secondary">Indoor</Badge>}
+                      </div>
+                      <p className="text-sm text-muted-foreground flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        {selectedSpot.locationName}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-muted rounded-lg text-sm text-muted-foreground">
+                      Spot: {initialData?.spotNumber || initialData?.spot?.spotNumber || 'Unknown'}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* In create mode, allow spot selection */
+                <div className="space-y-2">
+                  <Label htmlFor="spotId">Select Your Parking Spot *</Label>
+                  {spotsLoading ? (
+                    <div className="text-sm text-muted-foreground">Loading your spots...</div>
+                  ) : userSpots.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">
+                      No spots found. Please add a spot in "My Spots" first.
+                    </div>
+                  ) : (
+                    <Select value={formData.spotId} onValueChange={handleSpotSelection}>
+                      <SelectTrigger data-testid="select-parking-spot">
+                        <SelectValue placeholder="Select your parking spot" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {userSpots.map((spot) => (
+                          <SelectItem key={spot.id} value={spot.id}>
+                            {spot.spotNumber} - {spot.locationName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  {validationErrors.spotId && (
+                    <p className="text-sm text-red-600">{validationErrors.spotId}</p>
+                  )}
+                </div>
+              )}
+              {!isEditMode && selectedSpot && (
                 <div className="space-y-2">
                   <Label>Selected Spot Details</Label>
                   <div className="p-3 bg-muted rounded-lg">
@@ -357,11 +409,11 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
           </CardContent>
         </Card>
 
-        {/* Date Selection Based on Type */}
-        {listingType === "single" && (
+        {/* Date Selection Based on Type - In edit mode, always show single day */}
+        {(isEditMode || listingType === "single") && (
           <Card>
             <CardHeader>
-              <CardTitle>Single Day Listing</CardTitle>
+              <CardTitle>{isEditMode ? "Listing Date" : "Single Day Listing"}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
@@ -382,7 +434,7 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
           </Card>
         )}
 
-        {listingType === "period" && (
+        {!isEditMode && listingType === "period" && (
           <Card>
             <CardHeader>
               <CardTitle>Date Range Listing</CardTitle>
@@ -419,7 +471,7 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
           </Card>
         )}
 
-        {listingType === "recurring" && (
+        {!isEditMode && listingType === "recurring" && (
           <Card>
             <CardHeader>
               <CardTitle>Recurring Days Listing</CardTitle>
@@ -560,9 +612,9 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
             type="submit" 
             disabled={
               isSubmitting || 
-              !formData.spotId || 
+              (!isEditMode && !formData.spotId) || 
               !formData.price ||
-              (listingType === "recurring" && formData.recurringDays.length === 0)
+              (!isEditMode && listingType === "recurring" && formData.recurringDays.length === 0)
             }
             className="flex-1"
             data-testid="button-submit-listing"
@@ -570,8 +622,10 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
             {isSubmitting ? (
               <>
                 <Clock className="h-4 w-4 mr-2 animate-spin" />
-                Creating Listing...
+                {isEditMode ? "Saving Changes..." : "Creating Listing..."}
               </>
+            ) : isEditMode ? (
+              "Save Changes"
             ) : (
               `Create ${listingType === "single" ? "Single Day" : listingType === "period" ? "Period" : "Recurring"} Listing`
             )}
