@@ -1558,23 +1558,23 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               <TooltipTrigger asChild>
                 <Card 
                   className="hover-elevate cursor-pointer active-elevate-2" 
-                  onClick={() => setActiveTab("all")}
-                  data-testid="card-stat-negative"
+                  onClick={() => setActiveTab("payment-pending")}
+                  data-testid="card-stat-pending"
                 >
                   <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Spots Unused</CardTitle>
-                    <div className="rounded-full border-2 border-orange-400 p-2">
-                      <AlertTriangle className="h-4 w-4 text-orange-600" />
+                    <CardTitle className="text-sm font-medium">Awaiting Confirmation</CardTitle>
+                    <div className="rounded-full border-2 border-amber-400 p-2">
+                      <Clock className="h-4 w-4 text-amber-600" />
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{unusedItems.length}</div>
-                    <p className="text-xs text-orange-600">Listed but not booked</p>
+                    <div className="text-2xl font-bold">{paymentPendingItems.length}</div>
+                    <p className="text-xs text-amber-600">Pending payment confirmation</p>
                   </CardContent>
                 </Card>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Click to view all listings</p>
+                <p>Click to view pending confirmations</p>
               </TooltipContent>
             </Tooltip>
             
