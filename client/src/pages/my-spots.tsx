@@ -181,6 +181,12 @@ export default function MySpots() {
   })
   const maxDailyRate = maxDailyRateConfig?.value ? parseFloat(maxDailyRateConfig.value) : null
 
+  // Fetch default daily rate from system settings
+  const { data: defaultDailyRateConfig } = useQuery<{ value: string } | null>({
+    queryKey: ["/api/app-configs", "default_daily_rate"],
+  })
+  const systemDefaultRate = defaultDailyRateConfig?.value || "10"
+
   // Payment dialog state
   const [showPaymentDialog, setShowPaymentDialog] = useState(false)
   const [paymentFormData, setPaymentFormData] = useState({
@@ -560,10 +566,13 @@ export default function MySpots() {
 
   const handleOpenCreateListing = (spot: DBParkingSpot) => {
     setSelectedSpotForListing(spot)
-    // Pre-populate form with spot's default price if available
+    // Pre-populate form: spot's default price > system default rate
+    const defaultRate = spot.defaultPrice && parseFloat(spot.defaultPrice) > 0 
+      ? spot.defaultPrice 
+      : systemDefaultRate
     setListingFormData(prev => ({
       ...prev,
-      dailyRate: spot.defaultPrice || "",
+      dailyRate: defaultRate,
       // Reset other fields for new listing
       listingType: "single",
       singleDate: "",
@@ -1206,7 +1215,7 @@ export default function MySpots() {
                     min="0"
                     max={maxDailyRate || undefined}
                     step="0.01"
-                    placeholder="0.00"
+                    placeholder={`e.g. ${systemDefaultRate}`}
                     value={listingFormData.dailyRate}
                     onChange={(e) => {
                       const value = e.target.value
@@ -1221,7 +1230,7 @@ export default function MySpots() {
                       }
                       setListingFormData(prev => ({ ...prev, dailyRate: value }))
                     }}
-                    className="pl-7 min-h-11"
+                    className="pl-7 min-h-11 placeholder:text-muted-foreground/50"
                     data-testid="input-daily-rate"
                   />
                 </div>

@@ -65,6 +65,12 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
     enabled: true // Always fetch spots when form opens
   })
 
+  // Fetch default daily rate from system settings
+  const { data: defaultDailyRateConfig } = useQuery<{ value: string }>({
+    queryKey: ['/api/app-configs', 'default_daily_rate'],
+  })
+  const systemDefaultRate = defaultDailyRateConfig?.value || "10"
+
   const updateFormData = (key: string, value: any) => {
     setFormData(prev => ({ ...prev, [key]: value }))
   }
@@ -73,6 +79,17 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
     const spot = userSpots.find((s) => s.id === spotId)
     setSelectedSpot(spot || null)
     updateFormData("spotId", spotId)
+    
+    // Auto-populate price: use spot's default price if set, otherwise system default
+    if (spot) {
+      const spotDefaultPrice = (spot as any).defaultPrice
+      if (spotDefaultPrice && parseFloat(spotDefaultPrice) > 0) {
+        updateFormData("price", String(spotDefaultPrice))
+      } else if (!formData.price) {
+        // Only set system default if price is empty
+        updateFormData("price", systemDefaultRate)
+      }
+    }
   }
 
   const handleRecurringDayChange = (day: string, checked: boolean) => {
@@ -290,11 +307,12 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                   type="number"
                   min="0"
                   step="0.01"
-                  placeholder="25"
+                  placeholder={`e.g. ${systemDefaultRate}`}
                   value={formData.price}
                   onChange={(e) => updateFormData("price", e.target.value)}
                   required
                   data-testid="input-price"
+                  className="placeholder:text-muted-foreground/50"
                 />
                 {validationErrors.price && (
                   <p className="text-sm text-red-600">{validationErrors.price}</p>
