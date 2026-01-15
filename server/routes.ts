@@ -1561,6 +1561,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // PUT /api/spot-listings/:id - Update spot listing (Owner)
+  app.put("/api/spot-listings/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+      
+      // Check if listing exists and belongs to the user
+      const existingListing = await storage.getSpotListing(id);
+      if (!existingListing) {
+        return res.status(404).json({ error: "Listing not found" });
+      }
+      
+      if (existingListing.ownerId !== userId) {
+        return res.status(403).json({ error: "Not authorized to update this listing" });
+      }
+      
+      const { dailyRate, singleDate, notes } = req.body;
+      
+      // Check for duplicate listing if date is being changed
+      if (singleDate && singleDate !== existingListing.singleDate) {
+        // Get all listings for this spot and check for date conflict
+        const spotListings = await storage.getSpotListingsBySpot(existingListing.spotId);
+        const duplicateListing = spotListings.find(listing => 
+          listing.id !== id && // Exclude current listing
+          listing.singleDate === singleDate &&
+          listing.status !== 'cancelled' // Ignore cancelled listings
+        );
+        
+        if (duplicateListing) {
+          return res.status(400).json({ 
+            error: `A listing already exists for this spot on ${singleDate}. Please choose a different date.` 
+          });
+        }
+      }
+      
+      // Update the listing
+      const updateData: any = {};
+      if (dailyRate !== undefined) updateData.dailyRate = dailyRate;
+      if (singleDate !== undefined) updateData.singleDate = singleDate;
+      if (notes !== undefined) updateData.notes = notes;
+      
+      const updatedListing = await storage.updateListing(id, updateData);
+      
+      if (!updatedListing) {
+        return res.status(404).json({ error: "Failed to update listing" });
+      }
+      
+      // Audit the update
+      await auditService.logAction("UPDATE", "spot_listing", {
+        entityId: updatedListing.id,
+        message: `Updated spot listing for ${updatedListing.spotId} on ${updatedListing.singleDate}`,
+        before: existingListing,
+        after: updatedListing
+      });
+      
+      res.json(updatedListing);
+    } catch (error) {
+      console.error("Error updating spot listing:", error);
+      res.status(500).json({ error: "Failed to update spot listing" });
+    }
+  });
+
   // Update listing (Edit)
   app.patch("/api/listings/:id", isAuthenticated, async (req: any, res) => {
     try {

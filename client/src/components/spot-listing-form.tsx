@@ -204,7 +204,8 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
         })
 
         if (!response.ok) {
-          throw new Error("Failed to update listing. Please try again.")
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || "Failed to update listing. Please try again.")
         }
 
         console.log('Updated spot listing:', { listingId, ...updateData })
