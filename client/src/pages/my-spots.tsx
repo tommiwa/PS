@@ -721,68 +721,8 @@ export default function MySpots() {
         </div>
       </div>
 
-      {/* Overview Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-        <Card>
-          <CardHeader className="p-3 md:p-4 pb-2">
-            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Car className="h-4 w-4" />
-              Active Spots
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-3 md:p-4 pt-0">
-            <div className="text-xl md:text-2xl font-bold">{activeSpots}</div>
-            <p className="text-xs text-muted-foreground">Out of {totalSpots} total</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="p-3 md:p-4 pb-2">
-            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <DollarSign className="h-4 w-4" />
-              Total Spots
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-3 md:p-4 pt-0">
-            <div className="text-xl md:text-2xl font-bold">{totalSpots}</div>
-            <p className="text-xs text-muted-foreground">Registered spots</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="p-3 md:p-4 pb-2">
-            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Inactive Spots
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-3 md:p-4 pt-0">
-            <div className="text-xl md:text-2xl font-bold">{totalSpots - activeSpots}</div>
-            <p className="text-xs text-muted-foreground">Need activation</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="p-3 md:p-4 pb-2">
-            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Utilization
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-3 md:p-4 pt-0">
-            <div className="text-xl md:text-2xl font-bold">{totalSpots > 0 ? Math.round((activeSpots / totalSpots) * 100) : 0}%</div>
-            <p className="text-xs text-muted-foreground">Active spots</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Spot Management */}
-      <div className="w-full">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg md:text-xl font-semibold flex items-center gap-2">
-            <Grid className="h-4 w-4 md:h-5 md:w-5" />
-            Spot Management
-          </h2>
-        </div>
-
-        <div className="space-y-4">
+      {/* Spots List */}
+      <div className="space-y-4">
           {/* Loading State */}
           {isLoading ? (
             <div className="text-center py-8">
@@ -797,8 +737,8 @@ export default function MySpots() {
             /* Spots List */
             <div className="space-y-4">
               {userSpots.map((spot) => (
-          <Card key={spot.id} className={`${!spot.isActive ? 'opacity-60' : ''}`}>
-            <CardContent className="p-3 md:p-6">
+          <Card key={spot.id} className={`border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50/50 to-transparent ${!spot.isActive ? 'opacity-60' : ''}`}>
+            <CardContent className="p-4 md:p-6">
               <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-4">
                 <div className="flex items-start gap-3">
                   <div className="text-2xl">{getSpotTypeIcon(getSpotTypeById(spot.spotTypeId))}</div>
@@ -1000,7 +940,6 @@ export default function MySpots() {
               ))}
             </div>
           )}
-        </div>
       </div>
 
       {/* Edit Spot Dialog */}
