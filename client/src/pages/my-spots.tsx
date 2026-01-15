@@ -740,7 +740,7 @@ export default function MySpots() {
               {userSpots.map((spot) => (
           <Card key={spot.id} className={`overflow-hidden ${!spot.isActive ? 'opacity-60' : ''}`}>
             {/* Header Section - Blue */}
-            <div className="p-4 md:p-5 bg-gradient-to-r from-blue-100 to-blue-50/30 border-b">
+            <div className="p-4 md:p-5 bg-gradient-to-r from-blue-50/70 to-blue-50/20 border-b">
               <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                 <div className="flex items-start gap-3">
                   <div className="text-2xl">{getSpotTypeIcon(getSpotTypeById(spot.spotTypeId))}</div>
@@ -831,7 +831,7 @@ export default function MySpots() {
             </div>
 
             {/* Default Settings Section */}
-            <div className="p-4 md:p-5 bg-gradient-to-r from-blue-50/80 to-blue-50/30">
+            <div className="p-4 md:p-5 bg-gradient-to-r from-blue-50/50 to-blue-50/20">
                 <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wide">Default Settings</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Default Daily Rate */}
@@ -907,7 +907,7 @@ export default function MySpots() {
               </div>
 
             {/* Footer Section */}
-            <div className="p-4 md:p-5 bg-gradient-to-r from-blue-50/60 to-transparent border-t">
+            <div className="p-4 md:p-5 bg-gradient-to-r from-blue-50/40 to-transparent border-t">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 {/* Show info for BCI-managed spots */}
                 <div className="flex items-center gap-2">
