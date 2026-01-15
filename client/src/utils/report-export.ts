@@ -443,53 +443,65 @@ export async function exportSpotAssignmentsReport(data: SpotAssignmentReportResp
   const workbook = new ExcelJS.Workbook();
   const range = dateRange || data.dateRange;
   
-  const worksheet = workbook.addWorksheet('Spot Assignments');
+  // Calculate stats
+  const optInCount = data.assignments.filter(a => a.action === 'assigned').length;
+  const optOutCount = data.assignments.filter(a => a.action === 'unassigned').length;
   
-  worksheet.mergeCells('A1:J1');
+  const worksheet = workbook.addWorksheet('Spot Assignment Changes');
+  
+  worksheet.mergeCells('A1:K1');
   const titleCell = worksheet.getCell('A1');
-  titleCell.value = 'BCI ParkShare - Spot Assignment Report';
+  titleCell.value = 'BCI ParkShare - Spot Assignment Changes Report';
   titleCell.font = { bold: true, size: 16 };
   
-  worksheet.mergeCells('A2:J2');
+  worksheet.mergeCells('A2:K2');
   const scopeLabel = data.scope === 'bci' ? 'BCI-Managed' : 'All';
   worksheet.getCell('A2').value = `Date Range: ${range.from} to ${range.to} | Scope: ${scopeLabel}`;
   
   worksheet.getCell('A3').value = `Generated: ${new Date().toLocaleString()}`;
   
+  // Add summary stats
+  worksheet.addRow([]);
+  const summaryRow = worksheet.addRow(['Summary:', `Total Changes: ${data.assignments.length}`, `Opt-In: ${optInCount}`, `Opt-Out: ${optOutCount}`]);
+  summaryRow.getCell(1).font = { bold: true };
+  
   worksheet.addRow([]);
   
-  const headerRow = worksheet.addRow(['Action', 'User Name', 'Email', 'Department', 'Spot Number', 'Location', 'Spot Type', 'Monthly Fee', 'Effective Date', 'Assigned/Removed By']);
+  const headerRow = worksheet.addRow(['Action', 'Fee Change', 'Employee Name', 'Email', 'Department', 'Spot Number', 'Location', 'Spot Type', 'Monthly Fee', 'Effective Date', 'Changed By']);
   headerRow.font = { bold: true };
   
   data.assignments.forEach(assignment => {
+    const monthlyFee = parseFloat(assignment.spot.monthlyFee ?? "0");
     worksheet.addRow([
-      assignment.action === 'assigned' ? 'Assigned' : 'Unassigned',
+      assignment.action === 'assigned' ? 'Opt-In (Assigned)' : 'Opt-Out (Unassigned)',
+      assignment.action === 'assigned' ? `+$${monthlyFee.toFixed(2)}` : `-$${monthlyFee.toFixed(2)}`,
       `${assignment.user.firstName} ${assignment.user.lastName}`,
       assignment.user.email,
       assignment.user.department,
       assignment.spot.spotNumber,
       assignment.spot.location,
       assignment.spot.spotType,
-      `$${parseFloat(assignment.spot.monthlyFee ?? "0").toFixed(2)}`,
+      `$${monthlyFee.toFixed(2)}`,
       new Date(assignment.effectiveAt).toLocaleDateString(),
       assignment.actor ? `${assignment.actor.firstName} ${assignment.actor.lastName}` : 'System'
     ]);
   });
   
-  worksheet.getColumn(1).width = 12;
-  worksheet.getColumn(2).width = 25;
-  worksheet.getColumn(3).width = 30;
-  worksheet.getColumn(4).width = 20;
-  worksheet.getColumn(5).width = 12;
-  worksheet.getColumn(6).width = 25;
-  worksheet.getColumn(7).width = 15;
+  worksheet.getColumn(1).width = 20;
+  worksheet.getColumn(2).width = 12;
+  worksheet.getColumn(3).width = 25;
+  worksheet.getColumn(4).width = 30;
+  worksheet.getColumn(5).width = 20;
+  worksheet.getColumn(6).width = 12;
+  worksheet.getColumn(7).width = 25;
   worksheet.getColumn(8).width = 15;
   worksheet.getColumn(9).width = 15;
-  worksheet.getColumn(10).width = 25;
+  worksheet.getColumn(10).width = 15;
+  worksheet.getColumn(11).width = 25;
   
   const buffer = await workbook.xlsx.writeBuffer();
   const scopeSuffix = data.scope === 'bci' ? '-bci' : '';
-  saveAs(new Blob([buffer]), `spot-assignments-report${scopeSuffix}-${new Date().toISOString().split('T')[0]}.xlsx`);
+  saveAs(new Blob([buffer]), `spot-assignment-changes${scopeSuffix}-${new Date().toISOString().split('T')[0]}.xlsx`);
 }
 
 export async function exportSharedPoolUsageReport(data: SharedPoolUsageReportResponse, dateRange?: { from: string; to: string }) {

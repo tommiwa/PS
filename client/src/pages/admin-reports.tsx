@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useReportFilters } from '@/components/reports/useReportFilters';
 import { exportSharedPoolUsageReport, exportSpotAssignmentsReport } from '@/utils/report-export';
-import { AlertCircle, FileSpreadsheet, ChevronDown, ChevronRight, Car, UserPlus } from 'lucide-react';
+import { AlertCircle, FileSpreadsheet, ChevronDown, ChevronRight, Car, UserPlus, UserMinus, ArrowRightLeft } from 'lucide-react';
 import type { SharedPoolUsageReportResponse, SpotAssignmentReportResponse } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -19,10 +19,13 @@ import {
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function AdminReportsPage() {
   const { filters, setDateFrom, setDateTo } = useReportFilters();
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
+  const [actionFilter, setActionFilter] = useState<'all' | 'assigned' | 'unassigned'>('all');
 
   const today = new Date().toISOString().split('T')[0];
   const sharedPoolDateTo = filters.dateTo > today ? today : filters.dateTo;
@@ -43,14 +46,14 @@ export default function AdminReportsPage() {
     enabled: isDateRangeValid
   });
 
-  // Spot Assignment Report Query
+  // Spot Assignment Report Query - fetch all actions (assignments and unassignments)
   const spotAssignmentQuery = useQuery<SpotAssignmentReportResponse>({
     queryKey: ['/api/admin/reports/spot-assignments', filters.dateFrom, filters.dateTo],
     queryFn: async () => {
       const params = new URLSearchParams({
         from: filters.dateFrom,
         to: filters.dateTo,
-        action: 'assigned',
+        action: 'all',
         scope: 'bci'
       });
       const response = await fetch(`/api/admin/reports/spot-assignments?${params}`);
@@ -59,6 +62,17 @@ export default function AdminReportsPage() {
     },
     enabled: isDateRangeValid
   });
+
+  // Filter and compute stats for spot assignments
+  const filteredAssignments = spotAssignmentQuery.data?.assignments.filter(a => 
+    actionFilter === 'all' || a.action === actionFilter
+  ) || [];
+  
+  const assignmentStats = {
+    total: spotAssignmentQuery.data?.assignments.length || 0,
+    optIn: spotAssignmentQuery.data?.assignments.filter(a => a.action === 'assigned').length || 0,
+    optOut: spotAssignmentQuery.data?.assignments.filter(a => a.action === 'unassigned').length || 0
+  };
 
   const toggleUser = (userId: string) => {
     setExpandedUsers(prev => {
@@ -137,8 +151,8 @@ export default function AdminReportsPage() {
               Shared Pool Usage
             </TabsTrigger>
             <TabsTrigger value="spot-assignments" className="gap-2">
-              <UserPlus className="h-4 w-4" />
-              New Spot Assignments
+              <ArrowRightLeft className="h-4 w-4" />
+              Spot Assignment Changes
             </TabsTrigger>
           </TabsList>
 
@@ -275,9 +289,68 @@ export default function AdminReportsPage() {
             ) : null}
           </TabsContent>
 
-          {/* New Spot Assignments Tab */}
+          {/* Spot Assignment Changes Tab */}
           <TabsContent value="spot-assignments" className="space-y-4">
-            <div className="flex justify-end">
+            {/* Summary Stats */}
+            {spotAssignmentQuery.data && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="bg-gradient-to-r from-blue-50 to-blue-100/50 border-blue-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <ArrowRightLeft className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Total Changes</p>
+                        <p className="text-2xl font-bold text-blue-700">{assignmentStats.total}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-gradient-to-r from-green-50 to-green-100/50 border-green-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-green-100 rounded-lg">
+                        <UserPlus className="h-5 w-5 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Opt-In (New Assignments)</p>
+                        <p className="text-2xl font-bold text-green-700">{assignmentStats.optIn}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-gradient-to-r from-orange-50 to-orange-100/50 border-orange-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-orange-100 rounded-lg">
+                        <UserMinus className="h-5 w-5 text-orange-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Opt-Out (Unassignments)</p>
+                        <p className="text-2xl font-bold text-orange-700">{assignmentStats.optOut}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Filter and Export Row */}
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="action-filter" className="text-sm whitespace-nowrap">Filter by Action:</Label>
+                <Select value={actionFilter} onValueChange={(v: 'all' | 'assigned' | 'unassigned') => setActionFilter(v)}>
+                  <SelectTrigger className="w-40" id="action-filter" data-testid="select-action-filter">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Changes</SelectItem>
+                    <SelectItem value="assigned">Opt-In Only</SelectItem>
+                    <SelectItem value="unassigned">Opt-Out Only</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               {spotAssignmentQuery.data && spotAssignmentQuery.data.assignments.length > 0 && (
                 <Button
                   onClick={async () => {
@@ -300,45 +373,72 @@ export default function AdminReportsPage() {
             ) : spotAssignmentQuery.data ? (
               <Card data-testid="spot-assignments-table">
                 <CardHeader>
-                  <CardTitle>New Spot Assignments</CardTitle>
+                  <CardTitle>Spot Assignment Changes</CardTitle>
                   <CardDescription>
-                    {spotAssignmentQuery.data.totalCount} assignment{spotAssignmentQuery.data.totalCount !== 1 ? 's' : ''} in selected period
+                    Track employees who have opted in or out of permanent spot rental for payroll deduction adjustments.
+                    {filteredAssignments.length !== assignmentStats.total && (
+                      <span className="ml-2 font-medium">Showing {filteredAssignments.length} of {assignmentStats.total}</span>
+                    )}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {spotAssignmentQuery.data.assignments.length === 0 ? (
+                  {filteredAssignments.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
-                      No new spot assignments found for the selected date range.
+                      No spot assignment changes found for the selected criteria.
                     </div>
                   ) : (
                     <Table>
                       <TableHeader>
                         <TableRow>
                           <TableHead>Effective Date</TableHead>
+                          <TableHead>Action</TableHead>
                           <TableHead>Spot</TableHead>
                           <TableHead>Location</TableHead>
                           <TableHead>Spot Type</TableHead>
                           <TableHead>Monthly Fee</TableHead>
-                          <TableHead>Name</TableHead>
+                          <TableHead>Employee Name</TableHead>
                           <TableHead>Email</TableHead>
                           <TableHead>Department</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {spotAssignmentQuery.data.assignments
+                        {filteredAssignments
                           .slice()
                           .sort((a, b) => new Date(b.effectiveAt).getTime() - new Date(a.effectiveAt).getTime())
                           .map((assignment) => (
-                            <TableRow key={assignment.id}>
+                            <TableRow key={assignment.id} className={assignment.action === 'unassigned' ? 'bg-orange-50/50' : ''}>
                               <TableCell>{new Date(assignment.effectiveAt).toLocaleDateString()}</TableCell>
+                              <TableCell>
+                                {assignment.action === 'assigned' ? (
+                                  <Badge variant="outline" className="border-green-400 text-green-700 bg-green-50">
+                                    <UserPlus className="h-3 w-3 mr-1" />
+                                    Opt-In
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="border-orange-400 text-orange-700 bg-orange-50">
+                                    <UserMinus className="h-3 w-3 mr-1" />
+                                    Opt-Out
+                                  </Badge>
+                                )}
+                              </TableCell>
                               <TableCell className="font-medium">{assignment.spot.spotNumber}</TableCell>
                               <TableCell>{assignment.spot.location}</TableCell>
                               <TableCell>{assignment.spot.spotType}</TableCell>
-                              <TableCell>${parseFloat(assignment.spot.monthlyFee ?? "0").toFixed(2)}</TableCell>
+                              <TableCell>
+                                {assignment.action === 'assigned' ? (
+                                  <span className="text-green-700 font-medium">+${parseFloat(assignment.spot.monthlyFee ?? "0").toFixed(2)}</span>
+                                ) : (
+                                  <span className="text-orange-700 font-medium">-${parseFloat(assignment.spot.monthlyFee ?? "0").toFixed(2)}</span>
+                                )}
+                              </TableCell>
                               <TableCell className="font-semibold">
                                 {assignment.user.firstName} {assignment.user.lastName}
                               </TableCell>
-                              <TableCell>{assignment.user.email}</TableCell>
+                              <TableCell>
+                                <a href={`mailto:${assignment.user.email}`} className="text-blue-600 hover:underline">
+                                  {assignment.user.email}
+                                </a>
+                              </TableCell>
                               <TableCell>{assignment.user.department}</TableCell>
                             </TableRow>
                           ))}
