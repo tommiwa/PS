@@ -866,11 +866,11 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    variant="ghost"
+                    variant="default"
                     size="sm"
                     onClick={() => handleEditListing(listing)}
                     data-testid={`button-edit-listing-${listing.id}`}
-                    className="flex-1 lg:flex-none"
+                    className="flex-1 lg:flex-none bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     <Edit className="h-4 w-4 mr-2" />
                     <span className="hidden sm:inline">Edit</span>
@@ -884,11 +884,11 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    variant="ghost"
+                    variant="default"
                     size="sm"
                     onClick={() => handleCancelListing(listing)}
                     data-testid={`button-cancel-listing-${listing.id}`}
-                    className="flex-1 lg:flex-none text-destructive hover:text-destructive"
+                    className="flex-1 lg:flex-none bg-red-600 hover:bg-red-700 text-white"
                   >
                     <XCircle className="h-4 w-4 mr-2" />
                     <span className="hidden sm:inline">Cancel</span>
@@ -921,11 +921,11 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    variant="outline"
+                    variant="default"
                     size="sm"
                     onClick={() => handleDownloadReceipt(listing.bookingId || listing.id)}
                     data-testid={`button-download-receipt-${listing.id}`}
-                    className="flex-1 lg:flex-none"
+                    className="flex-1 lg:flex-none bg-slate-600 hover:bg-slate-700 text-white"
                   >
                     <Download className="h-4 w-4 mr-2" />
                     <span className="hidden sm:inline">Receipt</span>
@@ -1112,11 +1112,11 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  variant="ghost"
+                  variant="default"
                   size="sm"
                   onClick={() => handleViewDetails(booking)}
                   data-testid={`button-view-details-${booking.id}`}
-                  className="flex-1 lg:flex-none"
+                  className="flex-1 lg:flex-none bg-slate-600 hover:bg-slate-700 text-white"
                 >
                   <Eye className="h-4 w-4 mr-2" />
                   <span className="hidden sm:inline">View</span>
@@ -1148,11 +1148,11 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    variant="ghost"
+                    variant="default"
                     size="sm"
                     onClick={() => handleCancelBooking(booking.id)}
                     data-testid={`button-cancel-${booking.id}`}
-                    className="flex-1 lg:flex-none text-destructive hover:text-destructive"
+                    className="flex-1 lg:flex-none bg-red-600 hover:bg-red-700 text-white"
                   >
                     <XCircle className="h-4 w-4 mr-2" />
                     <span className="hidden sm:inline">Cancel</span>
@@ -1166,11 +1166,11 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    variant="outline"
+                    variant="default"
                     size="sm"
                     onClick={() => handleDownloadReceipt(booking.id)}
                     data-testid={`button-download-receipt-${booking.id}`}
-                    className="flex-1 lg:flex-none"
+                    className="flex-1 lg:flex-none bg-slate-600 hover:bg-slate-700 text-white"
                   >
                     <Download className="h-4 w-4 mr-2" />
                     <span className="hidden sm:inline">Receipt</span>
@@ -1254,12 +1254,12 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
           <div className="flex justify-end gap-1 col-span-1 md:col-span-1">
             {getStatusBadge()}
             {canEdit && (
-              <Button variant="ghost" size="icon" onClick={() => handleEditListing(listing)} data-testid={`compact-edit-${listing.id}`}>
+              <Button size="icon" onClick={() => handleEditListing(listing)} data-testid={`compact-edit-${listing.id}`} className="bg-blue-600 hover:bg-blue-700 text-white">
                 <Edit className="h-4 w-4" />
               </Button>
             )}
             {canCancel && (
-              <Button variant="ghost" size="icon" onClick={() => handleCancelListing(listing)} data-testid={`compact-cancel-${listing.id}`} className="text-destructive hover:text-destructive">
+              <Button size="icon" onClick={() => handleCancelListing(listing)} data-testid={`compact-cancel-${listing.id}`} className="bg-red-600 hover:bg-red-700 text-white">
                 <XCircle className="h-4 w-4" />
               </Button>
             )}
@@ -1269,7 +1269,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               </Button>
             )}
             {isCompleted && (
-              <Button variant="ghost" size="icon" onClick={() => handleDownloadReceipt(listing.bookingId || listing.id)} data-testid={`compact-receipt-${listing.id}`}>
+              <Button size="icon" onClick={() => handleDownloadReceipt(listing.bookingId || listing.id)} data-testid={`compact-receipt-${listing.id}`} className="bg-slate-600 hover:bg-slate-700 text-white">
                 <Download className="h-4 w-4" />
               </Button>
             )}
@@ -1335,7 +1335,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
           <div className="hidden md:block text-sm font-medium text-primary">${booking.totalAmount || booking.dailyRate}</div>
           <div className="flex justify-end md:justify-start">{getStatusBadge()}</div>
           <div className="flex justify-end gap-1">
-            <Button variant="ghost" size="icon" onClick={() => handleViewDetails(booking)} data-testid={`compact-view-${booking.id}`}>
+            <Button size="icon" onClick={() => handleViewDetails(booking)} data-testid={`compact-view-${booking.id}`} className="bg-slate-600 hover:bg-slate-700 text-white">
               <Eye className="h-4 w-4" />
             </Button>
             {canMarkPaid && (
@@ -1344,12 +1344,12 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               </Button>
             )}
             {canCancel && (
-              <Button variant="ghost" size="icon" onClick={() => handleCancelBooking(booking.id)} data-testid={`compact-cancel-${booking.id}`} className="text-destructive hover:text-destructive">
+              <Button size="icon" onClick={() => handleCancelBooking(booking.id)} data-testid={`compact-cancel-${booking.id}`} className="bg-red-600 hover:bg-red-700 text-white">
                 <XCircle className="h-4 w-4" />
               </Button>
             )}
             {isCompleted && (
-              <Button variant="ghost" size="icon" onClick={() => handleDownloadReceipt(booking.id)} data-testid={`compact-receipt-${booking.id}`}>
+              <Button size="icon" onClick={() => handleDownloadReceipt(booking.id)} data-testid={`compact-receipt-${booking.id}`} className="bg-slate-600 hover:bg-slate-700 text-white">
                 <Download className="h-4 w-4" />
               </Button>
             )}
