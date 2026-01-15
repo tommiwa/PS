@@ -555,6 +555,17 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     }
   }
 
+  const handleCancelListing = async (listing: any) => {
+    const confirmed = await confirm({
+      title: "Cancel Listing",
+      description: `Are you sure you want to cancel this listing for Spot ${listing.spotNumber || listing.spot?.spotNumber} on ${listing.date}? This will mark it as cancelled.`,
+      confirmText: "Yes, Cancel",
+      cancelText: "Keep Listing"
+    })
+    if (confirmed) {
+      cancelListingMutation.mutate(listing.id)
+    }
+  }
 
   // Mutations for listing management
   const updateListingMutation = useMutation({
@@ -582,6 +593,30 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
       toast({
         title: "Delete Failed",
         description: getErrorMessage(error, "Only unused listings can be deleted."),
+        variant: "destructive",
+      })
+    }
+  })
+
+  // Mutation for cancelling a listing (sets status to "cancelled")
+  const cancelListingMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest(`/api/listings/${id}`, { 
+        method: 'PATCH', 
+        body: { status: 'cancelled' } 
+      })
+    },
+    onSuccess: () => {
+      toast({
+        title: "Listing Cancelled",
+        description: "The listing has been cancelled.",
+      })
+      queryClient.invalidateQueries({ queryKey: ['/api/my-listings'] })
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Cancel Failed",
+        description: getErrorMessage(error, "Failed to cancel the listing."),
         variant: "destructive",
       })
     }
@@ -840,7 +875,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleDeleteListing(listing)}
+                    onClick={() => handleCancelListing(listing)}
                     data-testid={`button-cancel-listing-${listing.id}`}
                     className="flex-1 lg:flex-none text-destructive hover:text-destructive"
                   >
@@ -1213,7 +1248,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               </Button>
             )}
             {canCancel && (
-              <Button variant="ghost" size="icon" onClick={() => handleDeleteListing(listing)} data-testid={`compact-cancel-${listing.id}`} className="text-destructive hover:text-destructive">
+              <Button variant="ghost" size="icon" onClick={() => handleCancelListing(listing)} data-testid={`compact-cancel-${listing.id}`} className="text-destructive hover:text-destructive">
                 <XCircle className="h-4 w-4" />
               </Button>
             )}

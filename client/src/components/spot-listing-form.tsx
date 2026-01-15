@@ -71,6 +71,40 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
   })
   const systemDefaultRate = defaultDailyRateConfig?.value || "10"
 
+  // Populate form with initial data when editing an existing listing
+  useEffect(() => {
+    if (initialData && userSpots.length > 0) {
+      // Set listing type
+      const type = initialData.listingType || "single"
+      setListingType(type as "single" | "period" | "recurring")
+      
+      // Find and set the spot
+      const spotId = initialData.spotId || initialData.spot?.id || ""
+      const spot = userSpots.find((s) => s.id === spotId)
+      if (spot) {
+        setSelectedSpot(spot)
+      }
+      
+      // Populate form data based on the listing
+      setFormData({
+        spotId: spotId,
+        price: initialData.dailyRate || initialData.price || systemDefaultRate,
+        // Single day - use date or singleDate
+        date: initialData.date || initialData.singleDate || getTodayString(),
+        // Period
+        startDate: initialData.periodStartDate || initialData.startDate || getTodayString(),
+        endDate: initialData.periodEndDate || initialData.endDate || getTodayString(),
+        // Recurring
+        recurringDays: initialData.daysOfWeek || initialData.recurringDays || [],
+        recurringStartDate: initialData.recurringStartDate || getTodayString(),
+        recurringEndDate: initialData.recurringEndDate || "",
+        // Common
+        description: initialData.notes || initialData.description || "",
+        specialInstructions: initialData.specialInstructions || ""
+      })
+    }
+  }, [initialData, userSpots, systemDefaultRate])
+
   const updateFormData = (key: string, value: any) => {
     setFormData(prev => ({ ...prev, [key]: value }))
   }
