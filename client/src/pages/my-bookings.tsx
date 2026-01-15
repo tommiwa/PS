@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { SpotListingForm } from "@/components/spot-listing-form"
 import { EnhancedFilters, type FilterConfig, type FilterValues } from "@/components/ui/enhanced-filters"
-import { Calendar, Search, Filter, Download, Clock, CheckCircle, CheckCircle2, XCircle, Car, MapPin, DollarSign, AlertTriangle, Plus, Edit, Trash2, CreditCard, Info, Building, Ban, Eye, FileText, CalendarCheck, Receipt, LayoutGrid, List } from "lucide-react"
+import { Calendar, Search, Filter, Download, Clock, CheckCircle, CheckCircle2, XCircle, Car, MapPin, DollarSign, AlertTriangle, Plus, Edit, Trash2, CreditCard, Info, Building, Ban, Eye, FileText, CalendarCheck, Receipt, LayoutGrid, List, User } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { isPastDate } from "@/utils/date-utils"
 import { useMutation, useQuery } from "@tanstack/react-query"
@@ -676,8 +676,8 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
         <div className="flex flex-col lg:flex-row">
           {/* Main Content */}
           <div className="flex-1 p-4">
-            {/* Header Row */}
-            <div className="flex items-start justify-between gap-3 mb-4">
+            {/* Header Row - Spot info and status */}
+            <div className="flex items-start justify-between gap-3 mb-3">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                   <Car className="h-5 w-5 text-primary" />
@@ -695,63 +695,53 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               </div>
             </div>
             
-            {/* Info Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-              <div className="flex items-center gap-2.5">
-                <div className="h-8 w-8 rounded-md bg-muted/50 flex items-center justify-center flex-shrink-0">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">Date</p>
-                  <p className="text-sm font-medium truncate">{listing.date}</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-2.5">
-                <div className="h-8 w-8 rounded-md bg-muted/50 flex items-center justify-center flex-shrink-0">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">Duration</p>
-                  <p className="text-sm font-medium">Full Day</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-2.5">
-                <div className="h-8 w-8 rounded-md bg-muted/50 flex items-center justify-center flex-shrink-0">
-                  <Building className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">Spot Type</p>
-                  <p className="text-sm font-medium capitalize truncate">{listing.spot?.spotType || "Regular"}</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-2.5">
-                <div className="h-8 w-8 rounded-md bg-muted/50 flex items-center justify-center flex-shrink-0">
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">Price</p>
-                  <p className="text-sm font-semibold text-primary">${listing.totalAmount || listing.price || listing.dailyRate}</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-2.5">
-                <div className="h-8 w-8 rounded-md bg-muted/50 flex items-center justify-center flex-shrink-0">
-                  {listing.renterName ? (
-                    <CheckCircle className="h-4 w-4 text-green-600" />
+            {/* Primary Focus: Booking Status & Renter */}
+            <div className={`p-3 rounded-lg mb-3 ${
+              effectivelyBooked 
+                ? 'bg-blue-50 border border-blue-200' 
+                : 'bg-emerald-50 border border-emerald-200'
+            }`}>
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  {effectivelyBooked ? (
+                    <>
+                      <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                        <User className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-blue-600 font-medium uppercase tracking-wide">Booked By</p>
+                        <p className="text-lg font-bold text-blue-900">{listing.renterName || "Unknown Renter"}</p>
+                      </div>
+                    </>
                   ) : (
-                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <>
+                      <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                        <Clock className="h-5 w-5 text-emerald-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-emerald-600 font-medium uppercase tracking-wide">Status</p>
+                        <p className="text-lg font-bold text-emerald-900">Open for Booking</p>
+                      </div>
+                    </>
                   )}
                 </div>
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">Renter</p>
-                  <p className={`text-sm font-medium truncate ${listing.renterName ? '' : 'text-muted-foreground italic'}`}>
-                    {listing.renterName || "Not booked yet"}
-                  </p>
+                <div className="text-right">
+                  <p className="text-xs text-muted-foreground">You'll Earn</p>
+                  <p className="text-xl font-bold text-primary">${listing.totalAmount || listing.price || listing.dailyRate}</p>
                 </div>
               </div>
+            </div>
+            
+            {/* Secondary Info - Date and details */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+              <div className="flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5" />
+                <span>{listing.date}</span>
+              </div>
+              <span className="hidden sm:inline">•</span>
+              <span>Full Day</span>
+              <span className="hidden sm:inline">•</span>
+              <span className="capitalize">{listing.spot?.spotType || "Regular"}</span>
             </div>
             
             {/* Payment Status Banner (if applicable) */}
@@ -793,22 +783,6 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
           
           {/* Actions Column */}
           <div className="lg:w-32 border-t lg:border-t-0 lg:border-l bg-muted/20 p-3 lg:p-4 flex lg:flex-col items-center lg:items-stretch justify-center gap-2">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleViewDetails(listing)}
-                  data-testid={`button-view-${listing.id}`}
-                  className="flex-1 lg:flex-none"
-                >
-                  <Eye className="h-4 w-4 mr-2" />
-                  <span className="hidden sm:inline">View</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>View Details</TooltipContent>
-            </Tooltip>
-            
             {canEdit && (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -1157,17 +1131,26 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
           <Car className="h-4 w-4 text-primary" />
         </div>
         <div className="flex-1 min-w-0 grid grid-cols-2 md:grid-cols-5 gap-2 items-center">
+          {/* Spot Info */}
           <div className="min-w-0">
             <p className="font-medium text-sm truncate">Spot {listing.spot?.spotNumber || listing.spotNumber || 'Unknown'}</p>
             <p className="text-xs text-muted-foreground truncate">{listing.spot?.location || listing.locationName || 'Unknown'}</p>
           </div>
+          {/* Date */}
           <div className="hidden md:block text-sm text-muted-foreground">{listingDate}</div>
+          {/* Renter - EMPHASIZED */}
+          <div className="hidden md:block min-w-0">
+            {effectivelyBooked ? (
+              <p className="text-sm font-semibold text-blue-700 truncate">{listing.renterName || "Booked"}</p>
+            ) : (
+              <p className="text-sm text-emerald-600 font-medium">Open</p>
+            )}
+          </div>
+          {/* Price */}
           <div className="hidden md:block text-sm font-medium text-primary">${listing.totalAmount || listing.price || listing.dailyRate}</div>
-          <div className="flex justify-end md:justify-start">{getStatusBadge()}</div>
-          <div className="flex justify-end gap-1">
-            <Button variant="ghost" size="icon" onClick={() => handleViewDetails(listing)} data-testid={`compact-view-${listing.id}`}>
-              <Eye className="h-4 w-4" />
-            </Button>
+          {/* Actions */}
+          <div className="flex justify-end gap-1 col-span-1 md:col-span-1">
+            {getStatusBadge()}
             {canEdit && (
               <Button variant="ghost" size="icon" onClick={() => handleEditListing(listing)} data-testid={`compact-edit-${listing.id}`}>
                 <Edit className="h-4 w-4" />
