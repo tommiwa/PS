@@ -1019,11 +1019,11 @@ export default function AdminParkingManagement() {
     }).sort((a, b) => a.spotNumber.localeCompare(b.spotNumber))
   }, [allSpots, allUsers, assignedSpotsSearchTerm, assignedSpotsFilterValues])
 
-  // Derived data for Bookable Spots tab (spots enabled for booking) with filtering
+  // Derived data for Non-Bookable Spots tab (spots NOT enabled for booking) with filtering
   const filteredBookableSpots = useMemo(() => {
     return allSpots.filter(spot => {
-      // Must be bookable
-      if (!spot.isBookable) return false
+      // Must be NOT bookable (so admin can release them)
+      if (spot.isBookable) return false
       
       // Search filter - searches across all visible columns
       if (bookableSpotsSearchTerm.trim()) {
@@ -1613,21 +1613,21 @@ export default function AdminParkingManagement() {
               onClick={() => setActiveSpotTab("bci-bookable")}
             >
               <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Bookable Spots</CardTitle>
+                <CardTitle className="text-sm font-medium">Non-Bookable Spots</CardTitle>
                 <div className="rounded-full border-2 border-orange-400 p-2">
-                  <CheckCircle2 className="h-4 w-4 text-orange-600" />
+                  <EyeOff className="h-4 w-4 text-orange-600" />
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold" data-testid="stat-bookable-spots">
-                  {allSpots.filter(spot => spot.isBookable).length}
+                  {allSpots.filter(spot => !spot.isBookable).length}
                 </div>
-                <p className="text-xs text-orange-600">Spots available for booking</p>
+                <p className="text-xs text-orange-600">Spots disabled for booking</p>
               </CardContent>
             </Card>
           </TooltipTrigger>
           <TooltipContent>
-            View all spots enabled for bookings
+            View all spots disabled for booking (can be released)
           </TooltipContent>
         </Tooltip>
         </div>
@@ -1649,8 +1649,8 @@ export default function AdminParkingManagement() {
             Available ({unallocatedSpots.length})
           </TabsTrigger>
           <TabsTrigger value="bci-bookable" data-testid="tab-bci-bookable-spots" className="gap-2">
-            <CheckCircle2 className="h-4 w-4 !text-orange-600" />
-            Bookable ({bookableSpots.length})
+            <EyeOff className="h-4 w-4 !text-orange-600" />
+            Non-Bookable ({bookableSpots.length})
           </TabsTrigger>
         </TabsList>
 
@@ -2601,9 +2601,9 @@ export default function AdminParkingManagement() {
           </Card>
         </TabsContent>
 
-        {/* Bookable Spots Tab */}
+        {/* Non-Bookable Spots Tab */}
         <TabsContent value="bci-bookable" className="space-y-4">
-          {/* Search & Filters for Bookable Spots */}
+          {/* Search & Filters for Non-Bookable Spots */}
           <EnhancedFilters
             searchValue={bookableSpotsSearchTerm}
             onSearchChange={setBookableSpotsSearchTerm}
@@ -2618,16 +2618,16 @@ export default function AdminParkingManagement() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-orange-600" />
-                  Bookable Parking Spots ({bookableSpots.length})
+                  <EyeOff className="h-5 w-5 text-orange-600" />
+                  Non-Bookable Parking Spots ({bookableSpots.length})
                 </CardTitle>
               </div>
             </CardHeader>
             <CardContent>
               {bookableSpots.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground" data-testid="text-no-bookable-spots">
-                  <CheckCircle2 className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                  <p>No spots are currently enabled for booking.</p>
+                  <EyeOff className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                  <p>No spots are currently disabled for booking.</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
