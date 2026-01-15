@@ -1848,96 +1848,54 @@ export default function AdminParkingManagement() {
                             currentSortColumn={sortState.column}
                             currentSortDirection={sortState.direction}
                             onSort={handleSort}
+                            infoTooltip="Unique identifier for the parking spot"
                           >
-                            <div className="flex items-center gap-1">
-                              {t("admin.parkingManagement.spotNumber")}
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-                                </TooltipTrigger>
-                                <TooltipContent>Unique identifier for the parking spot</TooltipContent>
-                              </Tooltip>
-                            </div>
+                            {t("admin.parkingManagement.spotNumber")}
                           </SortableTableHeader>
                           <SortableTableHeader
                             column="location"
                             currentSortColumn={sortState.column}
                             currentSortDirection={sortState.direction}
                             onSort={handleSort}
+                            infoTooltip="Building and parking level where spot is located"
                           >
-                            <div className="flex items-center gap-1">
-                              {t("admin.parkingManagement.location")}
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-                                </TooltipTrigger>
-                                <TooltipContent>Building and parking level where spot is located</TooltipContent>
-                              </Tooltip>
-                            </div>
+                            {t("admin.parkingManagement.location")}
                           </SortableTableHeader>
                           <SortableTableHeader
                             column="spotType"
                             currentSortColumn={sortState.column}
                             currentSortDirection={sortState.direction}
                             onSort={handleSort}
+                            infoTooltip="Standard, Accessible, Reserved (C-Suite), or EV Charging"
                           >
-                            <div className="flex items-center gap-1">
-                              {t("admin.parkingManagement.type")}
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-                                </TooltipTrigger>
-                                <TooltipContent>Standard, Accessible, Reserved (C-Suite), or EV Charging</TooltipContent>
-                              </Tooltip>
-                            </div>
+                            {t("admin.parkingManagement.type")}
                           </SortableTableHeader>
                           <SortableTableHeader
                             column="isActive"
                             currentSortColumn={sortState.column}
                             currentSortDirection={sortState.direction}
                             onSort={handleSort}
+                            infoTooltip="Active = in use, Bookable = can be shared/booked"
                           >
-                            <div className="flex items-center gap-1">
-                              {t("admin.parkingManagement.status")}
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-                                </TooltipTrigger>
-                                <TooltipContent>Active = in use, Bookable = can be shared/booked</TooltipContent>
-                              </Tooltip>
-                            </div>
+                            {t("admin.parkingManagement.status")}
                           </SortableTableHeader>
                           <SortableTableHeader
                             column="ownerId"
                             currentSortColumn={sortState.column}
                             currentSortDirection={sortState.direction}
                             onSort={handleSort}
+                            infoTooltip="Employee assigned to this spot, or Workplace Services"
                           >
-                            <div className="flex items-center gap-1">
-                              {t("admin.parkingManagement.assignedTo")}
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-                                </TooltipTrigger>
-                                <TooltipContent>Employee assigned to this spot, or Workplace Services</TooltipContent>
-                              </Tooltip>
-                            </div>
+                            {t("admin.parkingManagement.assignedTo")}
                           </SortableTableHeader>
                           <SortableTableHeader
                             column="isBookable"
                             currentSortColumn={sortState.column}
                             currentSortDirection={sortState.direction}
                             onSort={handleSort}
+                            infoTooltip="Assigned = has owner, Available = managed by Workplace Services"
                           >
-                            <div className="flex items-center gap-1">
-                              {t("admin.parkingManagement.assignmentStatus")}
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-                                </TooltipTrigger>
-                                <TooltipContent>Assigned = has owner, Available = managed by Workplace Services</TooltipContent>
-                              </Tooltip>
-                            </div>
+                            {t("admin.parkingManagement.assignmentStatus")}
                           </SortableTableHeader>
                           <TableHead>Map</TableHead>
                           <TableHead>{t("admin.parkingManagement.actions")}</TableHead>
