@@ -256,11 +256,11 @@ export function ParkingSpotCard({
       </div>
 
       {/* Price and Date Section */}
-      <div className="p-4 pb-3 bg-gradient-to-r from-green-100/80 to-green-50/30">
+      <div className="p-4 pb-3 bg-gradient-to-r from-blue-50/80 to-blue-50/30">
         <div className="flex items-center justify-between gap-4">
           <div>
             <div className="text-xs text-muted-foreground mb-1">Daily Rate</div>
-            <div className="text-3xl font-bold text-green-600" data-testid={`text-price-${spot.id}`}>
+            <div className="text-3xl font-bold text-primary" data-testid={`text-price-${spot.id}`}>
               ${displayPrice.toFixed(2)}
             </div>
           </div>
@@ -279,10 +279,10 @@ export function ParkingSpotCard({
       </div>
 
       {/* Owner Section */}
-      <div className="px-4 pb-4 pt-3 bg-gradient-to-r from-slate-100 to-slate-50/30">
-        <div className="flex items-center gap-2 p-3 bg-white border border-slate-200 rounded-md shadow-sm">
-          <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
-            <User className="h-4 w-4 text-slate-500" />
+      <div className="px-4 pb-4 pt-3 bg-gradient-to-r from-blue-50/60 to-transparent">
+        <div className="flex items-center gap-2 p-3 bg-white border border-blue-100 rounded-md shadow-sm">
+          <div className="h-8 w-8 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
+            <User className="h-4 w-4 text-primary" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-xs text-muted-foreground">Owned By</div>
