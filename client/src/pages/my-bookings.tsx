@@ -839,23 +839,11 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               </div>
             )}
             
-            {/* Unused Warning with Delete Option */}
+            {/* Unused Warning */}
             {listing.status === "unused" && (
-              <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0" />
-                  <span className="text-sm text-amber-700">This spot was not booked for {listing.date}</span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleDeleteListing(listing)}
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                  data-testid={`button-delete-unused-${listing.id}`}
-                >
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  Delete
-                </Button>
+              <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-3">
+                <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                <span className="text-sm text-amber-700">This spot was not booked for {listing.date}</span>
               </div>
             )}
           </div>
@@ -914,6 +902,24 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>Confirm Payment Received</TooltipContent>
+              </Tooltip>
+            )}
+            
+            {listing.status === "unused" && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDeleteListing(listing)}
+                    data-testid={`button-delete-unused-${listing.id}`}
+                    className="flex-1 lg:flex-none text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    <span className="hidden sm:inline">Delete</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Delete Unused Listing</TooltipContent>
               </Tooltip>
             )}
             
