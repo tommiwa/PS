@@ -219,6 +219,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
         variant: "warning",
       })
       queryClient.invalidateQueries({ queryKey: ['/api/my-bookings'] })
+      queryClient.invalidateQueries({ queryKey: ['/api/my-listings'] })
     },
     onError: (error: any) => {
       toast({
@@ -518,6 +519,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/my-listings'] })
+      queryClient.invalidateQueries({ queryKey: ['/api/my-bookings'] })
       setShowEditListing(false)
     }
   })
@@ -532,6 +534,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
         description: "The unused listing has been removed.",
       })
       queryClient.invalidateQueries({ queryKey: ['/api/my-listings'] })
+      queryClient.invalidateQueries({ queryKey: ['/api/my-bookings'] })
     },
     onError: (error: any) => {
       toast({
@@ -556,6 +559,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
         description: "The listing has been cancelled.",
       })
       queryClient.invalidateQueries({ queryKey: ['/api/my-listings'] })
+      queryClient.invalidateQueries({ queryKey: ['/api/my-bookings'] })
     },
     onError: (error: any) => {
       toast({
@@ -616,6 +620,8 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
         title: "Reminder Sent",
         description: "Payment reminder has been sent to the renter.",
       })
+      queryClient.invalidateQueries({ queryKey: ['/api/my-listings'] })
+      queryClient.invalidateQueries({ queryKey: ['/api/my-bookings'] })
     },
     onError: (error: any) => {
       toast({
