@@ -9,8 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { SpotListingForm } from "@/components/spot-listing-form"
-import { EnhancedFilters, type FilterConfig, type FilterValues } from "@/components/ui/enhanced-filters"
-import { Calendar, Search, Filter, Download, Clock, CheckCircle, CheckCircle2, XCircle, Car, MapPin, DollarSign, AlertTriangle, Plus, Edit, Trash2, CreditCard, Info, Building, Ban, Eye, FileText, CalendarCheck, Receipt, LayoutGrid, List, User, Bell } from "lucide-react"
+import { Calendar, Search, Download, Clock, CheckCircle, CheckCircle2, XCircle, Car, MapPin, DollarSign, AlertTriangle, Plus, Edit, Trash2, CreditCard, Info, Building, Ban, Eye, FileText, CalendarCheck, Receipt, LayoutGrid, List, User, Bell, X } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { isPastDate } from "@/utils/date-utils"
 import { useMutation, useQuery } from "@tanstack/react-query"
@@ -34,7 +33,6 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
   const defaultOwnerView = getCurrentViewRole() === 'owner' || (getCurrentViewRole() === null && isOwner())
   const isOwnerView = viewMode === 'listings' ? true : viewMode === 'rentals' ? false : defaultOwnerView
   const [searchTerm, setSearchTerm] = useState("")
-  const [filterValues, setFilterValues] = useState<FilterValues>({})
   const [showListingForm, setShowListingForm] = useState(false)
   const [showEditListing, setShowEditListing] = useState(false)
   const [selectedListing, setSelectedListing] = useState<any>(null)
@@ -46,56 +44,6 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
   const { confirm } = useConfirm()
   const { toast } = useToast()
 
-  // Filter configurations for renters
-  const renterFilterConfigs: FilterConfig[] = [
-    {
-      key: "status",
-      label: "Status",
-      type: "select",
-      options: [
-        { value: "active", label: "Active" },
-        { value: "completed", label: "Completed" },
-        { value: "cancelled", label: "Cancelled" },
-        { value: "payment-pending", label: "Awaiting Payment" }
-      ]
-    },
-    {
-      key: "dateRange",
-      label: "Booking Date",
-      type: "dateRange"
-    }
-  ]
-
-  // Filter configurations for owners
-  const ownerFilterConfigs: FilterConfig[] = [
-    {
-      key: "status",
-      label: "Status",
-      type: "select",
-      options: [
-        { value: "active", label: "Active" },
-        { value: "completed", label: "Completed" },
-        { value: "cancelled", label: "Cancelled" }
-      ]
-    },
-    {
-      key: "spotNumber",
-      label: "Spot Number",
-      type: "text"
-    }
-  ]
-
-  // Filter handlers
-  const handleFilterChange = (key: string, value: string | undefined) => {
-    setFilterValues(prev => ({
-      ...prev,
-      [key]: value
-    }))
-  }
-
-  const handleClearFilters = () => {
-    setFilterValues({})
-  }
 
   // Fetch real data based on user role
   const { data: renterBookings = [], isLoading: isLoadingBookings } = useQuery<Booking[]>({
@@ -115,97 +63,45 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
   // Filter and sort logic for both renters and owners
   const allItems: (Booking | SpotListing)[] = isOwnerView ? listings : mockBookings
 
-  const filteredItems = allItems.filter((item: Booking | SpotListing) => {
-    // Search logic - search on fields that actually exist
-    let matchesSearch = true
-    if (searchTerm && searchTerm.trim() !== '') {
-      const search = searchTerm.toLowerCase()
-      
+  // Simple text search function
+  const filterBySearch = (items: (Booking | SpotListing)[]) => {
+    if (!searchTerm || searchTerm.trim() === '') return items
+    
+    const search = searchTerm.toLowerCase()
+    return items.filter((item: Booking | SpotListing) => {
       if (isOwnerView) {
         // For owners (SpotListing) - search by user-facing fields
         const listing = item as any
-        matchesSearch = 
+        return (
           ((listing.spot?.spotNumber ?? "") as string).toLowerCase().includes(search) ||
           ((listing.spot?.location ?? "") as string).toLowerCase().includes(search) ||
           ((listing.spot?.spotType ?? "") as string).toLowerCase().includes(search) ||
+          ((listing.renterName ?? "") as string).toLowerCase().includes(search) ||
           (listing.singleDate ?? "").toLowerCase().includes(search) ||
           String(listing.dailyRate ?? "").includes(search)
+        )
       } else {
         // For renters (Booking) - search by booking ID, spot ID, or date
         const booking = item as Booking
-        matchesSearch = 
+        return (
           (booking.id ?? "").toLowerCase().includes(search) ||
           (booking.spotId ?? "").toLowerCase().includes(search) ||
           (booking.bookingDate ?? "").toLowerCase().includes(search) ||
           String(booking.dailyRate ?? "").includes(search) ||
           (booking.notes ?? "").toLowerCase().includes(search)
+        )
       }
-    }
-    
-    // Status filter - map filter values to actual statuses
-    let matchesStatus = true
-    if (filterValues.status) {
-      if (isOwnerView) {
-        // For owners - map filter values to actual UI statuses
-        const listing = item as any
-        if (filterValues.status === 'active') {
-          matchesStatus = listing.status === 'available' || listing.status === 'booked'
-        } else if (filterValues.status === 'completed') {
-          matchesStatus = listing.status === 'used'
-        } else if (filterValues.status === 'cancelled') {
-          matchesStatus = listing.status === 'cancelled' || listing.status === 'unused'
-        } else {
-          matchesStatus = listing.status === filterValues.status
-        }
-      } else {
-        // For renters (Booking statuses: confirmed, pending, cancelled, completed)
-        const booking = item as Booking
-        if (filterValues.status === 'active') {
-          matchesStatus = booking.status === 'confirmed' || booking.status === 'pending'
-        } else if (filterValues.status === 'completed') {
-          matchesStatus = booking.status === 'completed'
-        } else if (filterValues.status === 'cancelled') {
-          matchesStatus = booking.status === 'cancelled'
-        } else if (filterValues.status === 'payment-pending') {
-          const paymentStatus = booking.paymentStatus || 'pending'
-          matchesStatus = booking.status === 'confirmed' && paymentStatus === 'pending'
-        } else {
-          matchesStatus = booking.status === filterValues.status
-        }
-      }
-    }
-    
-    // Date range filter for renters
-    let matchesDateRange = true
-    if (!isOwnerView && (filterValues.dateRangeFrom || filterValues.dateRangeTo)) {
-      const itemDate = 'bookingDate' in item ? item.bookingDate : null
-      if (itemDate) {
-        if (filterValues.dateRangeFrom && itemDate < filterValues.dateRangeFrom) {
-          matchesDateRange = false
-        }
-        if (filterValues.dateRangeTo && itemDate > filterValues.dateRangeTo) {
-          matchesDateRange = false
-        }
-      }
-    }
+    })
+  }
 
-    // Spot number filter for owners - search by spot.spotNumber
-    let matchesSpotNumber = true
-    if (isOwnerView && filterValues.spotNumber) {
-      const listing = item as any
-      const spotNumSearch = filterValues.spotNumber.toLowerCase()
-      matchesSpotNumber = ((listing.spot?.spotNumber ?? "") as string).toLowerCase().includes(spotNumSearch)
-    }
-    
-    return matchesSearch && matchesStatus && matchesDateRange && matchesSpotNumber
-  })
-
-  const sortedItems = [...filteredItems].sort((a: Booking | SpotListing, b: Booking | SpotListing) => {
-    // Default sort by date (newest first)
-    const aDate = 'bookingDate' in a ? a.bookingDate : ('singleDate' in a ? a.singleDate : null)
-    const bDate = 'bookingDate' in b ? b.bookingDate : ('singleDate' in b ? b.singleDate : null)
-    return new Date(bDate || 0).getTime() - new Date(aDate || 0).getTime()
-  })
+  const sortItems = (items: (Booking | SpotListing)[]) => {
+    return [...items].sort((a: Booking | SpotListing, b: Booking | SpotListing) => {
+      // Default sort by date (newest first)
+      const aDate = 'bookingDate' in a ? a.bookingDate : ('singleDate' in a ? a.singleDate : null)
+      const bDate = 'bookingDate' in b ? b.bookingDate : ('singleDate' in b ? b.singleDate : null)
+      return new Date(bDate || 0).getTime() - new Date(aDate || 0).getTime()
+    })
+  }
 
   // Categories for different user types
   let activeItems: (Booking | SpotListing)[], pendingItems: (Booking | SpotListing)[], paymentPendingItems: (Booking | SpotListing)[], completedItems: (Booking | SpotListing)[], cancelledItems: (Booking | SpotListing)[], unusedItems: (Booking | SpotListing)[]
@@ -1729,17 +1625,6 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
         )}
       </div>
 
-      {/* Filters and Search */}
-      <EnhancedFilters
-        searchValue={searchTerm}
-        onSearchChange={setSearchTerm}
-        filterConfigs={isOwnerView ? ownerFilterConfigs : renterFilterConfigs}
-        filterValues={filterValues}
-        onFilterChange={handleFilterChange}
-        onClearFilters={handleClearFilters}
-        searchPlaceholder={`Search by spot, location, or ${isOwnerView ? 'renter' : 'owner'}...`}
-        className="hover-elevate"
-      />
 
       {/* Enhanced Status-Based Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -1784,15 +1669,35 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
         </TabsList>
         
         <TabsContent value="active" className="w-full space-y-3 md:space-y-4">
-          <div className="flex items-start gap-2 rounded-lg border bg-muted/40 dark:bg-muted/20 px-3 py-2">
-            <CalendarCheck className="h-4 w-4 mt-0.5 text-green-600 dark:text-green-400 flex-shrink-0" />
+          {/* Search Input */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder={`Search by spot, location${isOwnerView ? ', renter' : ''}...`}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 pr-9"
+            />
+            {searchTerm && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                onClick={() => setSearchTerm("")}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+          <div className="flex items-start gap-2 rounded-lg border bg-muted/40 px-3 py-2">
+            <CalendarCheck className="h-4 w-4 mt-0.5 text-green-600 flex-shrink-0" />
             <p className="text-sm text-muted-foreground">
               {isOwnerView 
                 ? "Your listed spots that are available for booking or have confirmed reservations." 
                 : "Your confirmed bookings that are ready to use on the scheduled date."}
             </p>
           </div>
-          {activeItems.length === 0 ? (
+          {filterBySearch(activeItems).length === 0 ? (
             <Card>
               <CardContent className="p-6 md:p-8 text-center">
                 <Clock className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-3 md:mb-4 text-muted-foreground" />
@@ -1806,13 +1711,13 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
             </Card>
           ) : isCompactView ? (
             <div className="space-y-2">
-              {activeItems.map((item) => (
+              {sortItems(filterBySearch(activeItems)).map((item) => (
                 isOwnerView ? renderOwnerListingCompact(item) : renderRenterBookingCompact(item)
               ))}
             </div>
           ) : (
             <div className="space-y-3 md:space-y-4">
-              {activeItems.map((item) => (
+              {sortItems(filterBySearch(activeItems)).map((item) => (
                 isOwnerView ? renderOwnerListingWithActions(item) : renderRenterBooking(item)
               ))}
             </div>
@@ -1820,7 +1725,27 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
         </TabsContent>
 
         <TabsContent value="payment-pending" className="w-full space-y-3 md:space-y-4">
-          <div className="flex items-start gap-2 rounded-lg border bg-muted/40 dark:bg-muted/20 px-3 py-2">
+          {/* Search Input */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder={`Search by spot, location${isOwnerView ? ', renter' : ''}...`}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 pr-9"
+            />
+            {searchTerm && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                onClick={() => setSearchTerm("")}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+          <div className="flex items-start gap-2 rounded-lg border bg-muted/40 px-3 py-2">
             {isOwnerView 
               ? <Receipt className="h-4 w-4 mt-0.5 text-orange-600 dark:text-orange-400 flex-shrink-0" />
               : <CreditCard className="h-4 w-4 mt-0.5 text-orange-600 dark:text-orange-400 flex-shrink-0" />
@@ -1831,7 +1756,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                 : "Complete payment for these bookings to finalize your reservation."}
             </p>
           </div>
-          {paymentPendingItems.length === 0 ? (
+          {filterBySearch(paymentPendingItems).length === 0 ? (
             <Card>
               <CardContent className="p-6 md:p-8 text-center">
                 <CreditCard className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-3 md:mb-4 text-muted-foreground" />
@@ -1845,13 +1770,13 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
             </Card>
           ) : isCompactView ? (
             <div className="space-y-2">
-              {paymentPendingItems.map((item) => (
+              {sortItems(filterBySearch(paymentPendingItems)).map((item) => (
                 isOwnerView ? renderOwnerListingCompact(item) : renderRenterBookingCompact(item)
               ))}
             </div>
           ) : (
             <div className="space-y-3 md:space-y-4">
-              {paymentPendingItems.map((item) => (
+              {sortItems(filterBySearch(paymentPendingItems)).map((item) => (
                 isOwnerView ? renderOwnerListingWithPayment(item) : renderRenterBooking(item)
               ))}
             </div>
@@ -1859,15 +1784,35 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
         </TabsContent>
 
         <TabsContent value="completed" className="w-full space-y-3 md:space-y-4">
-          <div className="flex items-start gap-2 rounded-lg border bg-muted/40 dark:bg-muted/20 px-3 py-2">
-            <CheckCircle2 className="h-4 w-4 mt-0.5 text-slate-600 dark:text-slate-400 flex-shrink-0" />
+          {/* Search Input */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder={`Search by spot, location${isOwnerView ? ', renter' : ''}...`}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 pr-9"
+            />
+            {searchTerm && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                onClick={() => setSearchTerm("")}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+          <div className="flex items-start gap-2 rounded-lg border bg-muted/40 px-3 py-2">
+            <CheckCircle2 className="h-4 w-4 mt-0.5 text-slate-600 flex-shrink-0" />
             <p className="text-sm text-muted-foreground">
               {isOwnerView 
                 ? "Past bookings where your spots were used and payments received." 
                 : "Your past bookings with completed payments."}
             </p>
           </div>
-          {completedItems.length === 0 ? (
+          {filterBySearch(completedItems).length === 0 ? (
             <Card>
               <CardContent className="p-6 md:p-8 text-center">
                 <CheckCircle className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-3 md:mb-4 text-muted-foreground" />
@@ -1881,13 +1826,13 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
             </Card>
           ) : isCompactView ? (
             <div className="space-y-2">
-              {completedItems.map((item) => (
+              {sortItems(filterBySearch(completedItems)).map((item) => (
                 isOwnerView ? renderOwnerListingCompact(item) : renderRenterBookingCompact(item)
               ))}
             </div>
           ) : (
             <div className="space-y-3 md:space-y-4">
-              {completedItems.map((item) => (
+              {sortItems(filterBySearch(completedItems)).map((item) => (
                 isOwnerView ? renderOwnerListingWithPayment(item) : renderRenterBooking(item)
               ))}
             </div>
