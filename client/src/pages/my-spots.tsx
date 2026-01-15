@@ -1075,6 +1075,7 @@ export default function MySpots() {
                     id="single-date"
                     type="date"
                     min={new Date().toISOString().split('T')[0]}
+                    max={(() => { const d = new Date(); d.setMonth(d.getMonth() + 6); return d.toISOString().split('T')[0]; })()}
                     value={listingFormData.singleDate}
                     onChange={(e) => setListingFormData(prev => ({ ...prev, singleDate: e.target.value }))}
                     data-testid="input-single-date"
@@ -1092,6 +1093,7 @@ export default function MySpots() {
                         id="period-start-date"
                         type="date"
                         min={new Date().toISOString().split('T')[0]}
+                        max={(() => { const d = new Date(); d.setMonth(d.getMonth() + 6); return d.toISOString().split('T')[0]; })()}
                         value={listingFormData.periodStartDate}
                         onChange={(e) => {
                           setListingFormData(prev => ({ ...prev, periodStartDate: e.target.value }))
@@ -1107,6 +1109,7 @@ export default function MySpots() {
                         id="period-end-date"
                         type="date"
                         min={new Date().toISOString().split('T')[0]}
+                        max={(() => { const d = new Date(); d.setMonth(d.getMonth() + 6); return d.toISOString().split('T')[0]; })()}
                         value={listingFormData.periodEndDate}
                         onChange={(e) => {
                           setListingFormData(prev => ({ ...prev, periodEndDate: e.target.value }))
@@ -1135,6 +1138,7 @@ export default function MySpots() {
                           id="recurring-start-date"
                           type="date"
                           min={new Date().toISOString().split('T')[0]}
+                          max={(() => { const d = new Date(); d.setMonth(d.getMonth() + 6); return d.toISOString().split('T')[0]; })()}
                           value={listingFormData.recurringStartDate}
                           onChange={(e) => {
                             setListingFormData(prev => ({ ...prev, recurringStartDate: e.target.value }))
@@ -1150,6 +1154,7 @@ export default function MySpots() {
                           id="recurring-end-date"
                           type="date"
                           min={new Date().toISOString().split('T')[0]}
+                          max={(() => { const d = new Date(); d.setMonth(d.getMonth() + 6); return d.toISOString().split('T')[0]; })()}
                           value={listingFormData.recurringEndDate}
                           onChange={(e) => {
                             setListingFormData(prev => ({ ...prev, recurringEndDate: e.target.value }))

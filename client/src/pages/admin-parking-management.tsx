@@ -3380,7 +3380,13 @@ export default function AdminParkingManagement() {
                         setCreateAvailabilityFormData({ ...createAvailabilityFormData, singleDate: date })
                         setSingleDatePickerOpen(false)
                       }}
-                      disabled={(date) => date < new Date()}
+                      disabled={(date) => {
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        const maxDate = new Date();
+                        maxDate.setMonth(maxDate.getMonth() + 6);
+                        return date < today || date > maxDate;
+                      }}
                       initialFocus
                     />
                   </PopoverContent>
@@ -3412,7 +3418,13 @@ export default function AdminParkingManagement() {
                           setCreateAvailabilityFormData({ ...createAvailabilityFormData, periodStartDate: date })
                           setStartDatePickerOpen(false)
                         }}
-                        disabled={(date) => date < new Date()}
+                        disabled={(date) => {
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          const maxDate = new Date();
+                          maxDate.setMonth(maxDate.getMonth() + 6);
+                          return date < today || date > maxDate;
+                        }}
                         initialFocus
                       />
                     </PopoverContent>
@@ -3444,7 +3456,11 @@ export default function AdminParkingManagement() {
                           setEndDatePickerOpen(false)
                         }}
                         disabled={(date) => {
-                          if (date < new Date()) return true;
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          const maxDate = new Date();
+                          maxDate.setMonth(maxDate.getMonth() + 6);
+                          if (date < today || date > maxDate) return true;
                           if (createAvailabilityFormData.periodStartDate && date < createAvailabilityFormData.periodStartDate) return true;
                           return false;
                         }}
