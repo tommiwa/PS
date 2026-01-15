@@ -2147,7 +2147,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             } : undefined
           };
         }))
-        .then(spots => spots.filter(spot => spot !== null)); // Remove any null entries from safety check
+        .then(spots => spots.filter(spot => spot !== null)) // Remove any null entries from safety check
+        .then(spots => spots.filter(spot => spot.isAvailable)); // Hide spots with no future availability (past unused listings)
       
       // Fetch active locks to show pending/locked state
       const activeLocks = await db
