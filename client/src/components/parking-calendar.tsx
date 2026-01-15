@@ -739,6 +739,14 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
             <Button variant="outline" size="sm" onClick={() => navigateDate("prev")}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setCurrentDate(new Date())}
+              data-testid="calendar-today-button"
+            >
+              Today
+            </Button>
             <Button variant="outline" size="sm" onClick={() => navigateDate("next")}>
               <ChevronRight className="h-4 w-4" />
             </Button>
