@@ -214,20 +214,31 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     // For owners - categorize their listings using status and payment workflow
     const today = new Date().toISOString().split('T')[0]
     
-    // Active: All active listings - both available (open for booking) AND booked ones
-    activeItems = listings.filter((l: any) => 
-      l.status === "available" || l.status === "booked" || l.isBooked
-    )
+    // Helper to get listing date
+    const getListingDate = (l: any) => l.date || l.singleDate || ''
+    
+    // Active: Current/future dates only - both available and booked
+    // Shows listings where date >= today
+    activeItems = listings.filter((l: any) => {
+      const listingDate = getListingDate(l)
+      const isFutureOrToday = listingDate >= today
+      const isActiveStatus = l.status === "available" || l.status === "booked" || l.isBooked
+      return isActiveStatus && isFutureOrToday
+    })
     pendingItems = [] // Owners don't have pending bookings in this context
     
-    // Payment Pending: ALL booked listings where payment is not yet confirmed
-    // - paymentStatus = 'pending' (awaiting renter payment)
-    // - paymentStatus = 'paid' (awaiting owner confirmation)
-    // This includes both today/future AND past booked listings awaiting payment
-    paymentPendingItems = listings.filter((l: any) => 
-      (l.status === "booked" || l.isBooked) && 
-      (l.paymentStatus === 'pending' || l.paymentStatus === 'paid' || !l.paymentStatus)
-    )
+    // Payment Pending / Past: Shows listings that are:
+    // 1. Past dates (any status - available becomes "unused", booked needs payment)
+    // 2. OR booked listings awaiting payment (any date)
+    paymentPendingItems = listings.filter((l: any) => {
+      const listingDate = getListingDate(l)
+      const isPastDate = listingDate < today
+      const isBooked = l.status === "booked" || l.isBooked
+      const isAwaitingPayment = isBooked && (l.paymentStatus === 'pending' || l.paymentStatus === 'paid' || !l.paymentStatus)
+      
+      // Include if past date OR if booked and awaiting payment
+      return isPastDate || isAwaitingPayment
+    })
     
     // Completed: used listings OR listings where payment was confirmed
     completedItems = listings.filter((l: any) => 
