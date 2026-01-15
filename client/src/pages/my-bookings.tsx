@@ -518,9 +518,20 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
       return apiRequest(`/api/listings/${id}`, { method: 'PATCH', body: data })
     },
     onSuccess: () => {
+      toast({
+        title: "Listing Updated",
+        description: "Your listing has been updated successfully.",
+      })
       queryClient.invalidateQueries({ queryKey: ['/api/my-listings'] })
       queryClient.invalidateQueries({ queryKey: ['/api/my-bookings'] })
       setShowEditListing(false)
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Update Failed",
+        description: getErrorMessage(error, "Failed to update listing. Please try again."),
+        variant: "destructive",
+      })
     }
   })
 

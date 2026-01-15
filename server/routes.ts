@@ -1583,6 +1583,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate request body
       const validatedData = insertSpotListingSchema.partial().parse(req.body);
       
+      // Check for duplicate listing if date is being changed
+      const newDate = validatedData.singleDate;
+      const currentDate = existingListing.singleDate;
+      
+      if (newDate && newDate !== currentDate) {
+        // Get all listings for this spot and check for date conflict
+        const spotListings = await storage.getSpotListingsBySpot(existingListing.spotId);
+        const duplicateListing = spotListings.find(listing => 
+          listing.id !== id && // Exclude current listing
+          listing.singleDate === newDate &&
+          listing.status !== 'cancelled' // Ignore cancelled listings
+        );
+        
+        if (duplicateListing) {
+          return res.status(400).json({ 
+            error: `A listing already exists for this spot on ${newDate}. Please choose a different date.` 
+          });
+        }
+      }
+      
       const updatedListing = await storage.updateListing(id, validatedData);
       
       if (!updatedListing) {
