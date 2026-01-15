@@ -830,8 +830,8 @@ export default function MySpots() {
               )}
             </div>
 
-            {/* Default Settings Section - Green */}
-            <div className="p-4 md:p-5 bg-gradient-to-r from-green-100/80 to-green-50/30">
+            {/* Default Settings Section */}
+            <div className="p-4 md:p-5 bg-gradient-to-r from-blue-50/80 to-blue-50/30">
                 <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wide">Default Settings</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Default Daily Rate */}
@@ -906,8 +906,8 @@ export default function MySpots() {
                 </div>
               </div>
 
-            {/* Footer Section - Slate */}
-            <div className="p-4 md:p-5 bg-gradient-to-r from-slate-100 to-slate-50/30 border-t">
+            {/* Footer Section */}
+            <div className="p-4 md:p-5 bg-gradient-to-r from-blue-50/60 to-transparent border-t">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 {/* Show info for BCI-managed spots */}
                 <div className="flex items-center gap-2">

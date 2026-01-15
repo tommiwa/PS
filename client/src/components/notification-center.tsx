@@ -46,13 +46,12 @@ const notificationIcons = {
   general: Info,
 };
 
-// Unified color palette - using primary blue with subtle opacity variations for visual hierarchy
 const notificationColors = {
-  assignment: "bg-primary",
-  reminder: "bg-primary", 
-  expiration: "bg-primary",
-  welcome: "bg-primary",
-  general: "bg-primary",
+  assignment: "bg-green-500",
+  reminder: "bg-blue-500", 
+  expiration: "bg-red-500",
+  welcome: "bg-purple-500",
+  general: "bg-gray-500",
 };
 
 export function NotificationCenter() {
@@ -238,7 +237,7 @@ export function NotificationCenter() {
                     data-testid={`notification-${notification.id}`}
                   >
                     <div className="flex items-start gap-3">
-                      <div className={`p-2 rounded-full ${iconColor} text-primary-foreground flex-shrink-0`}>
+                      <div className={`p-2 rounded-full ${iconColor} text-white flex-shrink-0`}>
                         <Icon className="h-4 w-4" />
                       </div>
                       
