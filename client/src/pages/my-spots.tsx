@@ -737,9 +737,10 @@ export default function MySpots() {
             /* Spots List */
             <div className="space-y-4">
               {userSpots.map((spot) => (
-          <Card key={spot.id} className={`border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50/50 to-transparent ${!spot.isActive ? 'opacity-60' : ''}`}>
-            <CardContent className="p-4 md:p-6">
-              <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-4">
+          <Card key={spot.id} className={`overflow-hidden ${!spot.isActive ? 'opacity-60' : ''}`}>
+            {/* Header Section - Blue */}
+            <div className="p-4 md:p-5 bg-gradient-to-r from-blue-100 to-blue-50/30 border-b">
+              <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                 <div className="flex items-start gap-3">
                   <div className="text-2xl">{getSpotTypeIcon(getSpotTypeById(spot.spotTypeId))}</div>
                   <div className="flex-1 min-w-0">
@@ -754,11 +755,11 @@ export default function MySpots() {
                       <Tooltip>
                         <TooltipTrigger asChild>
                           {spot.isBciManaged ? (
-                            <Badge variant="secondary" className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100" data-testid={`badge-bci-managed-${spot.id}`}>
+                            <Badge variant="secondary" className="bg-purple-100 text-purple-700 border-purple-200 hover:bg-purple-200" data-testid={`badge-bci-managed-${spot.id}`}>
                               BCI Managed
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100" data-testid={`badge-personal-${spot.id}`}>
+                            <Badge variant="outline" className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-200" data-testid={`badge-personal-${spot.id}`}>
                               Personal
                             </Badge>
                           )}
@@ -789,7 +790,7 @@ export default function MySpots() {
                                 href={mapUrl} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors"
+                                className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-blue-200 bg-white hover:bg-blue-50 transition-colors"
                                 data-testid={`link-floor-plan-${spot.id}`}
                               >
                                 <Map className="h-4 w-4 text-blue-600" />
@@ -812,10 +813,10 @@ export default function MySpots() {
                   {/* Only show edit/delete for personal spots, not BCI-managed */}
                   {!spot.isBciManaged && (
                     <div className="flex gap-1">
-                      <Button variant="outline" size="sm" onClick={() => handleEditSpot(spot)} data-testid={`button-edit-spot-${spot.id}`} className="min-h-11">
+                      <Button variant="outline" size="sm" onClick={() => handleEditSpot(spot)} data-testid={`button-edit-spot-${spot.id}`} className="min-h-11 bg-white">
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => handleDeleteSpot(spot)} data-testid={`button-delete-spot-${spot.id}`} className="text-red-600 hover:text-red-700 hover:border-red-300 min-h-11">
+                      <Button variant="outline" size="sm" onClick={() => handleDeleteSpot(spot)} data-testid={`button-delete-spot-${spot.id}`} className="text-red-600 hover:text-red-700 hover:border-red-300 min-h-11 bg-white">
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -824,11 +825,12 @@ export default function MySpots() {
               </div>
 
               {spot.description && (
-                <p className="text-sm text-muted-foreground mb-4 break-words">{spot.description}</p>
+                <p className="text-sm text-muted-foreground mt-3 break-words">{spot.description}</p>
               )}
+            </div>
 
-              {/* Default Settings Section */}
-              <div className="mb-4 p-4 bg-muted/30 rounded-lg border">
+            {/* Default Settings Section - Green */}
+            <div className="p-4 md:p-5 bg-gradient-to-r from-green-100/80 to-green-50/30">
                 <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wide">Default Settings</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Default Daily Rate */}
@@ -903,7 +905,9 @@ export default function MySpots() {
                 </div>
               </div>
 
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-4 border-t">
+            {/* Footer Section - Slate */}
+            <div className="p-4 md:p-5 bg-gradient-to-r from-slate-100 to-slate-50/30 border-t">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 {/* Show info for BCI-managed spots */}
                 <div className="flex items-center gap-2">
                   <Info className="h-4 w-4 text-muted-foreground" />
@@ -928,14 +932,14 @@ export default function MySpots() {
                     size="sm"
                     onClick={() => handleViewBookingHistory(spot.id)}
                     data-testid={`button-history-${spot.id}`}
-                    className="w-full md:w-auto min-h-11"
+                    className="w-full md:w-auto min-h-11 bg-white"
                   >
                     <Eye className="h-4 w-4 mr-1" />
                     View History
                   </Button>
                 </div>
               </div>
-            </CardContent>
+            </div>
           </Card>
               ))}
             </div>
