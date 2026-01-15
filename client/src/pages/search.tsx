@@ -868,6 +868,8 @@ export default function Search() {
               spot={selectedSpot}
               onSubmit={(bookingData) => handleBookingFormSubmit(selectedSpot, bookingData)}
               onCancel={() => setShowBookingForm(false)}
+              selectedDate={userActiveLock?.bookingDate || selectedSpot.availability?.date || searchCriteria.date}
+              isDateLocked={true}
             />
           )}
         </DialogContent>
