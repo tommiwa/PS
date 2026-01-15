@@ -698,8 +698,8 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
             {/* Primary Focus: Booking Status & Renter */}
             <div className={`p-3 rounded-lg mb-3 ${
               effectivelyBooked 
-                ? 'bg-blue-50 border border-blue-200' 
-                : 'bg-emerald-50 border border-emerald-200'
+                ? 'bg-blue-50/80 border border-blue-200' 
+                : 'bg-blue-50/40 border border-blue-100'
             }`}>
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
@@ -715,12 +715,12 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                     </>
                   ) : (
                     <>
-                      <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                        <Clock className="h-5 w-5 text-emerald-600" />
+                      <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
+                        <Clock className="h-5 w-5 text-blue-400" />
                       </div>
                       <div>
-                        <p className="text-xs text-emerald-600 font-medium uppercase tracking-wide">Status</p>
-                        <p className="text-lg font-bold text-emerald-900">Open for Booking</p>
+                        <p className="text-xs text-blue-500 font-medium uppercase tracking-wide">Status</p>
+                        <p className="text-lg font-bold text-blue-700">Open for Booking</p>
                       </div>
                     </>
                   )}
@@ -1143,7 +1143,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
             {effectivelyBooked ? (
               <p className="text-sm font-semibold text-blue-700 truncate">{listing.renterName || "Booked"}</p>
             ) : (
-              <p className="text-sm text-emerald-600 font-medium">Open</p>
+              <p className="text-sm text-blue-500 font-medium">Open</p>
             )}
           </div>
           {/* Price */}
