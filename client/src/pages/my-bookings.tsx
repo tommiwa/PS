@@ -204,6 +204,9 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     unusedItems = [] // Renters don't have unused items
   }
 
+  // Combined sorted items for export functionality
+  const sortedItems = sortItems(allItems)
+
   // Mutation for cancelling booking
   const cancelBookingMutation = useMutation({
     mutationFn: async (bookingId: string) => {
