@@ -432,7 +432,6 @@ function AuthenticatedApp() {
                   <p>Log out of your account and return to the login page</p>
                 </TooltipContent>
               </Tooltip>
-              <ThemeToggle />
             </div>
           </header>
           <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden bg-muted/30">

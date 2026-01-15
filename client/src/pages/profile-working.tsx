@@ -558,17 +558,6 @@ export default function Profile() {
               <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{user?.name || t("profile.profile")}</h1>
               <p className="text-sm md:text-base text-muted-foreground">{t("profile.settings")}</p>
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                className="h-9 w-9"
-                data-testid="button-theme-toggle"
-              >
-                <Palette className="h-6 w-6 md:h-8 md:w-8" />
-              </Button>
-            </div>
           </div>
         </div>
       </div>
@@ -1692,33 +1681,11 @@ export default function Profile() {
                     {t("profile.tabs.appSettings")}
                   </CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    Customize your app experience with language and theme preferences.
+                    Customize your app experience with language preferences.
                   </p>
                 </CardHeader>
                 <CardContent className="space-y-4 md:space-y-6 p-4 md:p-6">
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <Palette className="h-4 w-4" />
-                          <Label>{t("appSettings.theme")}</Label>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          {t("appSettings.theme.description")}
-                        </p>
-                      </div>
-                      <Select value={theme} onValueChange={setTheme}>
-                        <SelectTrigger className="w-32" data-testid="select-theme">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="light">{t("appSettings.theme.light")}</SelectItem>
-                          <SelectItem value="dark">{t("appSettings.theme.dark")}</SelectItem>
-                          <SelectItem value="system">{t("appSettings.theme.system")}</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
                     <div className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
