@@ -1280,11 +1280,18 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
       const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
         available: { bg: "bg-emerald-100 dark:bg-emerald-900/40", text: "text-emerald-700 dark:text-emerald-300", label: "Available" },
         booked: { bg: "bg-blue-100 dark:bg-blue-900/40", text: "text-blue-700 dark:text-blue-300", label: "Booked" },
+        completed: { bg: "bg-slate-100 dark:bg-slate-800", text: "text-slate-700 dark:text-slate-300", label: "Completed" },
         used: { bg: "bg-slate-100 dark:bg-slate-800", text: "text-slate-700 dark:text-slate-300", label: "Completed" },
         cancelled: { bg: "bg-red-100 dark:bg-red-900/40", text: "text-red-700 dark:text-red-300", label: "Cancelled" },
         unused: { bg: "bg-amber-100 dark:bg-amber-900/40", text: "text-amber-700 dark:text-amber-300", label: "Unused" },
       }
-      const displayStatus = effectivelyBooked && listing.status === 'available' ? 'booked' : listing.status
+      // Prioritize: completed > cancelled > booked > available
+      let displayStatus = listing.status
+      if (isCompleted) {
+        displayStatus = 'completed'
+      } else if (effectivelyBooked && listing.status === 'available') {
+        displayStatus = 'booked'
+      }
       const config = statusConfig[displayStatus] || statusConfig.available
       return <Badge variant="outline" className={`${config.bg} ${config.text} border-0 text-xs`}>{config.label}</Badge>
     }
@@ -1317,8 +1324,8 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
           <div className="hidden md:block text-sm text-muted-foreground">{listingDate}</div>
           {/* Renter - EMPHASIZED */}
           <div className="hidden md:block min-w-0">
-            {effectivelyBooked ? (
-              <p className="text-sm font-semibold text-blue-700 truncate">{listing.renterName || "Booked"}</p>
+            {effectivelyBooked || isCompleted ? (
+              <p className="text-sm font-semibold text-foreground truncate">{listing.renterName || "Renter"}</p>
             ) : (
               <p className="text-sm text-blue-500 font-medium">Open</p>
             )}
