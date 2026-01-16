@@ -1143,43 +1143,30 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               </div>
             </div>
             
-            {/* Payment/Booking Status Banner */}
+            {/* Payment/Booking Status Banner - informational only */}
             {booking.status === "confirmed" && (
-              <div className={`mt-4 p-3 rounded-lg flex items-center justify-between gap-3 ${
+              <div className={`mt-4 p-3 rounded-lg flex items-center gap-3 ${
                 paymentStatus === 'pending' ? 'bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800' :
                 paymentStatus === 'paid' ? 'bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800' :
                 'bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800'
               }`}>
-                <div className="flex items-center gap-3">
-                  {paymentStatus === 'pending' && (
-                    <>
-                      <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
-                      <span className="text-sm text-amber-700 dark:text-amber-300">Payment pending - please mark as paid after transfer</span>
-                    </>
-                  )}
-                  {paymentStatus === 'paid' && (
-                    <>
-                      <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                      <span className="text-sm text-blue-700 dark:text-blue-300">Payment sent - awaiting owner confirmation</span>
-                    </>
-                  )}
-                  {paymentStatus === 'received' && (
-                    <>
-                      <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0" />
-                      <span className="text-sm text-green-700 dark:text-green-300">Booking confirmed - Ready to use on scheduled date</span>
-                    </>
-                  )}
-                </div>
-                {paymentStatus === 'pending' && canMarkPaid && (
-                  <Button
-                    size="sm"
-                    onClick={() => handleMarkPaid(booking.id)}
-                    disabled={markPaidMutation.isPending}
-                    className="bg-amber-600 hover:bg-amber-700 text-white flex-shrink-0"
-                  >
-                    <DollarSign className="h-4 w-4 mr-1" />
-                    Mark as Paid
-                  </Button>
+                {paymentStatus === 'pending' && (
+                  <>
+                    <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                    <span className="text-sm text-amber-700 dark:text-amber-300">Payment pending - please mark as paid after transfer</span>
+                  </>
+                )}
+                {paymentStatus === 'paid' && (
+                  <>
+                    <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                    <span className="text-sm text-blue-700 dark:text-blue-300">Payment sent - awaiting owner confirmation</span>
+                  </>
+                )}
+                {paymentStatus === 'received' && (
+                  <>
+                    <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+                    <span className="text-sm text-green-700 dark:text-green-300">Booking confirmed - Ready to use on scheduled date</span>
+                  </>
                 )}
               </div>
             )}
