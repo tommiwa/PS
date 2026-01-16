@@ -286,9 +286,9 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
   const handleMarkPaid = async (bookingId: string) => {
     const booking = mockBookings.find(b => b.id === bookingId) as any
     const confirmed = await confirm({
-      title: "Confirm Payment",
-      description: `Mark payment as received for booking on ${booking?.bookingDate || 'selected date'}?`,
-      confirmText: "Mark as Paid",
+      title: "Confirm Payment Sent",
+      description: `Mark payment as sent to spot owner for booking on ${booking?.bookingDate || 'selected date'}?`,
+      confirmText: "Mark as Sent",
       cancelText: "Cancel"
     })
     
@@ -606,10 +606,10 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
   })
 
 
-  const handleMarkPayment = async (bookingId: string) => {
+  const handleMarkPayment = async (bookingId: string, bookingDate?: string) => {
     const confirmed = await confirm({
       title: "Confirm Payment Received",
-      description: "Confirm that you have received payment for this booking? This will mark the booking as completed.",
+      description: `Mark payment as received for booking on ${bookingDate || 'selected date'}? This will mark the booking as completed.`,
       confirmText: "Confirm Receipt",
       cancelText: "Cancel"
     })
@@ -946,7 +946,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleMarkPayment(listing.bookingId || listing.id)}
+                    onClick={() => handleMarkPayment(listing.bookingId || listing.id, listing.date)}
                     disabled={markPaymentMutation.isPending}
                     data-testid={`button-confirm-payment-${listing.id}`}
                     className="flex-1 lg:flex-none text-green-600 hover:text-green-700"
@@ -1374,7 +1374,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               </Button>
             )}
             {canConfirmPayment && (
-              <Button variant="ghost" size="icon" onClick={() => handleMarkPayment(listing.bookingId || listing.id)} data-testid={`compact-confirm-${listing.id}`} className="text-green-600 hover:text-green-700">
+              <Button variant="ghost" size="icon" onClick={() => handleMarkPayment(listing.bookingId || listing.id, listing.date)} data-testid={`compact-confirm-${listing.id}`} className="text-green-600 hover:text-green-700">
                 <CheckCircle className="h-4 w-4" />
               </Button>
             )}
