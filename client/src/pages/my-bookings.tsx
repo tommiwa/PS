@@ -177,22 +177,32 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     cancelledItems = listings.filter((l: SpotListing) => l.status === "cancelled")
     unusedItems = listings.filter((l: SpotListing) => l.status === "unused")
   } else {
-    // For renters - categorize their bookings by payment workflow
+    // For renters - categorize their bookings by payment workflow and date
     const today = new Date().toISOString().split('T')[0]
     
-    // Active: confirmed bookings where payment is PENDING (not yet marked as paid by renter)
-    // These require the renter to mark as paid after transfer
+    // Active Tab: Shows bookings that are still "in use" or require action:
+    // 1. All current/future bookings (regardless of payment status) - spot is still usable
+    // 2. Past bookings where payment is still PENDING - user must mark as paid first
     activeItems = mockBookings.filter((b: Booking) => {
       const paymentStatus = b.paymentStatus || 'pending'
-      return b.status === "confirmed" && paymentStatus === 'pending'
+      const isPastDate = b.bookingDate < today
+      const isCompleted = b.status === "completed" || paymentStatus === 'received'
+      
+      // Include if: (future/today) OR (past but payment still pending)
+      // Exclude completed bookings
+      if (isCompleted) return false
+      return b.status === "confirmed" && (!isPastDate || paymentStatus === 'pending')
     })
     pendingItems = mockBookings.filter((b: Booking) => b.status === "pending") 
     
-    // Awaiting Payment: bookings where renter has marked as PAID but waiting for owner confirmation
-    // Renter can send reminder to owner to confirm payment
+    // Awaiting Payment Tab: Past bookings where:
+    // - Date has passed (spot already used)
+    // - Payment marked as PAID but waiting for owner confirmation
     paymentPendingItems = mockBookings.filter((b: Booking) => {
       const paymentStatus = b.paymentStatus || 'pending'
-      return b.status === "confirmed" && paymentStatus === 'paid'
+      const isPastDate = b.bookingDate < today
+      // Only show here if: past date AND payment sent but not confirmed
+      return b.status === "confirmed" && isPastDate && paymentStatus === 'paid'
     })
     
     // Completed: bookings where owner has confirmed payment (paymentStatus = 'received')
@@ -1022,13 +1032,13 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     
     // Action visibility rules:
     // - canMarkPaid: Only for confirmed bookings with pending payment (not completed, not cancelled)
-    // - canNotifyOwner: Only for confirmed bookings where payment is 'paid' (awaiting owner confirmation)
-    // - canCancel: Only for confirmed bookings that are 24+ hours away AND payment NOT yet sent (pending only)
-    //   Once payment is sent (paymentStatus='paid'), cancellation requires refund process
+    // - canNotifyOwner: Only for past bookings where payment is 'paid' (awaiting owner confirmation)
+    // - canCancel: Only for FUTURE bookings that are 24+ hours away (regardless of payment status)
+    //   Past bookings cannot be cancelled since the spot was already used
     // - showReceipt: Only for completed bookings
     const canMarkPaid = booking.status === "confirmed" && paymentStatus === 'pending' && !isCompleted && !isCancelled
-    const canNotifyOwner = booking.status === "confirmed" && paymentStatus === 'paid' && !isCompleted && !isCancelled
-    const canCancel = booking.status === "confirmed" && paymentStatus === 'pending' && canCancelWithin24Hours && !isPastDate && !isCompleted && !isCancelled
+    const canNotifyOwner = booking.status === "confirmed" && paymentStatus === 'paid' && isPastDate && !isCompleted && !isCancelled
+    const canCancel = booking.status === "confirmed" && !isPastDate && canCancelWithin24Hours && !isCompleted && !isCancelled
     
     // Get status badge with color
     const getBookingStatusBadge = () => {
@@ -1406,9 +1416,10 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     const hoursUntilBooking = (bookingDate.getTime() - now.getTime()) / (1000 * 60 * 60)
     const canCancelWithin24Hours = hoursUntilBooking >= 24
     
-    // Same action logic as card view - canCancel only when payment NOT yet sent
-    const canMarkPaid = booking.status === "confirmed" && paymentStatus === 'pending' && !isPastDate && !isCompleted && !isCancelled
-    const canCancel = booking.status === "confirmed" && paymentStatus === 'pending' && canCancelWithin24Hours && !isPastDate && !isCompleted && !isCancelled
+    // Same action logic as card view - canCancel for future bookings only
+    const canMarkPaid = booking.status === "confirmed" && paymentStatus === 'pending' && !isCompleted && !isCancelled
+    const canNotifyOwner = booking.status === "confirmed" && paymentStatus === 'paid' && isPastDate && !isCompleted && !isCancelled
+    const canCancel = booking.status === "confirmed" && !isPastDate && canCancelWithin24Hours && !isCompleted && !isCancelled
     
     const getStatusBadge = () => {
       const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
@@ -1822,12 +1833,12 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               </Button>
             )}
           </div>
-          <div className="flex items-start gap-2 rounded-lg border bg-amber-50 border-amber-200 px-3 py-2">
-            <Info className="h-4 w-4 mt-0.5 text-amber-600 flex-shrink-0" />
-            <p className="text-sm text-amber-700">
+          <div className="flex items-start gap-2 rounded-lg border bg-emerald-50 border-emerald-200 px-3 py-2">
+            <Info className="h-4 w-4 mt-0.5 text-emerald-600 flex-shrink-0" />
+            <p className="text-sm text-emerald-700">
               {isOwnerView 
                 ? "Your listed spots that are available for booking. Create new listings to earn from your parking spots." 
-                : "Bookings awaiting your payment. After transferring payment to the owner, click 'Mark as Paid' to notify them."}
+                : "Your current and upcoming bookings. For past bookings, mark payment as sent after transferring to the owner."}
             </p>
           </div>
           {filterBySearch(activeItems).length === 0 ? (
@@ -1883,7 +1894,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
             <p className="text-sm text-blue-700">
               {isOwnerView 
                 ? "Confirm when you've received payment from renters for these bookings." 
-                : "Payment sent - waiting for owner to confirm receipt. You can send a reminder if needed."}
+                : "Past bookings where payment was sent. Waiting for owner to confirm receipt - send a reminder if needed."}
             </p>
           </div>
           {filterBySearch(paymentPendingItems).length === 0 ? (
