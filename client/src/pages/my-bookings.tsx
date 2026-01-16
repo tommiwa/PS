@@ -177,38 +177,34 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     cancelledItems = listings.filter((l: SpotListing) => l.status === "cancelled")
     unusedItems = listings.filter((l: SpotListing) => l.status === "unused")
   } else {
-    // For renters - categorize their bookings by payment workflow and date
+    // For renters - categorize their bookings by date and payment status
     const today = new Date().toISOString().split('T')[0]
     
-    // Active Tab: Shows bookings that are still "in use" or require action:
-    // 1. All current/future bookings (regardless of payment status) - spot is still usable
-    // 2. Past bookings where payment is still PENDING - user must mark as paid first
+    // UPCOMING Tab: All future/current bookings (regardless of payment status)
+    // Even if paid early, stays here until date passes AND payment confirmed
     activeItems = mockBookings.filter((b: Booking) => {
-      const paymentStatus = b.paymentStatus || 'pending'
       const isPastDate = b.bookingDate < today
-      const isCompleted = b.status === "completed" || paymentStatus === 'received'
-      
-      // Include if: (future/today) OR (past but payment still pending)
-      // Exclude completed bookings
-      if (isCompleted) return false
-      return b.status === "confirmed" && (!isPastDate || paymentStatus === 'pending')
+      // Include all future/today bookings that are confirmed (not cancelled)
+      return b.status === "confirmed" && !isPastDate
     })
     pendingItems = mockBookings.filter((b: Booking) => b.status === "pending") 
     
-    // Awaiting Payment Tab: Past bookings where:
-    // - Date has passed (spot already used)
-    // - Payment marked as PAID but waiting for owner confirmation
+    // SETTLE PAYMENT Tab: Past bookings where payment is NOT yet confirmed
+    // Includes: pending (user hasn't paid) OR paid (waiting for owner confirmation)
     paymentPendingItems = mockBookings.filter((b: Booking) => {
       const paymentStatus = b.paymentStatus || 'pending'
       const isPastDate = b.bookingDate < today
-      // Only show here if: past date AND payment sent but not confirmed
-      return b.status === "confirmed" && isPastDate && paymentStatus === 'paid'
+      // Past date AND payment not yet confirmed by owner
+      return b.status === "confirmed" && isPastDate && paymentStatus !== 'received'
     })
     
-    // Completed: bookings where owner has confirmed payment (paymentStatus = 'received')
+    // COMPLETED Tab: Past bookings where owner confirmed payment
+    // Only truly "done" bookings - date passed AND payment settled
     completedItems = mockBookings.filter((b: Booking) => {
       const paymentStatus = b.paymentStatus || 'pending'
-      return b.status === "completed" || paymentStatus === 'received'
+      const isPastDate = b.bookingDate < today
+      // Must be past date AND payment confirmed
+      return (b.status === "completed" || (b.status === "confirmed" && isPastDate && paymentStatus === 'received'))
     })
     cancelledItems = mockBookings.filter((b: Booking) => b.status === "cancelled")
     unusedItems = [] // Renters don't have unused items
@@ -1657,19 +1653,19 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                   data-testid="card-stat-active"
                 >
                   <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Active Bookings</CardTitle>
+                    <CardTitle className="text-sm font-medium">Upcoming</CardTitle>
                     <div className="rounded-full border-2 border-green-400 p-2">
                       <CheckCircle2 className="h-4 w-4 text-green-600" />
                     </div>
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">{activeItems.length}</div>
-                    <p className="text-xs text-green-600">Confirmed upcoming reservations</p>
+                    <p className="text-xs text-green-600">Future reservations</p>
                   </CardContent>
                 </Card>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Click to view active bookings</p>
+                <p>Click to view upcoming bookings</p>
               </TooltipContent>
             </Tooltip>
             
@@ -1681,19 +1677,19 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                   data-testid="card-stat-payment"
                 >
                   <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Awaiting Payment</CardTitle>
+                    <CardTitle className="text-sm font-medium">Settle Payment</CardTitle>
                     <div className="rounded-full border-2 border-orange-400 p-2">
                       <DollarSign className="h-4 w-4 text-orange-600" />
                     </div>
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">{paymentPendingItems.length}</div>
-                    <p className="text-xs text-orange-600">Bookings requiring payment</p>
+                    <p className="text-xs text-orange-600">Past bookings to settle</p>
                   </CardContent>
                 </Card>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Click to view payment pending bookings</p>
+                <p>Click to view bookings that need settlement</p>
               </TooltipContent>
             </Tooltip>
             
@@ -1712,7 +1708,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">{completedItems.length}</div>
-                    <p className="text-xs text-slate-600">Past bookings with payment</p>
+                    <p className="text-xs text-slate-600">Fully settled bookings</p>
                   </CardContent>
                 </Card>
               </TooltipTrigger>
@@ -1768,17 +1764,17 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
           <TabsList className="flex overflow-x-auto scrollbar-hide snap-x snap-mandatory w-full h-auto gap-1 px-4">
             <TabsTrigger value="active" className="gap-1.5 flex-shrink-0 min-h-10 px-3 snap-start" data-testid="tab-active">
               <CheckCircle2 className="h-4 w-4 !text-green-600" />
-              <span>Active</span>
+              <span>{isOwnerView ? 'Active' : 'Upcoming'}</span>
               <Badge variant="secondary" className="ml-0.5 h-5 px-1.5 text-xs">{activeItems.length}</Badge>
             </TabsTrigger>
             <TabsTrigger value="payment-pending" className="gap-1.5 flex-shrink-0 min-h-10 px-3 snap-start" data-testid="tab-payment">
               <DollarSign className="h-4 w-4 !text-orange-600" />
-              <span>{isOwnerView ? 'Confirm' : 'Pay'}</span>
+              <span>{isOwnerView ? 'Confirm' : 'Settle'}</span>
               <Badge variant="secondary" className="ml-0.5 h-5 px-1.5 text-xs">{paymentPendingItems.length}</Badge>
             </TabsTrigger>
             <TabsTrigger value="completed" className="gap-1.5 flex-shrink-0 min-h-10 px-3 snap-start" data-testid="tab-completed">
               <CheckCircle2 className="h-4 w-4 !text-slate-600" />
-              <span>Done</span>
+              <span>Completed</span>
               <Badge variant="secondary" className="ml-0.5 h-5 px-1.5 text-xs">{completedItems.length}</Badge>
             </TabsTrigger>
           </TabsList>
@@ -1787,11 +1783,11 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
         <TabsList className="hidden md:grid md:grid-cols-3 w-full h-auto gap-1">
           <TabsTrigger value="active" className="gap-2 min-h-11" data-testid="tab-active-desktop">
             <CheckCircle2 className="h-4 w-4 !text-green-600" />
-            Active ({activeItems.length})
+            {isOwnerView ? `Active (${activeItems.length})` : `Upcoming (${activeItems.length})`}
           </TabsTrigger>
           <TabsTrigger value="payment-pending" className="gap-2 min-h-11" data-testid="tab-payment-desktop">
             <DollarSign className="h-4 w-4 !text-orange-600" />
-            {isOwnerView ? `Confirm Payment (${paymentPendingItems.length})` : `Awaiting Payment (${paymentPendingItems.length})`}
+            {isOwnerView ? `Confirm Payment (${paymentPendingItems.length})` : `Settle Payment (${paymentPendingItems.length})`}
           </TabsTrigger>
           <TabsTrigger value="completed" className="gap-2 min-h-11" data-testid="tab-completed-desktop">
             <CheckCircle2 className="h-4 w-4 !text-slate-600" />
@@ -1825,7 +1821,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
             <p className="text-sm text-emerald-700">
               {isOwnerView 
                 ? "Your listed spots that are available for booking. Create new listings to earn from your parking spots." 
-                : "All your active bookings. After transferring payment to the owner, click 'Mark as Paid' to update the status."}
+                : "Your upcoming parking reservations. You can mark payment as sent anytime before or after using the spot."}
             </p>
           </div>
           {filterBySearch(activeItems).length === 0 ? (
@@ -1833,10 +1829,10 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               <CardContent className="p-6 md:p-8 text-center">
                 <Clock className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-3 md:mb-4 text-muted-foreground" />
                 <h3 className="text-base md:text-lg font-semibold mb-2">
-                  {isOwnerView ? "No active listings" : "No active bookings"}
+                  {isOwnerView ? "No active listings" : "No upcoming bookings"}
                 </h3>
                 <p className="text-sm md:text-base text-muted-foreground">
-                  {isOwnerView ? "Create a new listing to start earning from your parking spots." : "Book a parking spot to see it here."}
+                  {isOwnerView ? "Create a new listing to start earning from your parking spots." : "Book a parking spot to see your upcoming reservations here."}
                 </p>
               </CardContent>
             </Card>
@@ -1876,12 +1872,12 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               </Button>
             )}
           </div>
-          <div className="flex items-start gap-2 rounded-lg border bg-blue-50 border-blue-200 px-3 py-2">
-            <Info className="h-4 w-4 mt-0.5 text-blue-600 flex-shrink-0" />
-            <p className="text-sm text-blue-700">
+          <div className="flex items-start gap-2 rounded-lg border bg-orange-50 border-orange-200 px-3 py-2">
+            <Info className="h-4 w-4 mt-0.5 text-orange-600 flex-shrink-0" />
+            <p className="text-sm text-orange-700">
               {isOwnerView 
                 ? "Confirm when you've received payment from renters for these bookings." 
-                : "Past bookings where payment was sent. Waiting for owner to confirm receipt - send a reminder if needed."}
+                : "Past bookings that need payment settlement. Mark as paid after transfer, or send a reminder to the owner."}
             </p>
           </div>
           {filterBySearch(paymentPendingItems).length === 0 ? (
@@ -1889,10 +1885,10 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               <CardContent className="p-6 md:p-8 text-center">
                 <CreditCard className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-3 md:mb-4 text-muted-foreground" />
                 <h3 className="text-base md:text-lg font-semibold mb-2">
-                  No payment pending
+                  No bookings to settle
                 </h3>
                 <p className="text-sm md:text-base text-muted-foreground">
-                  {isOwnerView ? "All your bookings have been paid for." : "All your booking payments are up to date."}
+                  {isOwnerView ? "All your bookings have been paid for." : "All your past bookings are fully settled."}
                 </p>
               </CardContent>
             </Card>
