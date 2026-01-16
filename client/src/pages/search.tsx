@@ -333,16 +333,21 @@ export default function Search() {
       return;
     }
     
-    if (bookingData) {
-      // Booking data provided from calendar - submit immediately
-      console.log('[handleBookSpot] bookingData provided, submitting immediately');
+    // Check if this is a FULL booking submission (has required fields like paymentMethod)
+    // vs just a date passed from clicking a card
+    const isFullBookingData = bookingData && bookingData.paymentMethod;
+    
+    if (isFullBookingData) {
+      // Full booking data provided from calendar - submit immediately
+      console.log('[handleBookSpot] Full bookingData provided, submitting immediately');
       handleBookingFormSubmit(spot, bookingData)
     } else {
-      // Determine the booking date - prioritize search criteria date when user is filtering by date
-      // This ensures when user filters by Jan 16 and clicks a spot, they book for Jan 16
+      // Determine the booking date - prioritize the date from the card that was clicked
+      // This ensures clicking a card showing "Jan 19" books for Jan 19, not the first available date
       const bookingDate = 
-        searchCriteria.date || // Prioritize the date user searched for
-        spot.availability?.date || // Fallback to spot's first available date
+        bookingData?.date || // Use the specific date from the clicked card
+        searchCriteria.date || // Fall back to search filter date
+        spot.availability?.date || // Fall back to spot's first available date
         new Date().toISOString().split('T')[0]; // Last resort: today
       
       console.log('[handleBookSpot] Calculated bookingDate:', bookingDate);

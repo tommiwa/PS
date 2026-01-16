@@ -170,8 +170,9 @@ export function ParkingSpotCard({
 
   const handleBook = () => {
     console.log(`Booking spot ${spot.id} for date ${spot.availability?.date}`)
-    // Pass only spot ID to trigger lock acquisition flow (not immediate booking)
-    onBook?.(spot.id)
+    // Pass spot ID AND the specific date shown on this card
+    // This is crucial because the same spot may appear multiple times for different dates
+    onBook?.(spot.id, { date: spot.availability?.date })
   }
 
   const locationName = spot.locationName;
