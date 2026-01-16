@@ -1314,6 +1314,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     const canEdit = listing.status === "available" && !isPastDate && !effectivelyBooked && !isCompleted && !isCancelled
     const canCancel = listing.status === "available" && !isPastDate && !effectivelyBooked && !isCompleted && !isCancelled
     const canConfirmPayment = effectivelyBooked && paymentStatus === 'paid' && !isCompleted && !isCancelled
+    const canNotify = effectivelyBooked && (paymentStatus === 'pending' || !paymentStatus) && !isCompleted && !isCancelled
     
     const getStatusBadge = () => {
       const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
@@ -1384,6 +1385,11 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
             {canCancel && (
               <Button variant="ghost" size="icon" onClick={() => handleCancelListing(listing)} data-testid={`compact-cancel-${listing.id}`} className="text-destructive hover:text-destructive">
                 <XCircle className="h-4 w-4" />
+              </Button>
+            )}
+            {canNotify && (
+              <Button variant="ghost" size="icon" onClick={() => handleSendPaymentReminder(listing.bookingId || listing.id, listing.renterName || 'Renter')} data-testid={`compact-notify-${listing.id}`} className="text-amber-600 hover:text-amber-700" disabled={sendPaymentReminderMutation.isPending}>
+                <Bell className="h-4 w-4" />
               </Button>
             )}
             {canConfirmPayment && (
@@ -1463,8 +1469,13 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               <Eye className="h-4 w-4" />
             </Button>
             {canMarkPaid && (
-              <Button variant="ghost" size="icon" onClick={() => handleMarkPaid(booking.id)} data-testid={`compact-pay-${booking.id}`} className="text-blue-600 hover:text-blue-700">
+              <Button variant="ghost" size="icon" onClick={() => handleMarkPaid(booking.id)} data-testid={`compact-pay-${booking.id}`} className="text-amber-600 hover:text-amber-700">
                 <DollarSign className="h-4 w-4" />
+              </Button>
+            )}
+            {canNotifyOwner && (
+              <Button variant="ghost" size="icon" onClick={() => handleNotifyOwner(booking.id, booking.ownerName || 'Owner')} data-testid={`compact-notify-${booking.id}`} className="text-blue-600 hover:text-blue-700" disabled={notifyOwnerMutation.isPending}>
+                <Bell className="h-4 w-4" />
               </Button>
             )}
             {canCancel && (
