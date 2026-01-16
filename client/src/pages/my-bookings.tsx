@@ -245,11 +245,30 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     const hoursUntilBooking = (bookingDate.getTime() - now.getTime()) / (1000 * 60 * 60)
     const canCancel = hoursUntilBooking >= 24
     
-    const confirmed = await confirm(confirmations.cancelBooking(
-      booking ? `Spot ${booking.spotNumber || booking.spotId?.slice(-8) || 'Unknown'}` : undefined,
-      booking?.bookingDate,
-      canCancel
-    ))
+    // Check if payment was already sent for a peer-to-peer booking
+    const paymentAlreadySent = booking?.paymentStatus === 'paid'
+    const isPeerToPeer = !booking?.isBciManaged
+    const needsPaymentSettlement = paymentAlreadySent && isPeerToPeer
+    
+    let confirmed = false
+    
+    if (needsPaymentSettlement) {
+      // Show special warning for paid peer-to-peer bookings
+      confirmed = await confirm({
+        title: "Cancel Paid Booking?",
+        description: `You have already sent payment for this booking on ${booking?.bookingDate || 'selected date'}. If you cancel, please settle the payment refund directly with the spot owner (${booking?.ownerName || 'the owner'}).`,
+        confirmText: "Cancel Anyway",
+        cancelText: "Keep Booking",
+        variant: "destructive"
+      })
+    } else {
+      // Standard cancellation confirmation
+      confirmed = await confirm(confirmations.cancelBooking(
+        booking ? `Spot ${booking.spotNumber || booking.spotId?.slice(-8) || 'Unknown'}` : undefined,
+        booking?.bookingDate,
+        canCancel
+      ))
+    }
     
     if (confirmed && canCancel) {
       cancelBookingMutation.mutate(bookingId)

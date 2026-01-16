@@ -2059,7 +2059,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           spotType: spotTypeName,
           ownerName: owner ? `${owner.firstName} ${owner.lastName}` : 'Unknown',
           // Use actual paymentStatus enum from booking (pending, paid, received)
-          paymentStatus: booking.paymentStatus || 'pending'
+          paymentStatus: booking.paymentStatus || 'pending',
+          // Include BCI-managed flag to distinguish admin-managed vs peer-to-peer listings
+          isBciManaged: spot?.isBciManaged || false
         };
       }));
       
