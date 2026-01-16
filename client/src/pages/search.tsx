@@ -338,11 +338,12 @@ export default function Search() {
       console.log('[handleBookSpot] bookingData provided, submitting immediately');
       handleBookingFormSubmit(spot, bookingData)
     } else {
-      // Determine the booking date from spot availability, search criteria, or today
+      // Determine the booking date - prioritize search criteria date when user is filtering by date
+      // This ensures when user filters by Jan 16 and clicks a spot, they book for Jan 16
       const bookingDate = 
-        spot.availability?.date || // From tiles view spot
-        searchCriteria.date || // From search filter
-        new Date().toISOString().split('T')[0]; // Fallback to today
+        searchCriteria.date || // Prioritize the date user searched for
+        spot.availability?.date || // Fallback to spot's first available date
+        new Date().toISOString().split('T')[0]; // Last resort: today
       
       console.log('[handleBookSpot] Calculated bookingDate:', bookingDate);
       console.log('[handleBookSpot] userActiveLock:', userActiveLock);
