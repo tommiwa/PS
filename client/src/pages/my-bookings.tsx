@@ -177,22 +177,22 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     cancelledItems = listings.filter((l: SpotListing) => l.status === "cancelled")
     unusedItems = listings.filter((l: SpotListing) => l.status === "unused")
   } else {
-    // For renters - categorize their bookings
+    // For renters - categorize their bookings by payment workflow
     const today = new Date().toISOString().split('T')[0]
     
-    // Active: confirmed bookings for today or future dates (regardless of payment status)
-    activeItems = mockBookings.filter((b: Booking) => 
-      b.status === "confirmed" && b.bookingDate >= today
-    )
+    // Active: confirmed bookings where payment is PENDING (not yet marked as paid by renter)
+    // These require the renter to mark as paid after transfer
+    activeItems = mockBookings.filter((b: Booking) => {
+      const paymentStatus = b.paymentStatus || 'pending'
+      return b.status === "confirmed" && paymentStatus === 'pending'
+    })
     pendingItems = mockBookings.filter((b: Booking) => b.status === "pending") 
     
-    // Payment Pending: all bookings where payment is not yet confirmed by owner
-    // - paymentStatus = 'pending' (awaiting renter payment)
-    // - paymentStatus = 'paid' (awaiting owner confirmation)
-    // Includes both active and past bookings
+    // Awaiting Payment: bookings where renter has marked as PAID but waiting for owner confirmation
+    // Renter can send reminder to owner to confirm payment
     paymentPendingItems = mockBookings.filter((b: Booking) => {
       const paymentStatus = b.paymentStatus || 'pending'
-      return b.status === "confirmed" && (paymentStatus === 'pending' || paymentStatus === 'paid')
+      return b.status === "confirmed" && paymentStatus === 'paid'
     })
     
     // Completed: bookings where owner has confirmed payment (paymentStatus = 'received')
@@ -656,6 +656,42 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     }
   }
 
+  // Mutation for renter to notify owner to confirm payment (paid → waiting for confirmation)
+  const notifyOwnerMutation = useMutation({
+    mutationFn: async (bookingId: string) => {
+      return apiRequest(`/api/bookings/${bookingId}/notify-owner`, { 
+        method: 'POST'
+      })
+    },
+    onSuccess: () => {
+      toast({
+        title: "Reminder Sent",
+        description: "A reminder has been sent to the spot owner to confirm your payment.",
+      })
+      queryClient.invalidateQueries({ queryKey: ['/api/my-bookings'] })
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Send Reminder",
+        description: getErrorMessage(error, "Could not send reminder to owner. Please try again."),
+        variant: "destructive",
+      })
+    }
+  })
+
+  const handleNotifyOwner = async (bookingId: string, ownerName: string) => {
+    const confirmed = await confirm({
+      title: "Send Confirmation Reminder",
+      description: `Send a reminder to ${ownerName} to confirm they received your payment?`,
+      confirmText: "Send Reminder",
+      cancelText: "Cancel"
+    })
+    
+    if (confirmed) {
+      notifyOwnerMutation.mutate(bookingId)
+    }
+  }
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "confirmed":
@@ -985,10 +1021,12 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     const canCancelWithin24Hours = hoursUntilBooking >= 24
     
     // Action visibility rules:
-    // - canMarkPaid: Only for confirmed, future bookings with pending payment (not completed, not cancelled, not past)
+    // - canMarkPaid: Only for confirmed bookings with pending payment (not completed, not cancelled)
+    // - canNotifyOwner: Only for confirmed bookings where payment is 'paid' (awaiting owner confirmation)
     // - canCancel: Only for confirmed bookings that are 24+ hours away (not completed, not cancelled, not past)
     // - showReceipt: Only for completed bookings
-    const canMarkPaid = booking.status === "confirmed" && paymentStatus === 'pending' && !isPastDate && !isCompleted && !isCancelled
+    const canMarkPaid = booking.status === "confirmed" && paymentStatus === 'pending' && !isCompleted && !isCancelled
+    const canNotifyOwner = booking.status === "confirmed" && paymentStatus === 'paid' && !isCompleted && !isCancelled
     const canCancel = booking.status === "confirmed" && canCancelWithin24Hours && !isPastDate && !isCompleted && !isCancelled
     
     // Get status badge with color
@@ -1146,6 +1184,27 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
           
           {/* Actions Column */}
           <div className="lg:w-32 border-t lg:border-t-0 lg:border-l bg-muted/20 p-3 lg:p-4 flex lg:flex-col items-center lg:items-stretch justify-center gap-2">
+            {/* Mark as Paid - First action for active bookings */}
+            {canMarkPaid && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleMarkPaid(booking.id)}
+                    data-testid={`button-mark-paid-${booking.id}`}
+                    disabled={markPaidMutation.isPending}
+                    className="flex-1 lg:flex-none text-amber-600 hover:text-amber-700"
+                  >
+                    <DollarSign className="h-4 w-4 mr-2" />
+                    <span className="hidden sm:inline">Mark as Paid</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Mark payment as sent to owner after completing transfer</TooltipContent>
+              </Tooltip>
+            )}
+            
+            {/* View Details - Always available */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -1159,28 +1218,10 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                   <span className="hidden sm:inline">View</span>
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>View Details</TooltipContent>
+              <TooltipContent>View booking details and payment information</TooltipContent>
             </Tooltip>
             
-            {canMarkPaid && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleMarkPaid(booking.id)}
-                    data-testid={`button-mark-paid-${booking.id}`}
-                    disabled={markPaidMutation.isPending}
-                    className="flex-1 lg:flex-none text-blue-600 hover:text-blue-700"
-                  >
-                    <DollarSign className="h-4 w-4 mr-2" />
-                    <span className="hidden sm:inline">Pay</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Mark as Paid</TooltipContent>
-              </Tooltip>
-            )}
-            
+            {/* Cancel - For active bookings 24+ hours away */}
             {canCancel && (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -1195,10 +1236,31 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                     <span className="hidden sm:inline">Cancel</span>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Cancel Booking</TooltipContent>
+                <TooltipContent>Cancel this booking (available 24+ hours before)</TooltipContent>
               </Tooltip>
             )}
             
+            {/* Notify Owner - For awaiting payment confirmation */}
+            {canNotifyOwner && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleNotifyOwner(booking.id, booking.ownerName || 'Owner')}
+                    data-testid={`button-notify-owner-${booking.id}`}
+                    disabled={notifyOwnerMutation.isPending}
+                    className="flex-1 lg:flex-none text-blue-600 hover:text-blue-700"
+                  >
+                    <Bell className="h-4 w-4 mr-2" />
+                    <span className="hidden sm:inline">Notify</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Send reminder to owner to confirm payment receipt</TooltipContent>
+              </Tooltip>
+            )}
+            
+            {/* Receipt - For completed bookings */}
             {isCompleted && (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -1213,7 +1275,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                     <span className="hidden sm:inline">Receipt</span>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Download Receipt</TooltipContent>
+                <TooltipContent>Download payment receipt for this booking</TooltipContent>
               </Tooltip>
             )}
           </div>
@@ -1759,12 +1821,12 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               </Button>
             )}
           </div>
-          <div className="flex items-start gap-2 rounded-lg border bg-muted/40 px-3 py-2">
-            <CalendarCheck className="h-4 w-4 mt-0.5 text-green-600 flex-shrink-0" />
-            <p className="text-sm text-muted-foreground">
+          <div className="flex items-start gap-2 rounded-lg border bg-amber-50 border-amber-200 px-3 py-2">
+            <Info className="h-4 w-4 mt-0.5 text-amber-600 flex-shrink-0" />
+            <p className="text-sm text-amber-700">
               {isOwnerView 
-                ? "Your listed spots that are available for booking or have confirmed reservations." 
-                : "Your confirmed bookings that are ready to use on the scheduled date."}
+                ? "Your listed spots that are available for booking. Create new listings to earn from your parking spots." 
+                : "Bookings awaiting your payment. After transferring payment to the owner, click 'Mark as Paid' to notify them."}
             </p>
           </div>
           {filterBySearch(activeItems).length === 0 ? (
@@ -1815,15 +1877,12 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               </Button>
             )}
           </div>
-          <div className="flex items-start gap-2 rounded-lg border bg-muted/40 px-3 py-2">
-            {isOwnerView 
-              ? <Receipt className="h-4 w-4 mt-0.5 text-orange-600 dark:text-orange-400 flex-shrink-0" />
-              : <CreditCard className="h-4 w-4 mt-0.5 text-orange-600 dark:text-orange-400 flex-shrink-0" />
-            }
-            <p className="text-sm text-muted-foreground">
+          <div className="flex items-start gap-2 rounded-lg border bg-blue-50 border-blue-200 px-3 py-2">
+            <Info className="h-4 w-4 mt-0.5 text-blue-600 flex-shrink-0" />
+            <p className="text-sm text-blue-700">
               {isOwnerView 
                 ? "Confirm when you've received payment from renters for these bookings." 
-                : "Complete payment for these bookings to finalize your reservation."}
+                : "Payment sent - waiting for owner to confirm receipt. You can send a reminder if needed."}
             </p>
           </div>
           {filterBySearch(paymentPendingItems).length === 0 ? (
@@ -1874,12 +1933,12 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               </Button>
             )}
           </div>
-          <div className="flex items-start gap-2 rounded-lg border bg-muted/40 px-3 py-2">
-            <CheckCircle2 className="h-4 w-4 mt-0.5 text-slate-600 flex-shrink-0" />
-            <p className="text-sm text-muted-foreground">
+          <div className="flex items-start gap-2 rounded-lg border bg-green-50 border-green-200 px-3 py-2">
+            <Info className="h-4 w-4 mt-0.5 text-green-600 flex-shrink-0" />
+            <p className="text-sm text-green-700">
               {isOwnerView 
                 ? "Past bookings where your spots were used and payments received." 
-                : "Your past bookings with completed payments."}
+                : "Completed bookings with confirmed payments. Download receipts for your records."}
             </p>
           </div>
           {filterBySearch(completedItems).length === 0 ? (

@@ -4163,8 +4163,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Send payment reminder notification to renter using the notification service
       const { sendPaymentReminderNotification: sendReminder } = await import('./notification-service');
+      const renterName = renter.firstName && renter.lastName 
+        ? `${renter.firstName} ${renter.lastName}`
+        : renter.email || 'Renter';
       await sendReminder(
-        { name: renter.name || renter.email || 'Renter', email: renter.email || '', id: renter.id },
+        { name: renterName, email: renter.email || '', id: renter.id },
         {
           bookingId: id,
           spotNumber: spot?.spotNumber || 'Unknown',
@@ -4183,6 +4186,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error sending payment reminder:", error);
       res.status(500).json({ error: "Failed to send payment reminder" });
+    }
+  });
+
+  // POST /api/bookings/:id/notify-owner - Renter sends reminder to owner to confirm payment
+  app.post("/api/bookings/:id/notify-owner", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = getAuthenticatedUserId(req);
+      
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      const booking = await storage.getBooking(id);
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      // Check if booking belongs to the user (as renter)
+      if (booking.renterId !== userId) {
+        return res.status(403).json({ error: "Not authorized to send reminder for this booking" });
+      }
+
+      // Validate current state - can only send reminder if payment is 'paid' (waiting for owner confirmation)
+      if (booking.paymentStatus !== 'paid') {
+        return res.status(400).json({ 
+          error: booking.paymentStatus === 'pending' 
+            ? "Please mark your payment as sent first" 
+            : booking.paymentStatus === 'received'
+            ? "Payment has already been confirmed"
+            : `Invalid payment status: ${booking.paymentStatus}`
+        });
+      }
+
+      // Get owner info for notification
+      const owner = await storage.getUser(booking.ownerId!);
+      if (!owner) {
+        return res.status(404).json({ error: "Owner not found" });
+      }
+
+      // Get renter info for the notification message
+      const renter = await storage.getUser(booking.renterId!);
+      const renterName = renter?.firstName && renter?.lastName 
+        ? `${renter.firstName} ${renter.lastName}`
+        : renter?.email || 'A renter';
+
+      // Get spot info
+      const spot = await storage.getParkingSpot(booking.spotId);
+
+      // Create in-app notification for owner
+      await storage.createInAppNotification({
+        userId: booking.ownerId!,
+        title: "Payment Confirmation Reminder",
+        message: `${renterName} is waiting for you to confirm payment receipt for Spot ${spot?.spotNumber || 'Unknown'} on ${booking.bookingDate}. Amount: $${booking.totalAmount || booking.dailyRate}`,
+        type: "payment" as any,
+        read: false
+      });
+
+      // Also send email notification if owner has email notifications enabled
+      const ownerNotificationPrefs = await storage.getNotificationPreferences(booking.ownerId!);
+      if (ownerNotificationPrefs?.emailNotifications) {
+        const { sendPaymentReminderNotification } = await import('./notification-service');
+        const ownerName = owner.firstName && owner.lastName 
+          ? `${owner.firstName} ${owner.lastName}`
+          : owner.email || 'Owner';
+        
+        await sendPaymentReminderNotification(
+          { name: ownerName, email: owner.email || '', id: owner.id },
+          {
+            bookingId: id,
+            spotNumber: spot?.spotNumber || 'Unknown',
+            amount: parseFloat(booking.totalAmount?.toString() || booking.dailyRate?.toString() || '0'),
+            dueDate: new Date(booking.bookingDate)
+          }
+        );
+      }
+      
+      await auditService.logAction("UPDATE", "booking", {
+        entityId: id,
+        message: `Confirmation reminder sent for booking ${id} to owner ${owner.email}`,
+        after: { action: 'confirmation_reminder_sent', ownerId: booking.ownerId }
+      });
+
+      res.json({ success: true, message: "Confirmation reminder sent to owner" });
+    } catch (error) {
+      console.error("Error sending confirmation reminder:", error);
+      res.status(500).json({ error: "Failed to send confirmation reminder" });
     }
   });
 
