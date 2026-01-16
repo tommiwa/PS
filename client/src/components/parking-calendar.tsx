@@ -393,8 +393,8 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
       });
       
       // Lock acquired successfully, call parent to show booking form
-      // Don't pass bookingData - let parent show the dialog
-      onBookSpot(spot.id)
+      // Pass the clicked date so the form shows the correct date
+      onBookSpot(spot.id, { date: dateStr })
     } catch (error: any) {
       console.error('[Calendar] Lock acquisition failed:', error);
       const rawMessage = error?.message || "";
