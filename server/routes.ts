@@ -2796,7 +2796,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .limit(1);
       }
 
+      // If no period listing, try recurring listing
       if (!correctListing || correctListing.length === 0) {
+        // Get day of week for the booking date
+        const bookingDateObj = new Date(bookingDate + 'T12:00:00');
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const bookingDayOfWeek = dayNames[bookingDateObj.getDay()];
+        
+        // Find recurring listings that cover this date
+        const recurringListings = await db
+          .select()
+          .from(spotListings)
+          .where(and(
+            eq(spotListings.spotId, validatedData.spotId),
+            eq(spotListings.status, 'available'),
+            eq(spotListings.listingType, 'recurring'),
+            sql`${spotListings.recurringStartDate} <= ${bookingDate}`,
+            sql`(${spotListings.recurringEndDate} IS NULL OR ${spotListings.recurringEndDate} >= ${bookingDate})`
+          ));
+        
+        // Check if any recurring listing includes this day of week
+        for (const listing of recurringListings) {
+          if (listing.daysOfWeek && listing.daysOfWeek.includes(bookingDayOfWeek)) {
+            correctListing = [listing];
+            break;
+          }
+        }
+      }
+
+      if (!correctListing || correctListing.length === 0) {
+        console.log(`[Booking] No listing found for spot ${validatedData.spotId} on date ${bookingDate}`);
         return res.status(404).json({ 
           error: "No active listing found for this date",
           message: "This spot is not available for booking on the selected date."
