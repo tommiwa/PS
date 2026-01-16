@@ -1023,11 +1023,12 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     // Action visibility rules:
     // - canMarkPaid: Only for confirmed bookings with pending payment (not completed, not cancelled)
     // - canNotifyOwner: Only for confirmed bookings where payment is 'paid' (awaiting owner confirmation)
-    // - canCancel: Only for confirmed bookings that are 24+ hours away (not completed, not cancelled, not past)
+    // - canCancel: Only for confirmed bookings that are 24+ hours away AND payment NOT yet sent (pending only)
+    //   Once payment is sent (paymentStatus='paid'), cancellation requires refund process
     // - showReceipt: Only for completed bookings
     const canMarkPaid = booking.status === "confirmed" && paymentStatus === 'pending' && !isCompleted && !isCancelled
     const canNotifyOwner = booking.status === "confirmed" && paymentStatus === 'paid' && !isCompleted && !isCancelled
-    const canCancel = booking.status === "confirmed" && canCancelWithin24Hours && !isPastDate && !isCompleted && !isCancelled
+    const canCancel = booking.status === "confirmed" && paymentStatus === 'pending' && canCancelWithin24Hours && !isPastDate && !isCompleted && !isCancelled
     
     // Get status badge with color
     const getBookingStatusBadge = () => {
@@ -1405,9 +1406,9 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     const hoursUntilBooking = (bookingDate.getTime() - now.getTime()) / (1000 * 60 * 60)
     const canCancelWithin24Hours = hoursUntilBooking >= 24
     
-    // Same action logic as card view
+    // Same action logic as card view - canCancel only when payment NOT yet sent
     const canMarkPaid = booking.status === "confirmed" && paymentStatus === 'pending' && !isPastDate && !isCompleted && !isCancelled
-    const canCancel = booking.status === "confirmed" && canCancelWithin24Hours && !isPastDate && !isCompleted && !isCancelled
+    const canCancel = booking.status === "confirmed" && paymentStatus === 'pending' && canCancelWithin24Hours && !isPastDate && !isCompleted && !isCancelled
     
     const getStatusBadge = () => {
       const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
