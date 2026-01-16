@@ -1838,7 +1838,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
             <p className="text-sm text-emerald-700">
               {isOwnerView 
                 ? "Your listed spots that are available for booking. Create new listings to earn from your parking spots." 
-                : "Your current and upcoming bookings. For past bookings, mark payment as sent after transferring to the owner."}
+                : "All your active bookings. After transferring payment to the owner, click 'Mark as Paid' to update the status."}
             </p>
           </div>
           {filterBySearch(activeItems).length === 0 ? (
