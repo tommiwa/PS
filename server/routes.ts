@@ -2798,9 +2798,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // If no period listing, try recurring listing
       if (!correctListing || correctListing.length === 0) {
-        // Get day of week for the booking date
+        // Get day of week for the booking date (lowercase to match database format)
         const bookingDateObj = new Date(bookingDate + 'T12:00:00');
-        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
         const bookingDayOfWeek = dayNames[bookingDateObj.getDay()];
         
         // Find recurring listings that cover this date
