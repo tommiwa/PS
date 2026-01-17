@@ -172,7 +172,8 @@ export default function AdminParkingManagement() {
     description: "",
     ownerId: null as string | null,
     mapLink: "" as string | null,
-    seatNumber: "" as string | null
+    seatNumber: "" as string | null,
+    reservedForDepartmentId: null as number | null
   })
   
   // Form state for add spot dialog
@@ -184,7 +185,8 @@ export default function AdminParkingManagement() {
     isActive: true,
     isBookable: true,
     isBciManaged: true,
-    description: ""
+    description: "",
+    reservedForDepartmentId: null as number | null
   })
 
   // Custom location state
@@ -309,6 +311,11 @@ export default function AdminParkingManagement() {
 
   const { data: spotTypes = [], isLoading: isLoadingSpotTypes } = useQuery<SpotTypeTable[]>({
     queryKey: ["/api/spot-types"],
+  });
+
+  // Fetch departments for department-reserved spots
+  const { data: departments = [] } = useQuery<Array<{ id: number; name: string }>>({
+    queryKey: ["/api/departments"],
   });
 
   // Generate location options dynamically from fetched locations
@@ -518,7 +525,8 @@ export default function AdminParkingManagement() {
         isActive: true,
         isBookable: true,
         isBciManaged: true,
-        description: ""
+        description: "",
+        reservedForDepartmentId: null
       });
     },
     onError: (error: any) => {
@@ -760,7 +768,8 @@ export default function AdminParkingManagement() {
       description: spot.description || "",
       ownerId: spot.ownerId || null,
       mapLink: spot.mapLink || "",
-      seatNumber: (spot as any).seatNumber || ""
+      seatNumber: (spot as any).seatNumber || "",
+      reservedForDepartmentId: spot.reservedForDepartmentId || null
     });
     setShowEditSpotDialog(true);
   };
@@ -2855,6 +2864,27 @@ export default function AdminParkingManagement() {
                 </SelectContent>
               </Select>
             </div>
+            {addSpotFormData.spotTypeId === 6 && (
+              <div>
+                <label className="text-sm font-medium">Reserved for Department</label>
+                <Select 
+                  value={addSpotFormData.reservedForDepartmentId?.toString() || ""}
+                  onValueChange={(value) => setAddSpotFormData(prev => ({ ...prev, reservedForDepartmentId: value ? parseInt(value) : null }))}
+                >
+                  <SelectTrigger data-testid="select-add-spot-department">
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departments.map(dept => (
+                      <SelectItem key={dept.id} value={dept.id.toString()}>
+                        {dept.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">Only employees from this department can book this spot</p>
+              </div>
+            )}
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="indoor"
@@ -2881,6 +2911,7 @@ export default function AdminParkingManagement() {
                   createLocationMutation.isPending ||
                   !addSpotFormData.spotNumber || 
                   !addSpotFormData.spotTypeId ||
+                  (addSpotFormData.spotTypeId === 6 && !addSpotFormData.reservedForDepartmentId) ||
                   (!isCreatingCustomLocation && !addSpotFormData.locationId) ||
                   (isCreatingCustomLocation && (!customLocationData.office || !customLocationData.building || !customLocationData.level))
                 }
@@ -2964,6 +2995,27 @@ export default function AdminParkingManagement() {
                 </SelectContent>
               </Select>
             </div>
+            {editFormData.spotTypeId === 6 && (
+              <div>
+                <label className="text-sm font-medium">Reserved for Department</label>
+                <Select 
+                  value={editFormData.reservedForDepartmentId?.toString() || ""}
+                  onValueChange={(value) => setEditFormData(prev => ({ ...prev, reservedForDepartmentId: value ? parseInt(value) : null }))}
+                >
+                  <SelectTrigger data-testid="select-edit-spot-department">
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departments.map(dept => (
+                      <SelectItem key={dept.id} value={dept.id.toString()}>
+                        {dept.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">Only employees from this department can book this spot</p>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -3017,7 +3069,7 @@ export default function AdminParkingManagement() {
                   spotId: selectedSpot.id, 
                   spotData: editFormData 
                 })}
-                disabled={editSpotMutation.isPending || !editFormData.spotNumber || !editFormData.locationId || !editFormData.spotTypeId}
+                disabled={editSpotMutation.isPending || !editFormData.spotNumber || !editFormData.locationId || !editFormData.spotTypeId || (editFormData.spotTypeId === 6 && !editFormData.reservedForDepartmentId)}
                 className="flex-1"
                 data-testid="button-confirm-edit-spot"
               >

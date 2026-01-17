@@ -897,6 +897,19 @@ export class MemStorage implements IStorage {
       enrichedSpot.spotTypeName = spotTypeResult[0].name;
     }
     
+    // Join reserved department name if set
+    if (spot.reservedForDepartmentId) {
+      const reservedDeptResult = await db
+        .select({ name: departments.name })
+        .from(departments)
+        .where(eq(departments.id, spot.reservedForDepartmentId))
+        .limit(1);
+      
+      if (reservedDeptResult.length > 0) {
+        enrichedSpot.reservedForDepartmentName = reservedDeptResult[0].name;
+      }
+    }
+    
     if (spot.ownerId) {
       // Query database for user with department join
       const userResult = await db
@@ -977,6 +990,19 @@ export class MemStorage implements IStorage {
       enrichedSpot.spotTypeName = spotTypeResult[0].name;
     }
     
+    // Join reserved department name if set
+    if (spot.reservedForDepartmentId) {
+      const reservedDeptResult = await db
+        .select({ name: departments.name })
+        .from(departments)
+        .where(eq(departments.id, spot.reservedForDepartmentId))
+        .limit(1);
+      
+      if (reservedDeptResult.length > 0) {
+        enrichedSpot.reservedForDepartmentName = reservedDeptResult[0].name;
+      }
+    }
+    
     if (spot.ownerId) {
       // Query database for user with department join
       const userResult = await db
@@ -1016,6 +1042,7 @@ export class MemStorage implements IStorage {
       isIndoor: insertSpot.isIndoor ?? false,
       ownerId: insertSpot.ownerId ?? null,
       description: insertSpot.description ?? null,
+      reservedForDepartmentId: insertSpot.reservedForDepartmentId ?? null,
       isActive: insertSpot.isActive ?? true,
       isBookable: insertSpot.isBookable ?? true,
       isBciManaged: insertSpot.isBciManaged ?? false,
