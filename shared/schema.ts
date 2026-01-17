@@ -1384,6 +1384,53 @@ export interface SharedPoolUsageReportResponse {
   dateRange: { from: string; to: string };
 }
 
+// Issue Status and Priority Enums
+export const issueStatuses = z.enum(["backlog", "todo", "in_progress", "completed"]);
+export type IssueStatus = z.infer<typeof issueStatuses>;
+
+export const issuePriorities = z.enum(["low", "medium", "high", "urgent"]);
+export type IssuePriority = z.infer<typeof issuePriorities>;
+
+// Issues Table - Simple issue tracking system
+export const issues = pgTable("issues", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: varchar("title").notNull(),
+  description: text("description").notNull(),
+  priority: text("priority").notNull().$type<IssuePriority>().default("medium"),
+  status: text("status").notNull().$type<IssueStatus>().default("backlog"),
+  attachmentUrl: text("attachment_url"), // Optional attachment
+  attachmentName: text("attachment_name"), // Original filename
+  reporterId: varchar("reporter_id").notNull(), // User who reported the issue
+  reporterName: varchar("reporter_name"), // Cached reporter name for display
+  reporterEmail: varchar("reporter_email"), // Cached reporter email
+  adminNotes: text("admin_notes"), // Internal notes from admin
+  resolvedAt: timestamp("resolved_at"), // When marked as completed
+  resolvedBy: varchar("resolved_by"), // Admin who resolved it
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertIssueSchema = createInsertSchema(issues).omit({
+  id: true,
+  status: true,
+  adminNotes: true,
+  resolvedAt: true,
+  resolvedBy: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateIssueSchema = createInsertSchema(issues).pick({
+  status: true,
+  adminNotes: true,
+  resolvedAt: true,
+  resolvedBy: true,
+}).partial();
+
+export type InsertIssue = z.infer<typeof insertIssueSchema>;
+export type UpdateIssue = z.infer<typeof updateIssueSchema>;
+export type Issue = typeof issues.$inferSelect;
+
 // App Configurations Table - System-wide settings
 export const appConfigs = pgTable("app_configs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
