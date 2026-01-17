@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
 import { apiRequest, queryClient } from "@/lib/queryClient"
 import { format } from "date-fns"
-import { AlertCircle, Clock, CheckCircle2, ListTodo, Loader2, RefreshCw } from "lucide-react"
+import { AlertCircle, Clock, CheckCircle2, ListTodo, Loader2, RefreshCw, History } from "lucide-react"
 
 type IssueStatus = "backlog" | "todo" | "in_progress" | "completed"
 type IssuePriority = "low" | "medium" | "high" | "urgent"
@@ -42,17 +43,14 @@ const priorityConfig: Record<IssuePriority, { label: string; color: string }> = 
 }
 
 export default function AdminIssuesPage() {
-  const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [activeTab, setActiveTab] = useState<string>("active")
   const [priorityFilter, setPriorityFilter] = useState<string>("all")
   const { toast } = useToast()
 
-  const { data: issues = [], isLoading, refetch } = useQuery<Issue[]>({
-    queryKey: ["/api/admin/issues", statusFilter, priorityFilter],
+  const { data: allIssues = [], isLoading, refetch } = useQuery<Issue[]>({
+    queryKey: ["/api/admin/issues"],
     queryFn: async () => {
-      const params = new URLSearchParams()
-      if (statusFilter !== "all") params.append("status", statusFilter)
-      if (priorityFilter !== "all") params.append("priority", priorityFilter)
-      const response = await fetch(`/api/admin/issues?${params.toString()}`)
+      const response = await fetch("/api/admin/issues")
       if (!response.ok) throw new Error("Failed to fetch issues")
       return response.json()
     },
@@ -83,8 +81,122 @@ export default function AdminIssuesPage() {
     updateStatusMutation.mutate({ id: issueId, status: newStatus })
   }
 
-  const openIssuesCount = issues.filter(i => i.status !== "completed").length
-  const urgentCount = issues.filter(i => i.priority === "urgent" && i.status !== "completed").length
+  const activeIssues = allIssues.filter(i => i.status !== "completed")
+  const completedIssues = allIssues.filter(i => i.status === "completed")
+  const urgentCount = activeIssues.filter(i => i.priority === "urgent").length
+
+  const getFilteredIssues = (issues: Issue[]) => {
+    if (priorityFilter === "all") return issues
+    return issues.filter(i => i.priority === priorityFilter)
+  }
+
+  const renderIssuesTable = (issues: Issue[], isHistory: boolean = false) => {
+    const filteredIssues = getFilteredIssues(issues)
+    
+    if (isLoading) {
+      return (
+        <div className="space-y-3">
+          {[...Array(5)].map((_, i) => (
+            <Skeleton key={i} className="h-16 w-full" />
+          ))}
+        </div>
+      )
+    }
+    
+    if (filteredIssues.length === 0) {
+      return (
+        <div className="text-center py-12 text-muted-foreground">
+          <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-30" />
+          <p>{isHistory ? "No completed issues yet." : "No active issues found."}</p>
+        </div>
+      )
+    }
+
+    return (
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Title</TableHead>
+              <TableHead>Reporter</TableHead>
+              <TableHead>Priority</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>{isHistory ? "Completed" : "Created"}</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredIssues.map((issue) => (
+              <TableRow key={issue.id}>
+                <TableCell>
+                  <div>
+                    <div className="font-medium">{issue.title}</div>
+                    <div className="text-sm text-muted-foreground line-clamp-1">
+                      {issue.description}
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div>
+                    <div className="text-sm">{issue.reporterName || "Unknown"}</div>
+                    {issue.reporterEmail && (
+                      <a 
+                        href={`mailto:${issue.reporterEmail}`}
+                        className="text-xs text-muted-foreground hover:text-primary"
+                      >
+                        {issue.reporterEmail}
+                      </a>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge 
+                    variant="secondary" 
+                    className={priorityConfig[issue.priority].color}
+                  >
+                    {priorityConfig[issue.priority].label}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge 
+                    variant="secondary" 
+                    className={`${statusConfig[issue.status].color} flex items-center gap-1 w-fit`}
+                  >
+                    {statusConfig[issue.status].icon}
+                    {statusConfig[issue.status].label}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {format(new Date(isHistory ? issue.updatedAt : issue.createdAt), "MMM d, yyyy")}
+                </TableCell>
+                <TableCell className="text-right">
+                  <Select 
+                    value={issue.status} 
+                    onValueChange={(value) => handleStatusChange(issue.id, value as IssueStatus)}
+                    disabled={updateStatusMutation.isPending}
+                  >
+                    <SelectTrigger className="w-[130px]">
+                      {updateStatusMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <SelectValue />
+                      )}
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="backlog">Backlog</SelectItem>
+                      <SelectItem value="todo">To Do</SelectItem>
+                      <SelectItem value="in_progress">In Progress</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    )
+  }
 
   return (
     <div className="container mx-auto p-6 max-w-7xl">
@@ -110,15 +222,15 @@ export default function AdminIssuesPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Issues</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{issues.length}</div>
+            <div className="text-2xl font-bold">{allIssues.length}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Open Issues</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Active Issues</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{openIssuesCount}</div>
+            <div className="text-2xl font-bold text-yellow-600">{activeIssues.length}</div>
           </CardContent>
         </Card>
         <Card>
@@ -134,131 +246,53 @@ export default function AdminIssuesPage() {
       <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <CardTitle>All Issues</CardTitle>
-            <div className="flex items-center gap-3">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="backlog">Backlog</SelectItem>
-                  <SelectItem value="todo">To Do</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                <SelectTrigger className="w-[130px]">
-                  <SelectValue placeholder="Priority" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Priorities</SelectItem>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="urgent">Urgent</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <TabsList>
+                  <TabsTrigger value="active" className="flex items-center gap-2">
+                    <ListTodo className="h-4 w-4" />
+                    Active
+                    {activeIssues.length > 0 && (
+                      <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                        {activeIssues.length}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                  <TabsTrigger value="history" className="flex items-center gap-2">
+                    <History className="h-4 w-4" />
+                    History
+                    {completedIssues.length > 0 && (
+                      <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                        {completedIssues.length}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                </TabsList>
+                <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                  <SelectTrigger className="w-[130px]">
+                    <SelectValue placeholder="Priority" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Priorities</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="urgent">Urgent</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </Tabs>
           </div>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="space-y-3">
-              {[...Array(5)].map((_, i) => (
-                <Skeleton key={i} className="h-16 w-full" />
-              ))}
-            </div>
-          ) : issues.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-30" />
-              <p>No issues found matching the current filters.</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Reporter</TableHead>
-                    <TableHead>Priority</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {issues.map((issue) => (
-                    <TableRow key={issue.id}>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{issue.title}</div>
-                          <div className="text-sm text-muted-foreground line-clamp-1">
-                            {issue.description}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="text-sm">{issue.reporterName || "Unknown"}</div>
-                          {issue.reporterEmail && (
-                            <a 
-                              href={`mailto:${issue.reporterEmail}`}
-                              className="text-xs text-muted-foreground hover:text-primary"
-                            >
-                              {issue.reporterEmail}
-                            </a>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant="secondary" 
-                          className={priorityConfig[issue.priority].color}
-                        >
-                          {priorityConfig[issue.priority].label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant="secondary" 
-                          className={`${statusConfig[issue.status].color} flex items-center gap-1 w-fit`}
-                        >
-                          {statusConfig[issue.status].icon}
-                          {statusConfig[issue.status].label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {format(new Date(issue.createdAt), "MMM d, yyyy")}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Select 
-                          value={issue.status} 
-                          onValueChange={(value) => handleStatusChange(issue.id, value as IssueStatus)}
-                          disabled={updateStatusMutation.isPending}
-                        >
-                          <SelectTrigger className="w-[130px]">
-                            {updateStatusMutation.isPending ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <SelectValue />
-                            )}
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="backlog">Backlog</SelectItem>
-                            <SelectItem value="todo">To Do</SelectItem>
-                            <SelectItem value="in_progress">In Progress</SelectItem>
-                            <SelectItem value="completed">Completed</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsContent value="active" className="mt-0">
+              {renderIssuesTable(activeIssues, false)}
+            </TabsContent>
+            <TabsContent value="history" className="mt-0">
+              {renderIssuesTable(completedIssues, true)}
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
     </div>
