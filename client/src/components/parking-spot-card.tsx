@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import { MapPin, Car, Zap, Accessibility, Building, User, Clock, Calendar, ExternalLink } from "lucide-react"
+import { MapPin, Car, Zap, Accessibility, Building, Building2, User, Clock, Calendar, ExternalLink } from "lucide-react"
 import type { ParkingSpot, ParkingSpotWithUser } from "@shared/schema"
 import { useAuth } from "@/contexts/auth-context"
 import { useLock } from "@/contexts/LockContext"
@@ -27,6 +27,8 @@ type SpotWithLock = (ParkingSpot | ParkingSpotWithUser) & {
   spotTypeName?: string
   dateToPrice?: Record<string, { listingId: string; dailyRate: number }>
   floorPlanBaseUrl?: string | null
+  reservedForDepartmentId?: number | null
+  reservedForDepartmentName?: string | null
 }
 
 interface ParkingSpotCardProps {
@@ -168,6 +170,27 @@ export function ParkingSpotCard({
     )
   }
 
+  // Department restriction badge for department-reserved spots
+  const getDepartmentRestrictionBadge = () => {
+    if (!spot.reservedForDepartmentName) return null;
+    
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div data-testid={`badge-dept-restriction-${spot.id}`}>
+            <Badge variant="outline" className="gap-1 bg-amber-100 text-amber-700 border-amber-200">
+              <Building2 className="h-3.5 w-3.5" />
+              {spot.reservedForDepartmentName}
+            </Badge>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>This spot is reserved for {spot.reservedForDepartmentName} department only</p>
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
   const handleBook = () => {
     console.log(`Booking spot ${spot.id} for date ${spot.availability?.date}`)
     // Pass spot ID AND the specific date shown on this card
@@ -252,7 +275,10 @@ export function ParkingSpotCard({
               )}
             </div>
           </div>
-          {getSpotTypeBadge()}
+          <div className="flex flex-col gap-1 items-end">
+            {getSpotTypeBadge()}
+            {getDepartmentRestrictionBadge()}
+          </div>
         </div>
       </div>
 
