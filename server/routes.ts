@@ -7512,6 +7512,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/issues", isAuthenticated, async (req: any, res) => {
     try {
       const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
       const user = await storage.getUser(userId);
       
       if (!user) {
@@ -7525,7 +7528,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         reporterEmail: user.email || '',
       });
       
-      const [newIssue] = await db.insert(issues).values(validatedData).returning();
+      const [newIssue] = await db.insert(issues).values(validatedData as any).returning();
       
       res.status(201).json(newIssue);
     } catch (error) {
@@ -7599,7 +7602,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .set({
           ...validatedData,
           updatedAt: new Date(),
-        })
+        } as any)
         .where(eq(issues.id, id))
         .returning();
       

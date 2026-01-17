@@ -16,12 +16,14 @@ import {
   Database,
   Lock,
   Clock,
-  DollarSign
+  DollarSign,
+  AlertCircle
 } from "lucide-react"
 import { Link, useLocation, useRoute } from "wouter"
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -31,6 +33,7 @@ import {
   SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { ReportIssueDialog } from "@/components/report-issue-dialog"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -150,6 +153,13 @@ const adminOperationsItems = [
     icon: CalendarCheck,
     roles: ["admin"],
     tooltip: "Booking Management"
+  },
+  {
+    title: "Reported Issues",
+    url: "/admin/issues",
+    icon: AlertCircle,
+    roles: ["admin"],
+    tooltip: "View and manage reported issues"
   },
   {
     title: "Audit Logs",
@@ -622,6 +632,16 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
           </>
         )}
       </SidebarContent>
+      
+      {/* Footer with Report Issue button - visible to all users */}
+      <SidebarFooter className="border-t p-3">
+        <ReportIssueDialog>
+          <Button variant="outline" size="sm" className="w-full justify-start gap-2">
+            <AlertCircle className="h-4 w-4" />
+            Report an Issue
+          </Button>
+        </ReportIssueDialog>
+      </SidebarFooter>
     </Sidebar>
   )
 }
