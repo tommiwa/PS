@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
+import { useConfirm } from "@/hooks/use-confirm"
 import { apiRequest, queryClient } from "@/lib/queryClient"
 import { format } from "date-fns"
 import { AlertCircle, Clock, CheckCircle2, ListTodo, Loader2, RefreshCw, History, Trash2 } from "lucide-react"
@@ -46,6 +47,7 @@ export default function AdminIssuesPage() {
   const [activeTab, setActiveTab] = useState<string>("active")
   const [priorityFilter, setPriorityFilter] = useState<string>("all")
   const { toast } = useToast()
+  const { confirm } = useConfirm()
 
   const { data: allIssues = [], isLoading, refetch } = useQuery<Issue[]>({
     queryKey: ["/api/admin/issues"],
@@ -102,8 +104,15 @@ export default function AdminIssuesPage() {
     updateStatusMutation.mutate({ id: issueId, status: newStatus })
   }
 
-  const handleDelete = (issueId: number) => {
-    if (confirm("Are you sure you want to delete this issue?")) {
+  const handleDelete = async (issueId: number) => {
+    const confirmed = await confirm({
+      title: "Delete Issue",
+      description: "Are you sure you want to delete this issue? This action cannot be undone.",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      variant: "destructive",
+    })
+    if (confirmed) {
       deleteIssueMutation.mutate(issueId)
     }
   }
