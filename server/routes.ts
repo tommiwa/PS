@@ -5,7 +5,7 @@ import { broadcastLockEvent } from "./websocket";
 import { setupAuth, isAuthenticated, requireAdmin, getAuthenticatedUserId, getAuthenticatedUserRole, getAuthenticatedUserBaseRole } from "./replitAuth";
 import { z } from "zod";
 import { db } from "./db";
-import { parkingSpots, spotLocks, spotListings, bookings } from "@shared/schema";
+import { parkingSpots, spotLocks, spotListings, bookings, issues, insertIssueSchema, updateIssueSchema, issueStatuses } from "@shared/schema";
 import { inArray, and, eq, lt, gt, not, or, sql } from "drizzle-orm";
 import { 
   sendAssignmentNotification, 
@@ -7503,6 +7503,137 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error sending report email:", error);
       res.status(500).json({ error: "Failed to send report email" });
+    }
+  });
+
+  // ==================== ISSUE TRACKING ROUTES ====================
+  
+  // Create a new issue (all authenticated users)
+  app.post("/api/issues", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      
+      const validatedData = insertIssueSchema.parse({
+        ...req.body,
+        reporterId: userId,
+        reporterName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown',
+        reporterEmail: user.email || '',
+      });
+      
+      const [newIssue] = await db.insert(issues).values(validatedData).returning();
+      
+      res.status(201).json(newIssue);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input", details: error.errors });
+      }
+      console.error("Error creating issue:", error);
+      res.status(500).json({ error: "Failed to create issue" });
+    }
+  });
+  
+  // Get all issues (admin only)
+  app.get("/api/admin/issues", requireAdmin, async (req, res) => {
+    try {
+      const { status, priority } = req.query;
+      
+      let query = db.select().from(issues);
+      
+      const allIssues = await query.orderBy(sql`${issues.createdAt} DESC`);
+      
+      // Filter in memory for simplicity
+      let filteredIssues = allIssues;
+      if (status && status !== 'all') {
+        filteredIssues = filteredIssues.filter(i => i.status === status);
+      }
+      if (priority && priority !== 'all') {
+        filteredIssues = filteredIssues.filter(i => i.priority === priority);
+      }
+      
+      res.json(filteredIssues);
+    } catch (error) {
+      console.error("Error fetching issues:", error);
+      res.status(500).json({ error: "Failed to fetch issues" });
+    }
+  });
+  
+  // Get single issue (admin only)
+  app.get("/api/admin/issues/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const [issue] = await db.select().from(issues).where(eq(issues.id, id));
+      
+      if (!issue) {
+        return res.status(404).json({ error: "Issue not found" });
+      }
+      
+      res.json(issue);
+    } catch (error) {
+      console.error("Error fetching issue:", error);
+      res.status(500).json({ error: "Failed to fetch issue" });
+    }
+  });
+  
+  // Update issue status (admin only)
+  app.patch("/api/admin/issues/:id", requireAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = getAuthenticatedUserId(req);
+      
+      const validatedData = updateIssueSchema.parse(req.body);
+      
+      // If status is being set to completed, record resolution info
+      if (validatedData.status === 'completed') {
+        validatedData.resolvedAt = new Date();
+        validatedData.resolvedBy = userId;
+      }
+      
+      const [updatedIssue] = await db
+        .update(issues)
+        .set({
+          ...validatedData,
+          updatedAt: new Date(),
+        })
+        .where(eq(issues.id, id))
+        .returning();
+      
+      if (!updatedIssue) {
+        return res.status(404).json({ error: "Issue not found" });
+      }
+      
+      res.json(updatedIssue);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input", details: error.errors });
+      }
+      console.error("Error updating issue:", error);
+      res.status(500).json({ error: "Failed to update issue" });
+    }
+  });
+  
+  // Get issues count by status (admin only - for dashboard)
+  app.get("/api/admin/issues/stats", requireAdmin, async (req, res) => {
+    try {
+      const allIssues = await db.select().from(issues);
+      
+      const stats = {
+        total: allIssues.length,
+        backlog: allIssues.filter(i => i.status === 'backlog').length,
+        todo: allIssues.filter(i => i.status === 'todo').length,
+        inProgress: allIssues.filter(i => i.status === 'in_progress').length,
+        completed: allIssues.filter(i => i.status === 'completed').length,
+      };
+      
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching issue stats:", error);
+      res.status(500).json({ error: "Failed to fetch issue stats" });
     }
   });
 
