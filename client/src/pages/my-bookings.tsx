@@ -256,7 +256,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
       // Show special warning for paid peer-to-peer bookings
       confirmed = await confirm({
         title: "Cancel Paid Booking?",
-        description: `You have already sent payment for this booking on ${booking?.bookingDate || 'selected date'}. If you cancel, please settle the payment refund directly with the spot owner (${booking?.ownerName || 'the owner'}).`,
+        description: `You have already sent payment for this booking on ${booking?.bookingDate || 'selected date'}. If you cancel, please settle the payment refund directly with the spot owner (${booking?.ownerName || 'Workplace Services'}).`,
         confirmText: "Cancel Anyway",
         cancelText: "Keep Booking",
         variant: "destructive"
@@ -427,7 +427,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
           spotLocation: item.location || 'N/A',
           renterName: user?.firstName + ' ' + user?.lastName || 'N/A',
           renterEmail: user?.email || 'N/A',
-          ownerName: item.ownerName || item.owner || 'N/A',
+          ownerName: item.ownerName || item.owner || 'Workplace Services',
           status: item.status || 'N/A',
           dailyRate: item.dailyRate || item.price || 0,
           startTime: item.startTime || 'N/A',
@@ -485,7 +485,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
           spotLocation: item.location || 'N/A',
           renterName: user?.firstName + ' ' + user?.lastName || 'N/A',
           renterEmail: user?.email || 'N/A',
-          ownerName: item.ownerName || item.owner || 'N/A',
+          ownerName: item.ownerName || item.owner || 'Workplace Services',
           status: item.status || 'N/A',
           dailyRate: item.dailyRate || item.price || 0,
           startTime: item.startTime || 'N/A',
@@ -1153,7 +1153,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs text-muted-foreground">Owner</p>
-                  <p className="text-sm font-medium truncate">{booking.ownerName || "N/A"}</p>
+                  <p className="text-sm font-medium truncate">{booking.ownerName || "Workplace Services"}</p>
                 </div>
               </div>
             </div>
@@ -1260,7 +1260,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleNotifyOwner(booking.id, booking.ownerName || 'Owner')}
+                    onClick={() => handleNotifyOwner(booking.id, booking.ownerName || 'Workplace Services')}
                     data-testid={`button-notify-owner-${booking.id}`}
                     disabled={notifyOwnerMutation.isPending}
                     className="flex-1 lg:flex-none text-blue-600 hover:text-blue-700"
@@ -1474,7 +1474,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               </Button>
             )}
             {canNotifyOwner && (
-              <Button variant="ghost" size="icon" onClick={() => handleNotifyOwner(booking.id, booking.ownerName || 'Owner')} data-testid={`compact-notify-${booking.id}`} className="text-blue-600 hover:text-blue-700" disabled={notifyOwnerMutation.isPending}>
+              <Button variant="ghost" size="icon" onClick={() => handleNotifyOwner(booking.id, booking.ownerName || 'Workplace Services')} data-testid={`compact-notify-${booking.id}`} className="text-blue-600 hover:text-blue-700" disabled={notifyOwnerMutation.isPending}>
                 <Bell className="h-4 w-4" />
               </Button>
             )}
