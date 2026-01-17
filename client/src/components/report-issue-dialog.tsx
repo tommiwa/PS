@@ -85,7 +85,7 @@ export function ReportIssueDialog({ children }: ReportIssueDialogProps) {
             Report an Issue
           </DialogTitle>
           <DialogDescription>
-            Let us know about any problems or suggestions. We'll review your submission and follow up as needed.
+            Let us know about any problems or suggestions. We'll review your submission and work to resolve it as early as possible.
           </DialogDescription>
         </DialogHeader>
         
