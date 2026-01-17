@@ -305,11 +305,6 @@ export default function AdminIssuesPage() {
                   <TabsTrigger value="history" className="flex items-center gap-2">
                     <History className="h-4 w-4" />
                     History
-                    {completedIssues.length > 0 && (
-                      <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
-                        {completedIssues.length}
-                      </Badge>
-                    )}
                   </TabsTrigger>
                 </TabsList>
                 <Select value={priorityFilter} onValueChange={setPriorityFilter}>
