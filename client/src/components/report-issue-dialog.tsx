@@ -121,7 +121,7 @@ export function ReportIssueDialog({ children }: ReportIssueDialogProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="low">Low - Minor inconvenience</SelectItem>
-                <SelectItem value="medium">Medium - Affects my work</SelectItem>
+                <SelectItem value="medium">Medium - Affects the functionality</SelectItem>
                 <SelectItem value="high">High - Significant impact</SelectItem>
                 <SelectItem value="urgent">Urgent - Critical blocker</SelectItem>
               </SelectContent>
