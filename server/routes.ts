@@ -2661,6 +2661,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Department-reserved spot check: Verify user belongs to the required department
+      if (spot.reservedForDepartmentId) {
+        const user = await storage.getUser(userId);
+        if (!user || user.departmentId !== spot.reservedForDepartmentId) {
+          // Get department name for error message
+          const departments = await storage.getDepartments();
+          const dept = departments.find(d => d.id === spot.reservedForDepartmentId);
+          const deptName = dept?.name || 'a specific department';
+          return res.status(403).json({ 
+            error: "This spot is reserved for another department", 
+            reason: `This parking spot is reserved for ${deptName} employees only.` 
+          });
+        }
+      }
+
       // Note: Removed taxable_benefit check as it's not in the SpotType enum
 
       // NOTE: Temporarily disabled for testing - allow booking own spots
