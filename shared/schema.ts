@@ -128,7 +128,7 @@ export type InsertInAppNotification = z.infer<typeof insertInAppNotificationSche
 export type InAppNotification = typeof inAppNotifications.$inferSelect;
 
 // Parking Spots Table
-export const spotTypes = z.enum(["regular", "electric", "tesla_ev", "accessible", "reserved"]);
+export const spotTypes = z.enum(["regular", "electric", "tesla_ev", "accessible", "reserved", "department_reserved"]);
 export type SpotType = z.infer<typeof spotTypes>;
 
 export const parkingSpots = pgTable("parking_spots", {
@@ -142,6 +142,7 @@ export const parkingSpots = pgTable("parking_spots", {
   defaultPrice: decimal("default_price", { precision: 10, scale: 2 }), // Owner's default daily rate for listings
   mapLink: text("map_link"), // External link to visual directory (e.g., office space software floor plan)
   seatNumber: text("seat_number"), // Seat ID for dynamic map link generation (e.g., "34478")
+  reservedForDepartmentId: integer("reserved_for_department_id").references(() => departments.id, { onDelete: "set null" }), // Department restriction for department-reserved spots
   isActive: boolean("is_active").notNull().default(true),
   isBookable: boolean("is_bookable").notNull().default(true), // Whether spot can be booked by renters
   isBciManaged: boolean("is_bci_managed").notNull().default(false), // BCI-managed spots (true) vs personal spots (false)
@@ -166,6 +167,7 @@ export interface ParkingSpotWithUser extends ParkingSpot {
   assignedUserDepartment?: string;
   locationName?: string;
   spotTypeName?: string;
+  reservedForDepartmentName?: string;
 }
 
 // Safe parking spot type for non-admin endpoints (excludes sensitive user data)
@@ -174,6 +176,7 @@ export interface ParkingSpotWithSafeUserData extends ParkingSpot {
   assignedUserDepartment?: string;
   locationName?: string;
   spotTypeName?: string;
+  reservedForDepartmentName?: string;
   listingId?: string;
   dailyRate?: string;
   availabilityDates?: string[];
