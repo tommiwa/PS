@@ -7620,6 +7620,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Delete issue (admin only)
+  app.delete("/api/admin/issues/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const [deletedIssue] = await db
+        .delete(issues)
+        .where(eq(issues.id, id))
+        .returning();
+      
+      if (!deletedIssue) {
+        return res.status(404).json({ error: "Issue not found" });
+      }
+      
+      res.json({ success: true, message: "Issue deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting issue:", error);
+      res.status(500).json({ error: "Failed to delete issue" });
+    }
+  });
+  
   // Get issues count by status (admin only - for dashboard)
   app.get("/api/admin/issues/stats", requireAdmin, async (req, res) => {
     try {

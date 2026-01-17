@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
 import { apiRequest, queryClient } from "@/lib/queryClient"
 import { format } from "date-fns"
-import { AlertCircle, Clock, CheckCircle2, ListTodo, Loader2, RefreshCw, History } from "lucide-react"
+import { AlertCircle, Clock, CheckCircle2, ListTodo, Loader2, RefreshCw, History, Trash2 } from "lucide-react"
 
 type IssueStatus = "backlog" | "todo" | "in_progress" | "completed"
 type IssuePriority = "low" | "medium" | "high" | "urgent"
@@ -77,8 +77,35 @@ export default function AdminIssuesPage() {
     },
   })
 
+  const deleteIssueMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiRequest(`/api/admin/issues/${id}`, { method: "DELETE" })
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/issues"] })
+      toast({
+        title: "Issue Deleted",
+        description: "The issue has been removed.",
+      })
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Delete",
+        description: error.message || "Could not delete issue.",
+        variant: "destructive",
+      })
+    },
+  })
+
   const handleStatusChange = (issueId: number, newStatus: IssueStatus) => {
     updateStatusMutation.mutate({ id: issueId, status: newStatus })
+  }
+
+  const handleDelete = (issueId: number) => {
+    if (confirm("Are you sure you want to delete this issue?")) {
+      deleteIssueMutation.mutate(issueId)
+    }
   }
 
   const activeIssues = allIssues.filter(i => i.status !== "completed")
@@ -170,25 +197,42 @@ export default function AdminIssuesPage() {
                   {format(new Date(isHistory ? issue.updatedAt : issue.createdAt), "MMM d, yyyy")}
                 </TableCell>
                 <TableCell className="text-right">
-                  <Select 
-                    value={issue.status} 
-                    onValueChange={(value) => handleStatusChange(issue.id, value as IssueStatus)}
-                    disabled={updateStatusMutation.isPending}
-                  >
-                    <SelectTrigger className="w-[130px]">
-                      {updateStatusMutation.isPending ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <SelectValue />
-                      )}
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="backlog">Backlog</SelectItem>
-                      <SelectItem value="todo">To Do</SelectItem>
-                      <SelectItem value="in_progress">In Progress</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="flex items-center justify-end gap-2">
+                    <Select 
+                      value={issue.status} 
+                      onValueChange={(value) => handleStatusChange(issue.id, value as IssueStatus)}
+                      disabled={updateStatusMutation.isPending}
+                    >
+                      <SelectTrigger className="w-[130px]">
+                        {updateStatusMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <SelectValue />
+                        )}
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="backlog">Backlog</SelectItem>
+                        <SelectItem value="todo">To Do</SelectItem>
+                        <SelectItem value="in_progress">In Progress</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {!isHistory && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(issue.id)}
+                        disabled={deleteIssueMutation.isPending}
+                        className="text-muted-foreground hover:text-destructive"
+                      >
+                        {deleteIssueMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
