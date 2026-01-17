@@ -23,7 +23,7 @@ export function ReportIssueDialog({ children }: ReportIssueDialogProps) {
 
   const createIssueMutation = useMutation({
     mutationFn: async (data: { title: string; description: string; priority: string }) => {
-      const response = await apiRequest("POST", "/api/issues", data)
+      const response = await apiRequest("/api/issues", { method: "POST", body: data })
       return response.json()
     },
     onSuccess: () => {
