@@ -935,28 +935,28 @@ export const generateParkingReceiptPDF = (receiptData: ParkingReceiptData, filen
   doc.setLineWidth(0.5)
   doc.rect(margin, margin, pageWidth - (margin * 2), 26, 'FD')
   
-  // Add ParkShare logo
+  // Add ParkShare logo - positioned inside the box
   try {
-    doc.addImage(PARKSHARE_LOGO_BASE64, 'PNG', margin + 4, yPos + 2, 18, 18)
+    doc.addImage(PARKSHARE_LOGO_BASE64, 'PNG', margin + 5, margin + 4, 18, 18)
   } catch (e) {
-    // Fallback: P icon with border
+    // Fallback: P icon with border - positioned inside the box
     doc.setDrawColor(darkBlue[0], darkBlue[1], darkBlue[2])
     doc.setLineWidth(0.5)
-    doc.circle(margin + 13, yPos + 10, 8, 'S')
+    doc.circle(margin + 14, margin + 13, 8, 'S')
     doc.setTextColor(darkBlue[0], darkBlue[1], darkBlue[2])
     doc.setFontSize(13)
     doc.setFont('helvetica', 'bold')
-    doc.text('P', margin + 13, yPos + 13, { align: 'center' })
+    doc.text('P', margin + 14, margin + 16, { align: 'center' })
   }
   
-  // Header text - dark blue on white
+  // Header text - dark blue on white, positioned relative to margin
   doc.setTextColor(darkBlue[0], darkBlue[1], darkBlue[2])
   doc.setFontSize(13)
   doc.setFont('helvetica', 'bold')
-  doc.text('BCI ParkShare', margin + 26, yPos + 8)
+  doc.text('BCI ParkShare', margin + 27, margin + 11)
   doc.setFontSize(9)
   doc.setFont('helvetica', 'normal')
-  doc.text('Parking Receipt', margin + 26, yPos + 15)
+  doc.text('Parking Receipt', margin + 27, margin + 18)
   
   yPos = margin + 32
   
@@ -1057,20 +1057,22 @@ export const generateParkingReceiptPDF = (receiptData: ParkingReceiptData, filen
   doc.setFillColor(darkBlue[0], darkBlue[1], darkBlue[2])
   doc.rect(innerMargin, yPos, contentWidth, 18, 'F')
   
-  // Green checkmark
+  // Green checkmark circle with white tick
   doc.setFillColor(accentGreen[0], accentGreen[1], accentGreen[2])
-  doc.circle(innerMargin + 8, yPos + 9, 4, 'F')
-  doc.setTextColor(white[0], white[1], white[2])
-  doc.setFontSize(8)
-  doc.setFont('helvetica', 'bold')
-  doc.text('\u2713', innerMargin + 8, yPos + 11, { align: 'center' })
+  doc.circle(innerMargin + 10, yPos + 9, 5, 'F')
+  
+  // Draw checkmark using lines (more visible than unicode)
+  doc.setDrawColor(white[0], white[1], white[2])
+  doc.setLineWidth(1)
+  doc.line(innerMargin + 7.5, yPos + 9, innerMargin + 9.5, yPos + 11.5)
+  doc.line(innerMargin + 9.5, yPos + 11.5, innerMargin + 13, yPos + 6.5)
   
   // PAID amount in white
   doc.setTextColor(white[0], white[1], white[2])
   doc.setFontSize(15)
   doc.setFont('helvetica', 'bold')
   const amount = typeof receiptData.dailyRate === 'number' ? receiptData.dailyRate : parseFloat(String(receiptData.dailyRate)) || 0
-  doc.text(`PAID: $${amount.toFixed(2)}`, centerX + 4, yPos + 12, { align: 'center' })
+  doc.text(`PAID: $${amount.toFixed(2)}`, centerX + 6, yPos + 12, { align: 'center' })
   
   yPos += 24
   
