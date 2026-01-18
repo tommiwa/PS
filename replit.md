@@ -37,6 +37,7 @@ Preferred communication style: Simple, everyday language.
 - **Role Assignment Logic**: Default "renter" on first login, "owner" for users with assigned spots, "admin" via hardcoded emails or manual assignment.
 - **"View As" Functionality**: Admin-only session-based role impersonation.
 - **Terms & Conditions**: Mandatory one-time acceptance system with versioned legal terms, simplified with emojis.
+- **User Migration**: When a user logs in with OIDC and their email matches an existing admin-created user but with different ID, the system automatically migrates all data by transferring foreign key references (parking spots, bookings, spot listings, spot assignment history, notifications, vehicles, etc.) from the old user record to the new OIDC-based record before deleting the old user.
 
 ### Key Features
 - **Booking System**: Real-time management with status tracking, custom calendar, search & filtering. Includes business rules for reserved spots (non-bookable), intelligent display of booked spots, support for period listings, and data consistency across views. Tiles and calendar views are synchronized - booked spots (shown as grey/disabled in calendar) are automatically filtered from tiles view to prevent duplicate bookings. Booking form intelligently auto-populates user data (phone, vehicle license) from session and database using hydration pattern to handle async auth loading without race conditions.

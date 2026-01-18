@@ -9,7 +9,26 @@ import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
 import { auditService } from "./audit-service";
 import { db } from "./db";
-import { users, parkingSpots, termsVersions, type User } from "@shared/schema";
+import { 
+  users, 
+  parkingSpots, 
+  termsVersions, 
+  notificationPreferences,
+  inAppNotifications,
+  spotLocks,
+  bookings,
+  waitingList,
+  vehicles,
+  paymentPreferences,
+  spotAssignmentHistory,
+  lockerWaitlist,
+  lockerAssignmentHistory,
+  spotListings,
+  issues,
+  disputes,
+  lockers,
+  type User 
+} from "@shared/schema";
 import { eq, desc, sql } from "drizzle-orm";
 
 // Extend Express Session to include viewAsRole
@@ -134,13 +153,15 @@ async function upsertUser(
   if (existingEmailUser && !existingDbUser) {
     console.log(`[UPSERT] Migrating user from ${existingEmailUser.id} to ${userId}`);
     
+    const oldUserId = existingEmailUser.id;
+    
     // First, update the old user's email to avoid unique constraint violation
     const tempEmail = `${existingEmailUser.email}-old-${Date.now()}`;
     console.log(`[UPSERT] Changing old user email from ${existingEmailUser.email} to ${tempEmail}`);
     
     const updateResult = await db.update(users)
       .set({ email: tempEmail })
-      .where(eq(users.id, existingEmailUser.id))
+      .where(eq(users.id, oldUserId))
       .returning();
     console.log(`[UPSERT] Email update result:`, updateResult);
     
@@ -161,13 +182,126 @@ async function upsertUser(
       updatedAt: now,
     });
     
-    // Delete the old user record (admin-created with random UUID)
-    console.log(`[UPSERT] Deleting old user record ${existingEmailUser.id}`);
-    await db.delete(users).where(eq(users.id, existingEmailUser.id));
+    // Transfer all foreign key references from old user to new user
+    console.log(`[UPSERT] Transferring foreign key references from ${oldUserId} to ${userId}`);
     
-    // Remove old user from in-memory storage
-    await storage.deleteUser(existingEmailUser.id);
-    console.log(`[UPSERT] Migration complete`);
+    try {
+      // Update parking spots ownership
+      await db.update(parkingSpots)
+        .set({ ownerId: userId })
+        .where(eq(parkingSpots.ownerId, oldUserId));
+      console.log(`[UPSERT] Transferred parking spots ownership`);
+      
+      // Update spot listings ownership
+      await db.update(spotListings)
+        .set({ ownerId: userId })
+        .where(eq(spotListings.ownerId, oldUserId));
+      console.log(`[UPSERT] Transferred spot listings`);
+      
+      // Update bookings (as renter)
+      await db.update(bookings)
+        .set({ renterId: userId })
+        .where(eq(bookings.renterId, oldUserId));
+      // Update bookings (as owner)
+      await db.update(bookings)
+        .set({ ownerId: userId })
+        .where(eq(bookings.ownerId, oldUserId));
+      console.log(`[UPSERT] Transferred bookings`);
+      
+      // Update spot assignment history
+      await db.update(spotAssignmentHistory)
+        .set({ userId: userId })
+        .where(eq(spotAssignmentHistory.userId, oldUserId));
+      console.log(`[UPSERT] Transferred spot assignment history`);
+      
+      // Update notification preferences
+      await db.update(notificationPreferences)
+        .set({ userId: userId })
+        .where(eq(notificationPreferences.userId, oldUserId));
+      console.log(`[UPSERT] Transferred notification preferences`);
+      
+      // Update in-app notifications
+      await db.update(inAppNotifications)
+        .set({ userId: userId })
+        .where(eq(inAppNotifications.userId, oldUserId));
+      console.log(`[UPSERT] Transferred in-app notifications`);
+      
+      // Update spot locks
+      await db.update(spotLocks)
+        .set({ userId: userId })
+        .where(eq(spotLocks.userId, oldUserId));
+      console.log(`[UPSERT] Transferred spot locks`);
+      
+      // Update waiting list entries
+      await db.update(waitingList)
+        .set({ userId: userId })
+        .where(eq(waitingList.userId, oldUserId));
+      console.log(`[UPSERT] Transferred waiting list entries`);
+      
+      // Update vehicles
+      await db.update(vehicles)
+        .set({ userId: userId })
+        .where(eq(vehicles.userId, oldUserId));
+      console.log(`[UPSERT] Transferred vehicles`);
+      
+      // Update payment preferences
+      await db.update(paymentPreferences)
+        .set({ userId: userId })
+        .where(eq(paymentPreferences.userId, oldUserId));
+      console.log(`[UPSERT] Transferred payment preferences`);
+      
+      // Update locker waitlist
+      await db.update(lockerWaitlist)
+        .set({ userId: userId })
+        .where(eq(lockerWaitlist.userId, oldUserId));
+      console.log(`[UPSERT] Transferred locker waitlist`);
+      
+      // Update locker assignment history
+      await db.update(lockerAssignmentHistory)
+        .set({ userId: userId })
+        .where(eq(lockerAssignmentHistory.userId, oldUserId));
+      console.log(`[UPSERT] Transferred locker assignment history`);
+      
+      // Update issues
+      await db.update(issues)
+        .set({ reporterId: userId })
+        .where(eq(issues.reporterId, oldUserId));
+      console.log(`[UPSERT] Transferred issues`);
+      
+      // Update disputes (as reporter)
+      await db.update(disputes)
+        .set({ reporterId: userId })
+        .where(eq(disputes.reporterId, oldUserId));
+      // Update disputes (as target user)
+      await db.update(disputes)
+        .set({ targetUserId: userId })
+        .where(eq(disputes.targetUserId, oldUserId));
+      // Update disputes (as resolver)
+      await db.update(disputes)
+        .set({ resolvedBy: userId })
+        .where(eq(disputes.resolvedBy, oldUserId));
+      console.log(`[UPSERT] Transferred disputes`);
+      
+      // Update lockers (assigned to user)
+      await db.update(lockers)
+        .set({ userId: userId })
+        .where(eq(lockers.userId, oldUserId));
+      console.log(`[UPSERT] Transferred lockers`);
+      
+      console.log(`[UPSERT] All foreign key references transferred successfully`);
+      
+      // Now delete the old user record (admin-created with random UUID)
+      console.log(`[UPSERT] Deleting old user record ${oldUserId}`);
+      await db.delete(users).where(eq(users.id, oldUserId));
+      
+      // Remove old user from in-memory storage
+      await storage.deleteUser(oldUserId);
+      console.log(`[UPSERT] Migration complete`);
+    } catch (transferError) {
+      console.error(`[UPSERT] Critical error during user migration:`, transferError);
+      // Re-throw the error - do not proceed with partial migration
+      throw new Error(`User migration failed: ${transferError instanceof Error ? transferError.message : 'Unknown error'}`);
+    }
   } else if (existingDbUser) {
     // Update existing user in database
     await db.update(users)
