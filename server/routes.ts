@@ -2873,6 +2873,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalAmount: actualTotalAmount.toString()
       } as any); // Type assertion since we're adding required fields server-side
 
+      // Update the listing status to 'booked' so it appears correctly in owner's view
+      await storage.updateSpotListingStatus(listing.id, 'booked');
+      console.log(`[Booking] Updated listing ${listing.id} status to 'booked'`);
+
       // Confirm the lock with the new booking
       await confirmLock(activeLock.id, newBooking.id);
 
@@ -3937,6 +3941,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const cancelledBooking = await storage.cancelBookingWithReason(id, "Cancelled by renter");
       
+      // Update the listing status back to 'available' so it can be booked again
+      if (booking.listingId) {
+        await storage.updateSpotListingStatus(booking.listingId, 'available');
+        console.log(`[Cancel Booking] Updated listing ${booking.listingId} status back to 'available'`);
+      }
+      
       await auditService.logAction("CANCEL", "booking", {
         entityId: id,
         message: `Booking ${id} cancelled by renter`,
@@ -3967,6 +3977,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const cancelledBooking = await storage.cancelBookingWithReason(id, reason);
+      
+      // Update the listing status back to 'available' so it can be booked again
+      if (booking.listingId) {
+        await storage.updateSpotListingStatus(booking.listingId, 'available');
+        console.log(`[Admin Cancel] Updated listing ${booking.listingId} status back to 'available'`);
+      }
       
       await auditService.logAction("CANCEL", "booking", {
         entityId: id,
