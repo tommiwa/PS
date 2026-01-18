@@ -1052,7 +1052,8 @@ export const generateParkingReceiptPDF = (receiptData: ParkingReceiptData, filen
   doc.setTextColor(white[0], white[1], white[2])
   doc.setFontSize(14)
   doc.setFont('helvetica', 'bold')
-  doc.text(`PAID: $${receiptData.dailyRate.toFixed(2)}`, centerX, yPos + 11, { align: 'center' })
+  const amount = typeof receiptData.dailyRate === 'number' ? receiptData.dailyRate : parseFloat(String(receiptData.dailyRate)) || 0
+  doc.text(`PAID: $${amount.toFixed(2)}`, centerX, yPos + 11, { align: 'center' })
   
   yPos += 22
   
