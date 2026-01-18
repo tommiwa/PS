@@ -1002,7 +1002,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               </Tooltip>
             )}
             
-            {isCompleted && (
+            {isCompleted && paymentStatus === 'received' && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -1018,6 +1018,11 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                 </TooltipTrigger>
                 <TooltipContent>Download Receipt</TooltipContent>
               </Tooltip>
+            )}
+            {isCompleted && paymentStatus !== 'received' && (
+              <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-300">
+                Not Used
+              </Badge>
             )}
           </div>
         </div>
