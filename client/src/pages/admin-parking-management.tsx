@@ -326,6 +326,15 @@ export default function AdminParkingManagement() {
     }));
   }, [locations]);
 
+  // Get the Department Reserved spot type ID dynamically (not hardcoded)
+  const departmentReservedSpotTypeId = useMemo(() => {
+    const deptReservedType = spotTypes.find(t => 
+      t.name === 'Department Reserved' || 
+      t.slug === 'department-reserved'
+    );
+    return deptReservedType?.id ?? null;
+  }, [spotTypes]);
+
   // Search users for direct assignment (only triggers when query >= 3 chars)
   const { data: searchedUsers = [], isLoading: isSearchingUsers } = useQuery<Array<{
     id: string;
@@ -2873,7 +2882,7 @@ export default function AdminParkingManagement() {
                 </SelectContent>
               </Select>
             </div>
-            {addSpotFormData.spotTypeId === 6 && (
+            {departmentReservedSpotTypeId && addSpotFormData.spotTypeId === departmentReservedSpotTypeId && (
               <div>
                 <label className="text-sm font-medium">Reserved for Department</label>
                 <Select 
@@ -2920,7 +2929,7 @@ export default function AdminParkingManagement() {
                   createLocationMutation.isPending ||
                   !addSpotFormData.spotNumber || 
                   !addSpotFormData.spotTypeId ||
-                  (addSpotFormData.spotTypeId === 6 && !addSpotFormData.reservedForDepartmentId) ||
+                  (departmentReservedSpotTypeId && addSpotFormData.spotTypeId === departmentReservedSpotTypeId && !addSpotFormData.reservedForDepartmentId) ||
                   (!isCreatingCustomLocation && !addSpotFormData.locationId) ||
                   (isCreatingCustomLocation && (!customLocationData.office || !customLocationData.building || !customLocationData.level))
                 }
@@ -3004,7 +3013,7 @@ export default function AdminParkingManagement() {
                 </SelectContent>
               </Select>
             </div>
-            {editFormData.spotTypeId === 6 && (
+            {departmentReservedSpotTypeId && editFormData.spotTypeId === departmentReservedSpotTypeId && (
               <div>
                 <label className="text-sm font-medium">Reserved for Department</label>
                 <Select 
@@ -3078,7 +3087,7 @@ export default function AdminParkingManagement() {
                   spotId: selectedSpot.id, 
                   spotData: editFormData 
                 })}
-                disabled={editSpotMutation.isPending || !editFormData.spotNumber || !editFormData.locationId || !editFormData.spotTypeId || (editFormData.spotTypeId === 6 && !editFormData.reservedForDepartmentId)}
+                disabled={editSpotMutation.isPending || !editFormData.spotNumber || !editFormData.locationId || !editFormData.spotTypeId || !!(departmentReservedSpotTypeId && editFormData.spotTypeId === departmentReservedSpotTypeId && !editFormData.reservedForDepartmentId)}
                 className="flex-1"
                 data-testid="button-confirm-edit-spot"
               >
@@ -3195,7 +3204,7 @@ export default function AdminParkingManagement() {
               
               // Check if this is a Department Reserved spot
               const isDeptReserved = selectedSpotForAssign.spotTypeName === 'Department Reserved' || 
-                                     selectedSpotForAssign.spotTypeId === 6;
+                                     (departmentReservedSpotTypeId && selectedSpotForAssign.spotTypeId === departmentReservedSpotTypeId);
               
               if (!isDeptReserved || !selectedSpotForAssign.reservedForDepartmentId) return null;
               
@@ -3268,7 +3277,7 @@ export default function AdminParkingManagement() {
                   
                   // Disable if department mismatch for Department Reserved spots
                   const isDeptReserved = selectedSpotForAssign.spotTypeName === 'Department Reserved' || 
-                                         selectedSpotForAssign.spotTypeId === 6;
+                                         (departmentReservedSpotTypeId && selectedSpotForAssign.spotTypeId === departmentReservedSpotTypeId);
                   if (isDeptReserved && selectedSpotForAssign.reservedForDepartmentId) {
                     const selectedUser = searchedUsers.find(u => u.id === directAssignFormData.userId) || 
                                          allUsers.find((u: any) => u.id === directAssignFormData.userId);

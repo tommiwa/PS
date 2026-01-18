@@ -4718,9 +4718,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "User not found" });
       }
       
-      // Validate department restriction for Department Reserved spots (spotTypeId = 6)
-      if (existingSpot.spotTypeId === 6 && existingSpot.reservedForDepartmentId) {
-        if (user.departmentId !== existingSpot.reservedForDepartmentId) {
+      // Validate department restriction for Department Reserved spots
+      // Look up the spot type to check if it's "Department Reserved" (by name/slug, not hardcoded ID)
+      if (existingSpot.spotTypeId && existingSpot.reservedForDepartmentId) {
+        const spotType = await storage.getSpotType(existingSpot.spotTypeId);
+        const isDepartmentReserved = spotType?.name === 'Department Reserved' || 
+                                      spotType?.slug === 'department-reserved';
+        
+        if (isDepartmentReserved && user.departmentId !== existingSpot.reservedForDepartmentId) {
           // Get department name for better error message
           const department = await storage.getDepartment(existingSpot.reservedForDepartmentId);
           const deptName = department?.name || 'the restricted department';
