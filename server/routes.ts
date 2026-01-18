@@ -4710,6 +4710,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existingSpot = await storage.getParkingSpot(spotId);
       const user = await storage.getUser(userId);
       
+      if (!existingSpot) {
+        return res.status(404).json({ error: "Parking spot not found" });
+      }
+      
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      // Validate department restriction for Department Reserved spots (spotTypeId = 6)
+      if (existingSpot.spotTypeId === 6 && existingSpot.reservedForDepartmentId) {
+        if (user.departmentId !== existingSpot.reservedForDepartmentId) {
+          // Get department name for better error message
+          const department = await storage.getDepartment(existingSpot.reservedForDepartmentId);
+          const deptName = department?.name || 'the restricted department';
+          return res.status(400).json({ 
+            error: `This spot is reserved for ${deptName} department only. The selected user is not a member of this department.`
+          });
+        }
+      }
+      
       // Check if user has an active waiting list entry and mark it as assigned
       const waitingListEntry = await storage.getWaitingListByUser(userId);
       if (waitingListEntry) {

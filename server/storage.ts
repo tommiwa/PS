@@ -85,7 +85,7 @@ export interface IStorage {
   hasAnyRole(userId: string, roles: UserRole[]): Promise<boolean>;
   
   // User search operation
-  searchUsers(query: string): Promise<Pick<User, 'id' | 'firstName' | 'lastName' | 'email'>[]>;
+  searchUsers(query: string): Promise<Pick<User, 'id' | 'firstName' | 'lastName' | 'email' | 'departmentId'>[]>;
 
   // Parking Spot operations
   getParkingSpot(id: string): Promise<ParkingSpot | undefined>;
@@ -746,7 +746,7 @@ export class MemStorage implements IStorage {
     return roles.some(role => user.roles.includes(role));
   }
 
-  async searchUsers(query: string): Promise<Pick<User, 'id' | 'firstName' | 'lastName' | 'email'>[]> {
+  async searchUsers(query: string): Promise<Pick<User, 'id' | 'firstName' | 'lastName' | 'email' | 'departmentId'>[]> {
     const lowerQuery = `%${query.toLowerCase()}%`;
     
     const results = await db
@@ -755,6 +755,7 @@ export class MemStorage implements IStorage {
         firstName: users.firstName,
         lastName: users.lastName,
         email: users.email,
+        departmentId: users.departmentId,
       })
       .from(users)
       .where(
@@ -770,6 +771,7 @@ export class MemStorage implements IStorage {
       firstName: r.firstName ?? null,
       lastName: r.lastName ?? null,
       email: r.email ?? null,
+      departmentId: r.departmentId ?? null,
     }));
   }
 

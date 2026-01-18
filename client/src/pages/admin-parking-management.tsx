@@ -36,7 +36,7 @@ import {
   Timer, Target, CheckCircle2, Search, Filter, Check, ChevronsUpDown,
   Zap, Accessibility, Building, MoreHorizontal, Info, RefreshCw,
   Trash2, Edit, UserMinus, UserCheck, Download, FileText,
-  Eye, EyeOff, Layers, Sparkles, Loader2, MapPin
+  Eye, EyeOff, Layers, Sparkles, Loader2, MapPin, AlertCircle
 } from "lucide-react"
 import type { ParkingSpot, ParkingSpotWithUser, SpotType, Location, SpotTypeTable } from "@shared/schema"
 import { quickExportParkingSpotsPDF, quickExportParkingSpotsExcel } from "@/utils/export-utils"
@@ -332,6 +332,7 @@ export default function AdminParkingManagement() {
     firstName: string | null;
     lastName: string | null;
     email: string | null;
+    departmentId: number | null;
   }>>({
     queryKey: [`/api/admin/search-users?query=${encodeURIComponent(debouncedUserSearchQuery)}`],
     enabled: debouncedUserSearchQuery.length >= 3,
@@ -3188,6 +3189,43 @@ export default function AdminParkingManagement() {
                 </PopoverContent>
               </Popover>
             </div>
+            {/* Department restriction validation warning */}
+            {(() => {
+              if (!selectedSpotForAssign || !directAssignFormData.userId) return null;
+              
+              // Check if this is a Department Reserved spot
+              const isDeptReserved = selectedSpotForAssign.spotTypeName === 'Department Reserved' || 
+                                     selectedSpotForAssign.spotTypeId === 6;
+              
+              if (!isDeptReserved || !selectedSpotForAssign.reservedForDepartmentId) return null;
+              
+              // Find the selected user
+              const selectedUser = searchedUsers.find(u => u.id === directAssignFormData.userId) || 
+                                   allUsers.find((u: any) => u.id === directAssignFormData.userId);
+              
+              if (!selectedUser) return null;
+              
+              // Check if user's department matches
+              const userDeptId = selectedUser.departmentId;
+              const spotDeptId = selectedSpotForAssign.reservedForDepartmentId;
+              
+              if (userDeptId !== spotDeptId) {
+                const deptName = selectedSpotForAssign.reservedForDepartmentName || 'the restricted department';
+                return (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg" data-testid="warning-department-mismatch">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                      <div className="text-sm text-red-700">
+                        <p className="font-medium">Department Restriction</p>
+                        <p>This spot is reserved for <strong>{deptName}</strong> department only. The selected user is not a member of this department and cannot be assigned to this spot.</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+              
+              return null;
+            })()}
             <div>
               <label className="text-sm font-medium">Duration</label>
               <Select 
@@ -3225,7 +3263,21 @@ export default function AdminParkingManagement() {
                     });
                   }
                 }}
-                disabled={directAssignMutation.isPending || !directAssignFormData.userId || !selectedSpotForAssign}
+                disabled={(() => {
+                  if (directAssignMutation.isPending || !directAssignFormData.userId || !selectedSpotForAssign) return true;
+                  
+                  // Disable if department mismatch for Department Reserved spots
+                  const isDeptReserved = selectedSpotForAssign.spotTypeName === 'Department Reserved' || 
+                                         selectedSpotForAssign.spotTypeId === 6;
+                  if (isDeptReserved && selectedSpotForAssign.reservedForDepartmentId) {
+                    const selectedUser = searchedUsers.find(u => u.id === directAssignFormData.userId) || 
+                                         allUsers.find((u: any) => u.id === directAssignFormData.userId);
+                    if (selectedUser && selectedUser.departmentId !== selectedSpotForAssign.reservedForDepartmentId) {
+                      return true;
+                    }
+                  }
+                  return false;
+                })()}
                 className="flex-1"
                 data-testid="button-confirm-direct-assign"
               >
