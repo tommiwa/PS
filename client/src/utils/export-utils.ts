@@ -1053,19 +1053,21 @@ export const generateParkingReceiptPDF = (receiptData: ParkingReceiptData, filen
   
   yPos += 8
   
-  // Amount section - Dark blue background
+  // Amount section - Dark blue background (inside the border)
+  const paymentBoxMargin = margin + 2
+  const paymentBoxWidth = pageWidth - (paymentBoxMargin * 2)
   doc.setFillColor(darkBlue[0], darkBlue[1], darkBlue[2])
-  doc.rect(innerMargin, yPos, contentWidth, 18, 'F')
+  doc.rect(paymentBoxMargin, yPos, paymentBoxWidth, 18, 'F')
   
   // Green checkmark circle with white tick
   doc.setFillColor(accentGreen[0], accentGreen[1], accentGreen[2])
-  doc.circle(innerMargin + 10, yPos + 9, 5, 'F')
+  doc.circle(paymentBoxMargin + 12, yPos + 9, 5, 'F')
   
   // Draw checkmark using lines (more visible than unicode)
   doc.setDrawColor(white[0], white[1], white[2])
   doc.setLineWidth(1)
-  doc.line(innerMargin + 7.5, yPos + 9, innerMargin + 9.5, yPos + 11.5)
-  doc.line(innerMargin + 9.5, yPos + 11.5, innerMargin + 13, yPos + 6.5)
+  doc.line(paymentBoxMargin + 9.5, yPos + 9, paymentBoxMargin + 11.5, yPos + 11.5)
+  doc.line(paymentBoxMargin + 11.5, yPos + 11.5, paymentBoxMargin + 15, yPos + 6.5)
   
   // PAID amount in white
   doc.setTextColor(white[0], white[1], white[2])
