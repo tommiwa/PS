@@ -1213,7 +1213,7 @@ export default function Profile() {
                                   </FormControl>
                                   <SelectContent>
                                     <SelectItem value="none">No preference</SelectItem>
-                                    {spotTypes.filter(type => type.name.toLowerCase() !== 'reserved').map((type) => (
+                                    {spotTypes.filter(type => !['reserved', 'department reserved'].includes(type.name.toLowerCase())).map((type) => (
                                       <SelectItem key={type.id} value={type.id.toString()}>
                                         {type.name}
                                       </SelectItem>
