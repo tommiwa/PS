@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import { MapPin, Car, Zap, Accessibility, Building, Building2, User, Clock, Calendar, ExternalLink } from "lucide-react"
+import { MapPin, Car, Zap, Accessibility, Building, Building2, User, Clock, Calendar, ExternalLink, Gift, Tag, Sun } from "lucide-react"
 import type { ParkingSpot, ParkingSpotWithUser } from "@shared/schema"
 import { useAuth } from "@/contexts/auth-context"
 import { useLock } from "@/contexts/LockContext"
@@ -191,6 +191,72 @@ export function ParkingSpotCard({
     );
   }
 
+  // Check if date is a weekend (Saturday or Sunday)
+  const isWeekend = (dateStr: string): boolean => {
+    const date = new Date(dateStr + 'T00:00:00');
+    const day = date.getDay();
+    return day === 0 || day === 6; // 0 = Sunday, 6 = Saturday
+  }
+
+  // Get promotional tags based on price and date
+  const getPromotionalTags = () => {
+    const tags: JSX.Element[] = [];
+    const price = getDisplayPrice();
+    const dateStr = spot.availability?.date;
+
+    // Free tag - price is $0
+    if (price === 0) {
+      tags.push(
+        <Tooltip key="free">
+          <TooltipTrigger asChild>
+            <Badge className="gap-1 bg-green-500 text-white border-green-600 hover:bg-green-600">
+              <Gift className="h-3 w-3" />
+              Free
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>This spot is available for free!</p>
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+    // Top Deal tag - price > $0 and <= $12
+    else if (price > 0 && price <= 12) {
+      tags.push(
+        <Tooltip key="top-deal">
+          <TooltipTrigger asChild>
+            <Badge className="gap-1 bg-teal-500 text-white border-teal-600 hover:bg-teal-600">
+              <Tag className="h-3 w-3" />
+              Top Deal
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Great value! This spot is priced at $12 or less</p>
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+
+    // Weekend tag - if date falls on Saturday or Sunday
+    if (dateStr && isWeekend(dateStr)) {
+      tags.push(
+        <Tooltip key="weekend">
+          <TooltipTrigger asChild>
+            <Badge className="gap-1 bg-orange-500 text-white border-orange-600 hover:bg-orange-600">
+              <Sun className="h-3 w-3" />
+              Weekend
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Weekend parking - Saturday or Sunday</p>
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+
+    return tags;
+  }
+
   const handleBook = () => {
     console.log(`Booking spot ${spot.id} for date ${spot.availability?.date}`)
     // Pass spot ID AND the specific date shown on this card
@@ -237,7 +303,7 @@ export function ParkingSpotCard({
       <div className="p-4 pb-3 bg-gradient-to-r from-blue-50/70 to-blue-50/20 border-b">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
               <h3 className="text-xl font-bold text-foreground">
                 Spot {spot.spotNumber}
               </h3>
@@ -247,6 +313,8 @@ export function ParkingSpotCard({
                   PENDING
                 </Badge>
               )}
+              {/* Promotional Tags */}
+              {getPromotionalTags()}
             </div>
             <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
               <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
