@@ -906,92 +906,111 @@ export interface ParkingReceiptData {
 }
 
 export const generateParkingReceiptPDF = (receiptData: ParkingReceiptData, filename: string): void => {
-  const doc = new jsPDF('portrait', 'mm', 'a4')
+  // Create a smaller receipt-sized document (80mm wide, like a thermal receipt)
+  const doc = new jsPDF('portrait', 'mm', [80, 150])
   const pageWidth = doc.internal.pageSize.getWidth()
+  const centerX = pageWidth / 2
   
-  doc.setFillColor(BCI_COLORS.primary)
-  doc.rect(20, 10, 60, 25, 'F')
+  let yPos = 10
   
-  doc.setTextColor(255, 255, 255)
-  doc.setFontSize(24)
-  doc.setFont('helvetica', 'bold')
-  doc.text('BCI', 50, 25, { align: 'center' })
+  // Car icon area with dashed border
+  doc.setDrawColor(100, 100, 100)
+  doc.setLineDashPattern([2, 2], 0)
+  doc.rect(10, yPos, 25, 18)
+  doc.setLineDashPattern([], 0)
   
-  doc.setFontSize(8)
-  doc.setFont('helvetica', 'normal')
-  doc.text('Parking Management', 50, 30, { align: 'center' })
+  // Simple car shape inside the box
+  doc.setFillColor(50, 50, 50)
+  doc.ellipse(22.5, yPos + 9, 8, 4, 'S')
+  doc.rect(17, yPos + 6, 11, 6)
   
-  doc.setTextColor(BCI_COLORS.text)
-  doc.setFontSize(20)
-  doc.setFont('helvetica', 'bold')
-  doc.text('Parking Receipt', 90, 25)
-  
-  const now = new Date()
-  const dateStr = now.toLocaleDateString()
-  const timeStr = now.toLocaleTimeString()
-  
-  doc.setFontSize(10)
-  doc.setTextColor(BCI_COLORS.secondary)
-  doc.text(`Generated: ${dateStr} at ${timeStr}`, pageWidth - 20, 20, { align: 'right' })
-  
-  doc.setDrawColor(BCI_COLORS.mediumGray)
-  doc.setLineWidth(0.5)
-  doc.line(20, 40, pageWidth - 20, 40)
-  
-  let yPos = 55
-  
+  // "Parking Receipt" title
+  doc.setTextColor(0, 0, 0)
   doc.setFontSize(14)
   doc.setFont('helvetica', 'bold')
-  doc.setTextColor(BCI_COLORS.primary)
-  doc.text('Receipt Details', 20, yPos)
-  yPos += 12
+  doc.text('Parking Receipt', 40, yPos + 12)
   
-  doc.setFontSize(11)
+  yPos += 28
+  
+  // Gray bordered content box
+  doc.setDrawColor(180, 180, 180)
+  doc.setLineWidth(0.3)
+  doc.rect(5, yPos, pageWidth - 10, 70)
+  
+  yPos += 8
+  
+  // Location/Address
+  doc.setFontSize(10)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(100, 100, 100)
+  doc.text(receiptData.spotLocation, centerX, yPos, { align: 'center' })
+  yPos += 5
+  doc.setFontSize(8)
   doc.setFont('helvetica', 'normal')
-  doc.setTextColor(BCI_COLORS.text)
-  
-  const labelX = 20
-  const valueX = 80
-  const lineHeight = 8
-  
-  const details = [
-    { label: 'Booking ID:', value: receiptData.bookingId },
-    { label: 'Spot Number:', value: receiptData.spotNumber },
-    { label: 'Location:', value: receiptData.spotLocation },
-    { label: 'Renter Name:', value: receiptData.renterName },
-    { label: 'Renter Email:', value: receiptData.renterEmail },
-    { label: 'Owner Name:', value: receiptData.ownerName },
-    { label: 'Booking Date:', value: receiptData.bookingDate },
-    { label: 'Status:', value: receiptData.status.toUpperCase() },
-    { label: 'Daily Rate:', value: `$${receiptData.dailyRate}` },
-    { label: 'Payment Status:', value: receiptData.paymentStatus.toUpperCase() }
-  ]
-  
-  details.forEach(detail => {
-    doc.setFont('helvetica', 'bold')
-    doc.text(detail.label, labelX, yPos)
-    doc.setFont('helvetica', 'normal')
-    doc.text(String(detail.value), valueX, yPos)
-    yPos += lineHeight
-  })
+  doc.text(`Spot ${receiptData.spotNumber}`, centerX, yPos, { align: 'center' })
   
   yPos += 10
-  doc.setDrawColor(BCI_COLORS.mediumGray)
-  doc.line(20, yPos, pageWidth - 20, yPos)
-  yPos += 15
   
-  doc.setFontSize(10)
-  doc.setTextColor(BCI_COLORS.secondary)
-  doc.text('Thank you for using BCI ParkShare!', pageWidth / 2, yPos, { align: 'center' })
-  yPos += 8
-  doc.setFontSize(8)
-  doc.text('This receipt was automatically generated. Please keep it for your records.', pageWidth / 2, yPos, { align: 'center' })
+  // Ticket number
+  doc.setFontSize(9)
+  doc.setTextColor(100, 100, 100)
+  doc.text(`Ticket#: ${receiptData.bookingId.slice(0, 10).toUpperCase()}`, centerX, yPos, { align: 'center' })
   
-  const pageHeight = doc.internal.pageSize.getHeight()
-  doc.setDrawColor(BCI_COLORS.mediumGray)
-  doc.line(20, pageHeight - 20, pageWidth - 20, pageHeight - 20)
-  doc.setFontSize(8)
-  doc.text('BCI ParkShare - Confidential Receipt', 20, pageHeight - 15)
+  yPos += 10
+  
+  // Date and Time side by side
+  const bookingDate = new Date(receiptData.bookingDate)
+  const dateStr = bookingDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })
+  const now = new Date()
+  const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+  
+  doc.setFontSize(9)
+  doc.text(`Date: ${dateStr}`, 15, yPos)
+  doc.text(`Time: ${timeStr}`, 50, yPos)
+  
+  yPos += 10
+  
+  // Duration
+  doc.text('Duration: 1 Day', centerX, yPos, { align: 'center' })
+  
+  yPos += 12
+  
+  // Large PAID amount
+  doc.setFontSize(16)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(0, 0, 0)
+  doc.text(`PAID: $${receiptData.dailyRate}`, centerX, yPos, { align: 'center' })
+  
+  yPos += 12
+  
+  // Thank you message
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(80, 80, 80)
+  doc.text('THANK YOU', centerX, yPos, { align: 'center' })
+  yPos += 5
+  doc.text('AND DRIVE SAFELY', centerX, yPos, { align: 'center' })
+  
+  yPos += 12
+  
+  // Simple barcode representation (lines pattern)
+  const barcodeY = yPos
+  const barcodeWidth = 50
+  const barcodeX = (pageWidth - barcodeWidth) / 2
+  doc.setFillColor(0, 0, 0)
+  
+  // Generate barcode-like pattern based on booking ID
+  const barcodePattern = receiptData.bookingId.split('').map((char, i) => {
+    const code = char.charCodeAt(0)
+    return (code + i) % 3 === 0 ? 2 : 1
+  })
+  
+  let barX = barcodeX
+  for (let i = 0; i < Math.min(barcodePattern.length, 25); i++) {
+    const barWidth = barcodePattern[i]
+    doc.rect(barX, barcodeY, barWidth, 12, 'F')
+    barX += barWidth + 1
+  }
   
   doc.save(`${filename}.pdf`)
 }
