@@ -906,111 +906,95 @@ export interface ParkingReceiptData {
 }
 
 export const generateParkingReceiptPDF = (receiptData: ParkingReceiptData, filename: string): void => {
-  // Create a smaller receipt-sized document (80mm wide, like a thermal receipt)
-  const doc = new jsPDF('portrait', 'mm', [80, 150])
+  // Create a receipt-sized document
+  const doc = new jsPDF('portrait', 'mm', [100, 160])
   const pageWidth = doc.internal.pageSize.getWidth()
   const centerX = pageWidth / 2
   
-  let yPos = 10
+  let yPos = 8
   
-  // Car icon area with dashed border
-  doc.setDrawColor(100, 100, 100)
-  doc.setLineDashPattern([2, 2], 0)
-  doc.rect(10, yPos, 25, 18)
-  doc.setLineDashPattern([], 0)
+  // Add ParkShare logo at top left
+  try {
+    doc.addImage(PARKSHARE_LOGO_BASE64, 'PNG', 8, yPos, 22, 22)
+  } catch (e) {
+    // Fallback: draw a simple P parking icon if logo fails
+    doc.setDrawColor(40, 40, 40)
+    doc.setLineWidth(0.5)
+    doc.rect(8, yPos, 22, 22)
+    doc.setFontSize(18)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(40, 40, 40)
+    doc.text('P', 19, yPos + 15, { align: 'center' })
+  }
   
-  // Simple car shape inside the box
-  doc.setFillColor(50, 50, 50)
-  doc.ellipse(22.5, yPos + 9, 8, 4, 'S')
-  doc.rect(17, yPos + 6, 11, 6)
-  
-  // "Parking Receipt" title
-  doc.setTextColor(0, 0, 0)
-  doc.setFontSize(14)
+  // Location/Address next to logo
+  doc.setTextColor(60, 60, 60)
+  doc.setFontSize(10)
   doc.setFont('helvetica', 'bold')
-  doc.text('Parking Receipt', 40, yPos + 12)
+  doc.text(receiptData.spotLocation, 34, yPos + 10)
+  doc.setFontSize(8)
+  doc.setFont('helvetica', 'normal')
+  doc.text('BCI ParkShare', 34, yPos + 16)
   
-  yPos += 28
+  yPos += 32
   
-  // Gray bordered content box
-  doc.setDrawColor(180, 180, 180)
-  doc.setLineWidth(0.3)
-  doc.rect(5, yPos, pageWidth - 10, 70)
+  // "Parking Receipt" title - centered and italic
+  doc.setTextColor(0, 0, 0)
+  doc.setFontSize(16)
+  doc.setFont('helvetica', 'bolditalic')
+  doc.text('Parking Receipt', centerX, yPos, { align: 'center' })
+  
+  yPos += 12
+  
+  // Big Spot Number
+  doc.setFontSize(24)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(BCI_COLORS.primary)
+  doc.text(`Spot ${receiptData.spotNumber}`, centerX, yPos, { align: 'center' })
+  
+  yPos += 14
+  
+  // Date prominently displayed
+  const bookingDate = new Date(receiptData.bookingDate)
+  const dateStr = bookingDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+  
+  doc.setFontSize(11)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(60, 60, 60)
+  doc.text(`Date: ${dateStr}`, centerX, yPos, { align: 'center' })
   
   yPos += 8
   
-  // Location/Address
-  doc.setFontSize(10)
-  doc.setFont('helvetica', 'bold')
-  doc.setTextColor(100, 100, 100)
-  doc.text(receiptData.spotLocation, centerX, yPos, { align: 'center' })
-  yPos += 5
-  doc.setFontSize(8)
-  doc.setFont('helvetica', 'normal')
-  doc.text(`Spot ${receiptData.spotNumber}`, centerX, yPos, { align: 'center' })
-  
-  yPos += 10
-  
-  // Ticket number
-  doc.setFontSize(9)
-  doc.setTextColor(100, 100, 100)
-  doc.text(`Ticket#: ${receiptData.bookingId.slice(0, 10).toUpperCase()}`, centerX, yPos, { align: 'center' })
-  
-  yPos += 10
-  
-  // Date and Time side by side
-  const bookingDate = new Date(receiptData.bookingDate)
-  const dateStr = bookingDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })
-  const now = new Date()
-  const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
-  
-  doc.setFontSize(9)
-  doc.text(`Date: ${dateStr}`, 15, yPos)
-  doc.text(`Time: ${timeStr}`, 50, yPos)
-  
-  yPos += 10
-  
   // Duration
+  doc.setFontSize(9)
   doc.text('Duration: 1 Day', centerX, yPos, { align: 'center' })
   
   yPos += 12
   
+  // Renter and Owner names
+  doc.setFontSize(9)
+  doc.setTextColor(80, 80, 80)
+  doc.text(`Renter: ${receiptData.renterName}`, centerX, yPos, { align: 'center' })
+  yPos += 6
+  doc.text(`Owner: ${receiptData.ownerName}`, centerX, yPos, { align: 'center' })
+  
+  yPos += 14
+  
   // Large PAID amount
-  doc.setFontSize(16)
+  doc.setFontSize(20)
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(0, 0, 0)
   doc.text(`PAID: $${receiptData.dailyRate}`, centerX, yPos, { align: 'center' })
   
-  yPos += 12
+  yPos += 14
   
   // Thank you message
-  doc.setFontSize(9)
+  doc.setFontSize(10)
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(80, 80, 80)
-  doc.text('THANK YOU', centerX, yPos, { align: 'center' })
-  yPos += 5
+  doc.text('THANK YOU!', centerX, yPos, { align: 'center' })
+  yPos += 6
   doc.text('AND DRIVE SAFELY', centerX, yPos, { align: 'center' })
-  
-  yPos += 12
-  
-  // Simple barcode representation (lines pattern)
-  const barcodeY = yPos
-  const barcodeWidth = 50
-  const barcodeX = (pageWidth - barcodeWidth) / 2
-  doc.setFillColor(0, 0, 0)
-  
-  // Generate barcode-like pattern based on booking ID
-  const barcodePattern = receiptData.bookingId.split('').map((char, i) => {
-    const code = char.charCodeAt(0)
-    return (code + i) % 3 === 0 ? 2 : 1
-  })
-  
-  let barX = barcodeX
-  for (let i = 0; i < Math.min(barcodePattern.length, 25); i++) {
-    const barWidth = barcodePattern[i]
-    doc.rect(barX, barcodeY, barWidth, 12, 'F')
-    barX += barWidth + 1
-  }
   
   doc.save(`${filename}.pdf`)
 }
