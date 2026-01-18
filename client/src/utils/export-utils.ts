@@ -1087,8 +1087,8 @@ export const generateParkingReceiptPDF = (receiptData: ParkingReceiptData, filen
   yPos += 5
   
   doc.setFontSize(8)
-  doc.setFont('helvetica', 'normal')
-  doc.text('Drive safely', centerX, yPos, { align: 'center' })
+  doc.setFont('helvetica', 'bold')
+  doc.text('DRIVE SAFELY', centerX, yPos, { align: 'center' })
   
   doc.save(`${filename}.pdf`)
 }
