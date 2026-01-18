@@ -1882,7 +1882,7 @@ export default function AdminParkingManagement() {
                             {t("admin.parkingManagement.spotNumber")}
                           </SortableTableHeader>
                           <SortableTableHeader
-                            column="location"
+                            column="locationName"
                             currentSortColumn={sortState.column}
                             currentSortDirection={sortState.direction}
                             onSort={handleSort}
@@ -1891,7 +1891,7 @@ export default function AdminParkingManagement() {
                             {t("admin.parkingManagement.location")}
                           </SortableTableHeader>
                           <SortableTableHeader
-                            column="spotType"
+                            column="spotTypeName"
                             currentSortColumn={sortState.column}
                             currentSortDirection={sortState.direction}
                             onSort={handleSort}
@@ -2225,7 +2225,7 @@ export default function AdminParkingManagement() {
                             Spot Number
                           </SortableTableHeader>
                         <SortableTableHeader
-                          column="location"
+                          column="locationName"
                           currentSortColumn={availableSpotsSortState.column}
                           currentSortDirection={availableSpotsSortState.direction}
                           onSort={handleAvailableSpotsSort}
@@ -2233,7 +2233,7 @@ export default function AdminParkingManagement() {
                           Location
                         </SortableTableHeader>
                         <SortableTableHeader
-                          column="spotType"
+                          column="spotTypeName"
                           currentSortColumn={availableSpotsSortState.column}
                           currentSortDirection={availableSpotsSortState.direction}
                           onSort={handleAvailableSpotsSort}
