@@ -907,7 +907,7 @@ export interface ParkingReceiptData {
 
 export const generateParkingReceiptPDF = (receiptData: ParkingReceiptData, filename: string): void => {
   // Professional receipt dimensions
-  const doc = new jsPDF('portrait', 'mm', [90, 155])
+  const doc = new jsPDF('portrait', 'mm', [90, 170])
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
   const centerX = pageWidth / 2
