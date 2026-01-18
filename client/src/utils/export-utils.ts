@@ -907,94 +907,149 @@ export interface ParkingReceiptData {
 
 export const generateParkingReceiptPDF = (receiptData: ParkingReceiptData, filename: string): void => {
   // Create a receipt-sized document
-  const doc = new jsPDF('portrait', 'mm', [100, 160])
+  const doc = new jsPDF('portrait', 'mm', [100, 180])
   const pageWidth = doc.internal.pageSize.getWidth()
+  const pageHeight = doc.internal.pageSize.getHeight()
   const centerX = pageWidth / 2
+  const margin = 6
+  const contentWidth = pageWidth - (margin * 2)
   
-  let yPos = 8
+  // Outer border - professional rounded look
+  doc.setDrawColor(37, 99, 235) // Primary blue
+  doc.setLineWidth(1.5)
+  doc.roundedRect(margin, margin, contentWidth, pageHeight - (margin * 2), 4, 4)
   
-  // Add ParkShare logo at top left
+  // Inner border
+  doc.setDrawColor(200, 210, 230)
+  doc.setLineWidth(0.3)
+  doc.roundedRect(margin + 2, margin + 2, contentWidth - 4, pageHeight - (margin * 2) - 4, 3, 3)
+  
+  let yPos = 14
+  
+  // Header section with blue background
+  doc.setFillColor(37, 99, 235) // Primary blue
+  doc.roundedRect(margin + 4, yPos, contentWidth - 8, 28, 2, 2, 'F')
+  
+  // Add ParkShare logo
   try {
-    doc.addImage(PARKSHARE_LOGO_BASE64, 'PNG', 8, yPos, 22, 22)
+    doc.addImage(PARKSHARE_LOGO_BASE64, 'PNG', margin + 8, yPos + 3, 22, 22)
   } catch (e) {
-    // Fallback: draw a simple P parking icon if logo fails
-    doc.setDrawColor(40, 40, 40)
-    doc.setLineWidth(0.5)
-    doc.rect(8, yPos, 22, 22)
-    doc.setFontSize(18)
+    // Fallback: P icon
+    doc.setFillColor(255, 255, 255)
+    doc.roundedRect(margin + 8, yPos + 3, 22, 22, 2, 2, 'F')
+    doc.setFontSize(16)
     doc.setFont('helvetica', 'bold')
-    doc.setTextColor(40, 40, 40)
-    doc.text('P', 19, yPos + 15, { align: 'center' })
+    doc.setTextColor(37, 99, 235)
+    doc.text('P', margin + 19, yPos + 17, { align: 'center' })
   }
   
-  // Location/Address next to logo
-  doc.setTextColor(60, 60, 60)
-  doc.setFontSize(10)
+  // BCI ParkShare title in header
+  doc.setTextColor(255, 255, 255)
+  doc.setFontSize(14)
   doc.setFont('helvetica', 'bold')
-  doc.text(receiptData.spotLocation, 34, yPos + 10)
-  doc.setFontSize(8)
+  doc.text('BCI ParkShare', margin + 34, yPos + 12)
+  doc.setFontSize(9)
   doc.setFont('helvetica', 'normal')
-  doc.text('BCI ParkShare', 34, yPos + 16)
+  doc.text('Parking Receipt', margin + 34, yPos + 20)
   
-  yPos += 32
+  yPos += 36
   
-  // "Parking Receipt" title - centered and italic
-  doc.setTextColor(0, 0, 0)
-  doc.setFontSize(16)
-  doc.setFont('helvetica', 'bolditalic')
-  doc.text('Parking Receipt', centerX, yPos, { align: 'center' })
+  // Location container with light background
+  doc.setFillColor(245, 247, 250)
+  doc.roundedRect(margin + 4, yPos, contentWidth - 8, 18, 2, 2, 'F')
+  doc.setDrawColor(220, 225, 235)
+  doc.setLineWidth(0.3)
+  doc.roundedRect(margin + 4, yPos, contentWidth - 8, 18, 2, 2)
   
-  yPos += 12
-  
-  // Big Spot Number
-  doc.setFontSize(24)
+  // Location text - wrap if too long
+  doc.setTextColor(60, 70, 90)
+  doc.setFontSize(9)
   doc.setFont('helvetica', 'bold')
-  doc.setTextColor(BCI_COLORS.primary)
-  doc.text(`Spot ${receiptData.spotNumber}`, centerX, yPos, { align: 'center' })
+  const locationLines = doc.splitTextToSize(receiptData.spotLocation, contentWidth - 16)
+  if (locationLines.length === 1) {
+    doc.text(locationLines[0], centerX, yPos + 11, { align: 'center' })
+  } else {
+    doc.text(locationLines[0], centerX, yPos + 8, { align: 'center' })
+    doc.text(locationLines[1] || '', centerX, yPos + 14, { align: 'center' })
+  }
   
-  yPos += 14
+  yPos += 24
   
-  // Date prominently displayed
+  // Big Spot Number - highlighted container
+  doc.setFillColor(239, 246, 255) // Light blue bg
+  doc.roundedRect(margin + 4, yPos, contentWidth - 8, 22, 2, 2, 'F')
+  doc.setDrawColor(147, 197, 253)
+  doc.setLineWidth(0.5)
+  doc.roundedRect(margin + 4, yPos, contentWidth - 8, 22, 2, 2)
+  
+  doc.setFontSize(22)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(37, 99, 235) // Primary blue
+  doc.text(`Spot ${receiptData.spotNumber}`, centerX, yPos + 15, { align: 'center' })
+  
+  yPos += 28
+  
+  // Date and Duration section
+  doc.setFillColor(250, 250, 252)
+  doc.roundedRect(margin + 4, yPos, contentWidth - 8, 20, 2, 2, 'F')
+  
   const bookingDate = new Date(receiptData.bookingDate)
   const dateStr = bookingDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
   
-  doc.setFontSize(11)
-  doc.setFont('helvetica', 'normal')
-  doc.setTextColor(60, 60, 60)
-  doc.text(`Date: ${dateStr}`, centerX, yPos, { align: 'center' })
-  
-  yPos += 8
-  
-  // Duration
-  doc.setFontSize(9)
-  doc.text('Duration: 1 Day', centerX, yPos, { align: 'center' })
-  
-  yPos += 12
-  
-  // Renter and Owner names
-  doc.setFontSize(9)
-  doc.setTextColor(80, 80, 80)
-  doc.text(`Renter: ${receiptData.renterName}`, centerX, yPos, { align: 'center' })
-  yPos += 6
-  doc.text(`Owner: ${receiptData.ownerName}`, centerX, yPos, { align: 'center' })
-  
-  yPos += 14
-  
-  // Large PAID amount
-  doc.setFontSize(20)
-  doc.setFont('helvetica', 'bold')
-  doc.setTextColor(0, 0, 0)
-  doc.text(`PAID: $${receiptData.dailyRate}`, centerX, yPos, { align: 'center' })
-  
-  yPos += 14
-  
-  // Thank you message
   doc.setFontSize(10)
   doc.setFont('helvetica', 'bold')
-  doc.setTextColor(80, 80, 80)
-  doc.text('THANK YOU!', centerX, yPos, { align: 'center' })
-  yPos += 6
-  doc.text('AND DRIVE SAFELY', centerX, yPos, { align: 'center' })
+  doc.setTextColor(50, 60, 80)
+  doc.text(dateStr, centerX, yPos + 9, { align: 'center' })
+  doc.setFontSize(8)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(100, 110, 130)
+  doc.text('Duration: 1 Day', centerX, yPos + 16, { align: 'center' })
+  
+  yPos += 26
+  
+  // Renter and Owner section
+  doc.setFillColor(248, 250, 252)
+  doc.roundedRect(margin + 4, yPos, contentWidth - 8, 24, 2, 2, 'F')
+  doc.setDrawColor(230, 235, 240)
+  doc.setLineWidth(0.2)
+  doc.roundedRect(margin + 4, yPos, contentWidth - 8, 24, 2, 2)
+  
+  doc.setFontSize(8)
+  doc.setTextColor(100, 110, 130)
+  doc.setFont('helvetica', 'normal')
+  doc.text('Renter', margin + 10, yPos + 8)
+  doc.text('Owner', margin + 10, yPos + 18)
+  
+  doc.setFontSize(9)
+  doc.setTextColor(40, 50, 70)
+  doc.setFont('helvetica', 'bold')
+  doc.text(receiptData.renterName, margin + 30, yPos + 8)
+  doc.text(receiptData.ownerName, margin + 30, yPos + 18)
+  
+  yPos += 30
+  
+  // PAID amount - green success container
+  doc.setFillColor(220, 252, 231) // Light green
+  doc.roundedRect(margin + 4, yPos, contentWidth - 8, 20, 2, 2, 'F')
+  doc.setDrawColor(34, 197, 94) // Green border
+  doc.setLineWidth(0.5)
+  doc.roundedRect(margin + 4, yPos, contentWidth - 8, 20, 2, 2)
+  
+  doc.setFontSize(18)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(22, 163, 74) // Green text
+  doc.text(`PAID: $${receiptData.dailyRate}`, centerX, yPos + 14, { align: 'center' })
+  
+  yPos += 26
+  
+  // Thank you footer
+  doc.setFillColor(37, 99, 235)
+  doc.roundedRect(margin + 4, yPos, contentWidth - 8, 16, 2, 2, 'F')
+  
+  doc.setFontSize(10)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(255, 255, 255)
+  doc.text('THANK YOU & DRIVE SAFELY!', centerX, yPos + 11, { align: 'center' })
   
   doc.save(`${filename}.pdf`)
 }
