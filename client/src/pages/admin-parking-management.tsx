@@ -1038,8 +1038,15 @@ export default function AdminParkingManagement() {
       }
       
       return true
-    }).sort((a, b) => a.spotNumber.localeCompare(b.spotNumber))
+    })
   }, [allSpots, allUsers, assignedSpotsSearchTerm, assignedSpotsFilterValues])
+
+  // Sorting functionality for assigned spots
+  const { sortState: assignedSpotsSortState, sortedData: sortedAssignedSpots, handleSort: handleAssignedSpotsSort } = useTableSort(
+    filteredAssignedSpots,
+    "spotNumber",
+    "asc"
+  )
 
   // Derived data for Non-Bookable Spots tab (spots NOT enabled for booking) with filtering
   const filteredBookableSpots = useMemo(() => {
@@ -1089,26 +1096,33 @@ export default function AdminParkingManagement() {
       }
       
       return true
-    }).sort((a, b) => a.spotNumber.localeCompare(b.spotNumber))
+    })
   }, [allSpots, allUsers, bookableSpotsSearchTerm, bookableSpotsFilterValues])
 
+  // Sorting functionality for non-bookable spots
+  const { sortState: bookableSpotsSortState, sortedData: sortedBookableSpots, handleSort: handleBookableSpotsSort } = useTableSort(
+    filteredBookableSpots,
+    "spotNumber",
+    "asc"
+  )
+
   // Keep legacy names for backward compatibility
-  const assignedSpots = filteredAssignedSpots
-  const bookableSpots = filteredBookableSpots
+  const assignedSpots = sortedAssignedSpots
+  const bookableSpots = sortedBookableSpots
 
   // Paginated data for Assigned Spots
   const paginatedAssignedSpots = useMemo(() => {
     const startIndex = assignedSpotsPageIndex * assignedSpotsPageSize
     const endIndex = startIndex + assignedSpotsPageSize
-    return assignedSpots.slice(startIndex, endIndex)
-  }, [assignedSpots, assignedSpotsPageIndex, assignedSpotsPageSize])
+    return sortedAssignedSpots.slice(startIndex, endIndex)
+  }, [sortedAssignedSpots, assignedSpotsPageIndex, assignedSpotsPageSize])
 
   // Paginated data for Bookable Spots
   const paginatedBookableSpots = useMemo(() => {
     const startIndex = bookableSpotsPageIndex * bookableSpotsPageSize
     const endIndex = startIndex + bookableSpotsPageSize
-    return bookableSpots.slice(startIndex, endIndex)
-  }, [bookableSpots, bookableSpotsPageIndex, bookableSpotsPageSize])
+    return sortedBookableSpots.slice(startIndex, endIndex)
+  }, [sortedBookableSpots, bookableSpotsPageIndex, bookableSpotsPageSize])
 
   // Page clamping useEffects to prevent invalid page indices
   // Clamp All Spots page
@@ -2446,61 +2460,51 @@ export default function AdminParkingManagement() {
                   <Table data-testid="table-assigned-spots">
                     <TableHeader>
                       <TableRow>
-                        <TableHead>
-                          <div className="flex items-center gap-1">
-                            Spot #
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-                              </TooltipTrigger>
-                              <TooltipContent>Unique identifier for the parking spot</TooltipContent>
-                            </Tooltip>
-                          </div>
-                        </TableHead>
-                        <TableHead>
-                          <div className="flex items-center gap-1">
-                            Location
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-                              </TooltipTrigger>
-                              <TooltipContent>Building and parking level where spot is located</TooltipContent>
-                            </Tooltip>
-                          </div>
-                        </TableHead>
-                        <TableHead>
-                          <div className="flex items-center gap-1">
-                            Assigned To
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-                              </TooltipTrigger>
-                              <TooltipContent>Employee currently assigned to this spot</TooltipContent>
-                            </Tooltip>
-                          </div>
-                        </TableHead>
-                        <TableHead>
-                          <div className="flex items-center gap-1">
-                            Type
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-                              </TooltipTrigger>
-                              <TooltipContent>Spot type: Standard, Accessible, Reserved (C-Suite), or EV Charging</TooltipContent>
-                            </Tooltip>
-                          </div>
-                        </TableHead>
-                        <TableHead>
-                          <div className="flex items-center gap-1">
-                            Status
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-                              </TooltipTrigger>
-                              <TooltipContent>Active = in use, Bookable = can be shared/booked by others</TooltipContent>
-                            </Tooltip>
-                          </div>
-                        </TableHead>
+                        <SortableTableHeader
+                          column="spotNumber"
+                          currentSortColumn={assignedSpotsSortState.column}
+                          currentSortDirection={assignedSpotsSortState.direction}
+                          onSort={handleAssignedSpotsSort}
+                          infoTooltip="Unique identifier for the parking spot"
+                        >
+                          Spot #
+                        </SortableTableHeader>
+                        <SortableTableHeader
+                          column="locationName"
+                          currentSortColumn={assignedSpotsSortState.column}
+                          currentSortDirection={assignedSpotsSortState.direction}
+                          onSort={handleAssignedSpotsSort}
+                          infoTooltip="Building and parking level where spot is located"
+                        >
+                          Location
+                        </SortableTableHeader>
+                        <SortableTableHeader
+                          column="ownerId"
+                          currentSortColumn={assignedSpotsSortState.column}
+                          currentSortDirection={assignedSpotsSortState.direction}
+                          onSort={handleAssignedSpotsSort}
+                          infoTooltip="Employee currently assigned to this spot"
+                        >
+                          Assigned To
+                        </SortableTableHeader>
+                        <SortableTableHeader
+                          column="spotTypeName"
+                          currentSortColumn={assignedSpotsSortState.column}
+                          currentSortDirection={assignedSpotsSortState.direction}
+                          onSort={handleAssignedSpotsSort}
+                          infoTooltip="Spot type: Standard, Accessible, Reserved (C-Suite), or EV Charging"
+                        >
+                          Type
+                        </SortableTableHeader>
+                        <SortableTableHeader
+                          column="isActive"
+                          currentSortColumn={assignedSpotsSortState.column}
+                          currentSortDirection={assignedSpotsSortState.direction}
+                          onSort={handleAssignedSpotsSort}
+                          infoTooltip="Active = in use, Bookable = can be shared/booked by others"
+                        >
+                          Status
+                        </SortableTableHeader>
                         <TableHead>Map</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
@@ -2622,61 +2626,51 @@ export default function AdminParkingManagement() {
                   <Table data-testid="table-bookable-spots">
                     <TableHeader>
                       <TableRow>
-                        <TableHead>
-                          <div className="flex items-center gap-1">
-                            Spot #
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-                              </TooltipTrigger>
-                              <TooltipContent>Unique identifier for the parking spot</TooltipContent>
-                            </Tooltip>
-                          </div>
-                        </TableHead>
-                        <TableHead>
-                          <div className="flex items-center gap-1">
-                            Location
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-                              </TooltipTrigger>
-                              <TooltipContent>Building and parking level where spot is located</TooltipContent>
-                            </Tooltip>
-                          </div>
-                        </TableHead>
-                        <TableHead>
-                          <div className="flex items-center gap-1">
-                            Owner
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-                              </TooltipTrigger>
-                              <TooltipContent>Assigned employee, or Workplace Services if unassigned</TooltipContent>
-                            </Tooltip>
-                          </div>
-                        </TableHead>
-                        <TableHead>
-                          <div className="flex items-center gap-1">
-                            Type
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-                              </TooltipTrigger>
-                              <TooltipContent>Spot type: Standard, Accessible, Reserved (C-Suite), or EV Charging</TooltipContent>
-                            </Tooltip>
-                          </div>
-                        </TableHead>
-                        <TableHead>
-                          <div className="flex items-center gap-1">
-                            Assignment
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-                              </TooltipTrigger>
-                              <TooltipContent>Assigned = has an owner, Available = managed by Workplace Services</TooltipContent>
-                            </Tooltip>
-                          </div>
-                        </TableHead>
+                        <SortableTableHeader
+                          column="spotNumber"
+                          currentSortColumn={bookableSpotsSortState.column}
+                          currentSortDirection={bookableSpotsSortState.direction}
+                          onSort={handleBookableSpotsSort}
+                          infoTooltip="Unique identifier for the parking spot"
+                        >
+                          Spot #
+                        </SortableTableHeader>
+                        <SortableTableHeader
+                          column="locationName"
+                          currentSortColumn={bookableSpotsSortState.column}
+                          currentSortDirection={bookableSpotsSortState.direction}
+                          onSort={handleBookableSpotsSort}
+                          infoTooltip="Building and parking level where spot is located"
+                        >
+                          Location
+                        </SortableTableHeader>
+                        <SortableTableHeader
+                          column="ownerId"
+                          currentSortColumn={bookableSpotsSortState.column}
+                          currentSortDirection={bookableSpotsSortState.direction}
+                          onSort={handleBookableSpotsSort}
+                          infoTooltip="Assigned employee, or Workplace Services if unassigned"
+                        >
+                          Owner
+                        </SortableTableHeader>
+                        <SortableTableHeader
+                          column="spotTypeName"
+                          currentSortColumn={bookableSpotsSortState.column}
+                          currentSortDirection={bookableSpotsSortState.direction}
+                          onSort={handleBookableSpotsSort}
+                          infoTooltip="Spot type: Standard, Accessible, Reserved (C-Suite), or EV Charging"
+                        >
+                          Type
+                        </SortableTableHeader>
+                        <SortableTableHeader
+                          column="ownerId"
+                          currentSortColumn={bookableSpotsSortState.column}
+                          currentSortDirection={bookableSpotsSortState.direction}
+                          onSort={handleBookableSpotsSort}
+                          infoTooltip="Assigned = has an owner, Available = managed by Workplace Services"
+                        >
+                          Assignment
+                        </SortableTableHeader>
                         <TableHead>Map</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
