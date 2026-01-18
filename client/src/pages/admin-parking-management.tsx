@@ -1431,6 +1431,14 @@ export default function AdminParkingManagement() {
       "Reserved": { 
         className: "bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100", 
         label: "Reserved" 
+      },
+      "department_reserved": { 
+        className: "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100", 
+        label: "Dept Reserved" 
+      },
+      "Department Reserved": { 
+        className: "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100", 
+        label: "Dept Reserved" 
       }
     };
     
