@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import { MapPin, Car, Zap, Accessibility, Building, Building2, User, Clock, Calendar, ExternalLink, Gift, Tag, Sun } from "lucide-react"
+import { MapPin, Car, Zap, Accessibility, Building, Building2, User, Clock, Calendar, Map, Gift, Tag, Sun } from "lucide-react"
 import type { ParkingSpot, ParkingSpotWithUser } from "@shared/schema"
 import { useAuth } from "@/contexts/auth-context"
 import { useLock } from "@/contexts/LockContext"
@@ -333,7 +333,7 @@ export function ParkingSpotCard({
                       data-testid={`link-floor-plan-${spot.id}`}
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <ExternalLink className="h-3.5 w-3.5" />
+                      <Map className="h-3.5 w-3.5" />
                     </a>
                   </TooltipTrigger>
                   <TooltipContent>
