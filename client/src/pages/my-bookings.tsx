@@ -193,13 +193,15 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
       return b.status === "confirmed" && isPastDate && paymentStatus !== 'received'
     })
     
-    // COMPLETED Tab: Past bookings where owner confirmed payment
-    // Only truly "done" bookings - date passed AND payment settled
+    // COMPLETED Tab: Past bookings only (date must have passed)
+    // Bookings stay in Upcoming until their date passes, regardless of payment status
     completedItems = mockBookings.filter((b: Booking) => {
       const paymentStatus = b.paymentStatus || 'pending'
       const isPastDate = b.bookingDate < today
-      // Must be past date AND payment confirmed
-      return (b.status === "completed" || (b.status === "confirmed" && isPastDate && paymentStatus === 'received'))
+      // Must be past date - regardless of payment status, future/today bookings stay in Upcoming
+      if (!isPastDate) return false
+      // Past date AND (status completed OR payment received)
+      return b.status === "completed" || (b.status === "confirmed" && paymentStatus === 'received')
     })
     cancelledItems = mockBookings.filter((b: Booking) => b.status === "cancelled")
     unusedItems = [] // Renters don't have unused items
