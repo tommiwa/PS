@@ -5201,14 +5201,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Parking spot not found" });
       }
       
-      // Check for active bookings - prevent deletion if there are any
-      const activeBookings = await storage.getBookingsBySpot(id);
-      const hasActiveBookings = activeBookings.some(b => 
-        b.status === 'confirmed' || b.status === 'pending'
-      );
-      if (hasActiveBookings) {
+      // Check for future paid bookings - prevent deletion if there are any
+      const allBookings = await storage.getBookingsBySpot(id);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      // Find future bookings that are paid/confirmed
+      const futurePaidBookings = allBookings.filter(b => {
+        const bookingDate = new Date(b.bookingDate);
+        bookingDate.setHours(0, 0, 0, 0);
+        const isFuture = bookingDate >= today;
+        const isPaid = b.status === 'confirmed' || b.status === 'completed' || 
+                       b.paymentStatus === 'received' || b.paymentStatus === 'payroll';
+        return isFuture && isPaid;
+      });
+      
+      if (futurePaidBookings.length > 0) {
+        // Get renter details for each booking
+        const bookingDetails = await Promise.all(futurePaidBookings.map(async (b) => {
+          const renter = await storage.getUser(b.renterId);
+          return {
+            bookingDate: b.bookingDate,
+            renterName: renter ? `${renter.firstName || ''} ${renter.lastName || ''}`.trim() : 'Unknown',
+            renterEmail: renter?.email || 'Unknown',
+            status: b.status,
+            paymentStatus: b.paymentStatus
+          };
+        }));
+        
+        const bookingList = bookingDetails.map(b => 
+          `- ${b.bookingDate}: ${b.renterName} (${b.renterEmail}) - Payment: ${b.paymentStatus}`
+        ).join('\n');
+        
         return res.status(409).json({ 
-          error: "Cannot delete parking spot with active bookings. Please cancel or complete bookings first." 
+          error: `Cannot delete parking spot with ${futurePaidBookings.length} future paid booking(s). Please cancel or refund these bookings first:\n${bookingList}`,
+          futureBookings: bookingDetails
         });
       }
       
@@ -5219,7 +5246,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // 2. Delete any spot locks
       await storage.deleteSpotLocksBySpotId(id);
       
-      // 3. Soft-delete spot listings (set deleted_at)
+      // 3. Soft-delete spot listings (set deleted_at) - this includes unbooked available listings
       await storage.softDeleteListingsBySpotId(id);
       
       const deleted = await storage.deleteParkingSpot(id);
