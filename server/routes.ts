@@ -5201,6 +5201,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Parking spot not found" });
       }
       
+      // Check for active bookings - prevent deletion if there are any
+      const activeBookings = await storage.getBookingsBySpot(id);
+      const hasActiveBookings = activeBookings.some(b => 
+        b.status === 'confirmed' || b.status === 'pending'
+      );
+      if (hasActiveBookings) {
+        return res.status(409).json({ 
+          error: "Cannot delete parking spot with active bookings. Please cancel or complete bookings first." 
+        });
+      }
+      
+      // Delete related records first to avoid foreign key violations
+      // 1. Delete spot assignment history
+      await storage.deleteSpotAssignmentHistoryBySpotId(id);
+      
+      // 2. Delete any spot locks
+      await storage.deleteSpotLocksBySpotId(id);
+      
+      // 3. Soft-delete spot listings (set deleted_at)
+      await storage.softDeleteListingsBySpotId(id);
+      
       const deleted = await storage.deleteParkingSpot(id);
       if (!deleted) {
         return res.status(404).json({ error: "Parking spot not found" });

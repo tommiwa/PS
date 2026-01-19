@@ -62,7 +62,7 @@ import { randomUUID } from "crypto";
 import { auditDecorator } from "./audit-service";
 import { type IAuditStorage } from "./audit-storage";
 import { db } from "./db";
-import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, locations, spotTypesTable, termsVersions, spotAssignmentHistory, lockers, lockerWaitlist, lockerAssignmentHistory, lockerTypesTable, appConfigs } from "@shared/schema";
+import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, locations, spotTypesTable, termsVersions, spotAssignmentHistory, spotLocks, lockers, lockerWaitlist, lockerAssignmentHistory, lockerTypesTable, appConfigs } from "@shared/schema";
 import { eq, or, ilike, asc, and, notExists, sql as sqlOp, count, desc, inArray, isNull } from "drizzle-orm";
 
 // Storage interface with comprehensive CRUD methods
@@ -94,6 +94,11 @@ export interface IStorage {
   createParkingSpot(spot: InsertParkingSpot): Promise<ParkingSpot>;
   updateParkingSpot(id: string, updates: Partial<InsertParkingSpot>): Promise<ParkingSpot | undefined>;
   deleteParkingSpot(id: string): Promise<boolean>;
+  
+  // Cleanup methods for parking spot deletion
+  deleteSpotAssignmentHistoryBySpotId(spotId: string): Promise<number>;
+  deleteSpotLocksBySpotId(spotId: string): Promise<number>;
+  softDeleteListingsBySpotId(spotId: string): Promise<number>;
   
   // Enriched parking spot operations (with user information)
   getParkingSpotWithUser(id: string): Promise<ParkingSpotWithUser | undefined>;
@@ -1081,6 +1086,32 @@ export class MemStorage implements IStorage {
       .where(eq(parkingSpots.id, id))
       .returning();
     return deleted.length > 0;
+  }
+
+  // Cleanup methods for parking spot deletion
+  async deleteSpotAssignmentHistoryBySpotId(spotId: string): Promise<number> {
+    const deleted = await db.delete(spotAssignmentHistory)
+      .where(eq(spotAssignmentHistory.spotId, spotId))
+      .returning();
+    return deleted.length;
+  }
+
+  async deleteSpotLocksBySpotId(spotId: string): Promise<number> {
+    const deleted = await db.delete(spotLocks)
+      .where(eq(spotLocks.spotId, spotId))
+      .returning();
+    return deleted.length;
+  }
+
+  async softDeleteListingsBySpotId(spotId: string): Promise<number> {
+    const updated = await db.update(spotListings)
+      .set({ deletedAt: new Date() })
+      .where(and(
+        eq(spotListings.spotId, spotId),
+        isNull(spotListings.deletedAt)
+      ))
+      .returning();
+    return updated.length;
   }
 
   // Spot Listing operations
