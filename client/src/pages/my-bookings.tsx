@@ -176,11 +176,12 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     const today = new Date().toISOString().split('T')[0]
     
     // UPCOMING Tab: All future/current bookings (regardless of payment status)
-    // Even if paid early, stays here until date passes AND payment confirmed
+    // Even if payment confirmed (status=completed), stays here until date passes
     activeItems = mockBookings.filter((b: Booking) => {
       const isPastDate = b.bookingDate < today
-      // Include all future/today bookings that are confirmed (not cancelled)
-      return b.status === "confirmed" && !isPastDate
+      // Include all future/today bookings that are confirmed OR completed (not cancelled)
+      // Completed status means payment was confirmed, but if date is future it stays here
+      return (b.status === "confirmed" || b.status === "completed") && !isPastDate
     })
     pendingItems = mockBookings.filter((b: Booking) => b.status === "pending") 
     
