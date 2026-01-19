@@ -502,19 +502,40 @@ export default function Search() {
       }
     }
     
-    // Text-based search across multiple fields
+    // Full text search across all relevant fields
     if (query && query.trim()) {
-      const queryLower = query.toLowerCase()
+      const queryLower = query.toLowerCase().trim()
+      
+      // Build comprehensive searchable text from all spot properties
       const searchableText = [
         spot.spotNumber,
         spot.location,
         spot.type,
         spot.owner,
-        spot.isInside ? 'inside' : 'outside'
-      ].join(' ').toLowerCase()
+        spot.isInside ? 'inside indoor covered' : 'outside outdoor',
+        `$${spot.price}`,
+        spot.price?.toString(),
+        spot.isBciManaged ? 'bci managed workplace' : 'peer p2p',
+        // Include type-related keywords
+        spot.type === 'electric' ? 'ev charging electric' : '',
+        spot.type === 'tesla_ev' ? 'tesla ev electric charging' : '',
+        spot.type === 'accessible' ? 'accessible handicap disabled' : '',
+        // Include availability dates if present
+        spot.availability?.date || '',
+      ].filter(Boolean).join(' ').toLowerCase()
       
-      if (!searchableText.includes(queryLower) && 
-          !queryLower.split(' ').some(term => searchableText.includes(term))) {
+      // Split query into individual search terms
+      const searchTerms = queryLower.split(/\s+/).filter(term => term.length > 0)
+      
+      // Full text search: match if ALL search terms are found somewhere in the searchable text
+      // This allows searches like "victoria electric" to match spots at Victoria with electric type
+      const allTermsMatch = searchTerms.every(term => 
+        searchableText.includes(term) ||
+        // Also check for partial matches at word boundaries
+        searchableText.split(/\s+/).some(word => word.startsWith(term) || word.includes(term))
+      )
+      
+      if (!allTermsMatch) {
         return false
       }
     }
