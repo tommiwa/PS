@@ -256,7 +256,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
       // Show special warning for paid peer-to-peer bookings
       confirmed = await confirm({
         title: "Cancel Paid Booking?",
-        description: `You have already sent payment for this booking on ${booking?.bookingDate || 'selected date'}. If you cancel, please settle the payment refund directly with the spot owner (${booking?.ownerName || 'Workplace Services'}).`,
+        description: `It's marked as paid, so please work with the spot owner (${booking?.ownerName || 'the owner'}) for the refund directly.`,
         confirmText: "Cancel Anyway",
         cancelText: "Keep Booking",
         variant: "destructive"
