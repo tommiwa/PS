@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { SpotListingForm } from "@/components/spot-listing-form"
-import { Calendar, Search, Download, Clock, CheckCircle, CheckCircle2, XCircle, Car, MapPin, DollarSign, AlertTriangle, Plus, Edit, Trash2, CreditCard, Info, Building, Ban, Eye, FileText, CalendarCheck, Receipt, LayoutGrid, List, User, Bell, X } from "lucide-react"
+import { Calendar, Search, Download, Clock, CheckCircle, CheckCircle2, XCircle, Car, MapPin, DollarSign, AlertTriangle, Plus, Edit, Trash2, CreditCard, Info, Building, Ban, Eye, FileText, CalendarCheck, Receipt, LayoutGrid, List, User, Bell, X, ExternalLink } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { isPastDate } from "@/utils/date-utils"
 import { useMutation, useQuery } from "@tanstack/react-query"
@@ -1099,6 +1099,25 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                   <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                     <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
                     <span className="truncate">{booking.location}</span>
+                    {booking.floorPlanBaseUrl && booking.seatNumber && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <a
+                            href={`${booking.floorPlanBaseUrl}${booking.seatNumber}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-primary hover:underline ml-1"
+                            data-testid={`link-floor-plan-${booking.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </a>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>View on floor plan</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1460,7 +1479,28 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
         </div>
         <div className="flex-1 min-w-0 grid grid-cols-2 md:grid-cols-5 gap-2 items-center">
           <div className="min-w-0">
-            <p className="font-medium text-sm truncate">Spot {booking.spotNumber}</p>
+            <div className="flex items-center gap-1">
+              <p className="font-medium text-sm truncate">Spot {booking.spotNumber}</p>
+              {booking.floorPlanBaseUrl && booking.seatNumber && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <a
+                      href={`${booking.floorPlanBaseUrl}${booking.seatNumber}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center text-primary hover:text-primary/80"
+                      data-testid={`compact-link-floor-plan-${booking.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>View on floor plan</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground truncate">{booking.location}</p>
           </div>
           <div className="hidden md:block text-sm text-muted-foreground">{booking.bookingDate}</div>

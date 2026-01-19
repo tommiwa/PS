@@ -2052,6 +2052,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
+        // Get floor plan URL for map link
+        let floorPlanBaseUrl: string | null = null;
+        if (spot?.locationId) {
+          const location = await storage.getLocation(spot.locationId);
+          floorPlanBaseUrl = location?.floorPlanBaseUrl || null;
+        }
+        
         return {
           ...booking,
           spotNumber: spot?.spotNumber || 'Unknown',
@@ -2061,7 +2068,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Use actual paymentStatus enum from booking (pending, paid, received)
           paymentStatus: booking.paymentStatus || 'pending',
           // Include BCI-managed flag to distinguish admin-managed vs peer-to-peer listings
-          isBciManaged: spot?.isBciManaged || false
+          isBciManaged: spot?.isBciManaged || false,
+          // Include map link fields
+          seatNumber: spot?.seatNumber || null,
+          floorPlanBaseUrl: floorPlanBaseUrl
         };
       }));
       
