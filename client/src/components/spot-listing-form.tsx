@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle, CalendarDays, Repeat } from "lucide-react"
 import { getTodayString } from "@/utils/date-utils"
 import { useQuery } from "@tanstack/react-query"
+import { queryClient } from "@/lib/queryClient"
 import type { ParkingSpotWithUser } from "@shared/schema"
 
 interface SpotListingData {
@@ -208,6 +209,10 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
           throw new Error(errorData.error || "Failed to update listing. Please try again.")
         }
 
+        // Invalidate queries to refresh the listings
+        queryClient.invalidateQueries({ queryKey: ['/api/my-listings'] })
+        queryClient.invalidateQueries({ queryKey: ['/api/available-spots'] })
+        
         console.log('Updated spot listing:', { listingId, ...updateData })
       } else {
         // Create new listing via API
@@ -234,6 +239,10 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
           throw new Error("Failed to create listing. Please try again.")
         }
 
+        // Invalidate queries to refresh the listings
+        queryClient.invalidateQueries({ queryKey: ['/api/my-listings'] })
+        queryClient.invalidateQueries({ queryKey: ['/api/available-spots'] })
+        
         console.log('Submitting spot listing:', { ...formData, listingType })
       }
       
