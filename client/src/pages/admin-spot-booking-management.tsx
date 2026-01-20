@@ -234,6 +234,8 @@ export default function AdminSpotBookingManagement() {
   const [showBookingDetails, setShowBookingDetails] = useState(false)
   const [bookingDetailsTab, setBookingDetailsTab] = useState("details")
   const [showAvailabilityDetailsDialog, setShowAvailabilityDetailsDialog] = useState(false)
+  const [showCancelListingDialog, setShowCancelListingDialog] = useState(false)
+  const [cancelListingReason, setCancelListingReason] = useState("")
   const [showCancelDialog, setShowCancelDialog] = useState(false)
   const [showContactDialog, setShowContactDialog] = useState(false)
   const [showMarkPaidConfirmDialog, setShowMarkPaidConfirmDialog] = useState(false)
@@ -996,6 +998,41 @@ export default function AdminSpotBookingManagement() {
     }
   });
 
+  // Cancel listing mutation (for Booking Availability tab)
+  const cancelListingMutation = useMutation({
+    mutationFn: async ({ listingId, reason }: { listingId: string; reason: string }) => {
+      // Extract original listing ID if this is an expanded day entry (format: "listingId-YYYY-MM-DD")
+      const originalListingId = listingId.includes('-') && listingId.match(/-\d{4}-\d{2}-\d{2}$/) 
+        ? listingId.replace(/-\d{4}-\d{2}-\d{2}$/, '') 
+        : listingId;
+      const response = await apiRequest(`/api/admin/spot-listings/${originalListingId}/cancel`, { 
+        method: 'POST', 
+        body: { reason }
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-availability", scope] });
+      
+      toast({
+        title: "Listing Cancelled",
+        description: "The spot listing has been successfully cancelled.",
+        variant: "default"
+      });
+      
+      setShowCancelListingDialog(false);
+      setCancelListingReason("");
+      setSelectedAvailabilityListing(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Cancellation Failed",
+        description: error instanceof Error ? error.message : "Failed to cancel listing. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
   // Mark payment as received mutation (admin confirms paid → received)
   const markPaidMutation = useMutation({
     mutationFn: async (bookingId: string) => {
@@ -1574,22 +1611,41 @@ export default function AdminSpotBookingManagement() {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedAvailabilityListing(listing);
-                                    setShowAvailabilityDetailsDialog(true);
-                                  }}
-                                  data-testid={`button-view-details-${listing.id}`}
-                                >
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>View Details</TooltipContent>
-                            </Tooltip>
+                            <div className="flex gap-1">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedAvailabilityListing(listing);
+                                      setShowAvailabilityDetailsDialog(true);
+                                    }}
+                                    data-testid={`button-view-details-${listing.id}`}
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>View Details</TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-destructive hover:text-destructive"
+                                    onClick={() => {
+                                      setSelectedAvailabilityListing(listing);
+                                      setShowCancelListingDialog(true);
+                                    }}
+                                    data-testid={`button-cancel-listing-${listing.id}`}
+                                  >
+                                    <XCircle className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Cancel Listing</TooltipContent>
+                              </Tooltip>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -2613,6 +2669,64 @@ export default function AdminSpotBookingManagement() {
                 data-testid="button-confirm-cancel"
               >
                 {cancelBookingMutation.isPending ? "Cancelling..." : "Cancel Booking"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Listing Dialog */}
+      <Dialog open={showCancelListingDialog} onOpenChange={setShowCancelListingDialog}>
+        <DialogContent data-testid="dialog-cancel-listing">
+          <DialogHeader>
+            <DialogTitle>Cancel Listing</DialogTitle>
+            <DialogDescription>
+              This will remove the spot availability listing. Please provide a reason.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {selectedAvailabilityListing && (
+              <div className="p-3 bg-muted rounded-md space-y-1">
+                <p className="text-sm"><span className="font-medium">Spot:</span> {selectedAvailabilityListing.spotNumber}</p>
+                <p className="text-sm"><span className="font-medium">Location:</span> {selectedAvailabilityListing.locationName}</p>
+                <p className="text-sm"><span className="font-medium">Date:</span> {formatDate(selectedAvailabilityListing.availableFrom)}</p>
+              </div>
+            )}
+            <div>
+              <Label htmlFor="cancel-listing-reason">Cancellation Reason</Label>
+              <Textarea
+                id="cancel-listing-reason"
+                placeholder="Explain why this listing is being cancelled..."
+                value={cancelListingReason}
+                onChange={(e) => setCancelListingReason(e.target.value)}
+                data-testid="textarea-cancel-listing-reason"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowCancelListingDialog(false);
+                  setCancelListingReason("");
+                }}
+                data-testid="button-cancel-listing-cancel"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  if (selectedAvailabilityListing && cancelListingReason.trim()) {
+                    cancelListingMutation.mutate({
+                      listingId: selectedAvailabilityListing.id,
+                      reason: cancelListingReason
+                    });
+                  }
+                }}
+                disabled={!cancelListingReason.trim() || cancelListingMutation.isPending}
+                data-testid="button-confirm-cancel-listing"
+              >
+                {cancelListingMutation.isPending ? "Cancelling..." : "Cancel Listing"}
               </Button>
             </div>
           </div>
