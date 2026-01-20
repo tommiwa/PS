@@ -2906,20 +2906,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Get existing single-day listings for this spot to avoid duplicates
-        // Check ALL statuses (not just available) to prevent creating duplicates even for booked/cancelled dates
+        // Only check 'available' and 'booked' statuses - completed/cancelled listings should not block new listings
         const existingListings = await storage.getSpotListingsBySpot(listing.spotId);
         const existingSingleDates = new Set(
           existingListings
-            .filter(l => l.listingType === 'single' && !l.deletedAt)
+            .filter(l => l.listingType === 'single' && !l.deletedAt && (l.status === 'available' || l.status === 'booked'))
             .map(l => l.singleDate)
             .filter(Boolean)
         );
         
-        // Also check for existing bookings on this spot to avoid creating listings for already-booked dates
+        // Also check for existing active bookings on this spot to avoid creating listings for already-booked dates
+        // Only 'confirmed' and 'pending' bookings should block new listings - completed/cancelled bookings should not
         const existingBookings = await storage.getBookingsBySpot(listing.spotId);
         const bookedDates = new Set(
           existingBookings
-            .filter(b => b.status !== 'cancelled')
+            .filter(b => b.status === 'confirmed' || b.status === 'pending')
             .map(b => b.bookingDate)
         );
         
