@@ -62,7 +62,7 @@ import {
   Globe
 } from "lucide-react"
 import type { Booking, BookingStatus, ParkingSpot } from "@shared/schema"
-import { quickExportBookingsPDF, quickExportBookingsExcel } from "@/utils/export-utils"
+import { quickExportBookingsPDF, quickExportBookingsExcel, generateParkingReceiptPDF, type ParkingReceiptData } from "@/utils/export-utils"
 
 // Define BookingScope type
 type BookingScope = 'all' | 'bci';
@@ -2365,22 +2365,51 @@ export default function AdminSpotBookingManagement() {
                             ${booking.totalAmount}
                           </TableCell>
                           <TableCell>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedBooking(booking);
-                                    setShowBookingDetails(true);
-                                  }}
-                                  data-testid={`button-view-details-${booking.id}`}
-                                >
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>View Details</TooltipContent>
-                            </Tooltip>
+                            <div className="flex gap-1">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedBooking(booking);
+                                      setShowBookingDetails(true);
+                                    }}
+                                    data-testid={`button-view-details-${booking.id}`}
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>View Details</TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      const receiptData: ParkingReceiptData = {
+                                        spotNumber: booking.spotNumber,
+                                        spotLocation: booking.spotLocation,
+                                        renterName: booking.renterName,
+                                        renterEmail: booking.renterEmail,
+                                        ownerName: booking.ownerName,
+                                        status: booking.status,
+                                        dailyRate: booking.dailyRate,
+                                        bookingDate: booking.bookingDate,
+                                        paymentStatus: booking.paymentStatus,
+                                        bookingId: booking.id
+                                      };
+                                      generateParkingReceiptPDF(receiptData, `parking-receipt-${booking.id.slice(0, 8)}.pdf`);
+                                    }}
+                                    data-testid={`button-download-receipt-${booking.id}`}
+                                  >
+                                    <FileText className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Download Receipt</TooltipContent>
+                              </Tooltip>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
