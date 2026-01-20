@@ -2883,27 +2883,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalAmount: actualTotalAmount.toString()
       } as any); // Type assertion since we're adding required fields server-side
 
-      // Handle period listings: split into remaining individual day listings
+      // Handle period listings: split into individual day listings
       // This ensures each day remains independently bookable in the share pool
       if (listing.listingType === 'period' && listing.periodStartDate && listing.periodEndDate) {
         console.log(`[Booking] Period listing detected (${listing.periodStartDate} to ${listing.periodEndDate}), splitting into individual days...`);
         
-        // Generate all dates in the period
-        const startDate = new Date(listing.periodStartDate + 'T12:00:00');
-        const endDate = new Date(listing.periodEndDate + 'T12:00:00');
+        // Generate all dates in the period using simple string-based date math
+        // This avoids timezone issues by keeping everything as YYYY-MM-DD strings
         const allDates: string[] = [];
+        const [startYear, startMonth, startDay] = listing.periodStartDate.split('-').map(Number);
+        const [endYear, endMonth, endDay] = listing.periodEndDate.split('-').map(Number);
         
-        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-          const dateStr = d.toISOString().split('T')[0];
-          allDates.push(dateStr);
+        // Use UTC dates to avoid timezone shifts
+        const startDate = new Date(Date.UTC(startYear, startMonth - 1, startDay));
+        const endDate = new Date(Date.UTC(endYear, endMonth - 1, endDay));
+        
+        for (let d = new Date(startDate); d <= endDate; d.setUTCDate(d.getUTCDate() + 1)) {
+          const year = d.getUTCFullYear();
+          const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+          const day = String(d.getUTCDate()).padStart(2, '0');
+          allDates.push(`${year}-${month}-${day}`);
         }
         
-        // Filter out the booked date - only create listings for remaining dates
-        const remainingDates = allDates.filter(date => date !== bookingDate);
+        // Get existing single-day listings for this spot to avoid duplicates
+        // Check ALL statuses (not just available) to prevent creating duplicates even for booked/cancelled dates
+        const existingListings = await storage.getSpotListingsBySpot(listing.spotId);
+        const existingSingleDates = new Set(
+          existingListings
+            .filter(l => l.listingType === 'single' && !l.deletedAt)
+            .map(l => l.singleDate)
+            .filter(Boolean)
+        );
+        
+        // Also check for existing bookings on this spot to avoid creating listings for already-booked dates
+        const existingBookings = await storage.getBookingsBySpot(listing.spotId);
+        const bookedDates = new Set(
+          existingBookings
+            .filter(b => b.status !== 'cancelled')
+            .map(b => b.bookingDate)
+        );
+        
+        // Filter out the booked date, dates with existing listings, and dates with existing bookings
+        const remainingDates = allDates.filter(date => 
+          date !== bookingDate && 
+          !existingSingleDates.has(date) && 
+          !bookedDates.has(date)
+        );
         
         console.log(`[Booking] Creating ${remainingDates.length} individual single-day listings for remaining dates`);
         
-        // Create individual single-day listings for each remaining date
+        // Create a single-day listing for the BOOKED date (status: 'booked')
+        // This properly represents the booking without using the period listing
+        const bookedListing = await storage.createSpotListing({
+          spotId: listing.spotId,
+          ownerId: listing.ownerId,
+          listingType: 'single',
+          singleDate: bookingDate,
+          periodStartDate: null,
+          periodEndDate: null,
+          recurringStartDate: null,
+          recurringEndDate: null,
+          daysOfWeek: null,
+          dailyRate: listing.dailyRate,
+          notes: listing.notes,
+          status: 'booked',
+          createdByAdmin: listing.createdByAdmin
+        });
+        console.log(`[Booking] Created booked single-day listing for ${bookingDate}: ${bookedListing.id}`);
+        
+        // Update the booking to reference the new single-day listing instead of the period listing
+        await storage.updateBooking(newBooking.id, { listingId: bookedListing.id } as any);
+        console.log(`[Booking] Updated booking ${newBooking.id} to reference listing ${bookedListing.id}`);
+        
+        // Create individual single-day listings for each remaining date (status: 'available')
         for (const date of remainingDates) {
           try {
             await storage.createSpotListing({
@@ -2919,19 +2971,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
               dailyRate: listing.dailyRate,
               notes: listing.notes,
               status: 'available',
-              isBciManaged: listing.isBciManaged,
-              promotionalTags: listing.promotionalTags
+              createdByAdmin: listing.createdByAdmin
             });
             console.log(`[Booking] Created single-day listing for ${date}`);
           } catch (err) {
             console.error(`[Booking] Failed to create listing for ${date}:`, err);
           }
         }
+        
+        // Cancel the original period listing since it's been split into individual days
+        await storage.cancelSpotListing(listing.id, 'Split into individual day listings due to partial booking');
+        console.log(`[Booking] Cancelled original period listing ${listing.id}`);
+      } else {
+        // For single-day or recurring listings, just mark as booked
+        await storage.updateSpotListingStatus(listing.id, 'booked');
+        console.log(`[Booking] Updated listing ${listing.id} status to 'booked'`);
       }
-
-      // Update the original listing status to 'booked' so it appears correctly in owner's view
-      await storage.updateSpotListingStatus(listing.id, 'booked');
-      console.log(`[Booking] Updated listing ${listing.id} status to 'booked'`);
 
       // Confirm the lock with the new booking
       await confirmLock(activeLock.id, newBooking.id);
