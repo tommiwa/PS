@@ -2883,7 +2883,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalAmount: actualTotalAmount.toString()
       } as any); // Type assertion since we're adding required fields server-side
 
-      // Update the listing status to 'booked' so it appears correctly in owner's view
+      // Handle period listings: split into remaining individual day listings
+      // This ensures each day remains independently bookable in the share pool
+      if (listing.listingType === 'period' && listing.periodStartDate && listing.periodEndDate) {
+        console.log(`[Booking] Period listing detected (${listing.periodStartDate} to ${listing.periodEndDate}), splitting into individual days...`);
+        
+        // Generate all dates in the period
+        const startDate = new Date(listing.periodStartDate + 'T12:00:00');
+        const endDate = new Date(listing.periodEndDate + 'T12:00:00');
+        const allDates: string[] = [];
+        
+        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+          const dateStr = d.toISOString().split('T')[0];
+          allDates.push(dateStr);
+        }
+        
+        // Filter out the booked date - only create listings for remaining dates
+        const remainingDates = allDates.filter(date => date !== bookingDate);
+        
+        console.log(`[Booking] Creating ${remainingDates.length} individual single-day listings for remaining dates`);
+        
+        // Create individual single-day listings for each remaining date
+        for (const date of remainingDates) {
+          try {
+            await storage.createSpotListing({
+              spotId: listing.spotId,
+              ownerId: listing.ownerId,
+              listingType: 'single',
+              singleDate: date,
+              periodStartDate: null,
+              periodEndDate: null,
+              recurringStartDate: null,
+              recurringEndDate: null,
+              daysOfWeek: null,
+              dailyRate: listing.dailyRate,
+              notes: listing.notes,
+              status: 'available',
+              isBciManaged: listing.isBciManaged,
+              promotionalTags: listing.promotionalTags
+            });
+            console.log(`[Booking] Created single-day listing for ${date}`);
+          } catch (err) {
+            console.error(`[Booking] Failed to create listing for ${date}:`, err);
+          }
+        }
+      }
+
+      // Update the original listing status to 'booked' so it appears correctly in owner's view
       await storage.updateSpotListingStatus(listing.id, 'booked');
       console.log(`[Booking] Updated listing ${listing.id} status to 'booked'`);
 
