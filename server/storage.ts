@@ -2925,33 +2925,77 @@ export class MemStorage implements IStorage {
           ? `${spotOwner.firstName || ''} ${spotOwner.lastName || ''}`.trim() || spotOwner.email || 'Unknown'
           : (spot.isBciManaged ? 'BCI Workplace Services' : 'Unknown');
         
-        // Calculate availableFrom and availableTo based on listing type
-        let availableFrom = '';
-        let availableTo = '';
+        // For period listings, expand into individual day entries
+        // For single listings, return as-is
+        // For recurring listings, return the range (not expanded)
+        const entries: Array<{
+          listing: typeof listing,
+          spot: typeof spot,
+          enrichedData: BookingAvailabilityData
+        }> = [];
         
         if (listing.listingType === 'single' && listing.singleDate) {
-          availableFrom = listing.singleDate;
-          availableTo = listing.singleDate;
-        } else if (listing.listingType === 'period') {
-          availableFrom = listing.periodStartDate || '';
-          availableTo = listing.periodEndDate || '';
+          entries.push({
+            listing,
+            spot,
+            enrichedData: {
+              ...listing,
+              spotNumber: spot.spotNumber,
+              locationName,
+              spotTypeName,
+              ownerName,
+              availableFrom: listing.singleDate,
+              availableTo: listing.singleDate
+            } as BookingAvailabilityData
+          });
+        } else if (listing.listingType === 'period' && listing.periodStartDate && listing.periodEndDate) {
+          // Expand period listing into individual day entries
+          const startDate = new Date(listing.periodStartDate + 'T00:00:00Z');
+          const endDate = new Date(listing.periodEndDate + 'T00:00:00Z');
+          const today = new Date().toISOString().split('T')[0];
+          
+          for (let d = new Date(startDate); d <= endDate; d.setUTCDate(d.getUTCDate() + 1)) {
+            const dateStr = d.toISOString().split('T')[0];
+            // Only include dates from today onwards
+            if (dateStr >= today) {
+              entries.push({
+                listing,
+                spot,
+                enrichedData: {
+                  ...listing,
+                  id: `${listing.id}-${dateStr}`, // Unique ID for each day
+                  spotNumber: spot.spotNumber,
+                  locationName,
+                  spotTypeName,
+                  ownerName,
+                  listingType: 'single', // Show as single day in the UI
+                  singleDate: dateStr,
+                  availableFrom: dateStr,
+                  availableTo: dateStr
+                } as BookingAvailabilityData
+              });
+            }
+          }
         } else if (listing.listingType === 'recurring') {
-          availableFrom = listing.recurringStartDate || '';
-          availableTo = listing.recurringEndDate || 'Ongoing';
+          entries.push({
+            listing,
+            spot,
+            enrichedData: {
+              ...listing,
+              spotNumber: spot.spotNumber,
+              locationName,
+              spotTypeName,
+              ownerName,
+              availableFrom: listing.recurringStartDate || '',
+              availableTo: listing.recurringEndDate || 'Ongoing'
+            } as BookingAvailabilityData
+          });
         }
         
         return {
           listing,
           spot,
-          enrichedData: {
-            ...listing,
-            spotNumber: spot.spotNumber,
-            locationName,
-            spotTypeName,
-            ownerName,
-            availableFrom,
-            availableTo
-          } as BookingAvailabilityData
+          entries
         };
       })
     );
@@ -2959,19 +3003,22 @@ export class MemStorage implements IStorage {
     // Filter out null entries (where spot was not found)
     const validListings = enrichedListings.filter((item): item is NonNullable<typeof item> => item !== null);
     
+    // Flatten all entries from all listings
+    const allEntries = validListings.flatMap(item => item.entries);
+    
     // Filter by scope:
     // - Shared Pool (isBciOnly=true): BCI-managed AND no owner assigned
     // - Assigned Spots (isBciOnly=false): everything NOT in shared pool (ensures no data loss)
     if (isBciOnly) {
-      return validListings
-        .filter(item => item.spot.isBciManaged && !item.spot.ownerId)
-        .map(item => item.enrichedData);
+      return allEntries
+        .filter(entry => entry.spot.isBciManaged && !entry.spot.ownerId)
+        .map(entry => entry.enrichedData);
     }
     
     // Assigned Spots: everything NOT in shared pool (has owner OR is not BCI-managed)
-    return validListings
-      .filter(item => item.spot.ownerId !== null || !item.spot.isBciManaged)
-      .map(item => item.enrichedData);
+    return allEntries
+      .filter(entry => entry.spot.ownerId !== null || !entry.spot.isBciManaged)
+      .map(entry => entry.enrichedData);
   }
 
   async getPendingPaymentBookings(isBciOnly?: boolean): Promise<PendingPaymentData[]> {
