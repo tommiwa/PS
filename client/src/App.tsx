@@ -43,7 +43,7 @@ import AdminIssuesPage from "@/pages/admin/issues";
 import MapDemo from "@/pages/map-demo";
 import Login from "@/pages/login";
 import Terms from "@/pages/terms";
-import TermsConsent from "@/pages/terms-consent";
+// Note: TermsConsent page removed - terms are now accepted on the login page
 import NotFound from "@/pages/not-found";
 
 // Terms version interface
@@ -179,10 +179,12 @@ function FormattedTermsContent({ content }: { content: string }) {
 
 // Protected Router that handles authentication
 function ProtectedRouter() {
-  const { user, isAuthenticated, isLoading, hasAcceptedTerms } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const [location, setLocation] = useLocation();
 
   // Redirect to login if not authenticated, or away from login if authenticated
+  // Note: Terms acceptance is handled on the login page before sign-in,
+  // so we no longer need a separate terms-consent page redirect
   useEffect(() => {
     // Allow public access to /terms page
     if (location === "/terms") {
@@ -193,14 +195,11 @@ function ProtectedRouter() {
       setLocation("/login");
     } else if (isAuthenticated && location === "/login") {
       setLocation("/"); // Move away from /login to let LandingPageRedirect handle role-based routing
-    } else if (isAuthenticated && hasAcceptedTerms() && location === "/terms-consent") {
-      // Redirect away from terms-consent if user has accepted terms
+    } else if (isAuthenticated && location === "/terms-consent") {
+      // Redirect away from terms-consent since terms are now accepted on login page
       setLocation("/");
-    } else if (isAuthenticated && !hasAcceptedTerms() && location !== "/terms-consent") {
-      // Redirect to terms consent if user hasn't accepted terms
-      setLocation("/terms-consent");
     }
-  }, [isAuthenticated, isLoading, location, setLocation, hasAcceptedTerms]);
+  }, [isAuthenticated, isLoading, location, setLocation]);
 
   // Show loading screen while checking authentication
   if (isLoading) {
@@ -222,11 +221,6 @@ function ProtectedRouter() {
   // Show login page if not authenticated
   if (!isAuthenticated) {
     return <Login />;
-  }
-
-  // Show terms consent page if user hasn't accepted terms
-  if (location === "/terms-consent") {
-    return <TermsConsent />;
   }
 
   // Render authenticated app with layout
