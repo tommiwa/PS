@@ -7,11 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useToast } from "@/hooks/use-toast"
 import { useConfirm } from "@/hooks/use-confirm"
 import { apiRequest, queryClient } from "@/lib/queryClient"
 import { format } from "date-fns"
-import { AlertCircle, Clock, CheckCircle2, ListTodo, Loader2, RefreshCw, History, Trash2 } from "lucide-react"
+import { AlertCircle, Clock, CheckCircle2, ListTodo, Loader2, RefreshCw, History, Trash2, Eye, User, Mail, Calendar } from "lucide-react"
 
 type IssueStatus = "backlog" | "todo" | "in_progress" | "completed"
 type IssuePriority = "low" | "medium" | "high" | "urgent"
@@ -46,6 +48,8 @@ const priorityConfig: Record<IssuePriority, { label: string; color: string }> = 
 export default function AdminIssuesPage() {
   const [activeTab, setActiveTab] = useState<string>("active")
   const [priorityFilter, setPriorityFilter] = useState<string>("all")
+  const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false)
   const { toast } = useToast()
   const { confirm } = useConfirm()
 
@@ -207,6 +211,21 @@ export default function AdminIssuesPage() {
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-2">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setSelectedIssue(issue)
+                            setShowDetailsDialog(true)
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>View Details</TooltipContent>
+                    </Tooltip>
                     <Select 
                       value={issue.status} 
                       onValueChange={(value) => handleStatusChange(issue.id, value as IssueStatus)}
@@ -227,19 +246,24 @@ export default function AdminIssuesPage() {
                       </SelectContent>
                     </Select>
                     {!isHistory && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(issue.id)}
-                        disabled={deleteIssueMutation.isPending}
-                        className="text-muted-foreground hover:text-destructive"
-                      >
-                        {deleteIssueMutation.isPending ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-4 w-4" />
-                        )}
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(issue.id)}
+                            disabled={deleteIssueMutation.isPending}
+                            className="text-muted-foreground hover:text-destructive"
+                          >
+                            {deleteIssueMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Delete Issue</TooltipContent>
+                      </Tooltip>
                     )}
                   </div>
                 </TableCell>
@@ -343,6 +367,85 @@ export default function AdminIssuesPage() {
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* Issue Details Dialog */}
+      <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-primary" />
+              Issue Details
+            </DialogTitle>
+          </DialogHeader>
+          {selectedIssue && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold">{selectedIssue.title}</h3>
+                <div className="flex items-center gap-2 mt-2">
+                  <Badge 
+                    variant="secondary" 
+                    className={priorityConfig[selectedIssue.priority].color}
+                  >
+                    {priorityConfig[selectedIssue.priority].label}
+                  </Badge>
+                  <Badge 
+                    variant="secondary" 
+                    className={`${statusConfig[selectedIssue.status].color} flex items-center gap-1`}
+                  >
+                    {statusConfig[selectedIssue.status].icon}
+                    {statusConfig[selectedIssue.status].label}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium text-muted-foreground">Description</h4>
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <p className="text-sm whitespace-pre-wrap">{selectedIssue.description}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Reporter
+                  </h4>
+                  <p className="text-sm">{selectedIssue.reporterName || "Unknown"}</p>
+                  {selectedIssue.reporterEmail && (
+                    <a 
+                      href={`mailto:${selectedIssue.reporterEmail}`}
+                      className="text-sm text-primary hover:underline flex items-center gap-1"
+                    >
+                      <Mail className="h-3 w-3" />
+                      {selectedIssue.reporterEmail}
+                    </a>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Dates
+                  </h4>
+                  <div className="text-sm">
+                    <p>Created: {format(new Date(selectedIssue.createdAt), "MMM d, yyyy 'at' h:mm a")}</p>
+                    <p className="text-muted-foreground">
+                      Updated: {format(new Date(selectedIssue.updatedAt), "MMM d, yyyy 'at' h:mm a")}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={() => setShowDetailsDialog(false)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
