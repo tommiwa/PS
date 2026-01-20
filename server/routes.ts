@@ -5229,13 +5229,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         }));
         
-        const bookingList = bookingDetails.map(b => 
-          `- ${b.bookingDate}: ${b.renterName} (${b.renterEmail}) - Payment: ${b.paymentStatus}`
-        ).join('\n');
+        // Format as a simple comma-separated list for clean display
+        const bookingSummary = bookingDetails.map(b => 
+          `${b.bookingDate} (${b.renterName})`
+        ).join(', ');
         
         return res.status(409).json({ 
-          error: `Cannot delete parking spot with ${futurePaidBookings.length} future paid booking(s). Please cancel or refund these bookings first:\n${bookingList}`,
-          futureBookings: bookingDetails
+          error: `Cannot delete spot with ${futurePaidBookings.length} future paid booking(s). Please cancel or refund first: ${bookingSummary}`
         });
       }
       
