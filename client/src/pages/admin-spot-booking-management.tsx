@@ -198,10 +198,10 @@ export default function AdminSpotBookingManagement() {
   const [location, setLocation] = useLocation()
   const searchParams = useSearch()
   
-  // Initialize scope from URL parameter, defaulting to 'all' (All Spots) if not specified
+  // Initialize scope from URL parameter, defaulting to 'bci' (Shared Pool) if not specified
   const urlScope = new URLSearchParams(searchParams).get('scope') as BookingScope | null
   const [scope, setScope] = useState<BookingScope>(
-    urlScope === 'bci' ? 'bci' : 'all'
+    urlScope === 'all' ? 'all' : 'bci'
   )
   
   // Update URL when scope changes (without page reload)
@@ -1859,22 +1859,6 @@ export default function AdminSpotBookingManagement() {
                               </TooltipTrigger>
                               <TooltipContent>Contact Users</TooltipContent>
                             </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedDisputeBookingId(booking.id);
-                                    setShowDisputeDialog(true);
-                                  }}
-                                  data-testid={`button-flag-dispute-${booking.id}`}
-                                >
-                                  <AlertTriangle className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Flag Dispute</TooltipContent>
-                            </Tooltip>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -2121,22 +2105,6 @@ export default function AdminSpotBookingManagement() {
                                   </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>Issue Refund</TooltipContent>
-                              </Tooltip>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                      setSelectedDisputeBookingId(payment.id);
-                                      setShowDisputeDialog(true);
-                                    }}
-                                    data-testid={`button-flag-dispute-payment-${payment.id}`}
-                                  >
-                                    <AlertTriangle className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Flag Dispute</TooltipContent>
                               </Tooltip>
                             </div>
                           </TableCell>
