@@ -211,21 +211,6 @@ export default function AdminIssuesPage() {
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-2">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setSelectedIssue(issue)
-                            setShowDetailsDialog(true)
-                          }}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>View Details</TooltipContent>
-                    </Tooltip>
                     <Select 
                       value={issue.status} 
                       onValueChange={(value) => handleStatusChange(issue.id, value as IssueStatus)}
@@ -245,6 +230,21 @@ export default function AdminIssuesPage() {
                         <SelectItem value="completed">Completed</SelectItem>
                       </SelectContent>
                     </Select>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setSelectedIssue(issue)
+                            setShowDetailsDialog(true)
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>View Details</TooltipContent>
+                    </Tooltip>
                     {!isHistory && (
                       <Tooltip>
                         <TooltipTrigger asChild>
