@@ -71,7 +71,7 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
 
   const [formData, setFormData] = useState({
     date: getValidDate(),
-    paymentMethod: "",
+    paymentMethod: "Interac Transfer", // Default to Interac
     specialInstructions: "",
     contactPhone: "", // Will be populated when auth loads
     vehicleInfo: "" // Will be populated when auth loads (model + color)
