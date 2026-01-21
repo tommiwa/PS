@@ -5,8 +5,8 @@ import { auditService } from "./audit-service";
 import { dbAuditStorage as auditStorage } from "./audit-storage";
 import { initTimezone } from "./timezone";
 import { db } from "./db";
-import { spotLocks, spotListings, bookings } from "@shared/schema";
-import { and, eq, lt, inArray, notInArray, sql, isNull, or } from "drizzle-orm";
+import { spotLocks, spotListings, bookings, parkingSpots } from "@shared/schema";
+import { and, eq, lt, lte, inArray, notInArray, sql, isNull, or } from "drizzle-orm";
 import { setupWebSocket, broadcastLockEvent } from "./websocket";
 
 const app = express();
@@ -420,6 +420,68 @@ If you have questions about the collection of your personal information through 
   // Set up interval to run listing expiration every hour (3600000 ms)
   setInterval(markExpiredListingsAsUnused, 3600000);
   log("Listing expiration job scheduled (runs hourly)");
+  
+  // Background job to auto-complete BCI-managed bookings when booking date passes
+  // BCI bookings use payroll deduction, so they auto-complete without manual payment confirmation
+  async function autoCompleteBciBookings() {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayStr = today.toISOString().split('T')[0];
+      
+      // Find all confirmed BCI-managed bookings where the booking date has passed
+      const bciBookingsToComplete = await db
+        .select({
+          booking: bookings,
+          spot: parkingSpots
+        })
+        .from(bookings)
+        .innerJoin(parkingSpots, eq(bookings.spotId, parkingSpots.id))
+        .where(and(
+          eq(bookings.status, 'confirmed'),
+          eq(parkingSpots.isBciManaged, true),
+          lt(bookings.bookingDate, todayStr) // Booking date is in the past
+        ));
+      
+      if (bciBookingsToComplete.length > 0) {
+        // Update each BCI booking to completed with payment received
+        for (const { booking } of bciBookingsToComplete) {
+          await db
+            .update(bookings)
+            .set({
+              status: 'completed',
+              paymentStatus: 'received',
+              paymentReceived: true,
+              updatedAt: new Date()
+            })
+            .where(eq(bookings.id, booking.id));
+          
+          // Also update the listing to "used" if it exists
+          if (booking.listingId) {
+            await db
+              .update(spotListings)
+              .set({ status: 'used' })
+              .where(eq(spotListings.id, booking.listingId));
+          }
+        }
+        
+        console.log(`[BCI Auto-Complete] Marked ${bciBookingsToComplete.length} BCI booking(s) as completed`);
+      }
+      
+      return bciBookingsToComplete.length;
+    } catch (error) {
+      console.error("[BCI Auto-Complete] Error auto-completing BCI bookings:", error);
+      return 0;
+    }
+  }
+  
+  // Run BCI auto-complete once on startup
+  log("Running initial BCI booking auto-complete...");
+  await autoCompleteBciBookings();
+  
+  // Set up interval to run BCI auto-complete every hour (3600000 ms)
+  setInterval(autoCompleteBciBookings, 3600000);
+  log("BCI booking auto-complete job scheduled (runs hourly)");
   
   const server = await registerRoutes(app);
 

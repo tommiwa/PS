@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle, User, Zap, Accessibility, Building, CreditCard, Timer, Info, Phone } from "lucide-react"
+import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle, User, Zap, Accessibility, Building, CreditCard, Timer, Info, Phone, Banknote } from "lucide-react"
+import { format, addMonths } from "date-fns"
 import type { ParkingSpot as DBParkingSpot } from "@shared/schema"
 import { isPastDate, getTodayString } from "@/utils/date-utils"
 import { useAuth } from "@/contexts/auth-context"
@@ -111,6 +112,15 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
   const [submitError, setSubmitError] = useState("")
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
 
+  // Calculate payroll deduction month for BCI-managed spots
+  const getPayrollDeductionMonth = (bookingDate: string): string => {
+    const date = new Date(bookingDate + "T12:00:00");
+    const dayOfMonth = date.getDate();
+    // If before 20th, deduct same month; otherwise next month
+    const deductionDate = dayOfMonth < 20 ? date : addMonths(date, 1);
+    return format(deductionDate, "MMMM yyyy");
+  }
+
   // Countdown timer effect
   useEffect(() => {
     if (userActiveLock) {
@@ -179,8 +189,8 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
       errors.date = "Cannot book parking spots for past dates"
     }
 
-    // Payment method validation
-    if (!formData.paymentMethod) {
+    // Payment method validation (only for peer-to-peer spots)
+    if (!spot.isBciManaged && !formData.paymentMethod) {
       errors.paymentMethod = "Payment method is required"
     }
 
@@ -218,8 +228,14 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
     setIsSubmitting(true)
     
     try {
+      // For BCI-managed spots, set payment method to Payroll
+      const submitData = {
+        ...formData,
+        spotId: spot.id,
+        paymentMethod: spot.isBciManaged ? "Payroll" : formData.paymentMethod
+      };
       // Simply pass the data to parent - parent handles the mutation and toasts
-      onSubmit({ ...formData, spotId: spot.id })
+      onSubmit(submitData)
     } finally {
       setIsSubmitting(false)
     }
@@ -336,27 +352,52 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
               Your Booking Details
             </h3>
 
-            {/* Payment Method Selection */}
-            <div className="space-y-2">
-              <Label htmlFor="paymentMethod" className="text-sm font-semibold">Payment Method</Label>
-              <Select value={formData.paymentMethod} onValueChange={(value) => updateFormData("paymentMethod", value)}>
-                <SelectTrigger data-testid="select-payment-method" className="bg-background">
-                  <SelectValue placeholder="Select payment method" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Interac Transfer">Interac e-Transfer</SelectItem>
-                  <SelectItem value="Cash">Cash</SelectItem>
-                </SelectContent>
-              </Select>
-              {validationErrors.paymentMethod && (
-                <p className="text-sm text-destructive">{validationErrors.paymentMethod}</p>
-              )}
-              {ownerPaymentPreferences && !ownerPaymentPreferences.paymentInstructions && (
-                <p className="text-xs text-muted-foreground">
-                  Owner prefers: {ownerPaymentPreferences.paymentType === "interac_transfer" ? "Interac Transfer" : "Cash"}
-                </p>
-              )}
-            </div>
+            {/* Payment Method - Different for BCI-managed vs peer-to-peer */}
+            {spot.isBciManaged ? (
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">Payment Method</Label>
+                <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-primary/10 rounded-full">
+                      <Banknote className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="font-medium text-sm">BCI Workplace Services</p>
+                      <p className="text-sm text-muted-foreground">
+                        Payment will be deducted directly from your payroll.
+                      </p>
+                      <p className="text-sm font-medium text-primary">
+                        Deduction month: {getPayrollDeductionMonth(formData.date)}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Bookings before the 20th are deducted in the same month, otherwise the next month.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="paymentMethod" className="text-sm font-semibold">Payment Method</Label>
+                <Select value={formData.paymentMethod} onValueChange={(value) => updateFormData("paymentMethod", value)}>
+                  <SelectTrigger data-testid="select-payment-method" className="bg-background">
+                    <SelectValue placeholder="Select payment method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Interac Transfer">Interac e-Transfer</SelectItem>
+                    <SelectItem value="Cash">Cash</SelectItem>
+                  </SelectContent>
+                </Select>
+                {validationErrors.paymentMethod && (
+                  <p className="text-sm text-destructive">{validationErrors.paymentMethod}</p>
+                )}
+                {ownerPaymentPreferences && !ownerPaymentPreferences.paymentInstructions && (
+                  <p className="text-xs text-muted-foreground">
+                    Owner prefers: {ownerPaymentPreferences.paymentType === "interac_transfer" ? "Interac Transfer" : "Cash"}
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Contact Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
