@@ -59,7 +59,8 @@ import {
   AlertCircle,
   Loader2,
   Building2,
-  Globe
+  Globe,
+  Banknote
 } from "lucide-react"
 import type { Booking, BookingStatus, ParkingSpot } from "@shared/schema"
 import { quickExportBookingsPDF, quickExportBookingsExcel, generateParkingReceiptPDF, type ParkingReceiptData } from "@/utils/export-utils"
@@ -191,6 +192,40 @@ interface AuditLogData {
   after: any;
 }
 
+// Payroll summary interfaces for BCI-managed spots
+interface PayrollBooking {
+  id: string;
+  spotNumber: string;
+  spotLocation: string;
+  spotType: string;
+  renterName: string;
+  renterEmail: string;
+  renterDepartment: string;
+  bookingDate: string;
+  dailyRate: number;
+  totalAmount: number;
+  status: BookingStatus;
+  deductionMonth: number;
+  deductionYear: number;
+  deductionPeriod: string;
+  createdAt: string;
+}
+
+interface PayrollPeriodSummary {
+  period: string;
+  periodLabel: string;
+  totalBookings: number;
+  totalAmount: number;
+  confirmedBookings: number;
+  completedBookings: number;
+  bookings: PayrollBooking[];
+}
+
+interface PayrollSummaryData {
+  currentPeriod: string;
+  periods: PayrollPeriodSummary[];
+}
+
 export default function AdminSpotBookingManagement() {
   const { toast } = useToast()
   const { confirm } = useConfirm()
@@ -292,6 +327,7 @@ export default function AdminSpotBookingManagement() {
         queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-availability", scope] }),
         queryClient.invalidateQueries({ queryKey: ["/api/admin/active-bookings", scope] }),
         queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-payments", scope] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/payroll-summary"] }),
         queryClient.invalidateQueries({ queryKey: ["/api/admin/past-bookings"] }),
         queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-activity", scope] }),
         queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-analytics", scope] })
@@ -324,11 +360,26 @@ export default function AdminSpotBookingManagement() {
       case "pending-payments":
         queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-payments", scope] })
         break
+      case "payroll-summary":
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/payroll-summary"] })
+        break
       case "past":
         queryClient.invalidateQueries({ queryKey: ["/api/admin/past-bookings"] })
         break
     }
   }, [activeTab, scope])
+  
+  // When scope changes, switch to appropriate tab if current tab doesn't apply
+  useEffect(() => {
+    // If switching to BCI scope and on pending-payments tab, switch to payroll-summary
+    if (scope === 'bci' && activeTab === 'pending-payments') {
+      setActiveTab('payroll-summary')
+    }
+    // If switching to All scope and on payroll-summary tab, switch to pending-payments
+    if (scope === 'all' && activeTab === 'payroll-summary') {
+      setActiveTab('pending-payments')
+    }
+  }, [scope])
 
   // Reset booking details tab to "details" when dialog opens
   useEffect(() => {
@@ -371,10 +422,18 @@ export default function AdminSpotBookingManagement() {
     queryFn: () => fetch(`/api/admin/booking-availability?scope=${scope}`).then(r => r.json())
   });
 
-  // Fetch pending payments
+  // Fetch pending payments (only for peer-to-peer scope)
   const { data: pendingPayments = [], isLoading: isLoadingPendingPayments } = useQuery<PendingPaymentData[]>({
     queryKey: ["/api/admin/pending-payments", scope],
-    queryFn: () => fetch(`/api/admin/pending-payments?scope=${scope}`).then(r => r.json())
+    queryFn: () => fetch(`/api/admin/pending-payments?scope=${scope}`).then(r => r.json()),
+    enabled: scope === 'all' // Only fetch for peer-to-peer (All Spots) view
+  });
+
+  // Fetch payroll summary (only for BCI scope)
+  const { data: payrollSummary, isLoading: isLoadingPayrollSummary } = useQuery<PayrollSummaryData>({
+    queryKey: ["/api/admin/payroll-summary"],
+    queryFn: () => fetch("/api/admin/payroll-summary").then(r => r.json()),
+    enabled: scope === 'bci' // Only fetch for Shared Pool view
   });
 
   // Fetch booking analytics
@@ -1462,15 +1521,23 @@ export default function AdminSpotBookingManagement() {
           </TabsTrigger>
           <TabsTrigger value="active" data-testid="tab-active-bookings" className="gap-2">
             <CheckCircle2 className="h-4 w-4 !text-blue-600" />
-            Active Bookings
+            {scope === 'bci' ? 'Upcoming Bookings' : 'Active Bookings'}
           </TabsTrigger>
-          <TabsTrigger value="pending-payments" data-testid="tab-pending-payments" className="gap-2">
-            <DollarSign className="h-4 w-4 !text-orange-600" />
-            Pending Payments
-          </TabsTrigger>
+          {/* Show Pending Payments for All Spots, Payroll Summary for Shared Pool */}
+          {scope === 'all' ? (
+            <TabsTrigger value="pending-payments" data-testid="tab-pending-payments" className="gap-2">
+              <DollarSign className="h-4 w-4 !text-orange-600" />
+              Pending Payments
+            </TabsTrigger>
+          ) : (
+            <TabsTrigger value="payroll-summary" data-testid="tab-payroll-summary" className="gap-2">
+              <Banknote className="h-4 w-4 !text-purple-600" />
+              Payroll Summary
+            </TabsTrigger>
+          )}
           <TabsTrigger value="past" data-testid="tab-past-bookings" className="gap-2">
             <Calendar className="h-4 w-4 !text-slate-600" />
-            Past Bookings
+            History
           </TabsTrigger>
         </TabsList>
 
@@ -2179,6 +2246,127 @@ export default function AdminSpotBookingManagement() {
                     onPageIndexChange={setPendingPaymentsPageIndex}
                   />
                 </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Payroll Summary Tab (BCI Scope Only) */}
+        <TabsContent value="payroll-summary" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Banknote className="h-5 w-5 text-purple-600" />
+                  Payroll Deduction Summary
+                </CardTitle>
+                <Badge variant="outline" className="text-purple-600 border-purple-300">
+                  Auto-deducted from employee payroll
+                </Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Bookings are grouped by payroll deduction month. Bookings before the 20th are deducted in the same month, 
+                otherwise deducted in the following month.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {isLoadingPayrollSummary ? (
+                <div className="space-y-4">
+                  {[...Array(3)].map((_, i) => (
+                    <Skeleton key={i} className="h-32 w-full" />
+                  ))}
+                </div>
+              ) : !payrollSummary || payrollSummary.periods.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Banknote className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No payroll data found</p>
+                  <p className="text-sm">Bookings for BCI-managed spots will appear here grouped by deduction period.</p>
+                </div>
+              ) : (
+                payrollSummary.periods.map((period) => (
+                  <Card key={period.period} className="bg-purple-50/50">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <Calendar className="h-4 w-4" />
+                          {period.periodLabel}
+                          {period.period === payrollSummary.currentPeriod && (
+                            <Badge className="bg-purple-100 text-purple-700">Current Period</Badge>
+                          )}
+                        </CardTitle>
+                        <div className="flex items-center gap-4 text-sm">
+                          <span className="flex items-center gap-1">
+                            <Users className="h-4 w-4" />
+                            {period.totalBookings} bookings
+                          </span>
+                          <span className="font-semibold text-purple-600">
+                            ${period.totalAmount.toFixed(2)} total
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex gap-4 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {period.confirmedBookings} upcoming
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <CheckCircle2 className="h-3 w-3 text-green-600" />
+                          {period.completedBookings} completed
+                        </span>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Employee</TableHead>
+                              <TableHead>Department</TableHead>
+                              <TableHead>Spot</TableHead>
+                              <TableHead>Location</TableHead>
+                              <TableHead>Booking Date</TableHead>
+                              <TableHead>Amount</TableHead>
+                              <TableHead>Status</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {period.bookings.map((booking) => (
+                              <TableRow key={booking.id}>
+                                <TableCell>
+                                  <div>
+                                    <p className="font-medium">{booking.renterName}</p>
+                                    <p className="text-xs text-muted-foreground">{booking.renterEmail}</p>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-sm">{booking.renterDepartment || '-'}</TableCell>
+                                <TableCell className="font-medium">{booking.spotNumber}</TableCell>
+                                <TableCell className="text-sm text-muted-foreground">{booking.spotLocation}</TableCell>
+                                <TableCell className="text-sm">
+                                  {new Date(booking.bookingDate + 'T12:00:00').toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric'
+                                  })}
+                                </TableCell>
+                                <TableCell className="font-medium">${booking.totalAmount.toFixed(2)}</TableCell>
+                                <TableCell>
+                                  <Badge 
+                                    variant="outline" 
+                                    className={booking.status === 'completed' 
+                                      ? 'bg-green-50 text-green-700 border-green-200' 
+                                      : 'bg-blue-50 text-blue-700 border-blue-200'}
+                                  >
+                                    {booking.status === 'completed' ? 'Completed' : 'Upcoming'}
+                                  </Badge>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
               )}
             </CardContent>
           </Card>

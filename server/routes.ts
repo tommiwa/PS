@@ -3749,6 +3749,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get BCI payroll summary for admin - shows bookings grouped by payroll deduction month
+  // Payroll logic: bookings before 20th = same month deduction, on/after 20th = next month deduction
+  app.get("/api/admin/payroll-summary", requireAdmin, async (req, res) => {
+    try {
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+      
+      // Get all BCI bookings (confirmed and completed) from last 3 months
+      const threeMonthsAgo = new Date(currentYear, currentMonth - 2, 1);
+      const threeMonthsAgoStr = threeMonthsAgo.toISOString().split('T')[0];
+      
+      // Get BCI-managed spot IDs first
+      const allSpots = await storage.getAllParkingSpots();
+      const bciSpotIds = allSpots.filter(s => s.isBciManaged).map(s => s.id);
+      
+      // Get all bookings for BCI spots
+      const allBookings = await storage.getAllBookings();
+      const bciBookings = allBookings.filter(b => 
+        bciSpotIds.includes(b.spotId) && 
+        b.bookingDate >= threeMonthsAgoStr &&
+        (b.status === 'confirmed' || b.status === 'completed')
+      );
+      
+      // Calculate deduction month for each booking
+      const bookingsWithDeduction = await Promise.all(bciBookings.map(async (booking) => {
+        const spot = await storage.getParkingSpot(booking.spotId);
+        const spotType = spot?.spotTypeId ? await storage.getSpotType(spot.spotTypeId) : null;
+        const location = spot?.locationId ? await storage.getLocation(spot.locationId) : null;
+        const renter = await storage.getUser(booking.renterId);
+        
+        // Build location name from office, building, level
+        const locationName = location 
+          ? `${location.office} - ${location.building} ${location.level}`.trim() 
+          : "Unknown";
+        
+        const bookingDate = new Date(booking.bookingDate + "T12:00:00");
+        const dayOfMonth = bookingDate.getDate();
+        // Before 20th = same month, on/after 20th = next month
+        const deductionMonth = dayOfMonth < 20 
+          ? bookingDate.getMonth() 
+          : (bookingDate.getMonth() + 1) % 12;
+        const deductionYear = dayOfMonth < 20 
+          ? bookingDate.getFullYear() 
+          : (bookingDate.getMonth() === 11 ? bookingDate.getFullYear() + 1 : bookingDate.getFullYear());
+        
+        return {
+          id: booking.id,
+          spotNumber: spot?.spotNumber || "Unknown",
+          spotLocation: locationName,
+          spotType: spotType?.name || "Unknown",
+          renterName: renter ? `${renter.firstName || ''} ${renter.lastName || ''}`.trim() || renter.email : "Unknown",
+          renterEmail: renter?.email || "",
+          renterDepartment: renter?.departmentId 
+            ? (await storage.getDepartment(renter.departmentId))?.name || "" 
+            : "",
+          bookingDate: booking.bookingDate,
+          dailyRate: parseFloat(booking.dailyRate),
+          totalAmount: parseFloat(booking.totalAmount),
+          status: booking.status,
+          deductionMonth,
+          deductionYear,
+          deductionPeriod: `${deductionYear}-${String(deductionMonth + 1).padStart(2, '0')}`,
+          createdAt: booking.createdAt
+        };
+      }));
+      
+      // Group by deduction period
+      const groupedByPeriod: Record<string, typeof bookingsWithDeduction> = {};
+      bookingsWithDeduction.forEach(booking => {
+        if (!groupedByPeriod[booking.deductionPeriod]) {
+          groupedByPeriod[booking.deductionPeriod] = [];
+        }
+        groupedByPeriod[booking.deductionPeriod].push(booking);
+      });
+      
+      // Sort each group by booking date
+      Object.values(groupedByPeriod).forEach(group => {
+        group.sort((a, b) => a.bookingDate.localeCompare(b.bookingDate));
+      });
+      
+      // Calculate totals for each period
+      const periodSummaries = Object.entries(groupedByPeriod)
+        .map(([period, bookings]) => ({
+          period,
+          periodLabel: new Date(parseInt(period.split('-')[0]), parseInt(period.split('-')[1]) - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+          totalBookings: bookings.length,
+          totalAmount: bookings.reduce((sum, b) => sum + b.totalAmount, 0),
+          confirmedBookings: bookings.filter(b => b.status === 'confirmed').length,
+          completedBookings: bookings.filter(b => b.status === 'completed').length,
+          bookings
+        }))
+        .sort((a, b) => b.period.localeCompare(a.period)); // Most recent first
+      
+      res.json({
+        currentPeriod: `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`,
+        periods: periodSummaries
+      });
+    } catch (error) {
+      console.error("Error fetching payroll summary:", error);
+      res.status(500).json({ error: "Failed to fetch payroll summary" });
+    }
+  });
+
   // Get booking analytics (Admin only)
   app.get("/api/admin/booking-analytics", requireAdmin, async (req, res) => {
     try {
