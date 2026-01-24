@@ -121,6 +121,18 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
     return format(deductionDate, "MMMM yyyy");
   }
 
+  // Determine if spot is truly BCI-managed (payroll eligible) vs peer-to-peer
+  // A spot uses payroll deduction ONLY if:
+  // 1. isBciManaged flag is true, AND
+  // 2. There is no individual owner (assignedUserName is null/undefined)
+  // If there's a real person as owner, it's peer-to-peer even if isBciManaged flag is incorrectly set
+  const isTrulyBciManaged = (): boolean => {
+    const hasIndividualOwner = !!(spot as any).assignedUserName;
+    return spot.isBciManaged && !hasIndividualOwner;
+  }
+  
+  const isPayrollSpot = isTrulyBciManaged();
+
   // Countdown timer effect
   useEffect(() => {
     if (userActiveLock) {
@@ -190,7 +202,7 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
     }
 
     // Payment method validation (only for peer-to-peer spots)
-    if (!spot.isBciManaged && !formData.paymentMethod) {
+    if (!isPayrollSpot && !formData.paymentMethod) {
       errors.paymentMethod = "Payment method is required"
     }
 
@@ -232,7 +244,7 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
       const submitData = {
         ...formData,
         spotId: spot.id,
-        paymentMethod: spot.isBciManaged ? "Payroll" : formData.paymentMethod
+        paymentMethod: isPayrollSpot ? "Payroll" : formData.paymentMethod
       };
       // Simply pass the data to parent - parent handles the mutation and toasts
       onSubmit(submitData)
@@ -353,7 +365,7 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
             </h3>
 
             {/* Payment Method - Different for BCI-managed vs peer-to-peer */}
-            {spot.isBciManaged ? (
+            {isPayrollSpot ? (
               <div className="space-y-2">
                 <Label className="text-sm font-semibold">Payment Method</Label>
                 <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
