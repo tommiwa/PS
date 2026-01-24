@@ -3736,12 +3736,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isBciOnly = scope === 'bci';
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 20;
+      const payrollPeriod = req.query.payrollPeriod as string | undefined;
       
       // Validate pagination params
       const validPage = Math.max(1, page);
       const validLimit = Math.min(100, Math.max(1, limit)); // Max 100 per page
       
-      const result = await storage.getPastBookings(isBciOnly, validPage, validLimit);
+      const result = await storage.getPastBookings(isBciOnly, validPage, validLimit, payrollPeriod);
       res.json(result);
     } catch (error) {
       console.error("Error fetching past bookings:", error);
@@ -3756,22 +3757,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const now = new Date();
       const currentMonth = now.getMonth();
       const currentYear = now.getFullYear();
+      const currentPeriod = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
       
-      // Get all BCI bookings (confirmed and completed) from last 3 months
-      const threeMonthsAgo = new Date(currentYear, currentMonth - 2, 1);
-      const threeMonthsAgoStr = threeMonthsAgo.toISOString().split('T')[0];
+      // Get BCI bookings for current payroll period only (bookings that will be deducted this month)
+      // This means: bookings from 20th of previous month through 19th of current month
+      const periodStartDate = new Date(currentYear, currentMonth - 1, 20);
+      const periodEndDate = new Date(currentYear, currentMonth, 19);
+      const periodStartStr = periodStartDate.toISOString().split('T')[0];
+      const periodEndStr = periodEndDate.toISOString().split('T')[0];
       
       // Get BCI-managed spot IDs first
       const allSpots = await storage.getAllParkingSpots();
       const bciSpotIds = allSpots.filter(s => s.isBciManaged).map(s => s.id);
       
-      // Get all bookings for BCI spots
+      // Get all bookings for BCI spots - only those in current payroll period
       const allBookings = await storage.getAllBookings();
-      const bciBookings = allBookings.filter(b => 
-        bciSpotIds.includes(b.spotId) && 
-        b.bookingDate >= threeMonthsAgoStr &&
-        (b.status === 'confirmed' || b.status === 'completed')
-      );
+      const bciBookings = allBookings.filter(b => {
+        if (!bciSpotIds.includes(b.spotId)) return false;
+        if (b.status !== 'confirmed' && b.status !== 'completed') return false;
+        
+        // Check if booking falls into current payroll period based on deduction month logic
+        const bookingDate = new Date(b.bookingDate + "T12:00:00");
+        const dayOfMonth = bookingDate.getDate();
+        const deductionMonth = dayOfMonth < 20 
+          ? bookingDate.getMonth() 
+          : (bookingDate.getMonth() + 1) % 12;
+        const deductionYear = dayOfMonth < 20 
+          ? bookingDate.getFullYear() 
+          : (bookingDate.getMonth() === 11 ? bookingDate.getFullYear() + 1 : bookingDate.getFullYear());
+        const bookingDeductionPeriod = `${deductionYear}-${String(deductionMonth + 1).padStart(2, '0')}`;
+        
+        return bookingDeductionPeriod === currentPeriod;
+      });
       
       // Calculate deduction month for each booking
       const bookingsWithDeduction = await Promise.all(bciBookings.map(async (booking) => {
@@ -3844,12 +3861,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .sort((a, b) => b.period.localeCompare(a.period)); // Most recent first
       
       res.json({
-        currentPeriod: `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`,
+        currentPeriod,
         periods: periodSummaries
       });
     } catch (error) {
       console.error("Error fetching payroll summary:", error);
       res.status(500).json({ error: "Failed to fetch payroll summary" });
+    }
+  });
+
+  // Get available payroll periods for History tab filter (Admin only)
+  app.get("/api/admin/payroll-periods", requireAdmin, async (req, res) => {
+    try {
+      // Get all BCI-managed spot IDs first
+      const allSpots = await storage.getAllParkingSpots();
+      const bciSpotIds = allSpots.filter(s => s.isBciManaged).map(s => s.id);
+      
+      // Get all completed BCI bookings to determine available periods
+      const allBookings = await storage.getAllBookings();
+      const bciBookings = allBookings.filter(b => 
+        bciSpotIds.includes(b.spotId) && 
+        (b.status === 'completed' || b.status === 'confirmed' || b.status === 'cancelled')
+      );
+      
+      // Calculate deduction period for each booking
+      const periodsSet = new Set<string>();
+      bciBookings.forEach(booking => {
+        const bookingDate = new Date(booking.bookingDate + "T12:00:00");
+        const dayOfMonth = bookingDate.getDate();
+        const deductionMonth = dayOfMonth < 20 
+          ? bookingDate.getMonth() 
+          : (bookingDate.getMonth() + 1) % 12;
+        const deductionYear = dayOfMonth < 20 
+          ? bookingDate.getFullYear() 
+          : (bookingDate.getMonth() === 11 ? bookingDate.getFullYear() + 1 : bookingDate.getFullYear());
+        periodsSet.add(`${deductionYear}-${String(deductionMonth + 1).padStart(2, '0')}`);
+      });
+      
+      // Convert to sorted array with labels
+      const periods = Array.from(periodsSet)
+        .sort((a, b) => b.localeCompare(a)) // Most recent first
+        .map(period => ({
+          value: period,
+          label: new Date(parseInt(period.split('-')[0]), parseInt(period.split('-')[1]) - 1)
+            .toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+        }));
+      
+      res.json({ periods });
+    } catch (error) {
+      console.error("Error fetching payroll periods:", error);
+      res.status(500).json({ error: "Failed to fetch payroll periods" });
     }
   });
 

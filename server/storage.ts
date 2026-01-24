@@ -307,7 +307,7 @@ export interface IStorage {
   getBookingAvailability(isBciOnly?: boolean): Promise<BookingAvailabilityData[]>;
   getPendingPaymentBookings(isBciOnly?: boolean): Promise<PendingPaymentData[]>;
   getActiveBookings(isBciOnly?: boolean): Promise<AdminBookingData[]>;
-  getPastBookings(isBciOnly?: boolean, page?: number, limit?: number): Promise<{ data: AdminBookingData[]; total: number; page: number; limit: number; totalPages: number }>;
+  getPastBookings(isBciOnly?: boolean, page?: number, limit?: number, payrollPeriod?: string): Promise<{ data: AdminBookingData[]; total: number; page: number; limit: number; totalPages: number }>;
   
   // Dispute operations
   createDispute(dispute: InsertDispute): Promise<Dispute>;
@@ -3164,8 +3164,114 @@ export class MemStorage implements IStorage {
     });
   }
 
-  async getPastBookings(isBciOnly?: boolean, page: number = 1, limit: number = 20): Promise<{ data: AdminBookingData[]; total: number; page: number; limit: number; totalPages: number }> {
+  async getPastBookings(isBciOnly?: boolean, page: number = 1, limit: number = 20, payrollPeriod?: string): Promise<{ data: AdminBookingData[]; total: number; page: number; limit: number; totalPages: number }> {
     const today = new Date().toISOString().split('T')[0];
+    
+    // Helper function to calculate deduction period for a booking date
+    const getDeductionPeriod = (bookingDateStr: string): string => {
+      const bookingDate = new Date(bookingDateStr + "T12:00:00");
+      const dayOfMonth = bookingDate.getDate();
+      const deductionMonth = dayOfMonth < 20 
+        ? bookingDate.getMonth() 
+        : (bookingDate.getMonth() + 1) % 12;
+      const deductionYear = dayOfMonth < 20 
+        ? bookingDate.getFullYear() 
+        : (bookingDate.getMonth() === 11 ? bookingDate.getFullYear() + 1 : bookingDate.getFullYear());
+      return `${deductionYear}-${String(deductionMonth + 1).padStart(2, '0')}`;
+    };
+    
+    // When filtering by payroll period, we need to fetch all and filter in app layer
+    // because the payroll period calculation is complex (depends on day of month)
+    if (payrollPeriod && isBciOnly) {
+      // Fetch all BCI past bookings (no pagination yet)
+      const allQuery = sqlOp`
+        SELECT 
+          b.*,
+          ps.spot_number, ps.location_id, ps.is_bci_managed, ps.owner_id as spot_owner_id,
+          l.building, l.level,
+          renter.id as renter_id, renter.first_name as renter_first_name, 
+          renter.last_name as renter_last_name, renter.email as renter_email,
+          owner.id as owner_id, owner.first_name as owner_first_name, 
+          owner.last_name as owner_last_name, owner.email as owner_email,
+          renter_dept.name as renter_department,
+          owner_dept.name as owner_department,
+          spot_owner.first_name as spot_owner_first_name, 
+          spot_owner.last_name as spot_owner_last_name, spot_owner.email as spot_owner_email,
+          spot_owner_dept.name as spot_owner_department
+        FROM bookings b
+        LEFT JOIN parking_spots ps ON b.spot_id = ps.id
+        LEFT JOIN locations l ON ps.location_id = l.id
+        LEFT JOIN users renter ON b.renter_id = renter.id
+        LEFT JOIN users owner ON b.owner_id = owner.id
+        LEFT JOIN departments renter_dept ON renter.department_id = renter_dept.id
+        LEFT JOIN departments owner_dept ON owner.department_id = owner_dept.id
+        LEFT JOIN users spot_owner ON ps.owner_id = spot_owner.id
+        LEFT JOIN departments spot_owner_dept ON spot_owner.department_id = spot_owner_dept.id
+        WHERE 
+          (b.booking_date < ${today} OR b.status = 'completed' OR b.status = 'cancelled')
+          AND ps.is_bci_managed = true AND ps.owner_id IS NULL
+        ORDER BY b.booking_date DESC
+      `;
+      
+      const allResults = await db.execute(allQuery);
+      
+      // Filter by payroll period and apply pagination
+      const allRows = ((allResults as any).rows || []).filter((row: any) => {
+        return getDeductionPeriod(row.booking_date) === payrollPeriod;
+      });
+      
+      const total = allRows.length;
+      const offset = (page - 1) * limit;
+      const paginatedRows = allRows.slice(offset, offset + limit);
+      
+      const data = paginatedRows.map((row: any) => {
+        const renterName = row.renter_first_name && row.renter_last_name 
+          ? `${row.renter_first_name} ${row.renter_last_name}`
+          : row.renter_email || 'Unknown';
+        const ownerName = row.spot_owner_id
+          ? (row.spot_owner_first_name && row.spot_owner_last_name 
+              ? `${row.spot_owner_first_name} ${row.spot_owner_last_name}`
+              : row.spot_owner_email || 'Unknown')
+          : (row.is_bci_managed ? 'BCI Workplace Services' : 'Unknown');
+        
+        const spotLocation = row.building && row.level
+          ? `${row.building} - ${row.level}`
+          : 'Unknown Location';
+        
+        return {
+          id: row.id,
+          spotNumber: row.spot_number || 'N/A',
+          spotLocation,
+          renterName,
+          renterEmail: row.renter_email || '',
+          renterDepartment: row.renter_department || '',
+          ownerName,
+          ownerEmail: row.spot_owner_id ? (row.spot_owner_email || '') : '',
+          ownerDepartment: row.spot_owner_id ? (row.spot_owner_department || '') : '',
+          bookingDate: row.booking_date,
+          dailyRate: Number(row.daily_rate),
+          totalAmount: Number(row.total_amount),
+          status: row.status,
+          paymentReceived: row.payment_received,
+          paymentStatus: row.payment_status || 'pending',
+          startTime: '08:00',
+          endTime: '18:00',
+          notes: row.notes || '',
+          createdAt: new Date(row.created_at).toISOString(),
+          lastActivity: new Date(row.updated_at).toISOString()
+        };
+      });
+      
+      return {
+        data,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      };
+    }
+    
+    // Standard pagination without payroll period filter
     const offset = (page - 1) * limit;
     
     // Use parameterized query with Drizzle sql template literals for count
