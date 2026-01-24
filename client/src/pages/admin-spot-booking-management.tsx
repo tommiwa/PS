@@ -401,6 +401,8 @@ export default function AdminSpotBookingManagement() {
   });
 
   // Fetch past bookings with server-side pagination (only when tab is active)
+  // Include payroll period filter if set (only applies to BCI scope)
+  const selectedPayrollPeriod = pastBookingsFilterValues.payrollPeriod as string | undefined;
   const { data: pastBookingsResponse, isLoading: isLoadingPastBookings } = useQuery<{
     data: AdminBookingData[];
     total: number;
@@ -408,8 +410,18 @@ export default function AdminSpotBookingManagement() {
     limit: number;
     totalPages: number;
   }>({
-    queryKey: ["/api/admin/past-bookings", scope, pastBookingsPageIndex + 1, pastBookingsPageSize],
-    queryFn: () => fetch(`/api/admin/past-bookings?scope=${scope}&page=${pastBookingsPageIndex + 1}&limit=${pastBookingsPageSize}`).then(r => r.json()),
+    queryKey: ["/api/admin/past-bookings", scope, pastBookingsPageIndex + 1, pastBookingsPageSize, selectedPayrollPeriod],
+    queryFn: () => {
+      const params = new URLSearchParams({
+        scope,
+        page: String(pastBookingsPageIndex + 1),
+        limit: String(pastBookingsPageSize)
+      });
+      if (selectedPayrollPeriod && scope === 'bci') {
+        params.set('payrollPeriod', selectedPayrollPeriod);
+      }
+      return fetch(`/api/admin/past-bookings?${params.toString()}`).then(r => r.json());
+    },
     enabled: activeTab === 'past'
   });
   
@@ -435,6 +447,17 @@ export default function AdminSpotBookingManagement() {
     queryFn: () => fetch("/api/admin/payroll-summary").then(r => r.json()),
     enabled: scope === 'bci' // Only fetch for Shared Pool view
   });
+
+  // Fetch available payroll periods for History tab filter (only for BCI scope)
+  const { data: payrollPeriodsData } = useQuery<{ periods: { value: string; label: string }[] }>({
+    queryKey: ["/api/admin/payroll-periods"],
+    queryFn: () => fetch("/api/admin/payroll-periods").then(r => r.json()),
+    enabled: scope === 'bci' // Only fetch for Shared Pool view
+  });
+
+  const payrollPeriodFilterOptions = useMemo(() => {
+    return payrollPeriodsData?.periods || [];
+  }, [payrollPeriodsData]);
 
   // Fetch booking analytics
   const { data: bookingAnalytics, isLoading: isLoadingAnalytics } = useQuery<BookingAnalytics>({
@@ -834,29 +857,43 @@ export default function AdminSpotBookingManagement() {
   ]
 
   // Filter configuration for past bookings
-  const pastBookingsFilterConfigs: FilterConfig[] = useMemo(() => [
-    {
-      key: "status",
-      label: "Status",
-      type: "select",
-      options: [
-        { value: "completed", label: "Completed" },
-        { value: "cancelled", label: "Cancelled" },
-        { value: "expired", label: "Expired" }
-      ]
-    },
-    {
-      key: "location",
-      label: "Location",
-      type: "select",
-      options: locationFilterOptions
-    },
-    {
-      key: "dateRange",
-      label: "Booking Date Range",
-      type: "dateRange"
+  const pastBookingsFilterConfigs: FilterConfig[] = useMemo(() => {
+    const baseConfigs: FilterConfig[] = [
+      {
+        key: "status",
+        label: "Status",
+        type: "select",
+        options: [
+          { value: "completed", label: "Completed" },
+          { value: "cancelled", label: "Cancelled" },
+          { value: "expired", label: "Expired" }
+        ]
+      },
+      {
+        key: "location",
+        label: "Location",
+        type: "select",
+        options: locationFilterOptions
+      },
+      {
+        key: "dateRange",
+        label: "Booking Date Range",
+        type: "dateRange"
+      }
+    ];
+    
+    // Add payroll period filter for BCI scope only
+    if (scope === 'bci' && payrollPeriodFilterOptions.length > 0) {
+      baseConfigs.unshift({
+        key: "payrollPeriod",
+        label: "Payroll Period",
+        type: "select",
+        options: payrollPeriodFilterOptions
+      });
     }
-  ], [locationFilterOptions])
+    
+    return baseConfigs;
+  }, [locationFilterOptions, scope, payrollPeriodFilterOptions])
 
   // Filter configuration for booking availability
   const availabilityFilterConfigs: FilterConfig[] = useMemo(() => [
@@ -932,12 +969,17 @@ export default function AdminSpotBookingManagement() {
       ...prev,
       [key]: value
     }))
+    // Reset pagination when payroll period filter changes (server-side filter)
+    if (key === 'payrollPeriod') {
+      setPastBookingsPageIndex(0);
+    }
   }
   
   // Clear past bookings filters
   const handleClearPastBookingsFilters = () => {
     setPastBookingsSearchTerm("")
     setPastBookingsFilterValues({})
+    setPastBookingsPageIndex(0);
   }
 
   // Handle availability filter changes
