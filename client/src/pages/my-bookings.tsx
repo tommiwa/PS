@@ -20,6 +20,33 @@ import { useToast } from "@/hooks/use-toast"
 import { quickExportBookingsPDF, quickExportBookingsExcel, generateParkingReceiptPDF } from "@/utils/export-utils"
 import { getErrorMessage } from "@/lib/error-utils"
 
+// Helper function to calculate payroll deduction month
+const getPayrollDeductionMonth = (bookingDate: string): string => {
+  if (!bookingDate) return "next payroll period";
+  const date = new Date(bookingDate + 'T00:00:00');
+  const day = date.getDate();
+  
+  // Before the 20th = same month, on or after 20th = next month
+  if (day < 20) {
+    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  } else {
+    const nextMonth = new Date(date);
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    return nextMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  }
+};
+
+// Helper to check if booking is truly a payroll spot (BCI-managed without individual owner)
+const isPayrollBooking = (booking: any): boolean => {
+  // Check if payment method is Payroll, OR if it's BCI-managed without an individual owner
+  if (booking.paymentMethod === "Payroll") return true;
+  if (booking.isBciManaged && !booking.ownerName) return true;
+  // Also check if owner name suggests it's workplace services
+  const ownerName = (booking.ownerName || "").toLowerCase();
+  if (booking.isBciManaged && (ownerName === "" || ownerName === "unknown" || ownerName.includes("workplace"))) return true;
+  return false;
+};
+
 interface MyBookingsProps {
   viewMode?: 'listings' | 'rentals';
 }
@@ -1048,14 +1075,17 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     const hoursUntilBooking = (bookingDate.getTime() - now.getTime()) / (1000 * 60 * 60)
     const canCancelWithin24Hours = hoursUntilBooking >= 24
     
+    // Check if this is a payroll booking (BCI Workplace Services)
+    const isPayroll = isPayrollBooking(booking)
+    
     // Action visibility rules:
-    // - canMarkPaid: Only for confirmed bookings with pending payment (not completed, not cancelled)
-    // - canNotifyOwner: Only for past bookings where payment is 'paid' (awaiting owner confirmation)
+    // - canMarkPaid: Only for confirmed peer-to-peer bookings with pending payment (not for payroll spots)
+    // - canNotifyOwner: Only for past peer-to-peer bookings where payment is 'paid' (awaiting owner confirmation)
     // - canCancel: Only for FUTURE bookings that are 24+ hours away (regardless of payment status)
     //   Past bookings cannot be cancelled since the spot was already used
     // - showReceipt: Only for completed bookings
-    const canMarkPaid = booking.status === "confirmed" && paymentStatus === 'pending' && !isCompleted && !isCancelled
-    const canNotifyOwner = booking.status === "confirmed" && paymentStatus === 'paid' && isPastDate && !isCompleted && !isCancelled
+    const canMarkPaid = !isPayroll && booking.status === "confirmed" && paymentStatus === 'pending' && !isCompleted && !isCancelled
+    const canNotifyOwner = !isPayroll && booking.status === "confirmed" && paymentStatus === 'paid' && isPastDate && !isCompleted && !isCancelled
     const canCancel = booking.status === "confirmed" && !isPastDate && canCancelWithin24Hours && !isCompleted && !isCancelled
     
     // Get status badge with color
@@ -1175,7 +1205,9 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs text-muted-foreground">Owner</p>
-                  <p className="text-sm font-medium truncate">{booking.ownerName || "Workplace Services"}</p>
+                  <p className="text-sm font-medium truncate">
+                    {isPayroll ? "BCI Workplace Services" : (booking.ownerName || "Unknown")}
+                  </p>
                 </div>
               </div>
             </div>
@@ -1183,23 +1215,32 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
             {/* Payment/Booking Status Banner - informational only */}
             {booking.status === "confirmed" && (
               <div className={`mt-4 p-3 rounded-lg flex items-center gap-3 ${
+                isPayroll ? 'bg-primary/5 border border-primary/20' :
                 paymentStatus === 'pending' ? 'bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800' :
                 paymentStatus === 'paid' ? 'bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800' :
                 'bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800'
               }`}>
-                {paymentStatus === 'pending' && (
+                {isPayroll && (
+                  <>
+                    <DollarSign className="h-4 w-4 text-primary flex-shrink-0" />
+                    <span className="text-sm text-primary">
+                      Payroll deduction scheduled for {getPayrollDeductionMonth(booking.bookingDate)}
+                    </span>
+                  </>
+                )}
+                {!isPayroll && paymentStatus === 'pending' && (
                   <>
                     <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
                     <span className="text-sm text-amber-700 dark:text-amber-300">Payment pending - please mark as paid after transfer</span>
                   </>
                 )}
-                {paymentStatus === 'paid' && (
+                {!isPayroll && paymentStatus === 'paid' && (
                   <>
                     <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
                     <span className="text-sm text-blue-700 dark:text-blue-300">Payment sent - awaiting owner confirmation</span>
                   </>
                 )}
-                {paymentStatus === 'received' && (
+                {!isPayroll && paymentStatus === 'received' && (
                   <>
                     <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0" />
                     <span className="text-sm text-green-700 dark:text-green-300">Booking confirmed - Ready to use on scheduled date</span>
@@ -1446,9 +1487,13 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     const hoursUntilBooking = (bookingDate.getTime() - now.getTime()) / (1000 * 60 * 60)
     const canCancelWithin24Hours = hoursUntilBooking >= 24
     
+    // Check if this is a payroll booking (BCI Workplace Services)
+    const isPayroll = isPayrollBooking(booking)
+    
     // Same action logic as card view - canCancel for future bookings only
-    const canMarkPaid = booking.status === "confirmed" && paymentStatus === 'pending' && !isCompleted && !isCancelled
-    const canNotifyOwner = booking.status === "confirmed" && paymentStatus === 'paid' && isPastDate && !isCompleted && !isCancelled
+    // Hide Mark as Paid and Notify Owner for payroll spots
+    const canMarkPaid = !isPayroll && booking.status === "confirmed" && paymentStatus === 'pending' && !isCompleted && !isCancelled
+    const canNotifyOwner = !isPayroll && booking.status === "confirmed" && paymentStatus === 'paid' && isPastDate && !isCompleted && !isCancelled
     const canCancel = booking.status === "confirmed" && !isPastDate && canCancelWithin24Hours && !isCompleted && !isCancelled
     
     const getStatusBadge = () => {
