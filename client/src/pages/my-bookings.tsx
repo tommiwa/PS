@@ -12,6 +12,7 @@ import { SpotListingForm } from "@/components/spot-listing-form"
 import { Calendar, Search, Download, Clock, CheckCircle, CheckCircle2, XCircle, Car, MapPin, DollarSign, AlertTriangle, Plus, Edit, Trash2, CreditCard, Info, Building, Ban, Eye, FileText, CalendarCheck, Receipt, LayoutGrid, List, User, Bell, X, ExternalLink } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { isPastDate } from "@/utils/date-utils"
+import { format, addMonths } from "date-fns"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { apiRequest, queryClient } from "@/lib/queryClient"
 import type { Booking, SpotListing } from "@shared/schema"
@@ -21,19 +22,15 @@ import { quickExportBookingsPDF, quickExportBookingsExcel, generateParkingReceip
 import { getErrorMessage } from "@/lib/error-utils"
 
 // Helper function to calculate payroll deduction month
+// Uses date-fns for consistent handling with booking-form.tsx
 const getPayrollDeductionMonth = (bookingDate: string): string => {
   if (!bookingDate) return "next payroll period";
-  const date = new Date(bookingDate + 'T00:00:00');
-  const day = date.getDate();
+  const date = new Date(bookingDate + 'T12:00:00');
+  const dayOfMonth = date.getDate();
   
   // Before the 20th = same month, on or after 20th = next month
-  if (day < 20) {
-    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  } else {
-    const nextMonth = new Date(date);
-    nextMonth.setMonth(nextMonth.getMonth() + 1);
-    return nextMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  }
+  const deductionDate = dayOfMonth < 20 ? date : addMonths(date, 1);
+  return format(deductionDate, "MMMM yyyy");
 };
 
 // Helper to check if booking is truly a payroll spot (BCI-managed without individual owner)
