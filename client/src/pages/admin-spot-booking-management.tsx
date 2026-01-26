@@ -2729,13 +2729,21 @@ export default function AdminSpotBookingManagement() {
                     <Label>Payment</Label>
                     {(() => {
                       const status = (selectedBooking as any).paymentStatus || 'pending';
+                      const isPayrollBooking = selectedBooking.ownerName === 'BCI Workplace Services';
                       return (
-                        <Badge 
-                          variant={status === 'received' ? 'default' : status === 'paid' ? 'secondary' : 'outline'} 
-                          data-testid="badge-payment-status"
-                        >
-                          {status === 'pending' ? 'Pending' : status === 'paid' ? 'Paid' : 'Received'}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge 
+                            variant={status === 'received' ? 'default' : status === 'paid' ? 'secondary' : 'outline'} 
+                            data-testid="badge-payment-status"
+                          >
+                            {status === 'pending' ? 'Pending' : status === 'paid' ? 'Paid' : 'Received'}
+                          </Badge>
+                          {isPayrollBooking && status === 'received' && (
+                            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200" data-testid="badge-payroll-indicator">
+                              Payroll
+                            </Badge>
+                          )}
+                        </div>
                       );
                     })()}
                   </div>
@@ -2760,17 +2768,19 @@ export default function AdminSpotBookingManagement() {
                     <MessageSquare className="h-4 w-4 mr-2" />
                     Contact Users
                   </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={() => {
-                      setShowCancelDialog(true);
-                      setShowBookingDetails(false);
-                    }}
-                    data-testid="button-cancel-from-details"
-                  >
-                    <Ban className="h-4 w-4 mr-2" />
-                    Cancel Booking
-                  </Button>
+                  {selectedBooking.status !== 'completed' && selectedBooking.status !== 'cancelled' && (
+                    <Button
+                      variant="destructive"
+                      onClick={() => {
+                        setShowCancelDialog(true);
+                        setShowBookingDetails(false);
+                      }}
+                      data-testid="button-cancel-from-details"
+                    >
+                      <Ban className="h-4 w-4 mr-2" />
+                      Cancel Booking
+                    </Button>
+                  )}
                 </div>
               </TabsContent>
 
