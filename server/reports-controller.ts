@@ -216,26 +216,34 @@ export async function getReportUtilization(req: Request, res: Response) {
       return true;
     });
     
+    // Helper to normalize date to YYYY-MM-DD string
+    const toDateStr = (d: any): string => {
+      if (!d) return '';
+      if (d instanceof Date) return d.toISOString().split('T')[0];
+      return String(d).split('T')[0];
+    };
+    
     // Helper to check if a listing is available on a specific date
     const isListingAvailableOnDate = (listing: any, dateStr: string): boolean => {
-      const checkDate = new Date(dateStr);
+      const checkDate = new Date(dateStr + 'T12:00:00');
       
       // Only include active/available listings
       if (listing.status !== 'available') return false;
       
       if (listing.listingType === 'single') {
-        return listing.singleDate === dateStr;
+        return toDateStr(listing.singleDate) === dateStr;
       }
       
       if (listing.listingType === 'period') {
-        const start = new Date(listing.periodStartDate);
-        const end = new Date(listing.periodEndDate);
+        const start = new Date(toDateStr(listing.periodStartDate) + 'T00:00:00');
+        const end = new Date(toDateStr(listing.periodEndDate) + 'T23:59:59');
         return checkDate >= start && checkDate <= end;
       }
       
       if (listing.listingType === 'recurring') {
-        const start = new Date(listing.recurringStartDate);
-        const end = listing.recurringEndDate ? new Date(listing.recurringEndDate) : null;
+        const start = new Date(toDateStr(listing.recurringStartDate) + 'T00:00:00');
+        const endStr = toDateStr(listing.recurringEndDate);
+        const end = endStr ? new Date(endStr + 'T23:59:59') : null;
         
         if (checkDate < start) return false;
         if (end && checkDate > end) return false;
@@ -257,8 +265,13 @@ export async function getReportUtilization(req: Request, res: Response) {
     for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
       const dateStr = date.toISOString().split('T')[0];
       
-      // Count bookings on this date
-      const dayBookings = bookings.filter((b: any) => b.bookingDate === dateStr);
+      // Count bookings on this date (handle both Date objects and strings)
+      const dayBookings = bookings.filter((b: any) => {
+        const bDateStr = b.bookingDate instanceof Date 
+          ? b.bookingDate.toISOString().split('T')[0]
+          : String(b.bookingDate).split('T')[0];
+        return bDateStr === dateStr;
+      });
       const bookedSpots = dayBookings.length;
       
       // Count unique spots with available listings on this date
