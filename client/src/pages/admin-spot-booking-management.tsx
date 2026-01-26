@@ -1451,7 +1451,7 @@ export default function AdminSpotBookingManagement() {
 
       {/* Quick Analytics Cards */}
       {cardsVisible && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Tooltip>
             <TooltipTrigger asChild>
               <Card 
@@ -1477,80 +1477,115 @@ export default function AdminSpotBookingManagement() {
             </TooltipContent>
           </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Card 
-                className="hover-elevate cursor-pointer active-elevate-2"
-                onClick={() => setActiveTab("active")}
-              >
-                <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Daily Revenue</CardTitle>
-                  <div className="rounded-full border-2 border-green-400 p-2">
-                    <DollarSign className="h-4 w-4 text-green-600" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold" data-testid="stat-daily-revenue">
-                    ${displayAnalytics.totalDailyRevenue?.toLocaleString() || 0}
-                  </div>
-                  <p className="text-xs text-green-600">Today's revenue</p>
-                </CardContent>
-              </Card>
-            </TooltipTrigger>
-            <TooltipContent>
-              View total daily revenue from bookings
-            </TooltipContent>
-          </Tooltip>
+          {/* Scope-aware Revenue Card */}
+          {scope === 'bci' ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Card 
+                  className="hover-elevate cursor-pointer active-elevate-2"
+                  onClick={() => setActiveTab("payroll-summary")}
+                >
+                  <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Payroll Period Revenue</CardTitle>
+                    <div className="rounded-full border-2 border-green-400 p-2">
+                      <DollarSign className="h-4 w-4 text-green-600" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold" data-testid="stat-payroll-revenue">
+                      ${(payrollSummary?.periods?.[0]?.totalAmount || 0).toLocaleString()}
+                    </div>
+                    <p className="text-xs text-green-600">
+                      {payrollSummary?.periods?.[0]?.periodLabel || 'Current period'}
+                    </p>
+                  </CardContent>
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent>
+                View total revenue for the current payroll period
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Card 
+                  className="hover-elevate cursor-pointer active-elevate-2"
+                  onClick={() => setActiveTab("active")}
+                >
+                  <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Daily Revenue</CardTitle>
+                    <div className="rounded-full border-2 border-green-400 p-2">
+                      <DollarSign className="h-4 w-4 text-green-600" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold" data-testid="stat-daily-revenue">
+                      ${displayAnalytics.totalDailyRevenue?.toLocaleString() || 0}
+                    </div>
+                    <p className="text-xs text-green-600">Today's revenue</p>
+                  </CardContent>
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent>
+                View total daily revenue from bookings
+              </TooltipContent>
+            </Tooltip>
+          )}
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Card 
-                className="hover-elevate cursor-pointer active-elevate-2"
-                onClick={() => setActiveTab("pending-payments")}
-              >
-                <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
-                  <div className="rounded-full border-2 border-orange-400 p-2">
-                    <AlertCircle className="h-4 w-4 text-orange-600" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold" data-testid="stat-pending-requests">
-                    {displayAnalytics.pendingRequests}
-                  </div>
-                  <p className="text-xs text-orange-600">Awaiting action</p>
-                </CardContent>
-              </Card>
-            </TooltipTrigger>
-            <TooltipContent>
-              Click to view pending booking requests
-            </TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Card 
-                className="hover-elevate cursor-pointer active-elevate-2"
-                onClick={() => setPendingDisputesDialogOpen(true)}
-              >
-                <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Pending Disputes</CardTitle>
-                  <div className="rounded-full border-2 border-orange-400 p-2">
-                    <AlertTriangle className="h-4 w-4 text-orange-600" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold" data-testid="stat-pending-disputes">
-                    {displayAnalytics.pendingDisputes}
-                  </div>
-                  <p className="text-xs text-orange-600">Awaiting resolution</p>
-                </CardContent>
-              </Card>
-            </TooltipTrigger>
-            <TooltipContent>
-              Click to view pending disputes requiring action
-            </TooltipContent>
-          </Tooltip>
+          {/* Scope-aware Bookings Count Card */}
+          {scope === 'bci' ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Card 
+                  className="hover-elevate cursor-pointer active-elevate-2"
+                  onClick={() => setActiveTab("payroll-summary")}
+                >
+                  <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Payroll Period Bookings</CardTitle>
+                    <div className="rounded-full border-2 border-purple-400 p-2">
+                      <Banknote className="h-4 w-4 text-purple-600" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold" data-testid="stat-payroll-bookings">
+                      {payrollSummary?.periods?.[0]?.totalBookings || 0}
+                    </div>
+                    <p className="text-xs text-purple-600">
+                      {payrollSummary?.periods?.[0]?.periodLabel || 'Current period'}
+                    </p>
+                  </CardContent>
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent>
+                View total bookings for the current payroll period
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Card 
+                  className="hover-elevate cursor-pointer active-elevate-2"
+                  onClick={() => setActiveTab("pending-payments")}
+                >
+                  <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
+                    <div className="rounded-full border-2 border-orange-400 p-2">
+                      <AlertCircle className="h-4 w-4 text-orange-600" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold" data-testid="stat-pending-requests">
+                      {displayAnalytics.pendingRequests}
+                    </div>
+                    <p className="text-xs text-orange-600">Awaiting action</p>
+                  </CardContent>
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent>
+                Click to view pending booking requests
+              </TooltipContent>
+            </Tooltip>
+          )}
         </div>
       )}
 
