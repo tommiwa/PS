@@ -2612,33 +2612,35 @@ export default function AdminSpotBookingManagement() {
                                 </TooltipTrigger>
                                 <TooltipContent>View Details</TooltipContent>
                               </Tooltip>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                      const receiptData: ParkingReceiptData = {
-                                        spotNumber: booking.spotNumber,
-                                        spotLocation: booking.spotLocation,
-                                        renterName: booking.renterName,
-                                        renterEmail: booking.renterEmail,
-                                        ownerName: booking.ownerName,
-                                        status: booking.status,
-                                        dailyRate: booking.dailyRate,
-                                        bookingDate: booking.bookingDate,
-                                        paymentStatus: booking.paymentStatus,
-                                        bookingId: booking.id
-                                      };
-                                      generateParkingReceiptPDF(receiptData, `parking-receipt-${booking.id.slice(0, 8)}.pdf`);
-                                    }}
-                                    data-testid={`button-download-receipt-${booking.id}`}
-                                  >
-                                    <FileText className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Download Receipt</TooltipContent>
-                              </Tooltip>
+                              {booking.ownerName !== 'BCI Workplace Services' && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        const receiptData: ParkingReceiptData = {
+                                          spotNumber: booking.spotNumber,
+                                          spotLocation: booking.spotLocation,
+                                          renterName: booking.renterName,
+                                          renterEmail: booking.renterEmail,
+                                          ownerName: booking.ownerName,
+                                          status: booking.status,
+                                          dailyRate: booking.dailyRate,
+                                          bookingDate: booking.bookingDate,
+                                          paymentStatus: booking.paymentStatus,
+                                          bookingId: booking.id
+                                        };
+                                        generateParkingReceiptPDF(receiptData, `parking-receipt-${booking.id.slice(0, 8)}.pdf`);
+                                      }}
+                                      data-testid={`button-download-receipt-${booking.id}`}
+                                    >
+                                      <FileText className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Download Receipt</TooltipContent>
+                                </Tooltip>
+                              )}
                             </div>
                           </TableCell>
                         </TableRow>
