@@ -445,7 +445,7 @@ If you have questions about the collection of your personal information through 
       
       if (bciBookingsToComplete.length > 0) {
         // Update each BCI booking to completed with payment received
-        for (const { booking } of bciBookingsToComplete) {
+        for (const { booking, spot } of bciBookingsToComplete) {
           await db
             .update(bookings)
             .set({
@@ -463,6 +463,26 @@ If you have questions about the collection of your personal information through 
               .set({ status: 'used' })
               .where(eq(spotListings.id, booking.listingId));
           }
+          
+          // Create audit log for system auto-completion
+          await auditStorage.createAuditLog({
+            correlationId: `auto-complete-${booking.id}`,
+            action: 'COMPLETE',
+            entityType: 'booking',
+            entityId: booking.id,
+            actorId: 'SYSTEM',
+            actorEmail: 'system@bci.ca',
+            actorRole: 'system',
+            success: true,
+            message: `Booking for spot ${spot.spotNumber} on ${booking.bookingDate} automatically completed (System Action - booking date passed)`,
+            before: { status: 'confirmed', paymentStatus: booking.paymentStatus },
+            after: { status: 'completed', paymentStatus: 'received' },
+            requestMeta: {
+              method: 'SYSTEM',
+              path: '/system/auto-complete',
+              ip: '127.0.0.1'
+            }
+          });
         }
         
         console.log(`[BCI Auto-Complete] Marked ${bciBookingsToComplete.length} BCI booking(s) as completed`);
