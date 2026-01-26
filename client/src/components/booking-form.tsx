@@ -368,20 +368,20 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
             {isPayrollSpot ? (
               <div className="space-y-2">
                 <Label className="text-sm font-semibold">Payment Method</Label>
-                <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
                   <div className="flex items-start gap-3">
-                    <div className="p-2 bg-primary/10 rounded-full">
-                      <Banknote className="h-5 w-5 text-primary" />
+                    <div className="p-2 bg-amber-100 rounded-full">
+                      <Banknote className="h-5 w-5 text-amber-600" />
                     </div>
                     <div className="space-y-1">
-                      <p className="font-medium text-sm">BCI Workplace Services</p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="font-medium text-sm text-amber-800">BCI Workplace Services</p>
+                      <p className="text-sm text-amber-700">
                         Payment will be deducted directly from your payroll.
                       </p>
-                      <p className="text-sm font-medium text-primary">
+                      <p className="text-sm font-medium text-amber-600">
                         Deduction month: {getPayrollDeductionMonth(formData.date)}
                       </p>
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-xs text-amber-600/80 mt-1">
                         Bookings before the 20th are deducted in the same month, otherwise the next month.
                       </p>
                     </div>
