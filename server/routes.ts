@@ -46,7 +46,7 @@ import {
   entityTypes,
   userRoles
 } from "@shared/schema";
-import { auditStorage, type AuditQueryFilters, type AuditPagination } from "./audit-storage";
+import { dbAuditStorage as auditStorage, type AuditQueryFilters, type AuditPagination } from "./audit-storage";
 import { auditService } from "./audit-service";
 import { 
   auditContextMiddleware, 

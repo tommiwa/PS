@@ -3943,7 +3943,7 @@ export class MemStorage implements IStorage {
 }
 
 // Initialize storage and audit system 
-import { auditStorage } from "./audit-storage";
+import { dbAuditStorage as auditStorage } from "./audit-storage";
 import { auditService } from "./audit-service";
 
 const storage = new MemStorage();
