@@ -2255,22 +2255,6 @@ export default function AdminSpotBookingManagement() {
                                   <TooltipContent>Confirm Payment Received</TooltipContent>
                                 </Tooltip>
                               )}
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                      setSelectedRefundBookingId(payment.id);
-                                      setShowRefundDialog(true);
-                                    }}
-                                    data-testid={`button-issue-refund-${payment.id}`}
-                                  >
-                                    <DollarSign className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Issue Refund</TooltipContent>
-                              </Tooltip>
                             </div>
                           </TableCell>
                         </TableRow>
