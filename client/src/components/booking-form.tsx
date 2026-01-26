@@ -374,7 +374,7 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
                       <Banknote className="h-5 w-5 text-amber-600" />
                     </div>
                     <div className="space-y-1">
-                      <p className="font-medium text-sm text-amber-800">BCI Workplace Services</p>
+                      <p className="font-medium text-sm text-amber-800">You are booking a Workplace Services spot</p>
                       <p className="text-sm text-amber-700">
                         Payment will be deducted directly from your payroll.
                       </p>
