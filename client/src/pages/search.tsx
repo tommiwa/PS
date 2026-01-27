@@ -397,9 +397,12 @@ export default function Search() {
             variant: "destructive"
           });
         } else if (rawMessage.includes('USER_HAS_ACTIVE_LOCK')) {
+          // Clear any stale local lock state and refetch
+          clearUserLock();
+          queryClient.invalidateQueries({ queryKey: ['/api/active-locks'] });
           toast({
-            title: "Active Reservation",
-            description: "You already have an active reservation on another spot. Please complete or cancel it first.",
+            title: "Booking In Progress",
+            description: "You have an active booking session on another spot. Please wait a moment and try again, or complete your other booking first.",
             variant: "destructive"
           });
         } else {
