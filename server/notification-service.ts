@@ -1658,3 +1658,239 @@ export async function sendBookingCancellationNotification(
 
   return results;
 }
+
+/**
+ * Send notification to former owner when they are unassigned from a spot
+ */
+export async function sendSpotUnassignmentNotification(
+  formerOwner: { name: string; email: string | null; id: string },
+  spotDetails: { spotNumber: string; location: string; building: string },
+  cancelledBookingsCount: number
+): Promise<{ emailSent: boolean; inAppSent: boolean }> {
+  const results = { emailSent: false, inAppSent: false };
+
+  try {
+    // Send email notification only if user has email
+    if (formerOwner.email) {
+      const subject = `Parking Spot Unassigned: ${spotDetails.spotNumber}`;
+      
+      const bookingsMessage = cancelledBookingsCount > 0 
+        ? `\n\nNote: ${cancelledBookingsCount} future booking(s) for this spot have been automatically cancelled.`
+        : '';
+      
+      const text = `Dear ${formerOwner.name},
+
+This is to inform you that you have been unassigned from parking spot ${spotDetails.spotNumber}.
+
+SPOT DETAILS:
+• Spot Number: ${spotDetails.spotNumber}
+• Location: ${spotDetails.location}
+• Building: ${spotDetails.building}${bookingsMessage}
+
+If you have any questions about this change, please contact the BCI Workplace Services team.
+
+Best regards,
+BCI ParkShare Team`;
+
+      const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parking Spot Unassigned</title>
+  <style>
+    .container { max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; }
+    .header { background: #dc2626; color: white; padding: 20px; text-align: center; }
+    .content { padding: 30px; background: #f8fafc; }
+    .spot-details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626; }
+    .footer { text-align: center; color: #64748b; padding: 20px; }
+    .warning { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Parking Spot Unassigned</h1>
+    </div>
+    
+    <div class="content">
+      <p>Dear ${formerOwner.name},</p>
+      <p>This is to inform you that you have been unassigned from your parking spot.</p>
+      
+      <div class="spot-details">
+        <h3>Spot Details</h3>
+        <ul>
+          <li><strong>Spot Number:</strong> ${spotDetails.spotNumber}</li>
+          <li><strong>Location:</strong> ${spotDetails.location}</li>
+          <li><strong>Building:</strong> ${spotDetails.building}</li>
+        </ul>
+      </div>
+      
+      ${cancelledBookingsCount > 0 ? `
+      <div class="warning">
+        <strong>Note:</strong> ${cancelledBookingsCount} future booking(s) for this spot have been automatically cancelled.
+      </div>
+      ` : ''}
+      
+      <p>If you have any questions about this change, please contact the BCI Workplace Services team.</p>
+    </div>
+    
+    <div class="footer">
+      <p>Best regards,<br>BCI ParkShare Team</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+      const emailResult = await sendEmailNotification({
+        to: formerOwner.email,
+        subject,
+        text,
+        html,
+        type: 'general'
+      });
+      results.emailSent = emailResult.success;
+    }
+
+    // Send in-app notification (always sent regardless of email)
+    await storage.createInAppNotification({
+      userId: formerOwner.id,
+      type: 'general',
+      title: `Spot Unassigned: ${spotDetails.spotNumber}`,
+      message: `You have been unassigned from parking spot ${spotDetails.spotNumber} at ${spotDetails.location}.${cancelledBookingsCount > 0 ? ` ${cancelledBookingsCount} future booking(s) were cancelled.` : ''}`,
+      data: {
+        spotNumber: spotDetails.spotNumber,
+        location: spotDetails.location,
+        building: spotDetails.building,
+        cancelledBookingsCount
+      },
+      read: false
+    });
+    
+    results.inAppSent = true;
+
+    console.log(`✓ Spot unassignment notification sent to ${formerOwner.name} (email: ${results.emailSent}, in-app: ${results.inAppSent})`);
+    
+  } catch (error) {
+    console.error('❌ Error sending spot unassignment notification:', error);
+  }
+
+  return results;
+}
+
+/**
+ * Send notification to renters when their future bookings are cancelled due to spot unassignment
+ */
+export async function sendBookingsCancelledDueToUnassignmentNotification(
+  renter: { name: string; email: string | null; id: string },
+  cancelledBookings: Array<{ bookingDate: string; spotNumber: string; location: string; building: string }>,
+  formerOwnerName: string
+): Promise<{ emailSent: boolean; inAppSent: boolean }> {
+  const results = { emailSent: false, inAppSent: false };
+
+  if (cancelledBookings.length === 0) return results;
+
+  try {
+    // Send email notification only if user has email
+    if (renter.email) {
+      const subject = `Booking(s) Cancelled: Spot Reassignment`;
+      
+      const bookingsList = cancelledBookings.map(b => 
+        `• ${b.bookingDate} - Spot ${b.spotNumber} at ${b.location}`
+      ).join('\n');
+      
+      const text = `Dear ${renter.name},
+
+We're writing to inform you that the following booking(s) have been cancelled due to a parking spot reassignment:
+
+${bookingsList}
+
+This cancellation occurred because the spot owner has been changed by administration. If any payments were made, they will be refunded according to the standard refund policy.
+
+We apologize for any inconvenience. Please visit BCI ParkShare to book an alternative spot.
+
+Best regards,
+BCI ParkShare Team`;
+
+      const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bookings Cancelled</title>
+  <style>
+    .container { max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; }
+    .header { background: #f59e0b; color: white; padding: 20px; text-align: center; }
+    .content { padding: 30px; background: #f8fafc; }
+    .bookings-list { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b; }
+    .footer { text-align: center; color: #64748b; padding: 20px; }
+    .info { background: #dbeafe; border-left: 4px solid #3b82f6; padding: 15px; margin: 20px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Booking(s) Cancelled</h1>
+    </div>
+    
+    <div class="content">
+      <p>Dear ${renter.name},</p>
+      <p>We're writing to inform you that the following booking(s) have been cancelled due to a parking spot reassignment:</p>
+      
+      <div class="bookings-list">
+        <h3>Cancelled Bookings</h3>
+        <ul>
+          ${cancelledBookings.map(b => `<li><strong>${b.bookingDate}</strong> - Spot ${b.spotNumber} at ${b.location}</li>`).join('')}
+        </ul>
+      </div>
+      
+      <div class="info">
+        <strong>Why was this cancelled?</strong><br>
+        This cancellation occurred because the spot owner has been changed by administration. If any payments were made, they will be refunded according to the standard refund policy.
+      </div>
+      
+      <p>We apologize for any inconvenience. Please visit BCI ParkShare to book an alternative spot.</p>
+    </div>
+    
+    <div class="footer">
+      <p>Best regards,<br>BCI ParkShare Team</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+      const emailResult = await sendEmailNotification({
+        to: renter.email,
+        subject,
+        text,
+        html,
+        type: 'booking_cancelled'
+      });
+      results.emailSent = emailResult.success;
+    }
+
+    // Send in-app notification (always sent regardless of email)
+    await storage.createInAppNotification({
+      userId: renter.id,
+      type: 'booking_cancelled',
+      title: `${cancelledBookings.length} Booking(s) Cancelled`,
+      message: `Your booking(s) have been cancelled due to a parking spot reassignment. Please visit BCI ParkShare to book an alternative spot.`,
+      data: {
+        cancelledBookings,
+        reason: 'spot_reassignment'
+      },
+      read: false
+    });
+    
+    results.inAppSent = true;
+
+    console.log(`✓ Bookings cancelled notification sent to ${renter.name} for ${cancelledBookings.length} booking(s) (email: ${results.emailSent}, in-app: ${results.inAppSent})`);
+    
+  } catch (error) {
+    console.error('❌ Error sending bookings cancelled notification:', error);
+  }
+
+  return results;
+}

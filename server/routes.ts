@@ -5353,6 +5353,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper function to handle spot unassignment logic
+  // Cancels future bookings and sends notifications to affected users
+  async function handleSpotUnassignment(
+    spotId: string,
+    spot: { spotNumber: string; locationId: number },
+    formerOwner: { id: string; firstName: string | null; lastName: string | null; email: string | null } | null | undefined
+  ): Promise<{ cancelledBookingsCount: number; notifiedRenters: string[] }> {
+    const result = { cancelledBookingsCount: 0, notifiedRenters: [] as string[] };
+    
+    if (!formerOwner) return result;
+    
+    try {
+      // Get location details for notifications
+      const location = await storage.getLocation(spot.locationId);
+      const locationName = location ? `${location.office} - ${location.level}` : 'Unknown Location';
+      const buildingName = location?.building || 'Unknown Building';
+      
+      // Get all bookings for this spot
+      const allBookings = await storage.getBookingsBySpot(spotId);
+      
+      // Filter for future bookings (today and onwards) that are not already cancelled
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const futureBookings = allBookings.filter(booking => {
+        const bookingDate = new Date(booking.bookingDate);
+        bookingDate.setHours(0, 0, 0, 0);
+        return bookingDate >= today && booking.status !== 'cancelled';
+      });
+      
+      if (futureBookings.length === 0) {
+        // No future bookings to cancel, but still notify former owner
+        const { sendSpotUnassignmentNotification } = await import('./notification-service');
+        await sendSpotUnassignmentNotification(
+          {
+            name: `${formerOwner.firstName || ''} ${formerOwner.lastName || ''}`.trim() || 'User',
+            email: formerOwner.email || null,
+            id: formerOwner.id
+          },
+          { spotNumber: spot.spotNumber, location: locationName, building: buildingName },
+          0
+        );
+        return result;
+      }
+      
+      // Group bookings by renter for notifications
+      const bookingsByRenter = new Map<string, typeof futureBookings>();
+      
+      for (const booking of futureBookings) {
+        // Cancel the booking
+        await storage.updateBooking(booking.id, { 
+          status: 'cancelled',
+          adminNotes: `Automatically cancelled due to spot unassignment on ${new Date().toISOString().split('T')[0]}`
+        });
+        result.cancelledBookingsCount++;
+        
+        // Group for notification
+        const renterBookings = bookingsByRenter.get(booking.renterId) || [];
+        renterBookings.push(booking);
+        bookingsByRenter.set(booking.renterId, renterBookings);
+      }
+      
+      // Import notification functions
+      const { sendSpotUnassignmentNotification, sendBookingsCancelledDueToUnassignmentNotification } = await import('./notification-service');
+      
+      // Notify each affected renter
+      for (const [renterId, renterBookings] of Array.from(bookingsByRenter.entries())) {
+        const renter = await storage.getUser(renterId);
+        if (renter) {
+          const cancelledBookingDetails = renterBookings.map((b: typeof futureBookings[0]) => ({
+            bookingDate: b.bookingDate,
+            spotNumber: spot.spotNumber,
+            location: locationName,
+            building: buildingName
+          }));
+          
+          await sendBookingsCancelledDueToUnassignmentNotification(
+            {
+              name: `${renter.firstName || ''} ${renter.lastName || ''}`.trim() || 'User',
+              email: renter.email || null,
+              id: renter.id
+            },
+            cancelledBookingDetails,
+            `${formerOwner.firstName || ''} ${formerOwner.lastName || ''}`.trim() || 'Previous Owner'
+          );
+          if (renter.email) {
+            result.notifiedRenters.push(renter.email);
+          }
+        }
+      }
+      
+      // Notify the former owner about unassignment
+      await sendSpotUnassignmentNotification(
+        {
+          name: `${formerOwner.firstName || ''} ${formerOwner.lastName || ''}`.trim() || 'User',
+          email: formerOwner.email || null,
+          id: formerOwner.id
+        },
+        { spotNumber: spot.spotNumber, location: locationName, building: buildingName },
+        result.cancelledBookingsCount
+      );
+      
+      console.log(`[Spot Unassignment] Spot ${spot.spotNumber}: Cancelled ${result.cancelledBookingsCount} future booking(s), notified ${result.notifiedRenters.length} renter(s) and former owner`);
+      
+    } catch (error) {
+      console.error('[Spot Unassignment] Error handling unassignment:', error);
+    }
+    
+    return result;
+  }
+
   // Unassign parking spot from user (Admin only)
   app.put("/api/admin/spots/:spotId/unassign", requireAdmin, async (req, res) => {
     try {
@@ -5405,7 +5516,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      res.json(updatedSpot);
+      // Handle unassignment: cancel future bookings and send notifications
+      const unassignmentResult = await handleSpotUnassignment(
+        spotId,
+        { spotNumber: existingSpot.spotNumber, locationId: existingSpot.locationId },
+        formerOwner
+      );
+      
+      res.json({ 
+        ...updatedSpot, 
+        cancelledBookingsCount: unassignmentResult.cancelledBookingsCount,
+        notifiedRenters: unassignmentResult.notifiedRenters
+      });
     } catch (error) {
       console.error("Error unassigning parking spot:", error);
       res.status(500).json({ error: "Failed to unassign parking spot" });
@@ -5431,6 +5553,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         validatedData.isBookable = false;
       }
       
+      // Check if ownerId is being changed (unassignment or reassignment)
+      const isOwnerChanging = 'ownerId' in validatedData && 
+        existingSpot.ownerId !== null && 
+        existingSpot.ownerId !== validatedData.ownerId;
+      
+      // Get former owner info before update if owner is changing
+      let formerOwner = null;
+      if (isOwnerChanging && existingSpot.ownerId) {
+        formerOwner = await storage.getUser(existingSpot.ownerId);
+      }
+      
       const updatedSpot = await storage.updateParkingSpot(id, validatedData);
       if (!updatedSpot) {
         return res.status(404).json({ error: "Parking spot not found" });
@@ -5444,7 +5577,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         after: updatedSpot
       });
       
-      res.json(updatedSpot);
+      // Handle owner change: cancel future bookings and notify affected users
+      let unassignmentResult = { cancelledBookingsCount: 0, notifiedRenters: [] as string[] };
+      if (isOwnerChanging && formerOwner) {
+        // Record unassignment history
+        const actorId = getAuthenticatedUserId(req);
+        await storage.recordSpotAssignment({
+          spotId: id,
+          userId: existingSpot.ownerId!,
+          action: 'unassigned',
+          effectiveAt: new Date(),
+          actorId: actorId || undefined,
+          notes: validatedData.ownerId ? 'Reassigned to another user' : 'Unassigned'
+        });
+        
+        // Cancel future bookings and send notifications
+        unassignmentResult = await handleSpotUnassignment(
+          id,
+          { spotNumber: existingSpot.spotNumber, locationId: existingSpot.locationId },
+          formerOwner
+        );
+        
+        // Remove owner role if no remaining spots
+        if (formerOwner.roles.includes("owner")) {
+          const remainingSpots = await storage.getParkingSpotsByOwner(existingSpot.ownerId!);
+          if (remainingSpots.length === 0) {
+            await storage.removeUserRole(existingSpot.ownerId!, "owner");
+          }
+        }
+      }
+      
+      res.json({
+        ...updatedSpot,
+        ...(isOwnerChanging ? {
+          cancelledBookingsCount: unassignmentResult.cancelledBookingsCount,
+          notifiedRenters: unassignmentResult.notifiedRenters
+        } : {})
+      });
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid input data", details: error.errors });
