@@ -293,7 +293,7 @@ export default function AdminIssuesPage() {
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3 mb-6">
+      <div className="grid gap-4 md:grid-cols-4 mb-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Issues</CardTitle>
@@ -312,12 +312,25 @@ export default function AdminIssuesPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Completed</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{completedIssues.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Urgent Issues</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">{urgentCount}</div>
           </CardContent>
         </Card>
+      </div>
+
+      <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2 text-sm text-blue-700">
+        <AlertCircle className="h-4 w-4 flex-shrink-0" />
+        <span>If you don't see the issue you reported, please check the Completed tab - it may have already been fixed.</span>
       </div>
 
       <Card>
