@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useConfirm } from "@/hooks/use-confirm"
 import { apiRequest, queryClient } from "@/lib/queryClient"
 import { format } from "date-fns"
-import { AlertCircle, Clock, CheckCircle2, ListTodo, Loader2, RefreshCw, History, Trash2, Eye, User, Mail, Calendar } from "lucide-react"
+import { AlertCircle, Clock, CheckCircle2, ListTodo, Loader2, RefreshCw, Trash2, Eye, User, Mail, Calendar } from "lucide-react"
 
 type IssueStatus = "backlog" | "todo" | "in_progress" | "completed"
 type IssuePriority = "low" | "medium" | "high" | "urgent"
@@ -336,8 +336,13 @@ export default function AdminIssuesPage() {
                     )}
                   </TabsTrigger>
                   <TabsTrigger value="history" className="flex items-center gap-2">
-                    <History className="h-4 w-4" />
-                    History
+                    <CheckCircle2 className="h-4 w-4" />
+                    Completed
+                    {completedIssues.length > 0 && (
+                      <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                        {completedIssues.length}
+                      </Badge>
+                    )}
                   </TabsTrigger>
                 </TabsList>
                 <Select value={priorityFilter} onValueChange={setPriorityFilter}>
