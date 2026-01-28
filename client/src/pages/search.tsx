@@ -437,6 +437,26 @@ export default function Search() {
     })
   }
 
+  // Handle cancelling booking - release lock and close dialog
+  const handleCancelBooking = async () => {
+    // Release the lock on backend first, then clear local state
+    if (userActiveLock) {
+      const lockIdToRelease = userActiveLock.lockId;
+      try {
+        // Clear local state immediately to prevent UI issues
+        clearUserLock();
+        // Release on backend
+        await releaseLock(lockIdToRelease);
+      } catch (error) {
+        console.error('[handleCancelBooking] Error releasing lock:', error);
+        // Lock might already be expired - that's okay
+      }
+    }
+    // Close the dialog and clear selection
+    setShowBookingForm(false);
+    setSelectedSpot(null);
+  }
+
   // Show loading state while fetching data
   if (isLoading) {
     return (
@@ -878,14 +898,9 @@ export default function Search() {
       <Dialog 
         open={showBookingForm} 
         onOpenChange={(open) => {
-          setShowBookingForm(open);
-          // Release lock when dialog closes
-          if (!open && userActiveLock) {
-            const lockIdToRelease = userActiveLock.lockId;
-            // Clear lock immediately to prevent race condition
-            clearUserLock();
-            // Then release on backend
-            releaseLock(lockIdToRelease);
+          if (!open) {
+            // User closed dialog via X, escape, or outside click - release lock
+            handleCancelBooking();
           }
         }}
       >
@@ -897,7 +912,7 @@ export default function Search() {
             <BookingForm
               spot={selectedSpot}
               onSubmit={(bookingData) => handleBookingFormSubmit(selectedSpot, bookingData)}
-              onCancel={() => setShowBookingForm(false)}
+              onCancel={handleCancelBooking}
               selectedDate={userActiveLock?.bookingDate || selectedSpot.availability?.date || searchCriteria.date}
               isDateLocked={true}
             />
