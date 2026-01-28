@@ -1,14 +1,14 @@
 // Notification Service - handles email and in-app notifications
-// Supports both SendGrid and Microsoft 365 Graph API for email functionality
+// Supports Mailgun and Microsoft 365 Graph API for email functionality
 
-import { MailService } from '@sendgrid/mail';
 import { ConfidentialClientApplication, Configuration } from '@azure/msal-node';
 import axios from 'axios';
+import FormData from 'form-data';
 import type { WaitingList, ParkingSpot, AuthUser } from '@shared/schema';
 import { storage } from './storage';
 
 // Email provider configuration
-type EmailProvider = 'ms365' | 'sendgrid' | 'mock';
+type EmailProvider = 'ms365' | 'mailgun' | 'mock';
 
 // Check which email providers are configured
 const MS365_CONFIGURED = !!(
@@ -17,24 +17,12 @@ const MS365_CONFIGURED = !!(
   process.env.MS365_CLIENT_SECRET &&
   process.env.MS365_SENDER_EMAIL
 );
-const SENDGRID_CONFIGURED = !!process.env.SENDGRID_API_KEY;
+const MAILGUN_CONFIGURED = !!(process.env.MAILGUN_API_KEY && process.env.MAILGUN_DOMAIN);
 
 // Determine which provider to use (MS365 takes priority if both are configured)
-const activeProvider: EmailProvider = MS365_CONFIGURED ? 'ms365' : (SENDGRID_CONFIGURED ? 'sendgrid' : 'mock');
+const activeProvider: EmailProvider = MS365_CONFIGURED ? 'ms365' : (MAILGUN_CONFIGURED ? 'mailgun' : 'mock');
 
-let mailService: MailService | null = null;
 let msalClient: ConfidentialClientApplication | null = null;
-
-// Initialize SendGrid if configured
-if (SENDGRID_CONFIGURED) {
-  try {
-    mailService = new MailService();
-    mailService.setApiKey(process.env.SENDGRID_API_KEY!);
-    console.log('✓ SendGrid initialized successfully');
-  } catch (error) {
-    console.error('❌ SendGrid initialization failed:', error);
-  }
-}
 
 // Initialize Microsoft 365 Graph API if configured
 if (MS365_CONFIGURED) {
@@ -53,13 +41,54 @@ if (MS365_CONFIGURED) {
   }
 }
 
+// Log Mailgun configuration status
+if (MAILGUN_CONFIGURED) {
+  console.log('✓ Mailgun configured successfully');
+}
+
 // Log the active email provider
 if (activeProvider === 'ms365') {
   console.log('📧 Email provider: Microsoft 365 Graph API');
-} else if (activeProvider === 'sendgrid') {
-  console.log('📧 Email provider: SendGrid');
+} else if (activeProvider === 'mailgun') {
+  console.log('📧 Email provider: Mailgun');
 } else {
   console.log('⚠️  No email provider configured - using mock notifications for development');
+}
+
+// Send email via Mailgun API
+async function sendEmailViaMailgun(
+  to: string,
+  subject: string,
+  text: string,
+  html: string
+): Promise<void> {
+  const apiKey = process.env.MAILGUN_API_KEY!;
+  const domain = process.env.MAILGUN_DOMAIN!;
+  const fromEmail = process.env.MAILGUN_FROM_EMAIL || `noreply@${domain}`;
+  
+  const form = new FormData();
+  form.append('from', `BCI ParkShare <${fromEmail}>`);
+  form.append('to', to);
+  form.append('subject', subject);
+  form.append('text', text);
+  form.append('html', html);
+  
+  // Determine API endpoint (US or EU region)
+  const apiEndpoint = process.env.MAILGUN_API_REGION === 'EU' 
+    ? 'https://api.eu.mailgun.net' 
+    : 'https://api.mailgun.net';
+  
+  await axios.post(
+    `${apiEndpoint}/v3/${domain}/messages`,
+    form,
+    {
+      auth: {
+        username: 'api',
+        password: apiKey
+      },
+      headers: form.getHeaders()
+    }
+  );
 }
 
 // Helper function to get MS365 access token
@@ -124,12 +153,12 @@ async function sendEmailViaMS365(
 export function getEmailProviderStatus(): { 
   provider: EmailProvider; 
   ms365Available: boolean; 
-  sendgridAvailable: boolean;
+  mailgunAvailable: boolean;
 } {
   return {
     provider: activeProvider,
     ms365Available: MS365_CONFIGURED,
-    sendgridAvailable: SENDGRID_CONFIGURED
+    mailgunAvailable: MAILGUN_CONFIGURED
   };
 }
 
@@ -1222,34 +1251,32 @@ export async function sendEmailNotification(notification: EmailNotification): Pr
         console.log(`✓ Email sent via MS365 to ${notification.to}: ${notification.subject}`);
         return { success: true, provider: 'ms365' };
       } catch (ms365Error) {
-        console.error('❌ MS365 email failed, attempting SendGrid fallback:', ms365Error);
-        // Fall through to SendGrid if available
-        if (mailService) {
-          await mailService.send({
-            to: notification.to,
-            from: process.env.SENDGRID_FROM_EMAIL || 'noreply@bci.ca',
-            subject: notification.subject,
-            text: notification.text,
-            html: notification.html,
-          });
-          console.log(`✓ Email sent via SendGrid (fallback) to ${notification.to}: ${notification.subject}`);
-          return { success: true, provider: 'sendgrid' };
+        console.error('❌ MS365 email failed, attempting Mailgun fallback:', ms365Error);
+        // Fall through to Mailgun if available
+        if (MAILGUN_CONFIGURED) {
+          await sendEmailViaMailgun(
+            notification.to,
+            notification.subject,
+            notification.text,
+            notification.html
+          );
+          console.log(`✓ Email sent via Mailgun (fallback) to ${notification.to}: ${notification.subject}`);
+          return { success: true, provider: 'mailgun' };
         }
         throw ms365Error;
       }
     }
 
-    // Use SendGrid if it's the active provider
-    if (activeProvider === 'sendgrid' && mailService) {
-      await mailService.send({
-        to: notification.to,
-        from: process.env.SENDGRID_FROM_EMAIL || 'noreply@bci.ca',
-        subject: notification.subject,
-        text: notification.text,
-        html: notification.html,
-      });
-      console.log(`✓ Email sent via SendGrid to ${notification.to}: ${notification.subject}`);
-      return { success: true, provider: 'sendgrid' };
+    // Use Mailgun if it's the active provider
+    if (activeProvider === 'mailgun' && MAILGUN_CONFIGURED) {
+      await sendEmailViaMailgun(
+        notification.to,
+        notification.subject,
+        notification.text,
+        notification.html
+      );
+      console.log(`✓ Email sent via Mailgun to ${notification.to}: ${notification.subject}`);
+      return { success: true, provider: 'mailgun' };
     }
 
     throw new Error('No email provider available');

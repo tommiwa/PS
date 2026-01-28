@@ -7810,7 +7810,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!isEmailServiceAvailable()) {
         return res.status(503).json({ 
           error: "Email service unavailable",
-          message: "SendGrid is not configured. Please contact your administrator to set up email delivery."
+          message: "Mailgun is not configured. Please contact your administrator to set up email delivery."
         });
       }
       

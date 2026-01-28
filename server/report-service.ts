@@ -1,5 +1,6 @@
-import * as sgMail from '@sendgrid/mail';
 import ExcelJS from 'exceljs';
+import axios from 'axios';
+import FormData from 'form-data';
 import type {
   ReportOverviewResponse,
   ReportUtilizationResponse,
@@ -10,20 +11,65 @@ import type {
   SharedPoolUsageReportResponse
 } from '@shared/schema';
 
-// Initialize SendGrid if API key is available
-const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
-const SENDGRID_AVAILABLE = !!SENDGRID_API_KEY;
+// Initialize Mailgun if API key is available
+const MAILGUN_CONFIGURED = !!(process.env.MAILGUN_API_KEY && process.env.MAILGUN_DOMAIN);
 
-if (SENDGRID_AVAILABLE) {
-  sgMail.setApiKey(SENDGRID_API_KEY!);
-  console.log('✓ SendGrid initialized for report emails');
+if (MAILGUN_CONFIGURED) {
+  console.log('✓ Mailgun configured for report emails');
 } else {
-  console.warn('⚠️  SENDGRID_API_KEY not found - email reports will not be available');
+  console.warn('⚠️  MAILGUN_API_KEY or MAILGUN_DOMAIN not found - email reports will not be available');
 }
 
-// Check if SendGrid is available
+// Check if email service is available
 export function isEmailServiceAvailable(): boolean {
-  return SENDGRID_AVAILABLE;
+  return MAILGUN_CONFIGURED;
+}
+
+// Send email via Mailgun API with attachment
+async function sendEmailViaMailgun(options: {
+  to: string[];
+  subject: string;
+  text: string;
+  html: string;
+  attachment: Buffer;
+  filename: string;
+}): Promise<void> {
+  const apiKey = process.env.MAILGUN_API_KEY!;
+  const domain = process.env.MAILGUN_DOMAIN!;
+  const fromEmail = process.env.MAILGUN_FROM_EMAIL || `noreply@${domain}`;
+  
+  const form = new FormData();
+  form.append('from', `BCI ParkShare <${fromEmail}>`);
+  
+  // Add all recipients
+  options.to.forEach(recipient => {
+    form.append('to', recipient);
+  });
+  
+  form.append('subject', options.subject);
+  form.append('text', options.text);
+  form.append('html', options.html);
+  form.append('attachment', options.attachment, {
+    filename: options.filename,
+    contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  });
+  
+  // Determine API endpoint (US or EU region)
+  const apiEndpoint = process.env.MAILGUN_API_REGION === 'EU' 
+    ? 'https://api.eu.mailgun.net' 
+    : 'https://api.mailgun.net';
+  
+  await axios.post(
+    `${apiEndpoint}/v3/${domain}/messages`,
+    form,
+    {
+      auth: {
+        username: 'api',
+        password: apiKey
+      },
+      headers: form.getHeaders()
+    }
+  );
 }
 
 // Generate Excel buffer for Overview Report
@@ -469,10 +515,10 @@ export async function sendReportEmail(
   dateRange: { from: string; to: string },
   scope: 'all' | 'bci'
 ): Promise<{ success: boolean; message: string }> {
-  if (!SENDGRID_AVAILABLE) {
+  if (!MAILGUN_CONFIGURED) {
     return {
       success: false,
-      message: 'Email service is not configured. Please contact your administrator to set up SENDGRID_API_KEY.'
+      message: 'Email service is not configured. Please contact your administrator to set up MAILGUN_API_KEY and MAILGUN_DOMAIN.'
     };
   }
 
@@ -522,12 +568,8 @@ export async function sendReportEmail(
 
     // Prepare email content
     const scopeLabel = scope === 'bci' ? 'BCI-Managed' : 'All';
-    const emailContent = {
-      to: recipients,
-      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@bciparkshare.com',
-      subject: `BCI ParkShare - ${reportTitle} (${scopeLabel})`,
-      text: `
-Dear Admin,
+    const emailSubject = `BCI ParkShare - ${reportTitle} (${scopeLabel})`;
+    const emailText = `Dear Admin,
 
 Please find attached the ${reportTitle} for BCI ParkShare.
 
@@ -539,9 +581,9 @@ Report Details:
 This is an automated report from the BCI ParkShare system.
 
 Best regards,
-BCI ParkShare Admin System
-      `,
-      html: `
+BCI ParkShare Admin System`;
+
+    const emailHtml = `
 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
   <div style="background-color: #2563eb; color: white; padding: 20px; text-align: center;">
     <h1 style="margin: 0;">BCI ParkShare</h1>
@@ -581,22 +623,19 @@ BCI ParkShare Admin System
   </div>
   
   <div style="background-color: #1e293b; color: #94a3b8; padding: 15px; text-align: center; font-size: 12px;">
-    <p style="margin: 0;">© ${new Date().getFullYear()} BCI ParkShare. All rights reserved.</p>
+    <p style="margin: 0;">&copy; ${new Date().getFullYear()} BCI ParkShare. All rights reserved.</p>
   </div>
-</div>
-      `,
-      attachments: [
-        {
-          content: attachment.toString('base64'),
-          filename,
-          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          disposition: 'attachment'
-        }
-      ]
-    };
+</div>`;
 
-    // Send email
-    await sgMail.send(emailContent);
+    // Send email via Mailgun
+    await sendEmailViaMailgun({
+      to: recipients,
+      subject: emailSubject,
+      text: emailText,
+      html: emailHtml,
+      attachment,
+      filename
+    });
 
     return {
       success: true,

@@ -67,8 +67,8 @@ Preferred communication style: Simple, everyday language.
 - **Neon Database**: Serverless PostgreSQL
 - **Email Service**: Dual-provider support with automatic failover
   - **Microsoft 365 Graph API** (Primary): Uses Azure AD app registration for corporate email delivery from @bci.ca domain
-  - **SendGrid** (Secondary/Fallback): Alternative email provider with API key authentication
-  - **Provider Priority**: MS365 is used first if configured; SendGrid is used as fallback or if MS365 is not configured
+  - **Mailgun** (Secondary/Fallback): Alternative email provider with API key authentication
+  - **Provider Priority**: MS365 is used first if configured; Mailgun is used as fallback or if MS365 is not configured
   - **Mock Mode**: When neither provider is configured, emails are logged to console for development
 
 ### Email Configuration (Environment Variables)
@@ -78,9 +78,11 @@ Preferred communication style: Simple, everyday language.
 - `MS365_CLIENT_SECRET`: Client secret from Azure app registration
 - `MS365_SENDER_EMAIL`: The M365 mailbox to send from (e.g., noreply@bci.ca)
 
-**SendGrid (Alternative):**
-- `SENDGRID_API_KEY`: SendGrid API key
-- `SENDGRID_FROM_EMAIL`: Sender email address (default: noreply@bci.ca)
+**Mailgun (Alternative):**
+- `MAILGUN_API_KEY`: Mailgun API key (found in Mailgun dashboard under API Keys)
+- `MAILGUN_DOMAIN`: Your Mailgun sending domain (e.g., mg.bci.ca or sandbox domain)
+- `MAILGUN_FROM_EMAIL`: Sender email address (optional, defaults to noreply@MAILGUN_DOMAIN)
+- `MAILGUN_API_REGION`: API region - set to "EU" for European region, omit for US (optional)
 
 ### Key Libraries
 - **@tanstack/react-query**: Server state management
