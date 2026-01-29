@@ -100,7 +100,13 @@ export default function Search() {
   const [selectedSpot, setSelectedSpot] = useState<DisplaySpot | null>(null)
   const [showBookingForm, setShowBookingForm] = useState(false)
   const [sortBy, setSortBy] = useState("price")
-  const [activeTab, setActiveTab] = useState<string>("tiles")
+  // Default to Calendar for desktop, Tiles for mobile (based on initial screen size)
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth < 768 ? "tiles" : "calendar"
+    }
+    return "calendar"
+  })
   const [isAcquiringLock, setIsAcquiringLock] = useState(false)
   const { toast } = useToast()
   const { userActiveLock, lockedListings, acquireLock, releaseLock, clearUserLock } = useLock()
@@ -758,21 +764,6 @@ export default function Search() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <TabsTrigger 
-                    value="tiles" 
-                    className="flex items-center gap-2 data-[state=active]:!bg-blue-500 data-[state=active]:!text-white data-[state=active]:!shadow-none" 
-                    data-testid="tab-tiles"
-                  >
-                    <Grid className="h-4 w-4" />
-                    Tiles
-                  </TabsTrigger>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Grid view - Browse parking spots as individual cards with detailed information</p>
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <TabsTrigger 
                     value="calendar" 
                     className="flex items-center gap-2 data-[state=active]:!bg-emerald-500 data-[state=active]:!text-white data-[state=active]:!shadow-none" 
                     data-testid="tab-calendar"
@@ -783,6 +774,21 @@ export default function Search() {
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Calendar view - See spot availability across dates and plan your bookings</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger 
+                    value="tiles" 
+                    className="flex items-center gap-2 data-[state=active]:!bg-blue-500 data-[state=active]:!text-white data-[state=active]:!shadow-none" 
+                    data-testid="tab-tiles"
+                  >
+                    <Grid className="h-4 w-4" />
+                    Tiles
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Grid view - Browse parking spots as individual cards with detailed information</p>
                 </TooltipContent>
               </Tooltip>
             </TabsList>

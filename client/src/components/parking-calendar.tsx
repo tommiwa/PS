@@ -73,6 +73,7 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
   const [currentDate, setCurrentDate] = useState(selectedDate)
   const [view, setView] = useState<CalendarView>("week")
   const [isAcquiringLock, setIsAcquiringLock] = useState(false)
+  const [expandedDay, setExpandedDay] = useState<{date: Date, spots: ParkingSpot[]} | null>(null)
   
   // State to store pre-computed data for visible dates
   interface DateSpotData {
@@ -614,9 +615,12 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                     )
                   })}
                   {daySpots.length > 3 && (
-                    <div className="text-xs text-muted-foreground text-center py-1">
-                      +{daySpots.length - 3}
-                    </div>
+                    <button
+                      onClick={() => setExpandedDay({date: day, spots: daySpots})}
+                      className="text-xs text-primary hover:text-primary/80 hover:underline text-center py-1 w-full cursor-pointer font-medium"
+                    >
+                      +{daySpots.length - 3} more
+                    </button>
                   )}
                 </div>
               </div>
@@ -708,9 +712,12 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                     )
                   })}
                   {daySpots.length > 2 && (
-                    <div className="text-xs text-muted-foreground">
-                      +{daySpots.length - 2}
-                    </div>
+                    <button
+                      onClick={() => setExpandedDay({date: day, spots: daySpots})}
+                      className="text-xs text-primary hover:text-primary/80 hover:underline cursor-pointer font-medium"
+                    >
+                      +{daySpots.length - 2} more
+                    </button>
                   )}
                 </div>
               </div>
@@ -788,6 +795,91 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
       <div className="flex-1 overflow-auto">
         {renderCalendarContent()}
       </div>
+      
+      {/* Expanded Day Dialog */}
+      <Dialog open={!!expandedDay} onOpenChange={(open) => !open && setExpandedDay(null)}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarIcon className="h-5 w-5 text-primary" />
+              Available Spots for {expandedDay && format(expandedDay.date, 'EEEE, MMMM d, yyyy')}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 mt-4">
+            {expandedDay?.spots.map((spot) => {
+              const dateKey = expandedDay.date.toISOString();
+              const dateData = dateSpotMap.get(dateKey);
+              const spotInfo = dateData?.spotData.get(spot.id);
+              const isBooked = spotInfo?.isBooked || false;
+              const isLocked = spotInfo?.isLocked || false;
+              const isExpired = spotInfo?.isExpired || false;
+              
+              return (
+                <div
+                  key={spot.id}
+                  className={`p-3 rounded-lg border transition-all ${
+                    isBooked
+                      ? 'opacity-60 cursor-not-allowed bg-muted border-muted'
+                      : isExpired
+                      ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600'
+                      : isLocked
+                      ? 'opacity-90 cursor-not-allowed bg-yellow-50 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-700'
+                      : `cursor-pointer hover-elevate ${
+                          isOwnerView 
+                            ? getOwnershipColor(spot.isOwned || false)
+                            : getSpotTypeColor(spot.type)
+                        } border-current/20`
+                  }`}
+                  onClick={() => {
+                    if (!isBooked && !isLocked && !isExpired) {
+                      setExpandedDay(null);
+                      handleSpotClick(spot, expandedDay.date);
+                    }
+                  }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        {getSpotTypeIcon(spot.type)}
+                        <span className="font-semibold">#{spot.spotNumber}</span>
+                      </div>
+                      <span className="text-sm text-muted-foreground">
+                        {getSpotTypeLabel(spot.type) || 'Regular'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {isExpired ? (
+                        <Badge variant="secondary" className="bg-gray-200 text-gray-600">
+                          Expired
+                        </Badge>
+                      ) : isBooked ? (
+                        <Badge variant="secondary" className="bg-gray-500 text-white">
+                          Booked
+                        </Badge>
+                      ) : isLocked ? (
+                        <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 border border-yellow-300">
+                          <Clock className="h-3 w-3 mr-1" />
+                          Pending
+                        </Badge>
+                      ) : (
+                        <span className="font-bold text-lg text-primary">
+                          ${spotInfo?.price || spot.price}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {spot.location && (
+                    <div className="flex items-center gap-1 mt-2 text-sm text-muted-foreground">
+                      <MapPin className="h-3 w-3" />
+                      {spot.location}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
