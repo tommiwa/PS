@@ -22,8 +22,10 @@ import {
   MoreHorizontal,
   MapPin,
   CalendarClock,
-  Info
+  Info,
+  ExternalLink
 } from "lucide-react"
+import { useLocation } from "wouter"
 import { formatDistanceToNow } from "date-fns"
 
 export interface InAppNotification {
@@ -58,6 +60,7 @@ export function NotificationCenter() {
   const { user } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
   const { confirm } = useConfirm()
+  const [, navigate] = useLocation()
 
   // Query user notifications
   const { data: notifications = [], isLoading, refetch } = useQuery<InAppNotification[]>({
@@ -317,26 +320,20 @@ export function NotificationCenter() {
         {notifications.length > 0 && (
           <>
             <Separator />
-            <div className="p-4">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full"
-                    onClick={() => {
-                      setIsOpen(false);
-                      // Could navigate to a full notifications page
-                    }}
-                    data-testid="button-view-all-notifications"
-                  >
-                    View All Notifications
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>View all notifications in expanded view</p>
-                </TooltipContent>
-              </Tooltip>
+            <div className="p-3">
+              <Button
+                variant="default"
+                size="sm"
+                className="w-full gap-2"
+                onClick={() => {
+                  setIsOpen(false);
+                  navigate('/notifications');
+                }}
+                data-testid="button-view-all-notifications"
+              >
+                <ExternalLink className="h-4 w-4" />
+                View All Notifications
+              </Button>
             </div>
           </>
         )}

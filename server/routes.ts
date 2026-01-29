@@ -7399,6 +7399,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete all notifications for the authenticated user
+  app.delete("/api/notifications/delete-all", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+      
+      await storage.deleteAllUserNotifications(userId);
+      res.json({ success: true, message: "All notifications deleted" });
+    } catch (error) {
+      console.error("Error deleting all notifications:", error);
+      res.status(500).json({ error: "Failed to delete all notifications" });
+    }
+  });
+
   // Get unread notification count for user
   app.get("/api/notifications/:userId/unread-count", isAuthenticated, async (req: any, res) => {
     try {

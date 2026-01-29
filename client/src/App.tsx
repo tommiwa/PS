@@ -40,6 +40,7 @@ import AdminReportsPage from "@/pages/admin-reports";
 import AdminLockerManagement from "@/pages/admin-locker-management";
 import AdminWaitingList from "@/pages/admin-waiting-list";
 import AdminIssuesPage from "@/pages/admin/issues";
+import NotificationsPage from "@/pages/notifications";
 import MapDemo from "@/pages/map-demo";
 import Login from "@/pages/login";
 import Terms from "@/pages/terms";
@@ -444,6 +445,7 @@ function AuthenticatedApp() {
               {/* General pages available to all authenticated users */}
               <Route path="/search" component={Search} />
               <Route path="/profile" component={Profile} />
+              <Route path="/notifications" component={NotificationsPage} />
               
               {/* Renter-specific pages */}
               <Route path="/my-bookings">

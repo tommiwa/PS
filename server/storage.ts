@@ -177,6 +177,7 @@ export interface IStorage {
   markNotificationAsRead(notificationId: string): Promise<InAppNotification>;
   markAllNotificationsAsRead(userId: string): Promise<void>;
   deleteInAppNotification(notificationId: string): Promise<void>;
+  deleteAllUserNotifications(userId: string): Promise<void>;
   getUnreadNotificationCount(userId: string): Promise<number>;
   
   // Payment Preferences operations
@@ -2864,6 +2865,16 @@ export class MemStorage implements IStorage {
     
     // Also delete from memory cache
     this.inAppNotifications.delete(notificationId);
+  }
+
+  async deleteAllUserNotifications(userId: string): Promise<void> {
+    await db.delete(inAppNotifications).where(eq(inAppNotifications.userId, userId));
+    
+    // Also delete from memory cache
+    const userNotificationIds = Array.from(this.inAppNotifications.entries())
+      .filter(([, notification]) => notification.userId === userId)
+      .map(([id]) => id);
+    userNotificationIds.forEach(id => this.inAppNotifications.delete(id));
   }
 
   async getUnreadNotificationCount(userId: string): Promise<number> {
