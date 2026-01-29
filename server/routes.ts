@@ -7381,6 +7381,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete all notifications for the authenticated user (must be before :id route)
+  app.delete("/api/notifications/delete-all", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+      
+      await storage.deleteAllUserNotifications(userId);
+      res.json({ success: true, message: "All notifications deleted" });
+    } catch (error) {
+      console.error("Error deleting all notifications:", error);
+      res.status(500).json({ error: "Failed to delete all notifications" });
+    }
+  });
+
   // Delete notification
   app.delete("/api/notifications/:id", isAuthenticated, async (req: any, res) => {
     try {
@@ -7396,23 +7413,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting notification:", error);
       res.status(500).json({ error: "Failed to delete notification" });
-    }
-  });
-
-  // Delete all notifications for the authenticated user
-  app.delete("/api/notifications/delete-all", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = getAuthenticatedUserId(req);
-      
-      if (!userId) {
-        return res.status(401).json({ error: "User not authenticated" });
-      }
-      
-      await storage.deleteAllUserNotifications(userId);
-      res.json({ success: true, message: "All notifications deleted" });
-    } catch (error) {
-      console.error("Error deleting all notifications:", error);
-      res.status(500).json({ error: "Failed to delete all notifications" });
     }
   });
 
