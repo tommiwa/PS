@@ -295,16 +295,18 @@ export function LockProvider({ children }: { children: React.ReactNode }) {
           method: 'DELETE',
         });
 
-        // Clear user lock if it matches and remove from lockedListings immediately
+        // Get the current lock info before clearing it
         setUserActiveLock((prev) => {
           if (prev?.lockId === lockId) {
-            // Also remove from lockedListings Map using the composite key
+            // Schedule lockedListings update for next tick to avoid nested state updates
             const compositeKey = `${prev.listingId}|${prev.bookingDate}`;
-            setLockedListings((prevListings) => {
-              const updated = new Map(prevListings);
-              updated.delete(compositeKey);
-              return updated;
-            });
+            setTimeout(() => {
+              setLockedListings((prevListings) => {
+                const updated = new Map(prevListings);
+                updated.delete(compositeKey);
+                return updated;
+              });
+            }, 0);
             return null;
           }
           return prev;
