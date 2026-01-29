@@ -1,4 +1,4 @@
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -39,6 +39,7 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
   const [activeFilters, setActiveFilters] = useState<string[]>([])
   const [showMoreFilters, setShowMoreFilters] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   // Parse the search query intelligently
   const parseSearchQuery = (searchQuery: string, filters: string[] = activeFilters): ParsedSearch => {
@@ -140,6 +141,27 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
 
     return parsed
   }
+
+  // Auto-search as user types (debounced 300ms)
+  useEffect(() => {
+    // Clear any existing timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+    }
+    
+    // Set new timer to search after 300ms of no typing
+    debounceTimerRef.current = setTimeout(() => {
+      const parsed = parseSearchQuery(query, activeFilters)
+      onSearch(parsed)
+    }, 300)
+    
+    // Cleanup on unmount or when dependencies change
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+      }
+    }
+  }, [query, activeFilters])
 
   const handleSearch = () => {
     const parsed = parseSearchQuery(query)
