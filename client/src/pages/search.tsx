@@ -581,9 +581,29 @@ export default function Search() {
 
   // Date-specific filtering for tiles view
   const filteredSpots = baseFilteredSpots.filter(spot => {
-    const { date } = searchCriteria
+    const { date, dateRange } = searchCriteria
     
-    // If no date specified, show all base filtered spots
+    // If no date or dateRange specified, show all base filtered spots
+    if (!date && !dateRange) return true
+    
+    // Handle dateRange filtering (e.g., "This Week" filter)
+    if (dateRange) {
+      const { start, end } = dateRange
+      if (spot.availabilityDates && spot.availabilityDates.length > 0) {
+        // Check if any availability date falls within the range
+        return spot.availabilityDates.some(d => {
+          return d >= start && d <= end && !isPastDate(d)
+        })
+      }
+      // Fallback: check old single date format
+      if (spot.availability?.date) {
+        const spotDate = spot.availability.date
+        return spotDate >= start && spotDate <= end && !isPastDate(spotDate)
+      }
+      return false
+    }
+    
+    // If no date specified but we handled dateRange above, show all
     if (!date) return true
     
     // Don't show spots for past search dates
@@ -640,10 +660,11 @@ export default function Search() {
     return spot.bookedDates.includes(spotDate)
   }
 
-  // Use filteredSpots for tiles view when date is selected, otherwise use baseFilteredSpots
+  // Use filteredSpots for tiles view when date or dateRange is selected, otherwise use baseFilteredSpots
   // Also filter out booked spots to sync with calendar
-  const spotsForTiles = (searchCriteria.date ? filteredSpots : baseFilteredSpots).filter(spot => !isSpotBooked(spot))
-  const spotsForCalendar = searchCriteria.date ? filteredSpots : baseFilteredSpots
+  const hasDateFilter = searchCriteria.date || searchCriteria.dateRange
+  const spotsForTiles = (hasDateFilter ? filteredSpots : baseFilteredSpots).filter(spot => !isSpotBooked(spot))
+  const spotsForCalendar = hasDateFilter ? filteredSpots : baseFilteredSpots
   
   const sortedSpots = [...spotsForTiles].sort((a, b) => {
     switch (sortBy) {

@@ -1,13 +1,10 @@
-import { useState, useEffect, useRef, useMemo } from "react"
+import { useState, useRef } from "react"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import { Search, X, MapPin, Car, Zap, Accessibility, Calendar, Clock, Filter, SlidersHorizontal } from "lucide-react"
+import { Search, X, Zap, Accessibility, Calendar, Filter, SlidersHorizontal } from "lucide-react"
 
 export interface ParsedSearch {
   query: string
@@ -16,6 +13,7 @@ export interface ParsedSearch {
   priceMin?: number
   priceMax?: number
   date?: string
+  dateRange?: { start: string; end: string }
   isInside?: boolean
   isBciManaged?: boolean
   quickFilters: string[]
@@ -26,32 +24,19 @@ interface EnhancedSearchProps {
   className?: string
 }
 
-const SEARCH_SUGGESTIONS = [
-  "spots under $16",
-  "electric charging",
-  "tesla charger",
-  "accessible spots",
-  "indoor parking",
-  "level 1",
-  "level 2",
-  "Victoria office",
-  "regular spots"
-]
-
 const QUICK_FILTERS = [
   { label: "Today", value: "today", icon: Calendar, type: "date", tooltip: "Filter for parking spots available today" },
-  { label: "Electric Charging", value: "electric", icon: Zap, type: "spotType", tooltip: "Filter for electric vehicle charging stations with standard EV connectors" },
-  { label: "Tesla Charger", value: "tesla_ev", icon: Zap, type: "spotType", tooltip: "Filter for Tesla-specific charging stations optimized for Tesla vehicles" },
+  { label: "This Week", value: "this_week", icon: Calendar, type: "date", tooltip: "Filter for parking spots available this week" },
+  { label: "Electric", value: "electric", icon: Zap, type: "spotType", tooltip: "Filter for electric vehicle charging stations with standard EV connectors" },
+  { label: "Tesla", value: "tesla_ev", icon: Zap, type: "spotType", tooltip: "Filter for Tesla-specific charging stations optimized for Tesla vehicles" },
   { label: "Accessible", value: "accessible", icon: Accessibility, type: "spotType", tooltip: "Filter for accessible parking spots designed for mobility accommodations" }
 ]
 
-const MOBILE_VISIBLE_FILTERS = 4
+const MOBILE_VISIBLE_FILTERS = 5
 
 export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
   const [query, setQuery] = useState("")
-  const [showSuggestions, setShowSuggestions] = useState(false)
   const [activeFilters, setActiveFilters] = useState<string[]>([])
-  const [focused, setFocused] = useState(false)
   const [showMoreFilters, setShowMoreFilters] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -68,6 +53,17 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
     filters.forEach(filterValue => {
       if (filterValue === "today") {
         parsed.date = new Date().toISOString().split('T')[0]
+      } else if (filterValue === "this_week") {
+        // Calculate end of week (Sunday)
+        const today = new Date()
+        const endOfWeek = new Date(today)
+        const dayOfWeek = today.getDay()
+        const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek
+        endOfWeek.setDate(today.getDate() + daysUntilSunday)
+        parsed.dateRange = {
+          start: today.toISOString().split('T')[0],
+          end: endOfWeek.toISOString().split('T')[0]
+        }
       } else if (filterValue === "electric") {
         parsed.spotType = "electric"
       } else if (filterValue === "tesla_ev") {
@@ -145,27 +141,8 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
     return parsed
   }
 
-  // Filter suggestions based on current input
-  const filteredSuggestions = useMemo(() => {
-    if (!query.trim()) return SEARCH_SUGGESTIONS.slice(0, 6)
-    
-    const queryLower = query.toLowerCase()
-    return SEARCH_SUGGESTIONS.filter(suggestion =>
-      suggestion.toLowerCase().includes(queryLower) ||
-      queryLower.split(' ').some(term => suggestion.toLowerCase().includes(term))
-    ).slice(0, 6)
-  }, [query])
-
   const handleSearch = () => {
     const parsed = parseSearchQuery(query)
-    onSearch(parsed)
-    setShowSuggestions(false)
-  }
-
-  const handleSuggestionSelect = (suggestion: string) => {
-    setQuery(suggestion)
-    setShowSuggestions(false)
-    const parsed = parseSearchQuery(suggestion)
     onSearch(parsed)
   }
 
@@ -205,16 +182,8 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
     if (e.key === 'Enter') {
       e.preventDefault()
       handleSearch()
-    } else if (e.key === 'Escape') {
-      setShowSuggestions(false)
     }
   }
-
-  useEffect(() => {
-    if (focused && query.length > 0) {
-      setShowSuggestions(true)
-    }
-  }, [focused, query])
 
   const getFilterColors = (filterValue: string, isActive: boolean) => {
     if (isActive) {
@@ -224,6 +193,7 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
     // Light, distinct colors for each filter
     const colorMap: Record<string, string> = {
       'today': 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100',
+      'this_week': 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100',
       'inside': 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100',
       'bci_managed': 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100',
       'budget': 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100',
@@ -337,110 +307,70 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
       </div>
 
       {/* Search Input */}
-      <Popover open={showSuggestions} onOpenChange={setShowSuggestions}>
-        <PopoverTrigger asChild>
-          <div className="flex gap-2 items-center">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />
-              <Input
-                ref={inputRef}
-                type="text"
-                placeholder="Search parking spots... (e.g., 'Victoria electric $20-30')"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={handleKeyDown}
-                onFocus={() => setFocused(true)}
-                onBlur={() => setTimeout(() => setFocused(false), 200)}
-                className={`pl-10 min-h-[44px] md:h-12 text-base ${query ? 'pr-10' : 'pr-4'}`}
-                data-testid="input-enhanced-search"
-                title="Search using natural language"
-              />
-              {query && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    clearSearch()
-                  }}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 flex items-center justify-center text-muted-foreground hover:text-foreground z-10"
-                  data-testid="button-clear-search"
-                  title="Clear search and filters"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-            
-            {/* Mobile: Icon-only button */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  onClick={handleSearch}
-                  className="md:hidden min-h-[44px] min-w-[44px] p-0"
-                  size="icon"
-                  data-testid="button-search"
-                >
-                  <Search className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Search with current criteria</p>
-              </TooltipContent>
-            </Tooltip>
-
-            {/* Desktop: Full button with text */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  onClick={handleSearch}
-                  className="hidden md:flex h-12 px-6"
-                  data-testid="button-search-desktop"
-                >
-                  <Search className="h-4 w-4 mr-2" />
-                  Search
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Search with current criteria</p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
-        </PopoverTrigger>
+      <div className="flex gap-2 items-center">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />
+          <Input
+            ref={inputRef}
+            type="text"
+            placeholder="Search parking spots... (e.g., 'Victoria electric $20-30')"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={handleKeyDown}
+            className={`pl-10 min-h-[44px] md:h-12 text-base ${query ? 'pr-10' : 'pr-4'}`}
+            data-testid="input-enhanced-search"
+            title="Search using natural language"
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                clearSearch()
+              }}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 flex items-center justify-center text-muted-foreground hover:text-foreground z-10"
+              data-testid="button-clear-search"
+              title="Clear search and filters"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
         
-        <PopoverContent 
-          className="w-[var(--radix-popover-trigger-width)] p-0"
-          align="start"
-          sideOffset={4}
-        >
-          <Command>
-            <CommandList>
-              {filteredSuggestions.length > 0 ? (
-                <CommandGroup heading="Suggestions">
-                  {filteredSuggestions.map((suggestion, index) => (
-                    <Tooltip key={index}>
-                      <TooltipTrigger asChild>
-                        <CommandItem
-                          onSelect={() => handleSuggestionSelect(suggestion)}
-                          className="cursor-pointer"
-                          data-testid={`suggestion-${index}`}
-                        >
-                          <Search className="h-4 w-4 mr-2" />
-                          {suggestion}
-                        </CommandItem>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Click to search for "{suggestion}"</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  ))}
-                </CommandGroup>
-              ) : (
-                <CommandEmpty>No suggestions found.</CommandEmpty>
-              )}
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+        {/* Mobile: Icon-only button */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              onClick={handleSearch}
+              className="md:hidden min-h-[44px] min-w-[44px] p-0"
+              size="icon"
+              data-testid="button-search"
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Search with current criteria</p>
+          </TooltipContent>
+        </Tooltip>
+
+        {/* Desktop: Full button with text */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              onClick={handleSearch}
+              className="hidden md:flex h-12 px-6"
+              data-testid="button-search-desktop"
+            >
+              <Search className="h-4 w-4 mr-2" />
+              Search
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Search with current criteria</p>
+          </TooltipContent>
+        </Tooltip>
+      </div>
 
       {/* Search Examples - Hidden on mobile, shown on desktop */}
       <Tooltip>
@@ -451,7 +381,7 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
             className="hidden md:block h-auto p-0 text-sm text-muted-foreground hover:bg-transparent hover:text-muted-foreground text-left justify-start"
             data-testid="text-search-examples"
           >
-            <span className="font-medium">Try searching:</span> "tesla charger", "accessible under $16", "level 1 inside", or "electric charging"
+            <span className="font-medium">Try searching:</span> "tesla", "accessible under $16", "level 1 inside", or "electric"
           </Button>
         </TooltipTrigger>
         <TooltipContent>
