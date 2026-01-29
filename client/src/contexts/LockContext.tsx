@@ -295,9 +295,16 @@ export function LockProvider({ children }: { children: React.ReactNode }) {
           method: 'DELETE',
         });
 
-        // Clear user lock if it matches
+        // Clear user lock if it matches and remove from lockedListings immediately
         setUserActiveLock((prev) => {
           if (prev?.lockId === lockId) {
+            // Also remove from lockedListings Map using the composite key
+            const compositeKey = `${prev.listingId}|${prev.bookingDate}`;
+            setLockedListings((prevListings) => {
+              const updated = new Map(prevListings);
+              updated.delete(compositeKey);
+              return updated;
+            });
             return null;
           }
           return prev;
