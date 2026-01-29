@@ -381,7 +381,7 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
             className="hidden md:block h-auto p-0 text-sm text-muted-foreground hover:bg-transparent hover:text-muted-foreground text-left justify-start"
             data-testid="text-search-examples"
           >
-            <span className="font-medium">Try searching:</span> "tesla", "accessible under $16", "level 1 inside", or "electric"
+            <span className="font-medium">Try searching:</span> "tesla", "victoria electric", "monday", "BCI managed", or owner names like "sarah"
           </Button>
         </TooltipTrigger>
         <TooltipContent>

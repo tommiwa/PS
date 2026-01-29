@@ -531,33 +531,88 @@ export default function Search() {
       }
     }
     
-    // Full text search across all relevant fields
+    // Full text search across all relevant fields shown in UI
     if (query && query.trim()) {
       const queryLower = query.toLowerCase().trim()
       
-      // Build comprehensive searchable text from all spot properties
+      // Format dates for search (e.g., "January 29 Jan 2026")
+      const formatDateForSearch = (dateStr: string): string => {
+        if (!dateStr || typeof dateStr !== 'string') return ''
+        try {
+          const date = new Date(dateStr + 'T00:00:00')
+          // Validate the date is valid
+          if (isNaN(date.getTime())) return dateStr
+          
+          const months = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december']
+          const shortMonths = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
+          const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+          const shortDays = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
+          
+          const monthIdx = date.getMonth()
+          const dayIdx = date.getDay()
+          
+          return [
+            dateStr,
+            months[monthIdx] || '',
+            shortMonths[monthIdx] || '',
+            days[dayIdx] || '',
+            shortDays[dayIdx] || '',
+            date.getDate().toString(),
+            date.getFullYear().toString()
+          ].filter(Boolean).join(' ')
+        } catch {
+          return dateStr
+        }
+      }
+      
+      // Build all date search strings
+      const dateSearchStrings = [
+        spot.availability?.date ? formatDateForSearch(spot.availability.date) : '',
+        ...(spot.availabilityDates || []).map(d => formatDateForSearch(d))
+      ].filter(Boolean).join(' ')
+      
+      // Build comprehensive searchable text from all spot properties shown in UI
       const searchableText = [
+        // Spot identification
         spot.spotNumber,
+        `spot ${spot.spotNumber}`,
+        `#${spot.spotNumber}`,
+        
+        // Location (full string and parts)
         spot.location,
-        spot.type,
+        
+        // Owner name
         spot.owner,
-        spot.isInside ? 'inside indoor covered' : 'outside outdoor',
+        
+        // Spot type and keywords
+        spot.type,
+        spot.type === 'electric' ? 'ev charging electric vehicle charger' : '',
+        spot.type === 'tesla_ev' ? 'tesla ev electric charging vehicle charger supercharger' : '',
+        spot.type === 'accessible' ? 'accessible handicap disabled wheelchair ada' : '',
+        spot.type === 'reserved' ? 'reserved vip executive' : '',
+        spot.type === 'regular' ? 'regular standard normal' : '',
+        
+        // Indoor/outdoor
+        spot.isInside ? 'inside indoor covered garage underground' : 'outside outdoor open lot',
+        
+        // Price variations
         `$${spot.price}`,
         spot.price?.toString(),
-        spot.isBciManaged ? 'bci managed workplace' : 'peer p2p',
-        // Include type-related keywords
-        spot.type === 'electric' ? 'ev charging electric' : '',
-        spot.type === 'tesla_ev' ? 'tesla ev electric charging' : '',
-        spot.type === 'accessible' ? 'accessible handicap disabled' : '',
-        // Include availability dates if present
-        spot.availability?.date || '',
+        spot.price === 0 ? 'free' : '',
+        (spot.price && spot.price <= 12) ? 'deal cheap affordable budget' : '',
+        
+        // BCI managed vs peer-to-peer
+        spot.isBciManaged ? 'bci managed workplace payroll company corporate' : 'peer p2p private individual',
+        
+        // All dates (formatted for natural language search)
+        dateSearchStrings,
       ].filter(Boolean).join(' ').toLowerCase()
       
       // Split query into individual search terms
       const searchTerms = queryLower.split(/\s+/).filter(term => term.length > 0)
       
       // Full text search: match if ALL search terms are found somewhere in the searchable text
-      // This allows searches like "victoria electric" to match spots at Victoria with electric type
+      // This allows searches like "victoria electric" or "john monday" to match
       const allTermsMatch = searchTerms.every(term => 
         searchableText.includes(term) ||
         // Also check for partial matches at word boundaries
