@@ -60,7 +60,8 @@ import {
   Loader2,
   Building2,
   Globe,
-  Banknote
+  Banknote,
+  X
 } from "lucide-react"
 import type { Booking, BookingStatus, ParkingSpot } from "@shared/schema"
 import { quickExportBookingsPDF, quickExportBookingsExcel, generateParkingReceiptPDF, type ParkingReceiptData } from "@/utils/export-utils"
@@ -1277,6 +1278,32 @@ export default function AdminSpotBookingManagement() {
     }
   });
 
+  // Mutation for excluding/restoring bookings from payroll
+  const excludeFromPayrollMutation = useMutation({
+    mutationFn: async (data: { bookingId: string; excluded: boolean }) => {
+      const response = await apiRequest(`/api/admin/bookings/${data.bookingId}/payroll-exclusion`, {
+        method: 'PATCH',
+        body: { excluded: data.excluded }
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/payroll-summary"] });
+      toast({
+        title: data.excluded ? "Removed from Payroll" : "Restored to Payroll",
+        description: data.message,
+        variant: "default"
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to Update",
+        description: error instanceof Error ? error.message : "Failed to update payroll status. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
   const handleCancelBooking = () => {
     if (!selectedBooking || !cancelReason.trim()) return;
     
@@ -2388,6 +2415,7 @@ export default function AdminSpotBookingManagement() {
                               <TableHead>Booking Date</TableHead>
                               <TableHead>Amount</TableHead>
                               <TableHead>Status</TableHead>
+                              <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -2419,6 +2447,21 @@ export default function AdminSpotBookingManagement() {
                                   >
                                     {booking.status === 'completed' ? 'Completed' : 'Upcoming'}
                                   </Badge>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    onClick={() => excludeFromPayrollMutation.mutate({ 
+                                      bookingId: booking.id, 
+                                      excluded: true 
+                                    })}
+                                    disabled={excludeFromPayrollMutation.isPending}
+                                  >
+                                    <X className="h-4 w-4 mr-1" />
+                                    Remove
+                                  </Button>
                                 </TableCell>
                               </TableRow>
                             ))}

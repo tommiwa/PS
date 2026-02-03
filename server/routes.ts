@@ -3775,6 +3775,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bciBookings = allBookings.filter(b => {
         if (!bciSpotIds.includes(b.spotId)) return false;
         if (b.status !== 'confirmed' && b.status !== 'completed') return false;
+        if (b.excludedFromPayroll) return false; // Skip bookings excluded from payroll
         
         // Check if booking falls into current payroll period based on deduction month logic
         const bookingDate = new Date(b.bookingDate + "T12:00:00");
@@ -3911,6 +3912,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching payroll periods:", error);
       res.status(500).json({ error: "Failed to fetch payroll periods" });
+    }
+  });
+
+  // Toggle payroll exclusion for a booking (Admin only)
+  app.patch("/api/admin/bookings/:bookingId/payroll-exclusion", requireAdmin, async (req, res) => {
+    try {
+      const { bookingId } = req.params;
+      const { excluded } = req.body;
+      
+      if (typeof excluded !== 'boolean') {
+        return res.status(400).json({ error: "excluded must be a boolean" });
+      }
+      
+      const booking = await storage.getBooking(bookingId);
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+      
+      // Update the booking's excludedFromPayroll flag
+      const updated = await storage.updateBooking(bookingId, { 
+        excludedFromPayroll: excluded 
+      });
+      
+      // Log audit trail
+      const adminUser = (req as any).user;
+      await storage.createAuditLog({
+        action: excluded ? 'payroll_exclusion_added' : 'payroll_exclusion_removed',
+        entityType: 'booking',
+        entityId: bookingId,
+        actorId: adminUser.id,
+        details: {
+          bookingId,
+          excluded,
+          adminEmail: adminUser.email
+        },
+        ipAddress: req.ip || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown'
+      });
+      
+      res.json({ 
+        success: true, 
+        excluded,
+        message: excluded 
+          ? "Booking removed from payroll summary" 
+          : "Booking restored to payroll summary"
+      });
+    } catch (error) {
+      console.error("Error toggling payroll exclusion:", error);
+      res.status(500).json({ error: "Failed to update payroll exclusion" });
     }
   });
 
