@@ -2449,19 +2449,24 @@ export default function AdminSpotBookingManagement() {
                                   </Badge>
                                 </TableCell>
                                 <TableCell className="text-right">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                    onClick={() => excludeFromPayrollMutation.mutate({ 
-                                      bookingId: booking.id, 
-                                      excluded: true 
-                                    })}
-                                    disabled={excludeFromPayrollMutation.isPending}
-                                  >
-                                    <X className="h-4 w-4 mr-1" />
-                                    Remove
-                                  </Button>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-destructive hover:text-destructive"
+                                        onClick={() => excludeFromPayrollMutation.mutate({ 
+                                          bookingId: booking.id, 
+                                          excluded: true 
+                                        })}
+                                        disabled={excludeFromPayrollMutation.isPending}
+                                        data-testid={`button-remove-payroll-${booking.id}`}
+                                      >
+                                        <Ban className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Remove from Payroll</TooltipContent>
+                                  </Tooltip>
                                 </TableCell>
                               </TableRow>
                             ))}

@@ -3937,18 +3937,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Log audit trail
       const adminUser = (req as any).user;
+      const { randomUUID } = require('crypto');
       await storage.createAuditLog({
-        action: excluded ? 'payroll_exclusion_added' : 'payroll_exclusion_removed',
+        correlationId: randomUUID(),
+        action: 'UPDATE',
         entityType: 'booking',
         entityId: bookingId,
         actorId: adminUser.id,
-        details: {
-          bookingId,
-          excluded,
-          adminEmail: adminUser.email
+        actorEmail: adminUser.email,
+        actorRole: adminUser.roles?.[0] || 'admin',
+        success: true,
+        message: excluded 
+          ? `Booking ${bookingId} removed from payroll by ${adminUser.email}` 
+          : `Booking ${bookingId} restored to payroll by ${adminUser.email}`,
+        requestMeta: {
+          ip: req.ip || 'unknown',
+          method: req.method,
+          path: req.path,
+          userAgent: req.headers['user-agent'] || 'unknown'
         },
-        ipAddress: req.ip || 'unknown',
-        userAgent: req.headers['user-agent'] || 'unknown'
+        before: { excludedFromPayroll: !excluded },
+        after: { excludedFromPayroll: excluded }
       });
       
       res.json({ 
