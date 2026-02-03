@@ -856,8 +856,8 @@ export async function getSharedPoolUsageReport(req: Request, res: Response) {
       storage.getAllParkingSpots(),
       storage.getAllBookings(),
       storage.getAllUsers(),
-      storage.getAllLocations?.() || [],
-      storage.getAllDepartments?.() || []
+      storage.getLocations(),
+      storage.getDepartments()
     ]);
     
     const sharedPoolSpots = allSpots.filter(s => s.isBciManaged === true && s.ownerId === null);
