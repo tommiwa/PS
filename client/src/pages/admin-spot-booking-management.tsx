@@ -2455,10 +2455,21 @@ export default function AdminSpotBookingManagement() {
                                         variant="ghost"
                                         size="sm"
                                         className="text-destructive hover:text-destructive"
-                                        onClick={() => excludeFromPayrollMutation.mutate({ 
-                                          bookingId: booking.id, 
-                                          excluded: true 
-                                        })}
+                                        onClick={async () => {
+                                          const confirmed = await confirm({
+                                            title: "Remove from Payroll",
+                                            description: `Are you sure you want to remove this booking for ${booking.renterName} (${booking.spotNumber}) from the payroll summary? This booking will no longer appear in payroll reports.`,
+                                            confirmText: "Remove",
+                                            cancelText: "Cancel",
+                                            variant: "destructive"
+                                          });
+                                          if (confirmed) {
+                                            excludeFromPayrollMutation.mutate({ 
+                                              bookingId: booking.id, 
+                                              excluded: true 
+                                            });
+                                          }
+                                        }}
                                         disabled={excludeFromPayrollMutation.isPending}
                                         data-testid={`button-remove-payroll-${booking.id}`}
                                       >
