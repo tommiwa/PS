@@ -1,5 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
+import { randomUUID } from "crypto";
 import { storage } from "./storage";
 import { broadcastLockEvent } from "./websocket";
 import { setupAuth, isAuthenticated, requireAdmin, getAuthenticatedUserId, getAuthenticatedUserRole, getAuthenticatedUserBaseRole } from "./replitAuth";
@@ -3937,7 +3938,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Log audit trail
       const adminUser = (req as any).user;
-      const { randomUUID } = require('crypto');
       await storage.createAuditLog({
         correlationId: randomUUID(),
         action: 'UPDATE',
