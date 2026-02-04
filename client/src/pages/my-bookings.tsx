@@ -1640,30 +1640,6 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
           </p>
         </div>
         <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
-          {isOwnerView && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button onClick={() => setShowListingForm(true)} data-testid="button-list-spot" className="w-full md:w-auto min-h-11">
-                  <Plus className="h-4 w-4 mr-2" />
-                  List My Spot
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Create a new parking spot listing to earn money from your available spaces</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button onClick={handleDownloadHistory} variant="outline" data-testid="button-download-history" className="hidden md:inline-flex md:w-auto min-h-11">
-                <Download className="h-4 w-4 mr-2" />
-                Download History
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Export your {isOwnerView ? 'listing' : 'booking'} history as a PDF or Excel file for record keeping</p>
-            </TooltipContent>
-          </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button 
