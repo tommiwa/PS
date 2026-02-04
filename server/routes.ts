@@ -5523,6 +5523,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return result;
   }
 
+  // Get future bookings for a spot (Admin only) - used to show affected bookings before unassignment/reassignment
+  app.get("/api/admin/spots/:spotId/future-bookings", requireAdmin, async (req, res) => {
+    try {
+      const { spotId } = req.params;
+      
+      // Check if spot exists
+      const spot = await storage.getParkingSpot(spotId);
+      if (!spot) {
+        return res.status(404).json({ error: "Parking spot not found" });
+      }
+      
+      // Get all bookings for this spot
+      const allBookings = await storage.getBookingsBySpot(spotId);
+      
+      // Filter for future bookings (today and onwards) that are not already cancelled
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const futureBookings = allBookings.filter(booking => {
+        const bookingDate = new Date(booking.bookingDate);
+        bookingDate.setHours(0, 0, 0, 0);
+        return bookingDate >= today && booking.status !== 'cancelled';
+      });
+      
+      // Get renter details for each booking
+      const bookingsWithDetails = await Promise.all(
+        futureBookings.map(async (booking) => {
+          const renter = await storage.getUser(booking.renterId);
+          return {
+            id: booking.id,
+            bookingDate: booking.bookingDate,
+            status: booking.status,
+            renterName: renter ? `${renter.firstName || ''} ${renter.lastName || ''}`.trim() : 'Unknown',
+            renterEmail: renter?.email || 'Unknown',
+            dailyRate: booking.dailyRate
+          };
+        })
+      );
+      
+      // Sort by booking date
+      bookingsWithDetails.sort((a, b) => a.bookingDate.localeCompare(b.bookingDate));
+      
+      res.json({
+        spotId,
+        spotNumber: spot.spotNumber,
+        count: bookingsWithDetails.length,
+        bookings: bookingsWithDetails
+      });
+    } catch (error) {
+      console.error("Error fetching future bookings:", error);
+      res.status(500).json({ error: "Failed to fetch future bookings" });
+    }
+  });
+
   // Unassign parking spot from user (Admin only)
   app.put("/api/admin/spots/:spotId/unassign", requireAdmin, async (req, res) => {
     try {

@@ -669,6 +669,48 @@ export default function AdminParkingManagement() {
     },
   });
 
+  // Type for future bookings response
+  type FutureBookingsResponse = {
+    spotId: string;
+    spotNumber: string;
+    count: number;
+    bookings: Array<{
+      id: string;
+      bookingDate: string;
+      status: string;
+      renterName: string;
+      renterEmail: string;
+      dailyRate: string;
+    }>;
+  };
+
+  // Query to fetch future bookings for a spot before release
+  const { data: futureBookingsData, isLoading: isLoadingFutureBookings } = useQuery<FutureBookingsResponse>({
+    queryKey: ["/api/admin/spots", selectedSpotForRelease?.id, "future-bookings"],
+    queryFn: async () => {
+      const response = await fetch(`/api/admin/spots/${selectedSpotForRelease?.id}/future-bookings`, {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Failed to fetch future bookings');
+      return response.json();
+    },
+    enabled: !!selectedSpotForRelease?.id && showReleaseSpotDialog,
+  });
+
+  // Query to fetch future bookings for a spot before direct assign (reassignment)
+  const { data: directAssignFutureBookings, isLoading: isLoadingDirectAssignBookings } = useQuery<FutureBookingsResponse>({
+    queryKey: ["/api/admin/spots", selectedSpotForAssign?.id, "future-bookings"],
+    queryFn: async () => {
+      const response = await fetch(`/api/admin/spots/${selectedSpotForAssign?.id}/future-bookings`, {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Failed to fetch future bookings');
+      return response.json();
+    },
+    // Only fetch if spot has an owner (reassignment scenario) and dialog is open
+    enabled: !!selectedSpotForAssign?.id && !!selectedSpotForAssign?.ownerId && showDirectAssignDialog,
+  });
+
   // Mutation to release spot (make available)
   const releaseSpotMutation = useMutation({
     mutationFn: async (spotId: string) => {
@@ -3256,6 +3298,51 @@ export default function AdminParkingManagement() {
                 data-testid="input-direct-assign-notes"
               />
             </div>
+            
+            {/* Show future bookings warning for reassignment */}
+            {selectedSpotForAssign?.ownerId && (
+              <>
+                {isLoadingDirectAssignBookings ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Checking for affected bookings...
+                  </div>
+                ) : directAssignFutureBookings && directAssignFutureBookings.count > 0 ? (
+                  <Alert variant="destructive" className="mt-2">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>
+                      <div className="space-y-2">
+                        <p className="font-medium">
+                          {directAssignFutureBookings.count} upcoming booking{directAssignFutureBookings.count > 1 ? 's' : ''} will be cancelled
+                        </p>
+                        <p className="text-sm">
+                          Reassigning this spot will cancel these bookings and notify affected users:
+                        </p>
+                        <div className="max-h-24 overflow-y-auto mt-2 space-y-1">
+                          {directAssignFutureBookings.bookings.map((booking) => (
+                            <div key={booking.id} className="text-xs bg-destructive/10 rounded px-2 py-1 flex justify-between items-center">
+                              <span className="font-medium">{booking.renterName}</span>
+                              <span className="text-muted-foreground">
+                                {new Date(booking.bookingDate + 'T12:00:00').toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric'
+                                })}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                ) : directAssignFutureBookings && directAssignFutureBookings.count === 0 ? (
+                  <div className="flex items-center gap-2 text-sm text-green-600">
+                    <CheckCircle2 className="h-4 w-4" />
+                    No upcoming bookings will be affected.
+                  </div>
+                ) : null}
+              </>
+            )}
+            
             <div className="flex gap-2 pt-4">
               <Button
                 onClick={() => {
@@ -3268,6 +3355,7 @@ export default function AdminParkingManagement() {
                 }}
                 disabled={(() => {
                   if (directAssignMutation.isPending || !directAssignFormData.userId || !selectedSpotForAssign) return true;
+                  if (isLoadingDirectAssignBookings) return true;
                   
                   // Disable if department mismatch for Department Reserved spots
                   const isDeptReserved = selectedSpotForAssign.spotTypeName === 'Department Reserved' || 
@@ -3284,7 +3372,10 @@ export default function AdminParkingManagement() {
                 className="flex-1"
                 data-testid="button-confirm-direct-assign"
               >
-                {directAssignMutation.isPending ? "Assigning..." : "Assign Spot"}
+                {directAssignMutation.isPending ? "Assigning..." : 
+                 directAssignFutureBookings && directAssignFutureBookings.count > 0 
+                   ? `Reassign & Cancel ${directAssignFutureBookings.count} Booking${directAssignFutureBookings.count > 1 ? 's' : ''}`
+                   : "Assign Spot"}
               </Button>
               <Button
                 variant="outline"
@@ -3301,7 +3392,7 @@ export default function AdminParkingManagement() {
 
       {/* Release Spot Confirmation Dialog */}
       <Dialog open={showReleaseSpotDialog} onOpenChange={setShowReleaseSpotDialog}>
-        <DialogContent className="max-w-md" data-testid="dialog-release-spot">
+        <DialogContent className="max-w-lg" data-testid="dialog-release-spot">
           <DialogHeader>
             <DialogTitle>Release Parking Spot</DialogTitle>
           </DialogHeader>
@@ -3312,6 +3403,47 @@ export default function AdminParkingManagement() {
                 <p className="text-sm text-muted-foreground">
                   This will make the spot available for assignment to other users. The current owner will lose access to this spot.
                 </p>
+                
+                {/* Show loading state or future bookings warning */}
+                {isLoadingFutureBookings ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Checking for affected bookings...
+                  </div>
+                ) : futureBookingsData && futureBookingsData.count > 0 ? (
+                  <Alert variant="destructive" className="mt-4">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>
+                      <div className="space-y-2">
+                        <p className="font-medium">
+                          {futureBookingsData.count} upcoming booking{futureBookingsData.count > 1 ? 's' : ''} will be cancelled
+                        </p>
+                        <p className="text-sm">
+                          The following people will be notified that their bookings have been cancelled:
+                        </p>
+                        <div className="max-h-32 overflow-y-auto mt-2 space-y-1">
+                          {futureBookingsData.bookings.map((booking) => (
+                            <div key={booking.id} className="text-xs bg-destructive/10 rounded px-2 py-1 flex justify-between items-center">
+                              <span className="font-medium">{booking.renterName}</span>
+                              <span className="text-muted-foreground">
+                                {new Date(booking.bookingDate + 'T12:00:00').toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric'
+                                })}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                ) : futureBookingsData && futureBookingsData.count === 0 ? (
+                  <div className="flex items-center gap-2 text-sm text-green-600">
+                    <CheckCircle2 className="h-4 w-4" />
+                    No upcoming bookings will be affected.
+                  </div>
+                ) : null}
+                
                 <div className="flex gap-2 pt-4">
                   <Button
                     onClick={() => {
@@ -3319,12 +3451,15 @@ export default function AdminParkingManagement() {
                         releaseSpotMutation.mutate(selectedSpotForRelease.id);
                       }
                     }}
-                    disabled={releaseSpotMutation.isPending}
+                    disabled={releaseSpotMutation.isPending || isLoadingFutureBookings}
                     variant="destructive"
                     className="flex-1"
                     data-testid="button-confirm-release-spot"
                   >
-                    {releaseSpotMutation.isPending ? "Releasing..." : "Release Spot"}
+                    {releaseSpotMutation.isPending ? "Releasing..." : 
+                     futureBookingsData && futureBookingsData.count > 0 
+                       ? `Release & Cancel ${futureBookingsData.count} Booking${futureBookingsData.count > 1 ? 's' : ''}`
+                       : "Release Spot"}
                   </Button>
                   <Button
                     variant="outline"
