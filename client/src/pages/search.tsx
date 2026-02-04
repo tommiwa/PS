@@ -89,6 +89,8 @@ interface DisplaySpot extends DBParkingSpot {
     userId?: string
   } | null
   listingId?: string
+  donateToCharity?: boolean // Primary charity flag
+  dateToCharity?: Record<string, boolean> // Map of date -> charity status
 }
 
 export default function Search() {
@@ -186,6 +188,9 @@ export default function Search() {
       // Preserve lock and listing info from API
       activeLock: spot.activeLock,
       listingId: spot.listingId,
+      // Preserve charity info from API
+      donateToCharity: (spot as any).donateToCharity,
+      dateToCharity: (spot as any).dateToCharity,
     }
     
     // If spot has availability dates, create one entry per date
@@ -230,6 +235,7 @@ export default function Search() {
         .map(date => {
           // Get date-specific price AND listingId if available
           const dateToPrice = (spot as any).dateToPrice;
+          const dateToCharity = (spot as any).dateToCharity;
           let spotPrice = spot.dailyRate ? parseFloat(spot.dailyRate) : 25;
           let dateListing = spot.listingId; // Default to spot's listingId
           
@@ -237,6 +243,9 @@ export default function Search() {
             spotPrice = parseFloat(dateToPrice[date].dailyRate);
             dateListing = dateToPrice[date].listingId; // Use date-specific listingId
           }
+          
+          // Get date-specific charity status
+          const isCharityOnDate = dateToCharity?.[date] ?? (spot as any).donateToCharity ?? false;
           
           return {
             ...baseSpot,
@@ -246,6 +255,7 @@ export default function Search() {
             availability: { date }, // Set specific date for this entry
             availabilityDates: [date], // Each expanded entry only has its own date
             bookedDates: spot.bookedDates, // Preserve for calendar view
+            donateToCharity: isCharityOnDate, // Date-specific charity status
           };
         })
     }

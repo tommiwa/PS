@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle, User, Zap, Accessibility, Building, CreditCard, Timer, Info, Phone, Banknote } from "lucide-react"
+import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle, User, Zap, Accessibility, Building, CreditCard, Timer, Info, Phone, Banknote, Heart, Tag, Sparkles } from "lucide-react"
+import { isWeekend, parseISO } from "date-fns"
 import { format, addMonths } from "date-fns"
 import type { ParkingSpot as DBParkingSpot } from "@shared/schema"
 import { isPastDate, getTodayString } from "@/utils/date-utils"
@@ -37,6 +38,8 @@ export interface ParkingSpot extends DBParkingSpot {
   availability?: {
     date: string
   }
+  donateToCharity?: boolean
+  dateToCharity?: Record<string, boolean>
 }
 
 interface BookingFormProps {
@@ -289,7 +292,7 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 border-b border-blue-200 dark:border-blue-800 px-6 py-4">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2">
+            <div className="flex items-center gap-3 mb-2 flex-wrap">
               <div className="flex items-center gap-2 text-xl font-semibold">
                 {getSpotTypeIcon()}
                 Spot {spot.spotNumber}
@@ -297,6 +300,60 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
               <Badge variant="secondary">
                 {getSpotTypeBadge()}
               </Badge>
+              {/* Promotional Labels */}
+              {(() => {
+                const bookingDate = formData.date;
+                const isCharityListing = spot.dateToCharity?.[bookingDate] ?? spot.donateToCharity ?? false;
+                const isWeekendBooking = bookingDate && isWeekend(parseISO(bookingDate));
+                const isTopDeal = spot.price <= 10;
+                
+                return (
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {isCharityListing && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge className="bg-pink-100 text-pink-700 border-pink-200 hover:bg-pink-200 dark:bg-pink-900/30 dark:text-pink-300 dark:border-pink-700 flex items-center gap-1">
+                            <Heart className="h-3 w-3 fill-pink-500 text-pink-500" />
+                            Charity
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="max-w-xs">
+                          <p className="font-medium">Support a Good Cause</p>
+                          <p className="text-xs text-muted-foreground">All proceeds from this booking will be donated to charity by the spot owner.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                    {isTopDeal && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700 flex items-center gap-1">
+                            <Tag className="h-3 w-3" />
+                            Top Deal
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="max-w-xs">
+                          <p className="font-medium">Great Value</p>
+                          <p className="text-xs text-muted-foreground">This spot is priced at $10/day or less - one of the best deals available!</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                    {isWeekendBooking && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700 flex items-center gap-1">
+                            <Sparkles className="h-3 w-3" />
+                            Weekend
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="max-w-xs">
+                          <p className="font-medium">Weekend Booking</p>
+                          <p className="text-xs text-muted-foreground">This booking is for a weekend day - perfect for personal errands or weekend activities!</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
