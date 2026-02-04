@@ -2296,6 +2296,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const primaryListingId = primaryListing?.listingId || listings[0].id;
           const primaryDailyRate = primaryListing?.dailyRate || listings[0].dailyRate;
           
+          // Check if any listing has donateToCharity flag
+          // Create a map of date -> donateToCharity for accurate display
+          const dateToCharity: Record<string, boolean> = {};
+          for (const listing of listings) {
+            if (listing.listingType === 'single' && listing.singleDate) {
+              const dateStr = await formatDateInTimezone(listing.singleDate);
+              dateToCharity[dateStr] = listing.donateToCharity || false;
+            } else if (listing.listingType === 'period' && listing.periodStartDate && listing.periodEndDate) {
+              const startStr = await formatDateInTimezone(listing.periodStartDate);
+              const endStr = await formatDateInTimezone(listing.periodEndDate);
+              const dates = await generateDateRange(startStr, endStr);
+              for (const dateStr of dates) {
+                if (!dateToCharity.hasOwnProperty(dateStr)) {
+                  dateToCharity[dateStr] = listing.donateToCharity || false;
+                }
+              }
+            } else if (listing.listingType === 'recurring' && listing.recurringStartDate && listing.recurringEndDate) {
+              const startStr = await formatDateInTimezone(listing.recurringStartDate);
+              const endStr = await formatDateInTimezone(listing.recurringEndDate);
+              const allDatesInRange = await generateDateRange(startStr, endStr);
+              for (const dateStr of allDatesInRange) {
+                if (!dateToCharity.hasOwnProperty(dateStr)) {
+                  dateToCharity[dateStr] = listing.donateToCharity || false;
+                }
+              }
+            }
+          }
+          // Primary charity status for first available date
+          const primaryDonateToCharity = firstDate ? (dateToCharity[firstDate] || false) : false;
+          
           // Convert dateToListing map to object for JSON serialization
           const dateToPrice: Record<string, {listingId: string, dailyRate: number}> = {};
           dateToListing.forEach((value, key) => {
@@ -2312,6 +2342,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             isExpired: isExpired, // True if all dates are expired
             bookedDates: bookedDates, // Array of dates that are already booked
             dateToPrice: dateToPrice, // Map of date -> {listingId, dailyRate} for accurate pricing
+            dateToCharity: dateToCharity, // Map of date -> boolean for charity status
+            donateToCharity: primaryDonateToCharity, // Primary charity status for first available date
             isAvailable: availabilityDates.length > 0, // True if spot has future availability
             // Keep backward compatibility with single date
             availability: availabilityDates.length > 0 ? {

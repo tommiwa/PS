@@ -14,7 +14,8 @@ import {
   Zap,
   Car,
   Accessibility,
-  Building
+  Building,
+  Heart
 } from "lucide-react"
 import { format, startOfWeek, addDays, addWeeks, addMonths, subWeeks, subMonths, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, getDay } from "date-fns"
 import { isPastDate } from "@/utils/date-utils"
@@ -40,6 +41,8 @@ interface ParkingSpot extends BookingFormSpot {
   isExpired?: boolean // True if all dates are expired
   bookedDates?: string[] // Array of dates that are already booked
   dateToPrice?: Record<string, {listingId: string, dailyRate: number}> // Map date -> price
+  dateToCharity?: Record<string, boolean> // Map date -> charity status
+  donateToCharity?: boolean // Primary charity status
   activeLock?: {
     lockId: string
     expiresAt: string
@@ -185,6 +188,17 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
     }
     const checkDate = formatLocalDate(date);
     return spot.expiredDates.includes(checkDate);
+  }
+
+  // Helper to check if a spot is for charity on a specific date
+  const isCharityOnDate = (spot: ParkingSpot, date: Date): boolean => {
+    const dateStr = formatLocalDate(date);
+    // Use dateToCharity mapping if available
+    if (spot.dateToCharity && spot.dateToCharity[dateStr] !== undefined) {
+      return spot.dateToCharity[dateStr];
+    }
+    // Fallback to primary donateToCharity
+    return spot.donateToCharity || false;
   }
 
   const getSpotsForDate = (date: Date): ParkingSpot[] => {
@@ -491,7 +505,12 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                             </div>
                           ) : (
                             <>
-                              <div className="font-semibold text-sm">${spotInfo?.price || spot.price}</div>
+                              <div className="flex items-center gap-1 font-semibold text-sm">
+                                {isCharityOnDate(spot, currentDate) && (
+                                  <Heart className="h-3 w-3 text-pink-500 fill-pink-500" />
+                                )}
+                                ${spotInfo?.price || spot.price}
+                              </div>
                               <div className="text-xs text-muted-foreground">per day</div>
                             </>
                           )}
@@ -603,7 +622,12 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                               PENDING
                             </span>
                           ) : (
-                            <span className="font-semibold">${spotInfo?.price || spot.price}</span>
+                            <span className="font-semibold flex items-center gap-0.5">
+                              {isCharityOnDate(spot, day) && (
+                                <Heart className="h-2.5 w-2.5 text-pink-500 fill-pink-500" />
+                              )}
+                              ${spotInfo?.price || spot.price}
+                            </span>
                           )}
                         </div>
                         {isBooked && (
@@ -702,7 +726,12 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                               PENDING
                             </span>
                           ) : (
-                            <span className="font-semibold">${spotInfo?.price || spot.price}</span>
+                            <span className="font-semibold flex items-center gap-0.5">
+                              {isCharityOnDate(spot, day) && (
+                                <Heart className="h-2 w-2 text-pink-500 fill-pink-500" />
+                              )}
+                              ${spotInfo?.price || spot.price}
+                            </span>
                           )}
                         </div>
                         {isBooked && (
@@ -862,7 +891,10 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                           Pending
                         </Badge>
                       ) : (
-                        <span className="font-bold text-lg text-primary">
+                        <span className="font-bold text-lg text-primary flex items-center gap-1">
+                          {isCharityOnDate(spot, expandedDay.date) && (
+                            <Heart className="h-4 w-4 text-pink-500 fill-pink-500" />
+                          )}
                           ${spotInfo?.price || spot.price}
                         </span>
                       )}
