@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Car, MapPin, DollarSign, Clock, Edit, Plus, Eye, Users, TrendingUp, Grid, Trash2, Info, CreditCard, Loader2, ExternalLink, Map } from "lucide-react"
+import { Car, MapPin, DollarSign, Clock, Edit, Plus, Eye, Users, TrendingUp, Grid, Trash2, Info, CreditCard, Loader2, ExternalLink, Map, Heart } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useConfirm, confirmations } from "@/hooks/use-confirm"
 import { useAuth } from "@/contexts/auth-context"
@@ -145,7 +145,8 @@ export default function MySpots() {
     daysOfWeek: [] as string[],
     dailyRate: "",
     notes: "",
-    status: "active" as const
+    status: "active" as const,
+    donateToCharity: false
   })
 
   const [dateValidationErrors, setDateValidationErrors] = useState({
@@ -337,7 +338,8 @@ export default function MySpots() {
         daysOfWeek: [],
         dailyRate: "",
         notes: "",
-        status: "active"
+        status: "active",
+        donateToCharity: false
       })
       setDateValidationErrors({
         periodDateRange: "",
@@ -673,6 +675,7 @@ export default function MySpots() {
       dailyRate: dailyRate,
       status: listingFormData.status,
       notes: listingFormData.notes || undefined,
+      donateToCharity: listingFormData.donateToCharity,
       // Conditional fields based on listing type
       ...(listingType === "single" && { singleDate: singleDate }),
       ...(listingType === "period" && { 
@@ -1032,7 +1035,8 @@ export default function MySpots() {
             daysOfWeek: [],
             dailyRate: "",
             notes: "",
-            status: "active"
+            status: "active",
+            donateToCharity: false
           })
           setDateValidationErrors({
             periodDateRange: "",
@@ -1247,6 +1251,26 @@ export default function MySpots() {
                   data-testid="textarea-listing-notes"
                   className="min-h-11"
                 />
+              </div>
+
+              {/* Donate to Charity Option */}
+              <div className="flex items-start space-x-3 p-4 bg-pink-50 border-2 border-pink-300 rounded-lg">
+                <Checkbox
+                  id="donateToCharity"
+                  checked={listingFormData.donateToCharity}
+                  onCheckedChange={(checked) => setListingFormData(prev => ({ ...prev, donateToCharity: checked === true }))}
+                  className="mt-0.5 h-5 w-5 data-[state=checked]:bg-pink-500 data-[state=checked]:border-pink-500"
+                  data-testid="checkbox-donate-to-charity"
+                />
+                <div className="space-y-1">
+                  <Label htmlFor="donateToCharity" className="cursor-pointer font-medium text-pink-900 flex items-center gap-2">
+                    <Heart className="h-4 w-4 text-pink-500 fill-pink-500" />
+                    Donate Earnings to Charity
+                  </Label>
+                  <p className="text-sm text-pink-700">
+                    All proceeds from this listing will go to charity. A special badge will appear on the listing.
+                  </p>
+                </div>
               </div>
 
               {/* Action Buttons */}
