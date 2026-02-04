@@ -5110,6 +5110,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Cancel any future bookings on this spot before assignment
+      // This handles the case where available spots have bookings from Workplace Services listings
+      let cancelledBookingsCount = 0;
+      const notifiedRenters: string[] = [];
+      
+      try {
+        // Get all bookings for this spot
+        const allBookings = await storage.getBookingsBySpot(spotId);
+        
+        // Filter for future bookings (today and onwards) that are not already cancelled
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const futureBookings = allBookings.filter(booking => {
+          const bookingDate = new Date(booking.bookingDate);
+          bookingDate.setHours(0, 0, 0, 0);
+          return bookingDate >= today && booking.status !== 'cancelled';
+        });
+        
+        if (futureBookings.length > 0) {
+          console.log(`[Spot Assignment] Found ${futureBookings.length} future bookings to cancel for spot ${spotId}`);
+          
+          // Get location details for notifications
+          const location = await storage.getLocation(existingSpot.locationId);
+          const locationName = location ? `${location.office} - ${location.level}` : 'Unknown Location';
+          const buildingName = location?.building || 'Unknown Building';
+          
+          // Group bookings by renter for batch notifications
+          const bookingsByRenter = new Map<string, typeof futureBookings>();
+          
+          for (const booking of futureBookings) {
+            // Cancel the booking
+            await storage.updateBooking(booking.id, { 
+              status: 'cancelled',
+              adminNotes: `Automatically cancelled due to spot assignment on ${new Date().toISOString().split('T')[0]}`
+            });
+            cancelledBookingsCount++;
+            
+            // Group for notification
+            const renterBookings = bookingsByRenter.get(booking.renterId) || [];
+            renterBookings.push(booking);
+            bookingsByRenter.set(booking.renterId, renterBookings);
+          }
+          
+          // Import notification functions
+          const { sendBookingsCancelledDueToUnassignmentNotification } = await import('./notification-service');
+          
+          // Notify each affected renter
+          for (const [renterId, renterBookings] of Array.from(bookingsByRenter.entries())) {
+            const renter = await storage.getUser(renterId);
+            if (renter) {
+              const cancelledBookingDetails = renterBookings.map((b: typeof renterBookings[0]) => ({
+                bookingDate: b.bookingDate,
+                spotNumber: existingSpot.spotNumber
+              }));
+              
+              await sendBookingsCancelledDueToUnassignmentNotification(
+                {
+                  id: renter.id,
+                  email: renter.email || '',
+                  firstName: renter.firstName || '',
+                  lastName: renter.lastName || ''
+                },
+                {
+                  spotNumber: existingSpot.spotNumber,
+                  location: locationName,
+                  building: buildingName
+                },
+                cancelledBookingDetails,
+                'Spot has been assigned to a new owner'
+              );
+              notifiedRenters.push(renter.email || renter.id);
+            }
+          }
+          
+          console.log(`[Spot Assignment] Cancelled ${cancelledBookingsCount} bookings, notified ${notifiedRenters.length} renters`);
+        }
+      } catch (cancelError) {
+        console.error('[Spot Assignment] Error cancelling future bookings:', cancelError);
+        // Continue with assignment even if cancellation fails
+      }
+      
       // Build update data with proper isBciManaged logic
       // Since isBciManaged has .notNull().default(false), it ALWAYS has a value
       // 1. If isBciManaged is explicitly provided → use that value

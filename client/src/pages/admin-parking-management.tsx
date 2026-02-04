@@ -711,6 +711,20 @@ export default function AdminParkingManagement() {
     enabled: !!selectedSpotForAssign?.id && !!selectedSpotForAssign?.ownerId && showDirectAssignDialog,
   });
 
+  // Query to fetch future bookings for available spot assignment
+  // Available spots (no owner) can still have bookings from Workplace Services listings
+  const { data: availableSpotFutureBookings, isLoading: isLoadingAvailableSpotBookings } = useQuery<FutureBookingsResponse>({
+    queryKey: ["/api/admin/spots", selectedAvailableSpot?.id, "future-bookings"],
+    queryFn: async () => {
+      const response = await fetch(`/api/admin/spots/${selectedAvailableSpot?.id}/future-bookings`, {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Failed to fetch future bookings');
+      return response.json();
+    },
+    enabled: !!selectedAvailableSpot?.id && showAssignAvailableSpotDialog,
+  });
+
   // Mutation to release spot (make available)
   const releaseSpotMutation = useMutation({
     mutationFn: async (spotId: string) => {
@@ -3546,6 +3560,47 @@ export default function AdminParkingManagement() {
                     </PopoverContent>
                   </Popover>
                 </div>
+                
+                {/* Show future bookings warning for available spot assignment */}
+                {isLoadingAvailableSpotBookings ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Checking for existing bookings...
+                  </div>
+                ) : availableSpotFutureBookings && availableSpotFutureBookings.count > 0 ? (
+                  <Alert variant="destructive" className="mt-2">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>
+                      <div className="space-y-2">
+                        <p className="font-medium">
+                          {availableSpotFutureBookings.count} upcoming booking{availableSpotFutureBookings.count > 1 ? 's' : ''} will be cancelled
+                        </p>
+                        <p className="text-sm">
+                          This spot has existing bookings from the shared pool. Assigning it will cancel these bookings and notify affected users:
+                        </p>
+                        <div className="max-h-24 overflow-y-auto mt-2 space-y-1">
+                          {availableSpotFutureBookings.bookings.map((booking) => (
+                            <div key={booking.id} className="text-xs bg-destructive/10 rounded px-2 py-1 flex justify-between items-center">
+                              <span className="font-medium">{booking.renterName}</span>
+                              <span className="text-muted-foreground">
+                                {new Date(booking.bookingDate + 'T12:00:00').toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric'
+                                })}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                ) : availableSpotFutureBookings && availableSpotFutureBookings.count === 0 ? (
+                  <div className="flex items-center gap-2 text-sm text-green-600">
+                    <CheckCircle2 className="h-4 w-4" />
+                    No existing bookings will be affected.
+                  </div>
+                ) : null}
+                
                 <div className="flex gap-2 pt-4">
                   <Button
                     onClick={() => {
@@ -3557,11 +3612,14 @@ export default function AdminParkingManagement() {
                         });
                       }
                     }}
-                    disabled={assignAvailableSpotMutation.isPending || !selectedUserForAvailableSpot}
+                    disabled={assignAvailableSpotMutation.isPending || !selectedUserForAvailableSpot || isLoadingAvailableSpotBookings}
                     className="flex-1"
                     data-testid="button-confirm-assign-available-spot"
                   >
-                    {assignAvailableSpotMutation.isPending ? "Assigning..." : "Assign Spot"}
+                    {assignAvailableSpotMutation.isPending ? "Assigning..." : 
+                     availableSpotFutureBookings && availableSpotFutureBookings.count > 0 
+                       ? `Assign & Cancel ${availableSpotFutureBookings.count} Booking${availableSpotFutureBookings.count > 1 ? 's' : ''}`
+                       : "Assign Spot"}
                   </Button>
                   <Button
                     variant="outline"
