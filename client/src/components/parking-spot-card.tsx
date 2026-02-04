@@ -208,14 +208,16 @@ export function ParkingSpotCard({
     // Charity donation tag - highest priority, show first
     if (spot.donateToCharity) {
       tags.push(
-        <Tooltip key="charity">
+        <Tooltip key="charity" delayDuration={100}>
           <TooltipTrigger asChild>
-            <Badge className="gap-1 bg-pink-500 text-white border-pink-600 hover:bg-pink-600">
-              <Heart className="h-3 w-3" />
-              Charity
-            </Badge>
+            <span className="cursor-help">
+              <Badge className="gap-1 bg-pink-500 text-white border-pink-600 hover:bg-pink-600">
+                <Heart className="h-3 w-3" />
+                Charity
+              </Badge>
+            </span>
           </TooltipTrigger>
-          <TooltipContent>
+          <TooltipContent className="z-[100]">
             <p>All proceeds from this spot go to charity!</p>
           </TooltipContent>
         </Tooltip>
@@ -225,14 +227,16 @@ export function ParkingSpotCard({
     // Free tag - price is $0
     if (price === 0) {
       tags.push(
-        <Tooltip key="free">
+        <Tooltip key="free" delayDuration={100}>
           <TooltipTrigger asChild>
-            <Badge className="gap-1 bg-green-500 text-white border-green-600 hover:bg-green-600">
-              <Gift className="h-3 w-3" />
-              Free
-            </Badge>
+            <span className="cursor-help">
+              <Badge className="gap-1 bg-green-500 text-white border-green-600 hover:bg-green-600">
+                <Gift className="h-3 w-3" />
+                Free
+              </Badge>
+            </span>
           </TooltipTrigger>
-          <TooltipContent>
+          <TooltipContent className="z-[100]">
             <p>This spot is available for free!</p>
           </TooltipContent>
         </Tooltip>
@@ -241,14 +245,16 @@ export function ParkingSpotCard({
     // Top Deal tag - price > $0 and <= $12
     else if (price > 0 && price <= 12) {
       tags.push(
-        <Tooltip key="top-deal">
+        <Tooltip key="top-deal" delayDuration={100}>
           <TooltipTrigger asChild>
-            <Badge className="gap-1 bg-teal-500 text-white border-teal-600 hover:bg-teal-600">
-              <Tag className="h-3 w-3" />
-              Top Deal
-            </Badge>
+            <span className="cursor-help">
+              <Badge className="gap-1 bg-teal-500 text-white border-teal-600 hover:bg-teal-600">
+                <Tag className="h-3 w-3" />
+                Top Deal
+              </Badge>
+            </span>
           </TooltipTrigger>
-          <TooltipContent>
+          <TooltipContent className="z-[100]">
             <p>Great value! This spot is priced at $12 or less</p>
           </TooltipContent>
         </Tooltip>
@@ -258,14 +264,16 @@ export function ParkingSpotCard({
     // Weekend tag - if date falls on Saturday or Sunday
     if (dateStr && isWeekend(dateStr)) {
       tags.push(
-        <Tooltip key="weekend">
+        <Tooltip key="weekend" delayDuration={100}>
           <TooltipTrigger asChild>
-            <Badge className="gap-1 bg-orange-500 text-white border-orange-600 hover:bg-orange-600">
-              <Sun className="h-3 w-3" />
-              Weekend
-            </Badge>
+            <span className="cursor-help">
+              <Badge className="gap-1 bg-orange-500 text-white border-orange-600 hover:bg-orange-600">
+                <Sun className="h-3 w-3" />
+                Weekend
+              </Badge>
+            </span>
           </TooltipTrigger>
-          <TooltipContent>
+          <TooltipContent className="z-[100]">
             <p>Weekend parking - Saturday or Sunday</p>
           </TooltipContent>
         </Tooltip>
