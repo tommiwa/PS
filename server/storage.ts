@@ -1172,6 +1172,7 @@ export class MemStorage implements IStorage {
       dailyRate: insertListing.dailyRate,
       status: status,
       notes: insertListing.notes ?? null,
+      donateToCharity: insertListing.donateToCharity ?? false,
     }).returning();
     
     // Auto-enable bookability on the spot when a listing is created
