@@ -310,42 +310,48 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
                 return (
                   <div className="flex items-center gap-1.5 flex-wrap">
                     {isCharityListing && (
-                      <Tooltip>
+                      <Tooltip delayDuration={100}>
                         <TooltipTrigger asChild>
-                          <Badge className="bg-pink-100 text-pink-700 border-pink-200 hover:bg-pink-200 dark:bg-pink-900/30 dark:text-pink-300 dark:border-pink-700 flex items-center gap-1">
-                            <Heart className="h-3 w-3 fill-pink-500 text-pink-500" />
-                            Charity
-                          </Badge>
+                          <span className="cursor-help inline-flex">
+                            <Badge className="bg-pink-100 text-pink-700 border-pink-200 hover:bg-pink-200 dark:bg-pink-900/30 dark:text-pink-300 dark:border-pink-700 flex items-center gap-1 cursor-help">
+                              <Heart className="h-3 w-3 fill-pink-500 text-pink-500" />
+                              Charity
+                            </Badge>
+                          </span>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom" className="max-w-xs">
+                        <TooltipContent side="bottom" className="max-w-xs z-[100]">
                           <p className="font-medium">Support a Good Cause</p>
                           <p className="text-xs text-muted-foreground">All proceeds from this booking will be donated to charity by the spot owner.</p>
                         </TooltipContent>
                       </Tooltip>
                     )}
                     {isTopDeal && (
-                      <Tooltip>
+                      <Tooltip delayDuration={100}>
                         <TooltipTrigger asChild>
-                          <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700 flex items-center gap-1">
-                            <Tag className="h-3 w-3" />
-                            Top Deal
-                          </Badge>
+                          <span className="cursor-help inline-flex">
+                            <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700 flex items-center gap-1 cursor-help">
+                              <Tag className="h-3 w-3" />
+                              Top Deal
+                            </Badge>
+                          </span>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom" className="max-w-xs">
+                        <TooltipContent side="bottom" className="max-w-xs z-[100]">
                           <p className="font-medium">Great Value</p>
                           <p className="text-xs text-muted-foreground">This spot is priced at $10/day or less - one of the best deals available!</p>
                         </TooltipContent>
                       </Tooltip>
                     )}
                     {isWeekendBooking && (
-                      <Tooltip>
+                      <Tooltip delayDuration={100}>
                         <TooltipTrigger asChild>
-                          <Badge className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700 flex items-center gap-1">
-                            <Sparkles className="h-3 w-3" />
-                            Weekend
-                          </Badge>
+                          <span className="cursor-help inline-flex">
+                            <Badge className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700 flex items-center gap-1 cursor-help">
+                              <Sparkles className="h-3 w-3" />
+                              Weekend
+                            </Badge>
+                          </span>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom" className="max-w-xs">
+                        <TooltipContent side="bottom" className="max-w-xs z-[100]">
                           <p className="font-medium">Weekend Booking</p>
                           <p className="text-xs text-muted-foreground">This booking is for a weekend day - perfect for personal errands or weekend activities!</p>
                         </TooltipContent>
