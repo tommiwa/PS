@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useConfirm } from "@/hooks/use-confirm"
 import { apiRequest, queryClient } from "@/lib/queryClient"
 import { format } from "date-fns"
-import { AlertCircle, Clock, CheckCircle2, ListTodo, Loader2, RefreshCw, Trash2, Eye, User, Mail, Calendar } from "lucide-react"
+import { AlertCircle, Clock, CheckCircle2, ListTodo, Loader2, RefreshCw, Trash2, Eye, User, Mail, Calendar, Star } from "lucide-react"
 
 type IssueStatus = "backlog" | "todo" | "in_progress" | "completed"
 type IssuePriority = "low" | "medium" | "high" | "urgent"
@@ -24,6 +24,7 @@ interface Issue {
   description: string
   priority: IssuePriority
   status: IssueStatus
+  rating: number | null
   reportedBy: string
   reporterName: string | null
   reporterEmail: string | null
@@ -161,6 +162,7 @@ export default function AdminIssuesPage() {
               <TableHead>Reporter</TableHead>
               <TableHead>Priority</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Rating</TableHead>
               <TableHead>{isHistory ? "Completed" : "Created"}</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -205,6 +207,24 @@ export default function AdminIssuesPage() {
                     {statusConfig[issue.status].icon}
                     {statusConfig[issue.status].label}
                   </Badge>
+                </TableCell>
+                <TableCell>
+                  {issue.rating ? (
+                    <div className="flex items-center gap-0.5">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star
+                          key={star}
+                          className={`h-3.5 w-3.5 ${
+                            star <= issue.rating!
+                              ? "fill-amber-400 text-amber-400"
+                              : "text-gray-300"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground text-sm">—</span>
+                  )}
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {format(new Date(isHistory ? issue.updatedAt : issue.createdAt), "MMM d, yyyy")}
@@ -413,6 +433,23 @@ export default function AdminIssuesPage() {
                     {statusConfig[selectedIssue.status].icon}
                     {statusConfig[selectedIssue.status].label}
                   </Badge>
+                  {selectedIssue.rating && (
+                    <div className="flex items-center gap-1 ml-2">
+                      <span className="text-sm text-muted-foreground">Rating:</span>
+                      <div className="flex items-center gap-0.5">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Star
+                            key={star}
+                            className={`h-4 w-4 ${
+                              star <= selectedIssue.rating!
+                                ? "fill-amber-400 text-amber-400"
+                                : "text-gray-300"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

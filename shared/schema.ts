@@ -1396,13 +1396,14 @@ export type IssueStatus = z.infer<typeof issueStatuses>;
 export const issuePriorities = z.enum(["low", "medium", "high", "urgent"]);
 export type IssuePriority = z.infer<typeof issuePriorities>;
 
-// Issues Table - Simple issue tracking system
+// Issues Table - Simple issue tracking / feedback system
 export const issues = pgTable("issues", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   title: varchar("title").notNull(),
   description: text("description").notNull(),
   priority: text("priority").notNull().$type<IssuePriority>().default("medium"),
   status: text("status").notNull().$type<IssueStatus>().default("backlog"),
+  rating: integer("rating"), // Optional app rating 1-5 stars
   attachmentUrl: text("attachment_url"), // Optional attachment
   attachmentName: text("attachment_name"), // Original filename
   reporterId: varchar("reporter_id").notNull(), // User who reported the issue

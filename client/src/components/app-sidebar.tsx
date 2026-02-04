@@ -17,7 +17,8 @@ import {
   Lock,
   Clock,
   DollarSign,
-  AlertCircle
+  AlertCircle,
+  MessageSquare
 } from "lucide-react"
 import { Link, useLocation, useRoute } from "wouter"
 import {
@@ -633,12 +634,12 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
         )}
       </SidebarContent>
       
-      {/* Footer with Report Issue button - visible to all users */}
+      {/* Footer with Feedback button - visible to all users */}
       <SidebarFooter className="border-t p-3">
         <ReportIssueDialog>
           <Button variant="outline" size="sm" className="w-full justify-start gap-2">
-            <AlertCircle className="h-4 w-4" />
-            Report an Issue
+            <MessageSquare className="h-4 w-4" />
+            Feedback
           </Button>
         </ReportIssueDialog>
       </SidebarFooter>
