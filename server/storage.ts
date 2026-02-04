@@ -1210,6 +1210,7 @@ export class MemStorage implements IStorage {
         dailyRate: listingData.dailyRate,
         status: status,
         notes: listingData.notes ?? null,
+        donateToCharity: listingData.donateToCharity ?? false,
       }).returning();
 
       if (listing[0]) {
