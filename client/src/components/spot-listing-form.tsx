@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle, CalendarDays, Repeat } from "lucide-react"
+import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle, CalendarDays, Repeat, Heart } from "lucide-react"
 import { getTodayString } from "@/utils/date-utils"
 import { useQuery } from "@tanstack/react-query"
 import { queryClient } from "@/lib/queryClient"
@@ -584,21 +584,21 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
             </div>
 
             {/* Donate to Charity Option */}
-            <div className="flex items-start space-x-3 p-4 bg-pink-50 border border-pink-200 rounded-lg">
+            <div className="flex items-start space-x-3 p-4 bg-pink-50 border-2 border-pink-300 rounded-lg">
               <Checkbox
                 id="donateToCharity"
                 checked={formData.donateToCharity}
                 onCheckedChange={(checked) => updateFormData("donateToCharity", checked === true)}
-                className="mt-0.5 data-[state=checked]:bg-pink-500 data-[state=checked]:border-pink-500"
+                className="mt-0.5 h-5 w-5 data-[state=checked]:bg-pink-500 data-[state=checked]:border-pink-500"
                 data-testid="checkbox-donate-to-charity"
               />
               <div className="space-y-1">
                 <Label htmlFor="donateToCharity" className="cursor-pointer font-medium text-pink-900 flex items-center gap-2">
-                  <span className="text-pink-500">❤</span>
+                  <Heart className="h-4 w-4 text-pink-500 fill-pink-500" />
                   Donate Earnings to Charity
                 </Label>
                 <p className="text-sm text-pink-700">
-                  All proceeds from this listing will be donated to charity. Your listing will display a special charity badge to let renters know.
+                  All proceeds from this listing will go to charity. A special badge will appear on the listing.
                 </p>
               </div>
             </div>
