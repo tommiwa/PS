@@ -56,7 +56,8 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
     recurringEndDate: "", // Optional end date for recurring
     // Common
     description: "",
-    specialInstructions: ""
+    specialInstructions: "",
+    donateToCharity: false
   })
   const [selectedSpot, setSelectedSpot] = useState<ParkingSpotWithUser | null>(null)
 
@@ -102,7 +103,8 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
         recurringEndDate: initialData.recurringEndDate || "",
         // Common
         description: initialData.notes || initialData.description || "",
-        specialInstructions: initialData.specialInstructions || ""
+        specialInstructions: initialData.specialInstructions || "",
+        donateToCharity: initialData.donateToCharity || false
       })
     }
   }, [initialData, userSpots, systemDefaultRate])
@@ -194,7 +196,8 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
         const updateData = {
           dailyRate: formData.price,
           singleDate: formData.date,
-          notes: formData.description || null
+          notes: formData.description || null,
+          donateToCharity: formData.donateToCharity
         }
 
         const listingId = initialData.id
@@ -226,7 +229,8 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
           recurringStartDate: listingType === "recurring" ? formData.recurringStartDate : null,
           recurringEndDate: listingType === "recurring" ? formData.recurringEndDate || null : null,
           daysOfWeek: listingType === "recurring" ? formData.recurringDays : null,
-          notes: formData.description || null
+          notes: formData.description || null,
+          donateToCharity: formData.donateToCharity
         }
 
         const response = await fetch('/api/spot-listings', {
@@ -577,6 +581,26 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                 className="min-h-20"
                 data-testid="textarea-instructions"
               />
+            </div>
+
+            {/* Donate to Charity Option */}
+            <div className="flex items-start space-x-3 p-4 bg-pink-50 border border-pink-200 rounded-lg">
+              <Checkbox
+                id="donateToCharity"
+                checked={formData.donateToCharity}
+                onCheckedChange={(checked) => updateFormData("donateToCharity", checked === true)}
+                className="mt-0.5 data-[state=checked]:bg-pink-500 data-[state=checked]:border-pink-500"
+                data-testid="checkbox-donate-to-charity"
+              />
+              <div className="space-y-1">
+                <Label htmlFor="donateToCharity" className="cursor-pointer font-medium text-pink-900 flex items-center gap-2">
+                  <span className="text-pink-500">❤</span>
+                  Donate Earnings to Charity
+                </Label>
+                <p className="text-sm text-pink-700">
+                  All proceeds from this listing will be donated to charity. Your listing will display a special charity badge to let renters know.
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>

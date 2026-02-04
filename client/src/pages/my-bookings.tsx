@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { SpotListingForm } from "@/components/spot-listing-form"
-import { Calendar, Search, Download, Clock, CheckCircle, CheckCircle2, XCircle, Car, MapPin, DollarSign, AlertTriangle, Plus, Edit, Trash2, CreditCard, Info, Building, Ban, Eye, FileText, CalendarCheck, Receipt, LayoutGrid, List, User, Bell, X, ExternalLink } from "lucide-react"
+import { Calendar, Search, Download, Clock, CheckCircle, CheckCircle2, XCircle, Car, MapPin, DollarSign, AlertTriangle, Plus, Edit, Trash2, CreditCard, Info, Building, Ban, Eye, FileText, CalendarCheck, Receipt, LayoutGrid, List, User, Bell, X, ExternalLink, Heart } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { isPastDate } from "@/utils/date-utils"
 import { format, addMonths } from "date-fns"
@@ -840,6 +840,12 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
+                {listing.donateToCharity && (
+                  <Badge className="bg-pink-500 hover:bg-pink-600 text-white gap-1 flex items-center">
+                    <Heart className="h-3 w-3" />
+                    Charity
+                  </Badge>
+                )}
                 {getStatusBadge()}
               </div>
             </div>
@@ -1436,6 +1442,11 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
           <div className="hidden md:block text-sm font-medium text-primary">${listing.totalAmount || listing.price || listing.dailyRate}</div>
           {/* Actions */}
           <div className="flex justify-end gap-1 col-span-1 md:col-span-1">
+            {listing.donateToCharity && (
+              <Badge className="bg-pink-500 hover:bg-pink-600 text-white gap-1 flex items-center text-xs px-1.5">
+                <Heart className="h-3 w-3" />
+              </Badge>
+            )}
             {getStatusBadge()}
             {canEdit && (
               <Button variant="ghost" size="icon" onClick={() => handleEditListing(listing)} data-testid={`compact-edit-${listing.id}`}>

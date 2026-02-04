@@ -36,7 +36,7 @@ import {
   Timer, Target, CheckCircle2, Search, Filter, Check, ChevronsUpDown,
   Zap, Accessibility, Building, MoreHorizontal, Info, RefreshCw,
   Trash2, Edit, UserMinus, UserCheck, Download, FileText,
-  Eye, EyeOff, Layers, Sparkles, Loader2, MapPin, AlertCircle
+  Eye, EyeOff, Layers, Sparkles, Loader2, MapPin, AlertCircle, Heart
 } from "lucide-react"
 import type { ParkingSpot, ParkingSpotWithUser, SpotType, Location, SpotTypeTable } from "@shared/schema"
 import { quickExportParkingSpotsPDF, quickExportParkingSpotsExcel } from "@/utils/export-utils"
@@ -286,7 +286,8 @@ export default function AdminParkingManagement() {
     singleDate: undefined as Date | undefined,
     periodStartDate: undefined as Date | undefined,
     periodEndDate: undefined as Date | undefined,
-    dailyRate: "16"
+    dailyRate: "16",
+    donateToCharity: false
   })
   
   // Fetch unallocated spots
@@ -421,6 +422,7 @@ export default function AdminParkingManagement() {
       periodStartDate?: string;
       periodEndDate?: string;
       dailyRate: number;
+      donateToCharity?: boolean;
     }) => {
       return await apiRequest(`/api/admin/bulk-create-listings`, {
         method: "POST",
@@ -449,7 +451,8 @@ export default function AdminParkingManagement() {
         singleDate: undefined,
         periodStartDate: undefined,
         periodEndDate: undefined,
-        dailyRate: "16"
+        dailyRate: "16",
+        donateToCharity: false
       });
       handleClearSelection();
     },
@@ -3796,6 +3799,28 @@ export default function AdminParkingManagement() {
               />
             </div>
 
+            {/* Donate to Charity Option */}
+            <div className="flex items-start space-x-3 p-4 bg-pink-50 border border-pink-200 rounded-lg">
+              <Checkbox
+                id="donateToCharity"
+                checked={createAvailabilityFormData.donateToCharity}
+                onCheckedChange={(checked) => 
+                  setCreateAvailabilityFormData({ ...createAvailabilityFormData, donateToCharity: checked === true })
+                }
+                className="mt-0.5 data-[state=checked]:bg-pink-500 data-[state=checked]:border-pink-500"
+                data-testid="checkbox-donate-to-charity"
+              />
+              <div className="space-y-1">
+                <Label htmlFor="donateToCharity" className="cursor-pointer font-medium text-pink-900 flex items-center gap-2">
+                  <Heart className="h-4 w-4 text-pink-500" />
+                  Donate Earnings to Charity
+                </Label>
+                <p className="text-sm text-pink-700">
+                  All proceeds from this listing will go to charity. A special badge will appear on the listing.
+                </p>
+              </div>
+            </div>
+
             <div className="flex gap-2 pt-4">
               <Button
                 onClick={() => {
@@ -3828,7 +3853,8 @@ export default function AdminParkingManagement() {
                       spotIds: Array.from(selectedSpots),
                       listingType: "single",
                       singleDate: format(createAvailabilityFormData.singleDate, "yyyy-MM-dd"),
-                      dailyRate
+                      dailyRate,
+                      donateToCharity: createAvailabilityFormData.donateToCharity
                     });
                   } else {
                     if (!createAvailabilityFormData.periodStartDate || !createAvailabilityFormData.periodEndDate) {
@@ -3855,7 +3881,8 @@ export default function AdminParkingManagement() {
                       listingType: "period",
                       periodStartDate: format(createAvailabilityFormData.periodStartDate, "yyyy-MM-dd"),
                       periodEndDate: format(createAvailabilityFormData.periodEndDate, "yyyy-MM-dd"),
-                      dailyRate
+                      dailyRate,
+                      donateToCharity: createAvailabilityFormData.donateToCharity
                     });
                   }
                 }}

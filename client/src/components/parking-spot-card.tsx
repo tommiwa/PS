@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import { MapPin, Car, Zap, Accessibility, Building, Building2, User, Clock, Calendar, Map, Gift, Tag, Sun } from "lucide-react"
+import { MapPin, Car, Zap, Accessibility, Building, Building2, User, Clock, Calendar, Map, Gift, Tag, Sun, Heart } from "lucide-react"
 import type { ParkingSpot, ParkingSpotWithUser } from "@shared/schema"
 import { useAuth } from "@/contexts/auth-context"
 import { useLock } from "@/contexts/LockContext"
@@ -29,6 +29,7 @@ type SpotWithLock = (ParkingSpot | ParkingSpotWithUser) & {
   floorPlanBaseUrl?: string | null
   reservedForDepartmentId?: number | null
   reservedForDepartmentName?: string | null
+  donateToCharity?: boolean
 }
 
 interface ParkingSpotCardProps {
@@ -203,6 +204,23 @@ export function ParkingSpotCard({
     const tags: JSX.Element[] = [];
     const price = getDisplayPrice();
     const dateStr = spot.availability?.date;
+
+    // Charity donation tag - highest priority, show first
+    if (spot.donateToCharity) {
+      tags.push(
+        <Tooltip key="charity">
+          <TooltipTrigger asChild>
+            <Badge className="gap-1 bg-pink-500 text-white border-pink-600 hover:bg-pink-600">
+              <Heart className="h-3 w-3" />
+              Charity
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>All proceeds from this spot go to charity!</p>
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
 
     // Free tag - price is $0
     if (price === 0) {

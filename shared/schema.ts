@@ -221,6 +221,7 @@ export const spotListings = pgTable("spot_listings", {
   status: text("status").notNull().$type<ListingStatus>().default("available"),
   notes: text("notes"),
   adminNotes: text("admin_notes"), // Admin-only notes
+  donateToCharity: boolean("donate_to_charity").notNull().default(false), // When true, earnings go to charity
   createdBy: varchar("created_by"), // User ID of who created the listing (admin or owner)
   createdByAdmin: boolean("created_by_admin").default(false), // True if listing was created by an admin
   createdAt: timestamp("created_at").notNull().defaultNow(),

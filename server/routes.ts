@@ -182,7 +182,8 @@ const bulkCreateListingsSchema = z.object({
   singleDate: z.string().optional(),
   periodStartDate: z.string().optional(),
   periodEndDate: z.string().optional(),
-  dailyRate: z.number().positive("Daily rate must be positive")
+  dailyRate: z.number().positive("Daily rate must be positive"),
+  donateToCharity: z.boolean().optional().default(false)
 }).refine(
   data => {
     if (data.listingType === "single") {
@@ -1581,7 +1582,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Not authorized to update this listing" });
       }
       
-      const { dailyRate, singleDate, notes } = req.body;
+      const { dailyRate, singleDate, notes, donateToCharity } = req.body;
       
       // DATE VALIDATION: Ensure date is today or in the future (same as create)
       if (singleDate) {
@@ -1637,6 +1638,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (dailyRate !== undefined) updateData.dailyRate = dailyRate;
       if (singleDate !== undefined) updateData.singleDate = singleDate;
       if (notes !== undefined) updateData.notes = notes;
+      if (donateToCharity !== undefined) updateData.donateToCharity = donateToCharity;
       
       const updatedListing = await storage.updateListing(id, updateData);
       
@@ -6096,7 +6098,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Validate request body with Zod
       const validatedData = bulkCreateListingsSchema.parse(req.body);
-      const { spotIds, listingType, singleDate, periodStartDate, periodEndDate, dailyRate } = validatedData;
+      const { spotIds, listingType, singleDate, periodStartDate, periodEndDate, dailyRate, donateToCharity } = validatedData;
       
       console.log('[DEBUG] After Zod validation - dailyRate:', dailyRate, 'Type:', typeof dailyRate);
       
@@ -6189,7 +6191,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const listingData: any = {
         listingType,
         dailyRate: dailyRateString,
-        status: "available"
+        status: "available",
+        donateToCharity: donateToCharity || false
       };
 
       if (listingType === "single" && singleDate) {
