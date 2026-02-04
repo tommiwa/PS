@@ -57,6 +57,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
   const defaultOwnerView = getCurrentViewRole() === 'owner' || (getCurrentViewRole() === null && isOwner())
   const isOwnerView = viewMode === 'listings' ? true : viewMode === 'rentals' ? false : defaultOwnerView
   const [searchTerm, setSearchTerm] = useState("")
+  const [charityFilter, setCharityFilter] = useState<"all" | "charity" | "regular">("all")
   const [showListingForm, setShowListingForm] = useState(false)
   const [showEditListing, setShowEditListing] = useState(false)
   const [selectedListing, setSelectedListing] = useState<any>(null)
@@ -145,6 +146,23 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
         )
       }
     })
+  }
+
+  // Filter by charity status (owner view only)
+  const filterByCharity = (items: (Booking | SpotListing)[]) => {
+    if (!isOwnerView || charityFilter === "all") return items
+    return items.filter((item: any) => {
+      if (charityFilter === "charity") {
+        return item.donateToCharity === true
+      } else {
+        return !item.donateToCharity
+      }
+    })
+  }
+
+  // Combined filter function
+  const applyFilters = (items: (Booking | SpotListing)[]) => {
+    return filterByCharity(filterBySearch(items))
   }
 
   const sortItems = (items: (Booking | SpotListing)[]) => {
@@ -1922,24 +1940,43 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
         </TabsList>
         
         <TabsContent value="active" className="w-full space-y-3 md:space-y-4">
-          {/* Search Input */}
-          <div className="relative flex items-center">
-            <Search className="absolute left-3 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
-            <Input
-              placeholder={`Search by spot, location${isOwnerView ? ', renter' : ''}...`}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-10 w-full"
-            />
-            {searchTerm && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-1 h-7 w-7 z-10"
-                onClick={() => setSearchTerm("")}
-              >
-                <X className="h-4 w-4" />
-              </Button>
+          {/* Search Input with Charity Filter for owners */}
+          <div className="flex items-center gap-2">
+            <div className="relative flex items-center flex-1">
+              <Search className="absolute left-3 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
+              <Input
+                placeholder={`Search by spot, location${isOwnerView ? ', renter' : ''}...`}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-10 w-full"
+              />
+              {searchTerm && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 h-7 w-7 z-10"
+                  onClick={() => setSearchTerm("")}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+            {isOwnerView && (
+              <Select value={charityFilter} onValueChange={(value: "all" | "charity" | "regular") => setCharityFilter(value)}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="Filter type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Listings</SelectItem>
+                  <SelectItem value="charity">
+                    <span className="flex items-center gap-1.5">
+                      <Heart className="h-3 w-3 text-pink-500" />
+                      Charity
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="regular">Regular</SelectItem>
+                </SelectContent>
+              </Select>
             )}
           </div>
           <div className="flex items-start gap-2 rounded-lg border bg-emerald-50 border-emerald-200 px-3 py-2">
@@ -1950,7 +1987,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                 : "Your upcoming parking reservations. You can mark payment as sent anytime before or after using the spot."}
             </p>
           </div>
-          {filterBySearch(activeItems).length === 0 ? (
+          {applyFilters(activeItems).length === 0 ? (
             <Card>
               <CardContent className="p-6 md:p-8 text-center">
                 <Clock className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-3 md:mb-4 text-muted-foreground" />
@@ -1964,13 +2001,13 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
             </Card>
           ) : isCompactView ? (
             <div className="space-y-2">
-              {sortItems(filterBySearch(activeItems)).map((item) => (
+              {sortItems(applyFilters(activeItems)).map((item) => (
                 isOwnerView ? renderOwnerListingCompact(item) : renderRenterBookingCompact(item)
               ))}
             </div>
           ) : (
             <div className="space-y-3 md:space-y-4">
-              {sortItems(filterBySearch(activeItems)).map((item) => (
+              {sortItems(applyFilters(activeItems)).map((item) => (
                 isOwnerView ? renderOwnerListingWithActions(item) : renderRenterBooking(item)
               ))}
             </div>
@@ -1978,24 +2015,43 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
         </TabsContent>
 
         <TabsContent value="payment-pending" className="w-full space-y-3 md:space-y-4">
-          {/* Search Input */}
-          <div className="relative flex items-center">
-            <Search className="absolute left-3 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
-            <Input
-              placeholder={`Search by spot, location${isOwnerView ? ', renter' : ''}...`}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-10 w-full"
-            />
-            {searchTerm && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-1 h-7 w-7 z-10"
-                onClick={() => setSearchTerm("")}
-              >
-                <X className="h-4 w-4" />
-              </Button>
+          {/* Search Input with Charity Filter for owners */}
+          <div className="flex items-center gap-2">
+            <div className="relative flex items-center flex-1">
+              <Search className="absolute left-3 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
+              <Input
+                placeholder={`Search by spot, location${isOwnerView ? ', renter' : ''}...`}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-10 w-full"
+              />
+              {searchTerm && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 h-7 w-7 z-10"
+                  onClick={() => setSearchTerm("")}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+            {isOwnerView && (
+              <Select value={charityFilter} onValueChange={(value: "all" | "charity" | "regular") => setCharityFilter(value)}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="Filter type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Listings</SelectItem>
+                  <SelectItem value="charity">
+                    <span className="flex items-center gap-1.5">
+                      <Heart className="h-3 w-3 text-pink-500" />
+                      Charity
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="regular">Regular</SelectItem>
+                </SelectContent>
+              </Select>
             )}
           </div>
           <div className="flex items-start gap-2 rounded-lg border bg-orange-50 border-orange-200 px-3 py-2">
@@ -2006,7 +2062,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                 : "Past bookings that need payment settlement. Mark as paid after transfer, or send a reminder to the owner."}
             </p>
           </div>
-          {filterBySearch(paymentPendingItems).length === 0 ? (
+          {applyFilters(paymentPendingItems).length === 0 ? (
             <Card>
               <CardContent className="p-6 md:p-8 text-center">
                 <CreditCard className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-3 md:mb-4 text-muted-foreground" />
@@ -2020,13 +2076,13 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
             </Card>
           ) : isCompactView ? (
             <div className="space-y-2">
-              {sortItems(filterBySearch(paymentPendingItems)).map((item) => (
+              {sortItems(applyFilters(paymentPendingItems)).map((item) => (
                 isOwnerView ? renderOwnerListingCompact(item) : renderRenterBookingCompact(item)
               ))}
             </div>
           ) : (
             <div className="space-y-3 md:space-y-4">
-              {sortItems(filterBySearch(paymentPendingItems)).map((item) => (
+              {sortItems(applyFilters(paymentPendingItems)).map((item) => (
                 isOwnerView ? renderOwnerListingWithPayment(item) : renderRenterBooking(item)
               ))}
             </div>
@@ -2034,24 +2090,43 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
         </TabsContent>
 
         <TabsContent value="completed" className="w-full space-y-3 md:space-y-4">
-          {/* Search Input */}
-          <div className="relative flex items-center">
-            <Search className="absolute left-3 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
-            <Input
-              placeholder={`Search by spot, location${isOwnerView ? ', renter' : ''}...`}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-10 w-full"
-            />
-            {searchTerm && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-1 h-7 w-7 z-10"
-                onClick={() => setSearchTerm("")}
-              >
-                <X className="h-4 w-4" />
-              </Button>
+          {/* Search Input with Charity Filter for owners */}
+          <div className="flex items-center gap-2">
+            <div className="relative flex items-center flex-1">
+              <Search className="absolute left-3 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
+              <Input
+                placeholder={`Search by spot, location${isOwnerView ? ', renter' : ''}...`}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-10 w-full"
+              />
+              {searchTerm && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 h-7 w-7 z-10"
+                  onClick={() => setSearchTerm("")}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+            {isOwnerView && (
+              <Select value={charityFilter} onValueChange={(value: "all" | "charity" | "regular") => setCharityFilter(value)}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="Filter type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Listings</SelectItem>
+                  <SelectItem value="charity">
+                    <span className="flex items-center gap-1.5">
+                      <Heart className="h-3 w-3 text-pink-500" />
+                      Charity
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="regular">Regular</SelectItem>
+                </SelectContent>
+              </Select>
             )}
           </div>
           <div className="flex items-start gap-2 rounded-lg border bg-green-50 border-green-200 px-3 py-2">
@@ -2062,7 +2137,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                 : "Completed bookings with confirmed payments. Download receipts for your records."}
             </p>
           </div>
-          {filterBySearch(completedItems).length === 0 ? (
+          {applyFilters(completedItems).length === 0 ? (
             <Card>
               <CardContent className="p-6 md:p-8 text-center">
                 <CheckCircle className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-3 md:mb-4 text-muted-foreground" />
@@ -2076,13 +2151,13 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
             </Card>
           ) : isCompactView ? (
             <div className="space-y-2">
-              {sortItems(filterBySearch(completedItems)).map((item) => (
+              {sortItems(applyFilters(completedItems)).map((item) => (
                 isOwnerView ? renderOwnerListingCompact(item) : renderRenterBookingCompact(item)
               ))}
             </div>
           ) : (
             <div className="space-y-3 md:space-y-4">
-              {sortItems(filterBySearch(completedItems)).map((item) => (
+              {sortItems(applyFilters(completedItems)).map((item) => (
                 isOwnerView ? renderOwnerListingWithPayment(item) : renderRenterBooking(item)
               ))}
             </div>
