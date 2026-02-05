@@ -3801,21 +3801,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const periodStartStr = periodStartDate.toISOString().split('T')[0];
       const periodEndStr = periodEndDate.toISOString().split('T')[0];
       
-      // Get all listings and users to check if listing owner is admin (Workplace Services)
+      // Get all spots, listings to identify true Workplace Services spots
+      // Workplace Services spots = BCI-managed AND no owner (ownerId is null)
+      const allSpots = await storage.getAllParkingSpots();
       const allListings = await storage.getAllSpotListings();
-      const allUsers = await storage.getAllUsers();
-      const adminUserIds = new Set(allUsers.filter(u => u.roles?.includes('admin')).map(u => u.id));
       
-      // Get listing IDs where the owner is an admin (Workplace Services)
-      const workplaceServicesListingIds = new Set(
-        allListings.filter(l => adminUserIds.has(l.ownerId)).map(l => l.id)
+      // True Workplace Services spots: BCI-managed AND no owner
+      const workplaceServicesSpotIds = new Set(
+        allSpots.filter(s => s.isBciManaged === true && s.ownerId === null).map(s => s.id)
       );
       
-      // Get all bookings for listings created by Workplace Services (admin users)
+      // Get listing IDs for Workplace Services spots only
+      const workplaceServicesListingIds = new Set(
+        allListings.filter(l => workplaceServicesSpotIds.has(l.spotId)).map(l => l.id)
+      );
+      
+      // Get all bookings for Workplace Services spots only
       // Include excluded bookings so they can be shown with "Removed" status
       const allBookings = await storage.getAllBookings();
       const bciBookings = allBookings.filter(b => {
-        // Only include bookings where the listing owner is an admin (Workplace Services)
+        // Only include bookings for Workplace Services spots (BCI-managed with no owner)
         if (!workplaceServicesListingIds.has(b.listingId)) return false;
         if (b.status !== 'confirmed' && b.status !== 'completed') return false;
         // No longer skip excluded bookings - we want to show them as "Removed"
@@ -3920,17 +3925,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get available payroll periods for History tab filter (Admin only)
   app.get("/api/admin/payroll-periods", requireAdmin, async (req, res) => {
     try {
-      // Get all listings and users to check if listing owner is admin (Workplace Services)
+      // Get all spots, listings to identify true Workplace Services spots
+      // Workplace Services spots = BCI-managed AND no owner (ownerId is null)
+      const allSpots = await storage.getAllParkingSpots();
       const allListings = await storage.getAllSpotListings();
-      const allUsers = await storage.getAllUsers();
-      const adminUserIds = new Set(allUsers.filter(u => u.roles?.includes('admin')).map(u => u.id));
       
-      // Get listing IDs where the owner is an admin (Workplace Services)
-      const workplaceServicesListingIds = new Set(
-        allListings.filter(l => adminUserIds.has(l.ownerId)).map(l => l.id)
+      // True Workplace Services spots: BCI-managed AND no owner
+      const workplaceServicesSpotIds = new Set(
+        allSpots.filter(s => s.isBciManaged === true && s.ownerId === null).map(s => s.id)
       );
       
-      // Get all completed bookings for listings created by Workplace Services (admin)
+      // Get listing IDs for Workplace Services spots only
+      const workplaceServicesListingIds = new Set(
+        allListings.filter(l => workplaceServicesSpotIds.has(l.spotId)).map(l => l.id)
+      );
+      
+      // Get all completed bookings for Workplace Services spots only
       const allBookings = await storage.getAllBookings();
       const bciBookings = allBookings.filter(b => 
         workplaceServicesListingIds.has(b.listingId) && 

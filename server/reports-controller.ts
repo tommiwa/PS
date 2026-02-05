@@ -861,17 +861,19 @@ export async function getSharedPoolUsageReport(req: Request, res: Response) {
       storage.getAllSpotListings()
     ]);
     
-    // Get admin user IDs (Workplace Services)
-    const adminUserIds = new Set(allUsers.filter(u => u.roles?.includes('admin')).map(u => u.id));
+    // True Workplace Services spots: BCI-managed AND no owner (ownerId is null)
+    const workplaceServicesSpotIds = new Set(
+      allSpots.filter(s => s.isBciManaged === true && s.ownerId === null).map(s => s.id)
+    );
     
-    // Get listing IDs where the owner is an admin (Workplace Services)
+    // Get listing IDs for Workplace Services spots only
     const workplaceServicesListingIds = new Set(
-      allListings.filter(l => adminUserIds.has(l.ownerId)).map(l => l.id)
+      allListings.filter(l => workplaceServicesSpotIds.has(l.spotId)).map(l => l.id)
     );
     
     const listingsMap = new Map(allListings.map(l => [l.id, l]));
     
-    // Filter bookings for Workplace Services listings only
+    // Filter bookings for Workplace Services spots only (BCI-managed with no owner)
     const filteredBookings = allBookings.filter((b: any) => {
       const bookingDate = b.bookingDate;
       const isInDateRange = bookingDate >= dateRange.from && bookingDate <= dateRange.to;
