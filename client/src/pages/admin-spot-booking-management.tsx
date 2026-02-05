@@ -454,6 +454,19 @@ export default function AdminSpotBookingManagement() {
     enabled: scope === 'bci' // Only fetch for Shared Pool view
   });
 
+  // Calculate active totals for the first period (excluding removed bookings)
+  const payrollActiveTotals = useMemo(() => {
+    const firstPeriod = payrollSummary?.periods?.[0];
+    if (!firstPeriod) return { bookings: 0, amount: 0, periodLabel: 'Current period' };
+    
+    const activeBookings = firstPeriod.bookings.filter(b => !b.excludedFromPayroll);
+    return {
+      bookings: activeBookings.length,
+      amount: activeBookings.reduce((sum, b) => sum + b.totalAmount, 0),
+      periodLabel: firstPeriod.periodLabel
+    };
+  }, [payrollSummary]);
+
   // Fetch available payroll periods for History tab filter (only for BCI scope)
   const { data: payrollPeriodsData } = useQuery<{ periods: { value: string; label: string }[] }>({
     queryKey: ["/api/admin/payroll-periods"],
@@ -1525,10 +1538,10 @@ export default function AdminSpotBookingManagement() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold" data-testid="stat-payroll-revenue">
-                      ${(payrollSummary?.periods?.[0]?.totalAmount || 0).toLocaleString()}
+                      ${payrollActiveTotals.amount.toLocaleString()}
                     </div>
                     <p className="text-xs text-green-600">
-                      {payrollSummary?.periods?.[0]?.periodLabel || 'Current period'}
+                      {payrollActiveTotals.periodLabel}
                     </p>
                   </CardContent>
                 </Card>
@@ -1580,10 +1593,10 @@ export default function AdminSpotBookingManagement() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold" data-testid="stat-payroll-bookings">
-                      {payrollSummary?.periods?.[0]?.totalBookings || 0}
+                      {payrollActiveTotals.bookings}
                     </div>
                     <p className="text-xs text-purple-600">
-                      {payrollSummary?.periods?.[0]?.periodLabel || 'Current period'}
+                      {payrollActiveTotals.periodLabel}
                     </p>
                   </CardContent>
                 </Card>
@@ -2389,7 +2402,13 @@ export default function AdminSpotBookingManagement() {
                   <p className="text-sm">Bookings for BCI-managed spots will appear here grouped by deduction period.</p>
                 </div>
               ) : (
-                payrollSummary.periods.map((period) => (
+                payrollSummary.periods.map((period) => {
+                  // Calculate active bookings (exclude removed ones)
+                  const activeBookings = period.bookings.filter(b => !b.excludedFromPayroll);
+                  const activeBookingsCount = activeBookings.length;
+                  const activeAmount = activeBookings.reduce((sum, b) => sum + b.totalAmount, 0);
+                  
+                  return (
                   <Card key={period.period} className="bg-purple-50/50">
                     <CardHeader className="pb-2">
                       <div className="flex items-center justify-between">
@@ -2403,10 +2422,10 @@ export default function AdminSpotBookingManagement() {
                         <div className="flex items-center gap-4 text-sm">
                           <span className="flex items-center gap-1">
                             <Users className="h-4 w-4" />
-                            {period.totalBookings} bookings
+                            {activeBookingsCount} bookings
                           </span>
                           <span className="font-semibold text-purple-600">
-                            ${period.totalAmount.toFixed(2)} total
+                            ${activeAmount.toFixed(2)} total
                           </span>
                         </div>
                       </div>
@@ -2566,7 +2585,7 @@ export default function AdminSpotBookingManagement() {
                       </div>
                     </CardContent>
                   </Card>
-                ))
+                )})
               )}
             </CardContent>
           </Card>

@@ -922,6 +922,8 @@ export async function getSharedPoolUsageReport(req: Request, res: Response) {
       const userData = userBookingsMap.get(user.id)!;
       const amount = Number(booking.dailyRate) || 0;
       
+      const isExcluded = booking.excludedFromPayroll || false;
+      
       userData.bookings.push({
         bookingId: booking.id,
         spotNumber: spot.spotNumber,
@@ -929,17 +931,26 @@ export async function getSharedPoolUsageReport(req: Request, res: Response) {
         bookingDate: booking.bookingDate,
         amount,
         donateToCharity: listing?.donateToCharity || false,
-        excludedFromPayroll: booking.excludedFromPayroll || false
+        excludedFromPayroll: isExcluded
       });
-      userData.totalAmount += amount;
+      // Only add to total if not excluded
+      if (!isExcluded) {
+        userData.totalAmount += amount;
+      }
     });
     
-    const usageByUser = Array.from(userBookingsMap.values()).map(userData => ({
-      ...userData,
-      bookingCount: userData.bookings.length
-    })).sort((a, b) => b.totalAmount - a.totalAmount);
+    const usageByUser = Array.from(userBookingsMap.values()).map(userData => {
+      // Count only active bookings
+      const activeBookings = userData.bookings.filter(b => !b.excludedFromPayroll);
+      return {
+        ...userData,
+        bookingCount: activeBookings.length
+      };
+    }).sort((a, b) => b.totalAmount - a.totalAmount);
     
-    const totalBookings = filteredBookings.length;
+    // Summary should only count active bookings
+    const activeBookingsCount = usageByUser.reduce((sum, u) => sum + u.bookingCount, 0);
+    const totalBookings = activeBookingsCount;
     const totalAmount = usageByUser.reduce((sum, u) => sum + u.totalAmount, 0);
     const uniqueUsers = usageByUser.length;
     
