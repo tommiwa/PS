@@ -1,14 +1,13 @@
 // Notification Service - handles email and in-app notifications
-// Supports Mailgun and Microsoft 365 Graph API for email functionality
+// Supports Mandrill and Microsoft 365 Graph API for email functionality
 
 import { ConfidentialClientApplication, Configuration } from '@azure/msal-node';
 import axios from 'axios';
-import FormData from 'form-data';
 import type { WaitingList, ParkingSpot, AuthUser } from '@shared/schema';
 import { storage } from './storage';
 
 // Email provider configuration
-type EmailProvider = 'ms365' | 'mailgun' | 'mock';
+type EmailProvider = 'ms365' | 'mandrill' | 'mock';
 
 // Check which email providers are configured
 const MS365_CONFIGURED = !!(
@@ -17,10 +16,10 @@ const MS365_CONFIGURED = !!(
   process.env.MS365_CLIENT_SECRET &&
   process.env.MS365_SENDER_EMAIL
 );
-const MAILGUN_CONFIGURED = !!(process.env.MAILGUN_API_KEY && process.env.MAILGUN_DOMAIN);
+const MANDRILL_CONFIGURED = !!(process.env.MANDRILL_API_KEY);
 
 // Determine which provider to use (MS365 takes priority if both are configured)
-const activeProvider: EmailProvider = MS365_CONFIGURED ? 'ms365' : (MAILGUN_CONFIGURED ? 'mailgun' : 'mock');
+const activeProvider: EmailProvider = MS365_CONFIGURED ? 'ms365' : (MANDRILL_CONFIGURED ? 'mandrill' : 'mock');
 
 let msalClient: ConfidentialClientApplication | null = null;
 
@@ -41,52 +40,60 @@ if (MS365_CONFIGURED) {
   }
 }
 
-// Log Mailgun configuration status
-if (MAILGUN_CONFIGURED) {
-  console.log('✓ Mailgun configured successfully');
+// Log Mandrill configuration status
+if (MANDRILL_CONFIGURED) {
+  console.log('✓ Mandrill configured successfully');
 }
 
 // Log the active email provider
 if (activeProvider === 'ms365') {
   console.log('📧 Email provider: Microsoft 365 Graph API');
-} else if (activeProvider === 'mailgun') {
-  console.log('📧 Email provider: Mailgun');
+} else if (activeProvider === 'mandrill') {
+  console.log('📧 Email provider: Mandrill');
 } else {
   console.log('⚠️  No email provider configured - using mock notifications for development');
 }
 
-// Send email via Mailgun API
-async function sendEmailViaMailgun(
+// Send email via Mandrill API
+async function sendEmailViaMandrill(
   to: string,
   subject: string,
   text: string,
   html: string
 ): Promise<void> {
-  const apiKey = process.env.MAILGUN_API_KEY!;
-  const domain = process.env.MAILGUN_DOMAIN!;
-  const fromEmail = process.env.MAILGUN_FROM_EMAIL || `noreply@${domain}`;
+  const apiKey = process.env.MANDRILL_API_KEY!;
+  const fromEmail = process.env.MANDRILL_FROM_EMAIL || 'noreply@bci.ca';
+  const fromName = process.env.MANDRILL_FROM_NAME || 'BCI ParkShare';
   
-  const form = new FormData();
-  form.append('from', `BCI ParkShare <${fromEmail}>`);
-  form.append('to', to);
-  form.append('subject', subject);
-  form.append('text', text);
-  form.append('html', html);
-  
-  // Determine API endpoint (US or EU region)
-  const apiEndpoint = process.env.MAILGUN_API_REGION === 'EU' 
-    ? 'https://api.eu.mailgun.net' 
-    : 'https://api.mailgun.net';
+  const payload = {
+    key: apiKey,
+    message: {
+      html: html,
+      text: text,
+      subject: subject,
+      from_email: fromEmail,
+      from_name: fromName,
+      to: [
+        {
+          email: to,
+          type: 'to'
+        }
+      ],
+      headers: {
+        'Reply-To': fromEmail
+      },
+      track_opens: true,
+      track_clicks: true
+    }
+  };
   
   await axios.post(
-    `${apiEndpoint}/v3/${domain}/messages`,
-    form,
+    'https://mandrillapp.com/api/1.0/messages/send.json',
+    payload,
     {
-      auth: {
-        username: 'api',
-        password: apiKey
-      },
-      headers: form.getHeaders()
+      headers: {
+        'Content-Type': 'application/json'
+      }
     }
   );
 }
@@ -153,12 +160,12 @@ async function sendEmailViaMS365(
 export function getEmailProviderStatus(): { 
   provider: EmailProvider; 
   ms365Available: boolean; 
-  mailgunAvailable: boolean;
+  mandrillAvailable: boolean;
 } {
   return {
     provider: activeProvider,
     ms365Available: MS365_CONFIGURED,
-    mailgunAvailable: MAILGUN_CONFIGURED
+    mandrillAvailable: MANDRILL_CONFIGURED
   };
 }
 
@@ -1251,32 +1258,32 @@ export async function sendEmailNotification(notification: EmailNotification): Pr
         console.log(`✓ Email sent via MS365 to ${notification.to}: ${notification.subject}`);
         return { success: true, provider: 'ms365' };
       } catch (ms365Error) {
-        console.error('❌ MS365 email failed, attempting Mailgun fallback:', ms365Error);
-        // Fall through to Mailgun if available
-        if (MAILGUN_CONFIGURED) {
-          await sendEmailViaMailgun(
+        console.error('❌ MS365 email failed, attempting Mandrill fallback:', ms365Error);
+        // Fall through to Mandrill if available
+        if (MANDRILL_CONFIGURED) {
+          await sendEmailViaMandrill(
             notification.to,
             notification.subject,
             notification.text,
             notification.html
           );
-          console.log(`✓ Email sent via Mailgun (fallback) to ${notification.to}: ${notification.subject}`);
-          return { success: true, provider: 'mailgun' };
+          console.log(`✓ Email sent via Mandrill (fallback) to ${notification.to}: ${notification.subject}`);
+          return { success: true, provider: 'mandrill' };
         }
         throw ms365Error;
       }
     }
 
-    // Use Mailgun if it's the active provider
-    if (activeProvider === 'mailgun' && MAILGUN_CONFIGURED) {
-      await sendEmailViaMailgun(
+    // Use Mandrill if it's the active provider
+    if (activeProvider === 'mandrill' && MANDRILL_CONFIGURED) {
+      await sendEmailViaMandrill(
         notification.to,
         notification.subject,
         notification.text,
         notification.html
       );
-      console.log(`✓ Email sent via Mailgun to ${notification.to}: ${notification.subject}`);
-      return { success: true, provider: 'mailgun' };
+      console.log(`✓ Email sent via Mandrill to ${notification.to}: ${notification.subject}`);
+      return { success: true, provider: 'mandrill' };
     }
 
     throw new Error('No email provider available');

@@ -1,6 +1,5 @@
 import ExcelJS from 'exceljs';
 import axios from 'axios';
-import FormData from 'form-data';
 import type {
   ReportOverviewResponse,
   ReportUtilizationResponse,
@@ -11,22 +10,22 @@ import type {
   SharedPoolUsageReportResponse
 } from '@shared/schema';
 
-// Initialize Mailgun if API key is available
-const MAILGUN_CONFIGURED = !!(process.env.MAILGUN_API_KEY && process.env.MAILGUN_DOMAIN);
+// Initialize Mandrill if API key is available
+const MANDRILL_CONFIGURED = !!(process.env.MANDRILL_API_KEY);
 
-if (MAILGUN_CONFIGURED) {
-  console.log('✓ Mailgun configured for report emails');
+if (MANDRILL_CONFIGURED) {
+  console.log('✓ Mandrill configured for report emails');
 } else {
-  console.warn('⚠️  MAILGUN_API_KEY or MAILGUN_DOMAIN not found - email reports will not be available');
+  console.warn('⚠️  MANDRILL_API_KEY not found - email reports will not be available');
 }
 
 // Check if email service is available
 export function isEmailServiceAvailable(): boolean {
-  return MAILGUN_CONFIGURED;
+  return MANDRILL_CONFIGURED;
 }
 
-// Send email via Mailgun API with attachment
-async function sendEmailViaMailgun(options: {
+// Send email via Mandrill API with attachment
+async function sendEmailViaMandrill(options: {
   to: string[];
   subject: string;
   text: string;
@@ -34,40 +33,44 @@ async function sendEmailViaMailgun(options: {
   attachment: Buffer;
   filename: string;
 }): Promise<void> {
-  const apiKey = process.env.MAILGUN_API_KEY!;
-  const domain = process.env.MAILGUN_DOMAIN!;
-  const fromEmail = process.env.MAILGUN_FROM_EMAIL || `noreply@${domain}`;
+  const apiKey = process.env.MANDRILL_API_KEY!;
+  const fromEmail = process.env.MANDRILL_FROM_EMAIL || 'noreply@bci.ca';
+  const fromName = process.env.MANDRILL_FROM_NAME || 'BCI ParkShare';
   
-  const form = new FormData();
-  form.append('from', `BCI ParkShare <${fromEmail}>`);
-  
-  // Add all recipients
-  options.to.forEach(recipient => {
-    form.append('to', recipient);
-  });
-  
-  form.append('subject', options.subject);
-  form.append('text', options.text);
-  form.append('html', options.html);
-  form.append('attachment', options.attachment, {
-    filename: options.filename,
-    contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-  });
-  
-  // Determine API endpoint (US or EU region)
-  const apiEndpoint = process.env.MAILGUN_API_REGION === 'EU' 
-    ? 'https://api.eu.mailgun.net' 
-    : 'https://api.mailgun.net';
+  const payload = {
+    key: apiKey,
+    message: {
+      html: options.html,
+      text: options.text,
+      subject: options.subject,
+      from_email: fromEmail,
+      from_name: fromName,
+      to: options.to.map(email => ({
+        email: email,
+        type: 'to'
+      })),
+      headers: {
+        'Reply-To': fromEmail
+      },
+      attachments: [
+        {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          name: options.filename,
+          content: options.attachment.toString('base64')
+        }
+      ],
+      track_opens: true,
+      track_clicks: true
+    }
+  };
   
   await axios.post(
-    `${apiEndpoint}/v3/${domain}/messages`,
-    form,
+    'https://mandrillapp.com/api/1.0/messages/send.json',
+    payload,
     {
-      auth: {
-        username: 'api',
-        password: apiKey
-      },
-      headers: form.getHeaders()
+      headers: {
+        'Content-Type': 'application/json'
+      }
     }
   );
 }
@@ -515,10 +518,10 @@ export async function sendReportEmail(
   dateRange: { from: string; to: string },
   scope: 'all' | 'bci'
 ): Promise<{ success: boolean; message: string }> {
-  if (!MAILGUN_CONFIGURED) {
+  if (!MANDRILL_CONFIGURED) {
     return {
       success: false,
-      message: 'Email service is not configured. Please contact your administrator to set up MAILGUN_API_KEY and MAILGUN_DOMAIN.'
+      message: 'Email service is not configured. Please contact your administrator to set up MANDRILL_API_KEY.'
     };
   }
 
@@ -627,8 +630,8 @@ BCI ParkShare Admin System`;
   </div>
 </div>`;
 
-    // Send email via Mailgun
-    await sendEmailViaMailgun({
+    // Send email via Mandrill
+    await sendEmailViaMandrill({
       to: recipients,
       subject: emailSubject,
       text: emailText,

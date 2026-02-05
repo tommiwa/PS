@@ -68,8 +68,8 @@ Preferred communication style: Simple, everyday language.
 - **Neon Database**: Serverless PostgreSQL
 - **Email Service**: Dual-provider support with automatic failover
   - **Microsoft 365 Graph API** (Primary): Uses Azure AD app registration for corporate email delivery from @bci.ca domain
-  - **Mailgun** (Secondary/Fallback): Alternative email provider with API key authentication
-  - **Provider Priority**: MS365 is used first if configured; Mailgun is used as fallback or if MS365 is not configured
+  - **Mandrill** (Secondary/Fallback): Mailchimp's transactional email service with API key authentication
+  - **Provider Priority**: MS365 is used first if configured; Mandrill is used as fallback or if MS365 is not configured
   - **Mock Mode**: When neither provider is configured, emails are logged to console for development
 
 ### Email Configuration (Environment Variables)
@@ -79,11 +79,10 @@ Preferred communication style: Simple, everyday language.
 - `MS365_CLIENT_SECRET`: Client secret from Azure app registration
 - `MS365_SENDER_EMAIL`: The M365 mailbox to send from (e.g., noreply@bci.ca)
 
-**Mailgun (Alternative):**
-- `MAILGUN_API_KEY`: Mailgun API key (found in Mailgun dashboard under API Keys)
-- `MAILGUN_DOMAIN`: Your Mailgun sending domain (e.g., mg.bci.ca or sandbox domain)
-- `MAILGUN_FROM_EMAIL`: Sender email address (optional, defaults to noreply@MAILGUN_DOMAIN)
-- `MAILGUN_API_REGION`: API region - set to "EU" for European region, omit for US (optional)
+**Mandrill (Mailchimp Transactional Email):**
+- `MANDRILL_API_KEY`: Mandrill API key (found in Mandrill dashboard under Settings > SMTP & API Info)
+- `MANDRILL_FROM_EMAIL`: Sender email address (optional, defaults to noreply@bci.ca)
+- `MANDRILL_FROM_NAME`: Sender display name (optional, defaults to "BCI ParkShare")
 
 ### Key Libraries
 - **@tanstack/react-query**: Server state management
