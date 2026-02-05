@@ -852,30 +852,35 @@ export async function getSharedPoolUsageReport(req: Request, res: Response) {
       to: to > today ? today : to
     };
     
-    const [allSpots, allBookings, allUsers, locations, departments] = await Promise.all([
+    const [allSpots, allBookings, allUsers, locations, departments, allListings] = await Promise.all([
       storage.getAllParkingSpots(),
       storage.getAllBookings(),
       storage.getAllUsers(),
       storage.getLocations(),
-      storage.getDepartments()
+      storage.getDepartments(),
+      storage.getAllSpotListings()
     ]);
     
-    const sharedPoolSpots = allSpots.filter(s => s.isBciManaged === true && s.ownerId === null);
-    const sharedPoolSpotIds = new Set(sharedPoolSpots.map(s => s.id));
+    // Get admin user IDs (Workplace Services)
+    const adminUserIds = new Set(allUsers.filter(u => u.roles?.includes('admin')).map(u => u.id));
     
+    // Get listing IDs where the owner is an admin (Workplace Services)
+    const workplaceServicesListingIds = new Set(
+      allListings.filter(l => adminUserIds.has(l.ownerId)).map(l => l.id)
+    );
+    
+    const listingsMap = new Map(allListings.map(l => [l.id, l]));
+    
+    // Filter bookings for Workplace Services listings only
     const filteredBookings = allBookings.filter((b: any) => {
       const bookingDate = b.bookingDate;
       const isInDateRange = bookingDate >= dateRange.from && bookingDate <= dateRange.to;
       const isPastOrToday = bookingDate <= today; // Include today's completed bookings
-      const isSharedPoolSpot = sharedPoolSpotIds.has(b.spotId);
+      const isWorkplaceServicesListing = workplaceServicesListingIds.has(b.listingId);
       const isValidStatus = b.status === 'confirmed' || b.status === 'completed';
       
-      return isInDateRange && isPastOrToday && isSharedPoolSpot && isValidStatus;
+      return isInDateRange && isPastOrToday && isWorkplaceServicesListing && isValidStatus;
     });
-    
-    // Fetch all spot listings for charity info
-    const allListings = await storage.getAllSpotListings();
-    const listingsMap = new Map(allListings.map(l => [l.id, l]));
     
     const userBookingsMap = new Map<string, {
       userId: string;
@@ -896,7 +901,7 @@ export async function getSharedPoolUsageReport(req: Request, res: Response) {
     
     filteredBookings.forEach((booking: any) => {
       const user = allUsers.find(u => u.id === booking.renterId);
-      const spot = sharedPoolSpots.find(s => s.id === booking.spotId);
+      const spot = allSpots.find(s => s.id === booking.spotId);
       const location = locations.find((l: any) => l.id === spot?.locationId);
       const department = departments.find((d: any) => d.id === user?.departmentId);
       const listing = listingsMap.get(booking.listingId);
