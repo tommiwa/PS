@@ -458,6 +458,109 @@ BCI ParkShare Team`;
   };
 };
 
+// Owner notification when someone books their spot
+export const createOwnerBookingNotification = (
+  owner: { name: string; email: string },
+  renter: { name: string; email: string },
+  booking: {
+    id: string;
+    spotNumber: string;
+    location: string;
+    building: string;
+    startDate: Date;
+    endDate: Date;
+    rate: number;
+    totalAmount: number;
+  }
+): EmailNotification => {
+  const subject = `📅 New Booking - Your Spot ${booking.spotNumber}`;
+  
+  const text = `Dear ${owner.name},
+
+Great news! Someone has booked your parking spot.
+
+BOOKING DETAILS:
+• Booking ID: ${booking.id}
+• Spot Number: ${booking.spotNumber}
+• Location: ${booking.location}
+• Building: ${booking.building}
+• Renter: ${renter.name} (${renter.email})
+• Start Date: ${booking.startDate.toLocaleDateString()}
+• End Date: ${booking.endDate.toLocaleDateString()}
+• Rate: $${booking.rate}/day
+• Total Amount: $${booking.totalAmount}
+
+Your spot will be used during this period. If you have any concerns, please contact the BCI ParkShare team.
+
+Best regards,
+BCI ParkShare Team`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Booking for Your Spot</title>
+  <style>
+    .container { max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; }
+    .header { background: #3b82f6; color: white; padding: 20px; text-align: center; }
+    .content { padding: 30px; background: #f8fafc; }
+    .booking-details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3b82f6; }
+    .renter-info { background: #dbeafe; padding: 15px; border-radius: 8px; margin: 15px 0; }
+    .footer { text-align: center; color: #64748b; padding: 20px; }
+    .amount { font-size: 1.2em; font-weight: bold; color: #10b981; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📅 New Booking!</h1>
+    </div>
+    
+    <div class="content">
+      <p>Dear ${owner.name},</p>
+      <p>Great news! Someone has booked your parking spot.</p>
+      
+      <div class="booking-details">
+        <h3>📋 Booking Details</h3>
+        <ul>
+          <li><strong>Booking ID:</strong> ${booking.id}</li>
+          <li><strong>Spot Number:</strong> ${booking.spotNumber}</li>
+          <li><strong>Location:</strong> ${booking.location}</li>
+          <li><strong>Building:</strong> ${booking.building}</li>
+          <li><strong>Start Date:</strong> ${booking.startDate.toLocaleDateString()}</li>
+          <li><strong>End Date:</strong> ${booking.endDate.toLocaleDateString()}</li>
+          <li><strong>Rate:</strong> $${booking.rate}/day</li>
+          <li><strong>Total Amount:</strong> <span class="amount">$${booking.totalAmount}</span></li>
+        </ul>
+      </div>
+      
+      <div class="renter-info">
+        <h4>👤 Renter Information</h4>
+        <p><strong>Name:</strong> ${renter.name}<br>
+        <strong>Email:</strong> ${renter.email}</p>
+      </div>
+      
+      <p>Your spot will be used during this period. If you have any concerns, please contact the BCI ParkShare team.</p>
+    </div>
+    
+    <div class="footer">
+      <p>Best regards,<br>BCI ParkShare Team</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  return {
+    to: owner.email,
+    subject,
+    text,
+    html,
+    type: 'booking_confirmation'
+  };
+};
+
 export const createBookingCancellationNotification = (
   user: { name: string; email: string },
   booking: {
@@ -582,6 +685,112 @@ BCI ParkShare Team`;
 
   return {
     to: user.email,
+    subject,
+    text,
+    html,
+    type: 'booking_cancelled'
+  };
+};
+
+// Owner notification when a booking on their spot is cancelled
+export const createOwnerBookingCancellationNotification = (
+  owner: { name: string; email: string },
+  renter: { name: string; email: string },
+  booking: {
+    id: string;
+    spotNumber: string;
+    location: string;
+    building: string;
+    bookingDate: Date | string;
+    cancelledBy: string;
+    reason?: string;
+  }
+): EmailNotification => {
+  const subject = `❌ Booking Cancelled - Spot ${booking.spotNumber}`;
+  
+  const bookingDateStr = booking.bookingDate instanceof Date 
+    ? booking.bookingDate.toLocaleDateString() 
+    : new Date(booking.bookingDate).toLocaleDateString();
+  
+  const text = `Dear ${owner.name},
+
+A booking for your parking spot has been cancelled.
+
+BOOKING DETAILS:
+• Booking ID: ${booking.id}
+• Spot Number: ${booking.spotNumber}
+• Location: ${booking.location}
+• Building: ${booking.building}
+• Booking Date: ${bookingDateStr}
+• Renter: ${renter.name} (${renter.email})
+• Cancelled By: ${booking.cancelledBy}${booking.reason ? `\n• Reason: ${booking.reason}` : ''}
+
+Your spot is now available for this date. You may create a new listing if you wish to make it available again.
+
+Best regards,
+BCI ParkShare Team`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Booking Cancelled</title>
+  <style>
+    .container { max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; }
+    .header { background: #f59e0b; color: white; padding: 20px; text-align: center; }
+    .content { padding: 30px; background: #f8fafc; }
+    .booking-details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b; }
+    .renter-info { background: #fef3c7; padding: 15px; border-radius: 8px; margin: 15px 0; }
+    .footer { text-align: center; color: #64748b; padding: 20px; }
+    .info-box { background: #dbeafe; border-left: 4px solid #3b82f6; padding: 15px; margin: 20px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>❌ Booking Cancelled</h1>
+    </div>
+    
+    <div class="content">
+      <p>Dear ${owner.name},</p>
+      <p>A booking for your parking spot has been cancelled.</p>
+      
+      <div class="booking-details">
+        <h3>📋 Booking Details</h3>
+        <ul>
+          <li><strong>Booking ID:</strong> ${booking.id}</li>
+          <li><strong>Spot Number:</strong> ${booking.spotNumber}</li>
+          <li><strong>Location:</strong> ${booking.location}</li>
+          <li><strong>Building:</strong> ${booking.building}</li>
+          <li><strong>Booking Date:</strong> ${bookingDateStr}</li>
+          <li><strong>Cancelled By:</strong> ${booking.cancelledBy}</li>
+          ${booking.reason ? `<li><strong>Reason:</strong> ${booking.reason}</li>` : ''}
+        </ul>
+      </div>
+      
+      <div class="renter-info">
+        <h4>👤 Renter Information</h4>
+        <p><strong>Name:</strong> ${renter.name}<br>
+        <strong>Email:</strong> ${renter.email}</p>
+      </div>
+      
+      <div class="info-box">
+        <strong>What's Next?</strong><br>
+        Your spot is now available for this date. You may create a new listing if you wish to make it available again.
+      </div>
+    </div>
+    
+    <div class="footer">
+      <p>Best regards,<br>BCI ParkShare Team</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  return {
+    to: owner.email,
     subject,
     text,
     html,
@@ -1398,19 +1607,20 @@ export async function sendBookingConfirmationNotification(
     rate: number;
     totalAmount: number;
   },
-  userPreferences: { bookingConfirmations?: boolean; emailNotifications?: boolean } = {}
-): Promise<{ emailSent: boolean; inAppSent: boolean }> {
-  const results = { emailSent: false, inAppSent: false };
+  userPreferences: { bookingConfirmations?: boolean; emailNotifications?: boolean } = {},
+  owner?: { name: string; email: string; id: string } | null
+): Promise<{ emailSent: boolean; inAppSent: boolean; ownerEmailSent: boolean; ownerInAppSent: boolean }> {
+  const results = { emailSent: false, inAppSent: false, ownerEmailSent: false, ownerInAppSent: false };
 
   try {
-    // Send email notification if user has booking confirmations enabled
+    // Send email notification to renter if user has booking confirmations enabled
     if (userPreferences.emailNotifications !== false && userPreferences.bookingConfirmations !== false) {
       const emailNotification = createBookingConfirmationNotification(user, booking);
       const emailResult = await sendEmailNotification(emailNotification);
       results.emailSent = emailResult.success;
     }
 
-    // Send in-app notification
+    // Send in-app notification to renter
     await storage.createInAppNotification({
       userId: user.id,
       type: 'booking_confirmation',
@@ -1425,6 +1635,36 @@ export async function sendBookingConfirmationNotification(
     });
     
     results.inAppSent = true;
+
+    // Send notification to spot owner if provided
+    if (owner && owner.email) {
+      try {
+        const ownerNotification = createOwnerBookingNotification(owner, user, booking);
+        const ownerEmailResult = await sendEmailNotification(ownerNotification);
+        results.ownerEmailSent = ownerEmailResult.success;
+        
+        // Send in-app notification to owner
+        await storage.createInAppNotification({
+          userId: owner.id,
+          type: 'booking_confirmation',
+          title: `New Booking: Spot ${booking.spotNumber}`,
+          message: `${user.name} has booked your spot ${booking.spotNumber} from ${booking.startDate.toLocaleDateString()} to ${booking.endDate.toLocaleDateString()}.`,
+          data: {
+            bookingId: booking.id,
+            spotNumber: booking.spotNumber,
+            renterName: user.name,
+            renterEmail: user.email,
+            totalAmount: booking.totalAmount
+          },
+          read: false
+        });
+        results.ownerInAppSent = true;
+        
+        console.log(`✓ Owner notification sent to ${owner.name} (email: ${results.ownerEmailSent}, in-app: ${results.ownerInAppSent})`);
+      } catch (ownerError) {
+        console.error('❌ Error sending owner notification:', ownerError);
+      }
+    }
 
     console.log(`✓ Booking confirmation notifications sent to ${user.name} (email: ${results.emailSent}, in-app: ${results.inAppSent})`);
     
@@ -1626,19 +1866,20 @@ export async function sendBookingCancellationNotification(
     cancelledBy: string;
     reason?: string;
   },
-  userPreferences: { bookingConfirmations?: boolean; emailNotifications?: boolean } = {}
-): Promise<{ emailSent: boolean; inAppSent: boolean }> {
-  const results = { emailSent: false, inAppSent: false };
+  userPreferences: { bookingConfirmations?: boolean; emailNotifications?: boolean } = {},
+  owner?: { name: string; email: string; id: string } | null
+): Promise<{ emailSent: boolean; inAppSent: boolean; ownerEmailSent: boolean; ownerInAppSent: boolean }> {
+  const results = { emailSent: false, inAppSent: false, ownerEmailSent: false, ownerInAppSent: false };
 
   try {
-    // Send email notification if user has booking confirmations enabled
+    // Send email notification to renter if user has booking confirmations enabled
     if (userPreferences.emailNotifications !== false && userPreferences.bookingConfirmations !== false) {
       const emailNotification = createBookingCancellationNotification(user, booking);
       const emailResult = await sendEmailNotification(emailNotification);
       results.emailSent = emailResult.success;
     }
 
-    // Send in-app notification (always sent)
+    // Send in-app notification to renter (always sent)
     await storage.createInAppNotification({
       userId: user.id,
       type: 'booking_cancelled',
@@ -1656,6 +1897,41 @@ export async function sendBookingCancellationNotification(
     });
     
     results.inAppSent = true;
+
+    // Send notification to spot owner if provided
+    if (owner && owner.email) {
+      try {
+        const ownerNotification = createOwnerBookingCancellationNotification(owner, user, booking);
+        const ownerEmailResult = await sendEmailNotification(ownerNotification);
+        results.ownerEmailSent = ownerEmailResult.success;
+        
+        const bookingDateStr = booking.bookingDate instanceof Date 
+          ? booking.bookingDate.toLocaleDateString() 
+          : new Date(booking.bookingDate).toLocaleDateString();
+        
+        // Send in-app notification to owner
+        await storage.createInAppNotification({
+          userId: owner.id,
+          type: 'booking_cancelled',
+          title: `Booking Cancelled: Spot ${booking.spotNumber}`,
+          message: `A booking for your spot ${booking.spotNumber} on ${bookingDateStr} has been cancelled by ${booking.cancelledBy}.`,
+          data: {
+            bookingId: booking.id,
+            spotNumber: booking.spotNumber,
+            renterName: user.name,
+            renterEmail: user.email,
+            cancelledBy: booking.cancelledBy,
+            reason: booking.reason
+          },
+          read: false
+        });
+        results.ownerInAppSent = true;
+        
+        console.log(`✓ Owner cancellation notification sent to ${owner.name} (email: ${results.ownerEmailSent}, in-app: ${results.ownerInAppSent})`);
+      } catch (ownerError) {
+        console.error('❌ Error sending owner cancellation notification:', ownerError);
+      }
+    }
 
     console.log(`✓ Booking cancellation notifications sent to ${user.name} (email: ${results.emailSent}, in-app: ${results.inAppSent})`);
     

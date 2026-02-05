@@ -12,6 +12,7 @@ import {
   sendAssignmentNotification, 
   sendWelcomeNotification,
   sendBookingConfirmationNotification,
+  sendBookingCancellationNotification,
   sendPaymentReminderNotification,
   sendSpotAvailabilityNotification,
   sendWeeklySummaryNotification,
@@ -3060,11 +3061,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
               totalAmount: Number(newBooking.totalAmount) // Convert decimal to number
             };
 
-            // Send the notification asynchronously
+            // Get spot owner for notification (if it's a peer-to-peer listing)
+            let ownerInfo: { name: string; email: string; id: string } | null = null;
+            if (listing.ownerId) {
+              const owner = await storage.getUser(listing.ownerId);
+              if (owner && owner.email) {
+                const ownerDisplayName = owner.firstName && owner.lastName 
+                  ? `${owner.firstName} ${owner.lastName}`
+                  : owner.firstName || owner.lastName || owner.email || 'Owner';
+                ownerInfo = { name: ownerDisplayName, email: owner.email, id: owner.id };
+              }
+            }
+
+            // Send the notification asynchronously (to renter and optionally to owner)
             await sendBookingConfirmationNotification(
               { name: displayName, email: user.email || '', id: user.id },
               bookingDetails,
-              notificationPreferences || {}
+              notificationPreferences || {},
+              ownerInfo
             );
           }
         } catch (emailError) {
@@ -4351,6 +4365,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
         after: cancelledBooking
       });
 
+      // Send cancellation notification (fire-and-forget)
+      setImmediate(async () => {
+        try {
+          const renter = await storage.getUser(booking.renterId);
+          const listing = booking.listingId ? await storage.getSpotListing(booking.listingId) : null;
+          const spot = await storage.getParkingSpot(booking.spotId);
+          
+          if (renter && spot) {
+            const renterName = renter.firstName && renter.lastName 
+              ? `${renter.firstName} ${renter.lastName}`
+              : renter.firstName || renter.lastName || renter.email || 'User';
+            
+            const bookingDetails = {
+              id: booking.id,
+              spotNumber: spot.spotNumber,
+              location: 'BCI Campus',
+              building: 'BCI Campus',
+              bookingDate: booking.bookingDate,
+              cancelledBy: 'Renter',
+              reason: 'Cancelled by renter'
+            };
+            
+            // Get owner info if this is a peer-to-peer listing
+            let ownerInfo: { name: string; email: string; id: string } | null = null;
+            if (listing?.ownerId) {
+              const owner = await storage.getUser(listing.ownerId);
+              if (owner && owner.email) {
+                const ownerName = owner.firstName && owner.lastName 
+                  ? `${owner.firstName} ${owner.lastName}`
+                  : owner.firstName || owner.lastName || owner.email || 'Owner';
+                ownerInfo = { name: ownerName, email: owner.email, id: owner.id };
+              }
+            }
+            
+            await sendBookingCancellationNotification(
+              { name: renterName, email: renter.email || '', id: renter.id },
+              bookingDetails,
+              {},
+              ownerInfo
+            );
+          }
+        } catch (notifyError) {
+          console.error('Failed to send cancellation notification:', notifyError);
+        }
+      });
+
       res.json(cancelledBooking);
     } catch (error) {
       console.error("Error cancelling booking:", error);
@@ -4386,6 +4446,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: `Booking ${id} cancelled by admin: ${reason}`,
         before: booking,
         after: cancelledBooking
+      });
+
+      // Send cancellation notification (fire-and-forget)
+      setImmediate(async () => {
+        try {
+          const renter = await storage.getUser(booking.renterId);
+          const listing = booking.listingId ? await storage.getSpotListing(booking.listingId) : null;
+          const spot = await storage.getParkingSpot(booking.spotId);
+          
+          if (renter && spot) {
+            const renterName = renter.firstName && renter.lastName 
+              ? `${renter.firstName} ${renter.lastName}`
+              : renter.firstName || renter.lastName || renter.email || 'User';
+            
+            const bookingDetails = {
+              id: booking.id,
+              spotNumber: spot.spotNumber,
+              location: 'BCI Campus',
+              building: 'BCI Campus',
+              bookingDate: booking.bookingDate,
+              cancelledBy: 'Admin',
+              reason: reason
+            };
+            
+            // Get owner info if this is a peer-to-peer listing
+            let ownerInfo: { name: string; email: string; id: string } | null = null;
+            if (listing?.ownerId) {
+              const owner = await storage.getUser(listing.ownerId);
+              if (owner && owner.email) {
+                const ownerName = owner.firstName && owner.lastName 
+                  ? `${owner.firstName} ${owner.lastName}`
+                  : owner.firstName || owner.lastName || owner.email || 'Owner';
+                ownerInfo = { name: ownerName, email: owner.email, id: owner.id };
+              }
+            }
+            
+            await sendBookingCancellationNotification(
+              { name: renterName, email: renter.email || '', id: renter.id },
+              bookingDetails,
+              {},
+              ownerInfo
+            );
+          }
+        } catch (notifyError) {
+          console.error('Failed to send admin cancellation notification:', notifyError);
+        }
       });
 
       res.json(cancelledBooking);
