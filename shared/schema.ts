@@ -1377,6 +1377,7 @@ export interface SharedPoolUsageReportResponse {
       location: string;
       bookingDate: string;
       amount: number;
+      donateToCharity: boolean;
     }>;
     totalAmount: number;
     bookingCount: number;

@@ -3806,11 +3806,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bciSpotIds = allSpots.filter(s => s.isBciManaged).map(s => s.id);
       
       // Get all bookings for BCI spots - only those in current payroll period
+      // Include excluded bookings so they can be shown with "Removed" status
       const allBookings = await storage.getAllBookings();
       const bciBookings = allBookings.filter(b => {
         if (!bciSpotIds.includes(b.spotId)) return false;
         if (b.status !== 'confirmed' && b.status !== 'completed') return false;
-        if (b.excludedFromPayroll) return false; // Skip bookings excluded from payroll
+        // No longer skip excluded bookings - we want to show them as "Removed"
         
         // Check if booking falls into current payroll period based on deduction month logic
         const bookingDate = new Date(b.bookingDate + "T12:00:00");
@@ -3832,6 +3833,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const spotType = spot?.spotTypeId ? await storage.getSpotType(spot.spotTypeId) : null;
         const location = spot?.locationId ? await storage.getLocation(spot.locationId) : null;
         const renter = await storage.getUser(booking.renterId);
+        const listing = await storage.getSpotListing(booking.listingId);
         
         // Build location name from office, building, level
         const locationName = location 
@@ -3865,7 +3867,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           deductionMonth,
           deductionYear,
           deductionPeriod: `${deductionYear}-${String(deductionMonth + 1).padStart(2, '0')}`,
-          createdAt: booking.createdAt
+          createdAt: booking.createdAt,
+          excludedFromPayroll: booking.excludedFromPayroll || false,
+          donateToCharity: listing?.donateToCharity || false
         };
       }));
       

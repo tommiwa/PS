@@ -556,13 +556,13 @@ export async function exportSharedPoolUsageReport(data: SharedPoolUsageReportRes
   summarySheet.getColumn(5).width = 18;
   
   const detailSheet = workbook.addWorksheet('Booking Details');
-  detailSheet.mergeCells('A1:G1');
+  detailSheet.mergeCells('A1:H1');
   const detailTitle = detailSheet.getCell('A1');
   detailTitle.value = 'Shared Pool Booking Details';
   detailTitle.font = { bold: true, size: 16 };
   
   detailSheet.addRow([]);
-  const detailHeaderRow = detailSheet.addRow(['User Name', 'Email', 'Department', 'Spot Number', 'Location', 'Booking Date', 'Amount']);
+  const detailHeaderRow = detailSheet.addRow(['User Name', 'Email', 'Department', 'Spot Number', 'Location', 'Booking Date', 'Type', 'Amount']);
   detailHeaderRow.font = { bold: true };
   
   data.usageByUser.forEach(user => {
@@ -574,6 +574,7 @@ export async function exportSharedPoolUsageReport(data: SharedPoolUsageReportRes
         booking.spotNumber,
         booking.location,
         booking.bookingDate,
+        booking.donateToCharity ? 'Charity' : 'Regular',
         `$${booking.amount.toFixed(2)}`
       ]);
     });
@@ -586,7 +587,124 @@ export async function exportSharedPoolUsageReport(data: SharedPoolUsageReportRes
   detailSheet.getColumn(5).width = 35;
   detailSheet.getColumn(6).width = 15;
   detailSheet.getColumn(7).width = 12;
+  detailSheet.getColumn(8).width = 12;
   
   const buffer = await workbook.xlsx.writeBuffer();
   saveAs(new Blob([buffer]), `shared-pool-usage-report-${new Date().toISOString().split('T')[0]}.xlsx`);
+}
+
+// Interface for Payroll Period Summary
+interface PayrollBookingExport {
+  id: string;
+  spotNumber: string;
+  spotLocation: string;
+  renterName: string;
+  renterEmail: string;
+  renterDepartment: string;
+  bookingDate: string;
+  totalAmount: number;
+  status: string;
+  excludedFromPayroll: boolean;
+  donateToCharity: boolean;
+}
+
+interface PayrollPeriodSummaryExport {
+  period: string;
+  periodLabel: string;
+  totalBookings: number;
+  totalAmount: number;
+  bookings: PayrollBookingExport[];
+}
+
+export async function exportPayrollSummaryReport(periods: PayrollPeriodSummaryExport[]) {
+  const workbook = new ExcelJS.Workbook();
+  
+  periods.forEach(period => {
+    const worksheet = workbook.addWorksheet(period.periodLabel.substring(0, 31));
+    
+    worksheet.mergeCells('A1:I1');
+    const titleCell = worksheet.getCell('A1');
+    titleCell.value = `BCI ParkShare - Payroll Deduction Summary - ${period.periodLabel}`;
+    titleCell.font = { bold: true, size: 16 };
+    
+    worksheet.getCell('A2').value = `Generated: ${new Date().toLocaleString()}`;
+    
+    worksheet.addRow([]);
+    const summaryRow = worksheet.addRow(['PERIOD SUMMARY']);
+    summaryRow.getCell(1).font = { bold: true, size: 14 };
+    
+    // Calculate active bookings (not removed)
+    const activeBookings = period.bookings.filter(b => !b.excludedFromPayroll);
+    const removedBookings = period.bookings.filter(b => b.excludedFromPayroll);
+    const activeAmount = activeBookings.reduce((sum, b) => sum + b.totalAmount, 0);
+    
+    worksheet.addRow(['Metric', 'Value']);
+    worksheet.addRow(['Total Bookings (Active)', activeBookings.length]);
+    worksheet.addRow(['Total Amount (Active)', `$${activeAmount.toFixed(2)}`]);
+    worksheet.addRow(['Removed Bookings', removedBookings.length]);
+    
+    worksheet.addRow([]);
+    const detailRow = worksheet.addRow(['BOOKING DETAILS']);
+    detailRow.getCell(1).font = { bold: true, size: 14 };
+    
+    const headerRow = worksheet.addRow(['Employee', 'Email', 'Department', 'Spot', 'Location', 'Booking Date', 'Type', 'Amount', 'Status']);
+    headerRow.font = { bold: true };
+    headerRow.eachCell((cell) => {
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE5E7EB' }
+      };
+    });
+    
+    period.bookings.forEach(booking => {
+      const row = worksheet.addRow([
+        booking.renterName,
+        booking.renterEmail,
+        booking.renterDepartment || '-',
+        booking.spotNumber,
+        booking.spotLocation,
+        booking.bookingDate,
+        booking.donateToCharity ? 'Charity' : 'Regular',
+        `$${booking.totalAmount.toFixed(2)}`,
+        booking.excludedFromPayroll ? 'REMOVED' : (booking.status === 'completed' ? 'Completed' : 'Upcoming')
+      ]);
+      
+      // Style removed rows with red background and text
+      if (booking.excludedFromPayroll) {
+        row.eachCell((cell) => {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFFEE2E2' } // Light red background
+          };
+          cell.font = { color: { argb: 'FFDC2626' } }; // Red text
+        });
+      }
+      
+      // Style charity rows with pink type cell
+      if (booking.donateToCharity) {
+        const typeCell = row.getCell(7);
+        typeCell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFFCE7F3' } // Light pink
+        };
+        typeCell.font = { color: { argb: 'FFBE185D' } }; // Pink text
+      }
+    });
+    
+    worksheet.getColumn(1).width = 25;
+    worksheet.getColumn(2).width = 30;
+    worksheet.getColumn(3).width = 20;
+    worksheet.getColumn(4).width = 10;
+    worksheet.getColumn(5).width = 35;
+    worksheet.getColumn(6).width = 15;
+    worksheet.getColumn(7).width = 12;
+    worksheet.getColumn(8).width = 12;
+    worksheet.getColumn(9).width = 12;
+  });
+  
+  const buffer = await workbook.xlsx.writeBuffer();
+  saveAs(new Blob([buffer]), `payroll-deduction-summary-${new Date().toISOString().split('T')[0]}.xlsx`);
 }

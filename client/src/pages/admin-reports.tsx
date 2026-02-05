@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useReportFilters } from '@/components/reports/useReportFilters';
 import { exportSharedPoolUsageReport, exportSpotAssignmentsReport } from '@/utils/report-export';
-import { AlertCircle, FileSpreadsheet, ChevronDown, ChevronRight, Car, UserPlus, UserMinus, ArrowRightLeft } from 'lucide-react';
+import { AlertCircle, FileSpreadsheet, ChevronDown, ChevronRight, Car, UserPlus, UserMinus, ArrowRightLeft, Heart } from 'lucide-react';
 import type { SharedPoolUsageReportResponse, SpotAssignmentReportResponse } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -225,6 +225,7 @@ export default function AdminReportsPage() {
                           <TableHead>Name</TableHead>
                           <TableHead>Email</TableHead>
                           <TableHead>Department</TableHead>
+                          <TableHead>Type</TableHead>
                           <TableHead className="text-right">Amount</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -258,6 +259,7 @@ export default function AdminReportsPage() {
                                 </TableCell>
                                 <TableCell>{user.email}</TableCell>
                                 <TableCell>{user.department}</TableCell>
+                                <TableCell className="text-muted-foreground">—</TableCell>
                                 <TableCell className="text-right font-semibold">
                                   ${user.totalAmount.toFixed(2)}
                                 </TableCell>
@@ -275,6 +277,18 @@ export default function AdminReportsPage() {
                                   </TableCell>
                                   <TableCell className="text-muted-foreground">{user.email}</TableCell>
                                   <TableCell className="text-muted-foreground">{user.department}</TableCell>
+                                  <TableCell>
+                                    {booking.donateToCharity ? (
+                                      <Badge variant="outline" className="bg-pink-50 text-pink-700 border-pink-200">
+                                        <Heart className="h-3 w-3 mr-1 fill-pink-500" />
+                                        Charity
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200">
+                                        Regular
+                                      </Badge>
+                                    )}
+                                  </TableCell>
                                   <TableCell className="text-right">${booking.amount.toFixed(2)}</TableCell>
                                 </TableRow>
                               ))}

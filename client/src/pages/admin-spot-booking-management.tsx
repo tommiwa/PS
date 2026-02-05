@@ -61,10 +61,13 @@ import {
   Building2,
   Globe,
   Banknote,
-  X
+  X,
+  Heart,
+  RotateCcw
 } from "lucide-react"
 import type { Booking, BookingStatus, ParkingSpot } from "@shared/schema"
 import { quickExportBookingsPDF, quickExportBookingsExcel, generateParkingReceiptPDF, type ParkingReceiptData } from "@/utils/export-utils"
+import { exportPayrollSummaryReport } from "@/utils/report-export"
 
 // Define BookingScope type
 type BookingScope = 'all' | 'bci';
@@ -210,6 +213,8 @@ interface PayrollBooking {
   deductionYear: number;
   deductionPeriod: string;
   createdAt: string;
+  excludedFromPayroll: boolean;
+  donateToCharity: boolean;
 }
 
 interface PayrollPeriodSummary {
@@ -2343,14 +2348,27 @@ export default function AdminSpotBookingManagement() {
         <TabsContent value="payroll-summary" className="space-y-4">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <CardTitle className="flex items-center gap-2">
                   <Banknote className="h-5 w-5 text-purple-600" />
                   Payroll Deduction Summary
                 </CardTitle>
-                <Badge variant="outline" className="text-purple-600 border-purple-300">
-                  Auto-deducted from employee payroll
-                </Badge>
+                <div className="flex items-center gap-2">
+                  {payrollSummary && payrollSummary.periods.length > 0 && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => exportPayrollSummaryReport(payrollSummary.periods)}
+                      data-testid="button-export-payroll-excel"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Export Excel
+                    </Button>
+                  )}
+                  <Badge variant="outline" className="text-purple-600 border-purple-300">
+                    Auto-deducted from employee payroll
+                  </Badge>
+                </div>
               </div>
               <p className="text-sm text-muted-foreground">
                 Bookings are grouped by payroll deduction month. Bookings before the 20th are deducted in the same month, 
@@ -2413,6 +2431,7 @@ export default function AdminSpotBookingManagement() {
                               <TableHead>Spot</TableHead>
                               <TableHead>Location</TableHead>
                               <TableHead>Booking Date</TableHead>
+                              <TableHead>Type</TableHead>
                               <TableHead>Amount</TableHead>
                               <TableHead>Status</TableHead>
                               <TableHead className="text-right">Actions</TableHead>
@@ -2420,64 +2439,125 @@ export default function AdminSpotBookingManagement() {
                           </TableHeader>
                           <TableBody>
                             {period.bookings.map((booking) => (
-                              <TableRow key={booking.id}>
+                              <TableRow 
+                                key={booking.id}
+                                className={booking.excludedFromPayroll ? 'bg-red-50/50' : ''}
+                              >
                                 <TableCell>
-                                  <div>
+                                  <div className={booking.excludedFromPayroll ? 'text-red-600' : ''}>
                                     <p className="font-medium">{booking.renterName}</p>
                                     <p className="text-xs text-muted-foreground">{booking.renterEmail}</p>
                                   </div>
                                 </TableCell>
-                                <TableCell className="text-sm">{booking.renterDepartment || '-'}</TableCell>
-                                <TableCell className="font-medium">{booking.spotNumber}</TableCell>
-                                <TableCell className="text-sm text-muted-foreground">{booking.spotLocation}</TableCell>
-                                <TableCell className="text-sm">
+                                <TableCell className={`text-sm ${booking.excludedFromPayroll ? 'text-red-600' : ''}`}>
+                                  {booking.renterDepartment || '-'}
+                                </TableCell>
+                                <TableCell className={`font-medium ${booking.excludedFromPayroll ? 'text-red-600' : ''}`}>
+                                  {booking.spotNumber}
+                                </TableCell>
+                                <TableCell className={`text-sm ${booking.excludedFromPayroll ? 'text-red-600' : 'text-muted-foreground'}`}>
+                                  {booking.spotLocation}
+                                </TableCell>
+                                <TableCell className={`text-sm ${booking.excludedFromPayroll ? 'text-red-600' : ''}`}>
                                   {new Date(booking.bookingDate + 'T12:00:00').toLocaleDateString('en-US', {
                                     month: 'short',
                                     day: 'numeric',
                                     year: 'numeric'
                                   })}
                                 </TableCell>
-                                <TableCell className="font-medium">${booking.totalAmount.toFixed(2)}</TableCell>
                                 <TableCell>
-                                  <Badge 
-                                    variant="outline" 
-                                    className={booking.status === 'completed' 
-                                      ? 'bg-green-50 text-green-700 border-green-200' 
-                                      : 'bg-blue-50 text-blue-700 border-blue-200'}
-                                  >
-                                    {booking.status === 'completed' ? 'Completed' : 'Upcoming'}
-                                  </Badge>
+                                  {booking.donateToCharity ? (
+                                    <Badge variant="outline" className="bg-pink-50 text-pink-700 border-pink-200">
+                                      <Heart className="h-3 w-3 mr-1 fill-pink-500" />
+                                      Charity
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200">
+                                      Regular
+                                    </Badge>
+                                  )}
+                                </TableCell>
+                                <TableCell className={`font-medium ${booking.excludedFromPayroll ? 'text-red-600 line-through' : ''}`}>
+                                  ${booking.totalAmount.toFixed(2)}
+                                </TableCell>
+                                <TableCell>
+                                  {booking.excludedFromPayroll ? (
+                                    <Badge variant="destructive" className="bg-red-100 text-red-700 border-red-200">
+                                      Removed
+                                    </Badge>
+                                  ) : (
+                                    <Badge 
+                                      variant="outline" 
+                                      className={booking.status === 'completed' 
+                                        ? 'bg-green-50 text-green-700 border-green-200' 
+                                        : 'bg-blue-50 text-blue-700 border-blue-200'}
+                                    >
+                                      {booking.status === 'completed' ? 'Completed' : 'Upcoming'}
+                                    </Badge>
+                                  )}
                                 </TableCell>
                                 <TableCell className="text-right">
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="text-destructive hover:text-destructive"
-                                        onClick={async () => {
-                                          const confirmed = await confirm({
-                                            title: "Remove from Payroll",
-                                            description: `Are you sure you want to remove this booking for ${booking.renterName} (${booking.spotNumber}) from the payroll summary? This booking will no longer appear in payroll reports.`,
-                                            confirmText: "Remove",
-                                            cancelText: "Cancel",
-                                            variant: "destructive"
-                                          });
-                                          if (confirmed) {
-                                            excludeFromPayrollMutation.mutate({ 
-                                              bookingId: booking.id, 
-                                              excluded: true 
+                                  {booking.excludedFromPayroll ? (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="text-green-600 hover:text-green-700"
+                                          onClick={async () => {
+                                            const confirmed = await confirm({
+                                              title: "Restore to Payroll",
+                                              description: `Are you sure you want to restore this booking for ${booking.renterName} (${booking.spotNumber}) back to the payroll summary?`,
+                                              confirmText: "Restore",
+                                              cancelText: "Cancel",
+                                              variant: "default"
                                             });
-                                          }
-                                        }}
-                                        disabled={excludeFromPayrollMutation.isPending}
-                                        data-testid={`button-remove-payroll-${booking.id}`}
-                                      >
-                                        <Ban className="h-4 w-4" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Remove from Payroll</TooltipContent>
-                                  </Tooltip>
+                                            if (confirmed) {
+                                              excludeFromPayrollMutation.mutate({ 
+                                                bookingId: booking.id, 
+                                                excluded: false 
+                                              });
+                                            }
+                                          }}
+                                          disabled={excludeFromPayrollMutation.isPending}
+                                          data-testid={`button-restore-payroll-${booking.id}`}
+                                        >
+                                          <RotateCcw className="h-4 w-4" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Restore to Payroll</TooltipContent>
+                                    </Tooltip>
+                                  ) : (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="text-destructive hover:text-destructive"
+                                          onClick={async () => {
+                                            const confirmed = await confirm({
+                                              title: "Remove from Payroll",
+                                              description: `Are you sure you want to remove this booking for ${booking.renterName} (${booking.spotNumber}) from the payroll summary? This booking will no longer appear in payroll reports.`,
+                                              confirmText: "Remove",
+                                              cancelText: "Cancel",
+                                              variant: "destructive"
+                                            });
+                                            if (confirmed) {
+                                              excludeFromPayrollMutation.mutate({ 
+                                                bookingId: booking.id, 
+                                                excluded: true 
+                                              });
+                                            }
+                                          }}
+                                          disabled={excludeFromPayrollMutation.isPending}
+                                          data-testid={`button-remove-payroll-${booking.id}`}
+                                        >
+                                          <Ban className="h-4 w-4" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Remove from Payroll</TooltipContent>
+                                    </Tooltip>
+                                  )}
                                 </TableCell>
                               </TableRow>
                             ))}

@@ -873,6 +873,10 @@ export async function getSharedPoolUsageReport(req: Request, res: Response) {
       return isInDateRange && isPastOrToday && isSharedPoolSpot && isValidStatus;
     });
     
+    // Fetch all spot listings for charity info
+    const allListings = await storage.getAllSpotListings();
+    const listingsMap = new Map(allListings.map(l => [l.id, l]));
+    
     const userBookingsMap = new Map<string, {
       userId: string;
       firstName: string;
@@ -885,6 +889,7 @@ export async function getSharedPoolUsageReport(req: Request, res: Response) {
         location: string;
         bookingDate: string;
         amount: number;
+        donateToCharity: boolean;
       }>;
       totalAmount: number;
     }>();
@@ -894,6 +899,7 @@ export async function getSharedPoolUsageReport(req: Request, res: Response) {
       const spot = sharedPoolSpots.find(s => s.id === booking.spotId);
       const location = locations.find((l: any) => l.id === spot?.locationId);
       const department = departments.find((d: any) => d.id === user?.departmentId);
+      const listing = listingsMap.get(booking.listingId);
       
       if (!user || !spot) return;
       
@@ -921,7 +927,8 @@ export async function getSharedPoolUsageReport(req: Request, res: Response) {
         spotNumber: spot.spotNumber,
         location: locationName,
         bookingDate: booking.bookingDate,
-        amount
+        amount,
+        donateToCharity: listing?.donateToCharity || false
       });
       userData.totalAmount += amount;
     });
