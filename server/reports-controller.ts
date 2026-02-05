@@ -928,7 +928,8 @@ export async function getSharedPoolUsageReport(req: Request, res: Response) {
         location: locationName,
         bookingDate: booking.bookingDate,
         amount,
-        donateToCharity: listing?.donateToCharity || false
+        donateToCharity: listing?.donateToCharity || false,
+        excludedFromPayroll: booking.excludedFromPayroll || false
       });
       userData.totalAmount += amount;
     });

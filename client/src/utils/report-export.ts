@@ -523,14 +523,28 @@ export async function exportSharedPoolUsageReport(data: SharedPoolUsageReportRes
   
   summarySheet.getCell('A4').value = `Generated: ${new Date().toLocaleString()}`;
   
+  // Filter out removed bookings for export
+  const filteredData = data.usageByUser.map(user => {
+    const activeBookings = user.bookings.filter(b => !b.excludedFromPayroll);
+    return {
+      ...user,
+      bookings: activeBookings,
+      bookingCount: activeBookings.length,
+      totalAmount: activeBookings.reduce((sum, b) => sum + b.amount, 0)
+    };
+  }).filter(user => user.bookingCount > 0);
+  
+  const totalActiveBookings = filteredData.reduce((sum, u) => sum + u.bookingCount, 0);
+  const totalActiveAmount = filteredData.reduce((sum, u) => sum + u.totalAmount, 0);
+  
   summarySheet.addRow([]);
   const reportSummaryRow = summarySheet.addRow(['REPORT SUMMARY']);
   reportSummaryRow.getCell(1).font = { bold: true, size: 14 };
   
   summarySheet.addRow(['Metric', 'Value']);
-  summarySheet.addRow(['Total Bookings', data.summary.totalBookings]);
-  summarySheet.addRow(['Total Amount Owed', `$${data.summary.totalAmount.toFixed(2)}`]);
-  summarySheet.addRow(['Unique Users', data.summary.uniqueUsers]);
+  summarySheet.addRow(['Total Bookings', totalActiveBookings]);
+  summarySheet.addRow(['Total Amount Owed', `$${totalActiveAmount.toFixed(2)}`]);
+  summarySheet.addRow(['Unique Users', filteredData.length]);
   
   summarySheet.addRow([]);
   const userSummaryRow = summarySheet.addRow(['USER SUMMARY - AMOUNTS OWED']);
@@ -539,7 +553,7 @@ export async function exportSharedPoolUsageReport(data: SharedPoolUsageReportRes
   const userHeaderRow = summarySheet.addRow(['Name', 'Email', 'Department', 'Bookings', 'Total Amount Owed']);
   userHeaderRow.font = { bold: true };
   
-  data.usageByUser.forEach(user => {
+  filteredData.forEach(user => {
     summarySheet.addRow([
       `${user.firstName} ${user.lastName}`,
       user.email,
@@ -565,7 +579,8 @@ export async function exportSharedPoolUsageReport(data: SharedPoolUsageReportRes
   const detailHeaderRow = detailSheet.addRow(['User Name', 'Email', 'Department', 'Spot Number', 'Location', 'Booking Date', 'Type', 'Amount']);
   detailHeaderRow.font = { bold: true };
   
-  data.usageByUser.forEach(user => {
+  // Use filtered data (excludes removed bookings)
+  filteredData.forEach(user => {
     user.bookings.forEach(booking => {
       detailSheet.addRow([
         `${user.firstName} ${user.lastName}`,

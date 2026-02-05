@@ -267,18 +267,38 @@ export default function AdminReportsPage() {
                               
                               {/* Individual booking rows (shown when expanded) */}
                               {isExpanded && sortedBookings.map((booking) => (
-                                <TableRow key={booking.bookingId} className="bg-background">
+                                <TableRow 
+                                  key={booking.bookingId} 
+                                  className={booking.excludedFromPayroll 
+                                    ? "bg-red-50/50 text-red-600" 
+                                    : "bg-background"
+                                  }
+                                >
                                   <TableCell></TableCell>
-                                  <TableCell>{booking.bookingDate}</TableCell>
-                                  <TableCell className="font-medium">{booking.spotNumber}</TableCell>
-                                  <TableCell>{booking.location}</TableCell>
-                                  <TableCell className="text-muted-foreground">
+                                  <TableCell className={booking.excludedFromPayroll ? "text-red-600" : ""}>
+                                    {booking.bookingDate}
+                                  </TableCell>
+                                  <TableCell className={`font-medium ${booking.excludedFromPayroll ? "text-red-600" : ""}`}>
+                                    {booking.spotNumber}
+                                  </TableCell>
+                                  <TableCell className={booking.excludedFromPayroll ? "text-red-600" : ""}>
+                                    {booking.location}
+                                  </TableCell>
+                                  <TableCell className={booking.excludedFromPayroll ? "text-red-600" : "text-muted-foreground"}>
                                     {user.firstName} {user.lastName}
                                   </TableCell>
-                                  <TableCell className="text-muted-foreground">{user.email}</TableCell>
-                                  <TableCell className="text-muted-foreground">{user.department}</TableCell>
+                                  <TableCell className={booking.excludedFromPayroll ? "text-red-600" : "text-muted-foreground"}>
+                                    {user.email}
+                                  </TableCell>
+                                  <TableCell className={booking.excludedFromPayroll ? "text-red-600" : "text-muted-foreground"}>
+                                    {user.department}
+                                  </TableCell>
                                   <TableCell>
-                                    {booking.donateToCharity ? (
+                                    {booking.excludedFromPayroll ? (
+                                      <Badge variant="outline" className="bg-red-100 text-red-700 border-red-200">
+                                        Removed
+                                      </Badge>
+                                    ) : booking.donateToCharity ? (
                                       <Badge variant="outline" className="bg-pink-50 text-pink-700 border-pink-200">
                                         <Heart className="h-3 w-3 mr-1 fill-pink-500" />
                                         Charity
@@ -289,7 +309,9 @@ export default function AdminReportsPage() {
                                       </Badge>
                                     )}
                                   </TableCell>
-                                  <TableCell className="text-right">${booking.amount.toFixed(2)}</TableCell>
+                                  <TableCell className={`text-right ${booking.excludedFromPayroll ? "text-red-600 line-through" : ""}`}>
+                                    ${booking.amount.toFixed(2)}
+                                  </TableCell>
                                 </TableRow>
                               ))}
                             </>
