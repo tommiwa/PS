@@ -174,13 +174,13 @@ export interface EmailNotification {
   subject: string;
   text: string;
   html: string;
-  type: 'assignment' | 'welcome' | 'booking_confirmation' | 'booking_cancelled' | 'payment_reminder' | 'spot_availability' | 'weekly_report' | 'system_maintenance' | 'general';
+  type: 'assignment' | 'welcome' | 'booking_confirmation' | 'booking_cancelled' | 'payment_reminder' | 'spot_availability' | 'weekly_report' | 'system_maintenance' | 'general' | 'waiting_list_enrollment' | 'waiting_list_admin';
 }
 
 export interface InAppNotification {
   id: string;
   userId: string;
-  type: 'assignment' | 'welcome' | 'booking_confirmation' | 'booking_cancelled' | 'payment_reminder' | 'spot_availability' | 'weekly_report' | 'system_maintenance' | 'general';
+  type: 'assignment' | 'welcome' | 'booking_confirmation' | 'booking_cancelled' | 'payment_reminder' | 'spot_availability' | 'weekly_report' | 'system_maintenance' | 'general' | 'waiting_list_enrollment' | 'waiting_list_admin';
   title: string;
   message: string;
   data?: any;
@@ -200,16 +200,17 @@ export interface InAppNotification {
 
 type EmailTheme = 'primary' | 'success' | 'warning' | 'danger' | 'neutral';
 
-const themeColors: Record<EmailTheme, { header: string; accent: string; light: string }> = {
-  primary: { header: '#2563eb', accent: '#2563eb', light: '#dbeafe' },
-  success: { header: '#10b981', accent: '#10b981', light: '#d1fae5' },
-  warning: { header: '#f59e0b', accent: '#f59e0b', light: '#fef3c7' },
-  danger: { header: '#ef4444', accent: '#ef4444', light: '#fee2e2' },
-  neutral: { header: '#64748b', accent: '#64748b', light: '#f1f5f9' }
+const themeColors: Record<EmailTheme, { accent: string; light: string; footerBar: string }> = {
+  primary: { accent: '#3730a3', light: '#eef2ff', footerBar: '#4f46e5' },
+  success: { accent: '#047857', light: '#d1fae5', footerBar: '#10b981' },
+  warning: { accent: '#b45309', light: '#fef3c7', footerBar: '#f59e0b' },
+  danger: { accent: '#b91c1c', light: '#fee2e2', footerBar: '#ef4444' },
+  neutral: { accent: '#475569', light: '#f1f5f9', footerBar: '#64748b' }
 };
 
 /**
  * Wraps email content with consistent header, footer, and styling
+ * Design inspired by Smartlead.ai - clean, minimal, professional
  */
 export function wrapEmailTemplate(options: {
   title: string;
@@ -243,54 +244,17 @@ export function wrapEmailTemplate(options: {
     body, table, td, p, a, li { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
     table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
     img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
-    body { height: 100% !important; margin: 0 !important; padding: 0 !important; width: 100% !important; background-color: #f1f5f9; }
+    body { height: 100% !important; margin: 0 !important; padding: 0 !important; width: 100% !important; background-color: #c7d2e3; }
     
     /* Container styles */
     .email-container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
     
-    /* Header styles */
-    .email-header { 
-      background: linear-gradient(135deg, ${colors.header} 0%, ${colors.header}dd 100%);
-      padding: 32px 40px;
-      text-align: center;
-    }
-    .logo-container {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-    }
-    .logo-icon {
-      width: 48px;
-      height: 48px;
-      background-color: rgba(255, 255, 255, 0.2);
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .logo-text {
-      color: #ffffff;
-      font-family: Arial, Helvetica, sans-serif;
-      font-size: 24px;
-      font-weight: 700;
-      letter-spacing: -0.5px;
-    }
-    .email-title {
-      color: #ffffff;
-      font-family: Arial, Helvetica, sans-serif;
-      font-size: 28px;
-      font-weight: 700;
-      margin: 24px 0 0 0;
-      line-height: 1.3;
-    }
-    
     /* Content styles */
     .email-content {
-      padding: 40px;
-      font-family: Arial, Helvetica, sans-serif;
+      padding: 40px 48px;
+      font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
       font-size: 16px;
-      line-height: 1.6;
+      line-height: 1.7;
       color: #374151;
     }
     .email-content p { margin: 0 0 16px 0; }
@@ -299,17 +263,17 @@ export function wrapEmailTemplate(options: {
     /* Card/Box styles */
     .info-card {
       background-color: #f8fafc;
-      border-radius: 12px;
-      padding: 24px;
+      border-radius: 8px;
+      padding: 20px 24px;
       margin: 24px 0;
       border-left: 4px solid ${colors.accent};
     }
     .info-card h3 {
-      font-family: Arial, Helvetica, sans-serif;
-      font-size: 18px;
+      font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
+      font-size: 16px;
       font-weight: 600;
       color: #1e293b;
-      margin: 0 0 16px 0;
+      margin: 0 0 12px 0;
     }
     .info-card ul {
       margin: 0;
@@ -317,35 +281,32 @@ export function wrapEmailTemplate(options: {
       list-style: none;
     }
     .info-card li {
-      padding: 8px 0;
-      border-bottom: 1px solid #e2e8f0;
+      padding: 6px 0;
       font-size: 15px;
+      color: #475569;
     }
-    .info-card li:last-child { border-bottom: none; }
-    .info-card li strong { color: #475569; }
+    .info-card li strong { color: #1e293b; }
     
     /* Highlight box */
     .highlight-box {
       background-color: ${colors.light};
-      border-radius: 8px;
-      padding: 16px 20px;
-      margin: 24px 0;
+      border-radius: 6px;
+      padding: 14px 18px;
+      margin: 20px 0;
+      font-size: 15px;
     }
-    .highlight-box.warning { background-color: #fef3c7; }
-    .highlight-box.success { background-color: #d1fae5; }
-    .highlight-box.danger { background-color: #fee2e2; }
     
     /* Button styles */
-    .button-container { text-align: center; margin: 32px 0; }
+    .button-container { text-align: left; margin: 28px 0; }
     .btn {
       display: inline-block;
-      padding: 14px 32px;
-      font-family: Arial, Helvetica, sans-serif;
-      font-size: 16px;
+      padding: 12px 28px;
+      font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
+      font-size: 15px;
       font-weight: 600;
       text-decoration: none;
-      border-radius: 8px;
-      margin: 6px;
+      border-radius: 6px;
+      margin-right: 10px;
     }
     .btn-primary {
       background-color: ${colors.accent};
@@ -356,115 +317,98 @@ export function wrapEmailTemplate(options: {
       color: ${colors.accent} !important;
       border: 2px solid ${colors.accent};
     }
-    .btn-success { background-color: #10b981; color: #ffffff !important; }
-    .btn-danger { background-color: #ef4444; color: #ffffff !important; }
-    
-    /* Footer styles */
-    .email-footer {
-      background-color: #f8fafc;
-      padding: 32px 40px;
-      text-align: center;
-      border-top: 1px solid #e2e8f0;
-    }
-    .footer-signature {
-      font-family: Arial, Helvetica, sans-serif;
-      font-size: 14px;
-      color: #64748b;
-      margin: 0 0 16px 0;
-    }
-    .footer-links {
-      font-family: Arial, Helvetica, sans-serif;
-      font-size: 12px;
-      color: #94a3b8;
-      margin: 0;
-    }
-    .footer-links a { color: #64748b; text-decoration: underline; }
-    .footer-copyright {
-      font-family: Arial, Helvetica, sans-serif;
-      font-size: 12px;
-      color: #94a3b8;
-      margin: 16px 0 0 0;
-    }
     
     /* Responsive styles */
     @media screen and (max-width: 600px) {
-      .email-container { width: 100% !important; }
-      .email-header { padding: 24px 20px !important; }
-      .email-content { padding: 24px 20px !important; }
-      .email-footer { padding: 24px 20px !important; }
+      .email-container { width: 100% !important; border-radius: 0 !important; }
+      .email-content { padding: 28px 24px !important; }
       .email-title { font-size: 22px !important; }
-      .info-card { padding: 16px !important; }
-      .btn { display: block; margin: 8px 0 !important; }
+      .info-card { padding: 16px 18px !important; }
+      .btn { display: block; margin: 8px 0 !important; text-align: center; }
     }
   </style>
 </head>
-<body style="margin: 0; padding: 0; background-color: #f1f5f9;">
-  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f1f5f9;">
+<body style="margin: 0; padding: 0; background-color: #c7d2e3;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #c7d2e3;">
     <tr>
       <td style="padding: 40px 20px;">
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" class="email-container" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-          <!-- Header -->
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" class="email-container" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);">
+          
+          <!-- Logo Header -->
           <tr>
-            <td class="email-header" style="background: linear-gradient(135deg, ${colors.header} 0%, ${colors.header}dd 100%); padding: 32px 40px; text-align: center;">
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+            <td style="padding: 36px 48px 0 48px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                 <tr>
-                  <td style="text-align: center;">
-                    <!-- Logo with parking icon -->
-                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 0 auto;">
-                      <tr>
-                        <td style="vertical-align: middle; padding-right: 12px;">
-                          <div style="width: 48px; height: 48px; background-color: rgba(255, 255, 255, 0.2); border-radius: 12px; text-align: center; line-height: 48px;">
-                            <span style="color: #ffffff; font-size: 24px; font-weight: bold;">P</span>
-                          </div>
-                        </td>
-                        <td style="vertical-align: middle;">
-                          <span style="color: #ffffff; font-family: Arial, Helvetica, sans-serif; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;">BCI ParkShare</span>
-                        </td>
-                      </tr>
-                    </table>
+                  <td style="vertical-align: middle; padding-right: 14px;">
+                    <div style="width: 44px; height: 44px; background-color: ${colors.accent}; border-radius: 10px; text-align: center; line-height: 44px;">
+                      <span style="color: #ffffff; font-size: 20px; font-weight: bold; font-family: Arial, sans-serif;">P</span>
+                    </div>
                   </td>
-                </tr>
-                <tr>
-                  <td>
-                    <h1 class="email-title" style="color: #ffffff; font-family: Arial, Helvetica, sans-serif; font-size: 28px; font-weight: 700; margin: 24px 0 0 0; line-height: 1.3;">${options.title}</h1>
+                  <td style="vertical-align: middle;">
+                    <span style="color: ${colors.accent}; font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 22px; font-weight: 700;">BCI ParkShare</span>
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
           
+          <!-- Title -->
+          <tr>
+            <td style="padding: 28px 48px 0 48px;">
+              <h1 style="color: ${colors.accent}; font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 28px; font-weight: 700; margin: 0; line-height: 1.3; letter-spacing: -0.3px;">${options.title}</h1>
+            </td>
+          </tr>
+          
+          <!-- Separator Line -->
+          <tr>
+            <td style="padding: 20px 48px 0 48px;">
+              <div style="height: 1px; background-color: #e2e8f0;"></div>
+            </td>
+          </tr>
+          
           <!-- Content -->
           <tr>
-            <td class="email-content" style="padding: 40px; font-family: Arial, Helvetica, sans-serif; font-size: 16px; line-height: 1.6; color: #374151;">
+            <td class="email-content" style="padding: 28px 48px 40px 48px; font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 16px; line-height: 1.7; color: #374151;">
               ${options.content}
               
               ${options.ctaButton ? `
-              <div class="button-container" style="text-align: center; margin: 32px 0;">
-                <a href="${options.ctaButton.url}" class="btn ${options.ctaButton.secondary ? 'btn-secondary' : 'btn-primary'}" style="display: inline-block; padding: 14px 32px; font-family: Arial, Helvetica, sans-serif; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px; margin: 6px; ${options.ctaButton.secondary ? `background-color: #ffffff; color: ${colors.accent}; border: 2px solid ${colors.accent};` : `background-color: ${colors.accent}; color: #ffffff;`}">${options.ctaButton.text}</a>
-                ${options.secondaryButton ? `<a href="${options.secondaryButton.url}" class="btn btn-secondary" style="display: inline-block; padding: 14px 32px; font-family: Arial, Helvetica, sans-serif; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px; margin: 6px; background-color: #ffffff; color: ${colors.accent}; border: 2px solid ${colors.accent};">${options.secondaryButton.text}</a>` : ''}
+              <div class="button-container" style="margin: 28px 0 0 0;">
+                <a href="${options.ctaButton.url}" class="btn btn-primary" style="display: inline-block; padding: 12px 28px; font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 15px; font-weight: 600; text-decoration: none; border-radius: 6px; background-color: ${colors.accent}; color: #ffffff;">${options.ctaButton.text}</a>
+                ${options.secondaryButton ? `<a href="${options.secondaryButton.url}" class="btn btn-secondary" style="display: inline-block; padding: 12px 28px; font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 15px; font-weight: 600; text-decoration: none; border-radius: 6px; background-color: #ffffff; color: ${colors.accent}; border: 2px solid ${colors.accent}; margin-left: 10px;">${options.secondaryButton.text}</a>` : ''}
               </div>
               ` : ''}
             </td>
           </tr>
           
-          <!-- Footer -->
+          <!-- Warm Regards -->
           <tr>
-            <td class="email-footer" style="background-color: #f8fafc; padding: 32px 40px; text-align: center; border-top: 1px solid #e2e8f0;">
-              <p class="footer-signature" style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #64748b; margin: 0 0 16px 0;">
+            <td style="padding: 0 48px 32px 48px;">
+              <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 15px; color: #64748b; margin: 0;">
                 Warm regards,<br>
-                <strong>The BCI ParkShare Team</strong>
-              </p>
-              <p class="footer-links" style="font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #94a3b8; margin: 0;">
-                <a href="#" style="color: #64748b; text-decoration: underline;">View Dashboard</a> &nbsp;|&nbsp; 
-                <a href="#" style="color: #64748b; text-decoration: underline;">Contact Support</a> &nbsp;|&nbsp; 
-                <a href="#" style="color: #64748b; text-decoration: underline;">Manage Preferences</a>
-              </p>
-              <p class="footer-copyright" style="font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #94a3b8; margin: 16px 0 0 0;">
-                &copy; ${new Date().getFullYear()} BCI Investment Management. All rights reserved.<br>
-                This is an automated message from BCI ParkShare.
+                <strong style="color: #475569;">The BCI ParkShare Team</strong>
               </p>
             </td>
           </tr>
+          
+          <!-- Footer Links -->
+          <tr>
+            <td style="padding: 0 48px 24px 48px;">
+              <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 12px; color: #94a3b8; margin: 0;">
+                <a href="#" style="color: #64748b; text-decoration: none;">Dashboard</a> &nbsp;&bull;&nbsp; 
+                <a href="#" style="color: #64748b; text-decoration: none;">Support</a> &nbsp;&bull;&nbsp; 
+                <a href="#" style="color: #64748b; text-decoration: none;">Preferences</a>
+              </p>
+              <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 11px; color: #94a3b8; margin: 12px 0 0 0;">
+                &copy; ${new Date().getFullYear()} BCI Investment Management. All rights reserved.
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Colored Footer Bar -->
+          <tr>
+            <td style="height: 8px; background-color: ${colors.footerBar};"></td>
+          </tr>
+          
         </table>
       </td>
     </tr>
@@ -491,7 +435,7 @@ SPOT DETAILS:
 - Spot Number: ${spotDetails.spotNumber}
 - Location: ${spotDetails.location}
 - Building: ${spotDetails.building}
-- Type: ${waitingListEntry.preferredSpotType || 'Standard'}
+- Type: Standard
 
 NEXT STEPS:
 1. Please respond within 48 hours to accept or decline this assignment
@@ -513,7 +457,7 @@ The BCI ParkShare Team`;
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Spot Number:</strong> ${spotDetails.spotNumber}</li>
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Location:</strong> ${spotDetails.location}</li>
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Building:</strong> ${spotDetails.building}</li>
-        <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Spot Type:</strong> ${waitingListEntry.preferredSpotType || 'Standard'}</li>
+        <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Spot Type:</strong> Standard</li>
       </ul>
     </div>
     
@@ -559,8 +503,8 @@ export const createWelcomeNotification = (
 Welcome to the BCI ParkShare waiting list! We're delighted to have you join our parking community.
 
 YOUR ENROLLMENT DETAILS:
-- Preferred Spot Type: ${waitingListEntry.preferredSpotType || 'Any Available'}
-- Preferred Building: ${waitingListEntry.preferredBuilding || 'Any Location'}
+- Preferred Spot Type: ${waitingListEntry.preferredSpotTypeId ? 'Selected' : 'Any Available'}
+- Preferred Location: ${waitingListEntry.preferredLocationId ? 'Selected' : 'Any Location'}
 - Priority Level: ${priorityLabel}
 - Enrollment Date: ${waitingListEntry.enrolledDate?.toLocaleDateString()}
 
@@ -582,8 +526,8 @@ The BCI ParkShare Team`;
     <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #2563eb;">
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Your Enrollment Details</h3>
       <ul style="margin: 0; padding: 0; list-style: none;">
-        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Preferred Spot Type:</strong> ${waitingListEntry.preferredSpotType || 'Any Available'}</li>
-        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Preferred Building:</strong> ${waitingListEntry.preferredBuilding || 'Any Location'}</li>
+        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Preferred Spot Type:</strong> ${waitingListEntry.preferredSpotTypeId ? 'Selected' : 'Any Available'}</li>
+        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Preferred Location:</strong> ${waitingListEntry.preferredLocationId ? 'Selected' : 'Any Location'}</li>
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Priority Level:</strong> ${priorityLabel}</li>
         <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Enrollment Date:</strong> ${waitingListEntry.enrolledDate?.toLocaleDateString()}</li>
       </ul>
@@ -1628,11 +1572,11 @@ export async function sendWelcomeNotification(
         userId: user.id,
         type: 'welcome',
         title: 'Welcome to BCI ParkShare Waiting List',
-        message: `You've been enrolled in the waiting list. We'll notify you when a ${waitingListEntry.preferredSpotType || 'parking'} spot becomes available.`,
+        message: `You've been enrolled in the waiting list. We'll notify you when a parking spot becomes available.`,
         data: {
           waitingListEntryId: waitingListEntry.id,
-          preferredSpotType: waitingListEntry.preferredSpotType,
-          preferredBuilding: waitingListEntry.preferredBuilding
+          preferredSpotTypeId: waitingListEntry.preferredSpotTypeId,
+          preferredLocationId: waitingListEntry.preferredLocationId
         },
         read: false
       });
