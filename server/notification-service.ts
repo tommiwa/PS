@@ -764,6 +764,7 @@ export const createBookingCancellationNotification = (
     bookingDate: Date | string;
     cancelledBy: string;
     cancelledByRole?: 'renter' | 'owner' | 'admin';
+    isBciManaged?: boolean;
     reason?: string;
   }
 ): EmailNotification => {
@@ -774,12 +775,21 @@ export const createBookingCancellationNotification = (
     : new Date(booking.bookingDate).toLocaleDateString();
 
   const role = booking.cancelledByRole || 'admin';
+  const isWorkplaceServices = booking.isBciManaged === true;
 
   const introText = role === 'renter'
     ? 'This is to confirm that you have successfully cancelled your parking spot booking.'
     : role === 'owner'
     ? `We wanted to let you know that the spot owner (${booking.cancelledBy}) has cancelled your booking. We understand this may be inconvenient, and we encourage you to browse the available listings to find a new spot.`
     : `We wanted to let you know that your parking spot booking has been cancelled by ${booking.cancelledBy}.`;
+
+  const bciManagedNote = isWorkplaceServices
+    ? '\nSince this is a Workplace Services spot, you will not be charged for this cancelled booking.\n'
+    : '';
+
+  const refundNote = !isWorkplaceServices && role !== 'renter'
+    ? 'If you made a payment, please contact the spot owner to get a refund or work with them for a future booking.\n\n'
+    : '';
 
   const text = `Dear ${user.name},
 
@@ -790,17 +800,27 @@ CANCELLATION DETAILS:
 - Location: ${booking.location} - ${booking.building}
 - Booking Date: ${bookingDateStr}
 - Cancelled By: ${booking.cancelledBy}${booking.reason ? `\n- Reason: ${booking.reason}` : ''}
-
-${role === 'renter' ? '' : 'If you made a payment, please contact the spot owner to get a refund or work with them for a future booking.\n\n'}WHAT'S NEXT:
+${bciManagedNote}
+${refundNote}WHAT'S NEXT:
 - Browse the available listings to find and book another parking spot
 - Contact support if you have any questions about this cancellation
 
 Warm regards,
 The BCI ParkShare Team`;
 
+  const bciManagedHtml = isWorkplaceServices
+    ? `<div class="highlight-box" style="background-color: #f0fdf4; border-radius: 8px; padding: 16px 20px; margin: 24px 0;">
+        <strong>No Charge:</strong> Since this is a Workplace Services spot, you will not be charged for this cancelled booking.
+      </div>`
+    : '';
+
   const nextStepsHtml = role === 'renter'
     ? `<div class="highlight-box" style="background-color: #f0fdf4; border-radius: 8px; padding: 16px 20px; margin: 24px 0;">
         <strong>Need another spot?</strong> You can browse the available listings anytime to find and book a new parking spot.
+      </div>`
+    : isWorkplaceServices
+    ? `<div class="highlight-box" style="background-color: #e0f2fe; border-radius: 8px; padding: 16px 20px; margin: 24px 0;">
+        <strong>Next Steps:</strong> Please browse the available listings to find and book a new parking spot.
       </div>`
     : `<div class="highlight-box" style="background-color: #e0f2fe; border-radius: 8px; padding: 16px 20px; margin: 24px 0;">
         <strong>Next Steps:</strong> Please browse the available listings to find and book a new parking spot. If you made a payment, please contact the spot owner to get a refund or work with them for a future booking.
@@ -821,6 +841,7 @@ The BCI ParkShare Team`;
       </ul>
     </div>
     
+    ${bciManagedHtml}
     ${nextStepsHtml}
   `;
 
@@ -852,6 +873,7 @@ export const createOwnerBookingCancellationNotification = (
     bookingDate: Date | string;
     cancelledBy: string;
     cancelledByRole?: 'renter' | 'owner' | 'admin';
+    isBciManaged?: boolean;
     reason?: string;
   }
 ): EmailNotification => {
@@ -1993,6 +2015,7 @@ export async function sendBookingCancellationNotification(
     bookingDate: Date | string;
     cancelledBy: string;
     cancelledByRole?: 'renter' | 'owner' | 'admin';
+    isBciManaged?: boolean;
     reason?: string;
   },
   userPreferences: { bookingConfirmations?: boolean; emailNotifications?: boolean } = {},

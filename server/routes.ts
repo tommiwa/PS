@@ -4400,6 +4400,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               bookingDate: booking.bookingDate,
               cancelledBy: renterDisplayName,
               cancelledByRole: 'renter' as const,
+              isBciManaged: spot.isBciManaged || false,
               reason: 'Cancelled by renter'
             };
             
@@ -4510,6 +4511,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               bookingDate: booking.bookingDate,
               cancelledBy: ownerName,
               cancelledByRole: 'owner' as const,
+              isBciManaged: spot.isBciManaged || false,
               reason: `Cancelled by spot owner (${ownerName})`
             };
             
@@ -4575,13 +4577,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
               ? `${renter.firstName} ${renter.lastName}`
               : renter.firstName || renter.lastName || renter.email || 'User';
             
+            const spotLocation = spot.locationId ? await storage.getLocation(spot.locationId) : null;
             const bookingDetails = {
               id: booking.id,
               spotNumber: spot.spotNumber,
-              location: 'BCI Campus',
-              building: 'BCI Campus',
+              location: spotLocation?.name || 'BCI Campus',
+              building: spotLocation?.building || 'BCI Campus',
               bookingDate: booking.bookingDate,
               cancelledBy: 'Admin',
+              cancelledByRole: 'admin' as const,
+              isBciManaged: spot.isBciManaged || false,
               reason: reason
             };
             
