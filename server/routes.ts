@@ -5355,6 +5355,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.addUserRole(userId, "owner");
       }
       
+      // Send spot assignment email to the user
+      try {
+        if (user?.email) {
+          const { createSpotAssignmentNotification, sendEmailNotification } = await import('./notification-service');
+          const location = await storage.getLocation(updatedSpot.locationId);
+          const locationName = location ? `${location.office} - ${location.level}` : 'Unknown';
+          const buildingName = location?.building || 'Unknown';
+          
+          const notification = createSpotAssignmentNotification(
+            { name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email, email: user.email },
+            { spotNumber: updatedSpot.spotNumber, location: locationName, building: buildingName }
+          );
+          await sendEmailNotification(notification);
+          console.log(`✓ Spot assignment email sent to ${user.email}`);
+        }
+      } catch (emailError) {
+        console.error('Failed to send spot assignment email:', emailError);
+      }
+      
       res.json(updatedSpot);
     } catch (error) {
       if (error instanceof z.ZodError) {

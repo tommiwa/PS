@@ -1425,6 +1425,62 @@ BCI ParkShare System`;
 };
 
 /**
+ * Spot Assignment Notification - sent to user when admin assigns them a parking spot
+ */
+export const createSpotAssignmentNotification = (
+  user: { name: string; email: string },
+  spotDetails: { spotNumber: string; location: string; building: string }
+): EmailNotification => {
+  const subject = `Parking Spot Assigned: ${spotDetails.spotNumber}`;
+  
+  const text = `Dear ${user.name},
+
+Great news! A parking spot has been assigned to you by BCI Workplace Services.
+
+SPOT DETAILS:
+- Spot Number: ${spotDetails.spotNumber}
+- Location: ${spotDetails.location} - ${spotDetails.building}
+
+This spot is now reserved for your use. You can view your assigned spot details anytime in your BCI ParkShare profile.
+
+If you have any questions, please contact the BCI Workplace Services team.
+
+Warm regards,
+The BCI ParkShare Team`;
+
+  const content = `
+    <p>Dear ${user.name},</p>
+    <p>Great news! A parking spot has been assigned to you by BCI Workplace Services.</p>
+    
+    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #16a34a;">
+      <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Your Assigned Spot</h3>
+      <ul style="margin: 0; padding: 0; list-style: none;">
+        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Spot Number:</strong> ${spotDetails.spotNumber}</li>
+        <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Location:</strong> ${spotDetails.location} - ${spotDetails.building}</li>
+      </ul>
+    </div>
+    
+    <p>This spot is now reserved for your use. You can view your assigned spot details anytime in your BCI ParkShare profile.</p>
+    <p>If you have any questions, please contact the BCI Workplace Services team.</p>
+  `;
+
+  const html = wrapEmailTemplate({
+    title: 'Parking Spot Assigned',
+    content,
+    theme: 'success',
+    titleColor: '#16a34a'
+  });
+
+  return {
+    to: user.email,
+    subject,
+    text,
+    html,
+    type: 'assignment'
+  };
+};
+
+/**
  * Waiting List Removal Notification - sent to user when they leave the waiting list
  */
 export const createWaitingListRemovalNotification = (
