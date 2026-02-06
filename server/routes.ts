@@ -1497,62 +1497,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         after: newListing
       });
 
-      // Send spot availability notifications (fire-and-forget to avoid blocking response)
-      setImmediate(async () => {
-        try {
-          // Get the parking spot details
-          const spot = await storage.getParkingSpot(newListing.spotId);
-          if (spot) {
-            // Get all users from waiting list who might be interested in this spot type/location
-            const waitingListEntries = await storage.getAllWaitingList();
-            const interestedUsers = waitingListEntries.filter(entry => {
-              // Match users who prefer this spot type or have no preference (null)
-              const matchesSpotType = !entry.preferredSpotTypeId || entry.preferredSpotTypeId === spot.spotTypeId;
-              // Match users who prefer this location or have no preference (null)
-              const matchesLocation = !entry.preferredLocationId || entry.preferredLocationId === spot.locationId;
-              return matchesSpotType && matchesLocation;
-            });
-
-            // Send notifications to interested users
-            for (const waitingEntry of interestedUsers) {
-              try {
-                // Get user details and notification preferences
-                const user = await storage.getUser(waitingEntry.userId);
-                if (user) {
-                  const notificationPreferences = await storage.getNotificationPreferences(user.id);
-                  
-                  // Construct display name
-                  const displayName = user.firstName && user.lastName 
-                    ? `${user.firstName} ${user.lastName}`
-                    : user.firstName || user.lastName || user.email || 'User';
-                  
-                  // Prepare spot details for email (single spot in array)
-                  const availableSpots = [{
-                    spotNumber: spot.spotNumber,
-                    location: 'BCI Campus',
-                    building: 'BCI Campus',
-                    type: 'Parking Spot',
-                    rate: Number(newListing.dailyRate) // Convert decimal to number
-                  }];
-
-                  // Send spot availability notification
-                  await sendSpotAvailabilityNotification(
-                    { name: displayName, email: user.email || '', id: user.id },
-                    availableSpots,
-                    notificationPreferences || {}
-                  );
-                }
-              } catch (userNotificationError) {
-                console.error(`Failed to send spot availability notification to user ${waitingEntry.userId}:`, userNotificationError);
-              }
-            }
-
-            console.log(`✓ Sent spot availability notifications for ${spot.spotNumber} to ${interestedUsers.length} interested users`);
-          }
-        } catch (availabilityError) {
-          console.error('Failed to send spot availability notifications:', availabilityError);
-        }
-      });
+      // DISABLED: Spot availability notifications to waiting list users
+      // This was sending bulk emails every time a spot was listed.
+      // Future: Re-enable with a subscribe/opt-in system so only subscribed users receive these.
+      // See: https://github.com/bci-parkshare/future - subscribe option for spot availability alerts
       
       res.json(newListing);
     } catch (error) {
