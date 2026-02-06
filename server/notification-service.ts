@@ -582,7 +582,6 @@ export const createBookingConfirmationNotification = (
 Great news! Your parking spot booking has been confirmed. We're excited to have you parked with us!
 
 BOOKING DETAILS:
-- Booking ID: ${booking.id}
 - Spot Number: ${booking.spotNumber}
 - Location: ${booking.location}
 - Building: ${booking.building}
@@ -592,10 +591,7 @@ BOOKING DETAILS:
 - Total Amount: $${booking.totalAmount}
 
 IMPORTANT INFORMATION:
-- Your access will be activated at 12:01 AM on your start date
-- Please arrive at your assigned spot on or after your start date
-- Remember to display any required parking permits
-- Contact support if you need to make changes to your booking
+Use the BCI access card to get access to the parking space and check the visual directory to find your actual booked spot before you come to parking. Please use it responsibly.
 
 Thank you for choosing BCI ParkShare!
 
@@ -609,7 +605,6 @@ The BCI ParkShare Team`;
     <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #10b981;">
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Booking Details</h3>
       <ul style="margin: 0; padding: 0; list-style: none;">
-        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Booking ID:</strong> ${booking.id}</li>
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Spot Number:</strong> ${booking.spotNumber}</li>
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Location:</strong> ${booking.location}</li>
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Building:</strong> ${booking.building}</li>
@@ -622,12 +617,7 @@ The BCI ParkShare Team`;
     
     <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #2563eb;">
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Important Information</h3>
-      <ul style="margin: 0; padding: 0; list-style: none;">
-        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;">Your access will be activated at 12:01 AM on your start date</li>
-        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;">Please arrive at your assigned spot on or after your start date</li>
-        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;">Remember to display any required parking permits</li>
-        <li style="padding: 8px 0; font-size: 15px;">Contact support if you need to make changes to your booking</li>
-      </ul>
+      <p style="font-size: 15px; color: #475569; margin: 0; line-height: 1.6;">Use the BCI access card to get access to the parking space and check the visual directory to find your actual booked spot before you come to parking. Please use it responsibly.</p>
     </div>
     
     <p>Thank you for choosing BCI ParkShare. We hope you have a seamless parking experience!</p>

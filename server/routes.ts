@@ -2997,16 +2997,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
               ? `${user.firstName} ${user.lastName}`
               : user.firstName || user.lastName || user.email || 'User';
             
+            // Fetch the spot's location from database for accurate email details
+            const spotLocation = await storage.getLocation(spot.locationId);
+            const locationName = spotLocation?.office || 'BCI Campus';
+            const buildingName = spotLocation?.building || locationName;
+
             // Prepare booking details for email with correct field mapping
             const bookingDetails = {
               id: newBooking.id,
               spotNumber: spot.spotNumber,
-              location: 'BCI Campus',
-              building: 'BCI Campus',
-              startDate: new Date(newBooking.bookingDate), // Use bookingDate as start date
-              endDate: new Date(newBooking.bookingDate), // Same day booking
-              rate: Number(newBooking.dailyRate), // Convert decimal to number
-              totalAmount: Number(newBooking.totalAmount) // Convert decimal to number
+              location: locationName,
+              building: buildingName,
+              startDate: new Date(newBooking.bookingDate),
+              endDate: new Date(newBooking.bookingDate),
+              rate: Number(newBooking.dailyRate),
+              totalAmount: Number(newBooking.totalAmount)
             };
 
             // Get spot owner for notification (if it's a peer-to-peer listing)
