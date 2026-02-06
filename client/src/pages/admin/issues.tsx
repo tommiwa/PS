@@ -301,10 +301,10 @@ export default function AdminIssuesPage() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <AlertCircle className="h-6 w-6 text-primary" />
-            Reported Issues
+            User Feedbacks
           </h1>
           <p className="text-muted-foreground mt-1">
-            Manage and track issues reported by users
+            Manage and track feedbacks from users
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => refetch()}>

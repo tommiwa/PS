@@ -2327,28 +2327,28 @@ export async function sendIssueReportNotification(
     const priorityColor = priorityColors[issue.priority] || '#64748b';
     const priorityLabel = issue.priority.charAt(0).toUpperCase() + issue.priority.slice(1);
 
-    const subject = `[BCI ParkShare] Issue Reported: ${issue.title}`;
+    const subject = `[BCI ParkShare] New Feedback Received: ${issue.title}`;
 
-    const text = `A new issue has been reported on BCI ParkShare.
+    const text = `A new feedback has been received on BCI ParkShare.
 
-REPORTED BY:
+SUBMITTED BY:
 - Name: ${reporter.name}
 - Email: ${reporter.email}
 
-ISSUE DETAILS:
+FEEDBACK DETAILS:
 - Title: ${issue.title}
 - Priority: ${priorityLabel}
 - Description: ${issue.description}
 
-Please review this issue in the BCI ParkShare admin panel under Reported Issues.
+Please review this feedback in the BCI ParkShare admin panel under User Feedbacks.
 
 BCI ParkShare Team`;
 
     const content = `
-    <p>A new issue has been reported on BCI ParkShare.</p>
+    <p>A new feedback has been received on BCI ParkShare.</p>
     
     <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
-      <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Reported By</h3>
+      <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Submitted By</h3>
       <ul style="margin: 0; padding: 0; list-style: none;">
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Name:</strong> ${reporter.name}</li>
         <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Email:</strong> ${reporter.email}</li>
@@ -2356,7 +2356,7 @@ BCI ParkShare Team`;
     </div>
     
     <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${priorityColor};">
-      <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Issue Details</h3>
+      <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Feedback Details</h3>
       <ul style="margin: 0; padding: 0; list-style: none;">
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Title:</strong> ${issue.title}</li>
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Priority:</strong> <span style="color: ${priorityColor}; font-weight: 600;">${priorityLabel}</span></li>
@@ -2364,11 +2364,11 @@ BCI ParkShare Team`;
       </ul>
     </div>
     
-    <p>Please review this issue in the BCI ParkShare admin panel under <strong>Reported Issues</strong>.</p>
+    <p>Please review this feedback in the BCI ParkShare admin panel under <strong>User Feedbacks</strong>.</p>
   `;
 
     const html = wrapEmailTemplate({
-      title: 'New Issue Reported',
+      title: 'New Feedback Received',
       content,
       theme: 'warning'
     });
@@ -2385,7 +2385,7 @@ BCI ParkShare Team`;
     const emailResult = await sendEmailNotification(notification);
     results.emailSent = emailResult.success;
 
-    console.log(`✓ Issue report email sent to lijin.joseji@bci.ca${adminEmails.length > 0 ? ` (cc: ${adminEmails.length} admins)` : ' (no CC - dev mode)'}: ${issue.title}`);
+    console.log(`✓ Feedback email sent to lijin.joseji@bci.ca${adminEmails.length > 0 ? ` (cc: ${adminEmails.length} admins)` : ' (no CC - dev mode)'}: ${issue.title}`);
   } catch (error) {
     console.error('❌ Error sending issue report notification:', error);
   }
