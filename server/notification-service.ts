@@ -238,6 +238,7 @@ export function wrapEmailTemplate(options: {
   title: string;
   content: string;
   theme?: EmailTheme;
+  titleColor?: string;
   ctaButton?: { text: string; url: string; secondary?: boolean };
   secondaryButton?: { text: string; url: string };
 }): string {
@@ -375,7 +376,7 @@ export function wrapEmailTemplate(options: {
           <!-- Title -->
           <tr>
             <td style="padding: 28px 48px 0 48px;">
-              <h1 style="color: ${BCI_BLUE}; font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 28px; font-weight: 700; margin: 0; line-height: 1.3; letter-spacing: -0.3px;">${options.title}</h1>
+              <h1 style="color: ${options.titleColor || BCI_BLUE}; font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 28px; font-weight: 700; margin: 0; line-height: 1.3; letter-spacing: -0.3px;">${options.title}</h1>
             </td>
           </tr>
           
@@ -2012,56 +2013,33 @@ If you have any questions about this change, please contact the BCI Workplace Se
 Best regards,
 BCI ParkShare Team`;
 
-      const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Parking Spot Unassigned</title>
-  <style>
-    .container { max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; }
-    .header { background: #dc2626; color: white; padding: 20px; text-align: center; }
-    .content { padding: 30px; background: #f8fafc; }
-    .spot-details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626; }
-    .footer { text-align: center; color: #64748b; padding: 20px; }
-    .warning { background: #fef3c7; border-left: 4px solid ${BCI_BLUE}; padding: 15px; margin: 20px 0; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>Parking Spot Unassigned</h1>
+      const content = `
+    <p>Dear ${formerOwner.name},</p>
+    <p>This is to inform you that you have been unassigned from your parking spot.</p>
+    
+    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #f97316;">
+      <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Spot Details</h3>
+      <ul style="margin: 0; padding: 0; list-style: none;">
+        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Spot Number:</strong> ${spotDetails.spotNumber}</li>
+        <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Location:</strong> ${spotDetails.location} - ${spotDetails.building}</li>
+      </ul>
     </div>
     
-    <div class="content">
-      <p>Dear ${formerOwner.name},</p>
-      <p>This is to inform you that you have been unassigned from your parking spot.</p>
-      
-      <div class="spot-details">
-        <h3>Spot Details</h3>
-        <ul>
-          <li><strong>Spot Number:</strong> ${spotDetails.spotNumber}</li>
-          <li><strong>Location:</strong> ${spotDetails.location}</li>
-          <li><strong>Building:</strong> ${spotDetails.building}</li>
-        </ul>
-      </div>
-      
-      ${cancelledBookingsCount > 0 ? `
-      <div class="warning">
-        <strong>Note:</strong> ${cancelledBookingsCount} future booking(s) for this spot have been automatically cancelled.
-      </div>
-      ` : ''}
-      
-      <p>If you have any questions about this change, please contact the BCI Workplace Services team.</p>
+    ${cancelledBookingsCount > 0 ? `
+    <div style="background-color: #fef3c7; border-radius: 8px; padding: 16px; margin: 20px 0;">
+      <strong style="color: #92400e;">Note:</strong> <span style="color: #92400e;">${cancelledBookingsCount} future booking(s) for this spot have been automatically cancelled.</span>
     </div>
+    ` : ''}
     
-    <div class="footer">
-      <p style="font-size: 11px; color: #94a3b8;">A BCI Workplace Services Initiative &bull; In partnership with Technology &amp; Innovation &bull; &copy; ${new Date().getFullYear()} BCI</p>
-    </div>
-  </div>
-</body>
-</html>`;
+    <p>If you have any questions about this change, please contact the BCI Workplace Services team.</p>
+  `;
+
+      const html = wrapEmailTemplate({
+        title: 'Parking Spot Unassigned',
+        content,
+        theme: 'neutral',
+        titleColor: '#f97316'
+      });
 
       const emailResult = await sendEmailNotification({
         to: formerOwner.email,
@@ -2133,53 +2111,31 @@ We apologize for any inconvenience. Please visit BCI ParkShare to book an altern
 Best regards,
 BCI ParkShare Team`;
 
-      const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bookings Cancelled</title>
-  <style>
-    .container { max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; }
-    .header { background: #f59e0b; color: white; padding: 20px; text-align: center; }
-    .content { padding: 30px; background: #f8fafc; }
-    .bookings-list { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${BCI_BLUE}; }
-    .footer { text-align: center; color: #64748b; padding: 20px; }
-    .info { background: #dbeafe; border-left: 4px solid #3b82f6; padding: 15px; margin: 20px 0; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>Booking(s) Cancelled</h1>
+      const content = `
+    <p>Dear ${renter.name},</p>
+    <p>We're writing to inform you that the following booking(s) have been cancelled due to a parking spot reassignment:</p>
+    
+    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #f97316;">
+      <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Cancelled Bookings</h3>
+      <ul style="margin: 0; padding: 0; list-style: none;">
+        ${cancelledBookings.map((b, i) => `<li style="padding: 8px 0; ${i < cancelledBookings.length - 1 ? 'border-bottom: 1px solid #e2e8f0;' : ''} font-size: 15px;"><strong style="color: #475569;">${b.bookingDate}</strong> - Spot ${b.spotNumber} at ${b.location}</li>`).join('')}
+      </ul>
     </div>
     
-    <div class="content">
-      <p>Dear ${renter.name},</p>
-      <p>We're writing to inform you that the following booking(s) have been cancelled due to a parking spot reassignment:</p>
-      
-      <div class="bookings-list">
-        <h3>Cancelled Bookings</h3>
-        <ul>
-          ${cancelledBookings.map(b => `<li><strong>${b.bookingDate}</strong> - Spot ${b.spotNumber} at ${b.location}</li>`).join('')}
-        </ul>
-      </div>
-      
-      <div class="info">
-        <strong>Why was this cancelled?</strong><br>
-        This cancellation occurred because the spot owner has been changed by administration. If any payments were made, they will be refunded according to the standard refund policy.
-      </div>
-      
-      <p>We apologize for any inconvenience. Please visit BCI ParkShare to book an alternative spot.</p>
+    <div style="background-color: #dbeafe; border-radius: 8px; padding: 16px; margin: 20px 0;">
+      <strong style="color: #1e40af;">Why was this cancelled?</strong><br>
+      <span style="color: #1e40af;">This cancellation occurred because the spot owner has been changed by administration. If any payments were made, they will be refunded according to the standard refund policy.</span>
     </div>
     
-    <div class="footer">
-      <p style="font-size: 11px; color: #94a3b8;">A BCI Workplace Services Initiative &bull; In partnership with Technology &amp; Innovation &bull; &copy; ${new Date().getFullYear()} BCI</p>
-    </div>
-  </div>
-</body>
-</html>`;
+    <p>We apologize for any inconvenience. Please visit BCI ParkShare to book an alternative spot.</p>
+  `;
+
+      const html = wrapEmailTemplate({
+        title: 'Booking(s) Cancelled',
+        content,
+        theme: 'neutral',
+        titleColor: '#f97316'
+      });
 
       const emailResult = await sendEmailNotification({
         to: renter.email,
