@@ -333,12 +333,13 @@ export default function Profile() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/user", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/waiting-list"] });
       // Reset UI states so flow starts fresh if user wants to re-join
       setShowSpotWarning(false);
       setShowJoinForm(false);
       toast({
         title: "Left Waiting List",
-        description: "You've been removed from the parking waiting list.",
+        description: "You've been removed from the parking waiting list. A confirmation email has been sent.",
         variant: "default"
       });
     },
