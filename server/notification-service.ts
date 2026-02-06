@@ -1906,9 +1906,11 @@ export async function sendWeeklySummaryNotification(
   return results;
 }
 
+// DISABLED: System Maintenance notification is currently disabled
+// export async function sendSystemMaintenanceNotification(...)
 export async function sendSystemMaintenanceNotification(
-  user: { name: string; email: string; id: string },
-  maintenance: {
+  _user: { name: string; email: string; id: string },
+  _maintenance: {
     title: string;
     description: string;
     startDate: Date;
@@ -1916,37 +1918,10 @@ export async function sendSystemMaintenanceNotification(
     affectedServices: string[];
     isUrgent: boolean;
   },
-  userPreferences: { systemMaintenance?: boolean; emailNotifications?: boolean } = {}
+  _userPreferences: { systemMaintenance?: boolean; emailNotifications?: boolean } = {}
 ): Promise<{ emailSent: boolean; inAppSent: boolean }> {
-  const results = { emailSent: false, inAppSent: false };
-
-  try {
-    // Send email notification if user has system maintenance notifications enabled
-    if (userPreferences.emailNotifications !== false && userPreferences.systemMaintenance !== false) {
-      const emailNotification = createSystemMaintenanceNotification(user, maintenance);
-      const emailResult = await sendEmailNotification(emailNotification);
-      results.emailSent = emailResult.success;
-    }
-
-    // Send in-app notification
-    await storage.createInAppNotification({
-      userId: user.id,
-      type: 'system_maintenance',
-      title: maintenance.isUrgent ? 'URGENT: System Maintenance' : 'System Maintenance Notice',
-      message: `${maintenance.title} - ${maintenance.startDate.toLocaleDateString()} to ${maintenance.endDate.toLocaleDateString()}`,
-      data: maintenance,
-      read: false
-    });
-    
-    results.inAppSent = true;
-
-    console.log(`✓ System maintenance notifications sent to ${user.name} (email: ${results.emailSent}, in-app: ${results.inAppSent})`);
-    
-  } catch (error) {
-    console.error('❌ Error sending system maintenance notifications:', error);
-  }
-
-  return results;
+  console.log('[System Maintenance Notification] Disabled - skipping');
+  return { emailSent: false, inAppSent: false };
 }
 
 export async function sendBookingCancellationNotification(
