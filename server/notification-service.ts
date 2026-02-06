@@ -975,7 +975,7 @@ The BCI ParkShare Team`;
 
   const ownerReminderHtml = payment.ownerName ? `
     <div class="highlight-box" style="background-color: #e0f2fe; border-radius: 8px; padding: 16px 20px; margin: 24px 0;">
-      <strong>Friendly Reminder:</strong> If you haven't already, please connect with <strong>${payment.ownerName}</strong> to arrange your payment. You can check the preferred payment method on the listing, or feel free to reach out to them directly to confirm &mdash; they may prefer <strong>Interac e-Transfer</strong> or <strong>cash</strong>.
+      <strong>Next Steps:</strong> If you haven't already, please connect with <strong>${payment.ownerName}</strong> to arrange your payment. You can check the preferred payment method on the listing, or feel free to reach out to them directly to confirm &mdash; they may prefer <strong>Interac e-Transfer</strong> or <strong>cash</strong>.
     </div>
   ` : `
     <div class="highlight-box" style="background-color: #e0f2fe; border-radius: 8px; padding: 16px 20px; margin: 24px 0;">
