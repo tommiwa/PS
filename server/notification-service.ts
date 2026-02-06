@@ -2385,7 +2385,7 @@ BCI ParkShare Team`;
     const emailResult = await sendEmailNotification(notification);
     results.emailSent = emailResult.success;
 
-    console.log(`✓ Issue report email sent to DL_Technology_Integration_Services@bci.ca (cc: ${adminEmails.length} admins): ${issue.title}`);
+    console.log(`✓ Issue report email sent to lijin.joseji@bci.ca${adminEmails.length > 0 ? ` (cc: ${adminEmails.length} admins)` : ' (no CC - dev mode)'}: ${issue.title}`);
   } catch (error) {
     console.error('❌ Error sending issue report notification:', error);
   }
