@@ -448,8 +448,7 @@ Great news! We're excited to let you know that a parking spot has been assigned 
 
 SPOT DETAILS:
 - Spot Number: ${spotDetails.spotNumber}
-- Location: ${spotDetails.location}
-- Building: ${spotDetails.building}
+- Location: ${spotDetails.location} - ${spotDetails.building}
 - Type: Standard
 
 NEXT STEPS:
@@ -470,8 +469,7 @@ The BCI ParkShare Team`;
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Your Assigned Spot</h3>
       <ul style="margin: 0; padding: 0; list-style: none;">
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Spot Number:</strong> ${spotDetails.spotNumber}</li>
-        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Location:</strong> ${spotDetails.location}</li>
-        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Building:</strong> ${spotDetails.building}</li>
+        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Location:</strong> ${spotDetails.location} - ${spotDetails.building}</li>
         <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Spot Type:</strong> Standard</li>
       </ul>
     </div>
@@ -493,8 +491,7 @@ The BCI ParkShare Team`;
   const html = wrapEmailTemplate({
     title: 'Your Parking Spot Is Ready',
     content,
-    theme: 'success',
-    ctaButton: { text: 'View Assignment', url: '#' }
+    theme: 'success'
   });
 
   return {
@@ -564,8 +561,7 @@ The BCI ParkShare Team`;
   const html = wrapEmailTemplate({
     title: 'Welcome to the Waiting List',
     content,
-    theme: 'primary',
-    ctaButton: { text: 'View My Status', url: '#' }
+    theme: 'primary'
   });
 
   return {
@@ -767,10 +763,8 @@ export const createBookingCancellationNotification = (
 We wanted to let you know that your parking spot booking has been cancelled.
 
 BOOKING DETAILS:
-- Booking ID: ${booking.id}
 - Spot Number: ${booking.spotNumber}
-- Location: ${booking.location}
-- Building: ${booking.building}
+- Location: ${booking.location} - ${booking.building}
 - Booking Date: ${bookingDateStr}
 - Cancelled By: ${booking.cancelledBy}${booking.reason ? `\n- Reason: ${booking.reason}` : ''}
 
@@ -796,10 +790,8 @@ The BCI ParkShare Team`;
     <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Cancellation Details</h3>
       <ul style="margin: 0; padding: 0; list-style: none;">
-        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Booking ID:</strong> ${booking.id}</li>
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Spot Number:</strong> ${booking.spotNumber}</li>
-        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Location:</strong> ${booking.location}</li>
-        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Building:</strong> ${booking.building}</li>
+        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Location:</strong> ${booking.location} - ${booking.building}</li>
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Booking Date:</strong> ${bookingDateStr}</li>
         <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Cancelled By:</strong> ${booking.cancelledBy}</li>
         ${booking.reason ? `<li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Reason:</strong> ${booking.reason}</li>` : ''}
@@ -823,8 +815,7 @@ The BCI ParkShare Team`;
   const html = wrapEmailTemplate({
     title: 'Booking Cancelled',
     content,
-    theme: 'danger',
-    ctaButton: { text: 'Find Another Spot', url: '#' }
+    theme: 'danger'
   });
 
   return {
@@ -861,10 +852,8 @@ export const createOwnerBookingCancellationNotification = (
 We wanted to let you know that a booking for your parking spot has been cancelled.
 
 BOOKING DETAILS:
-- Booking ID: ${booking.id}
 - Spot Number: ${booking.spotNumber}
-- Location: ${booking.location}
-- Building: ${booking.building}
+- Location: ${booking.location} - ${booking.building}
 - Booking Date: ${bookingDateStr}
 - Renter: ${renter.name} (${renter.email})
 - Cancelled By: ${booking.cancelledBy}${booking.reason ? `\n- Reason: ${booking.reason}` : ''}
@@ -881,10 +870,8 @@ The BCI ParkShare Team`;
     <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Cancellation Details</h3>
       <ul style="margin: 0; padding: 0; list-style: none;">
-        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Booking ID:</strong> ${booking.id}</li>
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Spot Number:</strong> ${booking.spotNumber}</li>
-        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Location:</strong> ${booking.location}</li>
-        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Building:</strong> ${booking.building}</li>
+        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Location:</strong> ${booking.location} - ${booking.building}</li>
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Booking Date:</strong> ${bookingDateStr}</li>
         <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Cancelled By:</strong> ${booking.cancelledBy}</li>
         ${booking.reason ? `<li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Reason:</strong> ${booking.reason}</li>` : ''}
@@ -894,7 +881,7 @@ The BCI ParkShare Team`;
     <div class="info-card" style="background-color: #e0f2fe; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Renter Information</h3>
       <ul style="margin: 0; padding: 0; list-style: none;">
-        <li style="padding: 8px 0; border-bottom: 1px solid #fcd34d; font-size: 15px;"><strong style="color: #475569;">Name:</strong> ${renter.name}</li>
+        <li style="padding: 8px 0; border-bottom: 1px solid #bfdbfe; font-size: 15px;"><strong style="color: #475569;">Name:</strong> ${renter.name}</li>
         <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Email:</strong> ${renter.email}</li>
       </ul>
     </div>
@@ -907,8 +894,7 @@ The BCI ParkShare Team`;
   const html = wrapEmailTemplate({
     title: 'Booking Cancelled',
     content,
-    theme: 'warning',
-    ctaButton: { text: 'Manage My Spots', url: '#' }
+    theme: 'warning'
   });
 
   return {
@@ -940,7 +926,6 @@ export const createPaymentReminderNotification = (
 ${isOverdue ? 'Your payment is now overdue and requires immediate attention.' : 'This is a friendly reminder about your upcoming payment.'}
 
 PAYMENT DETAILS:
-- Booking ID: ${payment.bookingId}
 - Spot Number: ${payment.spotNumber}
 - Amount Due: $${payment.amount}
 - Due Date: ${payment.dueDate.toLocaleDateString()}
@@ -964,7 +949,6 @@ The BCI ParkShare Team`;
     <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${amountColor};">
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Payment Details</h3>
       <ul style="margin: 0; padding: 0; list-style: none;">
-        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Booking ID:</strong> ${payment.bookingId}</li>
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Spot Number:</strong> ${payment.spotNumber}</li>
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Amount Due:</strong> <span style="color: ${amountColor}; font-weight: 600; font-size: 18px;">$${payment.amount}</span></li>
         <li style="padding: 8px 0; ${isOverdue ? 'border-bottom: 1px solid #e2e8f0;' : ''} font-size: 15px;"><strong style="color: #475569;">Due Date:</strong> ${payment.dueDate.toLocaleDateString()}</li>
@@ -988,8 +972,7 @@ The BCI ParkShare Team`;
   const html = wrapEmailTemplate({
     title: isOverdue ? 'Payment Overdue' : 'Payment Reminder',
     content,
-    theme: isOverdue ? 'danger' : 'warning',
-    ctaButton: { text: 'Make Payment', url: '#' }
+    theme: isOverdue ? 'danger' : 'warning'
   });
 
   return {
@@ -1014,7 +997,7 @@ export const createSpotAvailabilityNotification = (
   const subject = `Parking Spots Available - ${spots.length} spot${spots.length > 1 ? 's' : ''} matching your preferences`;
   
   const spotsList = spots.map(spot => 
-    `- Spot ${spot.spotNumber} (${spot.type}) - ${spot.location}, ${spot.building} - $${spot.rate}/day`
+    `- Spot ${spot.spotNumber} (${spot.type}) - ${spot.location} - ${spot.building} - $${spot.rate}/day`
   ).join('\n');
   
   const text = `Dear ${user.name},
@@ -1039,7 +1022,7 @@ The BCI ParkShare Team`;
   const spotsHtml = spots.map(spot => `
     <div style="background-color: #f1f5f9; border-radius: 8px; padding: 16px; margin: 12px 0;">
       <div style="font-weight: 600; color: #1e293b; font-size: 16px;">Spot ${spot.spotNumber}</div>
-      <div style="color: #64748b; font-size: 14px; margin-top: 4px;">${spot.type} | ${spot.location}, ${spot.building}</div>
+      <div style="color: #64748b; font-size: 14px; margin-top: 4px;">${spot.type} | ${spot.location} - ${spot.building}</div>
       <div style="color: #10b981; font-weight: 600; font-size: 15px; margin-top: 8px;">$${spot.rate}/day</div>
     </div>
   `).join('');
@@ -1063,8 +1046,7 @@ The BCI ParkShare Team`;
   const html = wrapEmailTemplate({
     title: 'New Spots Available',
     content,
-    theme: 'success',
-    ctaButton: { text: 'View Available Spots', url: '#' }
+    theme: 'success'
   });
 
   return {
@@ -1166,8 +1148,7 @@ The BCI ParkShare Team`;
   const html = wrapEmailTemplate({
     title: 'Your Weekly Summary',
     content,
-    theme: 'primary',
-    ctaButton: { text: 'View Full Details', url: '#' }
+    theme: 'primary'
   });
 
   return {
@@ -1357,8 +1338,7 @@ The BCI ParkShare Team`;
   const html = wrapEmailTemplate({
     title: "You're on the Waiting List",
     content,
-    theme: 'primary',
-    ctaButton: { text: 'View My Status', url: '#' }
+    theme: 'primary'
   });
 
   return {
@@ -1431,8 +1411,7 @@ BCI ParkShare System`;
   const html = wrapEmailTemplate({
     title: 'New Waiting List Enrollment',
     content,
-    theme: 'primary',
-    ctaButton: { text: 'Review Waiting List', url: '#' }
+    theme: 'primary'
   });
 
   return {
