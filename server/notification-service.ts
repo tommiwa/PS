@@ -791,7 +791,7 @@ CANCELLATION DETAILS:
 - Booking Date: ${bookingDateStr}
 - Cancelled By: ${booking.cancelledBy}${booking.reason ? `\n- Reason: ${booking.reason}` : ''}
 
-${role === 'renter' ? '' : 'If you had already made a payment for this booking, please connect with the spot owner to arrange a refund.\n\n'}WHAT'S NEXT:
+${role === 'renter' ? '' : 'If you made a payment, please contact the spot owner to get a refund or work with them for a future booking.\n\n'}WHAT'S NEXT:
 - Browse the available listings to find and book another parking spot
 - Contact support if you have any questions about this cancellation
 
@@ -803,7 +803,7 @@ The BCI ParkShare Team`;
         <strong>Need another spot?</strong> You can browse the available listings anytime to find and book a new parking spot.
       </div>`
     : `<div class="highlight-box" style="background-color: #e0f2fe; border-radius: 8px; padding: 16px 20px; margin: 24px 0;">
-        <strong>Next Steps:</strong> Please browse the available listings to find and book a new parking spot. If you had already made a payment for this booking, connect with the spot owner to arrange a refund.
+        <strong>Next Steps:</strong> Please browse the available listings to find and book a new parking spot. If you made a payment, please contact the spot owner to get a refund or work with them for a future booking.
       </div>`;
 
   const content = `
@@ -2195,7 +2195,7 @@ We're writing to inform you that the following booking(s) have been cancelled du
 
 ${bookingsList}
 
-This cancellation occurred because the spot owner has been changed by administration. If any payments were made, they will be refunded according to the standard refund policy.
+This cancellation occurred because the spot owner has been changed by administration. If you made a payment, please contact the spot owner to get a refund or work with them for a future booking.
 
 We apologize for any inconvenience. Please visit BCI ParkShare to book an alternative spot.
 
@@ -2215,7 +2215,7 @@ BCI ParkShare Team`;
     
     <div style="background-color: #dbeafe; border-radius: 8px; padding: 16px; margin: 20px 0;">
       <strong style="color: #1e40af;">Why was this cancelled?</strong><br>
-      <span style="color: #1e40af;">This cancellation occurred because the spot owner has been changed by administration. If any payments were made, they will be refunded according to the standard refund policy.</span>
+      <span style="color: #1e40af;">This cancellation occurred because the spot owner has been changed by administration. If you made a payment, please contact the spot owner to get a refund or work with them for a future booking.</span>
     </div>
     
     <p>We apologize for any inconvenience. Please visit BCI ParkShare to book an alternative spot.</p>
