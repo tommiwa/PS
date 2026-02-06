@@ -599,11 +599,14 @@ export const createBookingConfirmationNotification = (
     rate: number;
     totalAmount: number;
   },
-  owner?: { name: string; email: string } | null
+  owner?: { name: string; email: string } | null,
+  isWorkplaceServicesListing?: boolean
 ): EmailNotification => {
   const subject = `Booking Confirmed - Spot ${booking.spotNumber}`;
   
-  const ownerText = owner ? `\nSPOT OWNER:\n- Name: ${owner.name}\n- Email: ${owner.email}\n` : '';
+  const ownerText = isWorkplaceServicesListing
+    ? `\nMANAGED BY: Workplace Services (paid via payroll deduction)\n`
+    : owner ? `\nSPOT OWNER:\n- Name: ${owner.name}\n- Email: ${owner.email}\n` : '';
   
   const text = `Dear ${user.name},
 
@@ -625,7 +628,14 @@ Thank you for choosing BCI ParkShare!
 Warm regards,
 The BCI ParkShare Team`;
 
-  const ownerSection = owner ? `
+  const ownerSection = isWorkplaceServicesListing ? `
+    <div class="info-card" style="background-color: #e0f2fe; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
+      <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Managed By</h3>
+      <ul style="margin: 0; padding: 0; list-style: none;">
+        <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Workplace Services</strong> (paid via payroll deduction)</li>
+      </ul>
+    </div>
+  ` : owner ? `
     <div class="info-card" style="background-color: #e0f2fe; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Spot Owner</h3>
       <ul style="margin: 0; padding: 0; list-style: none;">
@@ -967,6 +977,7 @@ export const createPaymentReminderNotification = (
     daysOverdue?: number;
     ownerName?: string;
     ownerEmail?: string;
+    isWorkplaceServicesListing?: boolean;
   }
 ): EmailNotification => {
   const isOverdue = payment.daysOverdue && payment.daysOverdue > 0;
@@ -974,9 +985,11 @@ export const createPaymentReminderNotification = (
     ? `Payment Overdue - Spot ${payment.spotNumber} (${payment.daysOverdue} days)`
     : `Payment Reminder - Spot ${payment.spotNumber}`;
   
-  const ownerContactText = payment.ownerName
-    ? `\nSPOT OWNER CONTACT:\n- Name: ${payment.ownerName}\n- Email: ${payment.ownerEmail || 'N/A'}\n\nPlease reach out to ${payment.ownerName} to arrange payment if you have not already done so. Check with the spot owner for their preferred payment method (Interac e-Transfer or cash).\n`
-    : '';
+  const ownerContactText = payment.isWorkplaceServicesListing
+    ? `\nThis is a Workplace Services spot. Payment is handled through payroll deduction \u2014 no action is required on your part.\n`
+    : payment.ownerName
+      ? `\nSPOT OWNER CONTACT:\n- Name: ${payment.ownerName}\n- Email: ${payment.ownerEmail || 'N/A'}\n\nPlease reach out to ${payment.ownerName} to arrange payment if you have not already done so. Check with the spot owner for their preferred payment method (Interac e-Transfer or cash).\n`
+      : '';
 
   const text = `Dear ${user.name},
 
@@ -988,9 +1001,11 @@ PAYMENT DETAILS:
 - Due Date: ${payment.dueDate.toLocaleDateString()}
 ${isOverdue ? `- Days Overdue: ${payment.daysOverdue}` : ''}
 ${ownerContactText}
-${isOverdue 
-  ? 'ACTION REQUIRED: Please make your payment immediately to avoid service interruption. Late fees may apply.'
-  : 'Please ensure payment is made by the due date to maintain uninterrupted access to your parking spot.'
+${payment.isWorkplaceServicesListing
+  ? ''
+  : isOverdue 
+    ? 'ACTION REQUIRED: Please make your payment immediately to avoid service interruption. Late fees may apply.'
+    : 'Please ensure payment is made by the due date to maintain uninterrupted access to your parking spot.'
 }
 
 Warm regards,
@@ -998,7 +1013,12 @@ The BCI ParkShare Team`;
 
   const amountColor = isOverdue ? '#ef4444' : '#f59e0b';
   
-  const ownerContactHtml = payment.ownerName ? `
+  const ownerContactHtml = payment.isWorkplaceServicesListing ? `
+    <div style="background-color: #f0f9ff; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #1e9df1;">
+      <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Workplace Services Spot</h3>
+      <p style="margin: 0; font-size: 15px; color: #475569;">This is a Workplace Services spot. Payment is handled through payroll deduction &mdash; no action is required on your part.</p>
+    </div>
+  ` : payment.ownerName ? `
     <div style="background-color: #f0f9ff; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #1e9df1;">
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Spot Owner Contact</h3>
       <ul style="margin: 0; padding: 0; list-style: none;">
@@ -1008,7 +1028,7 @@ The BCI ParkShare Team`;
     </div>
   ` : '';
 
-  const ownerReminderHtml = payment.ownerName ? `
+  const ownerReminderHtml = payment.isWorkplaceServicesListing ? '' : payment.ownerName ? `
     <div class="highlight-box" style="background-color: #e0f2fe; border-radius: 8px; padding: 16px 20px; margin: 24px 0;">
       <strong>Next Steps:</strong> If you haven't already, please connect with <strong>${payment.ownerName}</strong> to arrange your payment. You can check the preferred payment method on the listing, or feel free to reach out to them directly to confirm &mdash; they may prefer <strong>Interac e-Transfer</strong> or <strong>cash</strong>.
     </div>
@@ -1781,14 +1801,15 @@ export async function sendBookingConfirmationNotification(
     totalAmount: number;
   },
   userPreferences: { bookingConfirmations?: boolean; emailNotifications?: boolean } = {},
-  owner?: { name: string; email: string; id: string } | null
+  owner?: { name: string; email: string; id: string } | null,
+  isWorkplaceServicesListing?: boolean
 ): Promise<{ emailSent: boolean; inAppSent: boolean; ownerEmailSent: boolean; ownerInAppSent: boolean }> {
   const results = { emailSent: false, inAppSent: false, ownerEmailSent: false, ownerInAppSent: false };
 
   try {
     // Send email notification to renter if user has booking confirmations enabled
     if (userPreferences.emailNotifications !== false && userPreferences.bookingConfirmations !== false) {
-      const emailNotification = createBookingConfirmationNotification(user, booking, owner);
+      const emailNotification = createBookingConfirmationNotification(user, booking, owner, isWorkplaceServicesListing);
       const emailResult = await sendEmailNotification(emailNotification);
       results.emailSent = emailResult.success;
     }
@@ -1858,6 +1879,7 @@ export async function sendPaymentReminderNotification(
     daysOverdue?: number;
     ownerName?: string;
     ownerEmail?: string;
+    isWorkplaceServicesListing?: boolean;
   },
   userPreferences: { paymentReminders?: boolean; emailNotifications?: boolean } = {}
 ): Promise<{ emailSent: boolean; inAppSent: boolean }> {

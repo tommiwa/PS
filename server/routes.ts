@@ -3014,9 +3014,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               totalAmount: Number(newBooking.totalAmount)
             };
 
-            // Get spot owner for notification (if it's a peer-to-peer listing)
+            // Get spot owner for notification (skip for admin-created/Workplace Services listings)
+            const isWorkplaceServicesListing = listing.createdByAdmin === true;
             let ownerInfo: { name: string; email: string; id: string } | null = null;
-            if (listing.ownerId) {
+            if (!isWorkplaceServicesListing && listing.ownerId) {
               const owner = await storage.getUser(listing.ownerId);
               if (owner && owner.email) {
                 const ownerDisplayName = owner.firstName && owner.lastName 
@@ -3031,7 +3032,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               { name: displayName, email: user.email || '', id: user.id },
               bookingDetails,
               notificationPreferences || {},
-              ownerInfo
+              ownerInfo,
+              isWorkplaceServicesListing
             );
           }
         } catch (emailError) {
@@ -4245,8 +4247,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     ? `${renter.firstName} ${renter.lastName}`
                     : renter.firstName || renter.lastName || renter.email || 'User';
                   
+                  const isWsListing = listing.createdByAdmin === true;
                   let ownerInfo: { name: string; email: string; id: string } | null = null;
-                  if (listing.ownerId) {
+                  if (!isWsListing && listing.ownerId) {
                     const owner = await storage.getUser(listing.ownerId);
                     if (owner && owner.email) {
                       const ownerName = owner.firstName && owner.lastName
@@ -4265,6 +4268,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       building: buildingName,
                       bookingDate: booking.bookingDate,
                       cancelledBy: 'Admin',
+                      isWorkplaceServicesListing: isWsListing,
                       reason: reason
                     },
                     {},
@@ -4810,11 +4814,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get spot info
       const spot = await storage.getParkingSpot(booking.spotId);
 
-      // Get spot owner info for the reminder
-      const owner = booking.ownerId ? await storage.getUser(booking.ownerId) : null;
-      const ownerName = owner && (owner.firstName || owner.lastName)
-        ? `${owner.firstName || ''} ${owner.lastName || ''}`.trim()
-        : undefined;
+      // Get listing to check if it's a Workplace Services (admin-created) listing
+      const listing = booking.listingId ? await storage.getSpotListing(booking.listingId) : null;
+      const isWsListing = listing?.createdByAdmin === true;
+
+      // Get spot owner info for the reminder (skip for Workplace Services listings)
+      const owner = (!isWsListing && booking.ownerId) ? await storage.getUser(booking.ownerId) : null;
+      const ownerName = isWsListing
+        ? 'Workplace Services'
+        : owner && (owner.firstName || owner.lastName)
+          ? `${owner.firstName || ''} ${owner.lastName || ''}`.trim()
+          : undefined;
 
       // Send payment reminder notification to renter using the notification service
       const { sendPaymentReminderNotification: sendReminder } = await import('./notification-service');
@@ -4829,7 +4839,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           amount: parseFloat(booking.totalAmount?.toString() || booking.dailyRate?.toString() || '0'),
           dueDate: new Date(booking.bookingDate),
           ownerName,
-          ownerEmail: owner?.email || undefined
+          ownerEmail: isWsListing ? undefined : (owner?.email || undefined),
+          isWorkplaceServicesListing: isWsListing
         }
       );
       
@@ -8064,11 +8075,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   ? `${user.firstName} ${user.lastName}`
                   : user.firstName || user.lastName || user.email || 'User';
                 
-                // Get spot owner info
-                const owner = booking.ownerId ? await storage.getUser(booking.ownerId) : null;
-                const ownerDisplayName = owner && (owner.firstName || owner.lastName)
-                  ? `${owner.firstName || ''} ${owner.lastName || ''}`.trim()
-                  : undefined;
+                // Get listing to check if it's a Workplace Services listing
+                const bulkListing = booking.listingId ? await storage.getSpotListing(booking.listingId) : null;
+                const isWsListing = bulkListing?.createdByAdmin === true;
+
+                // Get spot owner info (skip for Workplace Services listings)
+                const owner = (!isWsListing && booking.ownerId) ? await storage.getUser(booking.ownerId) : null;
+                const ownerDisplayName = isWsListing
+                  ? 'Workplace Services'
+                  : owner && (owner.firstName || owner.lastName)
+                    ? `${owner.firstName || ''} ${owner.lastName || ''}`.trim()
+                    : undefined;
 
                 // Prepare payment details
                 const paymentDetails = {
@@ -8078,7 +8095,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   dueDate: dueDate,
                   daysOverdue: daysDiff > 0 ? daysDiff : undefined,
                   ownerName: ownerDisplayName,
-                  ownerEmail: owner?.email || undefined
+                  ownerEmail: isWsListing ? undefined : (owner?.email || undefined),
+                  isWorkplaceServicesListing: isWsListing
                 };
                 
                 // Send payment reminder asynchronously
