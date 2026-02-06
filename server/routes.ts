@@ -1715,6 +1715,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
         after: updatedListing
       });
       
+      // If listing was cancelled by owner, cancel active bookings and notify renters
+      if (validatedData.status === 'cancelled' && existingListing.status !== 'cancelled') {
+        try {
+          const listingBookings = await storage.getBookingsByListing(id);
+          const activeBookings = listingBookings.filter(b => b.status !== 'cancelled' && b.status !== 'completed');
+          
+          if (activeBookings.length > 0) {
+            const spot = await storage.getParkingSpot(existingListing.spotId);
+            const location = spot?.locationId ? await storage.getLocation(spot.locationId) : null;
+            const locationName = location ? `${location.office} - ${location.level}` : 'Unknown';
+            const buildingName = location?.building || 'Unknown';
+            const isWsListing = existingListing.createdByAdmin === true;
+            const ownerUser = await storage.getUser(userId);
+            const ownerName = isWsListing
+              ? 'Workplace Services'
+              : (ownerUser?.firstName && ownerUser?.lastName
+                ? `${ownerUser.firstName} ${ownerUser.lastName}`
+                : ownerUser?.email || 'Owner');
+            
+            let ownerInfo: { name: string; email: string; id: string } | null = null;
+            if (!isWsListing && ownerUser && ownerUser.email) {
+              ownerInfo = { name: ownerName, email: ownerUser.email, id: ownerUser.id };
+            }
+            
+            for (const booking of activeBookings) {
+              await storage.cancelBookingWithReason(booking.id, `Listing cancelled by ${isWsListing ? 'Workplace Services' : `spot owner (${ownerName})`}`);
+              
+              setImmediate(async () => {
+                try {
+                  const renter = await storage.getUser(booking.renterId);
+                  if (renter && renter.email) {
+                    const renterName = renter.firstName && renter.lastName
+                      ? `${renter.firstName} ${renter.lastName}`
+                      : renter.firstName || renter.lastName || renter.email || 'User';
+                    
+                    await sendBookingCancellationNotification(
+                      { name: renterName, email: renter.email, id: renter.id },
+                      {
+                        id: booking.id,
+                        spotNumber: spot?.spotNumber || 'Unknown',
+                        location: locationName,
+                        building: buildingName,
+                        bookingDate: booking.bookingDate,
+                        cancelledBy: ownerName,
+                        cancelledByRole: 'owner' as const,
+                        isWorkplaceServicesListing: isWsListing,
+                        reason: `Listing cancelled by ${isWsListing ? 'Workplace Services' : `spot owner (${ownerName})`}`
+                      },
+                      {},
+                      ownerInfo
+                    );
+                  }
+                } catch (notifyError) {
+                  console.error(`Failed to send cancellation notification for booking ${booking.id}:`, notifyError);
+                }
+              });
+            }
+            console.log(`[Owner Cancel Listing] Cancelled ${activeBookings.length} bookings for listing ${id}`);
+          }
+        } catch (bookingCancelError) {
+          console.error('[Owner Cancel Listing] Error cancelling associated bookings:', bookingCancelError);
+        }
+      }
+      
       res.json(updatedListing);
     } catch (error) {
       if (error instanceof z.ZodError) {
