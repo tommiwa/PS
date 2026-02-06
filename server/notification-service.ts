@@ -970,9 +970,18 @@ The BCI ParkShare Team`;
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Name:</strong> ${payment.ownerName}</li>
         ${payment.ownerEmail ? `<li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Email:</strong> <a href="mailto:${payment.ownerEmail}" style="color: #1e9df1; text-decoration: none;">${payment.ownerEmail}</a></li>` : ''}
       </ul>
-      <p style="font-size: 14px; color: #475569; margin: 16px 0 0 0;">If you have not already done so, please reach out to <strong>${payment.ownerName}</strong> to arrange payment. Be sure to confirm their preferred payment method &mdash; <strong>Interac e-Transfer</strong> or <strong>cash</strong>.</p>
     </div>
   ` : '';
+
+  const ownerReminderHtml = payment.ownerName ? `
+    <div class="highlight-box" style="background-color: #e0f2fe; border-radius: 8px; padding: 16px 20px; margin: 24px 0;">
+      <strong>Friendly Reminder:</strong> If you haven't already, please connect with <strong>${payment.ownerName}</strong> to arrange your payment. Don't forget to check with them for their preferred payment method &mdash; <strong>Interac e-Transfer</strong> or <strong>cash</strong>.
+    </div>
+  ` : `
+    <div class="highlight-box" style="background-color: #e0f2fe; border-radius: 8px; padding: 16px 20px; margin: 24px 0;">
+      <strong>Friendly Reminder:</strong> If you haven't already, please arrange your payment at your earliest convenience.
+    </div>
+  `;
 
   const content = `
     <p>Dear ${user.name},</p>
@@ -994,11 +1003,9 @@ The BCI ParkShare Team`;
     <div class="highlight-box danger" style="background-color: #fee2e2; border-radius: 8px; padding: 16px 20px; margin: 24px 0;">
       <strong>Action Required:</strong> Please make your payment immediately to avoid service interruption. Late fees may apply according to our payment policy.
     </div>
-    ` : `
-    <div class="highlight-box" style="background-color: #e0f2fe; border-radius: 8px; padding: 16px 20px; margin: 24px 0;">
-      <strong>Reminder:</strong> Please ensure payment is made by the due date to maintain uninterrupted access to your parking spot.
-    </div>
-    `}
+    ` : ''}
+
+    ${ownerReminderHtml}
     
     <p>If you've already made this payment, please disregard this message. If you have any questions, please contact the spot owner directly or reach out to our support team.</p>
   `;
