@@ -588,9 +588,12 @@ export const createBookingConfirmationNotification = (
     endDate: Date;
     rate: number;
     totalAmount: number;
-  }
+  },
+  owner?: { name: string; email: string } | null
 ): EmailNotification => {
   const subject = `Booking Confirmed - Spot ${booking.spotNumber}`;
+  
+  const ownerText = owner ? `\nSPOT OWNER:\n- Name: ${owner.name}\n- Email: ${owner.email}\n` : '';
   
   const text = `Dear ${user.name},
 
@@ -598,22 +601,29 @@ Great news! Your parking spot booking has been confirmed. We're excited to have 
 
 BOOKING DETAILS:
 - Spot Number: ${booking.spotNumber}
-- Location: ${booking.location}
-- Building: ${booking.building}
-- Start Date: ${booking.startDate.toLocaleDateString()}
-- End Date: ${booking.endDate.toLocaleDateString()}
-- Daily Rate: $${booking.rate}
-- Total Amount: $${booking.totalAmount}
-
+- Location: ${booking.location} - ${booking.building}
+- Booking Date: ${booking.startDate.toLocaleDateString()} to ${booking.endDate.toLocaleDateString()}
+- Amount: $${booking.totalAmount}
+${ownerText}
 IMPORTANT INFORMATION:
 - Please use your BCI access card to enter the parking facility.
-- Refer to the visual directory on-site to locate your assigned spot before arriving.
+- Refer to the visual directory in Bull & Bear to locate your assigned spot before arriving.
 - Kindly use the parking space responsibly and follow all facility guidelines.
 
 Thank you for choosing BCI ParkShare!
 
 Warm regards,
 The BCI ParkShare Team`;
+
+  const ownerSection = owner ? `
+    <div class="info-card" style="background-color: #e0f2fe; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
+      <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Spot Owner</h3>
+      <ul style="margin: 0; padding: 0; list-style: none;">
+        <li style="padding: 8px 0; border-bottom: 1px solid #bfdbfe; font-size: 15px;"><strong style="color: #475569;">Name:</strong> ${owner.name}</li>
+        <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Email:</strong> ${owner.email}</li>
+      </ul>
+    </div>
+  ` : '';
 
   const content = `
     <p>Dear ${user.name},</p>
@@ -623,20 +633,19 @@ The BCI ParkShare Team`;
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Booking Details</h3>
       <ul style="margin: 0; padding: 0; list-style: none;">
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Spot Number:</strong> ${booking.spotNumber}</li>
-        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Location:</strong> ${booking.location}</li>
-        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Building:</strong> ${booking.building}</li>
-        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Start Date:</strong> ${booking.startDate.toLocaleDateString()}</li>
-        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">End Date:</strong> ${booking.endDate.toLocaleDateString()}</li>
-        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Daily Rate:</strong> $${booking.rate}</li>
-        <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Total Amount:</strong> <span style="color: #10b981; font-weight: 600;">$${booking.totalAmount}</span></li>
+        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Location:</strong> ${booking.location} - ${booking.building}</li>
+        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Booking Date:</strong> ${booking.startDate.toLocaleDateString()} to ${booking.endDate.toLocaleDateString()}</li>
+        <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Amount:</strong> <span style="color: ${BCI_BLUE}; font-weight: 600;">$${booking.totalAmount}</span></li>
       </ul>
     </div>
+    
+    ${ownerSection}
     
     <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Important Information</h3>
       <ul style="margin: 0; padding: 0 0 0 20px; list-style: disc;">
         <li style="padding: 4px 0; font-size: 15px; color: #475569; line-height: 1.6;">Please use your BCI access card to enter the parking facility.</li>
-        <li style="padding: 4px 0; font-size: 15px; color: #475569; line-height: 1.6;">Refer to the visual directory on-site to locate your assigned spot before arriving.</li>
+        <li style="padding: 4px 0; font-size: 15px; color: #475569; line-height: 1.6;">Refer to the visual directory in Bull & Bear to locate your assigned spot before arriving.</li>
         <li style="padding: 4px 0; font-size: 15px; color: #475569; line-height: 1.6;">Kindly use the parking space responsibly and follow all facility guidelines.</li>
       </ul>
     </div>
@@ -647,8 +656,7 @@ The BCI ParkShare Team`;
   const html = wrapEmailTemplate({
     title: 'Booking Confirmed',
     content,
-    theme: 'success',
-    ctaButton: { text: 'View My Bookings', url: '#' }
+    theme: 'success'
   });
 
   return {
@@ -1615,7 +1623,7 @@ export async function sendBookingConfirmationNotification(
   try {
     // Send email notification to renter if user has booking confirmations enabled
     if (userPreferences.emailNotifications !== false && userPreferences.bookingConfirmations !== false) {
-      const emailNotification = createBookingConfirmationNotification(user, booking);
+      const emailNotification = createBookingConfirmationNotification(user, booking, owner);
       const emailResult = await sendEmailNotification(emailNotification);
       results.emailSent = emailResult.success;
     }
