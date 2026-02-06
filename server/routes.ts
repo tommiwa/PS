@@ -8490,6 +8490,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const [newIssue] = await db.insert(issues).values(validatedData as any).returning();
       
+      // Send issue report email to DL_Technology_Integration_Services@bci.ca with all admins in CC
+      setImmediate(async () => {
+        try {
+          const { sendIssueReportNotification } = await import('./notification-service');
+          const allUsers = await storage.getAllUsers();
+          const adminEmails = allUsers
+            .filter(u => u.roles?.includes('admin') && u.email)
+            .map(u => u.email!);
+          
+          const reporterName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown';
+          await sendIssueReportNotification(
+            { name: reporterName, email: user.email || '' },
+            { title: newIssue.title, description: newIssue.description || '', priority: newIssue.priority },
+            adminEmails
+          );
+        } catch (emailError) {
+          console.error('Failed to send issue report email:', emailError);
+        }
+      });
+      
       res.status(201).json(newIssue);
     } catch (error) {
       if (error instanceof z.ZodError) {

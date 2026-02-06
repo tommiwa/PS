@@ -63,11 +63,21 @@ async function sendEmailViaMandrill(
   to: string,
   subject: string,
   text: string,
-  html: string
+  html: string,
+  cc?: string[]
 ): Promise<void> {
   const apiKey = process.env.MANDRILL_API_KEY!;
   const fromEmail = process.env.MANDRILL_FROM_EMAIL || 'noreply@bci.ca';
   const fromName = process.env.MANDRILL_FROM_NAME || 'BCI ParkShare';
+  
+  const recipients: Array<{ email: string; type: string }> = [
+    { email: to, type: 'to' }
+  ];
+  if (cc && cc.length > 0) {
+    for (const ccEmail of cc) {
+      recipients.push({ email: ccEmail, type: 'cc' });
+    }
+  }
   
   const payload = {
     key: apiKey,
@@ -77,12 +87,7 @@ async function sendEmailViaMandrill(
       subject: subject,
       from_email: fromEmail,
       from_name: fromName,
-      to: [
-        {
-          email: to,
-          type: 'to'
-        }
-      ],
+      to: recipients,
       headers: {
         'Reply-To': fromEmail
       },
@@ -132,12 +137,13 @@ async function sendEmailViaMS365(
   to: string,
   subject: string,
   text: string,
-  html: string
+  html: string,
+  cc?: string[]
 ): Promise<void> {
   const accessToken = await getMS365AccessToken();
   const senderEmail = process.env.MS365_SENDER_EMAIL!;
   
-  const emailPayload = {
+  const emailPayload: any = {
     message: {
       subject: subject,
       body: {
@@ -164,6 +170,12 @@ async function sendEmailViaMS365(
     },
     saveToSentItems: true
   };
+  
+  if (cc && cc.length > 0) {
+    emailPayload.message.ccRecipients = cc.map(email => ({
+      emailAddress: { address: email }
+    }));
+  }
   
   await axios.post(
     `https://graph.microsoft.com/v1.0/users/${senderEmail}/sendMail`,
@@ -192,10 +204,11 @@ export function getEmailProviderStatus(): {
 
 export interface EmailNotification {
   to: string;
+  cc?: string[];
   subject: string;
   text: string;
   html: string;
-  type: 'assignment' | 'welcome' | 'booking_confirmation' | 'booking_cancelled' | 'payment_reminder' | 'spot_availability' | 'weekly_report' | 'system_maintenance' | 'general' | 'waiting_list_enrollment' | 'waiting_list_admin';
+  type: 'assignment' | 'welcome' | 'booking_confirmation' | 'booking_cancelled' | 'payment_reminder' | 'spot_availability' | 'weekly_report' | 'system_maintenance' | 'general' | 'waiting_list_enrollment' | 'waiting_list_admin' | 'issue_report';
 }
 
 export interface InAppNotification {
@@ -1559,9 +1572,10 @@ export async function sendEmailNotification(notification: EmailNotification): Pr
           notification.to,
           notification.subject,
           notification.text,
-          notification.html
+          notification.html,
+          notification.cc
         );
-        console.log(`✓ Email sent via MS365 to ${notification.to}: ${notification.subject}`);
+        console.log(`✓ Email sent via MS365 to ${notification.to}${notification.cc?.length ? ` (cc: ${notification.cc.join(', ')})` : ''}: ${notification.subject}`);
         return { success: true, provider: 'ms365' };
       } catch (ms365Error) {
         console.error('❌ MS365 email failed, attempting Mandrill fallback:', ms365Error);
@@ -1571,9 +1585,10 @@ export async function sendEmailNotification(notification: EmailNotification): Pr
             notification.to,
             notification.subject,
             notification.text,
-            notification.html
+            notification.html,
+            notification.cc
           );
-          console.log(`✓ Email sent via Mandrill (fallback) to ${notification.to}: ${notification.subject}`);
+          console.log(`✓ Email sent via Mandrill (fallback) to ${notification.to}${notification.cc?.length ? ` (cc: ${notification.cc.join(', ')})` : ''}: ${notification.subject}`);
           return { success: true, provider: 'mandrill' };
         }
         throw ms365Error;
@@ -1586,9 +1601,10 @@ export async function sendEmailNotification(notification: EmailNotification): Pr
         notification.to,
         notification.subject,
         notification.text,
-        notification.html
+        notification.html,
+        notification.cc
       );
-      console.log(`✓ Email sent via Mandrill to ${notification.to}: ${notification.subject}`);
+      console.log(`✓ Email sent via Mandrill to ${notification.to}${notification.cc?.length ? ` (cc: ${notification.cc.join(', ')})` : ''}: ${notification.subject}`);
       return { success: true, provider: 'mandrill' };
     }
 
@@ -2200,6 +2216,92 @@ BCI ParkShare Team`;
     
   } catch (error) {
     console.error('❌ Error sending bookings cancelled notification:', error);
+  }
+
+  return results;
+}
+
+/**
+ * Issue Report Notification - sent to DL_Technology_Integration_Services@bci.ca with all admins in CC
+ */
+export async function sendIssueReportNotification(
+  reporter: { name: string; email: string },
+  issue: { title: string; description: string; priority: string },
+  adminEmails: string[]
+): Promise<{ emailSent: boolean }> {
+  const results = { emailSent: false };
+
+  try {
+    const priorityColors: Record<string, string> = {
+      low: '#22c55e',
+      medium: '#f59e0b',
+      high: '#f97316',
+      urgent: '#ef4444'
+    };
+    const priorityColor = priorityColors[issue.priority] || '#64748b';
+    const priorityLabel = issue.priority.charAt(0).toUpperCase() + issue.priority.slice(1);
+
+    const subject = `[BCI ParkShare] Issue Reported: ${issue.title}`;
+
+    const text = `A new issue has been reported on BCI ParkShare.
+
+REPORTED BY:
+- Name: ${reporter.name}
+- Email: ${reporter.email}
+
+ISSUE DETAILS:
+- Title: ${issue.title}
+- Priority: ${priorityLabel}
+- Description: ${issue.description}
+
+Please review this issue in the BCI ParkShare admin panel under Reported Issues.
+
+BCI ParkShare Team`;
+
+    const content = `
+    <p>A new issue has been reported on BCI ParkShare.</p>
+    
+    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
+      <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Reported By</h3>
+      <ul style="margin: 0; padding: 0; list-style: none;">
+        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Name:</strong> ${reporter.name}</li>
+        <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Email:</strong> ${reporter.email}</li>
+      </ul>
+    </div>
+    
+    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${priorityColor};">
+      <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Issue Details</h3>
+      <ul style="margin: 0; padding: 0; list-style: none;">
+        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Title:</strong> ${issue.title}</li>
+        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Priority:</strong> <span style="color: ${priorityColor}; font-weight: 600;">${priorityLabel}</span></li>
+        <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Description:</strong><br><span style="white-space: pre-wrap;">${issue.description}</span></li>
+      </ul>
+    </div>
+    
+    <p>Please review this issue in the BCI ParkShare admin panel under <strong>Reported Issues</strong>.</p>
+  `;
+
+    const html = wrapEmailTemplate({
+      title: 'New Issue Reported',
+      content,
+      theme: 'warning'
+    });
+
+    const notification: EmailNotification = {
+      to: 'DL_Technology_Integration_Services@bci.ca',
+      cc: adminEmails.length > 0 ? adminEmails : undefined,
+      subject,
+      text,
+      html,
+      type: 'issue_report'
+    };
+
+    const emailResult = await sendEmailNotification(notification);
+    results.emailSent = emailResult.success;
+
+    console.log(`✓ Issue report email sent to DL_Technology_Integration_Services@bci.ca (cc: ${adminEmails.length} admins): ${issue.title}`);
+  } catch (error) {
+    console.error('❌ Error sending issue report notification:', error);
   }
 
   return results;
