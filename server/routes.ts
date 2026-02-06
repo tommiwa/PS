@@ -5341,22 +5341,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           for (const [renterId, renterBookings] of Array.from(bookingsByRenter.entries())) {
             const renter = await storage.getUser(renterId);
             if (renter) {
+              const renterName = `${renter.firstName || ''} ${renter.lastName || ''}`.trim() || 'User';
               const cancelledBookingDetails = renterBookings.map((b: typeof renterBookings[0]) => ({
                 bookingDate: b.bookingDate,
-                spotNumber: existingSpot.spotNumber
+                spotNumber: existingSpot.spotNumber,
+                location: locationName,
+                building: buildingName
               }));
               
               await sendBookingsCancelledDueToUnassignmentNotification(
                 {
-                  id: renter.id,
-                  email: renter.email || '',
-                  firstName: renter.firstName || '',
-                  lastName: renter.lastName || ''
-                },
-                {
-                  spotNumber: existingSpot.spotNumber,
-                  location: locationName,
-                  building: buildingName
+                  name: renterName,
+                  email: renter.email || null,
+                  id: renter.id
                 },
                 cancelledBookingDetails,
                 'Spot has been assigned to a new owner'

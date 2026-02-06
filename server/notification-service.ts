@@ -2168,7 +2168,7 @@ BCI ParkShare Team`;
         title: 'Booking(s) Cancelled',
         content,
         theme: 'neutral',
-        titleColor: '#f97316'
+        titleColor: '#ef4444'
       });
 
       const emailResult = await sendEmailNotification({
