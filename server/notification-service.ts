@@ -816,7 +816,8 @@ The BCI ParkShare Team`;
   const html = wrapEmailTemplate({
     title: 'Booking Cancelled',
     content,
-    theme: 'danger'
+    theme: 'danger',
+    titleColor: '#ef4444'
   });
 
   return {
@@ -895,7 +896,8 @@ The BCI ParkShare Team`;
   const html = wrapEmailTemplate({
     title: 'Booking Cancelled',
     content,
-    theme: 'warning'
+    theme: 'warning',
+    titleColor: '#ef4444'
   });
 
   return {
@@ -973,7 +975,8 @@ The BCI ParkShare Team`;
   const html = wrapEmailTemplate({
     title: isOverdue ? 'Payment Overdue' : 'Payment Reminder',
     content,
-    theme: isOverdue ? 'danger' : 'warning'
+    theme: isOverdue ? 'danger' : 'warning',
+    titleColor: '#ef4444'
   });
 
   return {

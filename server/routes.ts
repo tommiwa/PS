@@ -4222,6 +4222,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
         after: cancelledListing
       });
 
+      // Cancel associated bookings and notify renters
+      try {
+        const listingBookings = await storage.getBookingsByListing(id);
+        const activeBookings = listingBookings.filter(b => b.status !== 'cancelled' && b.status !== 'completed');
+        
+        if (activeBookings.length > 0) {
+          const spot = await storage.getParkingSpot(listing.spotId);
+          const location = spot ? await storage.getLocation(spot.locationId) : null;
+          const locationName = location ? `${location.office} - ${location.level}` : 'Unknown';
+          const buildingName = location?.building || 'Unknown';
+          
+          for (const booking of activeBookings) {
+            await storage.cancelBookingWithReason(booking.id, `Listing cancelled: ${reason}`);
+            
+            // Send cancellation notification to renter
+            setImmediate(async () => {
+              try {
+                const renter = await storage.getUser(booking.renterId);
+                if (renter && renter.email) {
+                  const renterName = renter.firstName && renter.lastName
+                    ? `${renter.firstName} ${renter.lastName}`
+                    : renter.firstName || renter.lastName || renter.email || 'User';
+                  
+                  let ownerInfo: { name: string; email: string; id: string } | null = null;
+                  if (listing.ownerId) {
+                    const owner = await storage.getUser(listing.ownerId);
+                    if (owner && owner.email) {
+                      const ownerName = owner.firstName && owner.lastName
+                        ? `${owner.firstName} ${owner.lastName}`
+                        : owner.firstName || owner.lastName || owner.email || 'Owner';
+                      ownerInfo = { name: ownerName, email: owner.email, id: owner.id };
+                    }
+                  }
+                  
+                  await sendBookingCancellationNotification(
+                    { name: renterName, email: renter.email, id: renter.id },
+                    {
+                      id: booking.id,
+                      spotNumber: spot?.spotNumber || 'Unknown',
+                      location: locationName,
+                      building: buildingName,
+                      bookingDate: booking.bookingDate,
+                      cancelledBy: 'Admin',
+                      reason: reason
+                    },
+                    {},
+                    ownerInfo
+                  );
+                }
+              } catch (notifyError) {
+                console.error(`Failed to send cancellation notification for booking ${booking.id}:`, notifyError);
+              }
+            });
+          }
+          console.log(`[Cancel Listing] Cancelled ${activeBookings.length} bookings for listing ${id}`);
+        }
+      } catch (bookingCancelError) {
+        console.error('[Cancel Listing] Error cancelling associated bookings:', bookingCancelError);
+      }
+
       res.json(cancelledListing);
     } catch (error) {
       console.error("Error cancelling spot listing:", error);
