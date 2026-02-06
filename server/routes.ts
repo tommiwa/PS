@@ -4392,6 +4392,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             const spotLocation = spot.locationId ? await storage.getLocation(spot.locationId) : null;
             const renterDisplayName = renterName;
+            const isWorkplaceServicesListing = listing?.createdByAdmin === true;
             const bookingDetails = {
               id: booking.id,
               spotNumber: spot.spotNumber,
@@ -4400,7 +4401,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               bookingDate: booking.bookingDate,
               cancelledBy: renterDisplayName,
               cancelledByRole: 'renter' as const,
-              isBciManaged: spot.isBciManaged || false,
+              isWorkplaceServicesListing,
               reason: 'Cancelled by renter'
             };
             
@@ -4503,6 +4504,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               : renter.firstName || renter.lastName || renter.email || 'User';
             
             const spotLocation = spot.locationId ? await storage.getLocation(spot.locationId) : null;
+            const listing = booking.listingId ? await storage.getSpotListing(booking.listingId) : null;
+            const isWorkplaceServicesListing = listing?.createdByAdmin === true;
             const bookingDetails = {
               id: booking.id,
               spotNumber: spot.spotNumber,
@@ -4511,7 +4514,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               bookingDate: booking.bookingDate,
               cancelledBy: ownerName,
               cancelledByRole: 'owner' as const,
-              isBciManaged: spot.isBciManaged || false,
+              isWorkplaceServicesListing,
               reason: `Cancelled by spot owner (${ownerName})`
             };
             
@@ -4578,6 +4581,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               : renter.firstName || renter.lastName || renter.email || 'User';
             
             const spotLocation = spot.locationId ? await storage.getLocation(spot.locationId) : null;
+            const isWorkplaceServicesListing = listing?.createdByAdmin === true;
             const bookingDetails = {
               id: booking.id,
               spotNumber: spot.spotNumber,
@@ -4586,7 +4590,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               bookingDate: booking.bookingDate,
               cancelledBy: 'Admin',
               cancelledByRole: 'admin' as const,
-              isBciManaged: spot.isBciManaged || false,
+              isWorkplaceServicesListing,
               reason: reason
             };
             
