@@ -2287,8 +2287,11 @@ BCI ParkShare Team`;
       theme: 'warning'
     });
 
+    const isProduction = process.env.NODE_ENV === 'production';
+    const recipientEmail = isProduction ? 'DL_Technology_Integration_Services@bci.ca' : 'lijin.joseji@bci.ca';
+
     const notification: EmailNotification = {
-      to: 'DL_Technology_Integration_Services@bci.ca',
+      to: recipientEmail,
       cc: adminEmails.length > 0 ? adminEmails : undefined,
       subject,
       text,
