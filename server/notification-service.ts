@@ -414,7 +414,7 @@ export function wrapEmailTemplate(options: {
           <tr>
             <td style="padding: 0 48px 24px 48px; text-align: center;">
               <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 11px; color: #94a3b8; margin: 0;">
-                A BCI Workplace Services Initiative &bull; &copy; ${new Date().getFullYear()} BCI Investment Management
+                A BCI Workplace Services Initiative &bull; &copy; ${new Date().getFullYear()}
               </p>
             </td>
           </tr>
@@ -682,14 +682,10 @@ export const createOwnerBookingNotification = (
 Great news! Your parking spot has been booked. Thank you for sharing your space with a colleague!
 
 BOOKING DETAILS:
-- Booking ID: ${booking.id}
 - Spot Number: ${booking.spotNumber}
-- Location: ${booking.location}
-- Building: ${booking.building}
-- Start Date: ${booking.startDate.toLocaleDateString()}
-- End Date: ${booking.endDate.toLocaleDateString()}
-- Daily Rate: $${booking.rate}
-- Total Amount: $${booking.totalAmount}
+- Location: ${booking.location} - ${booking.building}
+- Booking Date: ${booking.startDate.toLocaleDateString()} to ${booking.endDate.toLocaleDateString()}
+- Amount: $${booking.totalAmount}
 
 RENTER INFORMATION:
 - Name: ${renter.name}
@@ -707,18 +703,14 @@ The BCI ParkShare Team`;
     <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Booking Details</h3>
       <ul style="margin: 0; padding: 0; list-style: none;">
-        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Booking ID:</strong> ${booking.id}</li>
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Spot Number:</strong> ${booking.spotNumber}</li>
-        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Location:</strong> ${booking.location}</li>
-        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Building:</strong> ${booking.building}</li>
-        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Start Date:</strong> ${booking.startDate.toLocaleDateString()}</li>
-        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">End Date:</strong> ${booking.endDate.toLocaleDateString()}</li>
-        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Daily Rate:</strong> $${booking.rate}</li>
-        <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Total Amount:</strong> <span style="color: #10b981; font-weight: 600;">$${booking.totalAmount}</span></li>
+        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Location:</strong> ${booking.location} - ${booking.building}</li>
+        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Booking Date:</strong> ${booking.startDate.toLocaleDateString()} to ${booking.endDate.toLocaleDateString()}</li>
+        <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Amount:</strong> <span style="color: ${BCI_BLUE}; font-weight: 600;">$${booking.totalAmount}</span></li>
       </ul>
     </div>
     
-    <div class="info-card" style="background-color: #dbeafe; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
+    <div class="info-card" style="background-color: #e0f2fe; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Renter Information</h3>
       <ul style="margin: 0; padding: 0; list-style: none;">
         <li style="padding: 8px 0; border-bottom: 1px solid #bfdbfe; font-size: 15px;"><strong style="color: #475569;">Name:</strong> ${renter.name}</li>
@@ -732,8 +724,7 @@ The BCI ParkShare Team`;
   const html = wrapEmailTemplate({
     title: 'Your Spot Has Been Booked',
     content,
-    theme: 'success',
-    ctaButton: { text: 'View My Spots', url: '#' }
+    theme: 'success'
   });
 
   return {
