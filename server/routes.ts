@@ -4699,6 +4699,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get spot info
       const spot = await storage.getParkingSpot(booking.spotId);
 
+      // Get spot owner info for the reminder
+      const owner = booking.ownerId ? await storage.getUser(booking.ownerId) : null;
+      const ownerName = owner && (owner.firstName || owner.lastName)
+        ? `${owner.firstName || ''} ${owner.lastName || ''}`.trim()
+        : undefined;
+
       // Send payment reminder notification to renter using the notification service
       const { sendPaymentReminderNotification: sendReminder } = await import('./notification-service');
       const renterName = renter.firstName && renter.lastName 
@@ -4710,7 +4716,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           bookingId: id,
           spotNumber: spot?.spotNumber || 'Unknown',
           amount: parseFloat(booking.totalAmount?.toString() || booking.dailyRate?.toString() || '0'),
-          dueDate: new Date(booking.bookingDate)
+          dueDate: new Date(booking.bookingDate),
+          ownerName,
+          ownerEmail: owner?.email || undefined
         }
       );
       
@@ -7945,13 +7953,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   ? `${user.firstName} ${user.lastName}`
                   : user.firstName || user.lastName || user.email || 'User';
                 
+                // Get spot owner info
+                const owner = booking.ownerId ? await storage.getUser(booking.ownerId) : null;
+                const ownerDisplayName = owner && (owner.firstName || owner.lastName)
+                  ? `${owner.firstName || ''} ${owner.lastName || ''}`.trim()
+                  : undefined;
+
                 // Prepare payment details
                 const paymentDetails = {
                   bookingId: booking.id,
                   spotNumber: spot.spotNumber,
                   amount: Number(booking.totalAmount), // Convert decimal to number
                   dueDate: dueDate,
-                  daysOverdue: daysDiff > 0 ? daysDiff : undefined
+                  daysOverdue: daysDiff > 0 ? daysDiff : undefined,
+                  ownerName: ownerDisplayName,
+                  ownerEmail: owner?.email || undefined
                 };
                 
                 // Send payment reminder asynchronously

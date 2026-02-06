@@ -930,6 +930,8 @@ export const createPaymentReminderNotification = (
     amount: number;
     dueDate: Date;
     daysOverdue?: number;
+    ownerName?: string;
+    ownerEmail?: string;
   }
 ): EmailNotification => {
   const isOverdue = payment.daysOverdue && payment.daysOverdue > 0;
@@ -937,6 +939,10 @@ export const createPaymentReminderNotification = (
     ? `Payment Overdue - Spot ${payment.spotNumber} (${payment.daysOverdue} days)`
     : `Payment Reminder - Spot ${payment.spotNumber}`;
   
+  const ownerContactText = payment.ownerName
+    ? `\nSPOT OWNER CONTACT:\n- Name: ${payment.ownerName}\n- Email: ${payment.ownerEmail || 'N/A'}\n\nPlease reach out to ${payment.ownerName} to arrange payment if you have not already done so. Check with the spot owner for their preferred payment method (Interac e-Transfer or cash).\n`
+    : '';
+
   const text = `Dear ${user.name},
 
 ${isOverdue ? 'Your payment is now overdue and requires immediate attention.' : 'This is a friendly reminder about your upcoming payment.'}
@@ -946,18 +952,28 @@ PAYMENT DETAILS:
 - Amount Due: $${payment.amount}
 - Due Date: ${payment.dueDate.toLocaleDateString()}
 ${isOverdue ? `- Days Overdue: ${payment.daysOverdue}` : ''}
-
+${ownerContactText}
 ${isOverdue 
   ? 'ACTION REQUIRED: Please make your payment immediately to avoid service interruption. Late fees may apply.'
   : 'Please ensure payment is made by the due date to maintain uninterrupted access to your parking spot.'
 }
 
-To make a payment, please log into your account or contact our billing department.
-
 Warm regards,
 The BCI ParkShare Team`;
 
   const amountColor = isOverdue ? '#ef4444' : '#f59e0b';
+  
+  const ownerContactHtml = payment.ownerName ? `
+    <div style="background-color: #f0f9ff; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #1e9df1;">
+      <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Spot Owner Contact</h3>
+      <ul style="margin: 0; padding: 0; list-style: none;">
+        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Name:</strong> ${payment.ownerName}</li>
+        ${payment.ownerEmail ? `<li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Email:</strong> <a href="mailto:${payment.ownerEmail}" style="color: #1e9df1; text-decoration: none;">${payment.ownerEmail}</a></li>` : ''}
+      </ul>
+      <p style="font-size: 14px; color: #475569; margin: 16px 0 0 0;">If you have not already done so, please reach out to <strong>${payment.ownerName}</strong> to arrange payment. Be sure to confirm their preferred payment method &mdash; <strong>Interac e-Transfer</strong> or <strong>cash</strong>.</p>
+    </div>
+  ` : '';
+
   const content = `
     <p>Dear ${user.name},</p>
     <p>${isOverdue ? 'Your payment is now overdue and requires immediate attention.' : 'This is a friendly reminder about your upcoming payment for your parking spot.'}</p>
@@ -971,6 +987,8 @@ The BCI ParkShare Team`;
         ${isOverdue ? `<li style="padding: 8px 0; font-size: 15px;"><strong style="color: #ef4444;">Days Overdue:</strong> <span style="color: #ef4444; font-weight: 600;">${payment.daysOverdue}</span></li>` : ''}
       </ul>
     </div>
+
+    ${ownerContactHtml}
     
     ${isOverdue ? `
     <div class="highlight-box danger" style="background-color: #fee2e2; border-radius: 8px; padding: 16px 20px; margin: 24px 0;">
@@ -982,7 +1000,7 @@ The BCI ParkShare Team`;
     </div>
     `}
     
-    <p>If you've already made this payment, please disregard this message. If you have any questions about your bill, please contact our support team.</p>
+    <p>If you've already made this payment, please disregard this message. If you have any questions, please contact the spot owner directly or reach out to our support team.</p>
   `;
 
   const html = wrapEmailTemplate({
@@ -1796,6 +1814,8 @@ export async function sendPaymentReminderNotification(
     amount: number;
     dueDate: Date;
     daysOverdue?: number;
+    ownerName?: string;
+    ownerEmail?: string;
   },
   userPreferences: { paymentReminders?: boolean; emailNotifications?: boolean } = {}
 ): Promise<{ emailSent: boolean; inAppSent: boolean }> {
