@@ -763,6 +763,7 @@ export const createBookingCancellationNotification = (
     building: string;
     bookingDate: Date | string;
     cancelledBy: string;
+    cancelledByRole?: 'renter' | 'owner' | 'admin';
     reason?: string;
   }
 ): EmailNotification => {
@@ -771,35 +772,43 @@ export const createBookingCancellationNotification = (
   const bookingDateStr = booking.bookingDate instanceof Date 
     ? booking.bookingDate.toLocaleDateString() 
     : new Date(booking.bookingDate).toLocaleDateString();
-  
+
+  const role = booking.cancelledByRole || 'admin';
+
+  const introText = role === 'renter'
+    ? 'This is to confirm that you have successfully cancelled your parking spot booking.'
+    : role === 'owner'
+    ? `We wanted to let you know that the spot owner (${booking.cancelledBy}) has cancelled your booking. We understand this may be inconvenient, and we encourage you to browse the available listings to find a new spot.`
+    : `We wanted to let you know that your parking spot booking has been cancelled by ${booking.cancelledBy}.`;
+
   const text = `Dear ${user.name},
 
-We wanted to let you know that your parking spot booking has been cancelled.
+${introText}
 
-BOOKING DETAILS:
+CANCELLATION DETAILS:
 - Spot Number: ${booking.spotNumber}
 - Location: ${booking.location} - ${booking.building}
 - Booking Date: ${bookingDateStr}
 - Cancelled By: ${booking.cancelledBy}${booking.reason ? `\n- Reason: ${booking.reason}` : ''}
 
-REFUND INFORMATION:
-- If you made a payment, a refund will be processed according to our cancellation policy
-- Refunds typically take 5-7 business days to appear in your account
-- You'll receive a separate confirmation once the refund is processed
-
-WHAT'S NEXT:
-- You can search for and book another available parking spot
-- Update your preferences to receive notifications about available spots
+${role === 'renter' ? '' : 'If you had already made a payment for this booking, please connect with the spot owner to arrange a refund.\n\n'}WHAT'S NEXT:
+- Browse the available listings to find and book another parking spot
 - Contact support if you have any questions about this cancellation
-
-We apologize for any inconvenience and appreciate your understanding.
 
 Warm regards,
 The BCI ParkShare Team`;
 
+  const nextStepsHtml = role === 'renter'
+    ? `<div class="highlight-box" style="background-color: #f0fdf4; border-radius: 8px; padding: 16px 20px; margin: 24px 0;">
+        <strong>Need another spot?</strong> You can browse the available listings anytime to find and book a new parking spot.
+      </div>`
+    : `<div class="highlight-box" style="background-color: #e0f2fe; border-radius: 8px; padding: 16px 20px; margin: 24px 0;">
+        <strong>Next Steps:</strong> Please browse the available listings to find and book a new parking spot. If you had already made a payment for this booking, connect with the spot owner to arrange a refund.
+      </div>`;
+
   const content = `
     <p>Dear ${user.name},</p>
-    <p>We wanted to let you know that your parking spot booking has been cancelled. We understand this may be inconvenient, and we're here to help you find an alternative.</p>
+    <p>${introText}</p>
     
     <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Cancellation Details</h3>
@@ -812,18 +821,7 @@ The BCI ParkShare Team`;
       </ul>
     </div>
     
-    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
-      <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Refund Information</h3>
-      <ul style="margin: 0; padding: 0; list-style: none;">
-        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;">If you made a payment, a refund will be processed according to our cancellation policy</li>
-        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;">Refunds typically take 5-7 business days to appear in your account</li>
-        <li style="padding: 8px 0; font-size: 15px;">You'll receive a separate confirmation once the refund is processed</li>
-      </ul>
-    </div>
-    
-    <div class="highlight-box" style="background-color: #f0fdf4; border-radius: 8px; padding: 16px 20px; margin: 24px 0;">
-      <strong>Need another spot?</strong> We have many other parking options available. Browse our listings to find a convenient alternative.
-    </div>
+    ${nextStepsHtml}
   `;
 
   const html = wrapEmailTemplate({
@@ -853,6 +851,7 @@ export const createOwnerBookingCancellationNotification = (
     building: string;
     bookingDate: Date | string;
     cancelledBy: string;
+    cancelledByRole?: 'renter' | 'owner' | 'admin';
     reason?: string;
   }
 ): EmailNotification => {
@@ -861,26 +860,40 @@ export const createOwnerBookingCancellationNotification = (
   const bookingDateStr = booking.bookingDate instanceof Date 
     ? booking.bookingDate.toLocaleDateString() 
     : new Date(booking.bookingDate).toLocaleDateString();
+
+  const role = booking.cancelledByRole || 'admin';
+
+  const introText = role === 'owner'
+    ? 'This is to confirm that you have successfully cancelled a booking on your parking spot.'
+    : role === 'renter'
+    ? `We wanted to let you know that <strong>${renter.name}</strong> has cancelled their booking on your parking spot.`
+    : `We wanted to let you know that a booking on your parking spot has been cancelled by ${booking.cancelledBy}.`;
+
+  const introTextPlain = role === 'owner'
+    ? 'This is to confirm that you have successfully cancelled a booking on your parking spot.'
+    : role === 'renter'
+    ? `We wanted to let you know that ${renter.name} has cancelled their booking on your parking spot.`
+    : `We wanted to let you know that a booking on your parking spot has been cancelled by ${booking.cancelledBy}.`;
   
   const text = `Dear ${owner.name},
 
-We wanted to let you know that a booking for your parking spot has been cancelled.
+${introTextPlain}
 
-BOOKING DETAILS:
+CANCELLATION DETAILS:
 - Spot Number: ${booking.spotNumber}
 - Location: ${booking.location} - ${booking.building}
 - Booking Date: ${bookingDateStr}
 - Renter: ${renter.name} (${renter.email})
 - Cancelled By: ${booking.cancelledBy}${booking.reason ? `\n- Reason: ${booking.reason}` : ''}
 
-Your spot is now available for this date. If you'd like, you can make it available again for other colleagues to book.
+Your spot has been made available again for this date. Other colleagues can now book it.
 
 Warm regards,
 The BCI ParkShare Team`;
 
   const content = `
     <p>Dear ${owner.name},</p>
-    <p>We wanted to let you know that a booking for your parking spot has been cancelled.</p>
+    <p>${introText}</p>
     
     <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Cancellation Details</h3>
@@ -897,12 +910,12 @@ The BCI ParkShare Team`;
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Renter Information</h3>
       <ul style="margin: 0; padding: 0; list-style: none;">
         <li style="padding: 8px 0; border-bottom: 1px solid #bfdbfe; font-size: 15px;"><strong style="color: #475569;">Name:</strong> ${renter.name}</li>
-        <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Email:</strong> ${renter.email}</li>
+        <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Email:</strong> <a href="mailto:${renter.email}" style="color: #1e9df1; text-decoration: none;">${renter.email}</a></li>
       </ul>
     </div>
     
-    <div class="highlight-box" style="background-color: #dbeafe; border-radius: 8px; padding: 16px 20px; margin: 24px 0;">
-      <strong>Good news:</strong> Your spot is now available for this date again. If you'd like, you can make it available for other colleagues to book.
+    <div class="highlight-box" style="background-color: #f0fdf4; border-radius: 8px; padding: 16px 20px; margin: 24px 0;">
+      <strong>Spot Available:</strong> Your spot has been made available again for this date. Other colleagues can now browse and book it.
     </div>
   `;
 
@@ -1979,6 +1992,7 @@ export async function sendBookingCancellationNotification(
     building: string;
     bookingDate: Date | string;
     cancelledBy: string;
+    cancelledByRole?: 'renter' | 'owner' | 'admin';
     reason?: string;
   },
   userPreferences: { bookingConfirmations?: boolean; emailNotifications?: boolean } = {},

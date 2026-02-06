@@ -4390,13 +4390,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
               ? `${renter.firstName} ${renter.lastName}`
               : renter.firstName || renter.lastName || renter.email || 'User';
             
+            const spotLocation = spot.locationId ? await storage.getLocation(spot.locationId) : null;
+            const renterDisplayName = renterName;
             const bookingDetails = {
               id: booking.id,
               spotNumber: spot.spotNumber,
-              location: 'BCI Campus',
-              building: 'BCI Campus',
+              location: spotLocation?.name || 'BCI Campus',
+              building: spotLocation?.building || 'BCI Campus',
               bookingDate: booking.bookingDate,
-              cancelledBy: 'Renter',
+              cancelledBy: renterDisplayName,
+              cancelledByRole: 'renter' as const,
               reason: 'Cancelled by renter'
             };
             
@@ -4427,6 +4430,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(cancelledBooking);
     } catch (error) {
       console.error("Error cancelling booking:", error);
+      res.status(500).json({ error: "Failed to cancel booking" });
+    }
+  });
+
+  // POST /api/bookings/:id/owner-cancel - Cancel booking (Owner only)
+  app.post("/api/bookings/:id/owner-cancel", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = getAuthenticatedUserId(req);
+      
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      const booking = await storage.getBooking(id);
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      // Check if user is the owner of this booking's spot
+      if (booking.ownerId !== userId) {
+        return res.status(403).json({ error: "Not authorized to cancel this booking. Only the spot owner can use this action." });
+      }
+
+      // Don't allow cancelling already completed or cancelled bookings
+      if (booking.status === 'completed' || booking.status === 'cancelled') {
+        return res.status(400).json({ error: `Cannot cancel ${booking.status} booking` });
+      }
+
+      // Check 24-hour cancellation policy
+      const bookingDate = new Date(booking.bookingDate + 'T00:00:00');
+      const now = new Date();
+      const hoursUntilBooking = (bookingDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+      
+      if (hoursUntilBooking < 24) {
+        return res.status(400).json({ 
+          error: "Cancellations must be made at least 24 hours before the booking date. Please contact support if you need assistance." 
+        });
+      }
+
+      const ownerUser = await storage.getUser(userId);
+      const ownerName = ownerUser?.firstName && ownerUser?.lastName
+        ? `${ownerUser.firstName} ${ownerUser.lastName}`
+        : ownerUser?.email || 'Owner';
+
+      const cancelledBooking = await storage.cancelBookingWithReason(id, `Cancelled by spot owner (${ownerName})`);
+      
+      // Update the listing status back to 'available' so it can be booked again
+      if (booking.listingId) {
+        await storage.updateSpotListingStatus(booking.listingId, 'available');
+        console.log(`[Owner Cancel] Updated listing ${booking.listingId} status back to 'available'`);
+      }
+      
+      await auditService.logAction("CANCEL", "booking", {
+        entityId: id,
+        message: `Booking ${id} cancelled by spot owner ${ownerName}`,
+        before: booking,
+        after: cancelledBooking
+      });
+
+      // Send cancellation notifications to both renter and owner
+      setImmediate(async () => {
+        try {
+          const renter = await storage.getUser(booking.renterId);
+          const spot = await storage.getParkingSpot(booking.spotId);
+          
+          if (renter && spot) {
+            const renterName = renter.firstName && renter.lastName 
+              ? `${renter.firstName} ${renter.lastName}`
+              : renter.firstName || renter.lastName || renter.email || 'User';
+            
+            const spotLocation = spot.locationId ? await storage.getLocation(spot.locationId) : null;
+            const bookingDetails = {
+              id: booking.id,
+              spotNumber: spot.spotNumber,
+              location: spotLocation?.name || 'BCI Campus',
+              building: spotLocation?.building || 'BCI Campus',
+              bookingDate: booking.bookingDate,
+              cancelledBy: ownerName,
+              cancelledByRole: 'owner' as const,
+              reason: `Cancelled by spot owner (${ownerName})`
+            };
+            
+            // Send notification to both renter and owner
+            await sendBookingCancellationNotification(
+              { name: renterName, email: renter.email || '', id: renter.id },
+              bookingDetails,
+              {},
+              ownerUser && ownerUser.email ? { name: ownerName, email: ownerUser.email, id: ownerUser.id } : null
+            );
+          }
+        } catch (notifyError) {
+          console.error('Failed to send owner cancellation notification:', notifyError);
+        }
+      });
+
+      res.json(cancelledBooking);
+    } catch (error) {
+      console.error("Error cancelling booking by owner:", error);
       res.status(500).json({ error: "Failed to cancel booking" });
     }
   });
