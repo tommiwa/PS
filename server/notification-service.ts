@@ -340,12 +340,12 @@ export function wrapEmailTemplate(options: {
               <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                 <tr>
                   <td style="vertical-align: middle; padding-right: 14px;">
-                    <div style="width: 44px; height: 44px; background-color: ${colors.accent}; border-radius: 10px; text-align: center; line-height: 44px;">
+                    <div style="width: 44px; height: 44px; background-color: #0f766e; border-radius: 10px; text-align: center; line-height: 44px;">
                       <span style="color: #ffffff; font-size: 20px; font-weight: bold; font-family: Arial, sans-serif;">P</span>
                     </div>
                   </td>
                   <td style="vertical-align: middle;">
-                    <span style="color: ${colors.accent}; font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 22px; font-weight: 700;">BCI ParkShare</span>
+                    <span style="color: #0f766e; font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 22px; font-weight: 700;">BCI ParkShare</span>
                   </td>
                 </tr>
               </table>
@@ -355,7 +355,7 @@ export function wrapEmailTemplate(options: {
           <!-- Title -->
           <tr>
             <td style="padding: 28px 48px 0 48px;">
-              <h1 style="color: ${colors.accent}; font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 28px; font-weight: 700; margin: 0; line-height: 1.3; letter-spacing: -0.3px;">${options.title}</h1>
+              <h1 style="color: #0f766e; font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 28px; font-weight: 700; margin: 0; line-height: 1.3; letter-spacing: -0.3px;">${options.title}</h1>
             </td>
           </tr>
           
@@ -406,7 +406,7 @@ export function wrapEmailTemplate(options: {
           
           <!-- Colored Footer Bar -->
           <tr>
-            <td style="height: 8px; background-color: ${colors.footerBar};"></td>
+            <td style="height: 8px; background-color: #0f766e;"></td>
           </tr>
           
         </table>
