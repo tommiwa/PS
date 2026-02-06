@@ -414,7 +414,7 @@ export function wrapEmailTemplate(options: {
           <tr>
             <td style="padding: 0 48px 24px 48px; text-align: center;">
               <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 11px; color: #94a3b8; margin: 0;">
-                A BCI Workplace Services Initiative &bull; &copy; ${new Date().getFullYear()}
+                A BCI Workplace Services Initiative &bull; In partnership with Technology &amp; Innovation &bull; &copy; ${new Date().getFullYear()} BCI
               </p>
             </td>
           </tr>
@@ -2007,7 +2007,7 @@ BCI ParkShare Team`;
     </div>
     
     <div class="footer">
-      <p>Best regards,<br>BCI ParkShare Team</p>
+      <p style="font-size: 11px; color: #94a3b8;">A BCI Workplace Services Initiative &bull; In partnership with Technology &amp; Innovation &bull; &copy; ${new Date().getFullYear()} BCI</p>
     </div>
   </div>
 </body>
@@ -2125,7 +2125,7 @@ BCI ParkShare Team`;
     </div>
     
     <div class="footer">
-      <p>Best regards,<br>BCI ParkShare Team</p>
+      <p style="font-size: 11px; color: #94a3b8;">A BCI Workplace Services Initiative &bull; In partnership with Technology &amp; Innovation &bull; &copy; ${new Date().getFullYear()} BCI</p>
     </div>
   </div>
 </body>
