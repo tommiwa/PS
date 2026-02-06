@@ -191,22 +191,28 @@ export interface InAppNotification {
 
 /**
  * Email Design System
- * Brand Colors:
- * - Primary: #2563eb (blue) - headers, primary actions
- * - Success: #10b981 (green) - confirmations, positive actions
- * - Warning: #f59e0b (amber) - reminders, cautions
- * - Danger: #ef4444 (red) - cancellations, urgent notices
+ * Brand Color: BCI Blue #1e9df1 (matches app primary color)
+ * All emails use consistent BCI blue branding
  */
+
+const BCI_BLUE = '#1e9df1';
+const BCI_BLUE_DARK = '#1580c9';
 
 type EmailTheme = 'primary' | 'success' | 'warning' | 'danger' | 'neutral';
 
 const themeColors: Record<EmailTheme, { accent: string; light: string; footerBar: string }> = {
-  primary: { accent: '#3730a3', light: '#eef2ff', footerBar: '#4f46e5' },
-  success: { accent: '#047857', light: '#d1fae5', footerBar: '#10b981' },
-  warning: { accent: '#b45309', light: '#fef3c7', footerBar: '#f59e0b' },
-  danger: { accent: '#b91c1c', light: '#fee2e2', footerBar: '#ef4444' },
-  neutral: { accent: '#475569', light: '#f1f5f9', footerBar: '#64748b' }
+  primary: { accent: BCI_BLUE, light: '#e0f2fe', footerBar: BCI_BLUE },
+  success: { accent: BCI_BLUE, light: '#e0f2fe', footerBar: BCI_BLUE },
+  warning: { accent: BCI_BLUE, light: '#e0f2fe', footerBar: BCI_BLUE },
+  danger: { accent: BCI_BLUE, light: '#e0f2fe', footerBar: BCI_BLUE },
+  neutral: { accent: BCI_BLUE, light: '#e0f2fe', footerBar: BCI_BLUE }
 };
+
+function getAppBaseUrl(): string {
+  if (process.env.REPLIT_DEPLOYMENT_URL) return `https://${process.env.REPLIT_DEPLOYMENT_URL}`;
+  if (process.env.REPLIT_DEV_DOMAIN) return `https://${process.env.REPLIT_DEV_DOMAIN}`;
+  return 'https://bci-parkshare.replit.app';
+}
 
 /**
  * Wraps email content with consistent header, footer, and styling
@@ -340,12 +346,10 @@ export function wrapEmailTemplate(options: {
               <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                 <tr>
                   <td style="vertical-align: middle; padding-right: 14px;">
-                    <div style="width: 44px; height: 44px; background-color: #0f766e; border-radius: 10px; text-align: center; line-height: 44px;">
-                      <span style="color: #ffffff; font-size: 20px; font-weight: bold; font-family: Arial, sans-serif;">P</span>
-                    </div>
+                    <img src="${getAppBaseUrl()}/favicon.png" alt="BCI ParkShare" width="44" height="44" style="width: 44px; height: 44px; border-radius: 10px; display: block;" />
                   </td>
                   <td style="vertical-align: middle;">
-                    <span style="color: #0f766e; font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 22px; font-weight: 700;">BCI ParkShare</span>
+                    <span style="color: ${BCI_BLUE}; font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 22px; font-weight: 700;">BCI ParkShare</span>
                   </td>
                 </tr>
               </table>
@@ -355,7 +359,7 @@ export function wrapEmailTemplate(options: {
           <!-- Title -->
           <tr>
             <td style="padding: 28px 48px 0 48px;">
-              <h1 style="color: #0f766e; font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 28px; font-weight: 700; margin: 0; line-height: 1.3; letter-spacing: -0.3px;">${options.title}</h1>
+              <h1 style="color: ${BCI_BLUE}; font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 28px; font-weight: 700; margin: 0; line-height: 1.3; letter-spacing: -0.3px;">${options.title}</h1>
             </td>
           </tr>
           
@@ -406,7 +410,7 @@ export function wrapEmailTemplate(options: {
           
           <!-- Colored Footer Bar -->
           <tr>
-            <td style="height: 8px; background-color: #0f766e;"></td>
+            <td style="height: 8px; background-color: ${BCI_BLUE};"></td>
           </tr>
           
         </table>
