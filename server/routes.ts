@@ -7559,6 +7559,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         before: userEntry
       });
       
+      // Send confirmation email to user
+      try {
+        const { createWaitingListRemovalNotification, sendEmailNotification } = await import('./notification-service');
+        const removalNotification = createWaitingListRemovalNotification(
+          { name: userEntry.userName, email: userEntry.userEmail }
+        );
+        await sendEmailNotification(removalNotification);
+        console.log(`✓ Waiting list removal email sent for ${userEntry.userName}`);
+      } catch (emailError) {
+        console.error('Failed to send waiting list removal email:', emailError);
+      }
+      
       res.json({ success: true, message: "Successfully removed from waiting list" });
     } catch (error) {
       console.error("Error removing user from waiting list:", error);

@@ -1424,6 +1424,56 @@ BCI ParkShare System`;
 };
 
 /**
+ * Waiting List Removal Notification - sent to user when they leave the waiting list
+ */
+export const createWaitingListRemovalNotification = (
+  user: { name: string; email: string }
+): EmailNotification => {
+  const subject = `You've Left the BCI ParkShare Waiting List`;
+  
+  const text = `Dear ${user.name},
+
+This email confirms that you have been successfully removed from the BCI ParkShare Waiting List.
+
+If this was unintentional, you can re-enroll anytime through your profile settings in the BCI ParkShare app.
+
+We hope to see you back soon!
+
+Warm regards,
+The BCI ParkShare Team`;
+
+  const content = `
+    <p>Dear ${user.name},</p>
+    <p>This email confirms that you have been successfully removed from the BCI ParkShare Waiting List.</p>
+    
+    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
+      <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">What This Means</h3>
+      <ul style="margin: 0; padding: 0; list-style: none;">
+        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Status:</strong> You are no longer on the waiting list for a permanent parking spot</li>
+        <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Daily Bookings:</strong> You can still book available daily parking spots through the app</li>
+      </ul>
+    </div>
+    
+    <p>If this was unintentional, you can re-enroll anytime through your profile settings in the BCI ParkShare app.</p>
+    <p>We hope to see you back soon!</p>
+  `;
+
+  const html = wrapEmailTemplate({
+    title: "You've Left the Waiting List",
+    content,
+    theme: 'neutral'
+  });
+
+  return {
+    to: user.email,
+    subject,
+    text,
+    html,
+    type: 'general'
+  };
+};
+
+/**
  * Send Email Notification
  */
 export async function sendEmailNotification(notification: EmailNotification): Promise<{ success: boolean; error?: string; provider?: EmailProvider }> {
