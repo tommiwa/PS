@@ -3,8 +3,12 @@
 
 import { ConfidentialClientApplication, Configuration } from '@azure/msal-node';
 import axios from 'axios';
+import fs from 'fs';
+import path from 'path';
 import type { WaitingList, ParkingSpot, AuthUser } from '@shared/schema';
 import { storage } from './storage';
+
+const LOGO_BASE64 = fs.readFileSync(path.join(process.cwd(), 'client/public/favicon.png')).toString('base64');
 
 // Email provider configuration
 type EmailProvider = 'ms365' | 'mandrill' | 'mock';
@@ -83,7 +87,14 @@ async function sendEmailViaMandrill(
         'Reply-To': fromEmail
       },
       track_opens: true,
-      track_clicks: true
+      track_clicks: true,
+      images: [
+        {
+          type: 'image/png',
+          name: 'logo',
+          content: LOGO_BASE64
+        }
+      ]
     }
   };
   
@@ -138,6 +149,16 @@ async function sendEmailViaMS365(
           emailAddress: {
             address: to
           }
+        }
+      ],
+      attachments: [
+        {
+          '@odata.type': '#microsoft.graph.fileAttachment',
+          name: 'logo.png',
+          contentId: 'logo',
+          isInline: true,
+          contentType: 'image/png',
+          contentBytes: LOGO_BASE64
         }
       ]
     },
@@ -198,6 +219,7 @@ export interface InAppNotification {
 const BCI_BLUE = '#1e9df1';
 const BCI_BLUE_DARK = '#1580c9';
 
+
 type EmailTheme = 'primary' | 'success' | 'warning' | 'danger' | 'neutral';
 
 const themeColors: Record<EmailTheme, { accent: string; light: string; footerBar: string }> = {
@@ -207,12 +229,6 @@ const themeColors: Record<EmailTheme, { accent: string; light: string; footerBar
   danger: { accent: BCI_BLUE, light: '#e0f2fe', footerBar: BCI_BLUE },
   neutral: { accent: BCI_BLUE, light: '#e0f2fe', footerBar: BCI_BLUE }
 };
-
-function getAppBaseUrl(): string {
-  if (process.env.REPLIT_DEPLOYMENT_URL) return `https://${process.env.REPLIT_DEPLOYMENT_URL}`;
-  if (process.env.REPLIT_DEV_DOMAIN) return `https://${process.env.REPLIT_DEV_DOMAIN}`;
-  return 'https://bci-parkshare.replit.app';
-}
 
 /**
  * Wraps email content with consistent header, footer, and styling
@@ -346,7 +362,7 @@ export function wrapEmailTemplate(options: {
               <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                 <tr>
                   <td style="vertical-align: middle; padding-right: 14px;">
-                    <img src="${getAppBaseUrl()}/favicon.png" alt="BCI ParkShare" width="44" height="44" style="width: 44px; height: 44px; border-radius: 10px; display: block;" />
+                    <img src="cid:logo" alt="BCI ParkShare" width="44" height="44" style="width: 44px; height: 44px; border-radius: 10px; display: block;" />
                   </td>
                   <td style="vertical-align: middle;">
                     <span style="color: ${BCI_BLUE}; font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 22px; font-weight: 700;">BCI ParkShare</span>
@@ -394,16 +410,11 @@ export function wrapEmailTemplate(options: {
             </td>
           </tr>
           
-          <!-- Footer Links -->
+          <!-- Footer -->
           <tr>
-            <td style="padding: 0 48px 24px 48px;">
-              <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 12px; color: #94a3b8; margin: 0;">
-                <a href="#" style="color: #64748b; text-decoration: none;">Dashboard</a> &nbsp;&bull;&nbsp; 
-                <a href="#" style="color: #64748b; text-decoration: none;">Support</a> &nbsp;&bull;&nbsp; 
-                <a href="#" style="color: #64748b; text-decoration: none;">Preferences</a>
-              </p>
-              <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 11px; color: #94a3b8; margin: 12px 0 0 0;">
-                &copy; ${new Date().getFullYear()} BCI Investment Management. All rights reserved.
+            <td style="padding: 0 48px 24px 48px; text-align: center;">
+              <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 11px; color: #94a3b8; margin: 0;">
+                A BCI Workplace Services Initiative &bull; &copy; ${new Date().getFullYear()} BCI Investment Management
               </p>
             </td>
           </tr>
@@ -455,7 +466,7 @@ The BCI ParkShare Team`;
     <p>Dear ${user.name},</p>
     <p>Great news! We're excited to let you know that a parking spot has been assigned to you from the waiting list. Your patience has paid off!</p>
     
-    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #10b981;">
+    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Your Assigned Spot</h3>
       <ul style="margin: 0; padding: 0; list-style: none;">
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Spot Number:</strong> ${spotDetails.spotNumber}</li>
@@ -465,7 +476,7 @@ The BCI ParkShare Team`;
       </ul>
     </div>
     
-    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #2563eb;">
+    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Next Steps</h3>
       <ol style="margin: 0; padding-left: 20px;">
         <li style="padding: 6px 0;">Please respond within <strong>48 hours</strong> to accept or decline</li>
@@ -474,7 +485,7 @@ The BCI ParkShare Team`;
       </ol>
     </div>
     
-    <div class="highlight-box warning" style="background-color: #fef3c7; border-radius: 8px; padding: 16px 20px; margin: 24px 0;">
+    <div class="highlight-box warning" style="background-color: #e0f2fe; border-radius: 8px; padding: 16px 20px; margin: 24px 0;">
       <strong>Important:</strong> This assignment will expire if not confirmed within 48 hours. Please respond promptly to secure your spot.
     </div>
   `;
@@ -516,7 +527,7 @@ WHAT HAPPENS NEXT:
 - We'll monitor spot availability that matches your preferences
 - When a spot becomes available, you'll be notified immediately
 - You'll have 48 hours to accept or decline any assignment
-- You can update your preferences anytime through your dashboard
+- You can update your preferences anytime through BCI ParkShare
 
 Thank you for your patience. We'll be in touch soon!
 
@@ -527,7 +538,7 @@ The BCI ParkShare Team`;
     <p>Dear ${user.name},</p>
     <p>Welcome to the BCI ParkShare waiting list! We're delighted to have you join our parking community. Your enrollment has been successfully processed.</p>
     
-    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #2563eb;">
+    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Your Enrollment Details</h3>
       <ul style="margin: 0; padding: 0; list-style: none;">
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Preferred Spot Type:</strong> ${waitingListEntry.preferredSpotTypeId ? 'Selected' : 'Any Available'}</li>
@@ -537,13 +548,13 @@ The BCI ParkShare Team`;
       </ul>
     </div>
     
-    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #10b981;">
+    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">What Happens Next</h3>
       <ul style="margin: 0; padding: 0; list-style: none;">
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;">We'll monitor spot availability matching your preferences</li>
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;">When a spot becomes available, you'll be notified immediately</li>
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;">You'll have 48 hours to accept or decline any assignment</li>
-        <li style="padding: 8px 0; font-size: 15px;">You can update your preferences anytime through your dashboard</li>
+        <li style="padding: 8px 0; font-size: 15px;">You can update your preferences anytime through BCI ParkShare</li>
       </ul>
     </div>
     
@@ -554,7 +565,7 @@ The BCI ParkShare Team`;
     title: 'Welcome to the Waiting List',
     content,
     theme: 'primary',
-    ctaButton: { text: 'View My Dashboard', url: '#' }
+    ctaButton: { text: 'View My Status', url: '#' }
   });
 
   return {
@@ -595,7 +606,9 @@ BOOKING DETAILS:
 - Total Amount: $${booking.totalAmount}
 
 IMPORTANT INFORMATION:
-Use the BCI access card to get access to the parking space and check the visual directory to find your actual booked spot before you come to parking. Please use it responsibly.
+- Please use your BCI access card to enter the parking facility.
+- Refer to the visual directory on-site to locate your assigned spot before arriving.
+- Kindly use the parking space responsibly and follow all facility guidelines.
 
 Thank you for choosing BCI ParkShare!
 
@@ -606,7 +619,7 @@ The BCI ParkShare Team`;
     <p>Dear ${user.name},</p>
     <p>Great news! Your parking spot booking has been confirmed. We're excited to have you parked with us!</p>
     
-    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #10b981;">
+    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Booking Details</h3>
       <ul style="margin: 0; padding: 0; list-style: none;">
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Spot Number:</strong> ${booking.spotNumber}</li>
@@ -619,9 +632,13 @@ The BCI ParkShare Team`;
       </ul>
     </div>
     
-    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #2563eb;">
+    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Important Information</h3>
-      <p style="font-size: 15px; color: #475569; margin: 0; line-height: 1.6;">Use the BCI access card to get access to the parking space and check the visual directory to find your actual booked spot before you come to parking. Please use it responsibly.</p>
+      <ul style="margin: 0; padding: 0 0 0 20px; list-style: disc;">
+        <li style="padding: 4px 0; font-size: 15px; color: #475569; line-height: 1.6;">Please use your BCI access card to enter the parking facility.</li>
+        <li style="padding: 4px 0; font-size: 15px; color: #475569; line-height: 1.6;">Refer to the visual directory on-site to locate your assigned spot before arriving.</li>
+        <li style="padding: 4px 0; font-size: 15px; color: #475569; line-height: 1.6;">Kindly use the parking space responsibly and follow all facility guidelines.</li>
+      </ul>
     </div>
     
     <p>Thank you for choosing BCI ParkShare. We hope you have a seamless parking experience!</p>
@@ -687,7 +704,7 @@ The BCI ParkShare Team`;
     <p>Dear ${owner.name},</p>
     <p>Great news! Your parking spot has been booked. Thank you for sharing your space with a colleague!</p>
     
-    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #10b981;">
+    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Booking Details</h3>
       <ul style="margin: 0; padding: 0; list-style: none;">
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Booking ID:</strong> ${booking.id}</li>
@@ -701,7 +718,7 @@ The BCI ParkShare Team`;
       </ul>
     </div>
     
-    <div class="info-card" style="background-color: #dbeafe; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #2563eb;">
+    <div class="info-card" style="background-color: #dbeafe; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Renter Information</h3>
       <ul style="margin: 0; padding: 0; list-style: none;">
         <li style="padding: 8px 0; border-bottom: 1px solid #bfdbfe; font-size: 15px;"><strong style="color: #475569;">Name:</strong> ${renter.name}</li>
@@ -777,7 +794,7 @@ The BCI ParkShare Team`;
     <p>Dear ${user.name},</p>
     <p>We wanted to let you know that your parking spot booking has been cancelled. We understand this may be inconvenient, and we're here to help you find an alternative.</p>
     
-    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #ef4444;">
+    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Cancellation Details</h3>
       <ul style="margin: 0; padding: 0; list-style: none;">
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Booking ID:</strong> ${booking.id}</li>
@@ -790,7 +807,7 @@ The BCI ParkShare Team`;
       </ul>
     </div>
     
-    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #2563eb;">
+    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Refund Information</h3>
       <ul style="margin: 0; padding: 0; list-style: none;">
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;">If you made a payment, a refund will be processed according to our cancellation policy</li>
@@ -862,7 +879,7 @@ The BCI ParkShare Team`;
     <p>Dear ${owner.name},</p>
     <p>We wanted to let you know that a booking for your parking spot has been cancelled.</p>
     
-    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #f59e0b;">
+    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Cancellation Details</h3>
       <ul style="margin: 0; padding: 0; list-style: none;">
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Booking ID:</strong> ${booking.id}</li>
@@ -875,7 +892,7 @@ The BCI ParkShare Team`;
       </ul>
     </div>
     
-    <div class="info-card" style="background-color: #fef3c7; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #f59e0b;">
+    <div class="info-card" style="background-color: #e0f2fe; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Renter Information</h3>
       <ul style="margin: 0; padding: 0; list-style: none;">
         <li style="padding: 8px 0; border-bottom: 1px solid #fcd34d; font-size: 15px;"><strong style="color: #475569;">Name:</strong> ${renter.name}</li>
@@ -961,7 +978,7 @@ The BCI ParkShare Team`;
       <strong>Action Required:</strong> Please make your payment immediately to avoid service interruption. Late fees may apply according to our payment policy.
     </div>
     ` : `
-    <div class="highlight-box" style="background-color: #fef3c7; border-radius: 8px; padding: 16px 20px; margin: 24px 0;">
+    <div class="highlight-box" style="background-color: #e0f2fe; border-radius: 8px; padding: 16px 20px; margin: 24px 0;">
       <strong>Reminder:</strong> Please ensure payment is made by the due date to maintain uninterrupted access to your parking spot.
     </div>
     `}
@@ -1032,12 +1049,12 @@ The BCI ParkShare Team`;
     <p>Dear ${user.name},</p>
     <p>Great news! We're excited to let you know that ${spots.length} parking spot${spots.length > 1 ? 's are' : ' is'} now available that match your preferences.</p>
     
-    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #10b981;">
+    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Available Spots</h3>
       ${spotsHtml}
     </div>
     
-    <div class="highlight-box" style="background-color: #fef3c7; border-radius: 8px; padding: 16px 20px; margin: 24px 0;">
+    <div class="highlight-box" style="background-color: #e0f2fe; border-radius: 8px; padding: 16px 20px; margin: 24px 0;">
       <strong>Act Fast:</strong> These spots are available on a first-come, first-served basis. Popular spots fill up quickly!
     </div>
     
@@ -1129,13 +1146,13 @@ The BCI ParkShare Team`;
     <p>Dear ${user.name},</p>
     <p>Here's your weekly parking summary for the week of ${summary.weekStart.toLocaleDateString()} to ${summary.weekEnd.toLocaleDateString()}.</p>
     
-    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #2563eb;">
+    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Week Overview</h3>
       ${statsHtml}
     </div>
     
     ${summary.pendingPayments > 0 ? `
-    <div class="highlight-box" style="background-color: #fef3c7; border-radius: 8px; padding: 16px 20px; margin: 24px 0;">
+    <div class="highlight-box" style="background-color: #e0f2fe; border-radius: 8px; padding: 16px 20px; margin: 24px 0;">
       <strong>Action Required:</strong> You have ${summary.pendingPayments} pending payment${summary.pendingPayments > 1 ? 's' : ''} that need attention.
     </div>
     ` : `
@@ -1239,7 +1256,7 @@ The BCI ParkShare Team`;
     </div>
     `}
     
-    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #2563eb;">
+    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">What You Need to Know</h3>
       <ul style="margin: 0; padding: 0; list-style: none;">
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;">Access to affected services may be temporarily limited during this window</li>
@@ -1313,7 +1330,7 @@ The BCI ParkShare Team`;
     <p>Dear ${user.name},</p>
     <p>Thank you for joining the BCI ParkShare Waiting List! We're excited to have you as part of our parking community.</p>
     
-    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #2563eb;">
+    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Your Enrollment Details</h3>
       <ul style="margin: 0; padding: 0; list-style: none;">
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;">
@@ -1325,7 +1342,7 @@ The BCI ParkShare Team`;
       </ul>
     </div>
     
-    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #10b981;">
+    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">What Happens Next</h3>
       <ul style="margin: 0; padding: 0; list-style: none;">
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">1.</strong> We'll monitor spot availability that matches your preferences</li>
@@ -1395,7 +1412,7 @@ BCI ParkShare System`;
     <p>Dear ${admin.name},</p>
     <p>A new user has joined the BCI ParkShare waiting list and may require a spot assignment.</p>
     
-    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #2563eb;">
+    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">New Member Details</h3>
       <ul style="margin: 0; padding: 0; list-style: none;">
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Name:</strong> ${newMember.name}</li>
@@ -1980,7 +1997,7 @@ BCI ParkShare Team`;
     .content { padding: 30px; background: #f8fafc; }
     .spot-details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626; }
     .footer { text-align: center; color: #64748b; padding: 20px; }
-    .warning { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; }
+    .warning { background: #fef3c7; border-left: 4px solid ${BCI_BLUE}; padding: 15px; margin: 20px 0; }
   </style>
 </head>
 <body>
@@ -2099,7 +2116,7 @@ BCI ParkShare Team`;
     .container { max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; }
     .header { background: #f59e0b; color: white; padding: 20px; text-align: center; }
     .content { padding: 30px; background: #f8fafc; }
-    .bookings-list { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b; }
+    .bookings-list { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${BCI_BLUE}; }
     .footer { text-align: center; color: #64748b; padding: 20px; }
     .info { background: #dbeafe; border-left: 4px solid #3b82f6; padding: 15px; margin: 20px 0; }
   </style>
