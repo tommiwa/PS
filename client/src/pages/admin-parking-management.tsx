@@ -3674,22 +3674,25 @@ export default function AdminParkingManagement() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={createAvailabilityFormData.singleDate}
-                      onSelect={(date) => {
-                        setCreateAvailabilityFormData({ ...createAvailabilityFormData, singleDate: date })
-                        setSingleDatePickerOpen(false)
-                      }}
-                      disabled={(date) => {
-                        const today = new Date();
-                        today.setHours(0, 0, 0, 0);
-                        const maxDate = new Date();
-                        maxDate.setMonth(maxDate.getMonth() + 6);
-                        return date < today || date > maxDate;
-                      }}
-                      initialFocus
-                    />
+                    {singleDatePickerOpen && (
+                      <Calendar
+                        mode="single"
+                        selected={createAvailabilityFormData.singleDate}
+                        defaultMonth={createAvailabilityFormData.singleDate || new Date()}
+                        onSelect={(date) => {
+                          setCreateAvailabilityFormData({ ...createAvailabilityFormData, singleDate: date })
+                          setSingleDatePickerOpen(false)
+                        }}
+                        disabled={(date) => {
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          const maxDate = new Date();
+                          maxDate.setMonth(maxDate.getMonth() + 6);
+                          return date < today || date > maxDate;
+                        }}
+                        initialFocus
+                      />
+                    )}
                   </PopoverContent>
                 </Popover>
               </div>
@@ -3712,27 +3715,29 @@ export default function AdminParkingManagement() {
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={createAvailabilityFormData.periodStartDate}
-                        defaultMonth={createAvailabilityFormData.periodStartDate || createAvailabilityFormData.periodEndDate}
-                        onSelect={(date) => {
-                          const updates: any = { periodStartDate: date };
-                          if (date && (!createAvailabilityFormData.periodEndDate || createAvailabilityFormData.periodEndDate < date)) {
-                            updates.periodEndDate = date;
-                          }
-                          setCreateAvailabilityFormData({ ...createAvailabilityFormData, ...updates });
-                          setStartDatePickerOpen(false)
-                        }}
-                        disabled={(date) => {
-                          const today = new Date();
-                          today.setHours(0, 0, 0, 0);
-                          const maxDate = new Date();
-                          maxDate.setMonth(maxDate.getMonth() + 6);
-                          return date < today || date > maxDate;
-                        }}
-                        initialFocus
-                      />
+                      {startDatePickerOpen && (
+                        <Calendar
+                          mode="single"
+                          selected={createAvailabilityFormData.periodStartDate}
+                          defaultMonth={createAvailabilityFormData.periodStartDate || createAvailabilityFormData.periodEndDate || new Date()}
+                          onSelect={(date) => {
+                            const updates: any = { periodStartDate: date };
+                            if (date && (!createAvailabilityFormData.periodEndDate || createAvailabilityFormData.periodEndDate < date)) {
+                              updates.periodEndDate = date;
+                            }
+                            setCreateAvailabilityFormData({ ...createAvailabilityFormData, ...updates });
+                            setStartDatePickerOpen(false)
+                          }}
+                          disabled={(date) => {
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            const maxDate = new Date();
+                            maxDate.setMonth(maxDate.getMonth() + 6);
+                            return date < today || date > maxDate;
+                          }}
+                          initialFocus
+                        />
+                      )}
                     </PopoverContent>
                   </Popover>
                 </div>
@@ -3754,29 +3759,30 @@ export default function AdminParkingManagement() {
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={createAvailabilityFormData.periodEndDate}
-                        defaultMonth={createAvailabilityFormData.periodStartDate || createAvailabilityFormData.periodEndDate}
-                        onSelect={(date) => {
-                          const updates: any = { periodEndDate: date };
-                          if (date && (!createAvailabilityFormData.periodStartDate || createAvailabilityFormData.periodStartDate > date)) {
-                            updates.periodStartDate = date;
-                          }
-                          setCreateAvailabilityFormData({ ...createAvailabilityFormData, ...updates });
-                          setEndDatePickerOpen(false)
-                        }}
-                        disabled={(date) => {
-                          const today = new Date();
-                          today.setHours(0, 0, 0, 0);
-                          const maxDate = new Date();
-                          maxDate.setMonth(maxDate.getMonth() + 6);
-                          if (date < today || date > maxDate) return true;
-                          if (createAvailabilityFormData.periodStartDate && date < createAvailabilityFormData.periodStartDate) return true;
-                          return false;
-                        }}
-                        initialFocus
-                      />
+                      {endDatePickerOpen && (
+                        <Calendar
+                          mode="single"
+                          selected={createAvailabilityFormData.periodEndDate}
+                          defaultMonth={createAvailabilityFormData.periodEndDate || createAvailabilityFormData.periodStartDate || new Date()}
+                          onSelect={(date) => {
+                            const updates: any = { periodEndDate: date };
+                            if (date && (!createAvailabilityFormData.periodStartDate || createAvailabilityFormData.periodStartDate > date)) {
+                              updates.periodStartDate = date;
+                            }
+                            setCreateAvailabilityFormData({ ...createAvailabilityFormData, ...updates });
+                            setEndDatePickerOpen(false)
+                          }}
+                          disabled={(date) => {
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            const maxDate = new Date();
+                            maxDate.setMonth(maxDate.getMonth() + 6);
+                            if (date < today || date > maxDate) return true;
+                            return false;
+                          }}
+                          initialFocus
+                        />
+                      )}
                     </PopoverContent>
                   </Popover>
                 </div>

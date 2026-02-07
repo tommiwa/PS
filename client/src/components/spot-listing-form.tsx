@@ -466,21 +466,23 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <CalendarComponent
-                      mode="single"
-                      selected={parseDate(formData.date)}
-                      defaultMonth={parseDate(formData.date)}
-                      onSelect={(date) => {
-                        updateFormData("date", formatDateStr(date))
-                        setSingleDateOpen(false)
-                      }}
-                      disabled={(date) => {
-                        const today = new Date()
-                        today.setHours(0, 0, 0, 0)
-                        return date < today || date > maxFutureDate
-                      }}
-                      initialFocus
-                    />
+                    {singleDateOpen && (
+                      <CalendarComponent
+                        mode="single"
+                        selected={parseDate(formData.date)}
+                        defaultMonth={parseDate(formData.date) || new Date()}
+                        onSelect={(date) => {
+                          updateFormData("date", formatDateStr(date))
+                          setSingleDateOpen(false)
+                        }}
+                        disabled={(date) => {
+                          const today = new Date()
+                          today.setHours(0, 0, 0, 0)
+                          return date < today || date > maxFutureDate
+                        }}
+                        initialFocus
+                      />
+                    )}
                   </PopoverContent>
                 </Popover>
                 {validationErrors.date && (
@@ -512,25 +514,27 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
-                      <CalendarComponent
-                        mode="single"
-                        selected={parseDate(formData.startDate)}
-                        defaultMonth={parseDate(formData.startDate) || parseDate(formData.endDate)}
-                        onSelect={(date) => {
-                          const dateStr = formatDateStr(date)
-                          updateFormData("startDate", dateStr)
-                          if (dateStr && (!formData.endDate || formData.endDate < dateStr)) {
-                            updateFormData("endDate", dateStr)
-                          }
-                          setPeriodStartOpen(false)
-                        }}
-                        disabled={(date) => {
-                          const today = new Date()
-                          today.setHours(0, 0, 0, 0)
-                          return date < today || date > maxFutureDate
-                        }}
-                        initialFocus
-                      />
+                      {periodStartOpen && (
+                        <CalendarComponent
+                          mode="single"
+                          selected={parseDate(formData.startDate)}
+                          defaultMonth={parseDate(formData.startDate) || parseDate(formData.endDate) || new Date()}
+                          onSelect={(date) => {
+                            const dateStr = formatDateStr(date)
+                            updateFormData("startDate", dateStr)
+                            if (dateStr && (!formData.endDate || formData.endDate < dateStr)) {
+                              updateFormData("endDate", dateStr)
+                            }
+                            setPeriodStartOpen(false)
+                          }}
+                          disabled={(date) => {
+                            const today = new Date()
+                            today.setHours(0, 0, 0, 0)
+                            return date < today || date > maxFutureDate
+                          }}
+                          initialFocus
+                        />
+                      )}
                     </PopoverContent>
                   </Popover>
                   {validationErrors.startDate && (
@@ -551,28 +555,28 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
-                      <CalendarComponent
-                        mode="single"
-                        selected={parseDate(formData.endDate)}
-                        defaultMonth={parseDate(formData.startDate) || parseDate(formData.endDate)}
-                        onSelect={(date) => {
-                          const dateStr = formatDateStr(date)
-                          updateFormData("endDate", dateStr)
-                          if (dateStr && (!formData.startDate || formData.startDate > dateStr)) {
-                            updateFormData("startDate", dateStr)
-                          }
-                          setPeriodEndOpen(false)
-                        }}
-                        disabled={(date) => {
-                          const today = new Date()
-                          today.setHours(0, 0, 0, 0)
-                          if (date < today || date > maxFutureDate) return true
-                          const startDate = parseDate(formData.startDate)
-                          if (startDate && date < startDate) return true
-                          return false
-                        }}
-                        initialFocus
-                      />
+                      {periodEndOpen && (
+                        <CalendarComponent
+                          mode="single"
+                          selected={parseDate(formData.endDate)}
+                          defaultMonth={parseDate(formData.endDate) || parseDate(formData.startDate) || new Date()}
+                          onSelect={(date) => {
+                            const dateStr = formatDateStr(date)
+                            updateFormData("endDate", dateStr)
+                            if (dateStr && (!formData.startDate || formData.startDate > dateStr)) {
+                              updateFormData("startDate", dateStr)
+                            }
+                            setPeriodEndOpen(false)
+                          }}
+                          disabled={(date) => {
+                            const today = new Date()
+                            today.setHours(0, 0, 0, 0)
+                            if (date < today || date > maxFutureDate) return true
+                            return false
+                          }}
+                          initialFocus
+                        />
+                      )}
                     </PopoverContent>
                   </Popover>
                   {validationErrors.endDate && (
@@ -639,25 +643,27 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
-                      <CalendarComponent
-                        mode="single"
-                        selected={parseDate(formData.recurringStartDate)}
-                        defaultMonth={parseDate(formData.recurringStartDate)}
-                        onSelect={(date) => {
-                          const dateStr = formatDateStr(date)
-                          updateFormData("recurringStartDate", dateStr)
-                          if (dateStr && formData.recurringEndDate && formData.recurringEndDate < dateStr) {
-                            updateFormData("recurringEndDate", dateStr)
-                          }
-                          setRecurringStartOpen(false)
-                        }}
-                        disabled={(date) => {
-                          const today = new Date()
-                          today.setHours(0, 0, 0, 0)
-                          return date < today || date > maxFutureDate
-                        }}
-                        initialFocus
-                      />
+                      {recurringStartOpen && (
+                        <CalendarComponent
+                          mode="single"
+                          selected={parseDate(formData.recurringStartDate)}
+                          defaultMonth={parseDate(formData.recurringStartDate) || new Date()}
+                          onSelect={(date) => {
+                            const dateStr = formatDateStr(date)
+                            updateFormData("recurringStartDate", dateStr)
+                            if (dateStr && formData.recurringEndDate && formData.recurringEndDate < dateStr) {
+                              updateFormData("recurringEndDate", dateStr)
+                            }
+                            setRecurringStartOpen(false)
+                          }}
+                          disabled={(date) => {
+                            const today = new Date()
+                            today.setHours(0, 0, 0, 0)
+                            return date < today || date > maxFutureDate
+                          }}
+                          initialFocus
+                        />
+                      )}
                     </PopoverContent>
                   </Popover>
                   {validationErrors.recurringStartDate && (
@@ -678,24 +684,26 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
-                      <CalendarComponent
-                        mode="single"
-                        selected={parseDate(formData.recurringEndDate)}
-                        defaultMonth={parseDate(formData.recurringStartDate) || parseDate(formData.recurringEndDate)}
-                        onSelect={(date) => {
-                          updateFormData("recurringEndDate", formatDateStr(date))
-                          setRecurringEndOpen(false)
-                        }}
-                        disabled={(date) => {
-                          const today = new Date()
-                          today.setHours(0, 0, 0, 0)
-                          if (date < today || date > maxFutureDate) return true
-                          const startDate = parseDate(formData.recurringStartDate)
-                          if (startDate && date < startDate) return true
-                          return false
-                        }}
-                        initialFocus
-                      />
+                      {recurringEndOpen && (
+                        <CalendarComponent
+                          mode="single"
+                          selected={parseDate(formData.recurringEndDate)}
+                          defaultMonth={parseDate(formData.recurringEndDate) || parseDate(formData.recurringStartDate) || new Date()}
+                          onSelect={(date) => {
+                            updateFormData("recurringEndDate", formatDateStr(date))
+                            setRecurringEndOpen(false)
+                          }}
+                          disabled={(date) => {
+                            const today = new Date()
+                            today.setHours(0, 0, 0, 0)
+                            if (date < today || date > maxFutureDate) return true
+                            const startDate = parseDate(formData.recurringStartDate)
+                            if (startDate && date < startDate) return true
+                            return false
+                          }}
+                          initialFocus
+                        />
+                      )}
                     </PopoverContent>
                   </Popover>
                   <p className="text-xs text-muted-foreground">Leave empty for ongoing recurring availability</p>
