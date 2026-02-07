@@ -231,6 +231,7 @@ export interface InAppNotification {
 
 const BCI_BLUE = '#1e9df1';
 const BCI_BLUE_DARK = '#1580c9';
+const APP_URL = 'https://park-share-bci.replit.app';
 
 
 type EmailTheme = 'primary' | 'success' | 'warning' | 'danger' | 'neutral';
@@ -505,7 +506,8 @@ The BCI ParkShare Team`;
   const html = wrapEmailTemplate({
     title: 'Your Parking Spot Is Ready',
     content,
-    theme: 'success'
+    theme: 'success',
+    ctaButton: { text: 'View My Spot', url: `${APP_URL}/my-listings` }
   });
 
   return {
@@ -575,7 +577,8 @@ The BCI ParkShare Team`;
   const html = wrapEmailTemplate({
     title: 'Welcome to the Waiting List',
     content,
-    theme: 'primary'
+    theme: 'primary',
+    ctaButton: { text: 'Find Parking', url: `${APP_URL}` }
   });
 
   return {
@@ -676,7 +679,8 @@ The BCI ParkShare Team`;
   const html = wrapEmailTemplate({
     title: 'Booking Confirmed',
     content,
-    theme: 'success'
+    theme: 'success',
+    ctaButton: { text: 'View My Bookings', url: `${APP_URL}/my-bookings` }
   });
 
   return {
@@ -752,7 +756,8 @@ The BCI ParkShare Team`;
   const html = wrapEmailTemplate({
     title: 'Your Spot Has Been Booked',
     content,
-    theme: 'success'
+    theme: 'success',
+    ctaButton: { text: 'View My Spot Listings', url: `${APP_URL}/my-listings` }
   });
 
   return {
@@ -859,7 +864,8 @@ The BCI ParkShare Team`;
     title: 'Booking Cancelled',
     content,
     theme: 'danger',
-    titleColor: '#ef4444'
+    titleColor: '#ef4444',
+    ctaButton: { text: 'Find Parking', url: `${APP_URL}` }
   });
 
   return {
@@ -955,7 +961,8 @@ The BCI ParkShare Team`;
     title: 'Booking Cancelled',
     content,
     theme: 'warning',
-    titleColor: '#ef4444'
+    titleColor: '#ef4444',
+    ctaButton: { text: 'View My Spot Listings', url: `${APP_URL}/my-listings` }
   });
 
   return {
@@ -1069,7 +1076,8 @@ The BCI ParkShare Team`;
     title: isOverdue ? 'Payment Overdue' : 'Payment Reminder',
     content,
     theme: isOverdue ? 'danger' : 'warning',
-    titleColor: '#ef4444'
+    titleColor: '#ef4444',
+    ctaButton: { text: 'View My Bookings', url: `${APP_URL}/my-bookings` }
   });
 
   return {
@@ -1143,7 +1151,8 @@ The BCI ParkShare Team`;
   const html = wrapEmailTemplate({
     title: 'New Spots Available',
     content,
-    theme: 'success'
+    theme: 'success',
+    ctaButton: { text: 'Find Parking', url: `${APP_URL}` }
   });
 
   return {
@@ -1245,7 +1254,8 @@ The BCI ParkShare Team`;
   const html = wrapEmailTemplate({
     title: 'Your Weekly Summary',
     content,
-    theme: 'primary'
+    theme: 'primary',
+    ctaButton: { text: 'Go to BCI ParkShare', url: `${APP_URL}` }
   });
 
   return {
@@ -1349,7 +1359,8 @@ The BCI ParkShare Team`;
   const html = wrapEmailTemplate({
     title: maintenance.isUrgent ? 'Urgent Maintenance Notice' : 'System Maintenance',
     content,
-    theme: maintenance.isUrgent ? 'danger' : 'neutral'
+    theme: maintenance.isUrgent ? 'danger' : 'neutral',
+    ctaButton: { text: 'Go to BCI ParkShare', url: `${APP_URL}` }
   });
 
   return {
@@ -1435,7 +1446,8 @@ The BCI ParkShare Team`;
   const html = wrapEmailTemplate({
     title: "You're on the Waiting List",
     content,
-    theme: 'primary'
+    theme: 'primary',
+    ctaButton: { text: 'Find Parking', url: `${APP_URL}` }
   });
 
   return {
@@ -1508,7 +1520,8 @@ BCI ParkShare System`;
   const html = wrapEmailTemplate({
     title: 'New Waiting List Enrollment',
     content,
-    theme: 'primary'
+    theme: 'primary',
+    ctaButton: { text: 'Manage Waiting List', url: `${APP_URL}/admin/waiting-list` }
   });
 
   return {
@@ -1564,7 +1577,8 @@ The BCI ParkShare Team`;
     title: 'Parking Spot Assigned',
     content,
     theme: 'success',
-    titleColor: '#16a34a'
+    titleColor: '#16a34a',
+    ctaButton: { text: 'View My Spot Listings', url: `${APP_URL}/my-listings` }
   });
 
   return {
@@ -1614,7 +1628,8 @@ The BCI ParkShare Team`;
   const html = wrapEmailTemplate({
     title: "You've Left the Waiting List",
     content,
-    theme: 'neutral'
+    theme: 'neutral',
+    ctaButton: { text: 'Find Parking', url: `${APP_URL}` }
   });
 
   return {
@@ -2174,7 +2189,8 @@ BCI ParkShare Team`;
         title: 'Parking Spot Unassigned',
         content,
         theme: 'neutral',
-        titleColor: '#f97316'
+        titleColor: '#f97316',
+        ctaButton: { text: 'Go to BCI ParkShare', url: `${APP_URL}` }
       });
 
       const emailResult = await sendEmailNotification({
@@ -2270,7 +2286,8 @@ BCI ParkShare Team`;
         title: 'Booking(s) Cancelled',
         content,
         theme: 'neutral',
-        titleColor: '#ef4444'
+        titleColor: '#ef4444',
+        ctaButton: { text: 'Find Parking', url: `${APP_URL}` }
       });
 
       const emailResult = await sendEmailNotification({
@@ -2370,7 +2387,8 @@ BCI ParkShare Team`;
     const html = wrapEmailTemplate({
       title: 'New Feedback Received',
       content,
-      theme: 'warning'
+      theme: 'warning',
+      ctaButton: { text: 'View User Feedbacks', url: `${APP_URL}/admin/issues` }
     });
 
     const notification: EmailNotification = {
@@ -2447,7 +2465,8 @@ The BCI ParkShare Team`;
     const html = wrapEmailTemplate({
       title: 'Feedback Resolved',
       content,
-      theme: 'success'
+      theme: 'success',
+      ctaButton: { text: 'Go to BCI ParkShare', url: `${APP_URL}` }
     });
 
     const notification: EmailNotification = {
