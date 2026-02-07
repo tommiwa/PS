@@ -461,7 +461,13 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                     type="date"
                     value={formData.startDate}
                     min={getTodayString()}
-                    onChange={(e) => updateFormData("startDate", e.target.value)}
+                    onChange={(e) => {
+                      const newStart = e.target.value;
+                      updateFormData("startDate", newStart);
+                      if (newStart && (!formData.endDate || formData.endDate < newStart)) {
+                        updateFormData("endDate", newStart);
+                      }
+                    }}
                     required
                     data-testid="input-start-date"
                   />
