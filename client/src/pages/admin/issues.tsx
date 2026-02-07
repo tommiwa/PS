@@ -64,21 +64,23 @@ export default function AdminIssuesPage() {
   })
 
   const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: number; status: IssueStatus }) => {
-      const response = await apiRequest(`/api/admin/issues/${id}`, { method: "PATCH", body: { status } })
+    mutationFn: async ({ id, status, notifyUser }: { id: number; status: IssueStatus; notifyUser?: boolean }) => {
+      const response = await apiRequest(`/api/admin/issues/${id}`, { method: "PATCH", body: { status, notifyUser } })
       return response.json()
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/issues"] })
       toast({
         title: "Status Updated",
-        description: "Issue status has been updated successfully.",
+        description: variables.notifyUser
+          ? "Status updated and the user has been notified via email."
+          : "Feedback status has been updated successfully.",
       })
     },
     onError: (error: any) => {
       toast({
         title: "Failed to Update",
-        description: error.message || "Could not update issue status.",
+        description: error.message || "Could not update feedback status.",
         variant: "destructive",
       })
     },
@@ -105,8 +107,18 @@ export default function AdminIssuesPage() {
     },
   })
 
-  const handleStatusChange = (issueId: number, newStatus: IssueStatus) => {
-    updateStatusMutation.mutate({ id: issueId, status: newStatus })
+  const handleStatusChange = async (issueId: number, newStatus: IssueStatus) => {
+    if (newStatus === 'completed') {
+      const notifyConfirmed = await confirm({
+        title: "Notify User",
+        description: "Would you like to notify the user who submitted this feedback that it has been resolved?",
+        confirmText: "Yes, Notify",
+        cancelText: "No, Just Update",
+      })
+      updateStatusMutation.mutate({ id: issueId, status: newStatus, notifyUser: notifyConfirmed })
+    } else {
+      updateStatusMutation.mutate({ id: issueId, status: newStatus })
+    }
   }
 
   const handleDelete = async (issueId: number) => {

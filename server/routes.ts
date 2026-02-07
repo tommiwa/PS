@@ -8790,6 +8790,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         validatedData.resolvedBy = userId;
       }
       
+      const notifyUser = req.body.notifyUser === true;
+      
       const [updatedIssue] = await db
         .update(issues)
         .set({
@@ -8801,6 +8803,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!updatedIssue) {
         return res.status(404).json({ error: "Issue not found" });
+      }
+      
+      // Send resolution notification to the reporter if requested
+      if (validatedData.status === 'completed' && notifyUser && updatedIssue.reporterEmail) {
+        setImmediate(async () => {
+          try {
+            const { sendFeedbackResolvedNotification } = await import('./notification-service');
+            await sendFeedbackResolvedNotification(
+              { name: updatedIssue.reporterName || 'User', email: updatedIssue.reporterEmail! },
+              { title: updatedIssue.title, description: updatedIssue.description || '' }
+            );
+          } catch (emailError) {
+            console.error('Failed to send feedback resolved email:', emailError);
+          }
+        });
       }
       
       res.json(updatedIssue);

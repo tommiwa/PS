@@ -2392,3 +2392,66 @@ BCI ParkShare Team`;
 
   return results;
 }
+
+export async function sendFeedbackResolvedNotification(
+  reporter: { name: string; email: string },
+  feedback: { title: string; description: string }
+): Promise<{ emailSent: boolean }> {
+  const results = { emailSent: false };
+
+  try {
+    const subject = `[BCI ParkShare] Your Feedback Has Been Resolved: ${feedback.title}`;
+
+    const text = `Hi ${reporter.name},
+
+Thank you for your feedback on BCI ParkShare. We're happy to let you know that your feedback has been reviewed and resolved.
+
+FEEDBACK DETAILS:
+- Title: ${feedback.title}
+- Description: ${feedback.description}
+
+If you have any further questions or concerns, please don't hesitate to submit another feedback through the app.
+
+Warm regards,
+The BCI ParkShare Team`;
+
+    const content = `
+    <p>Hi ${reporter.name},</p>
+    
+    <p>Thank you for your feedback on BCI ParkShare. We're happy to let you know that your feedback has been reviewed and resolved.</p>
+    
+    <div class="info-card" style="background-color: #f0fdf4; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #22c55e;">
+      <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Feedback Resolved</h3>
+      <ul style="margin: 0; padding: 0; list-style: none;">
+        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Title:</strong> ${feedback.title}</li>
+        <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Description:</strong><br><span style="white-space: pre-wrap;">${feedback.description}</span></li>
+      </ul>
+    </div>
+    
+    <p>If you have any further questions or concerns, please don't hesitate to submit another feedback through the app.</p>
+  `;
+
+    const html = wrapEmailTemplate({
+      title: 'Feedback Resolved',
+      content,
+      theme: 'success'
+    });
+
+    const notification: EmailNotification = {
+      to: reporter.email,
+      subject,
+      text,
+      html,
+      type: 'general'
+    };
+
+    const emailResult = await sendEmailNotification(notification);
+    results.emailSent = emailResult.success;
+
+    console.log(`✓ Feedback resolved email sent to ${reporter.email}: ${feedback.title}`);
+  } catch (error) {
+    console.error('❌ Error sending feedback resolved notification:', error);
+  }
+
+  return results;
+}
