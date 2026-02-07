@@ -330,18 +330,49 @@ function useNavigationDataRefresh() {
   }, [location]);
 }
 
+const RENTER_ROUTES = ['/search', '/my-bookings'];
+const OWNER_ROUTES = ['/my-spots', '/my-listings', '/my-rentals'];
+
+function getRequiredRoleForRoute(path: string): 'admin' | 'owner' | 'renter' | null {
+  if (path === '/admin' || path.startsWith('/admin/')) return 'admin';
+  if (OWNER_ROUTES.some(r => path === r)) return 'owner';
+  if (RENTER_ROUTES.some(r => path === r)) return 'renter';
+  return null;
+}
+
+function useAutoRoleSync() {
+  const [location] = useLocation();
+  const { user, getCurrentViewRole, switchViewRole, resetViewRole, isAdmin } = useAuth();
+  const currentView = getCurrentViewRole();
+  const isAdminUser = isAdmin();
+
+  useEffect(() => {
+    if (!user || !isAdminUser) return;
+
+    const requiredRole = getRequiredRoleForRoute(location);
+    if (!requiredRole) return;
+    if (currentView === requiredRole) return;
+
+    if (requiredRole === 'admin') {
+      resetViewRole();
+    } else {
+      switchViewRole(requiredRole);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location, currentView, isAdminUser]);
+}
+
 // Main authenticated app layout
 function AuthenticatedApp() {
   const { user, logout } = useAuth();
   const [termsDialogOpen, setTermsDialogOpen] = useState(false);
   
-  // Fetch terms for the footer dialog
   const { data: terms } = useQuery<TermsVersion>({
     queryKey: ["/api/legal/terms"],
   });
   
-  // Enable automatic data refresh on navigation
   useNavigationDataRefresh();
+  useAutoRoleSync();
   
   // Custom sidebar width for the parking application
   const style = {
