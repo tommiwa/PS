@@ -7,13 +7,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { useConfirm } from "@/hooks/use-confirm"
 import { apiRequest, queryClient } from "@/lib/queryClient"
 import { format } from "date-fns"
-import { AlertCircle, Clock, CheckCircle2, ListTodo, Loader2, RefreshCw, Trash2, Eye, User, Mail, Calendar, Star } from "lucide-react"
+import { AlertCircle, Clock, CheckCircle2, ListTodo, Loader2, RefreshCw, Trash2, Eye, User, Mail, Calendar, Star, FileText } from "lucide-react"
 
 type IssueStatus = "backlog" | "todo" | "in_progress" | "completed"
 type IssuePriority = "low" | "medium" | "high" | "urgent"
@@ -28,6 +31,7 @@ interface Issue {
   reportedBy: string
   reporterName: string | null
   reporterEmail: string | null
+  resolutionNotes: string | null
   createdAt: string
   updatedAt: string
 }
@@ -51,6 +55,10 @@ export default function AdminIssuesPage() {
   const [priorityFilter, setPriorityFilter] = useState<string>("all")
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
   const [showDetailsDialog, setShowDetailsDialog] = useState(false)
+  const [showCompletionDialog, setShowCompletionDialog] = useState(false)
+  const [completionIssueId, setCompletionIssueId] = useState<number | null>(null)
+  const [completionNotify, setCompletionNotify] = useState(true)
+  const [completionResolutionNotes, setCompletionResolutionNotes] = useState("")
   const { toast } = useToast()
   const { confirm } = useConfirm()
 
@@ -64,8 +72,8 @@ export default function AdminIssuesPage() {
   })
 
   const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status, notifyUser }: { id: number; status: IssueStatus; notifyUser?: boolean }) => {
-      const response = await apiRequest(`/api/admin/issues/${id}`, { method: "PATCH", body: { status, notifyUser } })
+    mutationFn: async ({ id, status, notifyUser, resolutionNotes }: { id: number; status: IssueStatus; notifyUser?: boolean; resolutionNotes?: string }) => {
+      const response = await apiRequest(`/api/admin/issues/${id}`, { method: "PATCH", body: { status, notifyUser, resolutionNotes } })
       return response.json()
     },
     onSuccess: (_data, variables) => {
@@ -109,16 +117,26 @@ export default function AdminIssuesPage() {
 
   const handleStatusChange = async (issueId: number, newStatus: IssueStatus) => {
     if (newStatus === 'completed') {
-      const notifyConfirmed = await confirm({
-        title: "Notify User",
-        description: "Would you like to notify the user who submitted this feedback that it has been resolved?",
-        confirmText: "Yes, Notify",
-        cancelText: "No, Just Update",
-      })
-      updateStatusMutation.mutate({ id: issueId, status: newStatus, notifyUser: notifyConfirmed })
+      setCompletionIssueId(issueId)
+      setCompletionNotify(true)
+      setCompletionResolutionNotes("")
+      setShowCompletionDialog(true)
     } else {
       updateStatusMutation.mutate({ id: issueId, status: newStatus })
     }
+  }
+
+  const handleCompletionSubmit = () => {
+    if (completionIssueId === null) return
+    updateStatusMutation.mutate({
+      id: completionIssueId,
+      status: 'completed',
+      notifyUser: completionNotify,
+      resolutionNotes: completionResolutionNotes.trim() || undefined,
+    })
+    setShowCompletionDialog(false)
+    setCompletionIssueId(null)
+    setCompletionResolutionNotes("")
   }
 
   const handleDelete = async (issueId: number) => {
@@ -418,6 +436,52 @@ export default function AdminIssuesPage() {
         </CardContent>
       </Card>
 
+      {/* Completion Dialog */}
+      <Dialog open={showCompletionDialog} onOpenChange={setShowCompletionDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-green-600" />
+              Mark as Completed
+            </DialogTitle>
+            <DialogDescription>
+              Optionally describe the steps taken to resolve this feedback and choose whether to notify the user.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="resolution-notes">Resolution Steps (optional)</Label>
+              <Textarea
+                id="resolution-notes"
+                placeholder="Describe what was done to resolve this issue..."
+                value={completionResolutionNotes}
+                onChange={(e) => setCompletionResolutionNotes(e.target.value)}
+                rows={4}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="notify-user"
+                checked={completionNotify}
+                onCheckedChange={(checked) => setCompletionNotify(checked === true)}
+              />
+              <Label htmlFor="notify-user" className="text-sm cursor-pointer">
+                Notify the user via email that their feedback has been resolved
+              </Label>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowCompletionDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCompletionSubmit} disabled={updateStatusMutation.isPending}>
+              {updateStatusMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Complete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Issue Details Dialog */}
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
         <DialogContent className="max-w-2xl">
@@ -471,6 +535,18 @@ export default function AdminIssuesPage() {
                   <p className="text-sm whitespace-pre-wrap">{selectedIssue.description}</p>
                 </div>
               </div>
+
+              {selectedIssue.resolutionNotes && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Resolution Steps
+                  </h4>
+                  <div className="p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg">
+                    <p className="text-sm whitespace-pre-wrap">{selectedIssue.resolutionNotes}</p>
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">

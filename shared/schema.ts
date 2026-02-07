@@ -1413,6 +1413,7 @@ export const issues = pgTable("issues", {
   reporterName: varchar("reporter_name"), // Cached reporter name for display
   reporterEmail: varchar("reporter_email"), // Cached reporter email
   adminNotes: text("admin_notes"), // Internal notes from admin
+  resolutionNotes: text("resolution_notes"), // Steps taken to resolve the issue
   resolvedAt: timestamp("resolved_at"), // When marked as completed
   resolvedBy: varchar("resolved_by"), // Admin who resolved it
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -1432,6 +1433,7 @@ export const insertIssueSchema = createInsertSchema(issues).omit({
 export const updateIssueSchema = createInsertSchema(issues).pick({
   status: true,
   adminNotes: true,
+  resolutionNotes: true,
   resolvedAt: true,
   resolvedBy: true,
 }).partial();

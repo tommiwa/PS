@@ -8913,13 +8913,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const notifyUser = req.body.notifyUser === true;
+      const resolutionNotes = req.body.resolutionNotes || null;
+      
+      const updateData: any = {
+        ...validatedData,
+        updatedAt: new Date(),
+      };
+      
+      if (resolutionNotes !== null) {
+        updateData.resolutionNotes = resolutionNotes;
+      }
       
       const [updatedIssue] = await db
         .update(issues)
-        .set({
-          ...validatedData,
-          updatedAt: new Date(),
-        } as any)
+        .set(updateData)
         .where(eq(issues.id, id))
         .returning();
       
@@ -8934,7 +8941,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const { sendFeedbackResolvedNotification } = await import('./notification-service');
             await sendFeedbackResolvedNotification(
               { name: updatedIssue.reporterName || 'User', email: updatedIssue.reporterEmail! },
-              { title: updatedIssue.title, description: updatedIssue.description || '' }
+              { title: updatedIssue.title, description: updatedIssue.description || '' },
+              resolutionNotes || undefined
             );
           } catch (emailError) {
             console.error('Failed to send feedback resolved email:', emailError);

@@ -2395,12 +2395,17 @@ BCI ParkShare Team`;
 
 export async function sendFeedbackResolvedNotification(
   reporter: { name: string; email: string },
-  feedback: { title: string; description: string }
+  feedback: { title: string; description: string },
+  resolutionNotes?: string
 ): Promise<{ emailSent: boolean }> {
   const results = { emailSent: false };
 
   try {
     const subject = `[BCI ParkShare] Your Feedback Has Been Resolved: ${feedback.title}`;
+
+    const resolutionText = resolutionNotes
+      ? `\nRESOLUTION STEPS:\n${resolutionNotes}\n`
+      : '';
 
     const text = `Hi ${reporter.name},
 
@@ -2409,11 +2414,19 @@ Thank you for your feedback on BCI ParkShare. We're happy to let you know that y
 FEEDBACK DETAILS:
 - Title: ${feedback.title}
 - Description: ${feedback.description}
-
+${resolutionText}
 If you have any further questions or concerns, please don't hesitate to submit another feedback through the app.
 
 Warm regards,
 The BCI ParkShare Team`;
+
+    const resolutionHtml = resolutionNotes
+      ? `
+    <div class="info-card" style="background-color: #eff6ff; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #1e9df1;">
+      <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Resolution Steps</h3>
+      <p style="margin: 0; font-size: 15px; color: #334155; white-space: pre-wrap;">${resolutionNotes}</p>
+    </div>`
+      : '';
 
     const content = `
     <p>Hi ${reporter.name},</p>
@@ -2427,7 +2440,7 @@ The BCI ParkShare Team`;
         <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Description:</strong><br><span style="white-space: pre-wrap;">${feedback.description}</span></li>
       </ul>
     </div>
-    
+    ${resolutionHtml}
     <p>If you have any further questions or concerns, please don't hesitate to submit another feedback through the app.</p>
   `;
 
