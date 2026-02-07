@@ -395,42 +395,36 @@ export async function setupAuth(app: Express) {
   };
 
   app.get("/api/login", (req, res, next) => {
-    function proceedWithAuth() {
-      // Log login attempt
-      const loginAttemptTime = Date.now();
-      const originalEnd = res.end;
+    const originalEnd = res.end;
+    
+    res.end = function(chunk?: any, encoding?: any) {
+      const success = res.statusCode >= 200 && res.statusCode < 400;
       
-      res.end = function(chunk?: any, encoding?: any) {
-        const success = res.statusCode >= 200 && res.statusCode < 400;
-        
-        // Extract user info if available
-        let actorId: string | undefined;
-        let actorEmail: string | undefined;
-        
-        if (req.user && (req.user as any).claims) {
-          actorId = (req.user as any).claims.sub;
-          actorEmail = (req.user as any).claims.email;
-        }
-        
-        // Log authentication event
-        auditService.auditAuth(
-          "LOGIN",
-          actorId || "unknown",
-          actorEmail || "unknown",
-          success,
-          success ? "Login initiated successfully" : `Login failed with status ${res.statusCode}`
-        ).catch(error => {
-          console.error("Failed to log login event:", error);
-        });
-        
-        return originalEnd.call(this, chunk, encoding);
-      };
+      let actorId: string | undefined;
+      let actorEmail: string | undefined;
       
-      const domain = getDomainForRequest(req);
-      passport.authenticate(`replitauth:${domain}`, {
-        scope: ["openid", "email", "profile", "offline_access"],
-      })(req, res, next);
-    }
+      if (req.user && (req.user as any).claims) {
+        actorId = (req.user as any).claims.sub;
+        actorEmail = (req.user as any).claims.email;
+      }
+      
+      auditService.auditAuth(
+        "LOGIN",
+        actorId || "unknown",
+        actorEmail || "unknown",
+        success,
+        success ? "Login initiated successfully" : `Login failed with status ${res.statusCode}`
+      ).catch(error => {
+        console.error("Failed to log login event:", error);
+      });
+      
+      return originalEnd.call(this, chunk, encoding);
+    };
+    
+    const domain = getDomainForRequest(req);
+    passport.authenticate(`replitauth:${domain}`, {
+      scope: ["openid", "email", "profile", "offline_access"],
+    })(req, res, next);
   });
 
   app.get("/api/callback", (req, res, next) => {
