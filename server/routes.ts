@@ -2996,7 +2996,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           dailyRate: listing.dailyRate,
           notes: listing.notes,
           status: 'booked',
-          createdByAdmin: listing.createdByAdmin
+          createdByAdmin: listing.createdByAdmin,
+          donateToCharity: listing.donateToCharity
         });
         console.log(`[Booking] Created booked single-day listing for ${bookingDate}: ${bookedListing.id}`);
         
@@ -3020,7 +3021,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               dailyRate: listing.dailyRate,
               notes: listing.notes,
               status: 'available',
-              createdByAdmin: listing.createdByAdmin
+              createdByAdmin: listing.createdByAdmin,
+              donateToCharity: listing.donateToCharity
             });
             console.log(`[Booking] Created single-day listing for ${date}`);
           } catch (err) {
@@ -3031,8 +3033,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Cancel the original period listing since it's been split into individual days
         await storage.cancelSpotListing(listing.id, 'Split into individual day listings due to partial booking');
         console.log(`[Booking] Cancelled original period listing ${listing.id}`);
+      } else if (listing.listingType === 'recurring' && listing.recurringStartDate && listing.daysOfWeek?.length) {
+        // Handle recurring listings: split into individual day listings (same approach as period)
+        // This ensures each day remains independently bookable
+        const recurringEndDate = listing.recurringEndDate || getMaxFutureDate().toISOString().split('T')[0];
+        console.log(`[Booking] Recurring listing detected (${listing.recurringStartDate} to ${recurringEndDate}, days: ${listing.daysOfWeek}), splitting into individual days...`);
+        
+        // Generate all matching dates from the recurring pattern
+        const allDates: string[] = [];
+        const [startYear, startMonth, startDay] = listing.recurringStartDate.split('-').map(Number);
+        const [endYear, endMonth, endDay] = recurringEndDate.split('-').map(Number);
+        
+        const startDate = new Date(Date.UTC(startYear, startMonth - 1, startDay));
+        const endDate = new Date(Date.UTC(endYear, endMonth - 1, endDay));
+        
+        // Map day names to JS day numbers (0=Sunday, 1=Monday, etc.)
+        const dayNameToNumber: Record<string, number> = {
+          'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3,
+          'thursday': 4, 'friday': 5, 'saturday': 6
+        };
+        const activeDays = new Set(
+          (listing.daysOfWeek as string[]).map((d: string) => dayNameToNumber[d.toLowerCase()]).filter((n: number | undefined) => n !== undefined)
+        );
+        
+        for (let d = new Date(startDate); d <= endDate; d.setUTCDate(d.getUTCDate() + 1)) {
+          if (activeDays.has(d.getUTCDay())) {
+            const year = d.getUTCFullYear();
+            const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(d.getUTCDate()).padStart(2, '0');
+            allDates.push(`${year}-${month}-${day}`);
+          }
+        }
+        
+        // Get existing single-day listings for this spot to avoid duplicates
+        const existingListings = await storage.getSpotListingsBySpot(listing.spotId);
+        const existingSingleDates = new Set(
+          existingListings
+            .filter(l => l.listingType === 'single' && !l.deletedAt && (l.status === 'available' || l.status === 'booked'))
+            .map(l => l.singleDate)
+            .filter(Boolean)
+        );
+        
+        // Check for existing active bookings to avoid creating listings for already-booked dates
+        const existingBookings = await storage.getBookingsBySpot(listing.spotId);
+        const bookedDates = new Set(
+          existingBookings
+            .filter(b => b.status === 'confirmed' || b.status === 'pending')
+            .map(b => b.bookingDate)
+        );
+        
+        // Filter out the booked date, dates with existing listings, and dates with existing bookings
+        const remainingDates = allDates.filter(date => 
+          date !== bookingDate && 
+          !existingSingleDates.has(date) && 
+          !bookedDates.has(date)
+        );
+        
+        console.log(`[Booking] Creating ${remainingDates.length} individual single-day listings for remaining recurring dates (out of ${allDates.length} total)`);
+        
+        // Create a single-day listing for the BOOKED date (status: 'booked')
+        const bookedListing = await storage.createSpotListing({
+          spotId: listing.spotId,
+          ownerId: listing.ownerId,
+          listingType: 'single',
+          singleDate: bookingDate,
+          periodStartDate: null,
+          periodEndDate: null,
+          recurringStartDate: null,
+          recurringEndDate: null,
+          daysOfWeek: null,
+          dailyRate: listing.dailyRate,
+          notes: listing.notes,
+          status: 'booked',
+          createdByAdmin: listing.createdByAdmin,
+          donateToCharity: listing.donateToCharity
+        });
+        console.log(`[Booking] Created booked single-day listing for ${bookingDate}: ${bookedListing.id}`);
+        
+        // Update the booking to reference the new single-day listing
+        await storage.updateBooking(newBooking.id, { listingId: bookedListing.id } as any);
+        console.log(`[Booking] Updated booking ${newBooking.id} to reference listing ${bookedListing.id}`);
+        
+        // Create individual single-day listings for each remaining date (status: 'available')
+        for (const date of remainingDates) {
+          try {
+            await storage.createSpotListing({
+              spotId: listing.spotId,
+              ownerId: listing.ownerId,
+              listingType: 'single',
+              singleDate: date,
+              periodStartDate: null,
+              periodEndDate: null,
+              recurringStartDate: null,
+              recurringEndDate: null,
+              daysOfWeek: null,
+              dailyRate: listing.dailyRate,
+              notes: listing.notes,
+              status: 'available',
+              createdByAdmin: listing.createdByAdmin,
+              donateToCharity: listing.donateToCharity
+            });
+            console.log(`[Booking] Created single-day listing for ${date}`);
+          } catch (err) {
+            console.error(`[Booking] Failed to create listing for ${date}:`, err);
+          }
+        }
+        
+        // Cancel the original recurring listing since it's been split into individual days
+        await storage.cancelSpotListing(listing.id, 'Split into individual day listings due to partial booking');
+        console.log(`[Booking] Cancelled original recurring listing ${listing.id}`);
       } else {
-        // For single-day or recurring listings, just mark as booked
+        // For single-day listings, just mark as booked
         await storage.updateSpotListingStatus(listing.id, 'booked');
         console.log(`[Booking] Updated listing ${listing.id} status to 'booked'`);
       }
