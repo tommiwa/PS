@@ -3756,7 +3756,7 @@ export default function AdminParkingManagement() {
                       <Calendar
                         mode="single"
                         selected={createAvailabilityFormData.periodEndDate}
-                        defaultMonth={createAvailabilityFormData.periodEndDate || createAvailabilityFormData.periodStartDate}
+                        defaultMonth={createAvailabilityFormData.periodStartDate || createAvailabilityFormData.periodEndDate}
                         onSelect={(date) => {
                           setCreateAvailabilityFormData({ ...createAvailabilityFormData, periodEndDate: date })
                           setEndDatePickerOpen(false)

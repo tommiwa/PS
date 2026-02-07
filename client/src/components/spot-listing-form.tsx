@@ -551,7 +551,7 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                       <CalendarComponent
                         mode="single"
                         selected={parseDate(formData.endDate)}
-                        defaultMonth={parseDate(formData.endDate) || parseDate(formData.startDate)}
+                        defaultMonth={parseDate(formData.startDate) || parseDate(formData.endDate)}
                         onSelect={(date) => {
                           updateFormData("endDate", formatDateStr(date))
                           setPeriodEndOpen(false)
@@ -674,7 +674,7 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                       <CalendarComponent
                         mode="single"
                         selected={parseDate(formData.recurringEndDate)}
-                        defaultMonth={parseDate(formData.recurringEndDate) || parseDate(formData.recurringStartDate)}
+                        defaultMonth={parseDate(formData.recurringStartDate) || parseDate(formData.recurringEndDate)}
                         onSelect={(date) => {
                           updateFormData("recurringEndDate", formatDateStr(date))
                           setRecurringEndOpen(false)
