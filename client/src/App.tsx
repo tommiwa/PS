@@ -44,7 +44,7 @@ import NotificationsPage from "@/pages/notifications";
 import MapDemo from "@/pages/map-demo";
 import Login from "@/pages/login";
 import Terms from "@/pages/terms";
-// Note: TermsConsent page removed - terms are now accepted on the login page
+import TermsConsent from "@/pages/terms-consent";
 import NotFound from "@/pages/not-found";
 
 // Terms version interface
@@ -183,11 +183,17 @@ function ProtectedRouter() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const [location, setLocation] = useLocation();
 
-  // Redirect to login if not authenticated, or away from login if authenticated
-  // Note: Terms acceptance is handled on the login page before sign-in,
-  // so we no longer need a separate terms-consent page redirect
+  const { data: activeTerms } = useQuery<TermsVersion>({
+    queryKey: ["/api/legal/terms"],
+    enabled: isAuthenticated,
+  });
+
+  const needsTermsAcceptance = isAuthenticated && activeTerms && (
+    !user?.acceptedTermsVersion || 
+    user.acceptedTermsVersion < activeTerms.version
+  );
+
   useEffect(() => {
-    // Allow public access to /terms page
     if (location === "/terms") {
       return;
     }
@@ -195,14 +201,18 @@ function ProtectedRouter() {
     if (!isLoading && !isAuthenticated && location !== "/login") {
       setLocation("/login");
     } else if (isAuthenticated && location === "/login") {
-      setLocation("/"); // Move away from /login to let LandingPageRedirect handle role-based routing
-    } else if (isAuthenticated && location === "/terms-consent") {
-      // Redirect away from terms-consent since terms are now accepted on login page
+      if (needsTermsAcceptance) {
+        setLocation("/terms-consent");
+      } else {
+        setLocation("/");
+      }
+    } else if (isAuthenticated && needsTermsAcceptance && location !== "/terms-consent") {
+      setLocation("/terms-consent");
+    } else if (isAuthenticated && !needsTermsAcceptance && location === "/terms-consent") {
       setLocation("/");
     }
-  }, [isAuthenticated, isLoading, location, setLocation]);
+  }, [isAuthenticated, isLoading, location, setLocation, needsTermsAcceptance]);
 
-  // Show loading screen while checking authentication
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -214,17 +224,18 @@ function ProtectedRouter() {
     );
   }
 
-  // Show terms page publicly if on /terms route
   if (location === "/terms") {
     return <Terms />;
   }
 
-  // Show login page if not authenticated
   if (!isAuthenticated) {
     return <Login />;
   }
 
-  // Render authenticated app with layout
+  if (needsTermsAcceptance) {
+    return <TermsConsent />;
+  }
+
   return <AuthenticatedApp />;
 }
 
