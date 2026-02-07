@@ -489,13 +489,10 @@ export default function AdminParkingManagement() {
       
       // Now create the spot with the location ID
       if (locationIdToUse) {
-        // Business Rule: Reserved spots (spotTypeId = 2) should NOT be bookable (reserved for C-suite)
-        const isReservedSpot = addSpotFormData.spotTypeId === 2;
-        
         await addSpotMutation.mutateAsync({
           ...addSpotFormData,
           locationId: locationIdToUse,
-          isBookable: isReservedSpot ? false : addSpotFormData.isBookable, // Force isBookable to false for Reserved spots
+          isBookable: addSpotFormData.isBookable,
           ownerId: addSpotFormData.isBciManaged ? null : undefined // BCI spots have null owner, Personal spots will be unassigned
         });
         
@@ -554,16 +551,9 @@ export default function AdminParkingManagement() {
   // Mutation to edit a spot
   const editSpotMutation = useMutation({
     mutationFn: async ({ spotId, spotData }: { spotId: string; spotData: typeof editFormData }) => {
-      // Business Rule: Reserved spots (spotTypeId = 2) should NOT be bookable (reserved for C-suite)
-      const isReservedSpot = spotData.spotTypeId === 2;
-      const finalSpotData = {
-        ...spotData,
-        isBookable: isReservedSpot ? false : spotData.isBookable // Force isBookable to false for Reserved spots
-      };
-      
       return await apiRequest(`/api/admin/spots/${spotId}`, {
         method: "PATCH",
-        body: finalSpotData,
+        body: spotData,
       });
     },
     onSuccess: async () => {
