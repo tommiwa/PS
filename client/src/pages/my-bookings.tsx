@@ -922,9 +922,9 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               <span className="hidden sm:inline">•</span>
               <span>{
                 (listing.originalListingType === 'period' || listing.listingType === 'period')
-                  ? 'Part of Date Range'
+                  ? `Part of Date Range${listing.periodStartDate && listing.periodEndDate ? ` (${listing.periodStartDate} to ${listing.periodEndDate})` : ''}`
                   : (listing.originalListingType === 'recurring' || listing.listingType === 'recurring')
-                    ? 'Part of Recurring'
+                    ? `Part of Recurring${listing.recurringStartDate && listing.recurringEndDate ? ` (${listing.recurringStartDate} to ${listing.recurringEndDate})` : ''}`
                     : 'Single Day'
               }</span>
               <span className="hidden sm:inline">•</span>
@@ -1204,9 +1204,9 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                   <p className="text-xs text-muted-foreground">Type</p>
                   <p className="text-sm font-medium">{
                     ((booking as any).originalListingType === 'period' || (booking as any).listingType === 'period')
-                      ? 'Part of Date Range'
+                      ? `Part of Date Range${(booking as any).periodStartDate && (booking as any).periodEndDate ? ` (${(booking as any).periodStartDate} to ${(booking as any).periodEndDate})` : ''}`
                       : ((booking as any).originalListingType === 'recurring' || (booking as any).listingType === 'recurring')
-                        ? 'Part of Recurring'
+                        ? `Part of Recurring${(booking as any).recurringStartDate && (booking as any).recurringEndDate ? ` (${(booking as any).recurringStartDate} to ${(booking as any).recurringEndDate})` : ''}`
                         : 'Single Day'
                   }</p>
                 </div>
