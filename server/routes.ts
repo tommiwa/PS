@@ -2052,6 +2052,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const enrichedBookings = await Promise.all(bookings.map(async (booking) => {
         const spot = await storage.getParkingSpot(booking.spotId);
         const owner = await storage.getUser(booking.ownerId);
+        const listing = booking.listingId ? await storage.getSpotListing(booking.listingId) : null;
         
         // Get location and spot type names
         let locationName = 'Unknown';
@@ -2087,7 +2088,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isBciManaged: spot?.isBciManaged || false,
           // Include map link fields
           seatNumber: spot?.seatNumber || null,
-          floorPlanBaseUrl: floorPlanBaseUrl
+          floorPlanBaseUrl: floorPlanBaseUrl,
+          listingType: listing?.listingType || 'single',
+          originalListingType: listing?.originalListingType || null
         };
       }));
       
@@ -2997,7 +3000,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           notes: listing.notes,
           status: 'booked',
           createdByAdmin: listing.createdByAdmin,
-          donateToCharity: listing.donateToCharity
+          donateToCharity: listing.donateToCharity,
+          originalListingType: 'period'
         });
         console.log(`[Booking] Created booked single-day listing for ${bookingDate}: ${bookedListing.id}`);
         
@@ -3022,7 +3026,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               notes: listing.notes,
               status: 'available',
               createdByAdmin: listing.createdByAdmin,
-              donateToCharity: listing.donateToCharity
+              donateToCharity: listing.donateToCharity,
+              originalListingType: 'period'
             });
             console.log(`[Booking] Created single-day listing for ${date}`);
           } catch (err) {
@@ -3106,7 +3111,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           notes: listing.notes,
           status: 'booked',
           createdByAdmin: listing.createdByAdmin,
-          donateToCharity: listing.donateToCharity
+          donateToCharity: listing.donateToCharity,
+          originalListingType: 'recurring'
         });
         console.log(`[Booking] Created booked single-day listing for ${bookingDate}: ${bookedListing.id}`);
         
@@ -3131,7 +3137,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               notes: listing.notes,
               status: 'available',
               createdByAdmin: listing.createdByAdmin,
-              donateToCharity: listing.donateToCharity
+              donateToCharity: listing.donateToCharity,
+              originalListingType: 'recurring'
             });
             console.log(`[Booking] Created single-day listing for ${date}`);
           } catch (err) {

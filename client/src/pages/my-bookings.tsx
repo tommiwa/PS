@@ -920,7 +920,13 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                 <span>{listing.date}</span>
               </div>
               <span className="hidden sm:inline">•</span>
-              <span>Full Day</span>
+              <span>{
+                (listing.originalListingType === 'period' || listing.listingType === 'period')
+                  ? 'Part of Date Range'
+                  : (listing.originalListingType === 'recurring' || listing.listingType === 'recurring')
+                    ? 'Part of Recurring'
+                    : 'Single Day'
+              }</span>
               <span className="hidden sm:inline">•</span>
               <span className="capitalize">{listing.spot?.spotType || "Regular"}</span>
             </div>
@@ -1195,8 +1201,14 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                   <Clock className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">Duration</p>
-                  <p className="text-sm font-medium">Full Day</p>
+                  <p className="text-xs text-muted-foreground">Type</p>
+                  <p className="text-sm font-medium">{
+                    ((booking as any).originalListingType === 'period' || (booking as any).listingType === 'period')
+                      ? 'Part of Date Range'
+                      : ((booking as any).originalListingType === 'recurring' || (booking as any).listingType === 'recurring')
+                        ? 'Part of Recurring'
+                        : 'Single Day'
+                  }</p>
                 </div>
               </div>
               
