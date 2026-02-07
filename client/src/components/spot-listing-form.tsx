@@ -195,6 +195,12 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
       if (!formData.recurringStartDate) {
         errors.recurringStartDate = "Start date is required"
       }
+      if (!formData.recurringEndDate) {
+        errors.recurringEndDate = "End date is required"
+      }
+      if (formData.recurringStartDate && formData.recurringEndDate && formData.recurringStartDate > formData.recurringEndDate) {
+        errors.recurringEndDate = "End date must be after start date"
+      }
     }
 
     setValidationErrors(errors)
@@ -671,7 +677,7 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="recurringEndDate">End Date (Optional)</Label>
+                  <Label htmlFor="recurringEndDate">End Date *</Label>
                   <Popover open={recurringEndOpen} onOpenChange={setRecurringEndOpen}>
                     <PopoverTrigger asChild>
                       <Button
@@ -680,7 +686,7 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                         data-testid="input-recurring-end"
                       >
                         <CalendarDays className="mr-2 h-4 w-4" />
-                        {formData.recurringEndDate ? format(parseDate(formData.recurringEndDate)!, "PPP") : "Pick end date (optional)"}
+                        {formData.recurringEndDate ? format(parseDate(formData.recurringEndDate)!, "PPP") : "Pick end date"}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -706,7 +712,9 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                       )}
                     </PopoverContent>
                   </Popover>
-                  <p className="text-xs text-muted-foreground">Leave empty for ongoing recurring availability</p>
+                  {validationErrors.recurringEndDate && (
+                    <p className="text-sm text-red-600">{validationErrors.recurringEndDate}</p>
+                  )}
                 </div>
               </div>
             </CardContent>
