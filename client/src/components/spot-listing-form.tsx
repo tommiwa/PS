@@ -538,7 +538,13 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                     type="date"
                     value={formData.recurringStartDate}
                     min={getTodayString()}
-                    onChange={(e) => updateFormData("recurringStartDate", e.target.value)}
+                    onChange={(e) => {
+                      const newStart = e.target.value;
+                      updateFormData("recurringStartDate", newStart);
+                      if (newStart && formData.recurringEndDate && formData.recurringEndDate < newStart) {
+                        updateFormData("recurringEndDate", newStart);
+                      }
+                    }}
                     required
                     data-testid="input-recurring-start"
                   />
