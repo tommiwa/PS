@@ -213,69 +213,72 @@ export default function TermsConsent() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-4xl">
-        <div className="mb-6 text-center">
-          <BCIHeroLogo className="mx-auto mb-4" />
-          <h1 className="text-2xl font-bold mb-2">Terms and Conditions</h1>
-          <p className="text-muted-foreground">
-            Please review and accept the terms to continue using the platform
-          </p>
-        </div>
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
+      <div className="flex-shrink-0 py-4 text-center border-b bg-background">
+        <BCIHeroLogo className="mx-auto mb-2" />
+        <h1 className="text-2xl font-bold mb-1">Terms and Conditions</h1>
+        <p className="text-sm text-muted-foreground">
+          Please review and accept the terms to continue using the platform
+        </p>
+      </div>
 
-        <Card className="p-6 md:p-8">
-          <ScrollArea className="h-[60vh] mb-6">
-            <div className="max-w-none pr-4" data-testid="terms-consent-content">
+      <div className="flex-1 overflow-auto px-4 py-4">
+        <div className="max-w-4xl mx-auto">
+          <Card className="p-6 md:p-8">
+            <div className="max-w-none" data-testid="terms-consent-content">
               <FormattedTermsContent content={terms.content} />
             </div>
-          </ScrollArea>
+          </Card>
+        </div>
+      </div>
 
-          <div className="space-y-4 border-t pt-4">
-            <div className="flex items-start space-x-3 p-4 bg-muted/50 rounded-lg">
-              <Checkbox
-                id="terms-acceptance"
-                checked={accepted}
-                onCheckedChange={(checked) => setAccepted(checked === true)}
-                data-testid="checkbox-accept-terms"
-              />
-              <div className="grid gap-1.5 leading-none">
-                <label
-                  htmlFor="terms-acceptance"
-                  className="text-sm font-medium leading-relaxed cursor-pointer"
-                >
-                  I have read and agree to the Terms and Conditions
-                </label>
-                <p className="text-sm text-muted-foreground">
-                  By checking this box, you acknowledge that you understand and accept all terms outlined above.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex justify-between items-center">
-              <p className="text-xs text-muted-foreground">
-                Version {terms.version} • Last updated: {new Date(terms.publishedAt || terms.createdAt).toLocaleDateString()}
-              </p>
-              <Button
-                onClick={handleAccept}
-                disabled={!accepted || acceptTermsMutation.isPending}
-                size="lg"
-                data-testid="button-accept-terms"
+      <div className="flex-shrink-0 border-t bg-background px-4 py-4">
+        <div className="max-w-4xl mx-auto space-y-3">
+          <div className="flex items-start space-x-3 p-3 bg-muted/50 rounded-lg">
+            <Checkbox
+              id="terms-acceptance"
+              checked={accepted}
+              onCheckedChange={(checked) => setAccepted(checked === true)}
+              data-testid="checkbox-accept-terms"
+              className="mt-0.5"
+            />
+            <div className="grid gap-1 leading-none">
+              <label
+                htmlFor="terms-acceptance"
+                className="text-sm font-medium leading-relaxed cursor-pointer"
               >
-                {acceptTermsMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Accepting...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="mr-2 h-4 w-4" />
-                    Accept and Continue
-                  </>
-                )}
-              </Button>
+                I have read and agree to the Terms and Conditions
+              </label>
+              <p className="text-xs text-muted-foreground">
+                By checking this box, you acknowledge that you understand and accept all terms outlined above.
+              </p>
             </div>
           </div>
-        </Card>
+
+          <div className="flex flex-wrap justify-between items-center gap-2">
+            <p className="text-xs text-muted-foreground">
+              Version {terms.version} • Last updated: {new Date(terms.publishedAt || terms.createdAt).toLocaleDateString()}
+            </p>
+            <Button
+              onClick={handleAccept}
+              disabled={!accepted || acceptTermsMutation.isPending}
+              size="lg"
+              data-testid="button-accept-terms"
+            >
+              {acceptTermsMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Accepting...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Accept and Continue
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );
