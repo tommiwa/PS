@@ -51,8 +51,8 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
     // Single day
     date: getTodayString(),
     // Period
-    startDate: getTodayString(),
-    endDate: getTodayString(),
+    startDate: "",
+    endDate: "",
     // Recurring
     recurringDays: [] as string[],
     recurringStartDate: getTodayString(),
@@ -117,8 +117,8 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
         // Single day - use date or singleDate
         date: initialData.date || initialData.singleDate || getTodayString(),
         // Period
-        startDate: initialData.periodStartDate || initialData.startDate || getTodayString(),
-        endDate: initialData.periodEndDate || initialData.endDate || getTodayString(),
+        startDate: initialData.periodStartDate || initialData.startDate || "",
+        endDate: initialData.periodEndDate || initialData.endDate || "",
         // Recurring
         recurringDays: initialData.daysOfWeek || initialData.recurringDays || [],
         recurringStartDate: initialData.recurringStartDate || getTodayString(),
@@ -508,14 +508,14 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                         data-testid="input-start-date"
                       >
                         <CalendarDays className="mr-2 h-4 w-4" />
-                        {formData.startDate ? format(parseDate(formData.startDate)!, "PPP") : "Pick start date"}
+                        {formData.startDate && parseDate(formData.startDate) ? format(parseDate(formData.startDate)!, "PPP") : "Pick start date"}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
                       <CalendarComponent
                         mode="single"
                         selected={parseDate(formData.startDate)}
-                        defaultMonth={parseDate(formData.startDate)}
+                        defaultMonth={parseDate(formData.startDate) || parseDate(formData.endDate)}
                         onSelect={(date) => {
                           const dateStr = formatDateStr(date)
                           updateFormData("startDate", dateStr)
@@ -533,6 +533,9 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                       />
                     </PopoverContent>
                   </Popover>
+                  {validationErrors.startDate && (
+                    <p className="text-sm text-red-600">{validationErrors.startDate}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="endDate">End Date *</Label>
@@ -544,7 +547,7 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                         data-testid="input-end-date"
                       >
                         <CalendarDays className="mr-2 h-4 w-4" />
-                        {formData.endDate ? format(parseDate(formData.endDate)!, "PPP") : "Pick end date"}
+                        {formData.endDate && parseDate(formData.endDate) ? format(parseDate(formData.endDate)!, "PPP") : "Pick end date"}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -553,7 +556,11 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                         selected={parseDate(formData.endDate)}
                         defaultMonth={parseDate(formData.startDate) || parseDate(formData.endDate)}
                         onSelect={(date) => {
-                          updateFormData("endDate", formatDateStr(date))
+                          const dateStr = formatDateStr(date)
+                          updateFormData("endDate", dateStr)
+                          if (dateStr && (!formData.startDate || formData.startDate > dateStr)) {
+                            updateFormData("startDate", dateStr)
+                          }
                           setPeriodEndOpen(false)
                         }}
                         disabled={(date) => {
