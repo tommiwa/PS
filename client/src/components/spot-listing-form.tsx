@@ -8,8 +8,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle, CalendarDays, Repeat, Heart } from "lucide-react"
 import { getTodayString } from "@/utils/date-utils"
+import { format } from "date-fns"
 import { useQuery } from "@tanstack/react-query"
 import { queryClient } from "@/lib/queryClient"
 import type { ParkingSpotWithUser } from "@shared/schema"
@@ -62,6 +65,25 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
   const [selectedSpot, setSelectedSpot] = useState<ParkingSpotWithUser | null>(null)
 
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const [singleDateOpen, setSingleDateOpen] = useState(false)
+  const [periodStartOpen, setPeriodStartOpen] = useState(false)
+  const [periodEndOpen, setPeriodEndOpen] = useState(false)
+  const [recurringStartOpen, setRecurringStartOpen] = useState(false)
+  const [recurringEndOpen, setRecurringEndOpen] = useState(false)
+
+  const parseDate = (dateStr: string): Date | undefined => {
+    if (!dateStr) return undefined
+    const d = new Date(dateStr + 'T12:00:00')
+    return isNaN(d.getTime()) ? undefined : d
+  }
+  const formatDateStr = (date: Date | undefined): string => {
+    if (!date) return ""
+    return format(date, "yyyy-MM-dd")
+  }
+  const todayDate = new Date()
+  const maxFutureDate = new Date()
+  maxFutureDate.setMonth(maxFutureDate.getMonth() + 6)
 
   // Fetch user's parking spots
   const { data: userSpots = [], isLoading: spotsLoading } = useQuery<ParkingSpotWithUser[]>({
@@ -432,14 +454,35 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
             <CardContent>
               <div className="space-y-2">
                 <Label htmlFor="date">Date *</Label>
-                <Input
-                  type="date"
-                  value={formData.date}
-                  min={getTodayString()}
-                  onChange={(e) => updateFormData("date", e.target.value)}
-                  required
-                  data-testid="input-date"
-                />
+                <Popover open={singleDateOpen} onOpenChange={setSingleDateOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal"
+                      data-testid="input-date"
+                    >
+                      <CalendarDays className="mr-2 h-4 w-4" />
+                      {formData.date ? format(parseDate(formData.date)!, "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={parseDate(formData.date)}
+                      defaultMonth={parseDate(formData.date)}
+                      onSelect={(date) => {
+                        updateFormData("date", formatDateStr(date))
+                        setSingleDateOpen(false)
+                      }}
+                      disabled={(date) => {
+                        const today = new Date()
+                        today.setHours(0, 0, 0, 0)
+                        return date < today || date > maxFutureDate
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
                 {validationErrors.date && (
                   <p className="text-sm text-red-600">{validationErrors.date}</p>
                 )}
@@ -457,31 +500,74 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="startDate">Start Date *</Label>
-                  <Input
-                    type="date"
-                    value={formData.startDate}
-                    min={getTodayString()}
-                    onChange={(e) => {
-                      const newStart = e.target.value;
-                      updateFormData("startDate", newStart);
-                      if (newStart && (!formData.endDate || formData.endDate < newStart)) {
-                        updateFormData("endDate", newStart);
-                      }
-                    }}
-                    required
-                    data-testid="input-start-date"
-                  />
+                  <Popover open={periodStartOpen} onOpenChange={setPeriodStartOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal"
+                        data-testid="input-start-date"
+                      >
+                        <CalendarDays className="mr-2 h-4 w-4" />
+                        {formData.startDate ? format(parseDate(formData.startDate)!, "PPP") : "Pick start date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={parseDate(formData.startDate)}
+                        defaultMonth={parseDate(formData.startDate)}
+                        onSelect={(date) => {
+                          const dateStr = formatDateStr(date)
+                          updateFormData("startDate", dateStr)
+                          if (dateStr && (!formData.endDate || formData.endDate < dateStr)) {
+                            updateFormData("endDate", dateStr)
+                          }
+                          setPeriodStartOpen(false)
+                        }}
+                        disabled={(date) => {
+                          const today = new Date()
+                          today.setHours(0, 0, 0, 0)
+                          return date < today || date > maxFutureDate
+                        }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="endDate">End Date *</Label>
-                  <Input
-                    type="date"
-                    value={formData.endDate}
-                    min={formData.startDate || getTodayString()}
-                    onChange={(e) => updateFormData("endDate", e.target.value)}
-                    required
-                    data-testid="input-end-date"
-                  />
+                  <Popover open={periodEndOpen} onOpenChange={setPeriodEndOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal"
+                        data-testid="input-end-date"
+                      >
+                        <CalendarDays className="mr-2 h-4 w-4" />
+                        {formData.endDate ? format(parseDate(formData.endDate)!, "PPP") : "Pick end date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={parseDate(formData.endDate)}
+                        defaultMonth={parseDate(formData.endDate) || parseDate(formData.startDate)}
+                        onSelect={(date) => {
+                          updateFormData("endDate", formatDateStr(date))
+                          setPeriodEndOpen(false)
+                        }}
+                        disabled={(date) => {
+                          const today = new Date()
+                          today.setHours(0, 0, 0, 0)
+                          if (date < today || date > maxFutureDate) return true
+                          const startDate = parseDate(formData.startDate)
+                          if (startDate && date < startDate) return true
+                          return false
+                        }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                   {validationErrors.endDate && (
                     <p className="text-sm text-red-600">{validationErrors.endDate}</p>
                   )}
@@ -534,33 +620,77 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="recurringStartDate">Start From *</Label>
-                  <Input
-                    type="date"
-                    value={formData.recurringStartDate}
-                    min={getTodayString()}
-                    onChange={(e) => {
-                      const newStart = e.target.value;
-                      updateFormData("recurringStartDate", newStart);
-                      if (newStart && formData.recurringEndDate && formData.recurringEndDate < newStart) {
-                        updateFormData("recurringEndDate", newStart);
-                      }
-                    }}
-                    required
-                    data-testid="input-recurring-start"
-                  />
+                  <Popover open={recurringStartOpen} onOpenChange={setRecurringStartOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal"
+                        data-testid="input-recurring-start"
+                      >
+                        <CalendarDays className="mr-2 h-4 w-4" />
+                        {formData.recurringStartDate ? format(parseDate(formData.recurringStartDate)!, "PPP") : "Pick start date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={parseDate(formData.recurringStartDate)}
+                        defaultMonth={parseDate(formData.recurringStartDate)}
+                        onSelect={(date) => {
+                          const dateStr = formatDateStr(date)
+                          updateFormData("recurringStartDate", dateStr)
+                          if (dateStr && formData.recurringEndDate && formData.recurringEndDate < dateStr) {
+                            updateFormData("recurringEndDate", dateStr)
+                          }
+                          setRecurringStartOpen(false)
+                        }}
+                        disabled={(date) => {
+                          const today = new Date()
+                          today.setHours(0, 0, 0, 0)
+                          return date < today || date > maxFutureDate
+                        }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                   {validationErrors.recurringStartDate && (
                     <p className="text-sm text-red-600">{validationErrors.recurringStartDate}</p>
                   )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="recurringEndDate">End Date (Optional)</Label>
-                  <Input
-                    type="date"
-                    value={formData.recurringEndDate}
-                    min={formData.recurringStartDate || getTodayString()}
-                    onChange={(e) => updateFormData("recurringEndDate", e.target.value)}
-                    data-testid="input-recurring-end"
-                  />
+                  <Popover open={recurringEndOpen} onOpenChange={setRecurringEndOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal"
+                        data-testid="input-recurring-end"
+                      >
+                        <CalendarDays className="mr-2 h-4 w-4" />
+                        {formData.recurringEndDate ? format(parseDate(formData.recurringEndDate)!, "PPP") : "Pick end date (optional)"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={parseDate(formData.recurringEndDate)}
+                        defaultMonth={parseDate(formData.recurringEndDate) || parseDate(formData.recurringStartDate)}
+                        onSelect={(date) => {
+                          updateFormData("recurringEndDate", formatDateStr(date))
+                          setRecurringEndOpen(false)
+                        }}
+                        disabled={(date) => {
+                          const today = new Date()
+                          today.setHours(0, 0, 0, 0)
+                          if (date < today || date > maxFutureDate) return true
+                          const startDate = parseDate(formData.recurringStartDate)
+                          if (startDate && date < startDate) return true
+                          return false
+                        }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                   <p className="text-xs text-muted-foreground">Leave empty for ongoing recurring availability</p>
                 </div>
               </div>
