@@ -2230,7 +2230,21 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Spot Number</p>
-                    <p className="font-medium">{selectedBooking.spotNumber}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">{selectedBooking.spotNumber}</p>
+                      {selectedBooking.floorPlanBaseUrl && selectedBooking.seatNumber && (
+                        <a
+                          href={`${selectedBooking.floorPlanBaseUrl}${selectedBooking.seatNumber}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                          data-testid="details-floor-plan-link"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          <span>View on map</span>
+                        </a>
+                      )}
+                    </div>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Status</p>
