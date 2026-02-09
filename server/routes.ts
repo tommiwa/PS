@@ -2052,6 +2052,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const enrichedBookings = await Promise.all(bookings.map(async (booking) => {
         const spot = await storage.getParkingSpot(booking.spotId);
         const owner = await storage.getUser(booking.ownerId);
+        const ownerPaymentPrefs = await storage.getPaymentPreferences(booking.ownerId);
         const listing = booking.listingId ? await storage.getSpotListing(booking.listingId) : null;
         
         // Get location and spot type names
@@ -2094,7 +2095,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           periodStartDate: listing?.periodStartDate || null,
           periodEndDate: listing?.periodEndDate || null,
           recurringStartDate: listing?.recurringStartDate || null,
-          recurringEndDate: listing?.recurringEndDate || null
+          recurringEndDate: listing?.recurringEndDate || null,
+          ownerPaymentInstructions: ownerPaymentPrefs?.paymentInstructions || null
         };
       }));
       

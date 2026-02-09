@@ -2262,6 +2262,12 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                     <p className="text-sm text-muted-foreground">Payment Status</p>
                     <Badge variant="outline">{selectedBooking.paymentStatus}</Badge>
                   </div>
+                  {selectedBooking.ownerPaymentInstructions && (
+                    <div className="col-span-2">
+                      <p className="text-sm text-muted-foreground">Payment Instructions</p>
+                      <p className="font-medium text-sm whitespace-pre-wrap">{selectedBooking.ownerPaymentInstructions}</p>
+                    </div>
+                  )}
                 </div>
               </>
             ) : null}
