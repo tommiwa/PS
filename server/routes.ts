@@ -3190,6 +3190,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const locationName = spotLocation?.office || 'BCI Campus';
             const buildingName = spotLocation?.building || locationName;
 
+            // Build visual directory link if floor plan URL and seat number are available
+            const floorPlanBaseUrl = spotLocation?.floorPlanBaseUrl || null;
+            const seatNumber = spot.seatNumber || null;
+            const visualDirectoryUrl = (floorPlanBaseUrl && seatNumber) ? `${floorPlanBaseUrl}${seatNumber}` : null;
+
             // Prepare booking details for email with correct field mapping
             const bookingDetails = {
               id: newBooking.id,
@@ -3199,7 +3204,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               startDate: new Date(newBooking.bookingDate),
               endDate: new Date(newBooking.bookingDate),
               rate: Number(newBooking.dailyRate),
-              totalAmount: Number(newBooking.totalAmount)
+              totalAmount: Number(newBooking.totalAmount),
+              visualDirectoryUrl
             };
 
             // Get spot owner for notification (skip for admin-created/Workplace Services listings)
