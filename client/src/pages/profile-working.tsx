@@ -1746,54 +1746,12 @@ export default function Profile() {
                             <div className="space-y-2">
                               <div className="flex items-center justify-between p-3 border rounded-lg">
                                 <div className="space-y-0.5">
-                                  <Label>Spot Availability</Label>
-                                  <p className="text-xs text-muted-foreground">When new spots become available that match your preferences</p>
-                                </div>
-                                <Switch
-                                  checked={notificationPreferences?.spotAvailability ?? true}
-                                  onCheckedChange={(checked) => handlePreferenceChange({ spotAvailability: checked })}
-                                  disabled={updateNotificationPreferencesMutation.isPending}
-                                />
-                              </div>
-                              <div className="flex items-center justify-between p-3 border rounded-lg">
-                                <div className="space-y-0.5">
                                   <Label>Spot Assignments</Label>
                                   <p className="text-xs text-muted-foreground">When you are assigned or unassigned from a parking spot</p>
                                 </div>
                                 <Switch
                                   checked={notificationPreferences?.spotAssignment ?? true}
                                   onCheckedChange={(checked) => handlePreferenceChange({ spotAssignment: checked })}
-                                  disabled={updateNotificationPreferencesMutation.isPending}
-                                />
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="space-y-3">
-                            <div className="flex items-center gap-2">
-                              <Shield className="h-4 w-4 text-muted-foreground" />
-                              <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Reports & System</h4>
-                            </div>
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-between p-3 border rounded-lg">
-                                <div className="space-y-0.5">
-                                  <Label>Weekly Summary</Label>
-                                  <p className="text-xs text-muted-foreground">Weekly recap of your bookings, payments, and activity</p>
-                                </div>
-                                <Switch
-                                  checked={notificationPreferences?.weeklyReports ?? true}
-                                  onCheckedChange={(checked) => handlePreferenceChange({ weeklyReports: checked })}
-                                  disabled={updateNotificationPreferencesMutation.isPending}
-                                />
-                              </div>
-                              <div className="flex items-center justify-between p-3 border rounded-lg">
-                                <div className="space-y-0.5">
-                                  <Label>System Maintenance</Label>
-                                  <p className="text-xs text-muted-foreground">Planned downtime and system maintenance alerts</p>
-                                </div>
-                                <Switch
-                                  checked={notificationPreferences?.systemMaintenance ?? true}
-                                  onCheckedChange={(checked) => handlePreferenceChange({ systemMaintenance: checked })}
                                   disabled={updateNotificationPreferencesMutation.isPending}
                                 />
                               </div>
