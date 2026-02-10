@@ -1699,7 +1699,7 @@ SPOT DETAILS:
 
 This spot is now reserved for your use. You can view your assigned spot details anytime in your BCI ParkShare profile.
 
-If you have any questions, please contact the BCI Workplace Services team at ${WORKPLACE_SERVICES_EMAIL}.
+If you have any questions, please email ${WORKPLACE_SERVICES_EMAIL}.
 
 Warm regards,
 The BCI ParkShare Team`;
@@ -1717,7 +1717,7 @@ The BCI ParkShare Team`;
     </div>
     
     <p>This spot is now reserved for your use. You can view your assigned spot details anytime in your BCI ParkShare profile.</p>
-    <p>If you have any questions, please contact the BCI Workplace Services team at <a href="mailto:${WORKPLACE_SERVICES_EMAIL}" style="color: #1e9df1; text-decoration: none;">${WORKPLACE_SERVICES_EMAIL}</a>.</p>
+    <p>If you have any questions, please email <a href="mailto:${WORKPLACE_SERVICES_EMAIL}" style="color: #1e9df1; text-decoration: none;">${WORKPLACE_SERVICES_EMAIL}</a>.</p>
   `;
 
   const html = wrapEmailTemplate({
@@ -2362,7 +2362,7 @@ SPOT DETAILS:
 • Location: ${spotDetails.location}
 • Building: ${spotDetails.building}${bookingsMessage}
 
-If you have any questions about this change, please contact the BCI Workplace Services team at ${WORKPLACE_SERVICES_EMAIL}.
+If you have any questions about this change, please email ${WORKPLACE_SERVICES_EMAIL}.
 
 Best regards,
 BCI ParkShare Team`;
@@ -2385,7 +2385,7 @@ BCI ParkShare Team`;
     </div>
     ` : ''}
     
-    <p>If you have any questions about this change, please contact the BCI Workplace Services team at <a href="mailto:${WORKPLACE_SERVICES_EMAIL}" style="color: #1e9df1; text-decoration: none;">${WORKPLACE_SERVICES_EMAIL}</a>.</p>
+    <p>If you have any questions about this change, please email <a href="mailto:${WORKPLACE_SERVICES_EMAIL}" style="color: #1e9df1; text-decoration: none;">${WORKPLACE_SERVICES_EMAIL}</a>.</p>
   `;
 
       const html = wrapEmailTemplate({
