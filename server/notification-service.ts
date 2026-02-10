@@ -617,7 +617,7 @@ export const createBookingConfirmationNotification = (
   owner?: { name: string; email: string } | null,
   isWorkplaceServicesListing?: boolean
 ): EmailNotification => {
-  const subject = `Booking Confirmed - ${formatDateRange(booking.startDate, booking.endDate)}, Spot ${booking.spotNumber}`;
+  const subject = `Booking Confirmed - Spot ${booking.spotNumber}, ${formatDateRange(booking.startDate, booking.endDate)}`;
   
   const ownerText = isWorkplaceServicesListing
     ? `\nMANAGED BY: Workplace Services (paid via payroll deduction)\n`
@@ -689,7 +689,7 @@ The BCI ParkShare Team`;
   `;
 
   const html = wrapEmailTemplate({
-    title: 'Booking Confirmed',
+    title: `Booking Confirmed - Spot ${booking.spotNumber}, ${formatDateRange(booking.startDate, booking.endDate)}`,
     content,
     theme: 'success',
     ctaButton: { text: 'View My Bookings', url: `${APP_URL}/my-bookings` }
