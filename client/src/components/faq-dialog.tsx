@@ -279,8 +279,8 @@ export function FAQDialog({ children }: FAQDialogProps) {
         <DialogHeader>
           <DialogTitle className="text-xl">Frequently Asked Questions</DialogTitle>
         </DialogHeader>
-        <Tabs defaultValue="renter" className="flex-1 min-h-0 flex flex-col">
-          <TabsList className="grid w-full grid-cols-2 mb-3">
+        <Tabs defaultValue="renter" className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          <TabsList className="grid w-full grid-cols-2 mb-3 flex-shrink-0">
             <TabsTrigger value="renter" className="gap-1.5">
               <Car className="h-4 w-4" />
               Renter
@@ -290,18 +290,20 @@ export function FAQDialog({ children }: FAQDialogProps) {
               Spot Owner
             </TabsTrigger>
           </TabsList>
-          <ScrollArea className="flex-1 min-h-0 pr-3" style={{ maxHeight: 'calc(85vh - 140px)' }}>
-            <TabsContent value="renter" className="mt-0">
+          <TabsContent value="renter" className="mt-0 flex-1 min-h-0 overflow-hidden" forceMount={undefined}>
+            <ScrollArea className="h-full pr-3" style={{ maxHeight: 'calc(85vh - 160px)' }}>
               {renterFAQs.map((category, index) => (
                 <FAQCategorySection key={index} category={category} />
               ))}
-            </TabsContent>
-            <TabsContent value="owner" className="mt-0">
+            </ScrollArea>
+          </TabsContent>
+          <TabsContent value="owner" className="mt-0 flex-1 min-h-0 overflow-hidden" forceMount={undefined}>
+            <ScrollArea className="h-full pr-3" style={{ maxHeight: 'calc(85vh - 160px)' }}>
               {ownerFAQs.map((category, index) => (
                 <FAQCategorySection key={index} category={category} />
               ))}
-            </TabsContent>
-          </ScrollArea>
+            </ScrollArea>
+          </TabsContent>
         </Tabs>
       </DialogContent>
     </Dialog>
