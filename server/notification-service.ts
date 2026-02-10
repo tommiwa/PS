@@ -10,6 +10,11 @@ import { storage } from './storage';
 
 const LOGO_BASE64 = fs.readFileSync(path.join(process.cwd(), 'client/public/favicon.png')).toString('base64');
 
+function formatFriendlyDate(date: Date | string): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 // Email provider configuration
 type EmailProvider = 'ms365' | 'mandrill' | 'mock';
 
@@ -534,7 +539,7 @@ YOUR ENROLLMENT DETAILS:
 - Preferred Spot Type: ${waitingListEntry.preferredSpotTypeId ? 'Selected' : 'Any Available'}
 - Preferred Location: ${waitingListEntry.preferredLocationId ? 'Selected' : 'Any Location'}
 - Priority Level: ${priorityLabel}
-- Enrollment Date: ${waitingListEntry.enrolledDate?.toLocaleDateString()}
+- Enrollment Date: ${formatFriendlyDate(waitingListEntry.enrolledDate)}
 
 WHAT HAPPENS NEXT:
 - We'll monitor spot availability that matches your preferences
@@ -557,7 +562,7 @@ The BCI ParkShare Team`;
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Preferred Spot Type:</strong> ${waitingListEntry.preferredSpotTypeId ? 'Selected' : 'Any Available'}</li>
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Preferred Location:</strong> ${waitingListEntry.preferredLocationId ? 'Selected' : 'Any Location'}</li>
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Priority Level:</strong> ${priorityLabel}</li>
-        <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Enrollment Date:</strong> ${waitingListEntry.enrolledDate?.toLocaleDateString()}</li>
+        <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Enrollment Date:</strong> ${formatFriendlyDate(waitingListEntry.enrolledDate)}</li>
       </ul>
     </div>
     
@@ -619,7 +624,7 @@ Great news! Your parking spot booking has been confirmed. We're excited to have 
 BOOKING DETAILS:
 - Spot Number: ${booking.spotNumber}${booking.visualDirectoryUrl ? ` (View on Visual Directory: ${booking.visualDirectoryUrl})` : ''}
 - Location: ${booking.location} - ${booking.building}
-- Booking Date: ${booking.startDate.toLocaleDateString()} to ${booking.endDate.toLocaleDateString()}
+- Booking Date: ${formatFriendlyDate(booking.startDate)} to ${formatFriendlyDate(booking.endDate)}
 - Amount: $${booking.totalAmount}
 ${ownerText}
 IMPORTANT INFORMATION:
@@ -658,7 +663,7 @@ The BCI ParkShare Team`;
       <ul style="margin: 0; padding: 0; list-style: none;">
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Spot Number:</strong> ${booking.spotNumber} <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(booking.building + ', ' + booking.location + ', BC, Canada')}" target="_blank" title="View spot location on map" style="display: inline-block; vertical-align: middle; margin-left: 6px; text-decoration: none;"><img src="https://maps.google.com/mapfiles/ms/icons/blue-dot.png" alt="View on Map" style="width: 20px; height: 20px; vertical-align: middle;" /></a>${booking.visualDirectoryUrl ? ` <a href="${booking.visualDirectoryUrl}" target="_blank" title="View spot on visual directory" style="display: inline-block; vertical-align: middle; margin-left: 6px; font-size: 13px; color: ${BCI_BLUE}; text-decoration: none; font-weight: 500;">View on Visual Directory</a>` : ''}</li>
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Location:</strong> ${booking.location} - ${booking.building}</li>
-        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Booking Date:</strong> ${booking.startDate.toLocaleDateString()} to ${booking.endDate.toLocaleDateString()}</li>
+        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Booking Date:</strong> ${formatFriendlyDate(booking.startDate)} to ${formatFriendlyDate(booking.endDate)}</li>
         <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Amount:</strong> <span style="color: ${BCI_BLUE}; font-weight: 600;">$${booking.totalAmount}</span></li>
       </ul>
     </div>
@@ -708,7 +713,7 @@ export const createOwnerBookingNotification = (
     totalAmount: number;
   }
 ): EmailNotification => {
-  const subject = `New Booking for Your Spot ${booking.spotNumber}`;
+  const subject = `Your Spot Was Booked on ${formatFriendlyDate(booking.startDate)}`;
   
   const text = `Dear ${owner.name},
 
@@ -717,7 +722,7 @@ Great news! Your parking spot has been booked. Thank you for sharing your space 
 BOOKING DETAILS:
 - Spot Number: ${booking.spotNumber}
 - Location: ${booking.location} - ${booking.building}
-- Booking Date: ${booking.startDate.toLocaleDateString()} to ${booking.endDate.toLocaleDateString()}
+- Booking Date: ${formatFriendlyDate(booking.startDate)} to ${formatFriendlyDate(booking.endDate)}
 - Amount: $${booking.totalAmount}
 
 RENTER INFORMATION:
@@ -738,7 +743,7 @@ The BCI ParkShare Team`;
       <ul style="margin: 0; padding: 0; list-style: none;">
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Spot Number:</strong> ${booking.spotNumber}</li>
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Location:</strong> ${booking.location} - ${booking.building}</li>
-        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Booking Date:</strong> ${booking.startDate.toLocaleDateString()} to ${booking.endDate.toLocaleDateString()}</li>
+        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Booking Date:</strong> ${formatFriendlyDate(booking.startDate)} to ${formatFriendlyDate(booking.endDate)}</li>
         <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Amount:</strong> <span style="color: ${BCI_BLUE}; font-weight: 600;">$${booking.totalAmount}</span></li>
       </ul>
     </div>
@@ -786,9 +791,7 @@ export const createBookingCancellationNotification = (
 ): EmailNotification => {
   const subject = `Booking Cancelled - Spot ${booking.spotNumber}`;
   
-  const bookingDateStr = booking.bookingDate instanceof Date 
-    ? booking.bookingDate.toLocaleDateString() 
-    : new Date(booking.bookingDate).toLocaleDateString();
+  const bookingDateStr = formatFriendlyDate(booking.bookingDate);
 
   const role = booking.cancelledByRole || 'admin';
   const isWorkplaceServices = booking.isWorkplaceServicesListing === true;
@@ -896,9 +899,7 @@ export const createOwnerBookingCancellationNotification = (
 ): EmailNotification => {
   const subject = `Booking Cancelled - Spot ${booking.spotNumber}`;
   
-  const bookingDateStr = booking.bookingDate instanceof Date 
-    ? booking.bookingDate.toLocaleDateString() 
-    : new Date(booking.bookingDate).toLocaleDateString();
+  const bookingDateStr = formatFriendlyDate(booking.bookingDate);
 
   const role = booking.cancelledByRole || 'admin';
 
@@ -1006,7 +1007,7 @@ ${isOverdue ? 'Your payment is now overdue and requires immediate attention.' : 
 PAYMENT DETAILS:
 - Spot Number: ${payment.spotNumber}
 - Amount Due: $${payment.amount}
-- Due Date: ${payment.dueDate.toLocaleDateString()}
+- Due Date: ${formatFriendlyDate(payment.dueDate)}
 ${isOverdue ? `- Days Overdue: ${payment.daysOverdue}` : ''}
 ${ownerContactText}
 ${payment.isWorkplaceServicesListing
@@ -1055,7 +1056,7 @@ The BCI ParkShare Team`;
       <ul style="margin: 0; padding: 0; list-style: none;">
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Spot Number:</strong> ${payment.spotNumber}</li>
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Amount Due:</strong> <span style="color: ${amountColor}; font-weight: 600; font-size: 18px;">$${payment.amount}</span></li>
-        <li style="padding: 8px 0; ${isOverdue ? 'border-bottom: 1px solid #e2e8f0;' : ''} font-size: 15px;"><strong style="color: #475569;">Due Date:</strong> ${payment.dueDate.toLocaleDateString()}</li>
+        <li style="padding: 8px 0; ${isOverdue ? 'border-bottom: 1px solid #e2e8f0;' : ''} font-size: 15px;"><strong style="color: #475569;">Due Date:</strong> ${formatFriendlyDate(payment.dueDate)}</li>
         ${isOverdue ? `<li style="padding: 8px 0; font-size: 15px;"><strong style="color: #ef4444;">Days Overdue:</strong> <span style="color: #ef4444; font-weight: 600;">${payment.daysOverdue}</span></li>` : ''}
       </ul>
     </div>
@@ -1177,11 +1178,11 @@ export const createWeeklySummaryNotification = (
     pendingPayments: number;
   }
 ): EmailNotification => {
-  const subject = `Your Weekly Parking Summary - ${summary.weekStart.toLocaleDateString()} to ${summary.weekEnd.toLocaleDateString()}`;
+  const subject = `Your Weekly Parking Summary - ${formatFriendlyDate(summary.weekStart)} to ${formatFriendlyDate(summary.weekEnd)}`;
   
   const text = `Dear ${user.name},
 
-Here's your weekly parking summary for ${summary.weekStart.toLocaleDateString()} - ${summary.weekEnd.toLocaleDateString()}:
+Here's your weekly parking summary for ${formatFriendlyDate(summary.weekStart)} - ${formatFriendlyDate(summary.weekEnd)}:
 
 WEEK OVERVIEW:
 - Total Bookings: ${summary.totalBookings}
@@ -1232,7 +1233,7 @@ The BCI ParkShare Team`;
 
   const content = `
     <p>Dear ${user.name},</p>
-    <p>Here's your weekly parking summary for the week of ${summary.weekStart.toLocaleDateString()} to ${summary.weekEnd.toLocaleDateString()}.</p>
+    <p>Here's your weekly parking summary for the week of ${formatFriendlyDate(summary.weekStart)} to ${formatFriendlyDate(summary.weekEnd)}.</p>
     
     <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Week Overview</h3>
@@ -1394,7 +1395,7 @@ Thank you for joining the BCI ParkShare Waiting List! We're excited to have you 
 YOUR ENROLLMENT DETAILS:
 - Priority Level: ${priorityLabel}
 - Preferred Spot Type: ${enrollmentDetails.preferredSpotType || 'Any Available'}
-- Enrollment Date: ${enrollmentDetails.enrolledDate.toLocaleDateString()}
+- Enrollment Date: ${formatFriendlyDate(enrollmentDetails.enrolledDate)}
 
 WHAT HAPPENS NEXT:
 1. We'll monitor spot availability that matches your preferences
@@ -1427,7 +1428,7 @@ The BCI ParkShare Team`;
           <span style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-weight: 600; ${priorityBadgeStyle}">${priorityLabel}</span>
         </li>
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Preferred Spot Type:</strong> ${enrollmentDetails.preferredSpotType || 'Any Available'}</li>
-        <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Enrollment Date:</strong> ${enrollmentDetails.enrolledDate.toLocaleDateString()}</li>
+        <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Enrollment Date:</strong> ${formatFriendlyDate(enrollmentDetails.enrolledDate)}</li>
       </ul>
     </div>
     
@@ -1484,7 +1485,7 @@ NEW MEMBER DETAILS:
 - Email: ${newMember.email}
 - Priority Level: ${priorityLabel}
 - Preferred Spot Type: ${enrollmentDetails.preferredSpotType || 'Any Available'}
-- Enrollment Date: ${enrollmentDetails.enrolledDate.toLocaleDateString()}
+- Enrollment Date: ${formatFriendlyDate(enrollmentDetails.enrolledDate)}
 
 Please review the waiting list and assign spots as they become available.
 
@@ -1511,7 +1512,7 @@ BCI ParkShare System`;
           <span style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-weight: 600; ${priorityBadgeStyle}">${priorityLabel}</span>
         </li>
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Preferred Spot Type:</strong> ${enrollmentDetails.preferredSpotType || 'Any Available'}</li>
-        <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Enrollment Date:</strong> ${enrollmentDetails.enrolledDate.toLocaleDateString()}</li>
+        <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Enrollment Date:</strong> ${formatFriendlyDate(enrollmentDetails.enrolledDate)}</li>
       </ul>
     </div>
     
@@ -1836,7 +1837,7 @@ export async function sendBookingConfirmationNotification(
       userId: user.id,
       type: 'booking_confirmation',
       title: `Booking Confirmed: Spot ${booking.spotNumber}`,
-      message: `Your booking for spot ${booking.spotNumber} from ${booking.startDate.toLocaleDateString()} to ${booking.endDate.toLocaleDateString()} has been confirmed.`,
+      message: `Your booking for spot ${booking.spotNumber} from ${formatFriendlyDate(booking.startDate)} to ${formatFriendlyDate(booking.endDate)} has been confirmed.`,
       data: {
         bookingId: booking.id,
         spotNumber: booking.spotNumber,
@@ -1859,7 +1860,7 @@ export async function sendBookingConfirmationNotification(
           userId: owner.id,
           type: 'booking_confirmation',
           title: `New Booking: Spot ${booking.spotNumber}`,
-          message: `${user.name} has booked your spot ${booking.spotNumber} from ${booking.startDate.toLocaleDateString()} to ${booking.endDate.toLocaleDateString()}.`,
+          message: `${user.name} has booked your spot on ${formatFriendlyDate(booking.startDate)}.`,
           data: {
             bookingId: booking.id,
             spotNumber: booking.spotNumber,
@@ -1916,7 +1917,7 @@ export async function sendPaymentReminderNotification(
       userId: user.id,
       type: 'payment_reminder',
       title: isOverdue ? `Payment Overdue: Spot ${payment.spotNumber}` : `Payment Reminder: Spot ${payment.spotNumber}`,
-      message: `${isOverdue ? 'Overdue payment' : 'Payment reminder'} for $${payment.amount}. Due: ${payment.dueDate.toLocaleDateString()}`,
+      message: `${isOverdue ? 'Overdue payment' : 'Payment reminder'} for $${payment.amount}. Due: ${formatFriendlyDate(payment.dueDate)}`,
       data: {
         bookingId: payment.bookingId,
         amount: payment.amount,
@@ -2096,9 +2097,7 @@ export async function sendBookingCancellationNotification(
         const ownerEmailResult = await sendEmailNotification(ownerNotification);
         results.ownerEmailSent = ownerEmailResult.success;
         
-        const bookingDateStr = booking.bookingDate instanceof Date 
-          ? booking.bookingDate.toLocaleDateString() 
-          : new Date(booking.bookingDate).toLocaleDateString();
+        const bookingDateStr = formatFriendlyDate(booking.bookingDate);
         
         // Send in-app notification to owner
         await storage.createInAppNotification({
