@@ -108,12 +108,11 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
     }
 
     // Price parsing from query text
-    const priceMatch = searchQuery.match(/\$?(\d+)[\s-]*(?:to|-)?\s*\$?(\d+)?/)
-    if (priceMatch) {
-      parsed.priceMin = parseInt(priceMatch[1])
-      if (priceMatch[2]) {
-        parsed.priceMax = parseInt(priceMatch[2])
-      }
+    // Range match: "$10-20", "$10 to $20", "10-20"
+    const rangeMatch = searchQuery.match(/\$?(\d+)\s*(?:to|-)\s*\$?(\d+)/)
+    if (rangeMatch) {
+      parsed.priceMin = parseInt(rangeMatch[1])
+      parsed.priceMax = parseInt(rangeMatch[2])
     } else if (searchQuery.includes("under") || searchQuery.includes("less than") || searchQuery.includes("below")) {
       const underMatch = searchQuery.match(/(?:under|less than|below)\s*\$?(\d+)/)
       if (underMatch) {
@@ -335,7 +334,7 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
           <Input
             ref={inputRef}
             type="text"
-            placeholder="Search parking spots... (e.g., 'Victoria electric $20-30')"
+            placeholder="Search by owner name, price, type, label (e.g., 'charity', 'top deal', 'free', 'monday')"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}

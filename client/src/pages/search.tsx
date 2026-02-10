@@ -581,6 +581,22 @@ export default function Search() {
         ...(spot.availabilityDates || []).map(d => formatDateForSearch(d))
       ].filter(Boolean).join(' ')
       
+      // Determine label/badge keywords based on spot properties
+      // spot.price is already set correctly per-date in the flatMap above
+      const price = spot.price || 0
+      const dateStr = spot.availability?.date
+      const isWeekendDate = dateStr ? (() => {
+        const d = new Date(dateStr + 'T00:00:00')
+        const day = d.getDay()
+        return day === 0 || day === 6
+      })() : false
+
+      const labelKeywords: string[] = []
+      if (spot.donateToCharity) labelKeywords.push('charity donate donation')
+      if (price === 0) labelKeywords.push('free')
+      if (price > 0 && price <= 12) labelKeywords.push('top deal topdeal great value')
+      if (isWeekendDate) labelKeywords.push('weekend saturday sunday')
+
       // Build comprehensive searchable text from all spot properties shown in UI
       const searchableText = [
         // Spot identification
@@ -591,8 +607,9 @@ export default function Search() {
         // Location (full string and parts)
         spot.location,
         
-        // Owner name
+        // Owner name (full text search)
         spot.owner,
+        ...(spot.owner ? spot.owner.split(/\s+/) : []),
         
         // Spot type and keywords
         spot.type,
@@ -606,13 +623,16 @@ export default function Search() {
         spot.isInside ? 'inside indoor covered garage underground' : 'outside outdoor open lot',
         
         // Price variations
-        `$${spot.price}`,
-        spot.price?.toString(),
-        spot.price === 0 ? 'free' : '',
-        (spot.price && spot.price <= 12) ? 'deal cheap affordable budget' : '',
+        `$${price}`,
+        price.toString(),
+        price === 0 ? 'free' : '',
+        (price > 0 && price <= 12) ? 'deal cheap affordable budget' : '',
         
         // BCI managed vs peer-to-peer
         spot.isBciManaged ? 'bci managed workplace payroll company corporate' : 'peer p2p private individual',
+        
+        // Labels/badges shown on spot cards
+        ...labelKeywords,
         
         // All dates (formatted for natural language search)
         dateSearchStrings,
