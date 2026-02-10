@@ -175,7 +175,7 @@ export default function Search() {
       type: mapSpotType(spot.spotTypeId),
       isInside: spot.isIndoor,
       price: spot.dailyRate ? parseFloat(spot.dailyRate) : 25,
-      owner: spot.owner ? `${spot.owner.firstName} ${spot.owner.lastName}` : getSpotOwner(spot.ownerId),
+      owner: spot.owner ? `${spot.owner.firstName} ${spot.owner.lastName}` : ((spot as any).assignedUserName || getSpotOwner(spot.ownerId)),
       // Use API's isAvailable field which checks if spot has future availability dates
       // Fallback to isActive only if isAvailable is not set (shouldn't happen with current API)
       isAvailable: spot.isAvailable ?? spot.isActive,
