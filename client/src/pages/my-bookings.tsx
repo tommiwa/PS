@@ -1061,14 +1061,14 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                     variant="ghost"
                     size="sm"
                     onClick={() => handleDownloadReceipt(listing.bookingId || listing.id)}
-                    data-testid={`button-view-${listing.id}`}
+                    data-testid={`button-receipt-${listing.id}`}
                     className="flex-1 lg:flex-none"
                   >
-                    <Eye className="h-4 w-4 mr-2" />
-                    <span className="hidden sm:inline">View</span>
+                    <Receipt className="h-4 w-4 mr-2" />
+                    <span className="hidden sm:inline">Receipt</span>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>View booking details</TooltipContent>
+                <TooltipContent>Download booking receipt</TooltipContent>
               </Tooltip>
             )}
             {isCompleted && paymentStatus !== 'received' && (
@@ -1369,7 +1369,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               </Tooltip>
             )}
             
-            {/* View - For completed bookings */}
+            {/* Receipt - For completed bookings */}
             {isCompleted && (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -1377,14 +1377,14 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                     variant="ghost"
                     size="sm"
                     onClick={() => handleDownloadReceipt(booking.id)}
-                    data-testid={`button-view-${booking.id}`}
+                    data-testid={`button-receipt-${booking.id}`}
                     className="flex-1 lg:flex-none"
                   >
-                    <Eye className="h-4 w-4 mr-2" />
-                    <span className="hidden sm:inline">View</span>
+                    <Receipt className="h-4 w-4 mr-2" />
+                    <span className="hidden sm:inline">Receipt</span>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>View booking details</TooltipContent>
+                <TooltipContent>Download booking receipt</TooltipContent>
               </Tooltip>
             )}
           </div>
@@ -1499,8 +1499,8 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               </Button>
             )}
             {isCompleted && (
-              <Button variant="ghost" size="icon" onClick={() => handleDownloadReceipt(listing.bookingId || listing.id)} data-testid={`compact-view-${listing.id}`}>
-                <Eye className="h-4 w-4" />
+              <Button variant="ghost" size="icon" onClick={() => handleDownloadReceipt(listing.bookingId || listing.id)} data-testid={`compact-receipt-${listing.id}`}>
+                <Receipt className="h-4 w-4" />
               </Button>
             )}
           </div>
@@ -1610,8 +1610,8 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               </Button>
             )}
             {isCompleted && (
-              <Button variant="ghost" size="icon" onClick={() => handleDownloadReceipt(booking.id)} data-testid={`compact-view-${booking.id}`}>
-                <Eye className="h-4 w-4" />
+              <Button variant="ghost" size="icon" onClick={() => handleDownloadReceipt(booking.id)} data-testid={`compact-receipt-${booking.id}`}>
+                <Receipt className="h-4 w-4" />
               </Button>
             )}
           </div>
