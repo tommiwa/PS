@@ -646,9 +646,8 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
             </Button>
           </ReportIssueDialog>
           <FAQDialog>
-            <Button variant="outline" size="sm" className="flex-1 justify-start gap-2">
+            <Button variant="outline" size="icon" className="flex-shrink-0">
               <HelpCircle className="h-4 w-4" />
-              FAQ
             </Button>
           </FAQDialog>
         </div>
