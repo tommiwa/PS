@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import { MapPin, Car, Zap, Accessibility, Building, Building2, User, Clock, Calendar, Map, Gift, Tag, Sun, Heart } from "lucide-react"
+import { MapPin, Car, Zap, Accessibility, Building, Building2, User, Clock, Calendar, Map, Gift, Tag, Sun, Heart, CreditCard } from "lucide-react"
 import type { ParkingSpot, ParkingSpotWithUser } from "@shared/schema"
 import { useAuth } from "@/contexts/auth-context"
 import { useLock } from "@/contexts/LockContext"
@@ -30,6 +30,8 @@ type SpotWithLock = (ParkingSpot | ParkingSpotWithUser) & {
   reservedForDepartmentId?: number | null
   reservedForDepartmentName?: string | null
   donateToCharity?: boolean
+  ownerPaymentInstructions?: string | null
+  ownerPaymentType?: string | null
 }
 
 interface ParkingSpotCardProps {
@@ -413,6 +415,19 @@ export function ParkingSpotCard({
           </div>
         </div>
       </div>
+
+      {/* Owner Payment Instructions */}
+      {spot.ownerPaymentInstructions && !spot.isBciManaged && (
+        <div className="px-4 pb-3">
+          <div className="flex items-start gap-2 p-2.5 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-md">
+            <CreditCard className="h-3.5 w-3.5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-green-800 dark:text-green-200">Payment Instructions</p>
+              <p className="text-xs text-green-700 dark:text-green-300 mt-0.5 line-clamp-2">{spot.ownerPaymentInstructions}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Book Button */}
       {showBookButton && (

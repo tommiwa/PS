@@ -191,6 +191,9 @@ export default function Search() {
       // Preserve charity info from API
       donateToCharity: (spot as any).donateToCharity,
       dateToCharity: (spot as any).dateToCharity,
+      // Preserve owner payment instructions from API
+      ownerPaymentInstructions: (spot as any).ownerPaymentInstructions,
+      ownerPaymentType: (spot as any).ownerPaymentType,
     }
     
     // If spot has availability dates, create one entry per date

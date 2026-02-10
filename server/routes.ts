@@ -2385,6 +2385,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             dateToPrice[key] = value;
           });
           
+          // Get owner payment preferences for display
+          let ownerPaymentInstructions: string | null = null;
+          let ownerPaymentType: string | null = null;
+          if (spot.ownerId) {
+            const ownerPayPrefs = await storage.getPaymentPreferences(spot.ownerId);
+            ownerPaymentInstructions = ownerPayPrefs?.paymentInstructions || null;
+            ownerPaymentType = ownerPayPrefs?.paymentType || null;
+          }
+
           // Enrich spot with listing data and booking information
           return {
             ...spot,
@@ -2398,6 +2407,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             dateToCharity: dateToCharity, // Map of date -> boolean for charity status
             donateToCharity: primaryDonateToCharity, // Primary charity status for first available date
             isAvailable: availabilityDates.length > 0, // True if spot has future availability
+            ownerPaymentInstructions: ownerPaymentInstructions,
+            ownerPaymentType: ownerPaymentType,
             // Keep backward compatibility with single date
             availability: availabilityDates.length > 0 ? {
               date: availabilityDates[0]
