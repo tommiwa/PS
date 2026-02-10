@@ -208,7 +208,7 @@ export default function Profile() {
     }
   }, [paymentPreferences, paymentForm]);
 
-  // Notification preferences mutation
+  // Notification preferences mutation with optimistic updates
   const updateNotificationPreferencesMutation = useMutation({
     mutationFn: async (preferences: UpdateNotificationPreferences) => {
       const response = await apiRequest(`/api/users/${user?.id}/notification-preferences`, { 
@@ -216,6 +216,15 @@ export default function Profile() {
         body: preferences 
       });
       return response.json();
+    },
+    onMutate: async (newPreferences) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/users", user?.id, "notification-preferences"] });
+      const previousPreferences = queryClient.getQueryData<NotificationPreferences>(["/api/users", user?.id, "notification-preferences"]);
+      queryClient.setQueryData(["/api/users", user?.id, "notification-preferences"], (old: NotificationPreferences | undefined) => ({
+        ...old,
+        ...newPreferences,
+      }));
+      return { previousPreferences };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "notification-preferences"] });
@@ -225,7 +234,10 @@ export default function Profile() {
         variant: "default"
       });
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      if (context?.previousPreferences) {
+        queryClient.setQueryData(["/api/users", user?.id, "notification-preferences"], context.previousPreferences);
+      }
       toast({
         title: "Failed to Update Preferences",
         description: error instanceof Error ? error.message : "Please try again.",
@@ -909,35 +921,9 @@ export default function Profile() {
                         disabled={updateNotificationPreferencesMutation.isPending}
                       />
                     </div>
-                    
-                    {(notificationPreferences?.emailNotifications ?? true) && (
-                      <div className="space-y-3">
-                        <Separator />
-                        <h4 className="font-medium text-sm text-muted-foreground">Email Types</h4>
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between p-3 border rounded-lg">
-                            <Label htmlFor="booking-confirmations">Booking Confirmations</Label>
-                            <Switch 
-                              id="booking-confirmations" 
-                              checked={notificationPreferences?.bookingConfirmations ?? true}
-                              onCheckedChange={(checked) => handlePreferenceChange({ bookingConfirmations: checked })}
-                              data-testid="switch-booking-confirmations"
-                              disabled={updateNotificationPreferencesMutation.isPending}
-                            />
-                          </div>
-                          <div className="flex items-center justify-between p-3 border rounded-lg">
-                            <Label htmlFor="payment-reminders">Payment Reminders</Label>
-                            <Switch 
-                              id="payment-reminders" 
-                              checked={notificationPreferences?.paymentReminders ?? true}
-                              onCheckedChange={(checked) => handlePreferenceChange({ paymentReminders: checked })}
-                              data-testid="switch-payment-reminders"
-                              disabled={updateNotificationPreferencesMutation.isPending}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Go to the <button type="button" className="text-primary underline" onClick={() => { const el = document.querySelector('[data-testid="tab-notifications"]') as HTMLElement; el?.click(); }}>Notifications tab</button> to manage individual email categories.
+                    </p>
                   </div>
                 )}
               </div>
@@ -1087,7 +1073,7 @@ export default function Profile() {
                 <span className="hidden sm:inline">{t("profile.tabs.vehicles")}</span>
                 <span className="sm:hidden">Vehicles</span>
               </TabsTrigger>
-              <TabsTrigger value="notifications" className="flex items-center gap-2 min-h-11 text-xs md:text-sm">
+              <TabsTrigger value="notifications" data-testid="tab-notifications" className="flex items-center gap-2 min-h-11 text-xs md:text-sm">
                 <Bell className="h-4 w-4 flex-shrink-0" />
                 <span className="hidden sm:inline">{t("profile.tabs.notifications")}</span>
                 <span className="sm:hidden">Alerts</span>
@@ -1656,19 +1642,167 @@ export default function Profile() {
                 <CardHeader className="p-4 md:p-6">
                   <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
                     <Bell className="h-5 w-5 md:h-6 md:w-6" />
-                    Notifications
+                    Email Notification Preferences
                   </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Choose which email notifications you want to receive. In-app notifications are always on.
+                  </p>
                 </CardHeader>
                 <CardContent className="p-4 md:p-6">
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <div className="rounded-full bg-muted p-4 mb-4">
-                      <Clock className="h-8 w-8 text-muted-foreground" />
+                  {isLoadingPreferences ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin" />
                     </div>
-                    <h3 className="text-lg font-semibold mb-2">Coming Soon</h3>
-                    <p className="text-sm text-muted-foreground max-w-sm">
-                      Notification preferences will be available in a future update. Stay tuned!
-                    </p>
-                  </div>
+                  ) : (
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-4 w-4" />
+                            <Label className="font-semibold">All Email Notifications</Label>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Master toggle for all email notifications
+                          </p>
+                        </div>
+                        <Switch
+                          checked={notificationPreferences?.emailNotifications ?? true}
+                          onCheckedChange={(checked) => handlePreferenceChange({ emailNotifications: checked })}
+                          disabled={updateNotificationPreferencesMutation.isPending}
+                        />
+                      </div>
+
+                      {(notificationPreferences?.emailNotifications ?? true) && (
+                        <div className="space-y-6">
+                          <Separator />
+
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4 text-muted-foreground" />
+                              <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Bookings</h4>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between p-3 border rounded-lg">
+                                <div className="space-y-0.5">
+                                  <Label>Booking Confirmations</Label>
+                                  <p className="text-xs text-muted-foreground">When a booking is confirmed for you or your spot</p>
+                                </div>
+                                <Switch
+                                  checked={notificationPreferences?.bookingConfirmations ?? true}
+                                  onCheckedChange={(checked) => handlePreferenceChange({ bookingConfirmations: checked })}
+                                  disabled={updateNotificationPreferencesMutation.isPending}
+                                />
+                              </div>
+                              <div className="flex items-center justify-between p-3 border rounded-lg">
+                                <div className="space-y-0.5">
+                                  <Label>Booking Cancellations</Label>
+                                  <p className="text-xs text-muted-foreground">When a booking is cancelled by you, the owner, or admin</p>
+                                </div>
+                                <Switch
+                                  checked={notificationPreferences?.bookingCancellations ?? true}
+                                  onCheckedChange={(checked) => handlePreferenceChange({ bookingCancellations: checked })}
+                                  disabled={updateNotificationPreferencesMutation.isPending}
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                              <CreditCard className="h-4 w-4 text-muted-foreground" />
+                              <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Payments</h4>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between p-3 border rounded-lg">
+                                <div className="space-y-0.5">
+                                  <Label>Payment Reminders</Label>
+                                  <p className="text-xs text-muted-foreground">Reminders for outstanding or overdue payments</p>
+                                </div>
+                                <Switch
+                                  checked={notificationPreferences?.paymentReminders ?? true}
+                                  onCheckedChange={(checked) => handlePreferenceChange({ paymentReminders: checked })}
+                                  disabled={updateNotificationPreferencesMutation.isPending}
+                                />
+                              </div>
+                              <div className="flex items-center justify-between p-3 border rounded-lg">
+                                <div className="space-y-0.5">
+                                  <Label>Payment Status Updates</Label>
+                                  <p className="text-xs text-muted-foreground">When a payment is marked as paid or confirmed received</p>
+                                </div>
+                                <Switch
+                                  checked={notificationPreferences?.paymentUpdates ?? true}
+                                  onCheckedChange={(checked) => handlePreferenceChange({ paymentUpdates: checked })}
+                                  disabled={updateNotificationPreferencesMutation.isPending}
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                              <MapPin className="h-4 w-4 text-muted-foreground" />
+                              <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Spot Management</h4>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between p-3 border rounded-lg">
+                                <div className="space-y-0.5">
+                                  <Label>Spot Availability</Label>
+                                  <p className="text-xs text-muted-foreground">When new spots become available that match your preferences</p>
+                                </div>
+                                <Switch
+                                  checked={notificationPreferences?.spotAvailability ?? true}
+                                  onCheckedChange={(checked) => handlePreferenceChange({ spotAvailability: checked })}
+                                  disabled={updateNotificationPreferencesMutation.isPending}
+                                />
+                              </div>
+                              <div className="flex items-center justify-between p-3 border rounded-lg">
+                                <div className="space-y-0.5">
+                                  <Label>Spot Assignments</Label>
+                                  <p className="text-xs text-muted-foreground">When you are assigned or unassigned from a parking spot</p>
+                                </div>
+                                <Switch
+                                  checked={notificationPreferences?.spotAssignment ?? true}
+                                  onCheckedChange={(checked) => handlePreferenceChange({ spotAssignment: checked })}
+                                  disabled={updateNotificationPreferencesMutation.isPending}
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                              <Shield className="h-4 w-4 text-muted-foreground" />
+                              <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Reports & System</h4>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between p-3 border rounded-lg">
+                                <div className="space-y-0.5">
+                                  <Label>Weekly Summary</Label>
+                                  <p className="text-xs text-muted-foreground">Weekly recap of your bookings, payments, and activity</p>
+                                </div>
+                                <Switch
+                                  checked={notificationPreferences?.weeklyReports ?? true}
+                                  onCheckedChange={(checked) => handlePreferenceChange({ weeklyReports: checked })}
+                                  disabled={updateNotificationPreferencesMutation.isPending}
+                                />
+                              </div>
+                              <div className="flex items-center justify-between p-3 border rounded-lg">
+                                <div className="space-y-0.5">
+                                  <Label>System Maintenance</Label>
+                                  <p className="text-xs text-muted-foreground">Planned downtime and system maintenance alerts</p>
+                                </div>
+                                <Switch
+                                  checked={notificationPreferences?.systemMaintenance ?? true}
+                                  onCheckedChange={(checked) => handlePreferenceChange({ systemMaintenance: checked })}
+                                  disabled={updateNotificationPreferencesMutation.isPending}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>

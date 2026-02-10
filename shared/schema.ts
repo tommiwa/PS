@@ -74,8 +74,11 @@ export const notificationPreferences = pgTable("notification_preferences", {
   userId: varchar("user_id").notNull(), // References users.id
   emailNotifications: boolean("email_notifications").notNull().default(true),
   bookingConfirmations: boolean("booking_confirmations").notNull().default(true),
+  bookingCancellations: boolean("booking_cancellations").notNull().default(true),
   paymentReminders: boolean("payment_reminders").notNull().default(true),
+  paymentUpdates: boolean("payment_updates").notNull().default(true),
   spotAvailability: boolean("spot_availability").notNull().default(true),
+  spotAssignment: boolean("spot_assignment").notNull().default(true),
   weeklyReports: boolean("weekly_reports").notNull().default(true),
   systemMaintenance: boolean("system_maintenance").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),

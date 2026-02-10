@@ -2090,9 +2090,11 @@ export async function sendPaymentMarkedPaidNotification(
     building: string;
     bookingDate: Date;
     amount: number;
-  }
+  },
+  userPreferences: { paymentUpdates?: boolean; emailNotifications?: boolean } = {}
 ): Promise<void> {
   try {
+    if (userPreferences.emailNotifications === false || userPreferences.paymentUpdates === false) return;
     const emailNotification = createPaymentMarkedPaidNotification(owner, renter, booking);
     const result = await sendEmailNotification(emailNotification);
     if (result.success) {
@@ -2115,9 +2117,11 @@ export async function sendPaymentConfirmedNotification(
     building: string;
     bookingDate: Date;
     amount: number;
-  }
+  },
+  userPreferences: { paymentUpdates?: boolean; emailNotifications?: boolean } = {}
 ): Promise<void> {
   try {
+    if (userPreferences.emailNotifications === false || userPreferences.paymentUpdates === false) return;
     const emailNotification = createPaymentConfirmedNotification(renter, owner, booking);
     const result = await sendEmailNotification(emailNotification);
     if (result.success) {
@@ -2250,14 +2254,14 @@ export async function sendBookingCancellationNotification(
     isWorkplaceServicesListing?: boolean;
     reason?: string;
   },
-  userPreferences: { bookingConfirmations?: boolean; emailNotifications?: boolean } = {},
+  userPreferences: { bookingConfirmations?: boolean; bookingCancellations?: boolean; emailNotifications?: boolean } = {},
   owner?: { name: string; email: string; id: string } | null
 ): Promise<{ emailSent: boolean; inAppSent: boolean; ownerEmailSent: boolean; ownerInAppSent: boolean }> {
   const results = { emailSent: false, inAppSent: false, ownerEmailSent: false, ownerInAppSent: false };
 
   try {
-    // Send email notification to renter if user has booking confirmations enabled
-    if (userPreferences.emailNotifications !== false && userPreferences.bookingConfirmations !== false) {
+    // Send email notification to renter if user has booking cancellations enabled
+    if (userPreferences.emailNotifications !== false && userPreferences.bookingCancellations !== false) {
       const emailNotification = createBookingCancellationNotification(user, booking);
       const emailResult = await sendEmailNotification(emailNotification);
       results.emailSent = emailResult.success;
@@ -2330,13 +2334,16 @@ export async function sendBookingCancellationNotification(
 export async function sendSpotUnassignmentNotification(
   formerOwner: { name: string; email: string | null; id: string },
   spotDetails: { spotNumber: string; location: string; building: string },
-  cancelledBookingsCount: number
+  cancelledBookingsCount: number,
+  userPreferences: { spotAssignment?: boolean; emailNotifications?: boolean } = {}
 ): Promise<{ emailSent: boolean; inAppSent: boolean }> {
   const results = { emailSent: false, inAppSent: false };
 
   try {
-    // Send email notification only if user has email
-    if (formerOwner.email) {
+    // Send email notification only if user has email and preferences allow it
+    if (userPreferences.emailNotifications === false || userPreferences.spotAssignment === false) {
+      // Skip email but still send in-app notification below
+    } else if (formerOwner.email) {
       const subject = `Parking Spot Unassigned: ${spotDetails.spotNumber}`;
       
       const bookingsMessage = cancelledBookingsCount > 0 
@@ -2428,15 +2435,18 @@ BCI ParkShare Team`;
 export async function sendBookingsCancelledDueToUnassignmentNotification(
   renter: { name: string; email: string | null; id: string },
   cancelledBookings: Array<{ bookingDate: string; spotNumber: string; location: string; building: string }>,
-  formerOwnerName: string
+  formerOwnerName: string,
+  userPreferences: { bookingCancellations?: boolean; emailNotifications?: boolean } = {}
 ): Promise<{ emailSent: boolean; inAppSent: boolean }> {
   const results = { emailSent: false, inAppSent: false };
 
   if (cancelledBookings.length === 0) return results;
 
   try {
-    // Send email notification only if user has email
-    if (renter.email) {
+    // Send email notification only if user has email and preferences allow it
+    if (userPreferences.emailNotifications === false || userPreferences.bookingCancellations === false) {
+      // Skip email but still send in-app notification below
+    } else if (renter.email) {
       const subject = `Booking(s) Cancelled: Spot Reassignment`;
       
       const bookingsList = cancelledBookings.map(b => 

@@ -1752,6 +1752,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       ? `${renter.firstName} ${renter.lastName}`
                       : renter.firstName || renter.lastName || renter.email || 'User';
                     
+                    const renterPrefs = await storage.getNotificationPreferences(renter.id);
                     await sendBookingCancellationNotification(
                       { name: renterName, email: renter.email, id: renter.id },
                       {
@@ -1765,7 +1766,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                         isWorkplaceServicesListing: isWsListing,
                         reason: `Listing cancelled by ${isWsListing ? 'Workplace Services' : `spot owner (${ownerName})`}`
                       },
-                      {},
+                      renterPrefs || {},
                       ownerInfo
                     );
                   }
@@ -1937,10 +1938,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const renterInfo = { name: `${renterUser.firstName} ${renterUser.lastName}`, email: renterUser.email || '' };
 
         if (paymentStatus === 'paid') {
-          sendPaymentMarkedPaidNotification(ownerInfo, renterInfo, notificationBooking)
+          const ownerPrefs = await storage.getNotificationPreferences(ownerUser.id);
+          sendPaymentMarkedPaidNotification(ownerInfo, renterInfo, notificationBooking, ownerPrefs || {})
             .catch(err => console.error('Error sending payment marked paid notification:', err));
         } else if (paymentStatus === 'received') {
-          sendPaymentConfirmedNotification(renterInfo, ownerInfo, notificationBooking)
+          const renterPrefs = await storage.getNotificationPreferences(renterUser.id);
+          sendPaymentConfirmedNotification(renterInfo, ownerInfo, notificationBooking, renterPrefs || {})
             .catch(err => console.error('Error sending payment confirmed notification:', err));
         }
       }
@@ -4481,6 +4484,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     }
                   }
                   
+                  const renterPrefs = await storage.getNotificationPreferences(renter.id);
                   await sendBookingCancellationNotification(
                     { name: renterName, email: renter.email, id: renter.id },
                     {
@@ -4493,7 +4497,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       isWorkplaceServicesListing: isWsListing,
                       reason: reason
                     },
-                    {},
+                    renterPrefs || {},
                     ownerInfo
                   );
                 }
@@ -4643,10 +4647,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
             }
             
+            const renterPrefs = await storage.getNotificationPreferences(renter.id);
             await sendBookingCancellationNotification(
               { name: renterName, email: renter.email || '', id: renter.id },
               bookingDetails,
-              {},
+              renterPrefs || {},
               ownerInfo
             );
           }
@@ -4745,10 +4750,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             };
             
             // Send notification to both renter and owner
+            const renterPrefs = await storage.getNotificationPreferences(renter.id);
             await sendBookingCancellationNotification(
               { name: renterName, email: renter.email || '', id: renter.id },
               bookingDetails,
-              {},
+              renterPrefs || {},
               ownerUser && ownerUser.email ? { name: ownerName, email: ownerUser.email, id: ownerUser.id } : null
             );
           }
@@ -4832,10 +4838,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
             }
             
+            const renterPrefs = await storage.getNotificationPreferences(renter.id);
             await sendBookingCancellationNotification(
               { name: renterName, email: renter.email || '', id: renter.id },
               bookingDetails,
-              {},
+              renterPrefs || {},
               ownerInfo
             );
           }
@@ -5701,6 +5708,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 building: buildingName
               }));
               
+              const renterPrefs = await storage.getNotificationPreferences(renter.id);
               await sendBookingsCancelledDueToUnassignmentNotification(
                 {
                   name: renterName,
@@ -5708,7 +5716,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   id: renter.id
                 },
                 cancelledBookingDetails,
-                'Spot has been assigned to a new owner'
+                'Spot has been assigned to a new owner',
+                renterPrefs || {}
               );
               notifiedRenters.push(renter.email || renter.id);
             }
@@ -6070,6 +6079,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (futureBookings.length === 0) {
         // No future bookings to cancel, but still notify former owner
         const { sendSpotUnassignmentNotification } = await import('./notification-service');
+        const formerOwnerPrefs = await storage.getNotificationPreferences(formerOwner.id);
         await sendSpotUnassignmentNotification(
           {
             name: `${formerOwner.firstName || ''} ${formerOwner.lastName || ''}`.trim() || 'User',
@@ -6077,7 +6087,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             id: formerOwner.id
           },
           { spotNumber: spot.spotNumber, location: locationName, building: buildingName },
-          0
+          0,
+          formerOwnerPrefs || {}
         );
         return result;
       }
@@ -6113,6 +6124,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             building: buildingName
           }));
           
+          const renterPrefs = await storage.getNotificationPreferences(renter.id);
           await sendBookingsCancelledDueToUnassignmentNotification(
             {
               name: `${renter.firstName || ''} ${renter.lastName || ''}`.trim() || 'User',
@@ -6120,7 +6132,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               id: renter.id
             },
             cancelledBookingDetails,
-            `${formerOwner.firstName || ''} ${formerOwner.lastName || ''}`.trim() || 'Previous Owner'
+            `${formerOwner.firstName || ''} ${formerOwner.lastName || ''}`.trim() || 'Previous Owner',
+            renterPrefs || {}
           );
           if (renter.email) {
             result.notifiedRenters.push(renter.email);
@@ -6129,6 +6142,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Notify the former owner about unassignment
+      const formerOwnerPrefs = await storage.getNotificationPreferences(formerOwner.id);
       await sendSpotUnassignmentNotification(
         {
           name: `${formerOwner.firstName || ''} ${formerOwner.lastName || ''}`.trim() || 'User',
@@ -6136,7 +6150,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: formerOwner.id
         },
         { spotNumber: spot.spotNumber, location: locationName, building: buildingName },
-        result.cancelledBookingsCount
+        result.cancelledBookingsCount,
+        formerOwnerPrefs || {}
       );
       
       console.log(`[Spot Unassignment] Spot ${spot.spotNumber}: Cancelled ${result.cancelledBookingsCount} future booking(s), notified ${result.notifiedRenters.length} renter(s) and former owner`);
