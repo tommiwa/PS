@@ -165,12 +165,12 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     return filterByCharity(filterBySearch(items))
   }
 
-  const sortItems = (items: (Booking | SpotListing)[]) => {
+  const sortItems = (items: (Booking | SpotListing)[], order: 'asc' | 'desc' = 'asc') => {
     return [...items].sort((a: Booking | SpotListing, b: Booking | SpotListing) => {
-      // Default sort by date (newest first)
-      const aDate = 'bookingDate' in a ? a.bookingDate : ('singleDate' in a ? a.singleDate : null)
-      const bDate = 'bookingDate' in b ? b.bookingDate : ('singleDate' in b ? b.singleDate : null)
-      return new Date(bDate || 0).getTime() - new Date(aDate || 0).getTime()
+      const aDate = 'bookingDate' in a ? a.bookingDate : ('singleDate' in a ? a.singleDate : ('date' in a ? (a as any).date : null))
+      const bDate = 'bookingDate' in b ? b.bookingDate : ('singleDate' in b ? b.singleDate : ('date' in b ? (b as any).date : null))
+      const diff = new Date(aDate || 0).getTime() - new Date(bDate || 0).getTime()
+      return order === 'asc' ? diff : -diff
     })
   }
 
@@ -2157,13 +2157,13 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
             </Card>
           ) : isCompactView ? (
             <div className="space-y-2">
-              {sortItems(applyFilters(completedItems)).map((item) => (
+              {sortItems(applyFilters(completedItems), 'desc').map((item) => (
                 isOwnerView ? renderOwnerListingCompact(item) : renderRenterBookingCompact(item)
               ))}
             </div>
           ) : (
             <div className="space-y-3 md:space-y-4">
-              {sortItems(applyFilters(completedItems)).map((item) => (
+              {sortItems(applyFilters(completedItems), 'desc').map((item) => (
                 isOwnerView ? renderOwnerListingWithPayment(item) : renderRenterBooking(item)
               ))}
             </div>
