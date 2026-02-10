@@ -1810,7 +1810,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">{activeItems.length}</div>
-                    <p className="text-xs text-green-600">Current reservations</p>
+                    <p className="text-xs text-green-600">Active & confirmed</p>
                   </CardContent>
                 </Card>
               </TooltipTrigger>
