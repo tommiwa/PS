@@ -766,7 +766,7 @@ The BCI ParkShare Team`;
   `;
 
   const html = wrapEmailTemplate({
-    title: `Your Spot Was Booked - ${formatDateRange(booking.startDate, booking.endDate)}`,
+    title: `Your Spot Has Been Booked - ${formatDateRange(booking.startDate, booking.endDate)}`,
     content,
     theme: 'success',
     ctaButton: { text: 'View My Spot Listings', url: `${APP_URL}/my-listings` }
