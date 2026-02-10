@@ -763,7 +763,7 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                   Donate Earnings to Charity
                 </Label>
                 <p className="text-sm text-pink-700">
-                  All proceeds from this listing will go to charity. A special badge will appear on the listing.
+                  By selecting this, you commit to donating all earnings from this listing to charity. A special badge will appear on the listing.
                 </p>
               </div>
             </div>
