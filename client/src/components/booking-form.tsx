@@ -321,7 +321,7 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
                         </TooltipTrigger>
                         <TooltipContent side="bottom" className="max-w-xs z-[100]">
                           <p className="font-medium">Support a Good Cause</p>
-                          <p className="text-xs text-muted-foreground">All proceeds from this booking will be donated to charity by the spot owner.</p>
+                          <p className="text-xs text-muted-foreground">The spot owner will donate all earnings from this booking to charity.</p>
                         </TooltipContent>
                       </Tooltip>
                     )}

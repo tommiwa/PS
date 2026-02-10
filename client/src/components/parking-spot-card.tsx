@@ -218,7 +218,7 @@ export function ParkingSpotCard({
             </span>
           </TooltipTrigger>
           <TooltipContent className="z-[100]">
-            <p>All proceeds from this spot go to charity!</p>
+            <p>The spot owner will donate all earnings from this spot to charity.</p>
           </TooltipContent>
         </Tooltip>
       );

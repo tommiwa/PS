@@ -859,10 +859,19 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 {listing.donateToCharity && (
-                  <Badge className="bg-pink-500 hover:bg-pink-600 text-white gap-1 flex items-center">
-                    <Heart className="h-3 w-3" />
-                    Charity
-                  </Badge>
+                  <Tooltip delayDuration={100}>
+                    <TooltipTrigger asChild>
+                      <span className="cursor-help">
+                        <Badge className="bg-pink-500 hover:bg-pink-600 text-white gap-1 flex items-center">
+                          <Heart className="h-3 w-3" />
+                          Charity
+                        </Badge>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent className="z-[100]">
+                      <p>The spot owner will donate all earnings from this spot to charity.</p>
+                    </TooltipContent>
+                  </Tooltip>
                 )}
                 {getStatusBadge()}
               </div>
@@ -1473,9 +1482,18 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
           {/* Actions */}
           <div className="flex justify-end gap-1 col-span-1 md:col-span-1">
             {listing.donateToCharity && (
-              <Badge className="bg-pink-500 hover:bg-pink-600 text-white gap-1 flex items-center text-xs px-1.5">
-                <Heart className="h-3 w-3" />
-              </Badge>
+              <Tooltip delayDuration={100}>
+                <TooltipTrigger asChild>
+                  <span className="cursor-help">
+                    <Badge className="bg-pink-500 hover:bg-pink-600 text-white gap-1 flex items-center text-xs px-1.5">
+                      <Heart className="h-3 w-3" />
+                    </Badge>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="z-[100]">
+                  <p>The spot owner will donate all earnings from this spot to charity.</p>
+                </TooltipContent>
+              </Tooltip>
             )}
             {getStatusBadge()}
             {canEdit && (
