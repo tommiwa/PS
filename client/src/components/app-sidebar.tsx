@@ -640,14 +640,14 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
       <SidebarFooter className="border-t p-3">
         <div className="flex items-center gap-2">
           <ReportIssueDialog>
-            <Button variant="outline" size="default" className="flex-1 justify-start gap-2">
-              <MessageSquare className="h-4 w-4" />
+            <Button variant="outline" size="sm" className="flex-1 justify-start gap-2">
+              <MessageSquare className="h-3.5 w-3.5" />
               Feedback
             </Button>
           </ReportIssueDialog>
           <FAQDialog>
-            <Button variant="outline" size="icon">
-              <HelpCircle className="h-4 w-4" />
+            <Button variant="outline" size="sm" className="px-2">
+              <HelpCircle className="h-3.5 w-3.5" />
             </Button>
           </FAQDialog>
         </div>
