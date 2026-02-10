@@ -15,6 +15,12 @@ function formatFriendlyDate(date: Date | string): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+function formatDateRange(startDate: Date, endDate: Date): string {
+  const start = formatFriendlyDate(startDate);
+  const end = formatFriendlyDate(endDate);
+  return start === end ? start : `${start} to ${end}`;
+}
+
 // Email provider configuration
 type EmailProvider = 'ms365' | 'mandrill' | 'mock';
 
@@ -611,7 +617,7 @@ export const createBookingConfirmationNotification = (
   owner?: { name: string; email: string } | null,
   isWorkplaceServicesListing?: boolean
 ): EmailNotification => {
-  const subject = `Booking Confirmed - Spot ${booking.spotNumber}`;
+  const subject = `Booking Confirmed - ${formatDateRange(booking.startDate, booking.endDate)}, Spot ${booking.spotNumber}`;
   
   const ownerText = isWorkplaceServicesListing
     ? `\nMANAGED BY: Workplace Services (paid via payroll deduction)\n`
@@ -624,7 +630,7 @@ Great news! Your parking spot booking has been confirmed. We're excited to have 
 BOOKING DETAILS:
 - Spot Number: ${booking.spotNumber}${booking.visualDirectoryUrl ? ` (View on Visual Directory: ${booking.visualDirectoryUrl})` : ''}
 - Location: ${booking.location} - ${booking.building}
-- Booking Date: ${formatFriendlyDate(booking.startDate)} to ${formatFriendlyDate(booking.endDate)}
+- Booking Date: ${formatDateRange(booking.startDate, booking.endDate)}
 - Amount: $${booking.totalAmount}
 ${ownerText}
 IMPORTANT INFORMATION:
@@ -663,7 +669,7 @@ The BCI ParkShare Team`;
       <ul style="margin: 0; padding: 0; list-style: none;">
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Spot Number:</strong> ${booking.spotNumber} <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(booking.building + ', ' + booking.location + ', BC, Canada')}" target="_blank" title="View spot location on map" style="display: inline-block; vertical-align: middle; margin-left: 6px; text-decoration: none;"><img src="https://maps.google.com/mapfiles/ms/icons/blue-dot.png" alt="View on Map" style="width: 20px; height: 20px; vertical-align: middle;" /></a>${booking.visualDirectoryUrl ? ` <a href="${booking.visualDirectoryUrl}" target="_blank" title="View spot on visual directory" style="display: inline-block; vertical-align: middle; margin-left: 6px; font-size: 13px; color: ${BCI_BLUE}; text-decoration: none; font-weight: 500;">View on Visual Directory</a>` : ''}</li>
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Location:</strong> ${booking.location} - ${booking.building}</li>
-        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Booking Date:</strong> ${formatFriendlyDate(booking.startDate)} to ${formatFriendlyDate(booking.endDate)}</li>
+        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Booking Date:</strong> ${formatDateRange(booking.startDate, booking.endDate)}</li>
         <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Amount:</strong> <span style="color: ${BCI_BLUE}; font-weight: 600;">$${booking.totalAmount}</span></li>
       </ul>
     </div>
@@ -722,7 +728,7 @@ Great news! Your parking spot has been booked. Thank you for sharing your space 
 BOOKING DETAILS:
 - Spot Number: ${booking.spotNumber}
 - Location: ${booking.location} - ${booking.building}
-- Booking Date: ${formatFriendlyDate(booking.startDate)} to ${formatFriendlyDate(booking.endDate)}
+- Booking Date: ${formatDateRange(booking.startDate, booking.endDate)}
 - Amount: $${booking.totalAmount}
 
 RENTER INFORMATION:
@@ -743,7 +749,7 @@ The BCI ParkShare Team`;
       <ul style="margin: 0; padding: 0; list-style: none;">
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Spot Number:</strong> ${booking.spotNumber}</li>
         <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Location:</strong> ${booking.location} - ${booking.building}</li>
-        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Booking Date:</strong> ${formatFriendlyDate(booking.startDate)} to ${formatFriendlyDate(booking.endDate)}</li>
+        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Booking Date:</strong> ${formatDateRange(booking.startDate, booking.endDate)}</li>
         <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Amount:</strong> <span style="color: ${BCI_BLUE}; font-weight: 600;">$${booking.totalAmount}</span></li>
       </ul>
     </div>
@@ -760,7 +766,7 @@ The BCI ParkShare Team`;
   `;
 
   const html = wrapEmailTemplate({
-    title: 'Your Spot Has Been Booked',
+    title: `Your Spot Was Booked - ${formatDateRange(booking.startDate, booking.endDate)}`,
     content,
     theme: 'success',
     ctaButton: { text: 'View My Spot Listings', url: `${APP_URL}/my-listings` }
@@ -1837,7 +1843,7 @@ export async function sendBookingConfirmationNotification(
       userId: user.id,
       type: 'booking_confirmation',
       title: `Booking Confirmed: Spot ${booking.spotNumber}`,
-      message: `Your booking for spot ${booking.spotNumber} from ${formatFriendlyDate(booking.startDate)} to ${formatFriendlyDate(booking.endDate)} has been confirmed.`,
+      message: `Your booking for spot ${booking.spotNumber} from ${formatDateRange(booking.startDate, booking.endDate)} has been confirmed.`,
       data: {
         bookingId: booking.id,
         spotNumber: booking.spotNumber,
