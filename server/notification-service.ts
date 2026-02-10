@@ -637,7 +637,7 @@ BOOKING DETAILS:
 ${ownerText}
 IMPORTANT INFORMATION:
 - Please use your BCI access card to enter the parking facility.
-- Refer to the visual directory in Bull & Bear to locate your assigned spot before arriving.
+- Refer to the visual directory on Bull & Bear to locate your assigned spot before arriving.
 - Kindly use the parking space responsibly and follow all facility guidelines.
 
 Thank you for choosing BCI ParkShare!
@@ -683,7 +683,7 @@ The BCI ParkShare Team`;
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Important Information</h3>
       <ul style="margin: 0; padding: 0 0 0 20px; list-style: disc;">
         <li style="padding: 4px 0; font-size: 15px; color: #475569; line-height: 1.6;">Please use your BCI access card to enter the parking facility.</li>
-        <li style="padding: 4px 0; font-size: 15px; color: #475569; line-height: 1.6;">Refer to the visual directory in Bull & Bear to locate your assigned spot before arriving.</li>
+        <li style="padding: 4px 0; font-size: 15px; color: #475569; line-height: 1.6;">Refer to the visual directory on Bull & Bear to locate your assigned spot before arriving.</li>
         <li style="padding: 4px 0; font-size: 15px; color: #475569; line-height: 1.6;">Kindly use the parking space responsibly and follow all facility guidelines.</li>
       </ul>
     </div>
