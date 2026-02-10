@@ -1097,6 +1097,142 @@ The BCI ParkShare Team`;
   };
 };
 
+export const createPaymentMarkedPaidNotification = (
+  owner: { name: string; email: string },
+  renter: { name: string; email: string },
+  booking: {
+    id: string;
+    spotNumber: string;
+    location: string;
+    building: string;
+    bookingDate: Date;
+    amount: number;
+  }
+): EmailNotification => {
+  const dateStr = formatDateRange(booking.bookingDate, booking.bookingDate);
+  const subject = `Payment Marked as Paid - Spot ${booking.spotNumber}, ${dateStr}`;
+
+  const text = `Dear ${owner.name},
+
+Your renter ${renter.name} has marked their payment as paid for your parking spot.
+
+BOOKING DETAILS:
+- Spot Number: ${booking.spotNumber}
+- Location: ${booking.location} - ${booking.building}
+- Booking Date: ${dateStr}
+- Amount: $${booking.amount}
+- Renter Name: ${renter.name}
+- Renter Email: ${renter.email}
+
+Please log in to confirm that you have received the payment.
+
+Warm regards,
+The BCI ParkShare Team`;
+
+  const content = `
+    <p>Dear ${owner.name},</p>
+    <p>Your renter <strong>${renter.name}</strong> has marked their payment as paid for your parking spot on <strong>${dateStr}</strong>.</p>
+    
+    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
+      <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Booking Details</h3>
+      <ul style="margin: 0; padding: 0; list-style: none;">
+        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Spot Number:</strong> ${booking.spotNumber}</li>
+        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Location:</strong> ${booking.location} - ${booking.building}</li>
+        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Booking Date:</strong> ${dateStr}</li>
+        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Amount:</strong> <span style="color: ${BCI_BLUE}; font-weight: 600; font-size: 18px;">$${booking.amount}</span></li>
+        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Renter Name:</strong> ${renter.name}</li>
+        <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Renter Email:</strong> ${renter.email}</li>
+      </ul>
+    </div>
+    
+    <div class="highlight-box" style="background-color: #e0f2fe; border-radius: 8px; padding: 16px 20px; margin: 24px 0;">
+      <strong>Action Required:</strong> Please log in to confirm that you have received this payment.
+    </div>
+  `;
+
+  const html = wrapEmailTemplate({
+    title: 'Payment Marked as Paid',
+    content,
+    theme: 'primary',
+    ctaButton: { text: 'Confirm Payment', url: `${APP_URL}/my-bookings` }
+  });
+
+  return {
+    to: owner.email,
+    subject,
+    text,
+    html,
+    type: 'payment_reminder'
+  };
+};
+
+export const createPaymentConfirmedNotification = (
+  renter: { name: string; email: string },
+  owner: { name: string; email: string },
+  booking: {
+    id: string;
+    spotNumber: string;
+    location: string;
+    building: string;
+    bookingDate: Date;
+    amount: number;
+  }
+): EmailNotification => {
+  const dateStr = formatDateRange(booking.bookingDate, booking.bookingDate);
+  const subject = `Payment Confirmed - Spot ${booking.spotNumber}, ${dateStr}`;
+
+  const text = `Dear ${renter.name},
+
+Great news! ${owner.name} has confirmed receipt of your payment for the parking spot booking.
+
+BOOKING DETAILS:
+- Spot Number: ${booking.spotNumber}
+- Location: ${booking.location} - ${booking.building}
+- Booking Date: ${dateStr}
+- Amount: $${booking.amount}
+- Owner Name: ${owner.name}
+
+Your payment has been successfully confirmed. Thank you!
+
+Warm regards,
+The BCI ParkShare Team`;
+
+  const content = `
+    <p>Dear ${renter.name},</p>
+    <p>Great news! <strong>${owner.name}</strong> has confirmed receipt of your payment for the parking spot booking on <strong>${dateStr}</strong>.</p>
+    
+    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
+      <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Booking Details</h3>
+      <ul style="margin: 0; padding: 0; list-style: none;">
+        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Spot Number:</strong> ${booking.spotNumber}</li>
+        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Location:</strong> ${booking.location} - ${booking.building}</li>
+        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Booking Date:</strong> ${dateStr}</li>
+        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Amount:</strong> <span style="color: ${BCI_BLUE}; font-weight: 600; font-size: 18px;">$${booking.amount}</span></li>
+        <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Owner Name:</strong> ${owner.name}</li>
+      </ul>
+    </div>
+    
+    <div class="highlight-box" style="background-color: #e0f2fe; border-radius: 8px; padding: 16px 20px; margin: 24px 0;">
+      Your payment has been successfully confirmed. Thank you for using BCI ParkShare!
+    </div>
+  `;
+
+  const html = wrapEmailTemplate({
+    title: 'Payment Confirmed',
+    content,
+    theme: 'success',
+    ctaButton: { text: 'View My Bookings', url: `${APP_URL}/my-bookings` }
+  });
+
+  return {
+    to: renter.email,
+    subject,
+    text,
+    html,
+    type: 'payment_reminder'
+  };
+};
+
 export const createSpotAvailabilityNotification = (
   user: { name: string; email: string },
   spots: {
@@ -1942,6 +2078,56 @@ export async function sendPaymentReminderNotification(
   }
 
   return results;
+}
+
+export async function sendPaymentMarkedPaidNotification(
+  owner: { name: string; email: string },
+  renter: { name: string; email: string },
+  booking: {
+    id: string;
+    spotNumber: string;
+    location: string;
+    building: string;
+    bookingDate: Date;
+    amount: number;
+  }
+): Promise<void> {
+  try {
+    const emailNotification = createPaymentMarkedPaidNotification(owner, renter, booking);
+    const result = await sendEmailNotification(emailNotification);
+    if (result.success) {
+      console.log(`✓ Payment marked-as-paid notification sent to owner ${owner.name} (${owner.email})`);
+    } else {
+      console.error(`❌ Failed to send payment marked-as-paid notification to ${owner.email}:`, result.error);
+    }
+  } catch (error) {
+    console.error('❌ Error sending payment marked-as-paid notification:', error);
+  }
+}
+
+export async function sendPaymentConfirmedNotification(
+  renter: { name: string; email: string },
+  owner: { name: string; email: string },
+  booking: {
+    id: string;
+    spotNumber: string;
+    location: string;
+    building: string;
+    bookingDate: Date;
+    amount: number;
+  }
+): Promise<void> {
+  try {
+    const emailNotification = createPaymentConfirmedNotification(renter, owner, booking);
+    const result = await sendEmailNotification(emailNotification);
+    if (result.success) {
+      console.log(`✓ Payment confirmed notification sent to renter ${renter.name} (${renter.email})`);
+    } else {
+      console.error(`❌ Failed to send payment confirmed notification to ${renter.email}:`, result.error);
+    }
+  } catch (error) {
+    console.error('❌ Error sending payment confirmed notification:', error);
+  }
 }
 
 export async function sendSpotAvailabilityNotification(

@@ -14,6 +14,8 @@ import {
   sendBookingConfirmationNotification,
   sendBookingCancellationNotification,
   sendPaymentReminderNotification,
+  sendPaymentMarkedPaidNotification,
+  sendPaymentConfirmedNotification,
   sendSpotAvailabilityNotification,
   sendWeeklySummaryNotification,
   sendSystemMaintenanceNotification,
@@ -1916,6 +1918,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         before: { ...booking, paymentStatus: currentStatus },
         after: { ...updatedBooking, paymentStatus: updatedBooking.paymentStatus }
       });
+
+      const ownerUser = await storage.getUser(booking.ownerId);
+      const renterUser = await storage.getUser(booking.renterId);
+      const spot = await storage.getParkingSpot(booking.spotId);
+      const spotLocation = spot?.locationId ? await storage.getLocation(spot.locationId) : null;
+
+      if (ownerUser && renterUser && spot) {
+        const notificationBooking = {
+          id: booking.id,
+          spotNumber: spot.spotNumber,
+          location: spotLocation ? spotLocation.office : '',
+          building: spotLocation ? `${spotLocation.building}, ${spotLocation.level}` : '',
+          bookingDate: new Date(booking.bookingDate),
+          amount: Number(booking.totalAmount),
+        };
+        const ownerInfo = { name: `${ownerUser.firstName} ${ownerUser.lastName}`, email: ownerUser.email || '' };
+        const renterInfo = { name: `${renterUser.firstName} ${renterUser.lastName}`, email: renterUser.email || '' };
+
+        if (paymentStatus === 'paid') {
+          sendPaymentMarkedPaidNotification(ownerInfo, renterInfo, notificationBooking)
+            .catch(err => console.error('Error sending payment marked paid notification:', err));
+        } else if (paymentStatus === 'received') {
+          sendPaymentConfirmedNotification(renterInfo, ownerInfo, notificationBooking)
+            .catch(err => console.error('Error sending payment confirmed notification:', err));
+        }
+      }
       
       res.json(updatedBooking);
     } catch (error) {
