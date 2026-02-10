@@ -394,22 +394,6 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
         </Tooltip>
       </div>
 
-      {/* Search Examples - Hidden on mobile, shown on desktop */}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="hidden md:block h-auto p-0 text-sm text-muted-foreground hover:bg-transparent hover:text-muted-foreground text-left justify-start"
-            data-testid="text-search-examples"
-          >
-            <span className="font-medium">Try searching:</span> "tesla", "victoria electric", "monday", "BCI managed", or owner names like "sarah"
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>Example search phrases</p>
-        </TooltipContent>
-      </Tooltip>
     </div>
   )
 }
