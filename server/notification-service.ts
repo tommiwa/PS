@@ -10,6 +10,8 @@ import { storage } from './storage';
 
 const LOGO_BASE64 = fs.readFileSync(path.join(process.cwd(), 'client/public/favicon.png')).toString('base64');
 
+const WORKPLACE_SERVICES_EMAIL = process.env.WORKPLACE_SERVICES_EMAIL || 'workplaceservices@bci.ca';
+
 function formatFriendlyDate(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date;
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -620,7 +622,7 @@ export const createBookingConfirmationNotification = (
   const subject = `Booking Confirmed - Spot ${booking.spotNumber}, ${formatDateRange(booking.startDate, booking.endDate)}`;
   
   const ownerText = isWorkplaceServicesListing
-    ? `\nMANAGED BY: Workplace Services (paid via payroll deduction)\n`
+    ? `\nMANAGED BY: Workplace Services (paid via payroll deduction)\n- Email: ${WORKPLACE_SERVICES_EMAIL}\n`
     : owner ? `\nSPOT OWNER:\n- Name: ${owner.name}\n- Email: ${owner.email}\n` : '';
   
   const text = `Dear ${user.name},
@@ -647,7 +649,8 @@ The BCI ParkShare Team`;
     <div class="info-card" style="background-color: #e0f2fe; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Managed By</h3>
       <ul style="margin: 0; padding: 0; list-style: none;">
-        <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Workplace Services</strong> (paid via payroll deduction)</li>
+        <li style="padding: 8px 0; border-bottom: 1px solid #bfdbfe; font-size: 15px;"><strong style="color: #475569;">Workplace Services</strong> (paid via payroll deduction)</li>
+        <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Email:</strong> <a href="mailto:${WORKPLACE_SERVICES_EMAIL}" style="color: #1e9df1; text-decoration: none;">${WORKPLACE_SERVICES_EMAIL}</a></li>
       </ul>
     </div>
   ` : owner ? `
@@ -1696,7 +1699,7 @@ SPOT DETAILS:
 
 This spot is now reserved for your use. You can view your assigned spot details anytime in your BCI ParkShare profile.
 
-If you have any questions, please contact the BCI Workplace Services team.
+If you have any questions, please contact the BCI Workplace Services team at ${WORKPLACE_SERVICES_EMAIL}.
 
 Warm regards,
 The BCI ParkShare Team`;
@@ -1714,7 +1717,7 @@ The BCI ParkShare Team`;
     </div>
     
     <p>This spot is now reserved for your use. You can view your assigned spot details anytime in your BCI ParkShare profile.</p>
-    <p>If you have any questions, please contact the BCI Workplace Services team.</p>
+    <p>If you have any questions, please contact the BCI Workplace Services team at <a href="mailto:${WORKPLACE_SERVICES_EMAIL}" style="color: #1e9df1; text-decoration: none;">${WORKPLACE_SERVICES_EMAIL}</a>.</p>
   `;
 
   const html = wrapEmailTemplate({
@@ -2359,7 +2362,7 @@ SPOT DETAILS:
 • Location: ${spotDetails.location}
 • Building: ${spotDetails.building}${bookingsMessage}
 
-If you have any questions about this change, please contact the BCI Workplace Services team.
+If you have any questions about this change, please contact the BCI Workplace Services team at ${WORKPLACE_SERVICES_EMAIL}.
 
 Best regards,
 BCI ParkShare Team`;
@@ -2382,7 +2385,7 @@ BCI ParkShare Team`;
     </div>
     ` : ''}
     
-    <p>If you have any questions about this change, please contact the BCI Workplace Services team.</p>
+    <p>If you have any questions about this change, please contact the BCI Workplace Services team at <a href="mailto:${WORKPLACE_SERVICES_EMAIL}" style="color: #1e9df1; text-decoration: none;">${WORKPLACE_SERVICES_EMAIL}</a>.</p>
   `;
 
       const html = wrapEmailTemplate({
@@ -2595,7 +2598,7 @@ BCI ParkShare Team`;
     });
 
     const notification: EmailNotification = {
-      to: 'lijin.joseji@bci.ca',
+      to: WORKPLACE_SERVICES_EMAIL,
       cc: adminEmails.length > 0 ? adminEmails : undefined,
       subject,
       text,
@@ -2606,7 +2609,7 @@ BCI ParkShare Team`;
     const emailResult = await sendEmailNotification(notification);
     results.emailSent = emailResult.success;
 
-    console.log(`✓ Feedback email sent to lijin.joseji@bci.ca${adminEmails.length > 0 ? ` (cc: ${adminEmails.length} admins)` : ' (no CC - dev mode)'}: ${issue.title}`);
+    console.log(`✓ Feedback email sent to ${WORKPLACE_SERVICES_EMAIL}${adminEmails.length > 0 ? ` (cc: ${adminEmails.length} admins)` : ' (no CC - dev mode)'}: ${issue.title}`);
   } catch (error) {
     console.error('❌ Error sending issue report notification:', error);
   }
