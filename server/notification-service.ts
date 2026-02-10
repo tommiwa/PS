@@ -1124,7 +1124,7 @@ BOOKING DETAILS:
 - Renter Name: ${renter.name}
 - Renter Email: ${renter.email}
 
-Please log in to confirm that you have received the payment.
+Please check that you have received the money via Interac e-Transfer or cash, then log in to the app to confirm the payment.
 
 Warm regards,
 The BCI ParkShare Team`;
@@ -1146,7 +1146,7 @@ The BCI ParkShare Team`;
     </div>
     
     <div class="highlight-box" style="background-color: #e0f2fe; border-radius: 8px; padding: 16px 20px; margin: 24px 0;">
-      <strong>Action Required:</strong> Please log in to confirm that you have received this payment.
+      <strong>Action Required:</strong> Please check that you have received the money via Interac e-Transfer or cash, then log in to the app to confirm the payment.
     </div>
   `;
 
