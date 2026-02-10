@@ -625,7 +625,7 @@ export const createBookingConfirmationNotification = (
   
   const text = `Dear ${user.name},
 
-Great news! Your parking spot booking has been confirmed. We're excited to have you parked with us!
+Great news! Your parking spot booking has been confirmed.
 
 BOOKING DETAILS:
 - Spot Number: ${booking.spotNumber}${booking.visualDirectoryUrl ? ` (View on Visual Directory: ${booking.visualDirectoryUrl})` : ''}
@@ -662,7 +662,7 @@ The BCI ParkShare Team`;
 
   const content = `
     <p>Dear ${user.name},</p>
-    <p>Great news! Your parking spot booking has been confirmed. We're excited to have you parked with us!</p>
+    <p>Great news! Your parking spot booking has been confirmed.</p>
     
     <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
       <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Booking Details</h3>
