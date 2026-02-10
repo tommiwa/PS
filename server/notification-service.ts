@@ -401,7 +401,7 @@ export function wrapEmailTemplate(options: {
           <!-- Title -->
           <tr>
             <td style="padding: 28px 48px 0 48px;">
-              <h1 style="color: ${options.titleColor || BCI_BLUE}; font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 28px; font-weight: 700; margin: 0; line-height: 1.3; letter-spacing: -0.3px;">${options.title}</h1>
+              <h1 style="color: ${options.titleColor || BCI_BLUE}; font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 24px; font-weight: 700; margin: 0; line-height: 1.3; letter-spacing: -0.3px;">${options.title}</h1>
             </td>
           </tr>
           
