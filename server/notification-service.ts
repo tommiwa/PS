@@ -719,7 +719,7 @@ export const createOwnerBookingNotification = (
     totalAmount: number;
   }
 ): EmailNotification => {
-  const subject = `Spot Booked - ${formatDateRange(booking.startDate, booking.endDate)}`;
+  const subject = `Your Spot Has Been Booked - ${formatDateRange(booking.startDate, booking.endDate)}`;
   
   const text = `Dear ${owner.name},
 
