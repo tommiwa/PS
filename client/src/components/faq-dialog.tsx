@@ -1,7 +1,6 @@
 import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Car, Key, ChevronDown, ChevronRight } from "lucide-react"
 
 interface FAQItem {
@@ -279,7 +278,7 @@ export function FAQDialog({ children }: FAQDialogProps) {
         <DialogHeader>
           <DialogTitle className="text-xl">Frequently Asked Questions</DialogTitle>
         </DialogHeader>
-        <Tabs defaultValue="renter" className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <Tabs defaultValue="renter" className="flex-1 min-h-0 flex flex-col">
           <TabsList className="grid w-full grid-cols-2 mb-3 flex-shrink-0">
             <TabsTrigger value="renter" className="gap-1.5">
               <Car className="h-4 w-4" />
@@ -290,19 +289,15 @@ export function FAQDialog({ children }: FAQDialogProps) {
               Spot Owner
             </TabsTrigger>
           </TabsList>
-          <TabsContent value="renter" className="mt-0 flex-1 min-h-0 overflow-hidden" forceMount={undefined}>
-            <ScrollArea className="h-full pr-3" style={{ maxHeight: 'calc(85vh - 160px)' }}>
-              {renterFAQs.map((category, index) => (
-                <FAQCategorySection key={index} category={category} />
-              ))}
-            </ScrollArea>
+          <TabsContent value="renter" className="mt-0 flex-1 min-h-0 overflow-y-auto pr-2">
+            {renterFAQs.map((category, index) => (
+              <FAQCategorySection key={index} category={category} />
+            ))}
           </TabsContent>
-          <TabsContent value="owner" className="mt-0 flex-1 min-h-0 overflow-hidden" forceMount={undefined}>
-            <ScrollArea className="h-full pr-3" style={{ maxHeight: 'calc(85vh - 160px)' }}>
-              {ownerFAQs.map((category, index) => (
-                <FAQCategorySection key={index} category={category} />
-              ))}
-            </ScrollArea>
+          <TabsContent value="owner" className="mt-0 flex-1 min-h-0 overflow-y-auto pr-2">
+            {ownerFAQs.map((category, index) => (
+              <FAQCategorySection key={index} category={category} />
+            ))}
           </TabsContent>
         </Tabs>
       </DialogContent>
