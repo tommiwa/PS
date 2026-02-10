@@ -1803,19 +1803,19 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                   data-testid="card-stat-active"
                 >
                   <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Upcoming</CardTitle>
+                    <CardTitle className="text-sm font-medium">Current Bookings</CardTitle>
                     <div className="rounded-full border-2 border-green-400 p-2">
                       <CheckCircle2 className="h-4 w-4 text-green-600" />
                     </div>
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">{activeItems.length}</div>
-                    <p className="text-xs text-green-600">Future reservations</p>
+                    <p className="text-xs text-green-600">Current reservations</p>
                   </CardContent>
                 </Card>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Click to view upcoming bookings</p>
+                <p>Click to view current bookings</p>
               </TooltipContent>
             </Tooltip>
             
@@ -1914,7 +1914,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
           <TabsList className="flex overflow-x-auto scrollbar-hide snap-x snap-mandatory w-full h-auto gap-1 px-4">
             <TabsTrigger value="active" className="gap-1.5 flex-shrink-0 min-h-10 px-3 snap-start" data-testid="tab-active">
               <CheckCircle2 className="h-4 w-4 !text-green-600" />
-              <span>{isOwnerView ? 'Active' : 'Upcoming'}</span>
+              <span>{isOwnerView ? 'Active' : 'Current Bookings'}</span>
               <Badge variant="secondary" className="ml-0.5 h-5 px-1.5 text-xs">{activeItems.length}</Badge>
             </TabsTrigger>
             <TabsTrigger value="payment-pending" className="gap-1.5 flex-shrink-0 min-h-10 px-3 snap-start" data-testid="tab-payment">
@@ -1933,7 +1933,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
         <TabsList className="hidden md:grid md:grid-cols-3 w-full h-auto gap-1">
           <TabsTrigger value="active" className="gap-2 min-h-11" data-testid="tab-active-desktop">
             <CheckCircle2 className="h-4 w-4 !text-green-600" />
-            {isOwnerView ? `Active (${activeItems.length})` : `Upcoming (${activeItems.length})`}
+            {isOwnerView ? `Active (${activeItems.length})` : `Current Bookings (${activeItems.length})`}
           </TabsTrigger>
           <TabsTrigger value="payment-pending" className="gap-2 min-h-11" data-testid="tab-payment-desktop">
             <DollarSign className="h-4 w-4 !text-orange-600" />
@@ -1990,7 +1990,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
             <p className="text-sm text-emerald-700">
               {isOwnerView 
                 ? "Your listed spots that are available for booking. Create new listings to earn from your parking spots." 
-                : "Your upcoming parking reservations. You can mark payment as sent anytime before or after using the spot."}
+                : "Your current parking reservations. You can mark payment as sent anytime before or after using the spot."}
             </p>
           </div>
           {applyFilters(activeItems).length === 0 ? (
@@ -1998,10 +1998,10 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               <CardContent className="p-6 md:p-8 text-center">
                 <Clock className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-3 md:mb-4 text-muted-foreground" />
                 <h3 className="text-base md:text-lg font-semibold mb-2">
-                  {isOwnerView ? "No active listings" : "No upcoming bookings"}
+                  {isOwnerView ? "No active listings" : "No current bookings"}
                 </h3>
                 <p className="text-sm md:text-base text-muted-foreground">
-                  {isOwnerView ? "Create a new listing to start earning from your parking spots." : "Book a parking spot to see your upcoming reservations here."}
+                  {isOwnerView ? "Create a new listing to start earning from your parking spots." : "Book a parking spot to see your current reservations here."}
                 </p>
               </CardContent>
             </Card>
