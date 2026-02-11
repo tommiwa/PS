@@ -330,13 +330,15 @@ function useNavigationDataRefresh() {
   }, [location]);
 }
 
-const RENTER_ROUTES = ['/search', '/my-bookings'];
+const RENTER_ROUTES = ['/my-bookings'];
 const OWNER_ROUTES = ['/my-spots', '/my-listings', '/my-rentals'];
+const SHARED_ROUTES = ['/search'];
 
 function getRequiredRoleForRoute(path: string): 'admin' | 'owner' | 'renter' | null {
   if (path === '/admin' || path.startsWith('/admin/')) return 'admin';
   if (OWNER_ROUTES.some(r => path === r)) return 'owner';
   if (RENTER_ROUTES.some(r => path === r)) return 'renter';
+  if (SHARED_ROUTES.some(r => path === r)) return null;
   return null;
 }
 
