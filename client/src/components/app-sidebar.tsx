@@ -645,11 +645,11 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
               Feedback
             </Button>
           </ReportIssueDialog>
-          <FAQDialog>
+          {/* <FAQDialog>
             <Button variant="outline" size="sm" className="px-2">
               <HelpCircle className="h-3.5 w-3.5" />
             </Button>
-          </FAQDialog>
+          </FAQDialog> */}
         </div>
       </SidebarFooter>
     </Sidebar>
