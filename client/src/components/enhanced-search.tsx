@@ -296,7 +296,7 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
                 data-testid="button-more-filters"
               >
                 <Badge 
-                  variant={hasActiveHiddenFilters ? "default" : "secondary"}
+                  variant={hasActiveHiddenFilters ? "default" : "outline"}
                   className={`gap-1 min-h-11 md:min-h-8 px-3 ${hasActiveHiddenFilters ? 'bg-primary text-primary-foreground' : ''}`}
                 >
                   <SlidersHorizontal className="h-3 w-3" />
