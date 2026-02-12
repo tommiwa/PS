@@ -575,8 +575,8 @@ export class MemStorage implements IStorage {
       const [updated] = await db.update(users)
         .set({
           email: userData.email ?? existingUser.email,
-          firstName: userData.firstName ?? existingUser.firstName,
-          lastName: userData.lastName ?? existingUser.lastName,
+          firstName: userData.firstName || existingUser.firstName,
+          lastName: userData.lastName || existingUser.lastName,
           profileImageUrl: userData.profileImageUrl ?? existingUser.profileImageUrl,
           lastLogin: now,
           updatedAt: now

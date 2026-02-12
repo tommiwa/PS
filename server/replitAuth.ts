@@ -310,12 +310,13 @@ async function upsertUser(
     }
   } else if (existingDbUser) {
     // Update existing user in database
+    // Preserve existing firstName/lastName if OIDC claims are empty
     await db.update(users)
       .set({
-        email: userData.email,
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-        profileImageUrl: userData.profileImageUrl,
+        email: userData.email ?? existingDbUser.email,
+        firstName: userData.firstName || existingDbUser.firstName,
+        lastName: userData.lastName || existingDbUser.lastName,
+        profileImageUrl: userData.profileImageUrl ?? existingDbUser.profileImageUrl,
         roles: finalRoles,
         lastLogin: now,
         updatedAt: now,
