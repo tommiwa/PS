@@ -2113,7 +2113,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           spotNumber: spot?.spotNumber || 'Unknown',
           location: locationName,
           spotType: spotTypeName,
-          ownerName: spot?.isBciManaged ? 'BCI Workplace Services' : (owner ? `${owner.firstName} ${owner.lastName}` : 'Unknown'),
+          ownerName: (spot?.isBciManaged && !spot?.ownerId) ? 'BCI Workplace Services' : (owner ? `${owner.firstName} ${owner.lastName}` : (spot?.isBciManaged ? 'BCI Workplace Services' : 'Unknown')),
           // Use actual paymentStatus enum from booking (pending, paid, received)
           paymentStatus: booking.paymentStatus || 'pending',
           // Include BCI-managed flag to distinguish admin-managed vs peer-to-peer listings
@@ -2397,7 +2397,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Enrich spot with listing data and booking information
           return {
             ...spot,
-            assignedUserName: spot.isBciManaged ? 'BCI Workplace Services' : (spot as any).assignedUserName,
+            assignedUserName: (spot.isBciManaged && !spot.ownerId) ? 'BCI Workplace Services' : ((spot as any).assignedUserName || (spot.isBciManaged ? 'BCI Workplace Services' : null)),
             listingId: primaryListingId,
             dailyRate: primaryDailyRate,
             availabilityDates: availabilityDates, // Array of today/future dates only
