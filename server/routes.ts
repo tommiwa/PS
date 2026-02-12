@@ -4954,6 +4954,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         after: { paymentStatus: 'paid' }
       });
 
+      // Send email notification to owner that renter marked payment as sent
+      try {
+        const ownerUser = await storage.getUser(booking.ownerId);
+        const renterUser = await storage.getUser(booking.renterId);
+        const spot = await storage.getParkingSpot(booking.spotId);
+        const spotLocation = spot?.locationId ? await storage.getLocation(spot.locationId) : null;
+
+        if (ownerUser && renterUser && spot) {
+          const notificationBooking = {
+            id: booking.id,
+            spotNumber: spot.spotNumber,
+            location: spotLocation ? spotLocation.office : '',
+            building: spotLocation ? `${spotLocation.building}, ${spotLocation.level}` : '',
+            bookingDate: new Date(booking.bookingDate),
+            amount: Number(booking.totalAmount),
+          };
+          const ownerInfo = { name: `${ownerUser.firstName} ${ownerUser.lastName}`, email: ownerUser.email || '' };
+          const renterInfo = { name: `${renterUser.firstName} ${renterUser.lastName}`, email: renterUser.email || '' };
+
+          const ownerPrefs = await storage.getNotificationPreferences(ownerUser.id);
+          sendPaymentMarkedPaidNotification(ownerInfo, renterInfo, notificationBooking, ownerPrefs || {})
+            .catch(err => console.error('Error sending payment marked paid notification:', err));
+        }
+      } catch (notifError) {
+        console.error('Error preparing payment notification:', notifError);
+      }
+
       res.json(updatedBooking);
     } catch (error) {
       console.error("Error marking payment:", error);
@@ -5016,6 +5043,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         before: { paymentStatus: booking.paymentStatus, status: booking.status },
         after: { paymentStatus: 'received', status: 'completed' }
       });
+
+      // Send email notification to renter that owner confirmed payment
+      try {
+        const ownerUser = await storage.getUser(booking.ownerId);
+        const renterUser = await storage.getUser(booking.renterId);
+        const spot = await storage.getParkingSpot(booking.spotId);
+        const spotLocation = spot?.locationId ? await storage.getLocation(spot.locationId) : null;
+
+        if (ownerUser && renterUser && spot) {
+          const notificationBooking = {
+            id: booking.id,
+            spotNumber: spot.spotNumber,
+            location: spotLocation ? spotLocation.office : '',
+            building: spotLocation ? `${spotLocation.building}, ${spotLocation.level}` : '',
+            bookingDate: new Date(booking.bookingDate),
+            amount: Number(booking.totalAmount),
+          };
+          const ownerInfo = { name: `${ownerUser.firstName} ${ownerUser.lastName}`, email: ownerUser.email || '' };
+          const renterInfo = { name: `${renterUser.firstName} ${renterUser.lastName}`, email: renterUser.email || '' };
+
+          const renterPrefs = await storage.getNotificationPreferences(renterUser.id);
+          sendPaymentConfirmedNotification(renterInfo, ownerInfo, notificationBooking, renterPrefs || {})
+            .catch(err => console.error('Error sending payment confirmed notification:', err));
+        }
+      } catch (notifError) {
+        console.error('Error preparing payment confirmed notification:', notifError);
+      }
 
       res.json(updatedBooking);
     } catch (error) {
