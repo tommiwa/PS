@@ -1199,7 +1199,7 @@ export class MemStorage implements IStorage {
     for (const spotId of spotIds) {
       const listing = await db.insert(spotListings).values({
         spotId: spotId,
-        ownerId: ownerId, // Use the provided ownerId (admin user for BCI-managed spots)
+        ownerId: ownerId,
         listingType: listingData.listingType as ListingType,
         singleDate: listingData.singleDate ?? null,
         periodStartDate: listingData.periodStartDate ?? null,
@@ -1211,6 +1211,7 @@ export class MemStorage implements IStorage {
         status: status,
         notes: listingData.notes ?? null,
         donateToCharity: listingData.donateToCharity ?? false,
+        createdByAdmin: true,
       }).returning();
 
       if (listing[0]) {

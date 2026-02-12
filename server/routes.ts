@@ -2113,7 +2113,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           spotNumber: spot?.spotNumber || 'Unknown',
           location: locationName,
           spotType: spotTypeName,
-          ownerName: (spot?.isBciManaged && !spot?.ownerId) ? 'BCI Workplace Services' : (owner ? `${owner.firstName} ${owner.lastName}` : (spot?.isBciManaged ? 'BCI Workplace Services' : 'Unknown')),
+          ownerName: listing?.createdByAdmin ? 'BCI Workplace Services' : (owner ? `${owner.firstName} ${owner.lastName}` : (spot?.isBciManaged && !spot?.ownerId ? 'BCI Workplace Services' : 'Unknown')),
           // Use actual paymentStatus enum from booking (pending, paid, received)
           paymentStatus: booking.paymentStatus || 'pending',
           // Include BCI-managed flag to distinguish admin-managed vs peer-to-peer listings
@@ -2394,10 +2394,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ownerPaymentType = ownerPayPrefs?.paymentType || null;
           }
 
+          // Determine owner display name based on listing context:
+          // - If listing was created by admin from admin page (createdByAdmin=true) → "BCI Workplace Services"
+          // - If listing was created by the owner from My Spots page (createdByAdmin=false) → show owner's name
+          // - If no listing context, fall back to spot ownership
+          const primaryListingObj = listings.find(l => l.id === primaryListingId);
+          const isAdminCreatedListing = primaryListingObj?.createdByAdmin === true;
+          const displayOwnerName = isAdminCreatedListing 
+            ? 'BCI Workplace Services' 
+            : ((spot as any).assignedUserName || (spot.isBciManaged && !spot.ownerId ? 'BCI Workplace Services' : null));
+
           // Enrich spot with listing data and booking information
           return {
             ...spot,
-            assignedUserName: (spot.isBciManaged && !spot.ownerId) ? 'BCI Workplace Services' : ((spot as any).assignedUserName || (spot.isBciManaged ? 'BCI Workplace Services' : null)),
+            assignedUserName: displayOwnerName,
             listingId: primaryListingId,
             dailyRate: primaryDailyRate,
             availabilityDates: availabilityDates, // Array of today/future dates only
