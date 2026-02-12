@@ -109,7 +109,7 @@ app.use((req, res, next) => {
 
 ## Terms and Conditions
 
-**Effective Date: January 12, 2026**
+**Effective Date: February 11, 2026**
 
 These Terms and Conditions ("Terms") govern your use of BCI's ParkShare application (the "App"). In these Terms, "we," "us," and "our" refer to BCI. "You" and "your" refer to the User accessing or using the App. By accessing or using the App, you agree to be bound by these Terms.
 
@@ -186,7 +186,11 @@ BCI provides the App on an "as is" basis and makes no warranties, express or imp
 
 BCI is not responsible or liable for any injury, death, property damage, theft, disappearance, or any other loss occurring in, on, or about the parking facility in connection with use of the App.
 
-Users are responsible for, and shall reimburse BCI for, any claims, damages, or liabilities arising from their use of the App or any parking stall booked or listed through the App, including any damage to property owned, leased, or managed by BCI. Any disputes between Tenants and Subtenants regarding damage or liability are solely between those parties, and BCI has no obligation to mediate, investigate, or resolve such disputes.
+Users are responsible for, and shall reimburse BCI for, any claims, damages, or liabilities arising from their use of the App or any parking stall booked or listed through the App, including any damage to property owned, leased, or managed by BCI.
+
+The Tenant acknowledges that BCI may seek recovery from the Tenant for any claims, damages, or liabilities arising from the use of their parking stall listed through the App, including where caused by a Subtenant. To the extent such claims, damages, or liabilities are caused by a Subtenant, the Subtenant shall indemnify, defend, and hold harmless the Tenant against the same.
+
+Any disputes between Tenants and Subtenants regarding damage or liability are solely between those parties, and BCI has no obligation to mediate, investigate, or resolve such disputes.
 
 ---
 
@@ -231,7 +235,7 @@ Questions regarding these Terms or the App should be directed to workplaceservic
 
 # ParkShare Privacy Notice
 
-**Last Updated: January 12, 2026**
+**Last Updated: February 11, 2026**
 
 This Privacy Notice explains how we collect, use, disclose and protect your personal information when you use BCI's ParkShare application (the "App"). In this Privacy Notice, "we," "us," and "our" refer to BCI. "You" and "your" refer to the individual using the App.
 
