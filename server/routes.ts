@@ -7263,45 +7263,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let configs = await storage.getAllAppConfigs();
       console.log(`[AppConfigs] Found ${configs.length} existing configs`);
       
-      // Auto-initialize default configs if none exist
-      if (configs.length === 0) {
-        console.log("[AppConfigs] No configs found, initializing defaults...");
-        const defaultConfigs = [
-          {
-            key: 'lock_timeout_ms',
-            value: '30000',
-            label: 'Lock Timeout',
-            dataType: 'number',
-            category: 'booking',
-            description: 'Duration in seconds for how long a booking lock is held before it automatically expires. Users must complete their booking within this time.'
-          },
-          {
-            key: 'max_daily_rate',
-            value: '18',
-            label: 'Maximum Daily Rate',
-            dataType: 'number',
-            category: 'booking',
-            description: 'Maximum allowed daily rate for parking spot listings. Owners and admins cannot set rates higher than this amount.'
-          },
-          {
-            key: 'timezone',
-            value: 'America/Los_Angeles',
-            label: 'Application Timezone',
-            dataType: 'string',
-            category: 'system',
-            description: 'The timezone used for displaying and calculating all dates and times in the application (e.g., America/Los_Angeles for PST/PDT)'
-          },
-          {
-            key: 'cancellation_window_hours',
-            value: '24',
-            label: 'Cancellation Window',
-            dataType: 'number',
-            category: 'booking',
-            description: 'Minimum hours before the booking date that cancellation is allowed. Users cannot cancel bookings within this time window.'
-          }
-        ];
-        
-        for (const config of defaultConfigs) {
+      // Auto-initialize any missing default configs
+      const defaultConfigs = [
+        {
+          key: 'lock_timeout_ms',
+          value: '30000',
+          label: 'Lock Timeout',
+          dataType: 'number',
+          category: 'booking',
+          description: 'Duration in seconds for how long a booking lock is held before it automatically expires. Users must complete their booking within this time.'
+        },
+        {
+          key: 'max_daily_rate',
+          value: '18',
+          label: 'Maximum Daily Rate',
+          dataType: 'number',
+          category: 'booking',
+          description: 'Maximum allowed daily rate for parking spot listings. Owners and admins cannot set rates higher than this amount.'
+        },
+        {
+          key: 'timezone',
+          value: 'America/Los_Angeles',
+          label: 'Application Timezone',
+          dataType: 'string',
+          category: 'system',
+          description: 'The timezone used for displaying and calculating all dates and times in the application (e.g., America/Los_Angeles for PST/PDT)'
+        },
+        {
+          key: 'cancellation_window_hours',
+          value: '24',
+          label: 'Cancellation Window',
+          dataType: 'number',
+          category: 'booking',
+          description: 'Minimum hours before the booking date that cancellation is allowed. Users cannot cancel bookings within this time window.'
+        }
+      ];
+      
+      const existingKeys = new Set(configs.map((c: any) => c.key));
+      const missingConfigs = defaultConfigs.filter(d => !existingKeys.has(d.key));
+      
+      if (missingConfigs.length > 0) {
+        console.log(`[AppConfigs] Inserting ${missingConfigs.length} missing default configs...`);
+        for (const config of missingConfigs) {
           try {
             await storage.createAppConfig(config);
             console.log(`[AppConfigs] Created config: ${config.key}`);
