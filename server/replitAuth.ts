@@ -52,12 +52,13 @@ const getOidcConfig = memoize(
 );
 
 export function getSession() {
-  const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 7 days
+  const sessionTtlSeconds = 7 * 24 * 60 * 60; // 7 days in seconds
+  const sessionTtlMs = sessionTtlSeconds * 1000; // 7 days in milliseconds (for cookie)
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
     conString: process.env.DATABASE_URL,
     createTableIfMissing: false,
-    ttl: sessionTtl,
+    ttl: sessionTtlSeconds, // connect-pg-simple expects seconds
     tableName: "sessions",
   });
   
@@ -70,9 +71,9 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: !isDevelopment, // Allow insecure cookies in development for testing
-      sameSite: isDevelopment ? 'lax' : 'lax', // Keep lax for OIDC compatibility
-      maxAge: sessionTtl,
+      secure: !isDevelopment,
+      sameSite: 'lax',
+      maxAge: sessionTtlMs, // express-session cookie expects milliseconds
     },
   });
 }
@@ -654,30 +655,37 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   }
 
   // Fallback to real Replit auth
-  if (!req.isAuthenticated() || !user.expires_at) {
+  if (!req.isAuthenticated() || !user?.claims?.sub) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
+  // If token hasn't expired yet, proceed
   const now = Math.floor(Date.now() / 1000);
-  if (now <= user.expires_at) {
+  if (user.expires_at && now <= user.expires_at) {
     return next();
   }
 
+  // Token expired — try to refresh it
   const refreshToken = user.refresh_token;
-  if (!refreshToken) {
-    res.status(401).json({ message: "Unauthorized" });
-    return;
+  if (refreshToken) {
+    try {
+      const config = await getOidcConfig();
+      const tokenResponse = await client.refreshTokenGrant(config, refreshToken);
+      updateUserSession(user, tokenResponse);
+      return next();
+    } catch (error) {
+      console.log(`[Auth] Token refresh failed for user ${user.claims.sub}, using existing session`);
+    }
   }
 
-  try {
-    const config = await getOidcConfig();
-    const tokenResponse = await client.refreshTokenGrant(config, refreshToken);
-    updateUserSession(user, tokenResponse);
+  // Token refresh failed or no refresh token, but user has a valid session with known identity
+  // Allow them to continue — the session cookie is still valid
+  if (user.claims?.sub) {
     return next();
-  } catch (error) {
-    res.status(401).json({ message: "Unauthorized" });
-    return;
   }
+
+  res.status(401).json({ message: "Unauthorized" });
+  return;
 };
 
 // Helper middleware to check if user is admin
