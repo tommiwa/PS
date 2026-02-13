@@ -1138,6 +1138,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     const canMarkPaid = !isPayroll && booking.status === "confirmed" && paymentStatus === 'pending' && !isCompleted && !isCancelled
     const canNotifyOwner = !isPayroll && booking.status === "confirmed" && paymentStatus === 'paid' && isPastDate && !isCompleted && !isCancelled
     const canCancel = booking.status === "confirmed" && !isPastDate && canCancelWithin24Hours && !isCompleted && !isCancelled
+    const withinCancellationWindow = booking.status === "confirmed" && !isPastDate && !canCancelWithin24Hours && !isCompleted && !isCancelled
     
     // Get status badge with color
     const getBookingStatusBadge = () => {
@@ -1354,7 +1355,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               <TooltipContent>View booking details and payment information</TooltipContent>
             </Tooltip>
             
-            {/* Cancel - For active bookings within cancellation window */}
+            {/* Cancel - For active bookings outside cancellation window */}
             {canCancel && (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -1370,6 +1371,18 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>{`Cancel this booking (available ${cancellationWindowHours}+ hours before)`}</TooltipContent>
+              </Tooltip>
+            )}
+            {/* Warning when within cancellation window */}
+            {withinCancellationWindow && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-1.5 px-2 py-1 text-xs text-amber-600 dark:text-amber-400">
+                    <Clock className="h-3.5 w-3.5 flex-shrink-0" />
+                    <span className="hidden sm:inline">Non-cancellable</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>{`This booking is within the ${cancellationWindowHours}-hour cancellation window and can no longer be cancelled. Contact support if you need assistance.`}</TooltipContent>
               </Tooltip>
             )}
             
@@ -1566,6 +1579,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     const canMarkPaid = !isPayroll && booking.status === "confirmed" && paymentStatus === 'pending' && !isCompleted && !isCancelled
     const canNotifyOwner = !isPayroll && booking.status === "confirmed" && paymentStatus === 'paid' && isPastDate && !isCompleted && !isCancelled
     const canCancel = booking.status === "confirmed" && !isPastDate && canCancelWithin24Hours && !isCompleted && !isCancelled
+    const withinCancellationWindow = booking.status === "confirmed" && !isPastDate && !canCancelWithin24Hours && !isCompleted && !isCancelled
     
     const getStatusBadge = () => {
       const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
@@ -1641,6 +1655,16 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               <Button variant="ghost" size="icon" onClick={() => handleCancelBooking(booking.id)} data-testid={`compact-cancel-${booking.id}`} className="text-destructive hover:text-destructive">
                 <XCircle className="h-4 w-4" />
               </Button>
+            )}
+            {withinCancellationWindow && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center text-amber-600 dark:text-amber-400">
+                    <Clock className="h-4 w-4" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>{`Within ${cancellationWindowHours}-hour cancellation window`}</TooltipContent>
+              </Tooltip>
             )}
             {isCompleted && (
               <Button variant="ghost" size="icon" onClick={() => handleDownloadReceipt(booking.id)} data-testid={`compact-receipt-${booking.id}`}>
