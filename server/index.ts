@@ -507,6 +507,29 @@ If you have questions about the collection of your personal information through 
   setInterval(autoCompleteBciBookings, 3600000);
   log("BCI booking auto-complete job scheduled (runs hourly)");
   
+  // Background cleanup job for expired sessions
+  async function cleanupExpiredSessions() {
+    try {
+      const result = await db.execute(
+        sql`DELETE FROM sessions WHERE expire < NOW()`
+      );
+      const deletedCount = (result as any).rowCount || 0;
+      if (deletedCount > 0) {
+        console.log(`[Session Cleanup] Removed ${deletedCount} expired session(s)`);
+      }
+    } catch (error) {
+      console.error("[Session Cleanup] Error cleaning up expired sessions:", error);
+    }
+  }
+
+  // Run session cleanup once on startup
+  log("Running initial session cleanup...");
+  await cleanupExpiredSessions();
+
+  // Set up interval to run session cleanup every 6 hours (21600000 ms)
+  setInterval(cleanupExpiredSessions, 21600000);
+  log("Session cleanup job scheduled (runs every 6 hours)");
+
   const server = await registerRoutes(app);
 
   // Setup WebSocket server

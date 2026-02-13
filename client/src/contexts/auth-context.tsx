@@ -76,7 +76,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [viewRole, setViewRole] = useState<UserRole | null>(null);
 
-  // Fetch authenticated user from backend
+  // Fetch authenticated user from backend with graceful session recovery
   const fetchUser = async () => {
     try {
       const response = await fetch('/api/auth/user', {
@@ -86,6 +86,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (response.ok) {
         const userData = await response.json();
         setUser(userData);
+        // Mark that we've had a successful session
+        try { sessionStorage.setItem('bci_had_session', '1'); } catch {}
+      } else if (response.status === 401) {
+        setUser(null);
+        
+        // Attempt silent re-auth if user previously had a session
+        // Use sessionStorage flag + cooldown to prevent redirect loops
+        const hadSession = sessionStorage.getItem('bci_had_session') === '1';
+        const lastReauthAttempt = parseInt(sessionStorage.getItem('bci_reauth_ts') || '0', 10);
+        const cooldownMs = 60000; // 1 minute cooldown between re-auth attempts
+        const now = Date.now();
+        
+        if (hadSession && (now - lastReauthAttempt) > cooldownMs) {
+          console.log("[Auth] Session expired, attempting silent re-auth...");
+          sessionStorage.setItem('bci_reauth_ts', String(now));
+          sessionStorage.removeItem('bci_had_session');
+          window.location.href = '/api/login';
+          return;
+        }
       } else {
         setUser(null);
       }

@@ -67,7 +67,8 @@ export function getSession() {
   return session({
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
-    resave: true, // Force session save on every request to help with OIDC flow
+    resave: false,
+    rolling: true, // Reset session expiry on every request (rolling sessions)
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
