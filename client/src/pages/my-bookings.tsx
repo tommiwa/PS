@@ -81,6 +81,11 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     enabled: isOwnerView, // Only fetch if user is an owner
   })
 
+  const { data: cancellationWindowConfig } = useQuery<{ key: string; value: string } | null>({
+    queryKey: ["/api/app-configs", "cancellation_window_hours"],
+  })
+  const cancellationWindowHours = cancellationWindowConfig?.value ? Number(cancellationWindowConfig.value) : 24
+
   // Use appropriate data based on user role
   const mockBookings: Booking[] = isOwnerView ? [] : renterBookings
   const listings: SpotListing[] = isOwnerView ? ownerListings : []
@@ -293,7 +298,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     const bookingDate = new Date(booking?.bookingDate + 'T00:00:00')
     const now = new Date()
     const hoursUntilBooking = (bookingDate.getTime() - now.getTime()) / (1000 * 60 * 60)
-    const canCancel = hoursUntilBooking >= 24
+    const canCancel = hoursUntilBooking >= cancellationWindowHours
     
     // Check if payment was already sent for a peer-to-peer booking
     const paymentAlreadySent = booking?.paymentStatus === 'paid'
@@ -1119,7 +1124,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     const bookingDate = new Date(booking.bookingDate + 'T00:00:00')
     const now = new Date()
     const hoursUntilBooking = (bookingDate.getTime() - now.getTime()) / (1000 * 60 * 60)
-    const canCancelWithin24Hours = hoursUntilBooking >= 24
+    const canCancelWithin24Hours = hoursUntilBooking >= cancellationWindowHours
     
     // Check if this is a payroll booking (BCI Workplace Services)
     const isPayroll = isPayrollBooking(booking)
@@ -1127,7 +1132,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     // Action visibility rules:
     // - canMarkPaid: Only for confirmed peer-to-peer bookings with pending payment (not for payroll spots)
     // - canNotifyOwner: Only for past peer-to-peer bookings where payment is 'paid' (awaiting owner confirmation)
-    // - canCancel: Only for FUTURE bookings that are 24+ hours away (regardless of payment status)
+    // - canCancel: Only for FUTURE bookings that are ${cancellationWindowHours}+ hours away (regardless of payment status)
     //   Past bookings cannot be cancelled since the spot was already used
     // - showReceipt: Only for completed bookings
     const canMarkPaid = !isPayroll && booking.status === "confirmed" && paymentStatus === 'pending' && !isCompleted && !isCancelled
@@ -1349,7 +1354,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               <TooltipContent>View booking details and payment information</TooltipContent>
             </Tooltip>
             
-            {/* Cancel - For active bookings 24+ hours away */}
+            {/* Cancel - For active bookings within cancellation window */}
             {canCancel && (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -1364,7 +1369,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                     <span className="hidden sm:inline">Cancel</span>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Cancel this booking (available 24+ hours before)</TooltipContent>
+                <TooltipContent>{`Cancel this booking (available ${cancellationWindowHours}+ hours before)`}</TooltipContent>
               </Tooltip>
             )}
             
@@ -1551,7 +1556,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     const bookingDate = new Date(booking.bookingDate + 'T00:00:00')
     const now = new Date()
     const hoursUntilBooking = (bookingDate.getTime() - now.getTime()) / (1000 * 60 * 60)
-    const canCancelWithin24Hours = hoursUntilBooking >= 24
+    const canCancelWithin24Hours = hoursUntilBooking >= cancellationWindowHours
     
     // Check if this is a payroll booking (BCI Workplace Services)
     const isPayroll = isPayrollBooking(booking)

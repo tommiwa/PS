@@ -1917,7 +1917,9 @@ export default function AdminDataManagement() {
                           <TableCell data-testid={`text-config-value-${config.key}`}>
                             {config.dataType === 'number' && config.key.includes('timeout') 
                               ? `${Number(config.value) / 1000}s`
-                              : config.value}
+                              : config.key === 'cancellation_window_hours'
+                                ? `${config.value} hours`
+                                : config.value}
                           </TableCell>
                           <TableCell data-testid={`text-config-description-${config.key}`}>
                             {config.description || "-"}
@@ -2334,7 +2336,7 @@ export default function AdminDataManagement() {
                     <Input
                       name="value"
                       type={editingConfig.dataType === 'number' ? 'number' : 'text'}
-                      min={editingConfig.dataType === 'number' && editingConfig.key.includes('timeout') ? 1 : undefined}
+                      min={editingConfig.dataType === 'number' && (editingConfig.key.includes('timeout') || editingConfig.key === 'cancellation_window_hours') ? 1 : undefined}
                       step={editingConfig.dataType === 'number' ? 1 : undefined}
                       defaultValue={
                         editingConfig.dataType === 'number' && editingConfig.key.includes('timeout')
@@ -2350,6 +2352,11 @@ export default function AdminDataManagement() {
                   {editingConfig.dataType === 'number' && editingConfig.key.includes('timeout') && (
                     <p className="text-sm text-muted-foreground mt-1">
                       Value in seconds (minimum: 1)
+                    </p>
+                  )}
+                  {editingConfig.key === 'cancellation_window_hours' && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Value in hours (minimum: 1). Users cannot cancel bookings within this many hours of the booking date.
                     </p>
                   )}
                   {editingConfig.key === 'timezone' && (

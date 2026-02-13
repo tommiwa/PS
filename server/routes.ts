@@ -4604,14 +4604,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: `Cannot cancel ${booking.status} booking` });
       }
 
-      // Check 24-hour cancellation policy
+      const cancellationWindowConfig = await storage.getAppConfigValue('cancellation_window_hours');
+      const cancellationWindowHours = cancellationWindowConfig ? Number(cancellationWindowConfig) : 24;
+
       const bookingDate = new Date(booking.bookingDate + 'T00:00:00');
       const now = new Date();
       const hoursUntilBooking = (bookingDate.getTime() - now.getTime()) / (1000 * 60 * 60);
       
-      if (hoursUntilBooking < 24) {
+      if (hoursUntilBooking < cancellationWindowHours) {
         return res.status(400).json({ 
-          error: "Cancellations must be made at least 24 hours before the booking date. Please contact support if you need assistance." 
+          error: `Cancellations must be made at least ${cancellationWindowHours} hours before the booking date. Please contact support if you need assistance.` 
         });
       }
 
@@ -4714,14 +4716,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: `Cannot cancel ${booking.status} booking` });
       }
 
-      // Check 24-hour cancellation policy
+      const cancellationWindowConfig2 = await storage.getAppConfigValue('cancellation_window_hours');
+      const cancellationWindowHours2 = cancellationWindowConfig2 ? Number(cancellationWindowConfig2) : 24;
+
       const bookingDate = new Date(booking.bookingDate + 'T00:00:00');
       const now = new Date();
       const hoursUntilBooking = (bookingDate.getTime() - now.getTime()) / (1000 * 60 * 60);
       
-      if (hoursUntilBooking < 24) {
+      if (hoursUntilBooking < cancellationWindowHours2) {
         return res.status(400).json({ 
-          error: "Cancellations must be made at least 24 hours before the booking date. Please contact support if you need assistance." 
+          error: `Cancellations must be made at least ${cancellationWindowHours2} hours before the booking date. Please contact support if you need assistance.` 
         });
       }
 
@@ -7286,6 +7290,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             dataType: 'string',
             category: 'system',
             description: 'The timezone used for displaying and calculating all dates and times in the application (e.g., America/Los_Angeles for PST/PDT)'
+          },
+          {
+            key: 'cancellation_window_hours',
+            value: '24',
+            label: 'Cancellation Window',
+            dataType: 'number',
+            category: 'booking',
+            description: 'Minimum hours before the booking date that cancellation is allowed. Users cannot cancel bookings within this time window.'
           }
         ];
         
@@ -7306,6 +7318,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching app configs:", error);
       res.status(500).json({ error: "Failed to fetch app configurations" });
+    }
+  });
+
+  // GET /api/app-configs/:key - Get specific app configuration (Authenticated users)
+  app.get("/api/app-configs/:key", isAuthenticated, async (req, res) => {
+    try {
+      const { key } = req.params;
+      const value = await storage.getAppConfigValue(key);
+      if (value === undefined) {
+        return res.status(404).json({ error: "Configuration not found" });
+      }
+      res.json({ key, value });
+    } catch (error) {
+      console.error("Error fetching app config:", error);
+      res.status(500).json({ error: "Failed to fetch app configuration" });
     }
   });
 
@@ -7349,7 +7376,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ error: "Value must be a valid number" });
         }
         // Special validation for timeout values (must be positive)
-        if (key.includes('timeout') && numValue <= 0) {
+        if ((key.includes('timeout') || key === 'cancellation_window_hours') && numValue <= 0) {
           return res.status(400).json({ error: "Timeout value must be greater than 0" });
         }
       }
