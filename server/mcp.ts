@@ -3,15 +3,13 @@ import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { registerAppTool, registerAppResource, RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
-import express from "express";
+import type { Express } from "express";
 import cors from "cors";
 import { createHash } from "crypto";
 import { storage } from "./storage";
 import type { User } from "@shared/schema";
 import fs from "node:fs";
 import path from "node:path";
-
-const MCP_PORT = 3001;
 
 const MCP_APPS_DIR = path.join(import.meta.dirname, "..", "mcp-apps", "dist");
 
@@ -481,14 +479,12 @@ function createMcpServerForUser(user: User): McpServer {
   return server;
 }
 
-export async function startMcpServer() {
-  const app = express();
-  app.use(cors());
-  app.use(express.json());
+const mcpTransports = new Map<string, { transport: SSEServerTransport; server: McpServer }>();
 
-  const transports = new Map<string, { transport: SSEServerTransport; server: McpServer }>();
+export function registerMcpRoutes(app: Express) {
+  app.use("/mcp", cors());
 
-  app.get("/sse", async (req, res) => {
+  app.get("/mcp/sse", async (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       res.status(401).json({ error: "API key required. Use Authorization: Bearer <your-api-key>" });
@@ -503,21 +499,21 @@ export async function startMcpServer() {
     }
 
     const server = createMcpServerForUser(authenticatedUser);
-    const transport = new SSEServerTransport("/messages", res);
+    const transport = new SSEServerTransport("/mcp/messages", res);
     const sessionId = transport.sessionId;
 
-    transports.set(sessionId, { transport, server });
+    mcpTransports.set(sessionId, { transport, server });
 
     res.on("close", () => {
-      transports.delete(sessionId);
+      mcpTransports.delete(sessionId);
     });
 
     await server.connect(transport);
   });
 
-  app.post("/messages", async (req, res) => {
+  app.post("/mcp/messages", async (req, res) => {
     const sessionId = req.query.sessionId as string;
-    const entry = transports.get(sessionId);
+    const entry = mcpTransports.get(sessionId);
     if (!entry) {
       res.status(404).json({ error: "Session not found" });
       return;
@@ -525,7 +521,7 @@ export async function startMcpServer() {
     await entry.transport.handlePostMessage(req, res);
   });
 
-  app.all("/mcp", async (req, res) => {
+  app.all("/mcp/stream", async (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       res.status(401).json({ error: "API key required" });
@@ -554,13 +550,13 @@ export async function startMcpServer() {
     }
   });
 
-  app.get("/health", (_req, res) => {
+  app.get("/mcp/health", (_req, res) => {
     res.json({
       status: "ok",
       server: "BCI ParkShare MCP",
       version: "1.0.0",
       transport: ["SSE", "Streamable HTTP"],
-      activeSessions: transports.size,
+      activeSessions: mcpTransports.size,
       mcpApps: ["spots-search", "my-bookings", "parking-stats"],
       tools: [
         "search_available_spots", "get_my_bookings", "get_booking_details", "cancel_booking",
@@ -569,14 +565,12 @@ export async function startMcpServer() {
         "get_waiting_list_status", "get_my_profile", "get_locations",
       ],
       authentication: "Bearer token (API key) in Authorization header",
-      endpoints: { sse: "/sse", messages: "/messages", mcp: "/mcp", health: "/health" },
+      endpoints: { sse: "/mcp/sse", messages: "/mcp/messages", stream: "/mcp/stream", health: "/mcp/health" },
     });
   });
 
-  app.listen(MCP_PORT, "0.0.0.0", () => {
-    console.log(`[MCP] BCI ParkShare MCP server running on port ${MCP_PORT}`);
-    console.log(`[MCP] SSE endpoint: http://localhost:${MCP_PORT}/sse`);
-    console.log(`[MCP] Streamable HTTP endpoint: http://localhost:${MCP_PORT}/mcp`);
-    console.log(`[MCP] Health check: http://localhost:${MCP_PORT}/health`);
-  });
+  console.log("[MCP] Routes registered on main server under /mcp/*");
+  console.log("[MCP] SSE endpoint: /mcp/sse");
+  console.log("[MCP] Streamable HTTP endpoint: /mcp/stream");
+  console.log("[MCP] Health check: /mcp/health");
 }

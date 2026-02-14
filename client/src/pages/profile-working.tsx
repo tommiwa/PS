@@ -1918,7 +1918,7 @@ export default function Profile() {
                     <div className="bg-muted p-3 rounded-md font-mono text-xs space-y-1">
                       <p>"mcpServers": {"{"}</p>
                       <p className="ml-4">"parkshare": {"{"}</p>
-                      <p className="ml-8">"url": "https://your-app-url:3001/mcp",</p>
+                      <p className="ml-8">"url": "https://your-app-url/mcp/stream",</p>
                       <p className="ml-8">"headers": {"{"}</p>
                       <p className="ml-12">"Authorization": "Bearer YOUR_API_KEY"</p>
                       <p className="ml-8">{"}"}</p>
@@ -1926,8 +1926,8 @@ export default function Profile() {
                       <p>{"}"}</p>
                     </div>
                     <p className="text-xs mt-2">
-                      The <code>/mcp</code> endpoint supports MCP Apps with interactive UIs for spot search, bookings, and statistics.
-                      For legacy SSE-only clients, use <code>/sse</code> instead.
+                      The <code>/mcp/stream</code> endpoint supports MCP Apps with interactive UIs for spot search, bookings, and statistics.
+                      For legacy SSE-only clients, use <code>/mcp/sse</code> instead.
                     </p>
                   </div>
                 </CardContent>

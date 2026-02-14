@@ -530,11 +530,9 @@ If you have questions about the collection of your personal information through 
   setInterval(cleanupExpiredSessions, 21600000);
   log("Session cleanup job scheduled (runs every 6 hours)");
 
-  // Start MCP server (separate port for AI assistant integrations)
-  const { startMcpServer } = await import("./mcp");
-  startMcpServer().catch(err => {
-    console.error("[MCP] Failed to start MCP server:", err);
-  });
+  // Register MCP routes on the main Express app (same port)
+  const { registerMcpRoutes } = await import("./mcp");
+  registerMcpRoutes(app);
 
   const server = await registerRoutes(app);
 
