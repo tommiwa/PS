@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Available Parking Spots</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
+      background: var(--color-background-primary, #ffffff);
+      color: var(--color-text-primary, #1a1a1a);
+      padding: 16px;
+      line-height: 1.5;
+    }
+    [data-theme="dark"] body {
+      background: var(--color-background-primary, #1a1a2e);
+      color: var(--color-text-primary, #e0e0e0);
+    }
+    .header { margin-bottom: 16px; }
+    .header h2 { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+    .header p { font-size: 13px; opacity: 0.7; }
+    .filters { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .filters input, .filters select {
+      padding: 8px 12px;
+      border: 1px solid var(--color-border-primary, #e0e0e0);
+      border-radius: 6px;
+      font-size: 13px;
+      background: var(--color-background-secondary, #f8f9fa);
+      color: inherit;
+      outline: none;
+    }
+    [data-theme="dark"] .filters input,
+    [data-theme="dark"] .filters select {
+      background: var(--color-background-secondary, #2a2a3e);
+      border-color: var(--color-border-primary, #3a3a4e);
+    }
+    .filters input:focus, .filters select:focus {
+      border-color: #3b82f6;
+    }
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn-primary { background: #3b82f6; color: white; }
+    .btn-sm { padding: 6px 12px; font-size: 12px; }
+    .spots-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+    .spot-card {
+      border: 1px solid var(--color-border-primary, #e0e0e0);
+      border-radius: 8px;
+      padding: 14px;
+      background: var(--color-background-secondary, #f8f9fa);
+      transition: border-color 0.2s;
+    }
+    [data-theme="dark"] .spot-card {
+      background: var(--color-background-secondary, #2a2a3e);
+      border-color: var(--color-border-primary, #3a3a4e);
+    }
+    .spot-card:hover { border-color: #3b82f6; }
+    .spot-name { font-weight: 600; font-size: 15px; margin-bottom: 6px; }
+    .spot-meta { font-size: 12px; opacity: 0.7; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+    .spot-price { font-weight: 600; color: #10b981; font-size: 14px; margin-top: 8px; }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+    .badge-type { background: #dbeafe; color: #1d4ed8; }
+    .badge-charity { background: #fce7f3; color: #be185d; }
+    [data-theme="dark"] .badge-type { background: #1e3a5f; color: #93c5fd; }
+    [data-theme="dark"] .badge-charity { background: #4a1942; color: #f9a8d4; }
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      opacity: 0.6;
+    }
+    .empty-state svg { width: 48px; height: 48px; margin-bottom: 12px; opacity: 0.4; }
+    .loading { text-align: center; padding: 40px; opacity: 0.6; }
+    .count { font-size: 12px; opacity: 0.6; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h2>Available Parking Spots</h2>
+    <p>Browse and search for available spots to book</p>
+  </div>
+  <div class="filters">
+    <input type="text" id="filter-location" placeholder="Filter by location..." />
+    <input type="date" id="filter-date" />
+    <button class="btn btn-primary btn-sm" id="btn-refresh">Refresh</button>
+  </div>
+  <div id="count" class="count"></div>
+  <div id="content" class="loading">Loading available spots...</div>
+  <script type="module" src="/src/spots-search.ts"></script>
+</body>
+</html>

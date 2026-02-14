@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Parking Statistics</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
+      background: var(--color-background-primary, #ffffff);
+      color: var(--color-text-primary, #1a1a1a);
+      padding: 16px;
+      line-height: 1.5;
+    }
+    [data-theme="dark"] body {
+      background: var(--color-background-primary, #1a1a2e);
+      color: var(--color-text-primary, #e0e0e0);
+    }
+    .header { margin-bottom: 16px; }
+    .header h2 { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+    .header p { font-size: 13px; opacity: 0.7; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .stat-card {
+      padding: 16px;
+      border-radius: 8px;
+      background: var(--color-background-secondary, #f8f9fa);
+      border: 1px solid var(--color-border-primary, #e0e0e0);
+    }
+    [data-theme="dark"] .stat-card {
+      background: var(--color-background-secondary, #2a2a3e);
+      border-color: var(--color-border-primary, #3a3a4e);
+    }
+    .stat-value { font-size: 28px; font-weight: 700; }
+    .stat-label { font-size: 12px; opacity: 0.6; margin-top: 4px; }
+    .stat-icon { font-size: 20px; margin-bottom: 8px; opacity: 0.5; }
+    .color-blue .stat-value { color: #3b82f6; }
+    .color-green .stat-value { color: #10b981; }
+    .color-purple .stat-value { color: #8b5cf6; }
+    .color-amber .stat-value { color: #f59e0b; }
+    .color-rose .stat-value { color: #f43f5e; }
+    .color-cyan .stat-value { color: #06b6d4; }
+    .section { margin-bottom: 20px; }
+    .section h3 { font-size: 15px; font-weight: 600; margin-bottom: 10px; }
+    .bar-chart { display: flex; flex-direction: column; gap: 8px; }
+    .bar-row { display: flex; align-items: center; gap: 10px; }
+    .bar-label { font-size: 12px; min-width: 120px; opacity: 0.8; }
+    .bar-track {
+      flex: 1;
+      height: 20px;
+      background: var(--color-background-secondary, #f0f0f0);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    [data-theme="dark"] .bar-track { background: var(--color-background-secondary, #2a2a3e); }
+    .bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; min-width: 2px; }
+    .bar-value { font-size: 12px; min-width: 40px; text-align: right; font-weight: 500; }
+    .tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+    .tab {
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid var(--color-border-primary, #e0e0e0);
+      background: none;
+      color: inherit;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    [data-theme="dark"] .tab { border-color: var(--color-border-primary, #3a3a4e); }
+    .tab:hover { opacity: 0.8; }
+    .tab.active { background: #3b82f6; color: white; border-color: #3b82f6; }
+    .btn { padding: 6px 12px; border: 1px solid var(--color-border-primary, #e0e0e0); border-radius: 6px; font-size: 12px; cursor: pointer; background: none; color: inherit; }
+    .btn:hover { opacity: 0.8; }
+    .loading { text-align: center; padding: 40px; opacity: 0.6; }
+    .empty-state { text-align: center; padding: 40px 20px; opacity: 0.6; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h2>Parking Statistics</h2>
+    <p>Your parking activity overview</p>
+  </div>
+  <div class="tabs" id="role-tabs">
+    <button class="tab active" data-role="renter">As Renter</button>
+    <button class="tab" data-role="owner">As Owner</button>
+  </div>
+  <div id="content" class="loading">Loading your statistics...</div>
+  <script type="module" src="/src/parking-stats.ts"></script>
+</body>
+</html>

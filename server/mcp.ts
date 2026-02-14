@@ -1,12 +1,27 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { registerAppTool, registerAppResource, RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
 import express from "express";
+import cors from "cors";
 import { createHash } from "crypto";
 import { storage } from "./storage";
 import type { User } from "@shared/schema";
+import fs from "node:fs";
+import path from "node:path";
 
 const MCP_PORT = 3001;
+
+const MCP_APPS_DIR = path.join(import.meta.dirname, "..", "mcp-apps", "dist");
+
+function readAppHtml(filename: string): string {
+  try {
+    return fs.readFileSync(path.join(MCP_APPS_DIR, filename), "utf-8");
+  } catch {
+    return `<html><body><p>MCP App UI not built. Run the build step first.</p></body></html>`;
+  }
+}
 
 async function authenticateApiKey(apiKey: string): Promise<User | null> {
   if (!apiKey) return null;
@@ -42,14 +57,20 @@ function createMcpServerForUser(user: User): McpServer {
     version: "1.0.0",
   });
 
-  server.tool(
+  const spotsSearchUri = "ui://parkshare/spots-search.html";
+  registerAppTool(
+    server,
     "search_available_spots",
-    "Search for available parking spots. Returns spots with active listings that can be booked.",
     {
-      location: z.string().optional().describe("Filter by location name (partial match)"),
-      date: z.string().optional().describe("Filter by specific date (YYYY-MM-DD format)"),
+      title: "Search Available Spots",
+      description: "Search for available parking spots. Returns spots with active listings that can be booked.",
+      inputSchema: {
+        location: z.string().optional().describe("Filter by location name (partial match)"),
+        date: z.string().optional().describe("Filter by specific date (YYYY-MM-DD format)"),
+      },
+      _meta: { ui: { resourceUri: spotsSearchUri } },
     },
-    async ({ location, date }) => {
+    async ({ location, date }): Promise<any> => {
       try {
         const activeListings = await storage.getActiveSpotListings();
         const allSpots = await storage.getAllParkingSpots();
@@ -109,11 +130,29 @@ function createMcpServerForUser(user: User): McpServer {
     }
   );
 
-  server.tool(
+  registerAppResource(
+    server,
+    "Available Spots Search",
+    spotsSearchUri,
+    { mimeType: RESOURCE_MIME_TYPE },
+    async () => ({
+      contents: [{ uri: spotsSearchUri, mimeType: RESOURCE_MIME_TYPE, text: readAppHtml("spots-search.html") }],
+    }),
+  );
+
+  const myBookingsUri = "ui://parkshare/my-bookings.html";
+  registerAppTool(
+    server,
     "get_my_bookings",
-    "Get all your bookings (past and upcoming).",
-    { status: z.enum(["confirmed", "completed", "cancelled", "all"]).optional().describe("Filter by status") },
-    async ({ status }) => {
+    {
+      title: "Get My Bookings",
+      description: "Get all your bookings (past and upcoming).",
+      inputSchema: {
+        status: z.enum(["confirmed", "completed", "cancelled", "all"]).optional().describe("Filter by status"),
+      },
+      _meta: { ui: { resourceUri: myBookingsUri } },
+    },
+    async ({ status }): Promise<any> => {
       try {
         let bookingsList = await storage.getBookingsByUser(user.id);
         const allSpots = await storage.getAllParkingSpots();
@@ -134,6 +173,16 @@ function createMcpServerForUser(user: User): McpServer {
         return { content: [{ type: "text" as const, text: `Error: ${error.message}` }] };
       }
     }
+  );
+
+  registerAppResource(
+    server,
+    "My Bookings",
+    myBookingsUri,
+    { mimeType: RESOURCE_MIME_TYPE },
+    async () => ({
+      contents: [{ uri: myBookingsUri, mimeType: RESOURCE_MIME_TYPE, text: readAppHtml("my-bookings.html") }],
+    }),
   );
 
   server.tool(
@@ -303,11 +352,17 @@ function createMcpServerForUser(user: User): McpServer {
     }
   );
 
-  server.tool(
+  const parkingStatsUri = "ui://parkshare/parking-stats.html";
+  registerAppTool(
+    server,
     "get_renter_stats",
-    "Get your parking statistics as a renter.",
-    {},
-    async () => {
+    {
+      title: "Get Renter Stats",
+      description: "Get your parking statistics as a renter.",
+      inputSchema: {},
+      _meta: { ui: { resourceUri: parkingStatsUri } },
+    },
+    async (): Promise<any> => {
       try {
         const bks = await storage.getBookingsByUser(user.id);
         const allSpots = await storage.getAllParkingSpots();
@@ -333,6 +388,16 @@ function createMcpServerForUser(user: User): McpServer {
         return { content: [{ type: "text" as const, text: `Error: ${error.message}` }] };
       }
     }
+  );
+
+  registerAppResource(
+    server,
+    "Parking Stats",
+    parkingStatsUri,
+    { mimeType: RESOURCE_MIME_TYPE },
+    async () => ({
+      contents: [{ uri: parkingStatsUri, mimeType: RESOURCE_MIME_TYPE, text: readAppHtml("parking-stats.html") }],
+    }),
   );
 
   server.tool(
@@ -418,6 +483,7 @@ function createMcpServerForUser(user: User): McpServer {
 
 export async function startMcpServer() {
   const app = express();
+  app.use(cors());
   app.use(express.json());
 
   const transports = new Map<string, { transport: SSEServerTransport; server: McpServer }>();
@@ -459,13 +525,43 @@ export async function startMcpServer() {
     await entry.transport.handlePostMessage(req, res);
   });
 
+  app.all("/mcp", async (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      res.status(401).json({ error: "API key required" });
+      return;
+    }
+    const apiKey = authHeader.substring(7);
+    const authenticatedUser = await authenticateApiKey(apiKey);
+    if (!authenticatedUser) {
+      res.status(401).json({ error: "Invalid or revoked API key" });
+      return;
+    }
+    const server = createMcpServerForUser(authenticatedUser);
+    const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+    res.on("close", () => {
+      transport.close().catch(() => {});
+      server.close().catch(() => {});
+    });
+    try {
+      await server.connect(transport);
+      await transport.handleRequest(req, res, req.body);
+    } catch (error) {
+      console.error("[MCP] Streamable HTTP error:", error);
+      if (!res.headersSent) {
+        res.status(500).json({ jsonrpc: "2.0", error: { code: -32603, message: "Internal server error" }, id: null });
+      }
+    }
+  });
+
   app.get("/health", (_req, res) => {
     res.json({
       status: "ok",
       server: "BCI ParkShare MCP",
       version: "1.0.0",
-      transport: "SSE",
+      transport: ["SSE", "Streamable HTTP"],
       activeSessions: transports.size,
+      mcpApps: ["spots-search", "my-bookings", "parking-stats"],
       tools: [
         "search_available_spots", "get_my_bookings", "get_booking_details", "cancel_booking",
         "get_my_listings", "cancel_listing", "get_my_spots", "get_my_notifications",
@@ -473,13 +569,14 @@ export async function startMcpServer() {
         "get_waiting_list_status", "get_my_profile", "get_locations",
       ],
       authentication: "Bearer token (API key) in Authorization header",
-      endpoints: { sse: "/sse", messages: "/messages", health: "/health" },
+      endpoints: { sse: "/sse", messages: "/messages", mcp: "/mcp", health: "/health" },
     });
   });
 
   app.listen(MCP_PORT, "0.0.0.0", () => {
     console.log(`[MCP] BCI ParkShare MCP server running on port ${MCP_PORT}`);
     console.log(`[MCP] SSE endpoint: http://localhost:${MCP_PORT}/sse`);
+    console.log(`[MCP] Streamable HTTP endpoint: http://localhost:${MCP_PORT}/mcp`);
     console.log(`[MCP] Health check: http://localhost:${MCP_PORT}/health`);
   });
 }
