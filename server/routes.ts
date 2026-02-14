@@ -9148,6 +9148,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==========================================
+  // API Key Management (for MCP server access)
+  // ==========================================
+
+  // Create a new API key
+  app.post("/api/api-keys", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+
+      const { name } = req.body;
+      if (!name || typeof name !== 'string' || name.trim().length === 0) {
+        return res.status(400).json({ error: "Name is required" });
+      }
+
+      // Check limit (max 5 active keys per user)
+      const existingKeys = await storage.getApiKeysByUser(userId);
+      if (existingKeys.length >= 5) {
+        return res.status(400).json({ error: "Maximum of 5 active API keys allowed" });
+      }
+
+      // Generate a random API key
+      const crypto = await import("crypto");
+      const rawKey = `bci_pk_${crypto.randomBytes(32).toString('hex')}`;
+      const keyHash = crypto.createHash('sha256').update(rawKey).digest('hex');
+      const keyPrefix = rawKey.substring(0, 15);
+
+      const apiKey = await storage.createApiKey({
+        userId,
+        keyHash,
+        keyPrefix,
+        name: name.trim(),
+      });
+
+      // Return the raw key ONLY on creation (never stored or shown again)
+      res.json({
+        id: apiKey.id,
+        name: apiKey.name,
+        keyPrefix: apiKey.keyPrefix,
+        key: rawKey,
+        createdAt: apiKey.createdAt,
+      });
+    } catch (error) {
+      console.error("Error creating API key:", error);
+      res.status(500).json({ error: "Failed to create API key" });
+    }
+  });
+
+  // List user's API keys (no raw keys shown)
+  app.get("/api/api-keys", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+
+      const keys = await storage.getApiKeysByUser(userId);
+      res.json(keys.map(k => ({
+        id: k.id,
+        name: k.name,
+        keyPrefix: k.keyPrefix,
+        lastUsedAt: k.lastUsedAt,
+        createdAt: k.createdAt,
+      })));
+    } catch (error) {
+      console.error("Error listing API keys:", error);
+      res.status(500).json({ error: "Failed to list API keys" });
+    }
+  });
+
+  // Revoke an API key
+  app.delete("/api/api-keys/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+
+      const success = await storage.revokeApiKey(req.params.id, userId);
+      if (!success) {
+        return res.status(404).json({ error: "API key not found" });
+      }
+
+      res.json({ success: true, message: "API key revoked" });
+    } catch (error) {
+      console.error("Error revoking API key:", error);
+      res.status(500).json({ error: "Failed to revoke API key" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

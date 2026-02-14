@@ -56,13 +56,15 @@ import {
   type InsertLockerAssignmentHistory,
   type LockerType,
   type AppConfig,
-  type InsertAppConfig
+  type InsertAppConfig,
+  type ApiKey,
+  type InsertApiKey
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { auditDecorator } from "./audit-service";
 import { type IAuditStorage } from "./audit-storage";
 import { db } from "./db";
-import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, locations, spotTypesTable, termsVersions, spotAssignmentHistory, spotLocks, lockers, lockerWaitlist, lockerAssignmentHistory, lockerTypesTable, appConfigs } from "@shared/schema";
+import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, locations, spotTypesTable, termsVersions, spotAssignmentHistory, spotLocks, lockers, lockerWaitlist, lockerAssignmentHistory, lockerTypesTable, appConfigs, apiKeys } from "@shared/schema";
 import { eq, or, ilike, asc, and, notExists, sql as sqlOp, count, desc, inArray, isNull } from "drizzle-orm";
 
 // Storage interface with comprehensive CRUD methods
@@ -362,6 +364,13 @@ export interface IStorage {
   updateAppConfig(key: string, value: string, updatedBy?: string): Promise<AppConfig | undefined>;
   createAppConfig(config: InsertAppConfig): Promise<AppConfig>;
   deleteAppConfig(key: string): Promise<boolean>;
+  
+  // API Key operations
+  createApiKey(data: { userId: string; keyHash: string; keyPrefix: string; name: string }): Promise<ApiKey>;
+  getApiKeysByUser(userId: string): Promise<ApiKey[]>;
+  getApiKeyByHash(keyHash: string): Promise<ApiKey | undefined>;
+  revokeApiKey(id: string, userId: string): Promise<boolean>;
+  updateApiKeyLastUsed(id: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -3951,6 +3960,30 @@ export class MemStorage implements IStorage {
   async deleteAppConfig(key: string): Promise<boolean> {
     const result = await db.delete(appConfigs).where(eq(appConfigs.key, key));
     return (result.rowCount ?? 0) > 0;
+  }
+
+  // API Key operations
+  async createApiKey(data: { userId: string; keyHash: string; keyPrefix: string; name: string }): Promise<ApiKey> {
+    const [result] = await db.insert(apiKeys).values(data).returning();
+    return result;
+  }
+
+  async getApiKeysByUser(userId: string): Promise<ApiKey[]> {
+    return db.select().from(apiKeys).where(and(eq(apiKeys.userId, userId), isNull(apiKeys.revokedAt))).orderBy(desc(apiKeys.createdAt));
+  }
+
+  async getApiKeyByHash(keyHash: string): Promise<ApiKey | undefined> {
+    const [result] = await db.select().from(apiKeys).where(and(eq(apiKeys.keyHash, keyHash), isNull(apiKeys.revokedAt))).limit(1);
+    return result;
+  }
+
+  async revokeApiKey(id: string, userId: string): Promise<boolean> {
+    const [result] = await db.update(apiKeys).set({ revokedAt: new Date() }).where(and(eq(apiKeys.id, id), eq(apiKeys.userId, userId))).returning();
+    return !!result;
+  }
+
+  async updateApiKeyLastUsed(id: string): Promise<void> {
+    await db.update(apiKeys).set({ lastUsedAt: new Date() }).where(eq(apiKeys.id, id));
   }
 
   // Audit decorators will be applied via server initialization

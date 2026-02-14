@@ -1475,3 +1475,25 @@ export const updateAppConfigSchema = createInsertSchema(appConfigs).omit({
 export type InsertAppConfig = z.infer<typeof insertAppConfigSchema>;
 export type UpdateAppConfig = z.infer<typeof updateAppConfigSchema>;
 export type AppConfig = typeof appConfigs.$inferSelect;
+
+// API Keys Table - MCP API key management system
+export const apiKeys = pgTable("api_keys", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  keyHash: varchar("key_hash").notNull(),
+  keyPrefix: varchar("key_prefix").notNull(),
+  name: varchar("name").notNull(),
+  lastUsedAt: timestamp("last_used_at"),
+  revokedAt: timestamp("revoked_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertApiKeySchema = createInsertSchema(apiKeys).omit({
+  id: true,
+  lastUsedAt: true,
+  revokedAt: true,
+  createdAt: true,
+});
+
+export type InsertApiKey = z.infer<typeof insertApiKeySchema>;
+export type ApiKey = typeof apiKeys.$inferSelect;
