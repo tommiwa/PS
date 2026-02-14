@@ -287,7 +287,7 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
         <div className="flex flex-wrap gap-2 md:hidden">
           {visibleFilters.map(renderFilterButton)}
           
-          <Sheet open={showMoreFilters} onOpenChange={setShowMoreFilters}>
+          {hiddenFilters.length > 0 && <Sheet open={showMoreFilters} onOpenChange={setShowMoreFilters}>
             <SheetTrigger asChild>
               <Button
                 variant="ghost"
@@ -318,7 +318,7 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
                 {hiddenFilters.map(renderFilterButton)}
               </div>
             </SheetContent>
-          </Sheet>
+          </Sheet>}
         </div>
 
         {/* Desktop: Show all filters */}
