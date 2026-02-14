@@ -124,17 +124,15 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
     return format(deductionDate, "MMMM yyyy");
   }
 
-  // Determine if spot is truly BCI-managed (payroll eligible) vs peer-to-peer
-  // A spot uses payroll deduction ONLY if:
-  // 1. isBciManaged flag is true, AND
-  // 2. There is no individual owner (assignedUserName is null/undefined)
-  // If there's a real person as owner, it's peer-to-peer even if isBciManaged flag is incorrectly set
-  const isTrulyBciManaged = (): boolean => {
-    const hasIndividualOwner = !!(spot as any).assignedUserName;
-    return spot.isBciManaged && !hasIndividualOwner;
+  // Determine if this is a Workplace Services spot (payroll eligible)
+  // A Workplace Services spot is one listed by admin (not permanently assigned to an employee)
+  // When admin creates a listing, the backend sets assignedUserName to "BCI Workplace Services"
+  // If an individual owner created the listing, their name appears instead → peer-to-peer with cash/e-transfer
+  const isWorkplaceServicesSpot = (): boolean => {
+    return (spot as any).assignedUserName === 'BCI Workplace Services';
   }
   
-  const isPayrollSpot = isTrulyBciManaged();
+  const isPayrollSpot = isWorkplaceServicesSpot();
 
   // Countdown timer effect
   useEffect(() => {
