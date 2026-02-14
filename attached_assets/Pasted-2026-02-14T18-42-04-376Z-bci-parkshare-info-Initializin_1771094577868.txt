@@ -1,0 +1,96 @@
+2026-02-14T18:42:04.376Z [bci-parkshare] [info] Initializing server... { metadata: undefined }
+2026-02-14T18:42:04.442Z [bci-parkshare] [info] Using MCP server command: npx with args and path: {
+  metadata: {
+    args: [
+      'mcp-remote@latest',
+      'https://park-share-bci.replit.app/mcp/sse',
+      '--header',
+      'Authorization: Bearer bci_pk_d9ee29d6b2a154a1fac54a56838a2d5be996dd203c6e2a4631d7edb851972560',
+      [length]: 4
+    ],
+    paths: [
+      'C:\\Program Files\\Git\\cmd',
+      'C:\\Program Files\\Git\\mingw64\\bin',
+      'C:\\Program Files\\Amazon Corretto\\jdk1.8.0_482\\bin',
+      'C:\\WINDOWS\\system32',
+      'C:\\WINDOWS',
+      'C:\\WINDOWS\\System32\\Wbem',
+      'C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\',
+      'C:\\WINDOWS\\System32\\OpenSSH\\',
+      'C:\\Program Files\\ASCI\\ActiveBatchV11\\',
+      'C:\\Program Files\\Azure Data Studio\\bin',
+      'C:\\Program Files\\Microsoft VS Code\\bin',
+      'C:\\Users\\ljoseji\\AppData\\Local\\Microsoft\\WindowsApps',
+      '',
+      [length]: 13
+    ]
+  }
+} %o
+2026-02-14T18:42:04.467Z [bci-parkshare] [info] Server started and connected successfully { metadata: undefined }
+2026-02-14T18:42:04.592Z [bci-parkshare] [info] Message from client: {"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{"extensions":{"io.modelcontextprotocol/ui":{"mimeTypes":["text/html;profile=mcp-app"]}}},"clientInfo":{"name":"claude-ai","version":"0.1.0"}},"jsonrpc":"2.0","id":0} { metadata: undefined }
+'npx' is not recognized as an internal or external command,
+operable program or batch file.
+2026-02-14T18:42:04.629Z [bci-parkshare] [error] spawn npx ENOENT {
+  metadata: {
+    context: 'connection',
+    stack: 'Error: spawn npx ENOENT\n' +
+      '    at e (C:\\Users\\ljoseji\\AppData\\Local\\AnthropicClaude\\app-1.1.3189\\resources\\app.asar\\.vite\\build\\index.js:302:7709)\n' +
+      '    at n (C:\\Users\\ljoseji\\AppData\\Local\\AnthropicClaude\\app-1.1.3189\\resources\\app.asar\\.vite\\build\\index.js:302:8036)\n' +
+      '    at a.emit (C:\\Users\\ljoseji\\AppData\\Local\\AnthropicClaude\\app-1.1.3189\\resources\\app.asar\\.vite\\build\\index.js:302:7927)\n' +
+      '    at ChildProcess._handle.onexit (node:internal/child_process:294:12)'
+  }
+}
+2026-02-14T18:42:04.629Z [bci-parkshare] [info] Server transport closed { metadata: undefined }
+2026-02-14T18:42:04.630Z [bci-parkshare] [info] Client transport closed { metadata: undefined }
+2026-02-14T18:42:04.630Z [bci-parkshare] [info] Server transport closed unexpectedly, this is likely due to the process exiting early. If you are developing this MCP server you can add output to stderr (i.e. `console.error('...')` in JavaScript, `print('...', file=sys.stderr)` in python) and it will appear in this log. { metadata: undefined }
+2026-02-14T18:42:04.630Z [bci-parkshare] [error] Server disconnected. For troubleshooting guidance, please visit our [debugging documentation](https://modelcontextprotocol.io/docs/tools/debugging) { metadata: { context: 'connection', stack: undefined } }
+2026-02-14T18:42:04.630Z [bci-parkshare] [info] Client transport closed { metadata: undefined }
+2026-02-14T18:42:14.117Z [bci-parkshare] [info] Client transport closed { metadata: undefined }
+2026-02-14T18:42:14.117Z [bci-parkshare] [info] Shutting down server... { metadata: undefined }
+2026-02-14T18:42:14.118Z [bci-parkshare] [info] Initializing server... { metadata: undefined }
+2026-02-14T18:42:14.159Z [bci-parkshare] [info] Using MCP server command: npx with args and path: {
+  metadata: {
+    args: [
+      'mcp-remote@latest',
+      'https://park-share-bci.replit.app/mcp/sse',
+      '--header',
+      'Authorization: Bearer bci_pk_d9ee29d6b2a154a1fac54a56838a2d5be996dd203c6e2a4631d7edb851972560',
+      [length]: 4
+    ],
+    paths: [
+      'C:\\Program Files\\Git\\cmd',
+      'C:\\Program Files\\Git\\mingw64\\bin',
+      'C:\\Program Files\\Amazon Corretto\\jdk1.8.0_482\\bin',
+      'C:\\WINDOWS\\system32',
+      'C:\\WINDOWS',
+      'C:\\WINDOWS\\System32\\Wbem',
+      'C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\',
+      'C:\\WINDOWS\\System32\\OpenSSH\\',
+      'C:\\Program Files\\ASCI\\ActiveBatchV11\\',
+      'C:\\Program Files\\Azure Data Studio\\bin',
+      'C:\\Program Files\\Microsoft VS Code\\bin',
+      'C:\\Users\\ljoseji\\AppData\\Local\\Microsoft\\WindowsApps',
+      '',
+      [length]: 13
+    ]
+  }
+} %o
+2026-02-14T18:42:14.186Z [bci-parkshare] [info] Server started and connected successfully { metadata: undefined }
+2026-02-14T18:42:14.200Z [bci-parkshare] [info] Message from client: {"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{"extensions":{"io.modelcontextprotocol/ui":{"mimeTypes":["text/html;profile=mcp-app"]}}},"clientInfo":{"name":"claude-ai","version":"0.1.0"}},"jsonrpc":"2.0","id":0} { metadata: undefined }
+'npx' is not recognized as an internal or external command,
+operable program or batch file.
+2026-02-14T18:42:14.296Z [bci-parkshare] [error] spawn npx ENOENT {
+  metadata: {
+    context: 'connection',
+    stack: 'Error: spawn npx ENOENT\n' +
+      '    at e (C:\\Users\\ljoseji\\AppData\\Local\\AnthropicClaude\\app-1.1.3189\\resources\\app.asar\\.vite\\build\\index.js:302:7709)\n' +
+      '    at n (C:\\Users\\ljoseji\\AppData\\Local\\AnthropicClaude\\app-1.1.3189\\resources\\app.asar\\.vite\\build\\index.js:302:8036)\n' +
+      '    at a.emit (C:\\Users\\ljoseji\\AppData\\Local\\AnthropicClaude\\app-1.1.3189\\resources\\app.asar\\.vite\\build\\index.js:302:7927)\n' +
+      '    at ChildProcess._handle.onexit (node:internal/child_process:294:12)'
+  }
+}
+2026-02-14T18:42:14.296Z [bci-parkshare] [info] Server transport closed { metadata: undefined }
+2026-02-14T18:42:14.297Z [bci-parkshare] [info] Client transport closed { metadata: undefined }
+2026-02-14T18:42:14.297Z [bci-parkshare] [info] Server transport closed unexpectedly, this is likely due to the process exiting early. If you are developing this MCP server you can add output to stderr (i.e. `console.error('...')` in JavaScript, `print('...', file=sys.stderr)` in python) and it will appear in this log. { metadata: undefined }
+2026-02-14T18:42:14.297Z [bci-parkshare] [error] Server disconnected. For troubleshooting guidance, please visit our [debugging documentation](https://modelcontextprotocol.io/docs/tools/debugging) { metadata: { context: 'connection', stack: undefined } }
+2026-02-14T18:42:14.297Z [bci-parkshare] [info] Client transport closed { metadata: undefined }
