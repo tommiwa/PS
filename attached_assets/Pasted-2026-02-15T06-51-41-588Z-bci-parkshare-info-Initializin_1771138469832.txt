@@ -1,0 +1,90 @@
+2026-02-15T06:51:41.588Z [bci-parkshare] [info] Initializing server... { metadata: undefined }
+2026-02-15T06:51:41.650Z [bci-parkshare] [info] Using MCP server command: C:\WINDOWS\System32\cmd.exe with args and path: {
+  metadata: {
+    args: [
+      '/C',
+      'C:\\Softwares\\node-v24.13.1\\npx.cmd',
+      'mcp-remote@latest',
+      'https://park-share-bci.replit.app/mcp/sse',
+      '--header',
+      'Authorization: Bearer bci_pk_163369c7819d0a3d0ef8eef8ff05c3eba551a31b9cb7161a3ee1f58f972ed136',
+      [length]: 6
+    ],
+    paths: [
+      'C:\\Program Files\\Git\\cmd',
+      'C:\\Program Files\\Git\\mingw64\\bin',
+      'C:\\Program Files\\Amazon Corretto\\jdk1.8.0_482\\bin',
+      'C:\\WINDOWS\\system32',
+      'C:\\WINDOWS',
+      'C:\\WINDOWS\\System32\\Wbem',
+      'C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\',
+      'C:\\WINDOWS\\System32\\OpenSSH\\',
+      'C:\\Program Files\\ASCI\\ActiveBatchV11\\',
+      'C:\\Program Files\\Azure Data Studio\\bin',
+      'C:\\Program Files\\Microsoft VS Code\\bin',
+      'C:\\Users\\ljoseji\\AppData\\Local\\Microsoft\\WindowsApps',
+      'C:\\Softwares\\node-v24.13.1',
+      '',
+      [length]: 14
+    ]
+  }
+} %o
+2026-02-15T06:51:41.668Z [bci-parkshare] [info] Server started and connected successfully { metadata: undefined }
+2026-02-15T06:51:41.730Z [bci-parkshare] [info] Message from client: {"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{"extensions":{"io.modelcontextprotocol/ui":{"mimeTypes":["text/html;profile=mcp-app"]}}},"clientInfo":{"name":"claude-ai","version":"0.1.0"}},"jsonrpc":"2.0","id":0} { metadata: undefined }
+2026-02-15T06:52:01.639Z [bci-parkshare] [info] Client transport closed { metadata: undefined }
+2026-02-15T06:52:01.639Z [bci-parkshare] [info] Server transport closed { metadata: undefined }
+2026-02-15T06:52:01.640Z [bci-parkshare] [info] Client transport closed { metadata: undefined }
+2026-02-15T06:52:01.640Z [bci-parkshare] [info] Server transport closed (intentional shutdown) { metadata: undefined }
+2026-02-15T06:52:01.640Z [bci-parkshare] [info] Client transport closed { metadata: undefined }
+2026-02-15T06:52:01.640Z [bci-parkshare] [info] Initializing server... { metadata: undefined }
+2026-02-15T06:52:01.638Z [bci-parkshare] [info] Shutting down server... { metadata: undefined }
+2026-02-15T06:52:01.688Z [bci-parkshare] [info] Using MCP server command: C:\WINDOWS\System32\cmd.exe with args and path: {
+  metadata: {
+    args: [
+      '/C',
+      'C:\\Softwares\\node-v24.13.1\\npx.cmd',
+      'mcp-remote@latest',
+      'https://park-share-bci.replit.app/mcp/sse',
+      '--header',
+      'Authorization: Bearer bci_pk_163369c7819d0a3d0ef8eef8ff05c3eba551a31b9cb7161a3ee1f58f972ed136',
+      [length]: 6
+    ],
+    paths: [
+      'C:\\Program Files\\Git\\cmd',
+      'C:\\Program Files\\Git\\mingw64\\bin',
+      'C:\\Program Files\\Amazon Corretto\\jdk1.8.0_482\\bin',
+      'C:\\WINDOWS\\system32',
+      'C:\\WINDOWS',
+      'C:\\WINDOWS\\System32\\Wbem',
+      'C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\',
+      'C:\\WINDOWS\\System32\\OpenSSH\\',
+      'C:\\Program Files\\ASCI\\ActiveBatchV11\\',
+      'C:\\Program Files\\Azure Data Studio\\bin',
+      'C:\\Program Files\\Microsoft VS Code\\bin',
+      'C:\\Users\\ljoseji\\AppData\\Local\\Microsoft\\WindowsApps',
+      'C:\\Softwares\\node-v24.13.1',
+      '',
+      [length]: 14
+    ]
+  }
+} %o
+2026-02-15T06:52:01.705Z [bci-parkshare] [info] Server started and connected successfully { metadata: undefined }
+2026-02-15T06:52:01.910Z [bci-parkshare] [info] Message from client: {"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{"extensions":{"io.modelcontextprotocol/ui":{"mimeTypes":["text/html;profile=mcp-app"]}}},"clientInfo":{"name":"claude-ai","version":"0.1.0"}},"jsonrpc":"2.0","id":0} { metadata: undefined }
+npm error code UNABLE_TO_GET_ISSUER_CERT_LOCALLY
+npm error errno UNABLE_TO_GET_ISSUER_CERT_LOCALLY
+npm error request to https://registry.npmjs.org/mcp-remote failed, reason: unable to get local issuer certificate
+npm error A complete log of this run can be found in: C:\Users\ljoseji\AppData\Local\npm-cache\_logs\2026-02-15T06_51_42_360Z-debug-0.log
+2026-02-15T06:52:53.876Z [bci-parkshare] [info] Server transport closed { metadata: undefined }
+2026-02-15T06:52:53.876Z [bci-parkshare] [info] Client transport closed { metadata: undefined }
+2026-02-15T06:53:01.969Z [bci-parkshare] [info] Message from client: {"jsonrpc":"2.0","method":"notifications/cancelled","params":{"requestId":0,"reason":"McpError: MCP error -32001: Request timed out"}} { metadata: undefined }
+2026-02-15T06:53:01.970Z [bci-parkshare] [info] Client transport closed { metadata: undefined }
+2026-02-15T06:53:01.970Z [bci-parkshare] [info] Server transport closed { metadata: undefined }
+2026-02-15T06:53:01.970Z [bci-parkshare] [info] Client transport closed { metadata: undefined }
+2026-02-15T06:53:01.970Z [bci-parkshare] [info] Server transport closed unexpectedly, this is likely due to the process exiting early. If you are developing this MCP server you can add output to stderr (i.e. `console.error('...')` in JavaScript, `print('...', file=sys.stderr)` in python) and it will appear in this log. { metadata: undefined }
+2026-02-15T06:53:01.971Z [bci-parkshare] [error] Server disconnected. For troubleshooting guidance, please visit our [debugging documentation](https://modelcontextprotocol.io/docs/tools/debugging) { metadata: { context: 'connection', stack: undefined } }
+npm error code UNABLE_TO_GET_ISSUER_CERT_LOCALLY
+npm error errno UNABLE_TO_GET_ISSUER_CERT_LOCALLY
+npm error request to https://registry.npmjs.org/mcp-remote failed, reason: unable to get local issuer certificate
+npm error A complete log of this run can be found in: C:\Users\ljoseji\AppData\Local\npm-cache\_logs\2026-02-15T06_52_02_218Z-debug-0.log
+2026-02-15T06:53:13.138Z [bci-parkshare] [info] Server transport closed { metadata: undefined }
+2026-02-15T06:53:13.138Z [bci-parkshare] [info] Client transport closed { metadata: undefined }
