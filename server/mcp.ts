@@ -522,6 +522,10 @@ export function registerMcpRoutes(app: Express) {
   });
 
   app.all("/mcp/stream", async (req, res) => {
+    if (req.method === 'OPTIONS') {
+      res.status(204).end();
+      return;
+    }
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       res.status(401).json({ error: "API key required" });
@@ -533,6 +537,11 @@ export function registerMcpRoutes(app: Express) {
       res.status(401).json({ error: "Invalid or revoked API key" });
       return;
     }
+
+    if (req.method === 'POST' && !req.headers['x-requested-with']) {
+      req.headers['x-requested-with'] = 'mcp-client';
+    }
+
     const server = createMcpServerForUser(authenticatedUser);
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
     res.on("close", () => {
