@@ -114,10 +114,10 @@ export const confirmations = {
     variant: "destructive" as const,
   }),
 
-  cancelBooking: (spotNumber?: string, date?: string, canCancel?: boolean) => ({
+  cancelBooking: (spotNumber?: string, date?: string, canCancel?: boolean, cancellationWindowHours?: number) => ({
     title: canCancel === false ? "Cannot Cancel Booking" : "Cancel Booking",
     description: canCancel === false 
-      ? `This booking${spotNumber ? ` for ${spotNumber}` : ""}${date ? ` on ${date}` : ""} cannot be cancelled because it is within 24 hours of the booking date. Please contact support if you need assistance.`
+      ? `This booking${spotNumber ? ` for ${spotNumber}` : ""}${date ? ` on ${date}` : ""} cannot be cancelled because it is within the ${cancellationWindowHours || 24}-hour cancellation window. Please contact support if you need assistance.`
       : `Are you sure you want to cancel this booking${spotNumber ? ` for ${spotNumber}` : ""}${date ? ` on ${date}` : ""}? This action cannot be undone.`,
     confirmText: canCancel === false ? "OK" : "Cancel Booking",
     cancelText: canCancel === false ? undefined : "Keep Booking",

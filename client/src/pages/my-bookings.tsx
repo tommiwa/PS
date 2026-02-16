@@ -294,7 +294,6 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
   const handleCancelBooking = async (bookingId: string) => {
     const booking = mockBookings.find(b => b.id === bookingId) as any
     
-    // Check 24-hour cancellation policy
     const bookingDate = new Date(booking?.bookingDate + 'T00:00:00')
     const now = new Date()
     const hoursUntilBooking = (bookingDate.getTime() - now.getTime()) / (1000 * 60 * 60)
@@ -321,7 +320,8 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
       confirmed = await confirm(confirmations.cancelBooking(
         booking ? `Spot ${booking.spotNumber || booking.spotId?.slice(-8) || 'Unknown'}` : undefined,
         booking?.bookingDate,
-        canCancel
+        canCancel,
+        cancellationWindowHours
       ))
     }
     
@@ -1120,7 +1120,6 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     const isCancelled = booking.status === "cancelled"
     const isActive = booking.status === "confirmed" && !isPastDate && !isCompleted
     
-    // 24-hour cancellation policy check
     const bookingDate = new Date(booking.bookingDate + 'T00:00:00')
     const now = new Date()
     const hoursUntilBooking = (bookingDate.getTime() - now.getTime()) / (1000 * 60 * 60)
@@ -1565,7 +1564,6 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     const isCompleted = booking.status === "completed" || (booking.status === "confirmed" && paymentStatus === 'received')
     const isCancelled = booking.status === "cancelled"
     
-    // 24-hour cancellation policy check
     const bookingDate = new Date(booking.bookingDate + 'T00:00:00')
     const now = new Date()
     const hoursUntilBooking = (bookingDate.getTime() - now.getTime()) / (1000 * 60 * 60)
