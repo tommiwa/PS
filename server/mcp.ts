@@ -5,7 +5,7 @@ import { registerAppTool, registerAppResource, RESOURCE_MIME_TYPE } from "@model
 import { z } from "zod";
 import type { Express } from "express";
 import cors from "cors";
-import { createHash } from "crypto";
+import { createHash, randomUUID } from "crypto";
 import { storage } from "./storage";
 import fs from "node:fs";
 import path from "node:path";
@@ -27,6 +27,12 @@ async function authenticateApiKey(apiKey: string): Promise<boolean> {
   if (!keyRecord) return false;
   storage.updateApiKeyLastUsed(keyRecord.id).catch(() => {});
   return true;
+}
+
+function optionalAuth(req: any): Promise<boolean> {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return Promise.resolve(true);
+  return authenticateApiKey(authHeader.substring(7));
 }
 
 function createMcpServer(): McpServer {
@@ -137,30 +143,142 @@ function createMcpServer(): McpServer {
   return server;
 }
 
-const mcpTransports = new Map<string, { transport: SSEServerTransport; server: McpServer }>();
+const sseTransports = new Map<string, { transport: SSEServerTransport; server: McpServer }>();
+const streamableSessions = new Map<string, { transport: StreamableHTTPServerTransport; server: McpServer; lastUsed: number }>();
+
+const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
+setInterval(() => {
+  const now = Date.now();
+  const toDelete: string[] = [];
+  streamableSessions.forEach((entry, id) => {
+    if (now - entry.lastUsed > SESSION_TIMEOUT_MS) {
+      entry.transport.close().catch(() => {});
+      entry.server.close().catch(() => {});
+      toDelete.push(id);
+    }
+  });
+  toDelete.forEach(id => streamableSessions.delete(id));
+}, 60 * 1000);
 
 export function registerMcpRoutes(app: Express) {
   app.use("/mcp", cors());
 
-  app.get("/mcp/sse", async (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const apiKey = authHeader.substring(7);
-      const isAuthenticated = await authenticateApiKey(apiKey);
-      if (!isAuthenticated) {
-        res.status(401).json({ error: "Invalid or revoked API key" });
-        return;
+  app.post("/mcp", async (req, res) => {
+    const isValid = await optionalAuth(req);
+    if (!isValid) {
+      res.status(401).json({ error: "Invalid or revoked API key" });
+      return;
+    }
+
+    const sessionId = req.headers['mcp-session-id'] as string | undefined;
+
+    if (sessionId && streamableSessions.has(sessionId)) {
+      const entry = streamableSessions.get(sessionId)!;
+      entry.lastUsed = Date.now();
+      try {
+        await entry.transport.handleRequest(req, res, req.body);
+      } catch (error) {
+        console.error("[MCP] Streamable HTTP session error:", error);
+        if (!res.headersSent) {
+          res.status(500).json({ jsonrpc: "2.0", error: { code: -32603, message: "Internal server error" }, id: null });
+        }
       }
+      return;
+    }
+
+    if (sessionId && !streamableSessions.has(sessionId)) {
+      res.status(404).json({ jsonrpc: "2.0", error: { code: -32000, message: "Session not found. Please reinitialize." }, id: null });
+      return;
+    }
+
+    const server = createMcpServer();
+    const transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: () => randomUUID(),
+    });
+
+    await server.connect(transport);
+
+    transport.onclose = () => {
+      const sid = (transport as any).sessionId;
+      if (sid) streamableSessions.delete(sid);
+      server.close().catch(() => {});
+    };
+
+    try {
+      await transport.handleRequest(req, res, req.body);
+    } catch (error) {
+      console.error("[MCP] Streamable HTTP init error:", error);
+      if (!res.headersSent) {
+        res.status(500).json({ jsonrpc: "2.0", error: { code: -32603, message: "Internal server error" }, id: null });
+      }
+      return;
+    }
+
+    const newSessionId = (transport as any).sessionId;
+    if (newSessionId) {
+      streamableSessions.set(newSessionId, { transport, server, lastUsed: Date.now() });
+    }
+  });
+
+  app.get("/mcp", async (req, res) => {
+    const accept = req.headers.accept || '';
+    if (!accept.includes('text/event-stream')) {
+      res.status(405).json({ error: "Method not allowed. Use POST for MCP messages." });
+      return;
+    }
+
+    const isValid = await optionalAuth(req);
+    if (!isValid) {
+      res.status(401).json({ error: "Invalid or revoked API key" });
+      return;
+    }
+
+    const sessionId = req.headers['mcp-session-id'] as string | undefined;
+    if (sessionId && streamableSessions.has(sessionId)) {
+      const entry = streamableSessions.get(sessionId)!;
+      entry.lastUsed = Date.now();
+      try {
+        await entry.transport.handleRequest(req, res);
+      } catch (error) {
+        console.error("[MCP] GET SSE stream error:", error);
+        if (!res.headersSent) {
+          res.status(500).end();
+        }
+      }
+      return;
+    }
+
+    res.status(405).json({ error: "No active session. Send an initialize request via POST first." });
+  });
+
+  app.delete("/mcp", async (req, res) => {
+    const sessionId = req.headers['mcp-session-id'] as string | undefined;
+    if (sessionId && streamableSessions.has(sessionId)) {
+      const entry = streamableSessions.get(sessionId)!;
+      await entry.transport.close().catch(() => {});
+      await entry.server.close().catch(() => {});
+      streamableSessions.delete(sessionId);
+      res.status(200).end();
+      return;
+    }
+    res.status(404).json({ error: "Session not found" });
+  });
+
+  app.get("/mcp/sse", async (req, res) => {
+    const isValid = await optionalAuth(req);
+    if (!isValid) {
+      res.status(401).json({ error: "Invalid or revoked API key" });
+      return;
     }
 
     const server = createMcpServer();
     const transport = new SSEServerTransport("/mcp/messages", res);
     const sessionId = transport.sessionId;
 
-    mcpTransports.set(sessionId, { transport, server });
+    sseTransports.set(sessionId, { transport, server });
 
     res.on("close", () => {
-      mcpTransports.delete(sessionId);
+      sseTransports.delete(sessionId);
     });
 
     await server.connect(transport);
@@ -168,7 +286,7 @@ export function registerMcpRoutes(app: Express) {
 
   app.post("/mcp/messages", async (req, res) => {
     const sessionId = req.query.sessionId as string;
-    const entry = mcpTransports.get(sessionId);
+    const entry = sseTransports.get(sessionId);
     if (!entry) {
       res.status(404).json({ error: "Session not found" });
       return;
@@ -176,58 +294,27 @@ export function registerMcpRoutes(app: Express) {
     await entry.transport.handlePostMessage(req, res);
   });
 
-  app.all("/mcp/stream", async (req, res) => {
-    if (req.method === 'OPTIONS') {
-      res.status(204).end();
-      return;
-    }
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const apiKey = authHeader.substring(7);
-      const isAuthenticated = await authenticateApiKey(apiKey);
-      if (!isAuthenticated) {
-        res.status(401).json({ error: "Invalid or revoked API key" });
-        return;
-      }
-    }
-
-    if (req.method === 'POST' && !req.headers['x-requested-with']) {
-      req.headers['x-requested-with'] = 'mcp-client';
-    }
-
-    const server = createMcpServer();
-    const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
-    res.on("close", () => {
-      transport.close().catch(() => {});
-      server.close().catch(() => {});
-    });
-    try {
-      await server.connect(transport);
-      await transport.handleRequest(req, res, req.body);
-    } catch (error) {
-      console.error("[MCP] Streamable HTTP error:", error);
-      if (!res.headersSent) {
-        res.status(500).json({ jsonrpc: "2.0", error: { code: -32603, message: "Internal server error" }, id: null });
-      }
-    }
-  });
-
   app.get("/mcp/health", (_req, res) => {
     res.json({
       status: "ok",
       server: "BCI ParkShare MCP",
       version: "1.0.0",
-      transport: ["SSE", "Streamable HTTP"],
-      activeSessions: mcpTransports.size,
+      transport: ["Streamable HTTP", "SSE (legacy)"],
+      activeSessions: streamableSessions.size + sseTransports.size,
       mcpApps: ["spots-search"],
       tools: ["search_available_spots", "get_locations"],
       authentication: "Optional - Bearer token (API key) in Authorization header. Works without auth for read-only tools.",
-      endpoints: { sse: "/mcp/sse", messages: "/mcp/messages", stream: "/mcp/stream", health: "/mcp/health" },
+      endpoints: {
+        streamableHttp: "/mcp (POST, GET, DELETE)",
+        sse: "/mcp/sse (legacy)",
+        messages: "/mcp/messages (legacy, for SSE transport)",
+        health: "/mcp/health",
+      },
     });
   });
 
   console.log("[MCP] Routes registered on main server under /mcp/*");
-  console.log("[MCP] SSE endpoint: /mcp/sse");
-  console.log("[MCP] Streamable HTTP endpoint: /mcp/stream");
+  console.log("[MCP] Streamable HTTP endpoint: /mcp (POST/GET/DELETE)");
+  console.log("[MCP] SSE endpoint (legacy): /mcp/sse");
   console.log("[MCP] Health check: /mcp/health");
 }
