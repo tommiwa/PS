@@ -9149,24 +9149,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ==========================================
-  // API Key Management (for MCP server access)
+  // API Key Management (for MCP server access) - Admin only
   // ==========================================
 
-  // Create a new API key
-  app.post("/api/api-keys", isAuthenticated, async (req: any, res) => {
+  // Create a new API key (admin selects which user the key is for)
+  app.post("/api/admin/api-keys", requireAdmin, async (req: any, res) => {
     try {
-      const userId = getAuthenticatedUserId(req);
-      if (!userId) return res.status(401).json({ error: "Not authenticated" });
-
-      const { name } = req.body;
+      const { name, userId } = req.body;
       if (!name || typeof name !== 'string' || name.trim().length === 0) {
         return res.status(400).json({ error: "Name is required" });
+      }
+      if (!userId || typeof userId !== 'string') {
+        return res.status(400).json({ error: "userId is required" });
       }
 
       // Check limit (max 5 active keys per user)
       const existingKeys = await storage.getApiKeysByUser(userId);
       if (existingKeys.length >= 5) {
-        return res.status(400).json({ error: "Maximum of 5 active API keys allowed" });
+        return res.status(400).json({ error: "Maximum of 5 active API keys allowed per user" });
       }
 
       // Generate a random API key
@@ -9196,33 +9196,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // List user's API keys (no raw keys shown)
-  app.get("/api/api-keys", isAuthenticated, async (req: any, res) => {
+  // List ALL active API keys across all users (admin only)
+  app.get("/api/admin/api-keys", requireAdmin, async (req: any, res) => {
     try {
-      const userId = getAuthenticatedUserId(req);
-      if (!userId) return res.status(401).json({ error: "Not authenticated" });
-
-      const keys = await storage.getApiKeysByUser(userId);
-      res.json(keys.map(k => ({
-        id: k.id,
-        name: k.name,
-        keyPrefix: k.keyPrefix,
-        lastUsedAt: k.lastUsedAt,
-        createdAt: k.createdAt,
-      })));
+      const keys = await storage.getAllApiKeys();
+      // Enrich with user info
+      const enrichedKeys = await Promise.all(keys.map(async (k) => {
+        const user = await storage.getUser(k.userId);
+        return {
+          id: k.id,
+          name: k.name,
+          keyPrefix: k.keyPrefix,
+          userId: k.userId,
+          userName: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : 'Unknown',
+          userEmail: user?.email || '',
+          lastUsedAt: k.lastUsedAt,
+          createdAt: k.createdAt,
+        };
+      }));
+      res.json(enrichedKeys);
     } catch (error) {
       console.error("Error listing API keys:", error);
       res.status(500).json({ error: "Failed to list API keys" });
     }
   });
 
-  // Revoke an API key
-  app.delete("/api/api-keys/:id", isAuthenticated, async (req: any, res) => {
+  // Revoke an API key (admin can revoke any key)
+  app.delete("/api/admin/api-keys/:id", requireAdmin, async (req: any, res) => {
     try {
-      const userId = getAuthenticatedUserId(req);
-      if (!userId) return res.status(401).json({ error: "Not authenticated" });
-
-      const success = await storage.revokeApiKey(req.params.id, userId);
+      const success = await storage.revokeApiKeyAdmin(req.params.id);
       if (!success) {
         return res.status(404).json({ error: "API key not found" });
       }

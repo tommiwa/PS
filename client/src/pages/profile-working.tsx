@@ -44,8 +44,7 @@ import {
   User,
   Palette,
   Globe,
-  AlertTriangle,
-  Key
+  AlertTriangle
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useTheme } from "@/contexts/theme-context"
@@ -104,9 +103,6 @@ export default function Profile() {
   const [showSpotWarning, setShowSpotWarning] = useState(false)
   const [showJoinForm, setShowJoinForm] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const [showCreateKeyDialog, setShowCreateKeyDialog] = useState(false);
-  const [newKeyName, setNewKeyName] = useState("");
-  const [createdKey, setCreatedKey] = useState<string | null>(null);
 
   // Vehicle form
   const vehicleForm = useForm<VehicleForm>({
@@ -193,35 +189,6 @@ export default function Profile() {
     queryKey: ["/api/spot-types"],
   });
 
-  const { data: apiKeys = [], isLoading: apiKeysLoading } = useQuery<any[]>({
-    queryKey: ['/api/api-keys'],
-  });
-
-  const createApiKeyMutation = useMutation({
-    mutationFn: async (name: string) => {
-      const res = await apiRequest('/api/api-keys', { method: 'POST', body: { name } });
-      return res.json();
-    },
-    onSuccess: (data: any) => {
-      setCreatedKey(data.key);
-      setNewKeyName("");
-      queryClient.invalidateQueries({ queryKey: ['/api/api-keys'] });
-      toast({ title: "API key created", description: "Copy your key now - it won't be shown again." });
-    },
-    onError: (error: any) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    },
-  });
-
-  const revokeApiKeyMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await apiRequest(`/api/api-keys/${id}`, { method: 'DELETE' });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/api-keys'] });
-      toast({ title: "API key revoked" });
-    },
-  });
 
   // Waiting list enrollment form
   const waitingListForm = useForm<WaitingListFormData>({
@@ -1117,10 +1084,6 @@ export default function Profile() {
                 <span className="hidden sm:inline">{t("profile.tabs.appSettings")}</span>
                 <span className="sm:hidden">Settings</span>
               </TabsTrigger>
-              <TabsTrigger value="api-keys" className="flex items-center gap-2 min-h-11 text-xs md:text-sm">
-                <Key className="h-4 w-4" />
-                <span className="hidden sm:inline">API Keys</span>
-              </TabsTrigger>
             </TabsList>
 
             {/* Waiting List Tab */}
@@ -1842,97 +1805,6 @@ export default function Profile() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="api-keys" className="space-y-4 md:space-y-6">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between gap-2">
-                  <div>
-                    <CardTitle className="text-lg">API Keys</CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Connect AI assistants like Claude or ChatGPT to your ParkShare account via the MCP server.
-                    </p>
-                  </div>
-                  <Button onClick={() => { setCreatedKey(null); setShowCreateKeyDialog(true); }}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Key
-                  </Button>
-                </CardHeader>
-                <CardContent>
-                  {apiKeysLoading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : apiKeys.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <Key className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                      <p>No API keys yet</p>
-                      <p className="text-sm mt-1">Create a key to connect AI assistants to your parking account.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {apiKeys.map((key: any) => (
-                        <div key={key.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-md border">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <Key className="h-4 w-4 text-muted-foreground" />
-                              <span className="font-medium">{key.name}</span>
-                            </div>
-                            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                              <span className="font-mono">{key.keyPrefix}...</span>
-                              <span>Created {new Date(key.createdAt).toLocaleDateString()}</span>
-                              {key.lastUsedAt && (
-                                <span>Last used {new Date(key.lastUsedAt).toLocaleDateString()}</span>
-                              )}
-                            </div>
-                          </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => revokeApiKeyMutation.mutate(key.id)}
-                            disabled={revokeApiKeyMutation.isPending}
-                          >
-                            <Trash2 className="h-4 w-4 mr-1" />
-                            Revoke
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">How to Connect</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="space-y-2 text-sm text-muted-foreground">
-                    <p>Use your API key to connect AI assistants to ParkShare. The MCP server provides tools for:</p>
-                    <ul className="list-disc list-inside space-y-1 ml-2">
-                      <li>Searching available parking spots</li>
-                      <li>Viewing and cancelling your bookings</li>
-                      <li>Managing your spot listings</li>
-                      <li>Checking notifications and statistics</li>
-                    </ul>
-                    <Separator />
-                    <p className="font-medium text-foreground">MCP Server Configuration (with MCP Apps UI support):</p>
-                    <div className="bg-muted p-3 rounded-md font-mono text-xs space-y-1">
-                      <p>"mcpServers": {"{"}</p>
-                      <p className="ml-4">"parkshare": {"{"}</p>
-                      <p className="ml-8">"url": "https://your-app-url/mcp/stream",</p>
-                      <p className="ml-8">"headers": {"{"}</p>
-                      <p className="ml-12">"Authorization": "Bearer YOUR_API_KEY"</p>
-                      <p className="ml-8">{"}"}</p>
-                      <p className="ml-4">{"}"}</p>
-                      <p>{"}"}</p>
-                    </div>
-                    <p className="text-xs mt-2">
-                      The <code>/mcp/stream</code> endpoint supports MCP Apps with interactive UIs for spot search, bookings, and statistics.
-                      For legacy SSE-only clients, use <code>/mcp/sse</code> instead.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
           </Tabs>
         </div>
       </div>
@@ -2138,59 +2010,6 @@ export default function Profile() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showCreateKeyDialog} onOpenChange={setShowCreateKeyDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create API Key</DialogTitle>
-          </DialogHeader>
-          {createdKey ? (
-            <div className="space-y-4">
-              <Alert>
-                <AlertDescription>
-                  <p className="font-medium mb-2">Your API key has been created. Copy it now - it won't be shown again.</p>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 bg-muted px-3 py-2 rounded text-xs font-mono break-all">{createdKey}</code>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        navigator.clipboard.writeText(createdKey);
-                        toast({ title: "Copied to clipboard" });
-                      }}
-                    >
-                      Copy
-                    </Button>
-                  </div>
-                </AlertDescription>
-              </Alert>
-              <DialogFooter>
-                <Button onClick={() => { setShowCreateKeyDialog(false); setCreatedKey(null); }}>Done</Button>
-              </DialogFooter>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Key Name</Label>
-                <Input
-                  placeholder="e.g., Claude Desktop, ChatGPT"
-                  value={newKeyName}
-                  onChange={(e) => setNewKeyName(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">A descriptive name to identify this key</p>
-              </div>
-              <DialogFooter className="flex gap-2">
-                <Button variant="outline" onClick={() => setShowCreateKeyDialog(false)}>Cancel</Button>
-                <Button
-                  onClick={() => createApiKeyMutation.mutate(newKeyName)}
-                  disabled={!newKeyName.trim() || createApiKeyMutation.isPending}
-                >
-                  {createApiKeyMutation.isPending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Creating...</> : "Create Key"}
-                </Button>
-              </DialogFooter>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

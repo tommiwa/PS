@@ -368,8 +368,10 @@ export interface IStorage {
   // API Key operations
   createApiKey(data: { userId: string; keyHash: string; keyPrefix: string; name: string }): Promise<ApiKey>;
   getApiKeysByUser(userId: string): Promise<ApiKey[]>;
+  getAllApiKeys(): Promise<ApiKey[]>;
   getApiKeyByHash(keyHash: string): Promise<ApiKey | undefined>;
   revokeApiKey(id: string, userId: string): Promise<boolean>;
+  revokeApiKeyAdmin(id: string): Promise<boolean>;
   updateApiKeyLastUsed(id: string): Promise<void>;
 }
 
@@ -3972,6 +3974,10 @@ export class MemStorage implements IStorage {
     return db.select().from(apiKeys).where(and(eq(apiKeys.userId, userId), isNull(apiKeys.revokedAt))).orderBy(desc(apiKeys.createdAt));
   }
 
+  async getAllApiKeys(): Promise<ApiKey[]> {
+    return db.select().from(apiKeys).where(isNull(apiKeys.revokedAt)).orderBy(desc(apiKeys.createdAt));
+  }
+
   async getApiKeyByHash(keyHash: string): Promise<ApiKey | undefined> {
     const [result] = await db.select().from(apiKeys).where(and(eq(apiKeys.keyHash, keyHash), isNull(apiKeys.revokedAt))).limit(1);
     return result;
@@ -3979,6 +3985,11 @@ export class MemStorage implements IStorage {
 
   async revokeApiKey(id: string, userId: string): Promise<boolean> {
     const [result] = await db.update(apiKeys).set({ revokedAt: new Date() }).where(and(eq(apiKeys.id, id), eq(apiKeys.userId, userId))).returning();
+    return !!result;
+  }
+
+  async revokeApiKeyAdmin(id: string): Promise<boolean> {
+    const [result] = await db.update(apiKeys).set({ revokedAt: new Date() }).where(eq(apiKeys.id, id)).returning();
     return !!result;
   }
 

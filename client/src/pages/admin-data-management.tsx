@@ -57,7 +57,9 @@ import {
   Loader2,
   ArrowUpDown,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Key,
+  Copy
 } from "lucide-react"
 
 // Department form schema
@@ -154,6 +156,12 @@ export default function AdminDataManagement() {
   const [configPageIndex, setConfigPageIndex] = useState(0)
   const [configPageSize, setConfigPageSize] = useState(10)
   
+  // API Keys state
+  const [newKeyName, setNewKeyName] = useState("")
+  const [newKeyUserId, setNewKeyUserId] = useState("")
+  const [createdKeyValue, setCreatedKeyValue] = useState("")
+  const [showCreateKeyDialog, setShowCreateKeyDialog] = useState(false)
+
   // Active tab state
   const [activeTab, setActiveTab] = useState("departments")
 
@@ -237,6 +245,14 @@ export default function AdminDataManagement() {
 
   const { data: appConfigs = [], isLoading: isLoadingConfigs, isError: isErrorConfigs, error: configsError } = useQuery<AppConfig[]>({
     queryKey: ["/api/admin/app-configs"],
+  });
+
+  const { data: apiKeys = [], isLoading: apiKeysLoading } = useQuery<any[]>({
+    queryKey: ['/api/admin/api-keys'],
+  });
+
+  const { data: allUsers = [] } = useQuery<any[]>({
+    queryKey: ['/api/admin/users'],
   });
 
   // Filtered and sorted data
@@ -689,6 +705,35 @@ export default function AdminDataManagement() {
     }
   });
 
+  // API Key mutations
+  const createApiKeyMutation = useMutation({
+    mutationFn: async ({ userId, name }: { userId: string; name: string }) => {
+      const res = await apiRequest('/api/admin/api-keys', { method: 'POST', body: { userId, name } });
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/api-keys'] });
+      setCreatedKeyValue(data.key);
+      toast({ title: "API key created", description: "Copy the key now - it won't be shown again." });
+    },
+    onError: (error: any) => {
+      toast({ variant: "destructive", title: "Error", description: error.message || "Failed to create API key" });
+    },
+  });
+
+  const revokeApiKeyMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest(`/api/admin/api-keys/${id}`, { method: 'DELETE' });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/api-keys'] });
+      toast({ title: "API key revoked" });
+    },
+    onError: (error: any) => {
+      toast({ variant: "destructive", title: "Error", description: error.message || "Failed to revoke API key" });
+    },
+  });
+
   // Sort handlers
   const handleDepartmentSort = (field: 'name' | 'createdAt') => {
     if (departmentSortField === field) {
@@ -1037,7 +1082,7 @@ export default function AdminDataManagement() {
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="departments" data-testid="tab-departments" className="gap-2">
             <Building2 className="h-4 w-4 !text-blue-600" />
             Departments
@@ -1053,6 +1098,10 @@ export default function AdminDataManagement() {
           <TabsTrigger value="app-configs" data-testid="tab-app-configs" className="gap-2">
             <Database className="h-4 w-4 !text-orange-600" />
             App Settings
+          </TabsTrigger>
+          <TabsTrigger value="api-keys" data-testid="tab-api-keys" className="gap-2">
+            <Key className="h-4 w-4 !text-amber-600" />
+            API Keys
           </TabsTrigger>
         </TabsList>
 
@@ -1957,7 +2006,172 @@ export default function AdminDataManagement() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* API Keys Tab */}
+        <TabsContent value="api-keys">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <CardTitle className="flex items-center gap-2">
+                  <Key className="h-5 w-5 !text-amber-600" />
+                  API Keys
+                </CardTitle>
+                <Button onClick={() => { setCreatedKeyValue(""); setNewKeyName(""); setNewKeyUserId(""); setShowCreateKeyDialog(true); }}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create API Key
+                </Button>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Manage API keys for MCP server access. Keys allow AI assistants to connect to ParkShare.
+              </p>
+            </CardHeader>
+            <CardContent>
+              {apiKeysLoading ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                </div>
+              ) : apiKeys.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Key className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p>No API keys yet</p>
+                  <p className="text-sm mt-1">Create a key to allow AI assistants to connect to ParkShare.</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>User</TableHead>
+                      <TableHead>Key Prefix</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead>Last Used</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {apiKeys.map((key: any) => (
+                      <TableRow key={key.id}>
+                        <TableCell className="font-medium">{key.name}</TableCell>
+                        <TableCell>
+                          <div className="space-y-0.5">
+                            <div className="text-sm">{key.userName}</div>
+                            <div className="text-xs text-muted-foreground">{key.userEmail}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <code className="text-xs bg-muted px-2 py-1 rounded">{key.keyPrefix}...</code>
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {new Date(key.createdAt).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {key.lastUsedAt ? new Date(key.lastUsedAt).toLocaleDateString() : "Never"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                              const confirmed = await confirm({
+                                title: "Revoke API Key",
+                                description: `Are you sure you want to revoke "${key.name}"? This action cannot be undone.`,
+                                confirmText: "Revoke",
+                                cancelText: "Cancel",
+                                variant: "destructive"
+                              });
+                              if (confirmed) {
+                                revokeApiKeyMutation.mutate(key.id);
+                              }
+                            }}
+                            disabled={revokeApiKeyMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Revoke
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
+
+      {/* Create API Key Dialog */}
+      <Dialog open={showCreateKeyDialog} onOpenChange={(open) => { if (!open) { setShowCreateKeyDialog(false); setCreatedKeyValue(""); setNewKeyName(""); setNewKeyUserId(""); } else { setShowCreateKeyDialog(true); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create API Key</DialogTitle>
+          </DialogHeader>
+          {createdKeyValue ? (
+            <div className="space-y-4">
+              <div className="rounded-md border p-4 space-y-2">
+                <p className="font-medium text-sm">Your API key has been created. Copy it now - it won't be shown again.</p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 bg-muted px-3 py-2 rounded text-xs font-mono break-all">{createdKeyValue}</code>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      navigator.clipboard.writeText(createdKeyValue);
+                      toast({ title: "Copied to clipboard" });
+                    }}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <Button onClick={() => { setShowCreateKeyDialog(false); setCreatedKeyValue(""); setNewKeyName(""); setNewKeyUserId(""); }}>Done</Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">User</label>
+                <Select value={newKeyUserId} onValueChange={setNewKeyUserId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a user" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allUsers.map((u: any) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.firstName || u.lastName ? `${u.firstName || ''} ${u.lastName || ''}`.trim() : u.email} ({u.email})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Key Name</label>
+                <Input
+                  placeholder="e.g., Claude Desktop, ChatGPT"
+                  value={newKeyName}
+                  onChange={(e) => setNewKeyName(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">A descriptive name to identify this key</p>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => { setShowCreateKeyDialog(false); setNewKeyName(""); setNewKeyUserId(""); }}>Cancel</Button>
+                <Button
+                  onClick={() => createApiKeyMutation.mutate({ userId: newKeyUserId, name: newKeyName })}
+                  disabled={!newKeyName.trim() || !newKeyUserId || createApiKeyMutation.isPending}
+                >
+                  {createApiKeyMutation.isPending ? (
+                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Creating...</>
+                  ) : (
+                    "Create Key"
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Department Dialog */}
       <Dialog open={showEditDepartmentDialog} onOpenChange={setShowEditDepartmentDialog}>
