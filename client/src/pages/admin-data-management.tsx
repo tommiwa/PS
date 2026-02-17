@@ -11,7 +11,6 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { 
   Pagination, 
   PaginationContent, 
@@ -158,7 +157,6 @@ export default function AdminDataManagement() {
   
   // API Keys state
   const [newKeyName, setNewKeyName] = useState("")
-  const [newKeyUserId, setNewKeyUserId] = useState("")
   const [createdKeyValue, setCreatedKeyValue] = useState("")
   const [showCreateKeyDialog, setShowCreateKeyDialog] = useState(false)
 
@@ -251,9 +249,6 @@ export default function AdminDataManagement() {
     queryKey: ['/api/admin/api-keys'],
   });
 
-  const { data: allUsers = [] } = useQuery<any[]>({
-    queryKey: ['/api/admin/users'],
-  });
 
   // Filtered and sorted data
   const filteredAndSortedDepartments = useMemo(() => {
@@ -707,8 +702,8 @@ export default function AdminDataManagement() {
 
   // API Key mutations
   const createApiKeyMutation = useMutation({
-    mutationFn: async ({ userId, name }: { userId: string; name: string }) => {
-      const res = await apiRequest('/api/admin/api-keys', { method: 'POST', body: { userId, name } });
+    mutationFn: async ({ name }: { name: string }) => {
+      const res = await apiRequest('/api/admin/api-keys', { method: 'POST', body: { name } });
       return res.json();
     },
     onSuccess: (data: any) => {
@@ -2016,7 +2011,7 @@ export default function AdminDataManagement() {
                   <Key className="h-5 w-5 !text-amber-600" />
                   API Keys
                 </CardTitle>
-                <Button onClick={() => { setCreatedKeyValue(""); setNewKeyName(""); setNewKeyUserId(""); setShowCreateKeyDialog(true); }}>
+                <Button onClick={() => { setCreatedKeyValue(""); setNewKeyName(""); setShowCreateKeyDialog(true); }}>
                   <Plus className="h-4 w-4 mr-2" />
                   Create API Key
                 </Button>
@@ -2043,7 +2038,6 @@ export default function AdminDataManagement() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Name</TableHead>
-                      <TableHead>User</TableHead>
                       <TableHead>Key Prefix</TableHead>
                       <TableHead>Created</TableHead>
                       <TableHead>Last Used</TableHead>
@@ -2054,12 +2048,6 @@ export default function AdminDataManagement() {
                     {apiKeys.map((key: any) => (
                       <TableRow key={key.id}>
                         <TableCell className="font-medium">{key.name}</TableCell>
-                        <TableCell>
-                          <div className="space-y-0.5">
-                            <div className="text-sm">{key.userName}</div>
-                            <div className="text-xs text-muted-foreground">{key.userEmail}</div>
-                          </div>
-                        </TableCell>
                         <TableCell>
                           <code className="text-xs bg-muted px-2 py-1 rounded">{key.keyPrefix}...</code>
                         </TableCell>
@@ -2102,7 +2090,7 @@ export default function AdminDataManagement() {
       </Tabs>
 
       {/* Create API Key Dialog */}
-      <Dialog open={showCreateKeyDialog} onOpenChange={(open) => { if (!open) { setShowCreateKeyDialog(false); setCreatedKeyValue(""); setNewKeyName(""); setNewKeyUserId(""); } else { setShowCreateKeyDialog(true); } }}>
+      <Dialog open={showCreateKeyDialog} onOpenChange={(open) => { if (!open) { setShowCreateKeyDialog(false); setCreatedKeyValue(""); setNewKeyName(""); } else { setShowCreateKeyDialog(true); } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Create API Key</DialogTitle>
@@ -2126,26 +2114,11 @@ export default function AdminDataManagement() {
                 </div>
               </div>
               <div className="flex justify-end">
-                <Button onClick={() => { setShowCreateKeyDialog(false); setCreatedKeyValue(""); setNewKeyName(""); setNewKeyUserId(""); }}>Done</Button>
+                <Button onClick={() => { setShowCreateKeyDialog(false); setCreatedKeyValue(""); setNewKeyName(""); }}>Done</Button>
               </div>
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">User</label>
-                <Select value={newKeyUserId} onValueChange={setNewKeyUserId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a user" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {allUsers.map((u: any) => (
-                      <SelectItem key={u.id} value={u.id}>
-                        {u.firstName || u.lastName ? `${u.firstName || ''} ${u.lastName || ''}`.trim() : u.email} ({u.email})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Key Name</label>
                 <Input
@@ -2156,10 +2129,10 @@ export default function AdminDataManagement() {
                 <p className="text-xs text-muted-foreground">A descriptive name to identify this key</p>
               </div>
               <div className="flex gap-2 justify-end">
-                <Button variant="outline" onClick={() => { setShowCreateKeyDialog(false); setNewKeyName(""); setNewKeyUserId(""); }}>Cancel</Button>
+                <Button variant="outline" onClick={() => { setShowCreateKeyDialog(false); setNewKeyName(""); }}>Cancel</Button>
                 <Button
-                  onClick={() => createApiKeyMutation.mutate({ userId: newKeyUserId, name: newKeyName })}
-                  disabled={!newKeyName.trim() || !newKeyUserId || createApiKeyMutation.isPending}
+                  onClick={() => createApiKeyMutation.mutate({ name: newKeyName })}
+                  disabled={!newKeyName.trim() || createApiKeyMutation.isPending}
                 >
                   {createApiKeyMutation.isPending ? (
                     <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Creating...</>

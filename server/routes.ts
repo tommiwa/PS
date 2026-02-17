@@ -9152,21 +9152,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API Key Management (for MCP server access) - Admin only
   // ==========================================
 
-  // Create a new API key (admin selects which user the key is for)
+  // Create a new system-wide API key
   app.post("/api/admin/api-keys", requireAdmin, async (req: any, res) => {
     try {
-      const { name, userId } = req.body;
+      const { name } = req.body;
       if (!name || typeof name !== 'string' || name.trim().length === 0) {
         return res.status(400).json({ error: "Name is required" });
       }
-      if (!userId || typeof userId !== 'string') {
-        return res.status(400).json({ error: "userId is required" });
-      }
 
-      // Check limit (max 5 active keys per user)
-      const existingKeys = await storage.getApiKeysByUser(userId);
-      if (existingKeys.length >= 5) {
-        return res.status(400).json({ error: "Maximum of 5 active API keys allowed per user" });
+      // Check limit (max 10 system-wide keys)
+      const existingKeys = await storage.getAllApiKeys();
+      if (existingKeys.length >= 10) {
+        return res.status(400).json({ error: "Maximum of 10 active API keys allowed" });
       }
 
       // Generate a random API key
@@ -9176,7 +9173,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const keyPrefix = rawKey.substring(0, 15);
 
       const apiKey = await storage.createApiKey({
-        userId,
         keyHash,
         keyPrefix,
         name: name.trim(),
@@ -9196,25 +9192,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // List ALL active API keys across all users (admin only)
+  // List ALL active system-wide API keys (admin only)
   app.get("/api/admin/api-keys", requireAdmin, async (req: any, res) => {
     try {
       const keys = await storage.getAllApiKeys();
-      // Enrich with user info
-      const enrichedKeys = await Promise.all(keys.map(async (k) => {
-        const user = await storage.getUser(k.userId);
-        return {
-          id: k.id,
-          name: k.name,
-          keyPrefix: k.keyPrefix,
-          userId: k.userId,
-          userName: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : 'Unknown',
-          userEmail: user?.email || '',
-          lastUsedAt: k.lastUsedAt,
-          createdAt: k.createdAt,
-        };
+      const result = keys.map((k) => ({
+        id: k.id,
+        name: k.name,
+        keyPrefix: k.keyPrefix,
+        lastUsedAt: k.lastUsedAt,
+        createdAt: k.createdAt,
       }));
-      res.json(enrichedKeys);
+      res.json(result);
     } catch (error) {
       console.error("Error listing API keys:", error);
       res.status(500).json({ error: "Failed to list API keys" });

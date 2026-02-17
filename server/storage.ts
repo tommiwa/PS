@@ -365,12 +365,10 @@ export interface IStorage {
   createAppConfig(config: InsertAppConfig): Promise<AppConfig>;
   deleteAppConfig(key: string): Promise<boolean>;
   
-  // API Key operations
-  createApiKey(data: { userId: string; keyHash: string; keyPrefix: string; name: string }): Promise<ApiKey>;
-  getApiKeysByUser(userId: string): Promise<ApiKey[]>;
+  // API Key operations (system-wide keys)
+  createApiKey(data: { keyHash: string; keyPrefix: string; name: string }): Promise<ApiKey>;
   getAllApiKeys(): Promise<ApiKey[]>;
   getApiKeyByHash(keyHash: string): Promise<ApiKey | undefined>;
-  revokeApiKey(id: string, userId: string): Promise<boolean>;
   revokeApiKeyAdmin(id: string): Promise<boolean>;
   updateApiKeyLastUsed(id: string): Promise<void>;
 }
@@ -3964,14 +3962,10 @@ export class MemStorage implements IStorage {
     return (result.rowCount ?? 0) > 0;
   }
 
-  // API Key operations
-  async createApiKey(data: { userId: string; keyHash: string; keyPrefix: string; name: string }): Promise<ApiKey> {
+  // API Key operations (system-wide keys)
+  async createApiKey(data: { keyHash: string; keyPrefix: string; name: string }): Promise<ApiKey> {
     const [result] = await db.insert(apiKeys).values(data).returning();
     return result;
-  }
-
-  async getApiKeysByUser(userId: string): Promise<ApiKey[]> {
-    return db.select().from(apiKeys).where(and(eq(apiKeys.userId, userId), isNull(apiKeys.revokedAt))).orderBy(desc(apiKeys.createdAt));
   }
 
   async getAllApiKeys(): Promise<ApiKey[]> {
@@ -3981,11 +3975,6 @@ export class MemStorage implements IStorage {
   async getApiKeyByHash(keyHash: string): Promise<ApiKey | undefined> {
     const [result] = await db.select().from(apiKeys).where(and(eq(apiKeys.keyHash, keyHash), isNull(apiKeys.revokedAt))).limit(1);
     return result;
-  }
-
-  async revokeApiKey(id: string, userId: string): Promise<boolean> {
-    const [result] = await db.update(apiKeys).set({ revokedAt: new Date() }).where(and(eq(apiKeys.id, id), eq(apiKeys.userId, userId))).returning();
-    return !!result;
   }
 
   async revokeApiKeyAdmin(id: string): Promise<boolean> {
