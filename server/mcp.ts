@@ -182,15 +182,13 @@ export function registerMcpRoutes(app: Express) {
       return;
     }
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      res.status(401).json({ error: "API key required" });
-      return;
-    }
-    const apiKey = authHeader.substring(7);
-    const isAuthenticated = await authenticateApiKey(apiKey);
-    if (!isAuthenticated) {
-      res.status(401).json({ error: "Invalid or revoked API key" });
-      return;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const apiKey = authHeader.substring(7);
+      const isAuthenticated = await authenticateApiKey(apiKey);
+      if (!isAuthenticated) {
+        res.status(401).json({ error: "Invalid or revoked API key" });
+        return;
+      }
     }
 
     if (req.method === 'POST' && !req.headers['x-requested-with']) {
@@ -223,7 +221,7 @@ export function registerMcpRoutes(app: Express) {
       activeSessions: mcpTransports.size,
       mcpApps: ["spots-search"],
       tools: ["search_available_spots", "get_locations"],
-      authentication: "Bearer token (API key) in Authorization header",
+      authentication: "Optional - Bearer token (API key) in Authorization header. Works without auth for read-only tools.",
       endpoints: { sse: "/mcp/sse", messages: "/mcp/messages", stream: "/mcp/stream", health: "/mcp/health" },
     });
   });
