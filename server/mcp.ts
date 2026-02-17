@@ -144,16 +144,13 @@ export function registerMcpRoutes(app: Express) {
 
   app.get("/mcp/sse", async (req, res) => {
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      res.status(401).json({ error: "API key required. Use Authorization: Bearer <your-api-key>" });
-      return;
-    }
-
-    const apiKey = authHeader.substring(7);
-    const isAuthenticated = await authenticateApiKey(apiKey);
-    if (!isAuthenticated) {
-      res.status(401).json({ error: "Invalid or revoked API key" });
-      return;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const apiKey = authHeader.substring(7);
+      const isAuthenticated = await authenticateApiKey(apiKey);
+      if (!isAuthenticated) {
+        res.status(401).json({ error: "Invalid or revoked API key" });
+        return;
+      }
     }
 
     const server = createMcpServer();
