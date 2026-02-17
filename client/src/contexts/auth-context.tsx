@@ -143,6 +143,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [user]);
 
   const logout = () => {
+    try { sessionStorage.setItem('bci_logging_out', '1'); } catch (_) {}
     window.location.href = '/api/logout';
   };
 
