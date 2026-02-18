@@ -10,7 +10,10 @@ import { storage } from "./storage";
 import fs from "node:fs";
 import path from "node:path";
 
-const MCP_APPS_DIR = path.join(import.meta.dirname, "..", "mcp-apps", "dist");
+import { fileURLToPath } from "node:url";
+
+const __dirname = import.meta.dirname ?? path.dirname(fileURLToPath(import.meta.url));
+const MCP_APPS_DIR = path.join(__dirname, "..", "mcp-apps", "dist");
 
 function readAppHtml(filename: string): string {
   try {
