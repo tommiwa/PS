@@ -29,9 +29,9 @@ async function authenticateApiKey(apiKey: string): Promise<boolean> {
   return true;
 }
 
-function optionalAuth(req: any): Promise<boolean> {
+function requireAuth(req: any): Promise<boolean> {
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) return Promise.resolve(true);
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return Promise.resolve(false);
   return authenticateApiKey(authHeader.substring(7));
 }
 
@@ -164,7 +164,7 @@ export function registerMcpRoutes(app: Express) {
   app.use("/mcp", cors());
 
   app.post("/mcp", async (req, res) => {
-    const isValid = await optionalAuth(req);
+    const isValid = await requireAuth(req);
     if (!isValid) {
       res.status(401).json({ error: "Invalid or revoked API key" });
       return;
@@ -227,7 +227,7 @@ export function registerMcpRoutes(app: Express) {
       return;
     }
 
-    const isValid = await optionalAuth(req);
+    const isValid = await requireAuth(req);
     if (!isValid) {
       res.status(401).json({ error: "Invalid or revoked API key" });
       return;
@@ -265,7 +265,7 @@ export function registerMcpRoutes(app: Express) {
   });
 
   app.get("/mcp/sse", async (req, res) => {
-    const isValid = await optionalAuth(req);
+    const isValid = await requireAuth(req);
     if (!isValid) {
       res.status(401).json({ error: "Invalid or revoked API key" });
       return;
@@ -303,7 +303,7 @@ export function registerMcpRoutes(app: Express) {
       activeSessions: streamableSessions.size + sseTransports.size,
       mcpApps: ["spots-search"],
       tools: ["search_available_spots", "get_locations"],
-      authentication: "Optional - Bearer token (API key) in Authorization header. Works without auth for read-only tools.",
+      authentication: "Required - Bearer token (API key) in Authorization header.",
       endpoints: {
         streamableHttp: "/mcp (POST, GET, DELETE)",
         sse: "/mcp/sse (legacy)",
