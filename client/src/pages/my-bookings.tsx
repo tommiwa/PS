@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { SpotListingForm } from "@/components/spot-listing-form"
-import { Calendar, Search, Download, Clock, CheckCircle, CheckCircle2, XCircle, Car, MapPin, DollarSign, AlertTriangle, Plus, Edit, Trash2, CreditCard, Info, Building, Ban, Eye, FileText, CalendarCheck, Receipt, LayoutGrid, List, User, Bell, X, ExternalLink, Heart } from "lucide-react"
+import { Calendar, Search, Download, Clock, CheckCircle, CheckCircle2, XCircle, Car, MapPin, DollarSign, AlertTriangle, Plus, Edit, Trash2, CreditCard, Info, Building, Ban, Eye, FileText, CalendarCheck, Receipt, LayoutGrid, List, User, Bell, X, ExternalLink, Heart, Map } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { isPastDate } from "@/utils/date-utils"
 import { format, addMonths } from "date-fns"
@@ -1177,29 +1177,35 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                   <Car className="h-5 w-5 text-primary" />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="font-semibold text-base">Spot {booking.spotNumber}</h3>
+                  <h3 className="font-semibold text-base flex items-center gap-1.5">
+                    Spot {booking.spotNumber}
+                    {(() => {
+                      const mapUrl = booking.mapLink || (booking.floorPlanBaseUrl && booking.seatNumber ? `${booking.floorPlanBaseUrl}${booking.seatNumber}` : null);
+                      if (!mapUrl) return null;
+                      return (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <a
+                              href={mapUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center text-primary hover:text-primary/80 transition-colors"
+                              data-testid={`link-map-${booking.id}`}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Map className="h-4 w-4" />
+                            </a>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>View spot on floor plan</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      );
+                    })()}
+                  </h3>
                   <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                     <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
                     <span className="truncate">{booking.location}</span>
-                    {booking.floorPlanBaseUrl && booking.seatNumber && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <a
-                            href={`${booking.floorPlanBaseUrl}${booking.seatNumber}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-primary hover:underline ml-1"
-                            data-testid={`link-floor-plan-${booking.id}`}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <ExternalLink className="h-3.5 w-3.5" />
-                          </a>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>View on floor plan</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
                   </div>
                 </div>
               </div>
@@ -1610,25 +1616,29 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
           <div className="min-w-0">
             <div className="flex items-center gap-1">
               <p className="font-medium text-sm truncate">Spot {booking.spotNumber}</p>
-              {booking.floorPlanBaseUrl && booking.seatNumber && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <a
-                      href={`${booking.floorPlanBaseUrl}${booking.seatNumber}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center text-primary hover:text-primary/80"
-                      data-testid={`compact-link-floor-plan-${booking.id}`}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </a>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>View on floor plan</p>
-                  </TooltipContent>
-                </Tooltip>
-              )}
+              {(() => {
+                const mapUrl = booking.mapLink || (booking.floorPlanBaseUrl && booking.seatNumber ? `${booking.floorPlanBaseUrl}${booking.seatNumber}` : null);
+                if (!mapUrl) return null;
+                return (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <a
+                        href={mapUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center text-primary hover:text-primary/80 transition-colors"
+                        data-testid={`compact-link-map-${booking.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Map className="h-3.5 w-3.5" />
+                      </a>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>View spot on floor plan</p>
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })()}
             </div>
             <p className="text-xs text-muted-foreground truncate">{booking.location}</p>
           </div>
@@ -2287,18 +2297,29 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                     <p className="text-sm text-muted-foreground">Spot Number</p>
                     <div className="flex items-center gap-2">
                       <p className="font-medium">{selectedBooking.spotNumber}</p>
-                      {selectedBooking.floorPlanBaseUrl && selectedBooking.seatNumber && (
-                        <a
-                          href={`${selectedBooking.floorPlanBaseUrl}${selectedBooking.seatNumber}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                          data-testid="details-floor-plan-link"
-                        >
-                          <ExternalLink className="h-3.5 w-3.5" />
-                          <span>View on map</span>
-                        </a>
-                      )}
+                      {(() => {
+                        const mapUrl = selectedBooking.mapLink || (selectedBooking.floorPlanBaseUrl && selectedBooking.seatNumber ? `${selectedBooking.floorPlanBaseUrl}${selectedBooking.seatNumber}` : null);
+                        if (!mapUrl) return null;
+                        return (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <a
+                                href={mapUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+                                data-testid="details-map-link"
+                              >
+                                <Map className="h-4 w-4" />
+                                <span>View on map</span>
+                              </a>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>View spot on floor plan</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        );
+                      })()}
                     </div>
                   </div>
                   <div>

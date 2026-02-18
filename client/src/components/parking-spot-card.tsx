@@ -332,8 +332,31 @@ export function ParkingSpotCard({
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2 flex-wrap">
-              <h3 className="text-xl font-bold text-foreground">
+              <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
                 Spot {spot.spotNumber}
+                {(() => {
+                  const mapUrl = spot.mapLink || (spot.floorPlanBaseUrl && spot.seatNumber ? `${spot.floorPlanBaseUrl}${spot.seatNumber}` : null);
+                  if (!mapUrl) return null;
+                  return (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <a
+                          href={mapUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center text-primary hover:text-primary/80 transition-colors"
+                          data-testid={`link-map-spot-${spot.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Map className="h-5 w-5" />
+                        </a>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>View spot on floor plan</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                })()}
               </h3>
               {isLockedByOther && (
                 <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/50 dark:text-yellow-200 dark:border-yellow-600">
@@ -350,25 +373,6 @@ export function ParkingSpotCard({
                 {locationName || `Location ID: ${spot.locationId}`}
                 {spot.isIndoor && " • Indoor"}
               </span>
-              {spot.floorPlanBaseUrl && spot.seatNumber && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <a
-                      href={`${spot.floorPlanBaseUrl}${spot.seatNumber}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-primary hover:underline ml-1"
-                      data-testid={`link-floor-plan-${spot.id}`}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <Map className="h-3.5 w-3.5" />
-                    </a>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>View on floor plan</p>
-                  </TooltipContent>
-                </Tooltip>
-              )}
             </div>
           </div>
           <div className="flex flex-col gap-1 items-end">

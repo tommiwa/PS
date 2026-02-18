@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle, User, Zap, Accessibility, Building, CreditCard, Timer, Info, Phone, Banknote, Heart, Tag, Sparkles } from "lucide-react"
+import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle, User, Zap, Accessibility, Building, CreditCard, Timer, Info, Phone, Banknote, Heart, Tag, Sparkles, Map } from "lucide-react"
 import { isWeekend, parseISO } from "date-fns"
 import { format, addMonths } from "date-fns"
 import type { ParkingSpot as DBParkingSpot } from "@shared/schema"
@@ -40,6 +40,7 @@ export interface ParkingSpot extends DBParkingSpot {
   }
   donateToCharity?: boolean
   dateToCharity?: Record<string, boolean>
+  floorPlanBaseUrl?: string | null
 }
 
 interface BookingFormProps {
@@ -294,6 +295,29 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
               <div className="flex items-center gap-2 text-xl font-semibold">
                 {getSpotTypeIcon()}
                 Spot {spot.spotNumber}
+                {(() => {
+                  const mapUrl = spot.mapLink || (spot.floorPlanBaseUrl && spot.seatNumber ? `${spot.floorPlanBaseUrl}${spot.seatNumber}` : null);
+                  if (!mapUrl) return null;
+                  return (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <a
+                          href={mapUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center rounded-md text-primary hover:text-primary/80 transition-colors"
+                          data-testid={`link-map-booking-${spot.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Map className="h-5 w-5" />
+                        </a>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>View spot on floor plan</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                })()}
               </div>
               <Badge variant="secondary">
                 {getSpotTypeBadge()}

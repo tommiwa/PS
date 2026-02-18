@@ -2119,6 +2119,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Include BCI-managed flag to distinguish admin-managed vs peer-to-peer listings
           isBciManaged: spot?.isBciManaged || false,
           // Include map link fields
+          mapLink: spot?.mapLink || null,
           seatNumber: spot?.seatNumber || null,
           floorPlanBaseUrl: floorPlanBaseUrl,
           listingType: listing?.listingType || 'single',
