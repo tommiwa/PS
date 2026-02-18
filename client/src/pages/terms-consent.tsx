@@ -213,18 +213,18 @@ export default function TermsConsent() {
   }
 
   return (
-    <div className="h-screen bg-background flex flex-col overflow-hidden">
-      <div className="flex-shrink-0 py-4 text-center border-b bg-background">
+    <div className="bg-background flex flex-col" style={{ height: '100dvh' }}>
+      <div className="flex-shrink-0 py-3 sm:py-4 text-center border-b bg-background px-4">
         <BCIHeroLogo className="mx-auto mb-2" />
-        <h1 className="text-2xl font-bold mb-1">Terms and Conditions</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="text-xl sm:text-2xl font-bold mb-1">Terms and Conditions</h1>
+        <p className="text-xs sm:text-sm text-muted-foreground">
           Please review and accept the terms to continue using the platform
         </p>
       </div>
 
-      <div className="flex-1 overflow-auto px-4 py-4">
+      <div className="flex-1 overflow-auto px-3 sm:px-4 py-3 sm:py-4 min-h-0">
         <div className="max-w-4xl mx-auto">
-          <Card className="p-6 md:p-8">
+          <Card className="p-4 sm:p-6 md:p-8">
             <div className="max-w-none" data-testid="terms-consent-content">
               <FormattedTermsContent content={terms.content} />
             </div>
@@ -232,7 +232,7 @@ export default function TermsConsent() {
         </div>
       </div>
 
-      <div className="flex-shrink-0 border-t bg-background px-4 py-4">
+      <div className="flex-shrink-0 border-t bg-background px-3 sm:px-4 py-3 sm:py-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:pb-4">
         <div className="max-w-4xl mx-auto space-y-3">
           <div className="flex items-start space-x-3 p-3 bg-muted/50 rounded-lg">
             <Checkbox
@@ -263,6 +263,7 @@ export default function TermsConsent() {
               onClick={handleAccept}
               disabled={!accepted || acceptTermsMutation.isPending}
               size="lg"
+              className="w-full sm:w-auto"
               data-testid="button-accept-terms"
             >
               {acceptTermsMutation.isPending ? (
