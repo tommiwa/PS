@@ -46,7 +46,9 @@ function renderSpots(spots: SpotResult[]) {
   if (spots.length === 0) {
     contentEl.innerHTML = `
       <div class="empty-state">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5m-4 0h4"/></svg>
+        <div class="empty-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5m-4 0h4"/></svg>
+        </div>
         <p>No available spots found</p>
       </div>`;
     countEl.textContent = "";
@@ -60,22 +62,30 @@ function renderSpotCard(spot: SpotResult): string {
   const charityBadge = spot.donateToCharity
     ? `<span class="badge badge-charity">Charity</span>`
     : "";
+  const listingLabel = spot.listingType === 'single' ? 'Single day' : spot.listingType === 'period' ? 'Period' : spot.listingType === 'recurring' ? 'Recurring' : spot.listingType;
   return `
     <div class="spot-card">
-      <div class="spot-name">Spot ${spot.spotNumber} ${charityBadge}</div>
-      <div class="spot-meta">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-        ${spot.location}
+      <div class="spot-card-header">
+        <div class="spot-name">
+          <svg class="spot-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="m16 8 5 3v7l-5 3z"/><circle cx="8" cy="21" r="1.5"/><circle cx="18" cy="21" r="1.5"/><path d="M2 21h4m10 0h4"/></svg>
+          Spot ${spot.spotNumber} ${charityBadge}
+        </div>
+        <div class="spot-price">$${spot.dailyRate}/day</div>
       </div>
-      <div class="spot-meta">
-        <span class="badge badge-type">${spot.spotType}</span>
-        <span class="badge">${spot.listingType}</span>
+      <div class="spot-details">
+        <div class="spot-meta">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+          ${spot.location}
+        </div>
+        <div class="spot-meta">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          ${getSpotDateDisplay(spot)}
+        </div>
+        <div class="spot-meta">
+          <span class="badge badge-type">${spot.spotType}</span>
+          <span class="badge badge-listing">${listingLabel}</span>
+        </div>
       </div>
-      <div class="spot-meta">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        ${getSpotDateDisplay(spot)}
-      </div>
-      <div class="spot-price">$${spot.dailyRate}/day</div>
     </div>`;
 }
 

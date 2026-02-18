@@ -17,88 +17,258 @@
       background: var(--color-background-primary, #1a1a2e);
       color: var(--color-text-primary, #e0e0e0);
     }
-    .header { margin-bottom: 16px; }
-    .header h2 { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
-    .header p { font-size: 13px; opacity: 0.7; }
-    .filters { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-    .filters input, .filters select {
-      padding: 8px 12px;
+
+    .app-container {
       border: 1px solid var(--color-border-primary, #e0e0e0);
-      border-radius: 6px;
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--color-background-primary, #ffffff);
+    }
+    [data-theme="dark"] .app-container {
+      border-color: var(--color-border-primary, #3a3a4e);
+      background: var(--color-background-primary, #1a1a2e);
+    }
+
+    .app-header {
+      background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .app-logo {
+      width: 36px;
+      height: 36px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .app-logo svg { width: 20px; height: 20px; color: white; }
+    .app-header-text h2 {
+      font-size: 16px;
+      font-weight: 600;
+      color: white;
+      letter-spacing: -0.01em;
+    }
+    .app-header-text p {
+      font-size: 12px;
+      color: rgba(255,255,255,0.75);
+      margin-top: 1px;
+    }
+
+    .app-body { padding: 16px 20px 20px; }
+
+    .filters {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .filters input {
+      padding: 7px 12px;
+      border: 1px solid var(--color-border-primary, #d1d5db);
+      border-radius: 8px;
       font-size: 13px;
-      background: var(--color-background-secondary, #f8f9fa);
+      background: var(--color-background-secondary, #f9fafb);
       color: inherit;
       outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      flex: 1;
+      min-width: 140px;
     }
-    [data-theme="dark"] .filters input,
-    [data-theme="dark"] .filters select {
+    [data-theme="dark"] .filters input {
       background: var(--color-background-secondary, #2a2a3e);
       border-color: var(--color-border-primary, #3a3a4e);
     }
-    .filters input:focus, .filters select:focus {
+    .filters input:focus {
       border-color: #3b82f6;
+      box-shadow: 0 0 0 2px rgba(59,130,246,0.15);
     }
     .btn {
-      padding: 8px 16px;
+      padding: 7px 14px;
       border: none;
-      border-radius: 6px;
+      border-radius: 8px;
       font-size: 13px;
       font-weight: 500;
       cursor: pointer;
-      transition: opacity 0.2s;
+      transition: opacity 0.15s, transform 0.1s;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
     }
-    .btn:hover { opacity: 0.85; }
+    .btn:hover { opacity: 0.88; }
+    .btn:active { transform: scale(0.97); }
     .btn-primary { background: #3b82f6; color: white; }
-    .btn-sm { padding: 6px 12px; font-size: 12px; }
-    .spots-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+
+    .count {
+      font-size: 12px;
+      font-weight: 500;
+      opacity: 0.55;
+      margin-bottom: 12px;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .spots-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 10px;
+    }
     .spot-card {
-      border: 1px solid var(--color-border-primary, #e0e0e0);
-      border-radius: 8px;
-      padding: 14px;
-      background: var(--color-background-secondary, #f8f9fa);
-      transition: border-color 0.2s;
+      border: 1px solid var(--color-border-primary, #e5e7eb);
+      border-radius: 10px;
+      padding: 14px 16px;
+      background: var(--color-background-secondary, #f9fafb);
+      transition: border-color 0.2s, box-shadow 0.2s;
+      position: relative;
     }
     [data-theme="dark"] .spot-card {
       background: var(--color-background-secondary, #2a2a3e);
       border-color: var(--color-border-primary, #3a3a4e);
     }
-    .spot-card:hover { border-color: #3b82f6; }
-    .spot-name { font-weight: 600; font-size: 15px; margin-bottom: 6px; }
-    .spot-meta { font-size: 12px; opacity: 0.7; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
-    .spot-price { font-weight: 600; color: #10b981; font-size: 14px; margin-top: 8px; }
+    .spot-card:hover {
+      border-color: #93bbfd;
+      box-shadow: 0 2px 8px rgba(59,130,246,0.08);
+    }
+    [data-theme="dark"] .spot-card:hover {
+      border-color: #3b6fc4;
+      box-shadow: 0 2px 8px rgba(59,130,246,0.12);
+    }
+
+    .spot-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .spot-name {
+      font-weight: 600;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .spot-name .spot-icon {
+      width: 18px;
+      height: 18px;
+      color: #3b82f6;
+      flex-shrink: 0;
+    }
+    .spot-price {
+      font-weight: 700;
+      color: #059669;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+    [data-theme="dark"] .spot-price { color: #34d399; }
+
+    .spot-details {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .spot-meta {
+      font-size: 12px;
+      opacity: 0.65;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .spot-meta svg { flex-shrink: 0; opacity: 0.7; }
+
     .badge {
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
       padding: 2px 8px;
-      border-radius: 10px;
+      border-radius: 6px;
       font-size: 11px;
       font-weight: 500;
+      letter-spacing: 0.01em;
     }
     .badge-type { background: #dbeafe; color: #1d4ed8; }
     .badge-charity { background: #fce7f3; color: #be185d; }
+    .badge-listing { background: #f0fdf4; color: #166534; }
     [data-theme="dark"] .badge-type { background: #1e3a5f; color: #93c5fd; }
     [data-theme="dark"] .badge-charity { background: #4a1942; color: #f9a8d4; }
+    [data-theme="dark"] .badge-listing { background: #14332a; color: #6ee7b7; }
+
     .empty-state {
       text-align: center;
       padding: 40px 20px;
-      opacity: 0.6;
     }
-    .empty-state svg { width: 48px; height: 48px; margin-bottom: 12px; opacity: 0.4; }
-    .loading { text-align: center; padding: 40px; opacity: 0.6; }
-    .count { font-size: 12px; opacity: 0.6; margin-bottom: 12px; }
+    .empty-state .empty-icon {
+      width: 56px;
+      height: 56px;
+      margin: 0 auto 14px;
+      background: var(--color-background-secondary, #f3f4f6);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    [data-theme="dark"] .empty-state .empty-icon {
+      background: var(--color-background-secondary, #2a2a3e);
+    }
+    .empty-state .empty-icon svg { width: 28px; height: 28px; opacity: 0.4; }
+    .empty-state p { font-size: 14px; opacity: 0.5; }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      opacity: 0.5;
+      font-size: 13px;
+    }
+    .loading::before {
+      content: '';
+      display: block;
+      width: 24px;
+      height: 24px;
+      border: 2px solid var(--color-border-primary, #d1d5db);
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      margin: 0 auto 10px;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .powered-by {
+      text-align: center;
+      margin-top: 16px;
+      font-size: 11px;
+      opacity: 0.35;
+      letter-spacing: 0.02em;
+    }
   </style>
 </head>
 <body>
-  <div class="header">
-    <h2>Available Parking Spots</h2>
-    <p>Browse and search for available spots to book</p>
+  <div class="app-container">
+    <div class="app-header">
+      <div class="app-logo">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="m16 8 5 3v7l-5 3z"/><circle cx="8" cy="21" r="1.5"/><circle cx="18" cy="21" r="1.5"/><path d="M2 21h4m10 0h4"/></svg>
+      </div>
+      <div class="app-header-text">
+        <h2>BCI ParkShare</h2>
+        <p>Search available parking spots to book</p>
+      </div>
+    </div>
+    <div class="app-body">
+      <div class="filters">
+        <input type="text" id="filter-location" placeholder="Filter by location..." />
+        <input type="date" id="filter-date" />
+        <button class="btn btn-primary" id="btn-refresh">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+          Refresh
+        </button>
+      </div>
+      <div id="count" class="count"></div>
+      <div id="content" class="loading">Loading available spots...</div>
+      <div class="powered-by">BCI ParkShare</div>
+    </div>
   </div>
-  <div class="filters">
-    <input type="text" id="filter-location" placeholder="Filter by location..." />
-    <input type="date" id="filter-date" />
-    <button class="btn btn-primary btn-sm" id="btn-refresh">Refresh</button>
-  </div>
-  <div id="count" class="count"></div>
-  <div id="content" class="loading">Loading available spots...</div>
   <script type="module" src="/src/spots-search.ts"></script>
 </body>
 </html>
