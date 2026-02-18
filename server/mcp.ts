@@ -1,24 +1,11 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { registerAppTool, registerAppResource, RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
 import type { Express } from "express";
 import cors from "cors";
 import { createHash, randomUUID } from "crypto";
 import { storage } from "./storage";
-import fs from "node:fs";
-import path from "node:path";
-
-const MCP_APPS_DIR = path.join(process.cwd(), "mcp-apps", "dist");
-
-function readAppHtml(filename: string): string {
-  try {
-    return fs.readFileSync(path.join(MCP_APPS_DIR, filename), "utf-8");
-  } catch {
-    return `<html><body><p>MCP App UI not built. Run the build step first.</p></body></html>`;
-  }
-}
 
 async function authenticateApiKey(apiKey: string): Promise<boolean> {
   if (!apiKey) return false;
@@ -41,18 +28,12 @@ function createMcpServer(): McpServer {
     version: "1.0.0",
   });
 
-  const spotsSearchUri = "ui://parkshare/spots-search.html";
-  registerAppTool(
-    server,
+  server.tool(
     "search_available_spots",
+    "Search for available parking spots. Returns spots with active listings that can be booked.",
     {
-      title: "Search Available Spots",
-      description: "Search for available parking spots. Returns spots with active listings that can be booked.",
-      inputSchema: {
-        location: z.string().optional().describe("Filter by location name (partial match)"),
-        date: z.string().optional().describe("Filter by specific date (YYYY-MM-DD format)"),
-      },
-      _meta: { ui: { resourceUri: spotsSearchUri } },
+      location: z.string().optional().describe("Filter by location name (partial match)"),
+      date: z.string().optional().describe("Filter by specific date (YYYY-MM-DD format)"),
     },
     async ({ location, date }): Promise<any> => {
       try {
@@ -112,16 +93,6 @@ function createMcpServer(): McpServer {
         return { content: [{ type: "text" as const, text: `Error: ${error.message}` }] };
       }
     }
-  );
-
-  registerAppResource(
-    server,
-    "Available Spots Search",
-    spotsSearchUri,
-    { mimeType: RESOURCE_MIME_TYPE },
-    async () => ({
-      contents: [{ uri: spotsSearchUri, mimeType: RESOURCE_MIME_TYPE, text: readAppHtml("spots-search.html") }],
-    }),
   );
 
   server.tool(
@@ -301,7 +272,6 @@ export function registerMcpRoutes(app: Express) {
       version: "1.0.0",
       transport: ["Streamable HTTP", "SSE (legacy)"],
       activeSessions: streamableSessions.size + sseTransports.size,
-      mcpApps: ["spots-search"],
       tools: ["search_available_spots", "get_locations"],
       authentication: "Required - Bearer token (API key) in Authorization header.",
       endpoints: {
