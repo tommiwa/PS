@@ -397,12 +397,29 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
                   Owner: <span className="font-medium text-foreground">{(spot as any).assignedUserName || "BCI Workplace Services"}</span>
                 </div>
               </div>
-              {/* Booking Date Info */}
-              <div className="flex items-center gap-2 mt-1 text-sm">
-                <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                <span className="font-medium">{formData.date}</span>
-                <span className="text-muted-foreground">(Full day: 12:00 AM - 11:59 PM)</span>
-              </div>
+              {/* Booking Date - Calendar Style */}
+              {(() => {
+                const dateObj = formData.date ? new Date(formData.date + 'T12:00:00') : null;
+                const dayOfWeek = dateObj ? format(dateObj, 'EEE').toUpperCase() : '';
+                const dayNum = dateObj ? format(dateObj, 'd') : '';
+                const monthYear = dateObj ? format(dateObj, 'MMMM yyyy') : '';
+                return (
+                  <div className="flex items-center gap-3 mt-2">
+                    <div className="flex flex-col items-center rounded-md border overflow-visible w-14 shrink-0">
+                      <div className="bg-primary text-primary-foreground text-[10px] font-bold tracking-wider w-full text-center py-0.5">
+                        {dayOfWeek}
+                      </div>
+                      <div className="text-2xl font-bold leading-none py-1.5">
+                        {dayNum}
+                      </div>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-base font-semibold">{monthYear}</span>
+                      <span className="text-xs text-muted-foreground">Full day: 12:00 AM - 11:59 PM</span>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
           {userActiveLock && remainingSeconds > 0 && (
