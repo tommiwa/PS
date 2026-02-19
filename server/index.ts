@@ -222,18 +222,9 @@ BCI's failure to enforce any right or provision of these Terms shall not constit
 
 ---
 
-## Contact Information
+## Contact
 
-For technical support, please contact:
-
-**BCI Technology Integration Services**
-Email: DL_Technology_Integration_Services@bci.ca
-
-For account issues, or Terms-related inquiries, please contact:
-
-**BCI WorkPlace Services**
-Email: workplaceservices@bci.ca
-Phone: (778) 410-7100
+Questions regarding these Terms or the App should be directed to workplaceservices@bci.ca.
 
 ---
 
@@ -249,10 +240,6 @@ This Privacy Notice explains how we collect, use, disclose and protect your pers
 
 By using the App, you acknowledge and agree to the collection, use, and disclosure of your personal information as described in this ParkShare Privacy Notice and in BCI's Privacy Notice - Canada. All personal information will be collected, used and disclosed in accordance with the Freedom of Information and Protection of Privacy Act (British Columbia) ("FIPPA").
 
----
-
-## Information We Collect
-
 BCI collects the following personal information through the App:
 
 - identification information, including your name, work email, department, and vehicle details such as make and colour
@@ -263,28 +250,16 @@ BCI collects the following personal information through the App:
 
 For clarity, if you make a payment via Interac, the individual whose stall you have booked may see your Interac email ID, but this information is not collected or visible to BCI.
 
----
-
-## How We Use Your Information
-
 BCI collects this personal information for the following purposes:
 
 - to administer and operate the App, including facilitating bookings between users
 - to investigate and enforce breaches of these Terms
 - to improve the App and related services
-- for any other purpose specified in BCI's Privacy Notice - Canada
-
----
-
-## Disclosure of Information
+- for any other purpose specified in BCI's Privacy Notice \u2013 Canada
 
 BCI will use and disclose your personal information only for the purposes described in this ParkShare Privacy Notice, for purposes consistent with those purposes, or as otherwise permitted or required under FIPPA. Your personal information may be disclosed to other users to the extent necessary to facilitate bookings (for example, when you book a stall, the individual whose stall you have booked will see your name).
 
----
-
-## Contact
-
-If you have questions about the collection of your personal information through the App, please refer to BCI's Privacy Notice - Canada or contact BCI's Privacy Officer at privacy@bci.ca.`;
+If you have questions about the collection of your personal information through the App, please refer to BCI's Privacy Notice \u2013 Canada or contact BCI's Privacy Officer at privacy@bci.ca.`;
 
       if (!activeTerms) {
         await storage.createTermsVersion({
@@ -295,21 +270,20 @@ If you have questions about the collection of your personal information through 
         });
         
         log("Seeded initial Terms and Conditions (Version 1.0)");
-      } else if (activeTerms.version === 1) {
-        // Migrate v1 terms to v2: add dual contact format + Privacy Notice
-        const hasPrivacyNotice = activeTerms.content.includes("ParkShare Privacy Notice");
-        const hasDualContact = activeTerms.content.includes("Technology Integration Services");
-        if (!hasPrivacyNotice || !hasDualContact) {
+      } else {
+        const contentMatches = activeTerms.content.trim() === initialTermsContent.trim();
+        if (!contentMatches) {
           const { termsVersions } = await import("@shared/schema");
           const { eq } = await import("drizzle-orm");
+          const newVersion = activeTerms.version + 1;
           await db.update(termsVersions)
             .set({ 
               content: initialTermsContent,
-              version: 2,
+              version: newVersion,
               updatedAt: new Date()
             })
             .where(eq(termsVersions.id, activeTerms.id));
-          log("Migrated Terms and Conditions from v1 to v2 (added dual contact + Privacy Notice)");
+          log(`Migrated Terms and Conditions to v${newVersion} (synced with official document)`);
         }
       }
     } catch (error) {
