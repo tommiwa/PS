@@ -991,6 +991,7 @@ export interface AdminBookingData {
   notes: string;
   createdAt: string;
   lastActivity: string;
+  ownerPaymentType?: string;
   ownerPaymentInstructions?: string;
 }
 

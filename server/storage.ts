@@ -3130,6 +3130,7 @@ export class MemStorage implements IStorage {
         spot_owner.first_name as spot_owner_first_name, 
         spot_owner.last_name as spot_owner_last_name, spot_owner.email as spot_owner_email,
         spot_owner_dept.name as spot_owner_department,
+        pp.payment_type as owner_payment_type,
         pp.payment_instructions as owner_payment_instructions
       FROM bookings b
       LEFT JOIN parking_spots ps ON b.spot_id = ps.id
@@ -3186,6 +3187,7 @@ export class MemStorage implements IStorage {
         notes: row.notes || '',
         createdAt: new Date(row.created_at).toISOString(),
         lastActivity: new Date(row.updated_at).toISOString(),
+        ownerPaymentType: row.owner_payment_type || '',
         ownerPaymentInstructions: row.owner_payment_instructions || '',
       };
     });
