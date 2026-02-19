@@ -19,7 +19,10 @@ import {
   sendSpotAvailabilityNotification,
   sendWeeklySummaryNotification,
   sendSystemMaintenanceNotification,
-  type InAppNotification 
+  sendEmailNotification,
+  wrapEmailTemplate,
+  type InAppNotification,
+  type EmailNotification
 } from "./notification-service";
 import { 
   insertParkingSpotSchema,
@@ -4423,6 +4426,129 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating payment status:", error);
       res.status(500).json({ error: "Failed to update payment status" });
+    }
+  });
+
+  // POST /api/admin/bookings/:id/contact - Send email to booking participants (Admin only)
+  app.post("/api/admin/bookings/:id/contact", requireAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { message, recipients } = req.body;
+
+      if (!message || !message.trim()) {
+        return res.status(400).json({ error: "Message is required" });
+      }
+      if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+        return res.status(400).json({ error: "At least one recipient is required" });
+      }
+
+      const booking = await storage.getBooking(id);
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      const spot = await storage.getParkingSpot(booking.spotId);
+      if (!spot) {
+        return res.status(404).json({ error: "Parking spot not found" });
+      }
+
+      const adminUserId = req.user.claims.sub;
+      const adminUser = await storage.getUser(adminUserId);
+      const adminName = adminUser ? `${adminUser.firstName} ${adminUser.lastName}` : 'Admin';
+
+      const renter = await storage.getUser(booking.renterId);
+      const owner = spot.ownerId ? await storage.getUser(spot.ownerId) : null;
+
+      const bookingDate = booking.bookingDate || 'N/A';
+      const spotNumber = spot.spotNumber || 'N/A';
+
+      const subject = 'BCI ParkShare - Message from Admin regarding Booking';
+
+      const textBody = (recipientName: string) => `Dear ${recipientName},
+
+You have received a message from ${adminName} regarding your parking booking.
+
+MESSAGE:
+${message.trim()}
+
+BOOKING DETAILS:
+- Booking ID: ${id}
+- Spot Number: ${spotNumber}
+- Booking Date: ${bookingDate}
+
+If you have any questions, please contact Workplace Services.
+
+Warm regards,
+The BCI ParkShare Team`;
+
+      const htmlBody = (recipientName: string) => {
+        const content = `
+          <p>Dear ${recipientName},</p>
+          <p>You have received a message from <strong>${adminName}</strong> regarding your parking booking.</p>
+          
+          <div class="info-card" style="background-color: #f8fafc; border-radius: 8px; padding: 20px 24px; margin: 24px 0; border-left: 4px solid #1e9df1;">
+            <h3 style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 16px; font-weight: 600; color: #1e293b; margin: 0 0 12px 0;">Message</h3>
+            <p style="font-size: 15px; color: #374151; white-space: pre-wrap; margin: 0;">${message.trim().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')}</p>
+          </div>
+          
+          <div class="info-card" style="background-color: #f8fafc; border-radius: 8px; padding: 20px 24px; margin: 24px 0; border-left: 4px solid #1e9df1;">
+            <h3 style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 16px; font-weight: 600; color: #1e293b; margin: 0 0 12px 0;">Booking Details</h3>
+            <ul style="margin: 0; padding: 0; list-style: none;">
+              <li style="padding: 6px 0; font-size: 15px; color: #475569;"><strong style="color: #1e293b;">Booking ID:</strong> ${id}</li>
+              <li style="padding: 6px 0; font-size: 15px; color: #475569;"><strong style="color: #1e293b;">Spot Number:</strong> ${spotNumber}</li>
+              <li style="padding: 6px 0; font-size: 15px; color: #475569;"><strong style="color: #1e293b;">Booking Date:</strong> ${bookingDate}</li>
+            </ul>
+          </div>
+          
+          <p>If you have any questions, please contact Workplace Services.</p>
+        `;
+        return wrapEmailTemplate({
+          title: 'Message from Admin',
+          content,
+          theme: 'primary'
+        });
+      };
+
+      let emailsSent = 0;
+
+      if (recipients.includes('renter') && renter?.email) {
+        const renterName = `${renter.firstName || ''} ${renter.lastName || ''}`.trim() || 'User';
+        const notification: EmailNotification = {
+          to: renter.email,
+          cc: [WORKPLACE_SERVICES_EMAIL],
+          subject,
+          text: textBody(renterName),
+          html: htmlBody(renterName),
+          type: 'general'
+        };
+        const result = await sendEmailNotification(notification);
+        if (result.success) emailsSent++;
+      }
+
+      if (recipients.includes('owner') && owner?.email) {
+        const ownerName = `${owner.firstName || ''} ${owner.lastName || ''}`.trim() || 'User';
+        const notification: EmailNotification = {
+          to: owner.email,
+          cc: [WORKPLACE_SERVICES_EMAIL],
+          subject,
+          text: textBody(ownerName),
+          html: htmlBody(ownerName),
+          type: 'general'
+        };
+        const result = await sendEmailNotification(notification);
+        if (result.success) emailsSent++;
+      }
+
+      await auditService.logAction("UPDATE", "booking", {
+        entityId: id,
+        message: `Admin sent contact email to ${recipients.join(', ')} regarding booking ${id}`,
+        after: { recipients, emailsSent }
+      });
+
+      res.json({ success: true, emailsSent });
+    } catch (error) {
+      console.error("Error sending contact email:", error);
+      res.status(500).json({ error: "Failed to send contact email" });
     }
   });
 

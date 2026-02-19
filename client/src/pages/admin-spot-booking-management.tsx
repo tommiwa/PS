@@ -24,6 +24,7 @@ import { SortableTableHeader } from "@/components/ui/sortable-table-header"
 import { EnhancedFilters, type FilterConfig, type FilterValues } from "@/components/ui/enhanced-filters"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { 
@@ -283,6 +284,8 @@ export default function AdminSpotBookingManagement() {
   const [showMarkPaidConfirmDialog, setShowMarkPaidConfirmDialog] = useState(false)
   const [cancelReason, setCancelReason] = useState("")
   const [contactMessage, setContactMessage] = useState("")
+  const [selectedRecipients, setSelectedRecipients] = useState<string[]>(["renter", "owner"])
+  const [isSendingContact, setIsSendingContact] = useState(false)
   const [activeTab, setActiveTab] = useState("availability")
   
   // Dispute-related state
@@ -1332,15 +1335,34 @@ export default function AdminSpotBookingManagement() {
     });
   };
 
-  const handleContactUser = (user: { name: string; email: string }) => {
-    console.log('Contact user:', user);
-    toast({
-      title: "Message Sent",
-      description: `Your message has been sent to ${user.name}.`,
-      variant: "default"
-    });
-    setShowContactDialog(false);
-    setContactMessage("");
+  const handleContactUser = async () => {
+    if (!selectedBooking || !contactMessage.trim() || selectedRecipients.length === 0) return;
+    
+    setIsSendingContact(true);
+    try {
+      const response = await apiRequest(`/api/admin/bookings/${selectedBooking.id}/contact`, {
+        method: 'POST',
+        body: JSON.stringify({ message: contactMessage, recipients: selectedRecipients }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await response.json();
+      toast({
+        title: "Message Sent",
+        description: `Your message has been sent to ${data.emailsSent} recipient(s).`,
+        variant: "default"
+      });
+      setShowContactDialog(false);
+      setContactMessage("");
+      setSelectedRecipients(["renter", "owner"]);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to send contact email",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSendingContact(false);
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -3190,7 +3212,13 @@ export default function AdminSpotBookingManagement() {
       </Dialog>
 
       {/* Contact Users Dialog */}
-      <Dialog open={showContactDialog} onOpenChange={setShowContactDialog}>
+      <Dialog open={showContactDialog} onOpenChange={(open) => {
+        setShowContactDialog(open);
+        if (!open) {
+          setContactMessage("");
+          setSelectedRecipients(["renter", "owner"]);
+        }
+      }}>
         <DialogContent data-testid="dialog-contact-users">
           <DialogHeader>
             <DialogTitle>Contact Users</DialogTitle>
@@ -3199,6 +3227,41 @@ export default function AdminSpotBookingManagement() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            <div className="space-y-3">
+              <Label>Recipients</Label>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="recipient-renter"
+                    checked={selectedRecipients.includes("renter")}
+                    onCheckedChange={(checked) => {
+                      setSelectedRecipients(prev =>
+                        checked ? [...prev, "renter"] : prev.filter(r => r !== "renter")
+                      );
+                    }}
+                  />
+                  <Label htmlFor="recipient-renter" className="text-sm font-normal cursor-pointer">
+                    Renter: {selectedBooking?.renterName} ({selectedBooking?.renterEmail})
+                  </Label>
+                </div>
+                {selectedBooking?.ownerEmail && (
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="recipient-owner"
+                      checked={selectedRecipients.includes("owner")}
+                      onCheckedChange={(checked) => {
+                        setSelectedRecipients(prev =>
+                          checked ? [...prev, "owner"] : prev.filter(r => r !== "owner")
+                        );
+                      }}
+                    />
+                    <Label htmlFor="recipient-owner" className="text-sm font-normal cursor-pointer">
+                      Owner/Assigned User: {selectedBooking?.ownerName} ({selectedBooking?.ownerEmail})
+                    </Label>
+                  </div>
+                )}
+              </div>
+            </div>
             <div>
               <Label htmlFor="contact-message">Message</Label>
               <Textarea
@@ -3213,19 +3276,24 @@ export default function AdminSpotBookingManagement() {
               <Button
                 variant="outline"
                 onClick={() => setShowContactDialog(false)}
+                disabled={isSendingContact}
                 data-testid="button-cancel-contact"
               >
                 Cancel
               </Button>
               <Button
-                onClick={() => selectedBooking && handleContactUser({
-                  name: selectedBooking.renterName,
-                  email: selectedBooking.renterEmail
-                })}
-                disabled={!contactMessage.trim()}
+                onClick={handleContactUser}
+                disabled={!contactMessage.trim() || selectedRecipients.length === 0 || isSendingContact}
                 data-testid="button-send-message"
               >
-                Send Message
+                {isSendingContact ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  "Send Message"
+                )}
               </Button>
             </div>
           </div>
