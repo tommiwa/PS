@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useState, useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { apiRequest } from "@/lib/queryClient"
 import { useLanguage } from "@/hooks/use-language"
@@ -99,9 +99,22 @@ export default function AdminAudits() {
   const auditUrl = `/api/admin/audits?${queryParams.toString()}`;
   const { data, isLoading, error, refetch } = useQuery<AuditLogsResponse>({
     queryKey: [auditUrl],
-    // Fallback for when data is still loading or undefined
     select: (data) => data || { items: [], total: 0, page: 1, pageSize: 50, totalPages: 1 }
   });
+
+  const { data: allUsers } = useQuery<Array<{ id: string; firstName: string; lastName: string; email: string }>>({
+    queryKey: ['/api/admin/users'],
+  });
+
+  const userMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (allUsers) {
+      for (const u of allUsers) {
+        map.set(u.id, `${u.firstName} ${u.lastName}`);
+      }
+    }
+    return map;
+  }, [allUsers]);
 
   // Handle search
   const handleSearch = () => {
@@ -479,11 +492,11 @@ export default function AdminAudits() {
                           <TableCell>
                             <div className="space-y-1">
                               <div className="font-medium text-sm">
-                                {log.actorEmail || "System"}
+                                {log.actorId ? (userMap.get(log.actorId) || log.actorEmail || "Unknown") : "System"}
                               </div>
-                              {log.actorId && (
-                                <div className="text-xs text-muted-foreground font-mono">
-                                  {log.actorId}
+                              {log.actorEmail && (
+                                <div className="text-xs text-muted-foreground">
+                                  {log.actorEmail}
                                 </div>
                               )}
                             </div>

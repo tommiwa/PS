@@ -558,7 +558,12 @@ export class DbAuditStorage implements IAuditStorage {
       conditions.push(lte(auditLogs.occurredAt, filters.endDate));
     }
     if (filters.actorId) {
-      conditions.push(eq(auditLogs.actorId, filters.actorId));
+      conditions.push(
+        or(
+          eq(auditLogs.actorId, filters.actorId),
+          ilike(auditLogs.actorEmail, `%${filters.actorId}%`)
+        )!
+      );
     }
     if (filters.entityType) {
       conditions.push(eq(auditLogs.entityType, filters.entityType));
