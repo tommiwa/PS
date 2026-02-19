@@ -2436,6 +2436,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             dateToPrice: dateToPrice, // Map of date -> {listingId, dailyRate} for accurate pricing
             dateToCharity: dateToCharity, // Map of date -> boolean for charity status
             donateToCharity: primaryDonateToCharity, // Primary charity status for first available date
+            createdByAdmin: primaryListingObj?.createdByAdmin || false,
             isAvailable: availabilityDates.length > 0, // True if spot has future availability
             ownerPaymentInstructions: ownerPaymentInstructions,
             ownerPaymentType: ownerPaymentType,

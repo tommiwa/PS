@@ -2509,16 +2509,24 @@ export default function AdminSpotBookingManagement() {
                                   })}
                                 </TableCell>
                                 <TableCell>
-                                  {booking.donateToCharity ? (
-                                    <Badge variant="outline" className="bg-pink-50 text-pink-700 border-pink-200">
-                                      <Heart className="h-3 w-3 mr-1 fill-pink-500" />
-                                      Charity
-                                    </Badge>
-                                  ) : (
-                                    <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200">
-                                      Regular
-                                    </Badge>
-                                  )}
+                                  <div className="flex flex-col gap-1">
+                                    {booking.donateToCharity ? (
+                                      <Badge variant="outline" className="bg-pink-50 text-pink-700 border-pink-200">
+                                        <Heart className="h-3 w-3 mr-1 fill-pink-500" />
+                                        Charity
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200">
+                                        Regular
+                                      </Badge>
+                                    )}
+                                    {(booking as any).createdByAdmin && (
+                                      <Badge className="bg-blue-600 text-white border-blue-700 gap-1">
+                                        <Building2 className="h-3 w-3" />
+                                        WPS Managed
+                                      </Badge>
+                                    )}
+                                  </div>
                                 </TableCell>
                                 <TableCell className={`font-medium ${booking.excludedFromPayroll ? 'text-red-600 line-through' : ''}`}>
                                   ${booking.totalAmount.toFixed(2)}

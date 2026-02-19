@@ -888,6 +888,21 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                     </TooltipContent>
                   </Tooltip>
                 )}
+                {listing.createdByAdmin && (
+                  <Tooltip delayDuration={100}>
+                    <TooltipTrigger asChild>
+                      <span className="cursor-help">
+                        <Badge className="bg-blue-600 hover:bg-blue-700 text-white border-blue-700 gap-1 flex items-center">
+                          <Building className="h-3 w-3" />
+                          WPS Managed
+                        </Badge>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent className="z-[100]">
+                      <p>This listing is managed by BCI Workplace Services</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
                 {getStatusBadge()}
               </div>
             </div>
@@ -1527,6 +1542,20 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                 </TooltipTrigger>
                 <TooltipContent className="z-[100]">
                   <p>The spot owner will donate all earnings from this spot to charity.</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {listing.createdByAdmin && (
+              <Tooltip delayDuration={100}>
+                <TooltipTrigger asChild>
+                  <span className="cursor-help">
+                    <Badge className="bg-blue-600 hover:bg-blue-700 text-white border-blue-700 gap-1 flex items-center text-xs px-1.5">
+                      <Building className="h-3 w-3" />
+                    </Badge>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="z-[100]">
+                  <p>This listing is managed by BCI Workplace Services</p>
                 </TooltipContent>
               </Tooltip>
             )}

@@ -30,6 +30,7 @@ type SpotWithLock = (ParkingSpot | ParkingSpotWithUser) & {
   reservedForDepartmentId?: number | null
   reservedForDepartmentName?: string | null
   donateToCharity?: boolean
+  createdByAdmin?: boolean
   ownerPaymentInstructions?: string | null
   ownerPaymentType?: string | null
 }
@@ -221,6 +222,25 @@ export function ParkingSpotCard({
           </TooltipTrigger>
           <TooltipContent className="z-[100]">
             <p>The spot owner will donate all earnings from this spot to charity.</p>
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+
+    // WPS Managed tag - admin-created listing
+    if (spot.createdByAdmin) {
+      tags.push(
+        <Tooltip key="wps-managed" delayDuration={100}>
+          <TooltipTrigger asChild>
+            <span className="cursor-help">
+              <Badge className="gap-1 bg-blue-600 text-white border-blue-700 hover:bg-blue-700">
+                <Building2 className="h-3 w-3" />
+                WPS Managed
+              </Badge>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent className="z-[100]">
+            <p>This listing is managed by BCI Workplace Services</p>
           </TooltipContent>
         </Tooltip>
       );
