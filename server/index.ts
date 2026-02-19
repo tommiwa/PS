@@ -104,8 +104,7 @@ app.use((req, res, next) => {
       const { storage } = await import("./storage");
       const activeTerms = await storage.getActiveTermsVersion();
       
-      if (!activeTerms) {
-        const initialTermsContent = `# BCI ParkShare
+      const initialTermsContent = `# BCI ParkShare
 
 ## Terms and Conditions
 
@@ -256,11 +255,11 @@ By using the App, you acknowledge and agree to the collection, use, and disclosu
 
 BCI collects the following personal information through the App:
 
-- **Identification information**, including your name, work email, department, and vehicle details such as make and colour
-- **Booking and listing information**, including dates, times, parking stall numbers, and the identity of other users involved in each transaction
-- **Cancellation records**, including dates, times, and whether cancellations were made within the required notice period
-- **Payment dispute information**, including complaints received or made and their resolution status
-- **App usage information**, including login timestamps and activity logs
+- identification information, including your name, work email, department, and vehicle details such as make and colour
+- booking and listing information, including dates, times, parking stall numbers, and the identity of other users involved in each transaction
+- cancellation records, including dates, times, and whether cancellations were made within the required notice period
+- payment dispute information, including complaints received or made and their resolution status
+- App usage information, including login timestamps and activity logs
 
 For clarity, if you make a payment via Interac, the individual whose stall you have booked may see your Interac email ID, but this information is not collected or visible to BCI.
 
@@ -273,7 +272,7 @@ BCI collects this personal information for the following purposes:
 - to administer and operate the App, including facilitating bookings between users
 - to investigate and enforce breaches of these Terms
 - to improve the App and related services
-- for any other purpose specified in BCI's Privacy Notice – Canada
+- for any other purpose specified in BCI's Privacy Notice - Canada
 
 ---
 
@@ -285,8 +284,9 @@ BCI will use and disclose your personal information only for the purposes descri
 
 ## Contact
 
-If you have questions about the collection of your personal information through the App, please refer to BCI's Privacy Notice – Canada or contact BCI's Privacy Officer at privacy@bci.ca.`;
+If you have questions about the collection of your personal information through the App, please refer to BCI's Privacy Notice - Canada or contact BCI's Privacy Officer at privacy@bci.ca.`;
 
+      if (!activeTerms) {
         await storage.createTermsVersion({
           version: 1,
           content: initialTermsContent,
@@ -295,6 +295,22 @@ If you have questions about the collection of your personal information through 
         });
         
         log("Seeded initial Terms and Conditions (Version 1.0)");
+      } else if (activeTerms.version === 1) {
+        // Migrate v1 terms to v2: add dual contact format + Privacy Notice
+        const hasPrivacyNotice = activeTerms.content.includes("ParkShare Privacy Notice");
+        const hasDualContact = activeTerms.content.includes("Technology Integration Services");
+        if (!hasPrivacyNotice || !hasDualContact) {
+          const { termsVersions } = await import("@shared/schema");
+          const { eq } = await import("drizzle-orm");
+          await db.update(termsVersions)
+            .set({ 
+              content: initialTermsContent,
+              version: 2,
+              updatedAt: new Date()
+            })
+            .where(eq(termsVersions.id, activeTerms.id));
+          log("Migrated Terms and Conditions from v1 to v2 (added dual contact + Privacy Notice)");
+        }
       }
     } catch (error) {
       console.error("Error seeding terms and conditions:", error);
