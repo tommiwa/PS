@@ -271,8 +271,10 @@ If you have questions about the collection of your personal information through 
         
         log("Seeded initial Terms and Conditions (Version 1.0)");
       } else {
-        const contentMatches = activeTerms.content.trim() === initialTermsContent.trim();
-        if (!contentMatches) {
+        const { createHash } = await import("crypto");
+        const currentHash = createHash("sha256").update(activeTerms.content.trim()).digest("hex").substring(0, 16);
+        const targetHash = createHash("sha256").update(initialTermsContent.trim()).digest("hex").substring(0, 16);
+        if (currentHash !== targetHash) {
           const { termsVersions } = await import("@shared/schema");
           const { eq } = await import("drizzle-orm");
           const newVersion = activeTerms.version + 1;
@@ -283,7 +285,7 @@ If you have questions about the collection of your personal information through 
               updatedAt: new Date()
             })
             .where(eq(termsVersions.id, activeTerms.id));
-          log(`Migrated Terms and Conditions to v${newVersion} (synced with official document)`);
+          log(`Migrated Terms and Conditions to v${newVersion} (content hash ${currentHash} -> ${targetHash})`);
         }
       }
     } catch (error) {
