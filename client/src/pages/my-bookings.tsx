@@ -2266,15 +2266,15 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Date</p>
-                    <p className="font-medium">{selectedListing.date}</p>
+                    <p className="font-medium">{selectedListing.date || selectedListing.singleDate || 'N/A'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Price</p>
-                    <p className="font-medium">${selectedListing.totalAmount || selectedListing.price}</p>
+                    <p className="font-medium">${selectedListing.totalAmount || selectedListing.price || selectedListing.dailyRate || '0.00'}</p>
                   </div>
                   <div className="col-span-2">
                     <p className="text-sm text-muted-foreground">Location</p>
-                    <p className="font-medium">{selectedListing.location}</p>
+                    <p className="font-medium">{selectedListing.location || 'N/A'}</p>
                   </div>
                   {selectedListing.renterName && (
                     <>
@@ -2330,23 +2330,23 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Date</p>
-                    <p className="font-medium">{selectedBooking.date}</p>
+                    <p className="font-medium">{selectedBooking.bookingDate || 'N/A'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Price</p>
-                    <p className="font-medium">${selectedBooking.totalAmount || selectedBooking.price}</p>
+                    <p className="font-medium">${selectedBooking.totalAmount || selectedBooking.dailyRate || '0.00'}</p>
                   </div>
                   <div className="col-span-2">
                     <p className="text-sm text-muted-foreground">Location</p>
-                    <p className="font-medium">{selectedBooking.location}</p>
+                    <p className="font-medium">{selectedBooking.location || 'N/A'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Owner</p>
-                    <p className="font-medium">{selectedBooking.owner}</p>
+                    <p className="font-medium">{selectedBooking.ownerName || 'N/A'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Vehicle</p>
-                    <p className="font-medium">{selectedBooking.vehicleUsed}</p>
+                    <p className="font-medium">{selectedBooking.renterVehicle || 'Not specified'}</p>
                   </div>
                   <div className="col-span-2">
                     <p className="text-sm text-muted-foreground">Payment Status</p>

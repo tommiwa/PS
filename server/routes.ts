@@ -2079,6 +2079,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const bookings = await storage.getBookingsByRenter(userId);
       
+      const renterVehicles = await storage.getVehiclesByUser(userId);
+      const renterPrimaryVehicle = renterVehicles?.find(v => v.isDefault) || renterVehicles?.[0];
+      const renterVehicleDisplay = renterPrimaryVehicle 
+        ? `${renterPrimaryVehicle.color || ''} ${renterPrimaryVehicle.make || ''} ${renterPrimaryVehicle.model || ''} (${renterPrimaryVehicle.licensePlate || ''})`.trim()
+        : null;
+      
       // Enrich bookings with spot and owner details
       const enrichedBookings = await Promise.all(bookings.map(async (booking) => {
         const spot = await storage.getParkingSpot(booking.spotId);
@@ -2114,11 +2120,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           location: locationName,
           spotType: spotTypeName,
           ownerName: listing?.createdByAdmin ? 'BCI Workplace Services' : (owner ? `${owner.firstName} ${owner.lastName}` : (spot?.isBciManaged && !spot?.ownerId ? 'BCI Workplace Services' : 'Unknown')),
-          // Use actual paymentStatus enum from booking (pending, paid, received)
           paymentStatus: booking.paymentStatus || 'pending',
-          // Include BCI-managed flag to distinguish admin-managed vs peer-to-peer listings
           isBciManaged: spot?.isBciManaged || false,
-          // Include map link fields
           mapLink: spot?.mapLink || null,
           seatNumber: spot?.seatNumber || null,
           floorPlanBaseUrl: floorPlanBaseUrl,
@@ -2128,7 +2131,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           periodEndDate: listing?.periodEndDate || null,
           recurringStartDate: listing?.recurringStartDate || null,
           recurringEndDate: listing?.recurringEndDate || null,
-          ownerPaymentInstructions: ownerPaymentPrefs?.paymentInstructions || null
+          ownerPaymentInstructions: ownerPaymentPrefs?.paymentInstructions || null,
+          renterVehicle: renterVehicleDisplay,
+          donateToCharity: listing?.donateToCharity || false
         };
       }));
       
