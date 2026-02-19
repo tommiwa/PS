@@ -223,9 +223,18 @@ BCI's failure to enforce any right or provision of these Terms shall not constit
 
 ---
 
-## Contact
+## Contact Information
 
-Questions regarding these Terms or the App should be directed to workplaceservices@bci.ca.
+For technical support, please contact:
+
+**BCI Technology Integration Services**
+Email: DL_Technology_Integration_Services@bci.ca
+
+For account issues, or Terms-related inquiries, please contact:
+
+**BCI WorkPlace Services**
+Email: workplaceservices@bci.ca
+Phone: (778) 410-7100
 
 ---
 
