@@ -531,21 +531,47 @@ If you have questions about the collection of your personal information through 
   setInterval(cleanupExpiredSessions, 21600000);
   log("Session cleanup job scheduled (runs every 6 hours)");
 
-  // One-time data fix: set created_by_admin=true for single-day listings
-  // that were split from admin-created period/recurring listings on BCI-managed spots
+  // Data fix: correctly set created_by_admin on single-day listings
+  // Only single-day listings split from admin-created parent period/recurring listings should be true
+  // Step 1: Reset any incorrectly set flags (from previous broad migration)
+  // Step 2: Set created_by_admin=true only for singles matching admin parent by spot_id + date range
   try {
+    const resetResult = await db.execute(sql`
+      UPDATE spot_listings
+      SET created_by_admin = false
+      WHERE listing_type = 'single'
+        AND created_by_admin = true
+        AND NOT EXISTS (
+          SELECT 1 FROM spot_listings parent
+          WHERE parent.spot_id = spot_listings.spot_id
+            AND parent.listing_type IN ('period', 'recurring')
+            AND parent.created_by_admin = true
+            AND spot_listings.single_date >= COALESCE(parent.period_start_date, parent.recurring_start_date)
+            AND spot_listings.single_date <= COALESCE(parent.period_end_date, parent.recurring_end_date)
+        )
+    `);
+    const resetCount = (resetResult as any)?.rowCount || 0;
+    if (resetCount > 0) {
+      log(`Reset ${resetCount} incorrectly flagged single-day listings back to created_by_admin=false`);
+    }
+
     const fixResult = await db.execute(sql`
       UPDATE spot_listings sl
       SET created_by_admin = true
-      FROM parking_spots ps
-      WHERE sl.spot_id = ps.id
-        AND ps.is_bci_managed = true
+      WHERE sl.listing_type = 'single'
         AND sl.created_by_admin = false
-        AND sl.listing_type = 'single'
+        AND EXISTS (
+          SELECT 1 FROM spot_listings parent
+          WHERE parent.spot_id = sl.spot_id
+            AND parent.listing_type IN ('period', 'recurring')
+            AND parent.created_by_admin = true
+            AND sl.single_date >= COALESCE(parent.period_start_date, parent.recurring_start_date)
+            AND sl.single_date <= COALESCE(parent.period_end_date, parent.recurring_end_date)
+        )
     `);
-    const rowCount = (fixResult as any)?.rowCount || (fixResult as any)?.length || 0;
-    if (rowCount > 0) {
-      log(`Fixed ${rowCount} single-day listings: set created_by_admin=true for BCI-managed spots`);
+    const fixCount = (fixResult as any)?.rowCount || 0;
+    if (fixCount > 0) {
+      log(`Fixed ${fixCount} single-day listings: set created_by_admin=true (matched to admin parent listings)`);
     }
   } catch (fixErr) {
     console.error('Error fixing created_by_admin flag:', fixErr);
