@@ -69,6 +69,9 @@ import {
 import { sendReportEmail, isEmailServiceAvailable } from "./report-service";
 import { getTodayInTimezone, formatDateInTimezone, isDateInPast, isDateTodayOrFuture } from "./timezone";
 
+// Workplace Services email - uses env var set per environment (dev vs prod)
+const WORKPLACE_SERVICES_EMAIL = process.env.WORKPLACE_SERVICES_EMAIL || 'workplaceservices@bci.ca';
+
 // Lock duration configuration
 const LOCK_DURATION_MS = 120000; // 2 minutes (120 seconds)
 
@@ -1738,7 +1741,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             let ownerInfo: { name: string; email: string; id: string } | null = null;
             if (isWsListing) {
-              ownerInfo = { name: 'BCI Workplace Services', email: 'workplaceservices@bci.ca', id: 'workplace-services' };
+              ownerInfo = { name: 'BCI Workplace Services', email: WORKPLACE_SERVICES_EMAIL, id: 'workplace-services' };
             } else if (ownerUser && ownerUser.email) {
               ownerInfo = { name: ownerName, email: ownerUser.email, id: ownerUser.id };
             }
@@ -1940,7 +1943,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           amount: Number(booking.totalAmount),
         };
         const ownerInfo = isWsListing
-          ? { name: 'BCI Workplace Services', email: 'workplaceservices@bci.ca' }
+          ? { name: 'BCI Workplace Services', email: WORKPLACE_SERVICES_EMAIL }
           : { name: `${ownerUser!.firstName} ${ownerUser!.lastName}`, email: ownerUser!.email || '' };
         const renterInfo = { name: `${renterUser.firstName} ${renterUser.lastName}`, email: renterUser.email || '' };
 
@@ -3277,7 +3280,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const isWorkplaceServicesListing = listing.createdByAdmin === true;
             let ownerInfo: { name: string; email: string; id: string } | null = null;
             if (isWorkplaceServicesListing) {
-              ownerInfo = { name: 'BCI Workplace Services', email: 'workplaceservices@bci.ca', id: 'workplace-services' };
+              ownerInfo = { name: 'BCI Workplace Services', email: WORKPLACE_SERVICES_EMAIL, id: 'workplace-services' };
             } else if (listing.ownerId) {
               const owner = await storage.getUser(listing.ownerId);
               if (owner && owner.email) {
@@ -4511,7 +4514,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   const isWsListing = listing.createdByAdmin === true;
                   let ownerInfo: { name: string; email: string; id: string } | null = null;
                   if (isWsListing) {
-                    ownerInfo = { name: 'BCI Workplace Services', email: 'workplaceservices@bci.ca', id: 'workplace-services' };
+                    ownerInfo = { name: 'BCI Workplace Services', email: WORKPLACE_SERVICES_EMAIL, id: 'workplace-services' };
                   } else if (listing.ownerId) {
                     const owner = await storage.getUser(listing.ownerId);
                     if (owner && owner.email) {
@@ -4678,7 +4681,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Get owner info - route to WPS for admin-created listings
             let ownerInfo: { name: string; email: string; id: string } | null = null;
             if (isWorkplaceServicesListing) {
-              ownerInfo = { name: 'BCI Workplace Services', email: 'workplaceservices@bci.ca', id: 'workplace-services' };
+              ownerInfo = { name: 'BCI Workplace Services', email: WORKPLACE_SERVICES_EMAIL, id: 'workplace-services' };
             } else if (listing?.ownerId) {
               const owner = await storage.getUser(listing.ownerId);
               if (owner && owner.email) {
@@ -4796,7 +4799,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Send notification to both renter and owner - route to WPS for admin-created listings
             let ownerInfoForNotification: { name: string; email: string; id: string } | null = null;
             if (isWorkplaceServicesListing) {
-              ownerInfoForNotification = { name: 'BCI Workplace Services', email: 'workplaceservices@bci.ca', id: 'workplace-services' };
+              ownerInfoForNotification = { name: 'BCI Workplace Services', email: WORKPLACE_SERVICES_EMAIL, id: 'workplace-services' };
             } else if (ownerUser && ownerUser.email) {
               ownerInfoForNotification = { name: ownerName, email: ownerUser.email, id: ownerUser.id };
             }
@@ -4880,7 +4883,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Get owner info - route to WPS for admin-created listings
             let ownerInfo: { name: string; email: string; id: string } | null = null;
             if (isWorkplaceServicesListing) {
-              ownerInfo = { name: 'BCI Workplace Services', email: 'workplaceservices@bci.ca', id: 'workplace-services' };
+              ownerInfo = { name: 'BCI Workplace Services', email: WORKPLACE_SERVICES_EMAIL, id: 'workplace-services' };
             } else if (listing?.ownerId) {
               const owner = await storage.getUser(listing.ownerId);
               if (owner && owner.email) {
@@ -5005,7 +5008,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             amount: Number(booking.totalAmount),
           };
           const ownerInfo = isWsListing
-            ? { name: 'BCI Workplace Services', email: 'workplaceservices@bci.ca' }
+            ? { name: 'BCI Workplace Services', email: WORKPLACE_SERVICES_EMAIL }
             : { name: `${ownerUser!.firstName} ${ownerUser!.lastName}`, email: ownerUser!.email || '' };
           const renterInfo = { name: `${renterUser.firstName} ${renterUser.lastName}`, email: renterUser.email || '' };
 
@@ -5100,7 +5103,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             amount: Number(booking.totalAmount),
           };
           const ownerInfo = isWsListing
-            ? { name: 'BCI Workplace Services', email: 'workplaceservices@bci.ca' }
+            ? { name: 'BCI Workplace Services', email: WORKPLACE_SERVICES_EMAIL }
             : { name: `${ownerUser!.firstName} ${ownerUser!.lastName}`, email: ownerUser!.email || '' };
           const renterInfo = { name: `${renterUser.firstName} ${renterUser.lastName}`, email: renterUser.email || '' };
 
@@ -5268,7 +5271,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isWsListing) {
         const { sendPaymentReminderNotification } = await import('./notification-service');
         await sendPaymentReminderNotification(
-          { name: 'BCI Workplace Services', email: 'workplaceservices@bci.ca', id: booking.ownerId! },
+          { name: 'BCI Workplace Services', email: WORKPLACE_SERVICES_EMAIL, id: booking.ownerId! },
           {
             bookingId: id,
             spotNumber: spot?.spotNumber || 'Unknown',
@@ -5298,7 +5301,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       await auditService.logAction("UPDATE", "booking", {
         entityId: id,
-        message: `Confirmation reminder sent for booking ${id} to ${isWsListing ? 'workplaceservices@bci.ca' : owner?.email}`,
+        message: `Confirmation reminder sent for booking ${id} to ${isWsListing ? WORKPLACE_SERVICES_EMAIL : owner?.email}`,
         after: { action: 'confirmation_reminder_sent', ownerId: booking.ownerId }
       });
 
