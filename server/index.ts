@@ -531,6 +531,26 @@ If you have questions about the collection of your personal information through 
   setInterval(cleanupExpiredSessions, 21600000);
   log("Session cleanup job scheduled (runs every 6 hours)");
 
+  // One-time data fix: set created_by_admin=true for single-day listings
+  // that were split from admin-created period/recurring listings on BCI-managed spots
+  try {
+    const fixResult = await db.execute(sql`
+      UPDATE spot_listings sl
+      SET created_by_admin = true
+      FROM parking_spots ps
+      WHERE sl.spot_id = ps.id
+        AND ps.is_bci_managed = true
+        AND sl.created_by_admin = false
+        AND sl.listing_type = 'single'
+    `);
+    const rowCount = (fixResult as any)?.rowCount || (fixResult as any)?.length || 0;
+    if (rowCount > 0) {
+      log(`Fixed ${rowCount} single-day listings: set created_by_admin=true for BCI-managed spots`);
+    }
+  } catch (fixErr) {
+    console.error('Error fixing created_by_admin flag:', fixErr);
+  }
+
   // Register MCP routes on the main Express app (same port)
   const { registerMcpRoutes } = await import("./mcp");
   registerMcpRoutes(app);
