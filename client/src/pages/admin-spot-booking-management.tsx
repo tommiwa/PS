@@ -93,6 +93,7 @@ interface AdminBookingData {
   notes: string;
   createdAt: string;
   lastActivity: string;
+  ownerPaymentInstructions?: string;
 }
 
 interface BookingActivity {
@@ -2932,6 +2933,13 @@ export default function AdminSpotBookingManagement() {
                   <div>
                     <Label>Notes</Label>
                     <p className="text-sm" data-testid="text-booking-notes">{selectedBooking.notes}</p>
+                  </div>
+                )}
+
+                {selectedBooking.ownerPaymentInstructions && (
+                  <div>
+                    <Label>Owner Payment Instructions</Label>
+                    <p className="text-sm whitespace-pre-wrap">{selectedBooking.ownerPaymentInstructions}</p>
                   </div>
                 )}
 

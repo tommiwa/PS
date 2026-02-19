@@ -3129,7 +3129,8 @@ export class MemStorage implements IStorage {
         owner_dept.name as owner_department,
         spot_owner.first_name as spot_owner_first_name, 
         spot_owner.last_name as spot_owner_last_name, spot_owner.email as spot_owner_email,
-        spot_owner_dept.name as spot_owner_department
+        spot_owner_dept.name as spot_owner_department,
+        pp.payment_instructions as owner_payment_instructions
       FROM bookings b
       LEFT JOIN parking_spots ps ON b.spot_id = ps.id
       LEFT JOIN locations l ON ps.location_id = l.id
@@ -3139,6 +3140,7 @@ export class MemStorage implements IStorage {
       LEFT JOIN departments owner_dept ON owner.department_id = owner_dept.id
       LEFT JOIN users spot_owner ON ps.owner_id = spot_owner.id
       LEFT JOIN departments spot_owner_dept ON spot_owner.department_id = spot_owner_dept.id
+      LEFT JOIN payment_preferences pp ON ps.owner_id = pp.user_id
       WHERE 
         (b.status = 'confirmed' OR b.status = 'pending')
         AND b.booking_date >= ${today}
@@ -3183,7 +3185,8 @@ export class MemStorage implements IStorage {
         endTime: '18:00',
         notes: row.notes || '',
         createdAt: new Date(row.created_at).toISOString(),
-        lastActivity: new Date(row.updated_at).toISOString()
+        lastActivity: new Date(row.updated_at).toISOString(),
+        ownerPaymentInstructions: row.owner_payment_instructions || '',
       };
     });
   }
@@ -3221,7 +3224,8 @@ export class MemStorage implements IStorage {
           owner_dept.name as owner_department,
           spot_owner.first_name as spot_owner_first_name, 
           spot_owner.last_name as spot_owner_last_name, spot_owner.email as spot_owner_email,
-          spot_owner_dept.name as spot_owner_department
+          spot_owner_dept.name as spot_owner_department,
+          pp.payment_instructions as owner_payment_instructions
         FROM bookings b
         LEFT JOIN parking_spots ps ON b.spot_id = ps.id
         LEFT JOIN locations l ON ps.location_id = l.id
@@ -3231,6 +3235,7 @@ export class MemStorage implements IStorage {
         LEFT JOIN departments owner_dept ON owner.department_id = owner_dept.id
         LEFT JOIN users spot_owner ON ps.owner_id = spot_owner.id
         LEFT JOIN departments spot_owner_dept ON spot_owner.department_id = spot_owner_dept.id
+        LEFT JOIN payment_preferences pp ON ps.owner_id = pp.user_id
         WHERE 
           (b.booking_date < ${today} OR b.status = 'completed' OR b.status = 'cancelled')
           AND ps.is_bci_managed = true AND ps.owner_id IS NULL
@@ -3282,7 +3287,8 @@ export class MemStorage implements IStorage {
           endTime: '18:00',
           notes: row.notes || '',
           createdAt: new Date(row.created_at).toISOString(),
-          lastActivity: new Date(row.updated_at).toISOString()
+          lastActivity: new Date(row.updated_at).toISOString(),
+          ownerPaymentInstructions: row.owner_payment_instructions || '',
         };
       });
       
@@ -3327,7 +3333,8 @@ export class MemStorage implements IStorage {
         owner_dept.name as owner_department,
         spot_owner.first_name as spot_owner_first_name, 
         spot_owner.last_name as spot_owner_last_name, spot_owner.email as spot_owner_email,
-        spot_owner_dept.name as spot_owner_department
+        spot_owner_dept.name as spot_owner_department,
+        pp.payment_instructions as owner_payment_instructions
       FROM bookings b
       LEFT JOIN parking_spots ps ON b.spot_id = ps.id
       LEFT JOIN locations l ON ps.location_id = l.id
@@ -3337,6 +3344,7 @@ export class MemStorage implements IStorage {
       LEFT JOIN departments owner_dept ON owner.department_id = owner_dept.id
       LEFT JOIN users spot_owner ON ps.owner_id = spot_owner.id
       LEFT JOIN departments spot_owner_dept ON spot_owner.department_id = spot_owner_dept.id
+      LEFT JOIN payment_preferences pp ON ps.owner_id = pp.user_id
       WHERE 
         (b.booking_date < ${today} OR b.status = 'completed' OR b.status = 'cancelled')
         ${isBciOnly ? sqlOp`AND ps.is_bci_managed = true AND ps.owner_id IS NULL` : sqlOp`AND (ps.owner_id IS NOT NULL OR ps.is_bci_managed = false)`}
@@ -3381,7 +3389,8 @@ export class MemStorage implements IStorage {
         endTime: '18:00',
         notes: row.notes || '',
         createdAt: new Date(row.created_at).toISOString(),
-        lastActivity: new Date(row.updated_at).toISOString()
+        lastActivity: new Date(row.updated_at).toISOString(),
+        ownerPaymentInstructions: row.owner_payment_instructions || '',
       };
     });
     

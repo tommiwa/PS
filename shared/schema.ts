@@ -991,6 +991,7 @@ export interface AdminBookingData {
   notes: string;
   createdAt: string;
   lastActivity: string;
+  ownerPaymentInstructions?: string;
 }
 
 // Admin-specific flattened pending payment data interface
