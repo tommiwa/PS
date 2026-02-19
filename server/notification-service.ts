@@ -2536,8 +2536,10 @@ BCI ParkShare Team`;
   return results;
 }
 
+const DEVSECOPS_EMAIL = 'Technology_DevSecOps_Services@bci.ca';
+
 /**
- * Issue Report Notification - sent to DL_Technology_Integration_Services@bci.ca with all admins in CC
+ * Issue Report Notification - sent to Technology_DevSecOps_Services@bci.ca with all admins in CC
  */
 export async function sendIssueReportNotification(
   reporter: { name: string; email: string },
@@ -2604,7 +2606,7 @@ BCI ParkShare Team`;
     });
 
     const notification: EmailNotification = {
-      to: WORKPLACE_SERVICES_EMAIL,
+      to: DEVSECOPS_EMAIL,
       cc: adminEmails.length > 0 ? adminEmails : undefined,
       subject,
       text,
@@ -2615,7 +2617,7 @@ BCI ParkShare Team`;
     const emailResult = await sendEmailNotification(notification);
     results.emailSent = emailResult.success;
 
-    console.log(`✓ Feedback email sent to ${WORKPLACE_SERVICES_EMAIL}${adminEmails.length > 0 ? ` (cc: ${adminEmails.length} admins)` : ' (no CC - dev mode)'}: ${issue.title}`);
+    console.log(`✓ Feedback email sent to ${DEVSECOPS_EMAIL}${adminEmails.length > 0 ? ` (cc: ${adminEmails.length} admins)` : ' (no CC - dev mode)'}: ${issue.title}`);
   } catch (error) {
     console.error('❌ Error sending issue report notification:', error);
   }
@@ -2683,6 +2685,7 @@ The BCI ParkShare Team`;
 
     const notification: EmailNotification = {
       to: reporter.email,
+      cc: [DEVSECOPS_EMAIL],
       subject,
       text,
       html,
@@ -2692,7 +2695,7 @@ The BCI ParkShare Team`;
     const emailResult = await sendEmailNotification(notification);
     results.emailSent = emailResult.success;
 
-    console.log(`✓ Feedback resolved email sent to ${reporter.email}: ${feedback.title}`);
+    console.log(`✓ Feedback resolved email sent to ${reporter.email} (cc: ${DEVSECOPS_EMAIL}): ${feedback.title}`);
   } catch (error) {
     console.error('❌ Error sending feedback resolved notification:', error);
   }
