@@ -16,7 +16,8 @@ import { useToast } from "@/hooks/use-toast"
 import { useConfirm } from "@/hooks/use-confirm"
 import { apiRequest, queryClient } from "@/lib/queryClient"
 import { format } from "date-fns"
-import { AlertCircle, Clock, CheckCircle2, ListTodo, Loader2, RefreshCw, Trash2, Eye, User, Mail, Calendar, Star, FileText } from "lucide-react"
+import { AlertCircle, Clock, CheckCircle2, ListTodo, Loader2, RefreshCw, Trash2, Eye, User, Mail, Calendar, Star, FileText, Download } from "lucide-react"
+import { exportToExcel, type ExportColumn } from "@/utils/export-utils"
 
 type IssueStatus = "backlog" | "todo" | "in_progress" | "completed"
 type IssuePriority = "low" | "medium" | "high" | "urgent"
@@ -159,6 +160,42 @@ export default function AdminIssuesPage() {
   const getFilteredIssues = (issues: Issue[]) => {
     if (priorityFilter === "all") return issues
     return issues.filter(i => i.priority === priorityFilter)
+  }
+
+  const handleExportToExcel = async () => {
+    const columns: ExportColumn[] = [
+      { header: "Title", dataKey: "title", width: 30 },
+      { header: "Description", dataKey: "description", width: 40 },
+      { header: "Reporter", dataKey: "reporterName", width: 20, formatter: (val) => val || "Unknown" },
+      { header: "Email", dataKey: "reporterEmail", width: 25, formatter: (val) => val || "—" },
+      { header: "Priority", dataKey: "priority", width: 12, formatter: (val) => priorityConfig[val as IssuePriority]?.label || val },
+      { header: "Status", dataKey: "status", width: 14, formatter: (val) => statusConfig[val as IssueStatus]?.label || val },
+      { header: "Rating", dataKey: "rating", width: 10, formatter: (val) => val ? `${val}/5` : "—" },
+      { header: "Resolution Notes", dataKey: "resolutionNotes", width: 35, formatter: (val) => val || "—" },
+      { header: "Created", dataKey: "createdAt", width: 18, formatter: (val) => format(new Date(val), "MMM d, yyyy h:mm a") },
+      { header: "Updated", dataKey: "updatedAt", width: 18, formatter: (val) => format(new Date(val), "MMM d, yyyy h:mm a") },
+    ]
+
+    try {
+      await exportToExcel({
+        title: "User Feedbacks Report",
+        subtitle: `All Issues — Exported ${format(new Date(), "MMM d, yyyy")}`,
+        data: allIssues,
+        columns,
+        filename: `user-feedbacks-${format(new Date(), "yyyy-MM-dd")}`,
+        summary: {
+          totalRecords: allIssues.length,
+          additionalStats: [
+            { label: "Active Issues", value: activeIssues.length },
+            { label: "Completed", value: completedIssues.length },
+            { label: "Urgent", value: urgentCount },
+          ],
+        },
+      })
+      toast({ title: "Export Complete", description: "User feedbacks exported to Excel successfully." })
+    } catch {
+      toast({ title: "Export Failed", description: "Could not export feedbacks.", variant: "destructive" })
+    }
   }
 
   const renderIssuesTable = (issues: Issue[], isHistory: boolean = false) => {
@@ -337,10 +374,16 @@ export default function AdminIssuesPage() {
             Manage and track feedbacks from users
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => refetch()}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleExportToExcel} disabled={allIssues.length === 0}>
+            <Download className="h-4 w-4 mr-2" />
+            Export to Excel
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4 mb-4">
