@@ -19,7 +19,8 @@ import {
   DollarSign,
   AlertCircle,
   MessageSquare,
-  HelpCircle
+  HelpCircle,
+  Download
 } from "lucide-react"
 import { Link, useLocation, useRoute } from "wouter"
 import {
@@ -42,6 +43,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { UserRole } from "@shared/schema"
 import { useAuth } from "@/contexts/auth-context"
+import { usePwaInstall } from "@/hooks/use-pwa-install"
 import { queryClient } from "@/lib/queryClient"
 import { useToast } from "@/hooks/use-toast"
 import { useState } from "react"
@@ -216,6 +218,7 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
   const { toast } = useToast();
   const [refreshing, setRefreshing] = useState<string | null>(null);
   const { setOpenMobile } = useSidebar();
+  const { canInstall, install } = usePwaInstall();
   
   // Get effective role: use view role if set (for admin viewing as other role), 
   // otherwise use user's actual roles
@@ -638,18 +641,26 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
       
       {/* Footer with Feedback and FAQ buttons - visible to all users */}
       <SidebarFooter className="border-t p-3">
-        <div className="flex items-center gap-2">
-          <ReportIssueDialog>
-            <Button variant="outline" size="sm" className="flex-1 justify-start gap-2">
-              <MessageSquare className="h-3.5 w-3.5" />
-              Feedback
+        <div className="flex flex-col gap-2">
+          {canInstall && (
+            <Button 
+              variant="default" 
+              size="sm" 
+              className="w-full justify-start gap-2"
+              onClick={() => install()}
+            >
+              <Download className="h-3.5 w-3.5" />
+              Install App
             </Button>
-          </ReportIssueDialog>
-          {/* <FAQDialog>
-            <Button variant="outline" size="sm" className="px-2">
-              <HelpCircle className="h-3.5 w-3.5" />
-            </Button>
-          </FAQDialog> */}
+          )}
+          <div className="flex items-center gap-2">
+            <ReportIssueDialog>
+              <Button variant="outline" size="sm" className="flex-1 justify-start gap-2">
+                <MessageSquare className="h-3.5 w-3.5" />
+                Feedback
+              </Button>
+            </ReportIssueDialog>
+          </div>
         </div>
       </SidebarFooter>
     </Sidebar>

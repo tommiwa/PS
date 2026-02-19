@@ -94,6 +94,7 @@ interface AdminBookingData {
   notes: string;
   createdAt: string;
   lastActivity: string;
+  ownerPaymentType?: string;
   ownerPaymentInstructions?: string;
 }
 
@@ -2958,10 +2959,17 @@ export default function AdminSpotBookingManagement() {
                   </div>
                 )}
 
-                {selectedBooking.ownerPaymentInstructions && (
+                {(selectedBooking.ownerPaymentType || selectedBooking.ownerPaymentInstructions) && (
                   <div>
-                    <Label>Owner Payment Instructions</Label>
-                    <p className="text-sm whitespace-pre-wrap">{selectedBooking.ownerPaymentInstructions}</p>
+                    <Label>Owner Payment Preference</Label>
+                    {selectedBooking.ownerPaymentType && (
+                      <p className="text-sm font-medium capitalize">
+                        {selectedBooking.ownerPaymentType === 'interac_transfer' ? 'Interac e-Transfer' : selectedBooking.ownerPaymentType}
+                      </p>
+                    )}
+                    {selectedBooking.ownerPaymentInstructions && (
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap mt-1">{selectedBooking.ownerPaymentInstructions}</p>
+                    )}
                   </div>
                 )}
 
