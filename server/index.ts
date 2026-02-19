@@ -531,23 +531,6 @@ If you have questions about the collection of your personal information through 
   setInterval(cleanupExpiredSessions, 21600000);
   log("Session cleanup job scheduled (runs every 6 hours)");
 
-  // One-time cleanup: remove duplicate Tony Payne user created by case-sensitive email mismatch
-  // Keep 45223531 (tony.payne@bci.ca, has spot assigned), delete 217cb565... (Tony.Payne@bci.ca, no data)
-  try {
-    const dupeResult = await db.execute(sql`
-      DELETE FROM users WHERE id = '217cb565-07fb-4e84-97fb-81bf137d157f'
-        AND NOT EXISTS (SELECT 1 FROM parking_spots WHERE owner_id = '217cb565-07fb-4e84-97fb-81bf137d157f')
-        AND NOT EXISTS (SELECT 1 FROM bookings WHERE renter_id = '217cb565-07fb-4e84-97fb-81bf137d157f' OR owner_id = '217cb565-07fb-4e84-97fb-81bf137d157f')
-        AND NOT EXISTS (SELECT 1 FROM spot_listings WHERE owner_id = '217cb565-07fb-4e84-97fb-81bf137d157f')
-    `);
-    const dupeCount = (dupeResult as any)?.rowCount || 0;
-    if (dupeCount > 0) {
-      log(`Removed duplicate user Tony.Payne@bci.ca (217cb565...) - merged into tony.payne@bci.ca (45223531)`);
-    }
-  } catch (dupeErr) {
-    console.error('Error removing duplicate user:', dupeErr);
-  }
-
   // Data fix: correctly set created_by_admin on single-day listings
   // Only single-day listings split from admin-created parent period/recurring listings should be true
   // Step 1: Reset any incorrectly set flags (from previous broad migration)
