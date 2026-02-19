@@ -367,6 +367,7 @@ function useAutoRoleSync() {
 // Main authenticated app layout
 function AuthenticatedApp() {
   const { user, logout } = useAuth();
+  const [, setLocation] = useLocation();
   const [termsDialogOpen, setTermsDialogOpen] = useState(false);
   
   const { data: terms } = useQuery<TermsVersion>({
@@ -438,17 +439,19 @@ function AuthenticatedApp() {
                 </div>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Avatar className="h-8 w-8 cursor-pointer">
-                      {user.profileImageUrl && (
-                        <AvatarImage src={user.profileImageUrl} alt={userName} />
-                      )}
-                      <AvatarFallback className="text-sm">
-                        {getInitials(userName)}
-                      </AvatarFallback>
-                    </Avatar>
+                    <a href="/profile" onClick={(e) => { e.preventDefault(); setLocation('/profile'); }}>
+                      <Avatar className="h-8 w-8 cursor-pointer">
+                        {user.profileImageUrl && (
+                          <AvatarImage src={user.profileImageUrl} alt={userName} />
+                        )}
+                        <AvatarFallback className="text-sm">
+                          {getInitials(userName)}
+                        </AvatarFallback>
+                      </Avatar>
+                    </a>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>User profile: {userName} ({userRole})</p>
+                    <p>View profile</p>
                   </TooltipContent>
                 </Tooltip>
               </div>
