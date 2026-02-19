@@ -1382,10 +1382,12 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
             {withinCancellationWindow && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Badge variant="outline" className="no-default-hover-elevate no-default-active-elevate bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-700">
-                    <Clock className="h-3 w-3 mr-1" />
-                    Non-cancellable
-                  </Badge>
+                  <div className="flex justify-center">
+                    <Badge variant="outline" className="no-default-hover-elevate no-default-active-elevate bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-700">
+                      <Clock className="h-3 w-3 mr-1" />
+                      Non-cancellable
+                    </Badge>
+                  </div>
                 </TooltipTrigger>
                 <TooltipContent>{`This booking is within the ${cancellationWindowHours}-hour cancellation window and can no longer be cancelled. Contact support if you need assistance.`}</TooltipContent>
               </Tooltip>
