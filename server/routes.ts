@@ -1737,7 +1737,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 : ownerUser?.email || 'Owner');
             
             let ownerInfo: { name: string; email: string; id: string } | null = null;
-            if (!isWsListing && ownerUser && ownerUser.email) {
+            if (isWsListing) {
+              ownerInfo = { name: 'BCI Workplace Services', email: 'workplaceservices@bci.ca', id: 'workplace-services' };
+            } else if (ownerUser && ownerUser.email) {
               ownerInfo = { name: ownerName, email: ownerUser.email, id: ownerUser.id };
             }
             
@@ -1920,12 +1922,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         after: { ...updatedBooking, paymentStatus: updatedBooking.paymentStatus }
       });
 
-      const ownerUser = await storage.getUser(booking.ownerId);
+      const listing = booking.listingId ? await storage.getSpotListing(booking.listingId) : null;
+      const isWsListing = listing?.createdByAdmin === true;
+
+      const ownerUser = !isWsListing ? await storage.getUser(booking.ownerId) : null;
       const renterUser = await storage.getUser(booking.renterId);
       const spot = await storage.getParkingSpot(booking.spotId);
       const spotLocation = spot?.locationId ? await storage.getLocation(spot.locationId) : null;
 
-      if (ownerUser && renterUser && spot) {
+      if ((ownerUser || isWsListing) && renterUser && spot) {
         const notificationBooking = {
           id: booking.id,
           spotNumber: spot.spotNumber,
@@ -1934,11 +1939,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           bookingDate: new Date(booking.bookingDate),
           amount: Number(booking.totalAmount),
         };
-        const ownerInfo = { name: `${ownerUser.firstName} ${ownerUser.lastName}`, email: ownerUser.email || '' };
+        const ownerInfo = isWsListing
+          ? { name: 'BCI Workplace Services', email: 'workplaceservices@bci.ca' }
+          : { name: `${ownerUser!.firstName} ${ownerUser!.lastName}`, email: ownerUser!.email || '' };
         const renterInfo = { name: `${renterUser.firstName} ${renterUser.lastName}`, email: renterUser.email || '' };
 
         if (paymentStatus === 'paid') {
-          const ownerPrefs = await storage.getNotificationPreferences(ownerUser.id);
+          const ownerPrefs = isWsListing ? {} : await storage.getNotificationPreferences(ownerUser!.id);
           sendPaymentMarkedPaidNotification(ownerInfo, renterInfo, notificationBooking, ownerPrefs || {})
             .catch(err => console.error('Error sending payment marked paid notification:', err));
         } else if (paymentStatus === 'received') {
@@ -3267,10 +3274,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               visualDirectoryUrl
             };
 
-            // Get spot owner for notification (skip for admin-created/Workplace Services listings)
             const isWorkplaceServicesListing = listing.createdByAdmin === true;
             let ownerInfo: { name: string; email: string; id: string } | null = null;
-            if (!isWorkplaceServicesListing && listing.ownerId) {
+            if (isWorkplaceServicesListing) {
+              ownerInfo = { name: 'BCI Workplace Services', email: 'workplaceservices@bci.ca', id: 'workplace-services' };
+            } else if (listing.ownerId) {
               const owner = await storage.getUser(listing.ownerId);
               if (owner && owner.email) {
                 const ownerDisplayName = owner.firstName && owner.lastName 
@@ -4502,7 +4510,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   
                   const isWsListing = listing.createdByAdmin === true;
                   let ownerInfo: { name: string; email: string; id: string } | null = null;
-                  if (!isWsListing && listing.ownerId) {
+                  if (isWsListing) {
+                    ownerInfo = { name: 'BCI Workplace Services', email: 'workplaceservices@bci.ca', id: 'workplace-services' };
+                  } else if (listing.ownerId) {
                     const owner = await storage.getUser(listing.ownerId);
                     if (owner && owner.email) {
                       const ownerName = owner.firstName && owner.lastName
@@ -4656,7 +4666,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const bookingDetails = {
               id: booking.id,
               spotNumber: spot.spotNumber,
-              location: spotLocation?.name || 'BCI Campus',
+              location: spotLocation?.office || 'BCI Campus',
               building: spotLocation?.building || 'BCI Campus',
               bookingDate: booking.bookingDate,
               cancelledBy: renterDisplayName,
@@ -4665,9 +4675,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               reason: 'Cancelled by renter'
             };
             
-            // Get owner info if this is a peer-to-peer listing
+            // Get owner info - route to WPS for admin-created listings
             let ownerInfo: { name: string; email: string; id: string } | null = null;
-            if (listing?.ownerId) {
+            if (isWorkplaceServicesListing) {
+              ownerInfo = { name: 'BCI Workplace Services', email: 'workplaceservices@bci.ca', id: 'workplace-services' };
+            } else if (listing?.ownerId) {
               const owner = await storage.getUser(listing.ownerId);
               if (owner && owner.email) {
                 const ownerName = owner.firstName && owner.lastName 
@@ -4772,7 +4784,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const bookingDetails = {
               id: booking.id,
               spotNumber: spot.spotNumber,
-              location: spotLocation?.name || 'BCI Campus',
+              location: spotLocation?.office || 'BCI Campus',
               building: spotLocation?.building || 'BCI Campus',
               bookingDate: booking.bookingDate,
               cancelledBy: ownerName,
@@ -4781,13 +4793,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
               reason: `Cancelled by spot owner (${ownerName})`
             };
             
-            // Send notification to both renter and owner
+            // Send notification to both renter and owner - route to WPS for admin-created listings
+            let ownerInfoForNotification: { name: string; email: string; id: string } | null = null;
+            if (isWorkplaceServicesListing) {
+              ownerInfoForNotification = { name: 'BCI Workplace Services', email: 'workplaceservices@bci.ca', id: 'workplace-services' };
+            } else if (ownerUser && ownerUser.email) {
+              ownerInfoForNotification = { name: ownerName, email: ownerUser.email, id: ownerUser.id };
+            }
+            
             const renterPrefs = await storage.getNotificationPreferences(renter.id);
             await sendBookingCancellationNotification(
               { name: renterName, email: renter.email || '', id: renter.id },
               bookingDetails,
               renterPrefs || {},
-              ownerUser && ownerUser.email ? { name: ownerName, email: ownerUser.email, id: ownerUser.id } : null
+              ownerInfoForNotification
             );
           }
         } catch (notifyError) {
@@ -4849,7 +4868,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const bookingDetails = {
               id: booking.id,
               spotNumber: spot.spotNumber,
-              location: spotLocation?.name || 'BCI Campus',
+              location: spotLocation?.office || 'BCI Campus',
               building: spotLocation?.building || 'BCI Campus',
               bookingDate: booking.bookingDate,
               cancelledBy: 'Admin',
@@ -4858,9 +4877,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               reason: reason
             };
             
-            // Get owner info if this is a peer-to-peer listing
+            // Get owner info - route to WPS for admin-created listings
             let ownerInfo: { name: string; email: string; id: string } | null = null;
-            if (listing?.ownerId) {
+            if (isWorkplaceServicesListing) {
+              ownerInfo = { name: 'BCI Workplace Services', email: 'workplaceservices@bci.ca', id: 'workplace-services' };
+            } else if (listing?.ownerId) {
               const owner = await storage.getUser(listing.ownerId);
               if (owner && owner.email) {
                 const ownerName = owner.firstName && owner.lastName 
@@ -4966,12 +4987,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Send email notification to owner that renter marked payment as sent
       try {
-        const ownerUser = await storage.getUser(booking.ownerId);
+        const listing = booking.listingId ? await storage.getSpotListing(booking.listingId) : null;
+        const isWsListing = listing?.createdByAdmin === true;
+
+        const ownerUser = !isWsListing ? await storage.getUser(booking.ownerId) : null;
         const renterUser = await storage.getUser(booking.renterId);
         const spot = await storage.getParkingSpot(booking.spotId);
         const spotLocation = spot?.locationId ? await storage.getLocation(spot.locationId) : null;
 
-        if (ownerUser && renterUser && spot) {
+        if ((ownerUser || isWsListing) && renterUser && spot) {
           const notificationBooking = {
             id: booking.id,
             spotNumber: spot.spotNumber,
@@ -4980,10 +5004,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             bookingDate: new Date(booking.bookingDate),
             amount: Number(booking.totalAmount),
           };
-          const ownerInfo = { name: `${ownerUser.firstName} ${ownerUser.lastName}`, email: ownerUser.email || '' };
+          const ownerInfo = isWsListing
+            ? { name: 'BCI Workplace Services', email: 'workplaceservices@bci.ca' }
+            : { name: `${ownerUser!.firstName} ${ownerUser!.lastName}`, email: ownerUser!.email || '' };
           const renterInfo = { name: `${renterUser.firstName} ${renterUser.lastName}`, email: renterUser.email || '' };
 
-          const ownerPrefs = await storage.getNotificationPreferences(ownerUser.id);
+          const ownerPrefs = isWsListing ? {} : await storage.getNotificationPreferences(ownerUser!.id);
           sendPaymentMarkedPaidNotification(ownerInfo, renterInfo, notificationBooking, ownerPrefs || {})
             .catch(err => console.error('Error sending payment marked paid notification:', err));
         }
@@ -5056,12 +5082,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Send email notification to renter that owner confirmed payment
       try {
-        const ownerUser = await storage.getUser(booking.ownerId);
+        const listing = booking.listingId ? await storage.getSpotListing(booking.listingId) : null;
+        const isWsListing = listing?.createdByAdmin === true;
+
+        const ownerUser = !isWsListing ? await storage.getUser(booking.ownerId) : null;
         const renterUser = await storage.getUser(booking.renterId);
         const spot = await storage.getParkingSpot(booking.spotId);
         const spotLocation = spot?.locationId ? await storage.getLocation(spot.locationId) : null;
 
-        if (ownerUser && renterUser && spot) {
+        if ((ownerUser || isWsListing) && renterUser && spot) {
           const notificationBooking = {
             id: booking.id,
             spotNumber: spot.spotNumber,
@@ -5070,7 +5099,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             bookingDate: new Date(booking.bookingDate),
             amount: Number(booking.totalAmount),
           };
-          const ownerInfo = { name: `${ownerUser.firstName} ${ownerUser.lastName}`, email: ownerUser.email || '' };
+          const ownerInfo = isWsListing
+            ? { name: 'BCI Workplace Services', email: 'workplaceservices@bci.ca' }
+            : { name: `${ownerUser!.firstName} ${ownerUser!.lastName}`, email: ownerUser!.email || '' };
           const renterInfo = { name: `${renterUser.firstName} ${renterUser.lastName}`, email: renterUser.email || '' };
 
           const renterPrefs = await storage.getNotificationPreferences(renterUser.id);
@@ -5203,9 +5234,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Check if this is a Workplace Services (admin-created) listing
+      const listing = booking.listingId ? await storage.getSpotListing(booking.listingId) : null;
+      const isWsListing = listing?.createdByAdmin === true;
+
       // Get owner info for notification
-      const owner = await storage.getUser(booking.ownerId!);
-      if (!owner) {
+      const owner = !isWsListing ? await storage.getUser(booking.ownerId!) : null;
+      if (!owner && !isWsListing) {
         return res.status(404).json({ error: "Owner not found" });
       }
 
@@ -5218,25 +5253,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get spot info
       const spot = await storage.getParkingSpot(booking.spotId);
 
-      // Create in-app notification for owner
-      await storage.createInAppNotification({
-        userId: booking.ownerId!,
-        title: "Payment Confirmation Reminder",
-        message: `${renterName} is waiting for you to confirm payment receipt for Spot ${spot?.spotNumber || 'Unknown'} on ${booking.bookingDate}. Amount: $${booking.totalAmount || booking.dailyRate}`,
-        type: "payment" as any,
-        read: false
-      });
+      // Create in-app notification for owner (skip for WPS - no user account)
+      if (!isWsListing) {
+        await storage.createInAppNotification({
+          userId: booking.ownerId!,
+          title: "Payment Confirmation Reminder",
+          message: `${renterName} is waiting for you to confirm payment receipt for Spot ${spot?.spotNumber || 'Unknown'} on ${booking.bookingDate}. Amount: $${booking.totalAmount || booking.dailyRate}`,
+          type: "payment" as any,
+          read: false
+        });
+      }
 
-      // Also send email notification if owner has email notifications enabled
-      const ownerNotificationPrefs = await storage.getNotificationPreferences(booking.ownerId!);
-      if (ownerNotificationPrefs?.emailNotifications) {
+      // Send email notification to owner (or WPS email for admin-created listings)
+      if (isWsListing) {
         const { sendPaymentReminderNotification } = await import('./notification-service');
-        const ownerName = owner.firstName && owner.lastName 
-          ? `${owner.firstName} ${owner.lastName}`
-          : owner.email || 'Owner';
-        
         await sendPaymentReminderNotification(
-          { name: ownerName, email: owner.email || '', id: owner.id },
+          { name: 'BCI Workplace Services', email: 'workplaceservices@bci.ca', id: booking.ownerId! },
           {
             bookingId: id,
             spotNumber: spot?.spotNumber || 'Unknown',
@@ -5244,11 +5276,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
             dueDate: new Date(booking.bookingDate)
           }
         );
+      } else {
+        const ownerNotificationPrefs = await storage.getNotificationPreferences(booking.ownerId!);
+        if (ownerNotificationPrefs?.emailNotifications) {
+          const { sendPaymentReminderNotification } = await import('./notification-service');
+          const ownerName = owner!.firstName && owner!.lastName 
+            ? `${owner!.firstName} ${owner!.lastName}`
+            : owner!.email || 'Owner';
+          
+          await sendPaymentReminderNotification(
+            { name: ownerName, email: owner!.email || '', id: owner!.id },
+            {
+              bookingId: id,
+              spotNumber: spot?.spotNumber || 'Unknown',
+              amount: parseFloat(booking.totalAmount?.toString() || booking.dailyRate?.toString() || '0'),
+              dueDate: new Date(booking.bookingDate)
+            }
+          );
+        }
       }
       
       await auditService.logAction("UPDATE", "booking", {
         entityId: id,
-        message: `Confirmation reminder sent for booking ${id} to owner ${owner.email}`,
+        message: `Confirmation reminder sent for booking ${id} to ${isWsListing ? 'workplaceservices@bci.ca' : owner?.email}`,
         after: { action: 'confirmation_reminder_sent', ownerId: booking.ownerId }
       });
 

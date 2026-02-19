@@ -1993,31 +1993,34 @@ export async function sendBookingConfirmationNotification(
     
     results.inAppSent = true;
 
-    // Send notification to spot owner if provided
+    // Send notification to spot owner (or Workplace Services for admin-created listings)
     if (owner && owner.email) {
       try {
         const ownerNotification = createOwnerBookingNotification(owner, user, booking);
         const ownerEmailResult = await sendEmailNotification(ownerNotification);
         results.ownerEmailSent = ownerEmailResult.success;
         
-        // Send in-app notification to owner
-        await storage.createInAppNotification({
-          userId: owner.id,
-          type: 'booking_confirmation',
-          title: `New Booking: Spot ${booking.spotNumber}`,
-          message: `${user.name} has booked your spot on ${formatFriendlyDate(booking.startDate)}.`,
-          data: {
-            bookingId: booking.id,
-            spotNumber: booking.spotNumber,
-            renterName: user.name,
-            renterEmail: user.email,
-            totalAmount: booking.totalAmount
-          },
-          read: false
-        });
-        results.ownerInAppSent = true;
+        // Only send in-app notification if this is a real user (not Workplace Services)
+        const isWpsOwner = owner.id === 'workplace-services';
+        if (!isWpsOwner) {
+          await storage.createInAppNotification({
+            userId: owner.id,
+            type: 'booking_confirmation',
+            title: `New Booking: Spot ${booking.spotNumber}`,
+            message: `${user.name} has booked your spot on ${formatFriendlyDate(booking.startDate)}.`,
+            data: {
+              bookingId: booking.id,
+              spotNumber: booking.spotNumber,
+              renterName: user.name,
+              renterEmail: user.email,
+              totalAmount: booking.totalAmount
+            },
+            read: false
+          });
+          results.ownerInAppSent = true;
+        }
         
-        console.log(`✓ Owner notification sent to ${owner.name} (email: ${results.ownerEmailSent}, in-app: ${results.ownerInAppSent})`);
+        console.log(`✓ Owner notification sent to ${owner.name} (${owner.email}) (email: ${results.ownerEmailSent}, in-app: ${results.ownerInAppSent})`);
       } catch (ownerError) {
         console.error('❌ Error sending owner notification:', ownerError);
       }
@@ -2298,23 +2301,26 @@ export async function sendBookingCancellationNotification(
         
         const bookingDateStr = formatFriendlyDate(booking.bookingDate);
         
-        // Send in-app notification to owner
-        await storage.createInAppNotification({
-          userId: owner.id,
-          type: 'booking_cancelled',
-          title: `Booking Cancelled: Spot ${booking.spotNumber}`,
-          message: `A booking for your spot ${booking.spotNumber} on ${bookingDateStr} has been cancelled by ${booking.cancelledBy}.`,
-          data: {
-            bookingId: booking.id,
-            spotNumber: booking.spotNumber,
-            renterName: user.name,
-            renterEmail: user.email,
-            cancelledBy: booking.cancelledBy,
-            reason: booking.reason
-          },
-          read: false
-        });
-        results.ownerInAppSent = true;
+        // Only send in-app notification if this is a real user (not Workplace Services)
+        const isWpsOwner = owner.id === 'workplace-services';
+        if (!isWpsOwner) {
+          await storage.createInAppNotification({
+            userId: owner.id,
+            type: 'booking_cancelled',
+            title: `Booking Cancelled: Spot ${booking.spotNumber}`,
+            message: `A booking for your spot ${booking.spotNumber} on ${bookingDateStr} has been cancelled by ${booking.cancelledBy}.`,
+            data: {
+              bookingId: booking.id,
+              spotNumber: booking.spotNumber,
+              renterName: user.name,
+              renterEmail: user.email,
+              cancelledBy: booking.cancelledBy,
+              reason: booking.reason
+            },
+            read: false
+          });
+          results.ownerInAppSent = true;
+        }
         
         console.log(`✓ Owner cancellation notification sent to ${owner.name} (email: ${results.ownerEmailSent}, in-app: ${results.ownerInAppSent})`);
       } catch (ownerError) {
