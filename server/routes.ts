@@ -2146,7 +2146,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           recurringEndDate: listing?.recurringEndDate || null,
           ownerPaymentInstructions: ownerPaymentPrefs?.paymentInstructions || null,
           renterVehicle: renterVehicleDisplay,
-          donateToCharity: listing?.donateToCharity || false
+          donateToCharity: listing?.donateToCharity || false,
+          createdByAdmin: listing?.createdByAdmin || (spot?.isBciManaged && !spot?.ownerId) || false
         };
       }));
       
@@ -2436,7 +2437,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             dateToPrice: dateToPrice, // Map of date -> {listingId, dailyRate} for accurate pricing
             dateToCharity: dateToCharity, // Map of date -> boolean for charity status
             donateToCharity: primaryDonateToCharity, // Primary charity status for first available date
-            createdByAdmin: primaryListingObj?.createdByAdmin || false,
+            createdByAdmin: primaryListingObj?.createdByAdmin || (spot.isBciManaged && !spot.ownerId) || false,
             isAvailable: availabilityDates.length > 0, // True if spot has future availability
             ownerPaymentInstructions: ownerPaymentInstructions,
             ownerPaymentType: ownerPaymentType,
