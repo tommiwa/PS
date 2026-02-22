@@ -30,10 +30,11 @@ import {
 } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 
-// Extend Express Session to include viewAsRole
+// Extend Express Session to include viewAsRole and viewAsUserId
 declare module 'express-session' {
   interface SessionData {
     viewAsRole?: string;
+    viewAsUserId?: string;
   }
 }
 
@@ -596,9 +597,12 @@ export async function setupAuth(app: Express) {
       actorEmail = (req.user as any).claims.email;
     }
     
-    // Clear view-as role before destroying session
+    // Clear view-as role and user before destroying session
     if (req.session?.viewAsRole) {
       delete req.session.viewAsRole;
+    }
+    if (req.session?.viewAsUserId) {
+      delete req.session.viewAsUserId;
     }
     
     // Clear the session
@@ -741,6 +745,17 @@ export const requireAdmin: RequestHandler = async (req, res, next) => {
 // Helper to get authenticated user ID from request
 export function getAuthenticatedUserId(req: any): string | null {
   return req.user?.claims?.sub || null;
+}
+
+// Helper to get effective user ID (respects admin view-as-user impersonation)
+// Returns the impersonated user's ID when admin is in view-as-user mode, otherwise the authenticated user's ID
+// IMPORTANT: Use this ONLY for read-only data queries (my bookings, my listings, etc.)
+// For audit logs, permissions, and write operations, always use getAuthenticatedUserId
+export function getEffectiveUserId(req: any): string | null {
+  if (req.session?.viewAsUserId) {
+    return req.session.viewAsUserId;
+  }
+  return getAuthenticatedUserId(req);
 }
 
 // Helper to get authenticated user roles
