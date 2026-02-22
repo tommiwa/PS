@@ -19,7 +19,7 @@ import { LockProvider } from "@/contexts/LockContext";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ConfirmProvider } from "@/hooks/use-confirm";
 import { NotificationCenter } from "@/components/notification-center";
-import { LogOut, Loader2, FileText, CheckCircle2, Eye, X } from "lucide-react";
+import { LogOut, Loader2, FileText, CheckCircle2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import parkShareLogo from "@assets/logo.png";
 
@@ -366,7 +366,7 @@ function useAutoRoleSync() {
 
 // Main authenticated app layout
 function AuthenticatedApp() {
-  const { user, logout, isImpersonating, viewAsUser, stopViewingAsUser } = useAuth();
+  const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
   const [termsDialogOpen, setTermsDialogOpen] = useState(false);
   
@@ -477,30 +477,6 @@ function AuthenticatedApp() {
               </Tooltip>
             </div>
           </header>
-          {isImpersonating && viewAsUser && (
-            <div className="flex items-center justify-between gap-4 px-4 py-2 bg-orange-500 text-white text-sm sticky top-0 z-50">
-              <div className="flex items-center gap-2">
-                <Eye className="h-4 w-4 flex-shrink-0" />
-                <span className="font-medium">
-                  Viewing as: {viewAsUser.firstName} {viewAsUser.lastName}
-                </span>
-                <span className="opacity-80">({viewAsUser.email})</span>
-                <span className="opacity-70">| Read-only mode</span>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={async () => {
-                  await stopViewingAsUser();
-                  setLocation("/admin", { replace: true });
-                }}
-                className="text-white hover:bg-orange-600 gap-1 h-7"
-              >
-                <X className="h-3 w-3" />
-                Exit
-              </Button>
-            </div>
-          )}
           <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden bg-muted/30">
             <Switch>
               {/* Default landing page - redirects based on user role */}
