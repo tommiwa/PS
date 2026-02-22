@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { randomUUID } from "crypto";
 import { storage } from "./storage";
 import { broadcastLockEvent } from "./websocket";
-import { setupAuth, isAuthenticated, requireAdmin, getAuthenticatedUserId, getEffectiveUserId, getAuthenticatedUserRole, getAuthenticatedUserBaseRole } from "./replitAuth";
+import { setupAuth, isAuthenticated, requireAdmin, getAuthenticatedUserId, getAuthenticatedUserRole, getAuthenticatedUserBaseRole } from "./replitAuth";
 import { z } from "zod";
 import { db } from "./db";
 import { parkingSpots, spotLocks, spotListings, bookings, issues, insertIssueSchema, updateIssueSchema, issueStatuses } from "@shared/schema";
@@ -242,22 +242,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(auditContextMiddleware);
   app.use(auditErrorMiddleware);
 
-  // Middleware to enforce read-only mode when admin is viewing as another user
-  // This prevents admins from accidentally making changes as the impersonated user
-  const enforceReadOnlyWhenImpersonating = (req: any, res: any, next: any) => {
-    if (req.session?.viewAsUserId && req.method !== 'GET') {
-      if (req.path === '/api/auth/view-as') {
-        return next();
-      }
-      return res.status(403).json({ 
-        error: "Read-only mode: You are viewing as another user. Exit impersonation to make changes.",
-        isImpersonating: true
-      });
-    }
-    next();
-  };
-  app.use(enforceReadOnlyWhenImpersonating);
-
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
@@ -342,110 +326,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // View-as endpoints for admin role impersonation
-  // POST /api/auth/view-as - Set view-as role and optionally a specific user (Admin only)
+  // POST /api/auth/view-as - Set view-as role (Admin only)
   app.post('/api/auth/view-as', requireAdmin, async (req: any, res) => {
     try {
-      const { role, userId: targetUserId } = req.body;
+      const { role } = req.body;
       
+      // Double-check user is admin (defense-in-depth)
       const baseRole = await getAuthenticatedUserBaseRole(req);
       if (baseRole !== 'admin') {
         return res.status(403).json({ error: "Only admins can use view-as functionality" });
       }
       
-      if (targetUserId) {
-        const targetUser = await storage.getUser(targetUserId);
-        if (!targetUser) {
-          return res.status(404).json({ error: "User not found" });
-        }
-        
-        req.session.viewAsUserId = targetUserId;
-        
-        let autoRole = 'renter';
-        if (targetUser.roles?.includes('owner')) {
-          autoRole = 'owner';
-        }
-        if (targetUser.roles?.includes('admin')) {
-          autoRole = 'admin';
-        }
-        req.session.viewAsRole = role || autoRole;
-        
-        req.session.save((err: any) => {
-          if (err) {
-            console.error("Failed to save session:", err);
-            return res.status(500).json({ error: "Failed to save session" });
-          }
-          
-          const adminId = getAuthenticatedUserId(req);
-          console.log(`Admin ${adminId} is now viewing as user ${targetUserId} (${targetUser.firstName} ${targetUser.lastName}) with role ${req.session.viewAsRole}`);
-          res.json({ 
-            success: true, 
-            viewAsRole: req.session.viewAsRole,
-            viewAsUserId: targetUserId,
-            viewAsUserName: `${targetUser.firstName || ''} ${targetUser.lastName || ''}`.trim(),
-            viewAsUserEmail: targetUser.email
-          });
-        });
-      } else {
-        if (!role || !['admin', 'owner', 'renter'].includes(role)) {
-          return res.status(400).json({ error: "Invalid role. Must be 'admin', 'owner', or 'renter'" });
-        }
-        
-        req.session.viewAsRole = role;
-        
-        if (req.session.viewAsUserId) {
-          delete req.session.viewAsUserId;
-        }
-        
-        req.session.save((err: any) => {
-          if (err) {
-            console.error("Failed to save session:", err);
-            return res.status(500).json({ error: "Failed to save session" });
-          }
-          
-          const adminId = getAuthenticatedUserId(req);
-          console.log(`Admin ${adminId} is now viewing as ${role}`);
-          res.json({ success: true, viewAsRole: role });
-        });
-      }
-    } catch (error) {
-      console.error("Error setting view-as role:", error);
-      res.status(500).json({ error: "Failed to set view-as role" });
-    }
-  });
-
-  // GET /api/auth/view-as - Get current view-as role and user info
-  app.get('/api/auth/view-as', isAuthenticated, async (req: any, res) => {
-    try {
-      const viewAsRole = req.session?.viewAsRole || null;
-      const viewAsUserId = req.session?.viewAsUserId || null;
-      let viewAsUserName = null;
-      let viewAsUserEmail = null;
-      
-      if (viewAsUserId) {
-        const targetUser = await storage.getUser(viewAsUserId);
-        if (targetUser) {
-          viewAsUserName = `${targetUser.firstName || ''} ${targetUser.lastName || ''}`.trim();
-          viewAsUserEmail = targetUser.email;
-        }
+      // Validate role
+      if (!role || !['admin', 'owner', 'renter'].includes(role)) {
+        return res.status(400).json({ error: "Invalid role. Must be 'admin', 'owner', or 'renter'" });
       }
       
-      res.json({ viewAsRole, viewAsUserId, viewAsUserName, viewAsUserEmail });
-    } catch (error) {
-      console.error("Error getting view-as role:", error);
-      res.status(500).json({ error: "Failed to get view-as role" });
-    }
-  });
-
-  // DELETE /api/auth/view-as - Clear view-as role and user
-  app.delete('/api/auth/view-as', isAuthenticated, async (req: any, res) => {
-    try {
-      if (req.session?.viewAsRole) {
-        delete req.session.viewAsRole;
-      }
-      if (req.session?.viewAsUserId) {
-        delete req.session.viewAsUserId;
-      }
+      // Store in session
+      req.session.viewAsRole = role;
       
+      // Save session and return response
       req.session.save((err: any) => {
         if (err) {
           console.error("Failed to save session:", err);
@@ -453,8 +353,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         const userId = getAuthenticatedUserId(req);
-        console.log(`Admin ${userId} cleared view-as role and user`);
-        res.json({ success: true, message: "View-as role and user cleared" });
+        console.log(`Admin ${userId} is now viewing as ${role}`);
+        res.json({ success: true, viewAsRole: role });
+      });
+    } catch (error) {
+      console.error("Error setting view-as role:", error);
+      res.status(500).json({ error: "Failed to set view-as role" });
+    }
+  });
+
+  // GET /api/auth/view-as - Get current view-as role
+  app.get('/api/auth/view-as', isAuthenticated, async (req: any, res) => {
+    try {
+      const viewAsRole = req.session?.viewAsRole || null;
+      res.json({ viewAsRole });
+    } catch (error) {
+      console.error("Error getting view-as role:", error);
+      res.status(500).json({ error: "Failed to get view-as role" });
+    }
+  });
+
+  // DELETE /api/auth/view-as - Clear view-as role
+  app.delete('/api/auth/view-as', isAuthenticated, async (req: any, res) => {
+    try {
+      // Clear the view-as role from session
+      if (req.session?.viewAsRole) {
+        delete req.session.viewAsRole;
+      }
+      
+      // Save session and return response
+      req.session.save((err: any) => {
+        if (err) {
+          console.error("Failed to save session:", err);
+          return res.status(500).json({ error: "Failed to save session" });
+        }
+        
+        const userId = getAuthenticatedUserId(req);
+        console.log(`Admin ${userId} cleared view-as role`);
+        res.json({ success: true, message: "View-as role cleared" });
       });
     } catch (error) {
       console.error("Error clearing view-as role:", error);
@@ -1161,7 +1097,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get user's parking spots
   app.get("/api/my-spots", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = getEffectiveUserId(req);
+      const userId = getAuthenticatedUserId(req);
       if (!userId) {
         return res.status(401).json({ error: "User not authenticated" });
       }
@@ -2052,7 +1988,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get user's listings (for owners in MyBookings)
   app.get("/api/my-listings", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = getEffectiveUserId(req);
+      const userId = getAuthenticatedUserId(req);
       if (!userId) {
         return res.status(401).json({ error: "User not authenticated" });
       }
@@ -2149,7 +2085,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get user's bookings (for renters in MyBookings)
   app.get("/api/my-bookings", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = getEffectiveUserId(req);
+      const userId = getAuthenticatedUserId(req);
       if (!userId) {
         return res.status(401).json({ error: "User not authenticated" });
       }
@@ -3492,7 +3428,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get renter dashboard statistics (Authenticated renters)
   app.get("/api/renter/dashboard-stats", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = getEffectiveUserId(req);
+      const userId = getAuthenticatedUserId(req);
       if (!userId) {
         return res.status(401).json({ error: "User not authenticated" });
       }
@@ -3555,7 +3491,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get detailed renter statistics (Authenticated renters)
   app.get("/api/renter/statistics", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = getEffectiveUserId(req);
+      const userId = getAuthenticatedUserId(req);
       if (!userId) {
         return res.status(401).json({ error: "User not authenticated" });
       }
@@ -6268,34 +6204,6 @@ The BCI ParkShare Team`;
       }
       console.error("Error creating admin parking spot:", error);
       res.status(500).json({ error: "Failed to create parking spot" });
-    }
-  });
-
-  // Search users for admin user picker (Admin only)
-  app.get("/api/admin/users/search", requireAdmin, async (req: any, res) => {
-    try {
-      const query = (req.query.q as string || '').trim().toLowerCase();
-      const allUsers = await storage.getAllUsers();
-      const filtered = query 
-        ? allUsers.filter(u => 
-            (u.firstName?.toLowerCase().includes(query) || 
-             u.lastName?.toLowerCase().includes(query) || 
-             u.email?.toLowerCase().includes(query)))
-        : allUsers;
-      
-      const users = filtered.slice(0, 50).map(u => ({
-        id: u.id,
-        firstName: u.firstName,
-        lastName: u.lastName,
-        email: u.email,
-        roles: u.roles,
-        department: (u as any).department
-      }));
-      
-      res.json(users);
-    } catch (error) {
-      console.error("Error searching users:", error);
-      res.status(500).json({ error: "Failed to search users" });
     }
   });
 

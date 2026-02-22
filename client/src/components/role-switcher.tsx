@@ -38,6 +38,7 @@ export function RoleSwitcher() {
     }
   };
 
+  // Only show for admin users
   if (!isAdmin()) {
     return null;
   }
@@ -46,22 +47,29 @@ export function RoleSwitcher() {
   const currentConfig = roleConfig[currentViewRole as UserRole] || roleConfig.admin;
   const CurrentIcon = currentConfig.icon;
 
+  // Mock function to check if spot owner has registered spots  
+  // In real app, this would query the database
   const hasRegisteredSpots = (userId: string) => {
+    // Mock data - some users have spots, some don't
+    // Demo spot owner "user-owner-001" has registered spots
     const usersWithSpots = ['user-admin-001', 'owner-002', 'owner-004']; 
     return usersWithSpots.includes(userId);
   };
 
   const handleRoleSwitch = async (role: UserRole) => {
     if (role === "admin") {
-      await resetViewRole();
-      setLocation("/admin", { replace: true });
+      await resetViewRole(); // Reset to admin view
+      setLocation("/admin", { replace: true }); // Admin goes to /admin, not /dashboard
     } else {
-      await switchViewRole(role);
+      await switchViewRole(role); // Switch to other role view
       
+      // Redirect to appropriate landing page for the role
       if (role === "owner") {
+        // Spot owners: My Bookings if they have spots, My Spots if they don't
         const targetPage = hasRegisteredSpots(user?.id || "") ? "/my-bookings" : "/my-spots";
         setLocation(targetPage, { replace: true });
       } else if (role === "renter") {
+        // Renters: Smart Parking Search page
         setLocation("/search", { replace: true });
       }
     }
@@ -72,86 +80,80 @@ export function RoleSwitcher() {
   };
 
   return (
-    <>
-      <DropdownMenu>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <DropdownMenuTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="sm"
-                className="flex items-center gap-2 h-8"
-                data-testid="button-role-switcher"
-              >
-                <Badge variant="secondary" className={`flex items-center gap-1 text-xs ${currentConfig.color}`}>
-                  <CurrentIcon className="h-3 w-3" />
-                  {currentConfig.label}
-                </Badge>
-                <ChevronDown className="h-3 w-3" />
-              </Button>
-            </DropdownMenuTrigger>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p className="max-w-xs">{getTooltipText()}</p>
-          </TooltipContent>
-        </Tooltip>
+    <DropdownMenu>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              className="flex items-center gap-2 h-8"
+              data-testid="button-role-switcher"
+            >
+              <Badge variant="secondary" className={`flex items-center gap-1 text-xs ${currentConfig.color}`}>
+                <CurrentIcon className="h-3 w-3" />
+                {currentConfig.label}
+              </Badge>
+              <ChevronDown className="h-3 w-3" />
+            </Button>
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p className="max-w-xs">{getTooltipText()}</p>
+        </TooltipContent>
+      </Tooltip>
+      
+      <DropdownMenuContent align="end" className="w-44" data-testid="dropdown-role-switcher">
+        <DropdownMenuLabel className="text-xs text-muted-foreground">
+          {t("roleSwitcher.viewAs")}
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
         
-        <DropdownMenuContent align="end" className="w-44" data-testid="dropdown-role-switcher">
-          <DropdownMenuLabel className="text-xs text-muted-foreground">
-            {t("roleSwitcher.viewAs")}
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          
-          <DropdownMenuItem 
-            onClick={() => handleRoleSwitch("admin")}
-            className="flex items-center gap-2"
-            data-testid="menu-item-admin-view"
-          >
-            <Shield className="h-4 w-4" />
-            <div className="flex-1">
-              <p className="text-sm font-medium">{t("role.admin")}</p>
-              <p className="text-xs text-muted-foreground">{t("roleSwitcher.adminDesc")}</p>
-            </div>
-            {currentViewRole === "admin" && (
-              <Badge variant="outline" className="text-xs">{t("roleSwitcher.current")}</Badge>
-            )}
-          </DropdownMenuItem>
+        <DropdownMenuItem 
+          onClick={() => handleRoleSwitch("admin")}
+          className="flex items-center gap-2"
+          data-testid="menu-item-admin-view"
+        >
+          <Shield className="h-4 w-4" />
+          <div className="flex-1">
+            <p className="text-sm font-medium">{t("role.admin")}</p>
+            <p className="text-xs text-muted-foreground">{t("roleSwitcher.adminDesc")}</p>
+          </div>
+          {currentViewRole === "admin" && (
+            <Badge variant="outline" className="text-xs">{t("roleSwitcher.current")}</Badge>
+          )}
+        </DropdownMenuItem>
 
-          <DropdownMenuItem 
-            onClick={() => handleRoleSwitch("owner")}
-            className="flex items-center gap-2"
-            data-testid="menu-item-owner-view"
-          >
-            <Car className="h-4 w-4" />
-            <div className="flex-1">
-              <p className="text-sm font-medium">{t("role.owner")}</p>
-              <p className="text-xs text-muted-foreground">{t("roleSwitcher.ownerDesc")}</p>
-            </div>
-            {currentViewRole === "owner" && (
-              <Badge variant="outline" className="text-xs">{t("roleSwitcher.current")}</Badge>
-            )}
-          </DropdownMenuItem>
+        <DropdownMenuItem 
+          onClick={() => handleRoleSwitch("owner")}
+          className="flex items-center gap-2"
+          data-testid="menu-item-owner-view"
+        >
+          <Car className="h-4 w-4" />
+          <div className="flex-1">
+            <p className="text-sm font-medium">{t("role.owner")}</p>
+            <p className="text-xs text-muted-foreground">{t("roleSwitcher.ownerDesc")}</p>
+          </div>
+          {currentViewRole === "owner" && (
+            <Badge variant="outline" className="text-xs">{t("roleSwitcher.current")}</Badge>
+          )}
+        </DropdownMenuItem>
 
-          <DropdownMenuItem 
-            onClick={() => handleRoleSwitch("renter")}
-            className="flex items-center gap-2"
-            data-testid="menu-item-renter-view"
-          >
-            <User className="h-4 w-4" />
-            <div className="flex-1">
-              <p className="text-sm font-medium">{t("role.renter")}</p>
-              <p className="text-xs text-muted-foreground">{t("roleSwitcher.renterDesc")}</p>
-            </div>
-            {currentViewRole === "renter" && (
-              <Badge variant="outline" className="text-xs">{t("roleSwitcher.current")}</Badge>
-            )}
-          </DropdownMenuItem>
-
-
-
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-    </>
+        <DropdownMenuItem 
+          onClick={() => handleRoleSwitch("renter")}
+          className="flex items-center gap-2"
+          data-testid="menu-item-renter-view"
+        >
+          <User className="h-4 w-4" />
+          <div className="flex-1">
+            <p className="text-sm font-medium">{t("role.renter")}</p>
+            <p className="text-xs text-muted-foreground">{t("roleSwitcher.renterDesc")}</p>
+          </div>
+          {currentViewRole === "renter" && (
+            <Badge variant="outline" className="text-xs">{t("roleSwitcher.current")}</Badge>
+          )}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

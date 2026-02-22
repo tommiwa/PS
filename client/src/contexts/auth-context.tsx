@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { UserRole } from "@shared/schema";
-import { queryClient } from "@/lib/queryClient";
 
 interface AuthUser {
   id: string;
@@ -23,15 +22,6 @@ interface AuthUser {
   };
 }
 
-interface ViewAsUser {
-  id: string;
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-  roles?: string[];
-  department?: string;
-}
-
 interface AuthContextType {
   user: AuthUser | null;
   isAuthenticated: boolean;
@@ -48,10 +38,6 @@ interface AuthContextType {
   resetViewRole: () => Promise<void>;
   getCurrentViewRole: () => UserRole | null;
   isViewingAs: (role: UserRole) => boolean;
-  viewAsUser: ViewAsUser | null;
-  startViewingAsUser: (userId: string) => Promise<void>;
-  stopViewingAsUser: () => Promise<void>;
-  isImpersonating: boolean;
   refreshUser: () => Promise<void>;
   effectiveRole: UserRole | null;
   // Terms and Conditions
@@ -74,10 +60,6 @@ const defaultAuthContextValue: AuthContextType = {
   resetViewRole: async () => { throw new Error("AuthProvider not initialized") },
   getCurrentViewRole: () => null,
   isViewingAs: () => false,
-  viewAsUser: null,
-  startViewingAsUser: async () => { throw new Error("AuthProvider not initialized") },
-  stopViewingAsUser: async () => { throw new Error("AuthProvider not initialized") },
-  isImpersonating: false,
   refreshUser: async () => { throw new Error("AuthProvider not initialized") },
   effectiveRole: null,
   hasAcceptedTerms: () => false,
@@ -93,7 +75,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [viewRole, setViewRole] = useState<UserRole | null>(null);
-  const [viewAsUser, setViewAsUser] = useState<ViewAsUser | null>(null);
 
   // Fetch authenticated user from backend with graceful session recovery
   const fetchUser = async () => {
@@ -149,14 +130,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
           const data = await response.json();
           if (data.viewAsRole) {
             setViewRole(data.viewAsRole);
-          }
-          if (data.viewAsUserId) {
-            setViewAsUser({
-              id: data.viewAsUserId,
-              firstName: data.viewAsUserName?.split(' ')[0],
-              lastName: data.viewAsUserName?.split(' ').slice(1).join(' '),
-              email: data.viewAsUserEmail,
-            });
           }
         }
       } catch (error) {
@@ -222,51 +195,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const startViewingAsUser = async (userId: string) => {
-    if (!user?.roles?.includes("admin")) return;
-    
-    try {
-      const response = await fetch('/api/auth/view-as', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId }),
-        credentials: 'include',
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setViewRole(data.viewAsRole as UserRole);
-        setViewAsUser({
-          id: userId,
-          firstName: data.viewAsUserName?.split(' ')[0],
-          lastName: data.viewAsUserName?.split(' ').slice(1).join(' '),
-          email: data.viewAsUserEmail,
-        });
-        queryClient.invalidateQueries();
-      }
-    } catch (error) {
-      console.error("Error starting user impersonation:", error);
-    }
-  };
-
-  const stopViewingAsUser = async () => {
-    try {
-      await fetch('/api/auth/view-as', {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      setViewAsUser(null);
-      setViewRole(null);
-      queryClient.invalidateQueries();
-    } catch (error) {
-      console.error("Error stopping user impersonation:", error);
-    }
-  };
-
   const resetViewRole = async () => {
     setViewRole(null);
-    setViewAsUser(null);
     
+    // Clear from backend
     try {
       await fetch('/api/auth/view-as', {
         method: 'DELETE',
@@ -296,8 +228,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return !!user?.acceptedTermsVersion;
   };
 
-  const isImpersonating = !!viewAsUser;
-
   const value: AuthContextType = {
     user,
     isAuthenticated: !!user,
@@ -313,10 +243,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     resetViewRole,
     getCurrentViewRole,
     isViewingAs,
-    viewAsUser,
-    startViewingAsUser,
-    stopViewingAsUser,
-    isImpersonating,
     refreshUser,
     effectiveRole: getEffectiveRole(),
     hasAcceptedTerms,
