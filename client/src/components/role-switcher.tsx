@@ -190,7 +190,7 @@ export function RoleSwitcher() {
 
           <DropdownMenuSeparator />
           <DropdownMenuLabel className="text-xs text-muted-foreground">
-            User Impersonation
+            Troubleshooting
           </DropdownMenuLabel>
 
           {isImpersonating ? (
@@ -218,8 +218,8 @@ export function RoleSwitcher() {
             >
               <Eye className="h-4 w-4" />
               <div className="flex-1">
-                <p className="text-sm font-medium">View as User</p>
-                <p className="text-xs text-muted-foreground">See app as specific user</p>
+                <p className="text-sm font-medium">Switch to User</p>
+                <p className="text-xs text-muted-foreground">See what a specific user sees</p>
               </div>
             </DropdownMenuItem>
           )}
