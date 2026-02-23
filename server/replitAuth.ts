@@ -54,6 +54,7 @@ const getOidcConfig = memoize(
 );
 
 const REFRESH_TOKEN_EXPIRY_DAYS = 30;
+const MAX_REFRESH_TOKENS_PER_USER = 5;
 
 function hashToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
@@ -71,20 +72,44 @@ async function generateRefreshToken(userId: string, userAgent?: string): Promise
     userAgent: userAgent || null,
   });
 
+  const userTokens = await db
+    .select({ id: refreshTokens.id, createdAt: refreshTokens.createdAt })
+    .from(refreshTokens)
+    .where(eq(refreshTokens.userId, userId))
+    .orderBy(refreshTokens.createdAt);
+
+  if (userTokens.length > MAX_REFRESH_TOKENS_PER_USER) {
+    const tokensToRemove = userTokens.slice(0, userTokens.length - MAX_REFRESH_TOKENS_PER_USER);
+    for (const t of tokensToRemove) {
+      await db.delete(refreshTokens).where(eq(refreshTokens.id, t.id));
+    }
+    console.log(`[Auth] Pruned ${tokensToRemove.length} old refresh tokens for user ${userId}`);
+  }
+
   return rawToken;
 }
 
-async function validateRefreshToken(rawToken: string): Promise<string | null> {
+async function validateRefreshToken(rawToken: string): Promise<{ userId: string } | "invalid"> {
   const tokenHash = hashToken(rawToken);
   const now = new Date();
 
   const rows = await db
     .select()
     .from(refreshTokens)
-    .where(and(eq(refreshTokens.tokenHash, tokenHash), gt(refreshTokens.expiresAt, now)));
+    .where(eq(refreshTokens.tokenHash, tokenHash));
 
-  if (rows.length === 0) return null;
-  return rows[0].userId;
+  if (rows.length === 0) {
+    return "invalid";
+  }
+
+  const token = rows[0];
+
+  if (token.expiresAt < now) {
+    await db.delete(refreshTokens).where(eq(refreshTokens.id, token.id));
+    return "invalid";
+  }
+
+  return { userId: token.userId };
 }
 
 async function revokeRefreshToken(rawToken: string): Promise<void> {
@@ -660,11 +685,14 @@ export async function setupAuth(app: Express) {
         return res.status(401).json({ error: "No refresh token" });
       }
 
-      const userId = await validateRefreshToken(rawToken);
-      if (!userId) {
+      const result = await validateRefreshToken(rawToken);
+
+      if (result === "invalid") {
         res.clearCookie('bci_refresh_token', { path: '/' });
         return res.status(401).json({ error: "Invalid or expired refresh token" });
       }
+
+      const { userId } = result;
 
       const dbUser = await db.select().from(users).where(eq(users.id, userId)).then(rows => rows[0]);
       if (!dbUser || dbUser.status === "suspended" || dbUser.status === "deleted") {
