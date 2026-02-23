@@ -4746,9 +4746,8 @@ The BCI ParkShare Team`;
         return res.status(403).json({ error: "Not authorized to cancel this booking" });
       }
 
-      // Don't allow cancelling already completed or cancelled bookings
-      if (booking.status === 'completed' || booking.status === 'cancelled') {
-        return res.status(400).json({ error: `Cannot cancel ${booking.status} booking` });
+      if (booking.status === 'cancelled') {
+        return res.status(400).json({ error: "Booking is already cancelled" });
       }
 
       const cancellationWindowConfig = await storage.getAppConfigValue('cancellation_window_hours');
@@ -4766,7 +4765,6 @@ The BCI ParkShare Team`;
 
       const cancelledBooking = await storage.cancelBookingWithReason(id, "Cancelled by renter");
       
-      // Update the listing status back to 'available' so it can be booked again
       if (booking.listingId) {
         await storage.updateSpotListingStatus(booking.listingId, 'available');
         console.log(`[Cancel Booking] Updated listing ${booking.listingId} status back to 'available'`);
@@ -4860,21 +4858,17 @@ The BCI ParkShare Team`;
         return res.status(403).json({ error: "Not authorized to cancel this booking. Only the spot owner can use this action." });
       }
 
-      // Don't allow cancelling already completed or cancelled bookings
-      if (booking.status === 'completed' || booking.status === 'cancelled') {
-        return res.status(400).json({ error: `Cannot cancel ${booking.status} booking` });
+      if (booking.status === 'cancelled') {
+        return res.status(400).json({ error: "Booking is already cancelled" });
       }
-
-      const cancellationWindowConfig2 = await storage.getAppConfigValue('cancellation_window_hours');
-      const cancellationWindowHours2 = cancellationWindowConfig2 ? Number(cancellationWindowConfig2) : 24;
 
       const bookingDate = new Date(booking.bookingDate + 'T00:00:00');
       const now = new Date();
       const hoursUntilBooking = (bookingDate.getTime() - now.getTime()) / (1000 * 60 * 60);
       
-      if (hoursUntilBooking < cancellationWindowHours2) {
+      if (hoursUntilBooking < 0) {
         return res.status(400).json({ 
-          error: `Cancellations must be made at least ${cancellationWindowHours2} hours before the booking date. Please contact support if you need assistance.` 
+          error: "Cannot cancel a booking for a past date." 
         });
       }
 
@@ -4885,10 +4879,9 @@ The BCI ParkShare Team`;
 
       const cancelledBooking = await storage.cancelBookingWithReason(id, `Cancelled by spot owner (${ownerName})`);
       
-      // Update the listing status back to 'available' so it can be booked again
       if (booking.listingId) {
-        await storage.updateSpotListingStatus(booking.listingId, 'available');
-        console.log(`[Owner Cancel] Updated listing ${booking.listingId} status back to 'available'`);
+        await storage.cancelSpotListing(booking.listingId, `Booking cancelled by spot owner (${ownerName})`);
+        console.log(`[Owner Cancel] Cancelled listing ${booking.listingId} along with booking`);
       }
       
       await auditService.logAction("CANCEL", "booking", {

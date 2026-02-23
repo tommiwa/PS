@@ -592,6 +592,42 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     }
   }
 
+  const ownerCancelBookingMutation = useMutation({
+    mutationFn: async (bookingId: string) => {
+      return apiRequest(`/api/bookings/${bookingId}/owner-cancel`, { method: 'POST' })
+    },
+    onSuccess: () => {
+      toast({
+        title: "Booking Cancelled",
+        description: "The booking has been cancelled and the listing has been removed.",
+        variant: "warning",
+      })
+      queryClient.invalidateQueries({ queryKey: ['/api/my-bookings'] })
+      queryClient.invalidateQueries({ queryKey: ['/api/my-listings'] })
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Cancellation Failed",
+        description: getErrorMessage(error, "Failed to cancel booking. Please try again."),
+        variant: "destructive",
+      })
+    }
+  })
+
+  const handleOwnerCancelBooking = async (listing: any) => {
+    if (!listing.bookingId) return
+    const confirmed = await confirm({
+      title: "Cancel Booking",
+      description: `Are you sure you want to cancel the booking on Spot ${listing.spotNumber || listing.spot?.spotNumber} for ${listing.date}? This will cancel both the booking and the listing.`,
+      confirmText: "Yes, Cancel Booking",
+      cancelText: "Keep Booking",
+      variant: "destructive"
+    })
+    if (confirmed) {
+      ownerCancelBookingMutation.mutate(listing.bookingId)
+    }
+  }
+
   // Mutations for listing management
   const updateListingMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string, data: any }) => {
@@ -812,6 +848,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     // - showReceipt: Only for completed listings
     const canEdit = listing.status === "available" && !isPastDate && !effectivelyBooked && !isCompleted && !isCancelled
     const canCancel = listing.status === "available" && !isPastDate && !effectivelyBooked && !isCompleted && !isCancelled
+    const canCancelBooking = effectivelyBooked && !isPastDate && !isCancelled && !!listing.bookingId
     const canNotify = effectivelyBooked && (paymentStatus === 'pending' || !paymentStatus) && !isCompleted && !isCancelled
     const canConfirmPayment = effectivelyBooked && paymentStatus === 'paid' && !isCompleted && !isCancelled
     
@@ -1037,6 +1074,24 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               </Tooltip>
             )}
             
+            {canCancelBooking && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleOwnerCancelBooking(listing)}
+                    data-testid={`button-cancel-booking-${listing.id}`}
+                    className="flex-1 lg:flex-none text-destructive hover:text-destructive"
+                  >
+                    <XCircle className="h-4 w-4 mr-2" />
+                    <span className="hidden sm:inline">Cancel Booking</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Cancel booking and listing</TooltipContent>
+              </Tooltip>
+            )}
+            
             {canNotify && (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -1146,13 +1201,12 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     // Action visibility rules:
     // - canMarkPaid: Only for confirmed peer-to-peer bookings with pending payment (not for payroll spots)
     // - canNotifyOwner: Only for past peer-to-peer bookings where payment is 'paid' (awaiting owner confirmation)
-    // - canCancel: Only for FUTURE bookings that are ${cancellationWindowHours}+ hours away (regardless of payment status)
-    //   Past bookings cannot be cancelled since the spot was already used
+    // - canCancel: Any future booking that is not already cancelled, within cancellation window
     // - showReceipt: Only for completed bookings
     const canMarkPaid = !isPayroll && booking.status === "confirmed" && paymentStatus === 'pending' && !isCompleted && !isCancelled
     const canNotifyOwner = !isPayroll && booking.status === "confirmed" && paymentStatus === 'paid' && isPastDate && !isCompleted && !isCancelled
-    const canCancel = booking.status === "confirmed" && !isPastDate && canCancelWithin24Hours && !isCompleted && !isCancelled
-    const withinCancellationWindow = booking.status === "confirmed" && !isPastDate && !canCancelWithin24Hours && !isCompleted && !isCancelled
+    const canCancel = !isPastDate && canCancelWithin24Hours && !isCancelled
+    const withinCancellationWindow = !isPastDate && !canCancelWithin24Hours && !isCancelled
     
     // Get status badge with color
     const getBookingStatusBadge = () => {
@@ -1468,6 +1522,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     // Same logic as card view
     const canEdit = listing.status === "available" && !isPastDate && !effectivelyBooked && !isCompleted && !isCancelled
     const canCancel = listing.status === "available" && !isPastDate && !effectivelyBooked && !isCompleted && !isCancelled
+    const canCancelBooking = effectivelyBooked && !isPastDate && !isCancelled && !!listing.bookingId
     const canConfirmPayment = effectivelyBooked && paymentStatus === 'paid' && !isCompleted && !isCancelled
     const canNotify = effectivelyBooked && (paymentStatus === 'pending' || !paymentStatus) && !isCompleted && !isCancelled
     
@@ -1570,6 +1625,11 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                 <XCircle className="h-4 w-4" />
               </Button>
             )}
+            {canCancelBooking && (
+              <Button variant="ghost" size="icon" onClick={() => handleOwnerCancelBooking(listing)} data-testid={`compact-cancel-booking-${listing.id}`} className="text-destructive hover:text-destructive">
+                <XCircle className="h-4 w-4" />
+              </Button>
+            )}
             {canNotify && (
               <Button variant="ghost" size="icon" onClick={() => handleSendPaymentReminder(listing.bookingId || listing.id, listing.renterName || 'Renter')} data-testid={`compact-notify-${listing.id}`} className="text-amber-600 hover:text-amber-700" disabled={sendPaymentReminderMutation.isPending}>
                 <Bell className="h-4 w-4" />
@@ -1609,12 +1669,11 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     // Check if this is a payroll booking (BCI Workplace Services)
     const isPayroll = isPayrollBooking(booking)
     
-    // Same action logic as card view - canCancel for future bookings only
-    // Hide Mark as Paid and Notify Owner for payroll spots
+    // Same action logic as card view - canCancel for any future non-cancelled booking within window
     const canMarkPaid = !isPayroll && booking.status === "confirmed" && paymentStatus === 'pending' && !isCompleted && !isCancelled
     const canNotifyOwner = !isPayroll && booking.status === "confirmed" && paymentStatus === 'paid' && isPastDate && !isCompleted && !isCancelled
-    const canCancel = booking.status === "confirmed" && !isPastDate && canCancelWithin24Hours && !isCompleted && !isCancelled
-    const withinCancellationWindow = booking.status === "confirmed" && !isPastDate && !canCancelWithin24Hours && !isCompleted && !isCancelled
+    const canCancel = !isPastDate && canCancelWithin24Hours && !isCancelled
+    const withinCancellationWindow = !isPastDate && !canCancelWithin24Hours && !isCancelled
     
     const getStatusBadge = () => {
       const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
