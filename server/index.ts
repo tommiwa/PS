@@ -1,15 +1,17 @@
 import express, { type Request, Response, NextFunction } from "express";
+import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { auditService } from "./audit-service";
 import { dbAuditStorage as auditStorage } from "./audit-storage";
 import { initTimezone } from "./timezone";
 import { db } from "./db";
-import { spotLocks, spotListings, bookings, parkingSpots } from "@shared/schema";
+import { spotLocks, spotListings, bookings, parkingSpots, refreshTokens } from "@shared/schema";
 import { and, eq, lt, lte, inArray, notInArray, sql, isNull, or } from "drizzle-orm";
 import { setupWebSocket, broadcastLockEvent } from "./websocket";
 
 const app = express();
+app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -530,6 +532,19 @@ If you have questions about the collection of your personal information through 
   // Set up interval to run session cleanup every 6 hours (21600000 ms)
   setInterval(cleanupExpiredSessions, 21600000);
   log("Session cleanup job scheduled (runs every 6 hours)");
+
+  // Refresh token cleanup (runs daily)
+  const cleanupExpiredRefreshTokens = async () => {
+    try {
+      const result = await db.delete(refreshTokens).where(lt(refreshTokens.expiresAt, new Date()));
+      log("Refresh token cleanup completed");
+    } catch (error) {
+      console.error("[Refresh Token Cleanup] Error:", error);
+    }
+  };
+  await cleanupExpiredRefreshTokens();
+  setInterval(cleanupExpiredRefreshTokens, 24 * 60 * 60 * 1000);
+  log("Refresh token cleanup job scheduled (runs daily)");
 
   // Data fix: correctly set created_by_admin on single-day listings
   // Only single-day listings split from admin-created parent period/recurring listings should be true

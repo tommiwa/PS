@@ -6,6 +6,7 @@ import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
+import crypto from "crypto";
 import { storage } from "./storage";
 import { auditService } from "./audit-service";
 import { db } from "./db";
@@ -26,9 +27,10 @@ import {
   issues,
   disputes,
   lockers,
+  refreshTokens,
   type User 
 } from "@shared/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and, gt, lt } from "drizzle-orm";
 
 // Extend Express Session to include viewAsRole
 declare module 'express-session' {
@@ -50,6 +52,55 @@ const getOidcConfig = memoize(
   },
   { maxAge: 3600 * 1000 }
 );
+
+const REFRESH_TOKEN_EXPIRY_DAYS = 30;
+
+function hashToken(token: string): string {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+async function generateRefreshToken(userId: string, userAgent?: string): Promise<string> {
+  const rawToken = crypto.randomBytes(48).toString("base64url");
+  const tokenHash = hashToken(rawToken);
+  const expiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+
+  await db.insert(refreshTokens).values({
+    userId,
+    tokenHash,
+    expiresAt,
+    userAgent: userAgent || null,
+  });
+
+  return rawToken;
+}
+
+async function validateRefreshToken(rawToken: string): Promise<string | null> {
+  const tokenHash = hashToken(rawToken);
+  const now = new Date();
+
+  const rows = await db
+    .select()
+    .from(refreshTokens)
+    .where(and(eq(refreshTokens.tokenHash, tokenHash), gt(refreshTokens.expiresAt, now)));
+
+  if (rows.length === 0) return null;
+  return rows[0].userId;
+}
+
+async function revokeRefreshToken(rawToken: string): Promise<void> {
+  const tokenHash = hashToken(rawToken);
+  await db.delete(refreshTokens).where(eq(refreshTokens.tokenHash, tokenHash));
+}
+
+async function revokeAllUserRefreshTokens(userId: string): Promise<void> {
+  await db.delete(refreshTokens).where(eq(refreshTokens.userId, userId));
+}
+
+async function cleanupExpiredRefreshTokens(): Promise<void> {
+  const now = new Date();
+  const result = await db.delete(refreshTokens).where(lt(refreshTokens.expiresAt, now));
+  console.log(`[Refresh Token Cleanup] Removed expired refresh tokens`);
+}
 
 export function getSession() {
   const sessionTtlSeconds = 7 * 24 * 60 * 60; // 7 days in seconds
@@ -551,6 +602,22 @@ export async function setupAuth(app: Express) {
             console.error("Failed to log authentication success:", error);
           });
           
+          // Issue refresh token for persistent login
+          try {
+            const rawRefreshToken = await generateRefreshToken(userId, req.headers['user-agent']);
+            const isDev = process.env.NODE_ENV !== 'production';
+            res.cookie('bci_refresh_token', rawRefreshToken, {
+              httpOnly: true,
+              secure: !isDev,
+              sameSite: 'lax',
+              maxAge: REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
+              path: '/',
+            });
+            console.log(`[Auth] Refresh token issued for user ${userId}`);
+          } catch (tokenError) {
+            console.error("[Auth] Failed to issue refresh token:", tokenError);
+          }
+
           // Redirect based on user roles
           let redirectUrl = "/search"; // Default redirect for renters
           
@@ -586,6 +653,61 @@ export async function setupAuth(app: Express) {
     })(req, res, next);
   });
 
+  app.post("/api/auth/refresh", async (req, res) => {
+    try {
+      const rawToken = req.cookies?.bci_refresh_token;
+      if (!rawToken) {
+        return res.status(401).json({ error: "No refresh token" });
+      }
+
+      const userId = await validateRefreshToken(rawToken);
+      if (!userId) {
+        res.clearCookie('bci_refresh_token', { path: '/' });
+        return res.status(401).json({ error: "Invalid or expired refresh token" });
+      }
+
+      const dbUser = await db.select().from(users).where(eq(users.id, userId)).then(rows => rows[0]);
+      if (!dbUser || dbUser.status === "suspended" || dbUser.status === "deleted") {
+        await revokeRefreshToken(rawToken);
+        res.clearCookie('bci_refresh_token', { path: '/' });
+        return res.status(401).json({ error: "User not found or inactive" });
+      }
+
+      await revokeRefreshToken(rawToken);
+
+      const newRawToken = await generateRefreshToken(userId, req.headers['user-agent']);
+      const isDev = process.env.NODE_ENV !== 'production';
+      res.cookie('bci_refresh_token', newRawToken, {
+        httpOnly: true,
+        secure: !isDev,
+        sameSite: 'lax',
+        maxAge: REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
+        path: '/',
+      });
+
+      await new Promise<void>((resolve, reject) => {
+        const fakeUser = {
+          claims: {
+            sub: dbUser.id,
+            email: dbUser.email,
+            first_name: dbUser.firstName,
+            last_name: dbUser.lastName,
+          },
+        };
+        req.logIn(fakeUser, (err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+
+      console.log(`[Auth] Session refreshed for user ${userId} via refresh token`);
+      return res.json({ success: true });
+    } catch (error) {
+      console.error("[Auth] Refresh token error:", error);
+      return res.status(500).json({ error: "Failed to refresh session" });
+    }
+  });
+
   app.get("/api/logout", (req, res) => {
     // Extract user info before logout
     let actorId: string | undefined;
@@ -594,6 +716,14 @@ export async function setupAuth(app: Express) {
     if (req.user && (req.user as any).claims) {
       actorId = (req.user as any).claims.sub;
       actorEmail = (req.user as any).claims.email;
+    }
+    
+    // Revoke refresh token
+    const rawToken = req.cookies?.bci_refresh_token;
+    if (rawToken) {
+      revokeRefreshToken(rawToken).catch(err => {
+        console.error("[Auth] Failed to revoke refresh token on logout:", err);
+      });
     }
     
     // Clear view-as role before destroying session
@@ -618,8 +748,9 @@ export async function setupAuth(app: Express) {
         console.error("Failed to log logout event:", error);
       });
       
-      // Clear the cookie
+      // Clear cookies
       res.clearCookie('connect.sid');
+      res.clearCookie('bci_refresh_token', { path: '/' });
       
       // Redirect to login page
       console.log(`User ${actorId} (${actorEmail}) logged out successfully`);

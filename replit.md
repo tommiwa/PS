@@ -33,6 +33,7 @@ Preferred communication style: Simple, everyday language.
 ### Authentication & Authorization
 - **User Management**: Multi-role access control (admin, owner, renter) with dynamic role assignment.
 - **Authentication**: Server-side session management, Replit OIDC for employee login.
+- **Persistent Login (Refresh Tokens)**: 30-day refresh tokens stored as httpOnly cookies (`bci_refresh_token`). When the 7-day session expires, the frontend silently calls `POST /api/auth/refresh` to restore the session without requiring OIDC re-login. Tokens are SHA-256 hashed in `refresh_tokens` table, rotated on each use (old token revoked, new one issued), and cleaned up daily. Supports Safari/Chrome on iPhone and Chrome on Android (including PWA mode). Tokens are revoked on explicit logout.
 - **Permission System**: Route and component-level checks.
 - **Role Assignment Logic**: Default "renter" on first login, "owner" for users with assigned spots, "admin" via hardcoded emails or manual assignment.
 - **"View As" Functionality**: Admin-only session-based role impersonation.

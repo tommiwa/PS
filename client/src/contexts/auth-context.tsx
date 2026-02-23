@@ -76,7 +76,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [viewRole, setViewRole] = useState<UserRole | null>(null);
 
-  // Fetch authenticated user from backend with graceful session recovery
+  const attemptTokenRefresh = async (): Promise<boolean> => {
+    try {
+      const response = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      return response.ok;
+    } catch {
+      return false;
+    }
+  };
+
   const fetchUser = async () => {
     try {
       const response = await fetch('/api/auth/user', {
@@ -86,20 +97,32 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (response.ok) {
         const userData = await response.json();
         setUser(userData);
-        // Mark that we've had a successful session
         try { sessionStorage.setItem('bci_had_session', '1'); } catch {}
       } else if (response.status === 401) {
         setUser(null);
         
-        // Attempt silent re-auth if user previously had a session
-        // Use sessionStorage flag + cooldown to prevent redirect loops
+        console.log("[Auth] Session expired, attempting refresh token recovery...");
+        const refreshed = await attemptTokenRefresh();
+        
+        if (refreshed) {
+          console.log("[Auth] Session restored via refresh token");
+          const retryResponse = await fetch('/api/auth/user', { credentials: 'include' });
+          if (retryResponse.ok) {
+            const userData = await retryResponse.json();
+            setUser(userData);
+            try { sessionStorage.setItem('bci_had_session', '1'); } catch {}
+            setIsLoading(false);
+            return;
+          }
+        }
+        
         const hadSession = sessionStorage.getItem('bci_had_session') === '1';
         const lastReauthAttempt = parseInt(sessionStorage.getItem('bci_reauth_ts') || '0', 10);
-        const cooldownMs = 60000; // 1 minute cooldown between re-auth attempts
+        const cooldownMs = 60000;
         const now = Date.now();
         
         if (hadSession && (now - lastReauthAttempt) > cooldownMs) {
-          console.log("[Auth] Session expired, attempting silent re-auth...");
+          console.log("[Auth] Refresh token failed, falling back to OIDC re-auth...");
           sessionStorage.setItem('bci_reauth_ts', String(now));
           sessionStorage.removeItem('bci_had_session');
           window.location.href = '/api/login';
