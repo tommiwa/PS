@@ -171,7 +171,7 @@ export function BookingCard({
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Booking date: {booking.date}</p>
+              <p>Usage date: {booking.date}</p>
             </TooltipContent>
           </Tooltip>
           <Tooltip>

@@ -313,9 +313,7 @@ export const exportBookingsData = (bookings: any[], title: string = 'Booking Rep
     { header: 'Owner Name', dataKey: 'ownerName', width: 18 },
     { header: 'Status', dataKey: 'status', width: 12, formatter: (status) => status?.toUpperCase() || '-' },
     { header: 'Daily Rate', dataKey: 'dailyRate', width: 12, formatter: (rate) => `$${rate || 0}` },
-    { header: 'Start Time', dataKey: 'startTime', width: 15, formatter: (time) => time ? new Date(time).toLocaleTimeString() : '-' },
-    { header: 'End Time', dataKey: 'endTime', width: 15, formatter: (time) => time ? new Date(time).toLocaleTimeString() : '-' },
-    { header: 'Booking Date', dataKey: 'bookingDate', width: 15, formatter: (date) => date ? new Date(date).toLocaleDateString() : '-' },
+    { header: 'Usage Date', dataKey: 'bookingDate', width: 15, formatter: (date) => date ? new Date(date).toLocaleDateString() : '-' },
     { header: 'Payment Status', dataKey: 'paymentReceived', width: 15, formatter: (received) => received ? 'Received' : 'Pending' }
   ]
 

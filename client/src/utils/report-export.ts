@@ -576,7 +576,7 @@ export async function exportSharedPoolUsageReport(data: SharedPoolUsageReportRes
   detailTitle.font = { bold: true, size: 16 };
   
   detailSheet.addRow([]);
-  const detailHeaderRow = detailSheet.addRow(['User Name', 'Email', 'Department', 'Spot Number', 'Location', 'Booking Date', 'Type', 'Amount']);
+  const detailHeaderRow = detailSheet.addRow(['User Name', 'Email', 'Department', 'Spot Number', 'Location', 'Usage Date', 'Type', 'Amount']);
   detailHeaderRow.font = { bold: true };
   
   // Use filtered data (excludes removed bookings)
@@ -662,7 +662,7 @@ export async function exportPayrollSummaryReport(periods: PayrollPeriodSummaryEx
     const detailRow = worksheet.addRow(['BOOKING DETAILS']);
     detailRow.getCell(1).font = { bold: true, size: 14 };
     
-    const headerRow = worksheet.addRow(['Employee', 'Email', 'Department', 'Spot', 'Location', 'Booking Date', 'Type', 'Amount', 'Status']);
+    const headerRow = worksheet.addRow(['Employee', 'Email', 'Department', 'Spot', 'Location', 'Usage Date', 'Type', 'Amount', 'Status']);
     headerRow.font = { bold: true };
     headerRow.eachCell((cell) => {
       cell.fill = {

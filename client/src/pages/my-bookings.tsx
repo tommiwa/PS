@@ -469,13 +469,10 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
           ownerName: user?.firstName + ' ' + user?.lastName || 'N/A',
           status: item.status ?? 'N/A',
           dailyRate: item.dailyRate ? `$${item.dailyRate}` : 'N/A',
-          startTime: item.startTime || 'N/A',
-          endTime: item.endTime || 'N/A',
           bookingDate: item.singleDate ?? item.periodStartDate ?? 'N/A',
           paymentStatus: item.paymentStatus || 'pending'
         }
       } else {
-        // Renter booking data
         return {
           id: item.id,
           spotNumber: item.spotNumber || 'N/A',
@@ -485,8 +482,6 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
           ownerName: item.ownerName || item.owner || 'Workplace Services',
           status: item.status || 'N/A',
           dailyRate: item.dailyRate || item.price || 0,
-          startTime: item.startTime || 'N/A',
-          endTime: item.endTime || 'N/A',
           bookingDate: item.bookingDate || item.date || 'N/A',
           paymentStatus: item.paymentStatus || 'pending'
         }
@@ -527,13 +522,10 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
           ownerName: user?.firstName + ' ' + user?.lastName || 'N/A',
           status: item.status ?? 'N/A',
           dailyRate: item.dailyRate ? `$${item.dailyRate}` : 'N/A',
-          startTime: item.startTime || 'N/A',
-          endTime: item.endTime || 'N/A',
           bookingDate: item.singleDate ?? item.periodStartDate ?? 'N/A',
           paymentStatus: item.paymentStatus || 'pending'
         }
       } else {
-        // Renter booking data
         return {
           id: item.id,
           spotNumber: item.spotNumber || 'N/A',
@@ -543,8 +535,6 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
           ownerName: item.ownerName || item.owner || 'Workplace Services',
           status: item.status || 'N/A',
           dailyRate: item.dailyRate || item.price || 0,
-          startTime: item.startTime || 'N/A',
-          endTime: item.endTime || 'N/A',
           bookingDate: item.bookingDate || item.date || 'N/A',
           paymentStatus: item.paymentStatus || 'pending'
         }

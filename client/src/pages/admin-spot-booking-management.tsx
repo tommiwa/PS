@@ -89,8 +89,6 @@ interface AdminBookingData {
   totalAmount: number;
   status: BookingStatus;
   paymentStatus: 'pending' | 'paid' | 'received';
-  startTime: string;
-  endTime: string;
   notes: string;
   createdAt: string;
   lastActivity: string;
@@ -847,7 +845,7 @@ export default function AdminSpotBookingManagement() {
     },
     {
       key: "dateRange",
-      label: "Booking Date Range",
+      label: "Usage Date Range",
       type: "dateRange"
     }
   ], [locationFilterOptions]);
@@ -901,7 +899,7 @@ export default function AdminSpotBookingManagement() {
       },
       {
         key: "dateRange",
-        label: "Booking Date Range",
+        label: "Usage Date Range",
         type: "dateRange"
       }
     ];
@@ -2056,9 +2054,6 @@ export default function AdminSpotBookingManagement() {
                         <TableCell>
                           <div>
                             <p className="font-medium">{formatDate(booking.bookingDate)}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {booking.startTime} - {booking.endTime}
-                            </p>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -2306,8 +2301,6 @@ export default function AdminSpotBookingManagement() {
                                         totalAmount: payment.totalAmount,
                                         status: payment.status,
                                         paymentStatus: payment.paymentStatus || 'pending',
-                                        startTime: '',
-                                        endTime: '',
                                         notes: '',
                                         createdAt: '',
                                         lastActivity: ''
@@ -2343,8 +2336,6 @@ export default function AdminSpotBookingManagement() {
                                           totalAmount: payment.totalAmount,
                                           status: payment.status,
                                           paymentStatus: payment.paymentStatus || 'pending',
-                                          startTime: '',
-                                          endTime: '',
                                           notes: '',
                                           createdAt: '',
                                           lastActivity: ''
@@ -2473,7 +2464,7 @@ export default function AdminSpotBookingManagement() {
                               <TableHead>Department</TableHead>
                               <TableHead>Spot</TableHead>
                               <TableHead>Location</TableHead>
-                              <TableHead>Booking Date</TableHead>
+                              <TableHead>Usage Date</TableHead>
                               <TableHead>Type</TableHead>
                               <TableHead>Amount</TableHead>
                               <TableHead>Status</TableHead>
@@ -2790,7 +2781,6 @@ export default function AdminSpotBookingManagement() {
                           <TableCell data-testid={`text-date-${booking.id}`}>
                             <div>
                               <p className="font-medium">{formatDate(booking.bookingDate)}</p>
-                              <p className="text-sm text-muted-foreground">{booking.startTime} - {booking.endTime}</p>
                             </div>
                           </TableCell>
                           <TableCell data-testid={`badge-status-${booking.id}`}>
@@ -2902,11 +2892,8 @@ export default function AdminSpotBookingManagement() {
                     <p className="text-sm text-muted-foreground" data-testid="text-spot-location">{selectedBooking.spotLocation}</p>
                   </div>
                   <div>
-                    <Label>Booking Date</Label>
+                    <Label>Usage Date</Label>
                     <p className="font-medium" data-testid="text-booking-date">{formatDate(selectedBooking.bookingDate)}</p>
-                    <p className="text-sm text-muted-foreground" data-testid="text-booking-time">
-                      {selectedBooking.startTime} - {selectedBooking.endTime}
-                    </p>
                   </div>
                 </div>
                 

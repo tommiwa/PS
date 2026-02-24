@@ -986,8 +986,6 @@ export interface AdminBookingData {
   totalAmount: number;
   status: BookingStatus;
   paymentReceived: boolean;
-  startTime: string;
-  endTime: string;
   notes: string;
   createdAt: string;
   lastActivity: string;
