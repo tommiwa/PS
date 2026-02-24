@@ -1290,7 +1290,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">Date</p>
+                  <p className="text-xs text-muted-foreground">Usage Date</p>
                   <p className="text-sm font-medium truncate">{booking.bookingDate}</p>
                 </div>
               </div>
@@ -2355,7 +2355,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                     </Badge>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Date</p>
+                    <p className="text-sm text-muted-foreground">Usage Date</p>
                     <p className="font-medium">{selectedListing.date || selectedListing.singleDate || 'N/A'}</p>
                   </div>
                   <div>
@@ -2419,7 +2419,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                     </Badge>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Date</p>
+                    <p className="text-sm text-muted-foreground">Usage Date</p>
                     <p className="font-medium">{selectedBooking.bookingDate || 'N/A'}</p>
                   </div>
                   <div>

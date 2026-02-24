@@ -2002,7 +2002,7 @@ export default function AdminSpotBookingManagement() {
                         currentSortDirection={sortState.direction}
                         onSort={handleSort}
                       >
-                        Date
+                        Usage Date
                       </SortableTableHeader>
                       <SortableTableHeader
                         column="totalAmount"
@@ -2219,7 +2219,7 @@ export default function AdminSpotBookingManagement() {
                           currentSortDirection={pendingPaymentsSortState.direction}
                           onSort={handlePendingPaymentsSort}
                         >
-                          Booking Date
+                          Usage Date
                         </SortableTableHeader>
                         <SortableTableHeader
                           column="totalAmount"
@@ -2745,7 +2745,7 @@ export default function AdminSpotBookingManagement() {
                           currentSortDirection={pastBookingsSortState.direction}
                           onSort={handlePastBookingsSort}
                         >
-                          Date
+                          Usage Date
                         </SortableTableHeader>
                         <SortableTableHeader
                           column="status"
