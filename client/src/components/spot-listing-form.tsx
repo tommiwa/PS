@@ -549,7 +549,7 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="endDate" className={!formData.startDate ? "text-muted-foreground" : ""}>End Date *</Label>
-                  <Popover open={periodEndOpen} onOpenChange={formData.startDate ? setPeriodEndOpen : undefined}>
+                  <Popover open={periodEndOpen} onOpenChange={(open) => { if (formData.startDate) setPeriodEndOpen(open) }}>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
