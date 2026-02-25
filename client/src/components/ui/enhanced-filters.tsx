@@ -96,7 +96,7 @@ export function EnhancedFilters({
           </div>
         )
 
-      case "dateRange":
+      case "dateRange": {
         const [fromKey, toKey] = [`${config.key}From`, `${config.key}To`]
         const fromValue = filterValues[fromKey] || ""
         return (
@@ -132,6 +132,7 @@ export function EnhancedFilters({
             )}
           </div>
         )
+      }
 
       case "text":
         return (
