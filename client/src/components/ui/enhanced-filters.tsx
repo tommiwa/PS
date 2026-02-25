@@ -98,6 +98,7 @@ export function EnhancedFilters({
 
       case "dateRange":
         const [fromKey, toKey] = [`${config.key}From`, `${config.key}To`]
+        const fromValue = filterValues[fromKey] || ""
         return (
           <div key={config.key} className="space-y-2">
             <Label className="text-sm font-medium">{config.label}</Label>
@@ -105,18 +106,30 @@ export function EnhancedFilters({
               <Input
                 type="date"
                 placeholder="From"
-                value={filterValues[fromKey] || ""}
-                onChange={(e) => onFilterChange(fromKey, e.target.value || undefined)}
+                value={fromValue}
+                onChange={(e) => {
+                  const newFrom = e.target.value || undefined
+                  onFilterChange(fromKey, newFrom)
+                  if (filterValues[toKey] && newFrom && filterValues[toKey]! < newFrom) {
+                    onFilterChange(toKey, undefined)
+                  }
+                }}
                 data-testid={`input-filter-${fromKey}`}
               />
               <Input
                 type="date"
                 placeholder="To"
                 value={filterValues[toKey] || ""}
+                min={fromValue || undefined}
+                disabled={!fromValue}
                 onChange={(e) => onFilterChange(toKey, e.target.value || undefined)}
                 data-testid={`input-filter-${toKey}`}
+                className={!fromValue ? "opacity-50 cursor-not-allowed" : ""}
               />
             </div>
+            {!fromValue && (
+              <p className="text-xs text-muted-foreground">Select a start date first</p>
+            )}
           </div>
         )
 

@@ -548,13 +548,14 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="endDate">End Date *</Label>
-                  <Popover open={periodEndOpen} onOpenChange={setPeriodEndOpen}>
+                  <Label htmlFor="endDate" className={!formData.startDate ? "text-muted-foreground" : ""}>End Date *</Label>
+                  <Popover open={periodEndOpen} onOpenChange={formData.startDate ? setPeriodEndOpen : undefined}>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
                         className="w-full justify-start text-left font-normal"
                         data-testid="input-end-date"
+                        disabled={!formData.startDate}
                       >
                         <CalendarDays className="mr-2 h-4 w-4" />
                         {formData.endDate && parseDate(formData.endDate) ? format(parseDate(formData.endDate)!, "PPP") : "Pick end date"}
@@ -569,15 +570,14 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                           onSelect={(date) => {
                             const dateStr = formatDateStr(date)
                             updateFormData("endDate", dateStr)
-                            if (dateStr && (!formData.startDate || formData.startDate > dateStr)) {
-                              updateFormData("startDate", dateStr)
-                            }
                             setPeriodEndOpen(false)
                           }}
                           disabled={(date) => {
                             const today = new Date()
                             today.setHours(0, 0, 0, 0)
+                            const startDate = parseDate(formData.startDate)
                             if (date < today || date > maxFutureDate) return true
+                            if (startDate && date < startDate) return true
                             return false
                           }}
                           initialFocus
@@ -585,6 +585,9 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                       )}
                     </PopoverContent>
                   </Popover>
+                  {!formData.startDate && (
+                    <p className="text-xs text-muted-foreground">Select a start date first</p>
+                  )}
                   {validationErrors.endDate && (
                     <p className="text-sm text-red-600">{validationErrors.endDate}</p>
                   )}

@@ -121,15 +121,20 @@ export default function AdminReportsPage() {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="date-to">To Date</Label>
+          <Label htmlFor="date-to" className={!filters.dateFrom ? "text-muted-foreground" : ""}>To Date</Label>
           <Input
             id="date-to"
             type="date"
             value={filters.dateTo}
             onChange={(e) => setDateTo(e.target.value)}
             min={filters.dateFrom}
+            disabled={!filters.dateFrom}
+            className={!filters.dateFrom ? "opacity-50 cursor-not-allowed" : ""}
             data-testid="input-date-to"
           />
+          {!filters.dateFrom && (
+            <p className="text-xs text-muted-foreground">Select a start date first</p>
+          )}
         </div>
       </div>
 
