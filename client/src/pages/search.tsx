@@ -764,11 +764,12 @@ export default function Search() {
     switch (sortBy) {
       case "price":
         return a.price - b.price
-      case "date":
+      case "date": {
         // Sort by earliest availability date
         const aDate = a.availabilityDates?.[0] || ''
         const bDate = b.availabilityDates?.[0] || ''
         return aDate.localeCompare(bDate)
+      }
       default:
         return 0
     }

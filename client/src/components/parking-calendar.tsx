@@ -143,10 +143,11 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
     switch (view) {
       case "day":
         return format(currentDate, "EEEE, MMMM d, yyyy")
-      case "week":
+      case "week": {
         const weekStart = startOfWeek(currentDate)
         const weekEnd = addDays(weekStart, 6)
         return `${format(weekStart, "MMM d")} - ${format(weekEnd, "MMM d, yyyy")}`
+      }
       case "month":
         return format(currentDate, "MMMM yyyy")
     }
@@ -156,15 +157,17 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
     switch (view) {
       case "day":
         return [currentDate]
-      case "week":
+      case "week": {
         const weekStart = startOfWeek(currentDate)
         return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
-      case "month":
+      }
+      case "month": {
         const monthStart = startOfMonth(currentDate)
         const monthEnd = endOfMonth(currentDate)
         const calendarStart = startOfWeek(monthStart)
         const calendarEnd = addDays(startOfWeek(monthEnd), 6)
         return eachDayOfInterval({ start: calendarStart, end: calendarEnd })
+      }
     }
   }
 
