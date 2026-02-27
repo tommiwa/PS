@@ -41,7 +41,10 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
 
   // Initialize theme on mount
   useEffect(() => {
-    const savedTheme = localStorage.getItem("theme") as Theme;
+    let savedTheme: Theme | null = null;
+    try {
+      savedTheme = localStorage.getItem("theme") as Theme;
+    } catch {}
     const initialTheme = savedTheme || "bci";
     
     setThemeState(initialTheme);
@@ -80,7 +83,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   // Update theme
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
-    localStorage.setItem("theme", newTheme);
+    try { localStorage.setItem("theme", newTheme); } catch {}
     
     let resolvedTheme: "light" | "dark";
     if (newTheme === "system") {

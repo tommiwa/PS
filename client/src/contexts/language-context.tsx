@@ -1257,7 +1257,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('language', language)
+      try { localStorage.setItem('language', language) } catch {}
     }
   }, [language])
 

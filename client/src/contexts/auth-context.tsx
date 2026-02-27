@@ -116,15 +116,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
           }
         }
         
-        const hadSession = sessionStorage.getItem('bci_had_session') === '1';
-        const lastReauthAttempt = parseInt(sessionStorage.getItem('bci_reauth_ts') || '0', 10);
+        let hadSession = false;
+        let lastReauthAttempt = 0;
+        try {
+          hadSession = sessionStorage.getItem('bci_had_session') === '1';
+          lastReauthAttempt = parseInt(sessionStorage.getItem('bci_reauth_ts') || '0', 10);
+        } catch {}
         const cooldownMs = 60000;
         const now = Date.now();
         
         if (hadSession && (now - lastReauthAttempt) > cooldownMs) {
           console.log("[Auth] Refresh token failed, falling back to OIDC re-auth...");
-          sessionStorage.setItem('bci_reauth_ts', String(now));
-          sessionStorage.removeItem('bci_had_session');
+          try { sessionStorage.setItem('bci_reauth_ts', String(now)); } catch {}
+          try { sessionStorage.removeItem('bci_had_session'); } catch {}
           window.location.href = '/api/login';
           return;
         }
