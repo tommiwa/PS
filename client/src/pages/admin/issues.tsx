@@ -178,7 +178,7 @@ export default function AdminIssuesPage() {
 
     try {
       await exportToExcel({
-        title: "User Feedbacks Report",
+        title: "User Feedback Report",
         subtitle: `All Issues — Exported ${format(new Date(), "MMM d, yyyy")}`,
         data: allIssues,
         columns,
@@ -368,7 +368,7 @@ export default function AdminIssuesPage() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <AlertCircle className="h-6 w-6 text-primary" />
-            User Feedbacks
+            User Feedback
           </h1>
           <p className="text-muted-foreground mt-1">
             Manage and track feedbacks from users

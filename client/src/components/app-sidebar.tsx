@@ -160,7 +160,7 @@ const adminOperationsItems = [
     tooltip: "Booking Management"
   },
   {
-    title: "User Feedbacks",
+    title: "User Feedback",
     url: "/admin/issues",
     icon: AlertCircle,
     roles: ["admin"],
