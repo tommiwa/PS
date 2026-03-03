@@ -1308,6 +1308,7 @@ export default function AdminSpotBookingManagement() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/payroll-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/reports/shared-pool-usage"] });
       toast({
         title: data.excluded ? "Removed from Payroll" : "Restored to Payroll",
         description: data.message,

@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useReportFilters } from '@/components/reports/useReportFilters';
 import { exportSharedPoolUsageReport, exportSpotAssignmentsReport } from '@/utils/report-export';
-import { AlertCircle, FileSpreadsheet, ChevronDown, ChevronRight, Car, UserPlus, UserMinus, ArrowRightLeft, Heart } from 'lucide-react';
+import { AlertCircle, FileSpreadsheet, ChevronDown, ChevronRight, Car, UserPlus, UserMinus, ArrowRightLeft, Heart, Ban, RotateCcw } from 'lucide-react';
 import type { SharedPoolUsageReportResponse, SpotAssignmentReportResponse } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -21,11 +21,17 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useToast } from '@/hooks/use-toast';
+import { useConfirm } from '@/hooks/use-confirm';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 
 export default function AdminReportsPage() {
   const { filters, setDateFrom, setDateTo } = useReportFilters();
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
   const [actionFilter, setActionFilter] = useState<'all' | 'assigned' | 'unassigned'>('all');
+  const { toast } = useToast();
+  const { confirm } = useConfirm();
 
   const today = new Date().toISOString().split('T')[0];
   const sharedPoolDateTo = filters.dateTo > today ? today : filters.dateTo;
@@ -61,6 +67,33 @@ export default function AdminReportsPage() {
       return response.json();
     },
     enabled: isDateRangeValid
+  });
+
+  // Mutation to toggle payroll exclusion for a booking — shared source of truth with Payroll Summary
+  const excludeFromPayrollMutation = useMutation({
+    mutationFn: async (data: { bookingId: string; excluded: boolean }) => {
+      const response = await apiRequest(`/api/admin/bookings/${data.bookingId}/payroll-exclusion`, {
+        method: 'PATCH',
+        body: { excluded: data.excluded }
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/reports/shared-pool-usage'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/payroll-summary'] });
+      toast({
+        title: data.excluded ? "Removed from Payroll" : "Restored to Payroll",
+        description: data.message,
+        variant: "default"
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to Update",
+        description: error instanceof Error ? error.message : "Failed to update payroll status. Please try again.",
+        variant: "destructive"
+      });
+    }
   });
 
   // Filter and compute stats for spot assignments
@@ -199,7 +232,18 @@ export default function AdminReportsPage() {
                     <div>
                       <CardTitle>Usage by Employee</CardTitle>
                       <CardDescription>
-                        {sharedPoolUsageQuery.data.summary.totalBookings} bookings | ${sharedPoolUsageQuery.data.summary.totalAmount.toFixed(2)} total
+                        {(() => {
+                          const allBookings = sharedPoolUsageQuery.data!.usageByUser.flatMap(u => u.bookings);
+                          const removedCount = allBookings.filter(b => b.excludedFromPayroll).length;
+                          return (
+                            <>
+                              {sharedPoolUsageQuery.data!.summary.totalBookings} active booking{sharedPoolUsageQuery.data!.summary.totalBookings !== 1 ? 's' : ''} | ${sharedPoolUsageQuery.data!.summary.totalAmount.toFixed(2)} total
+                              {removedCount > 0 && (
+                                <span className="ml-2 text-red-500">· {removedCount} removed from payroll</span>
+                              )}
+                            </>
+                          );
+                        })()}
                       </CardDescription>
                     </div>
                     {sharedPoolUsageQuery.data.usageByUser.length > 0 && (
@@ -232,6 +276,7 @@ export default function AdminReportsPage() {
                           <TableHead>Department</TableHead>
                           <TableHead>Type</TableHead>
                           <TableHead className="text-right">Amount</TableHead>
+                          <TableHead className="w-16"></TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -268,6 +313,7 @@ export default function AdminReportsPage() {
                                 <TableCell className="text-right font-semibold">
                                   ${user.totalAmount.toFixed(2)}
                                 </TableCell>
+                                <TableCell></TableCell>
                               </TableRow>
                               
                               {/* Individual booking rows (shown when expanded) */}
@@ -316,6 +362,65 @@ export default function AdminReportsPage() {
                                   </TableCell>
                                   <TableCell className={`text-right ${booking.excludedFromPayroll ? "text-red-600 line-through" : ""}`}>
                                     ${booking.amount.toFixed(2)}
+                                  </TableCell>
+                                  <TableCell>
+                                    {booking.excludedFromPayroll ? (
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="text-green-600 hover:text-green-700"
+                                            disabled={excludeFromPayrollMutation.isPending}
+                                            data-testid={`button-restore-payroll-${booking.bookingId}`}
+                                            onClick={async (e) => {
+                                              e.stopPropagation();
+                                              const confirmed = await confirm({
+                                                title: "Restore to Payroll",
+                                                description: `Restore booking for ${user.firstName} ${user.lastName} (${booking.spotNumber}, ${booking.bookingDate}) back into payroll? The amount of $${booking.amount.toFixed(2)} will be included in the deduction.`,
+                                                confirmText: "Restore",
+                                                cancelText: "Cancel",
+                                                variant: "default"
+                                              });
+                                              if (confirmed) {
+                                                excludeFromPayrollMutation.mutate({ bookingId: booking.bookingId, excluded: false });
+                                              }
+                                            }}
+                                          >
+                                            <RotateCcw className="h-4 w-4" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Restore to Payroll</TooltipContent>
+                                      </Tooltip>
+                                    ) : (
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="text-destructive hover:text-destructive"
+                                            disabled={excludeFromPayrollMutation.isPending}
+                                            data-testid={`button-remove-payroll-${booking.bookingId}`}
+                                            onClick={async (e) => {
+                                              e.stopPropagation();
+                                              const confirmed = await confirm({
+                                                title: "Remove from Payroll",
+                                                description: `Remove this booking for ${user.firstName} ${user.lastName} (${booking.spotNumber}, ${booking.bookingDate}) from payroll? The amount of $${booking.amount.toFixed(2)} will not be deducted.`,
+                                                confirmText: "Remove",
+                                                cancelText: "Cancel",
+                                                variant: "destructive"
+                                              });
+                                              if (confirmed) {
+                                                excludeFromPayrollMutation.mutate({ bookingId: booking.bookingId, excluded: true });
+                                              }
+                                            }}
+                                          >
+                                            <Ban className="h-4 w-4" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Remove from Payroll</TooltipContent>
+                                      </Tooltip>
+                                    )}
                                   </TableCell>
                                 </TableRow>
                               ))}
