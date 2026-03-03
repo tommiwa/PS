@@ -660,6 +660,16 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
                 Feedback
               </Button>
             </ReportIssueDialog>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <FAQDialog>
+                  <Button variant="outline" size="icon">
+                    <HelpCircle className="h-4 w-4" />
+                  </Button>
+                </FAQDialog>
+              </TooltipTrigger>
+              <TooltipContent side="top">FAQ</TooltipContent>
+            </Tooltip>
           </div>
         </div>
       </SidebarFooter>
