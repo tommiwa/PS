@@ -37,8 +37,6 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { ReportIssueDialog } from "@/components/report-issue-dialog"
-import { FAQDialog } from "@/components/faq-dialog"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { UserRole } from "@shared/schema"
@@ -205,6 +203,13 @@ const accountMenuItems = [
     icon: Users,
     roles: ["admin", "owner", "renter"],
     tooltip: "Profile"
+  },
+  {
+    title: "FAQ",
+    url: "/faq",
+    icon: HelpCircle,
+    roles: ["admin", "owner", "renter"],
+    tooltip: "Frequently Asked Questions"
   },
 ]
 
@@ -655,21 +660,11 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
           )}
           <div className="flex items-center gap-2">
             <ReportIssueDialog>
-              <Button variant="outline" size="sm" className="flex-1 justify-start gap-2">
+              <Button variant="outline" size="sm" className="w-full justify-start gap-2">
                 <MessageSquare className="h-3.5 w-3.5" />
                 Feedback
               </Button>
             </ReportIssueDialog>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <FAQDialog>
-                  <Button variant="outline" size="icon">
-                    <HelpCircle className="h-4 w-4" />
-                  </Button>
-                </FAQDialog>
-              </TooltipTrigger>
-              <TooltipContent side="top">FAQ</TooltipContent>
-            </Tooltip>
           </div>
         </div>
       </SidebarFooter>

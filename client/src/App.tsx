@@ -42,6 +42,7 @@ import AdminWaitingList from "@/pages/admin-waiting-list";
 import AdminIssuesPage from "@/pages/admin/issues";
 import NotificationsPage from "@/pages/notifications";
 import MapDemo from "@/pages/map-demo";
+import FAQPage from "@/pages/faq";
 import Login from "@/pages/login";
 import Terms from "@/pages/terms";
 import TermsConsent from "@/pages/terms-consent";
@@ -523,6 +524,9 @@ function AuthenticatedApp() {
               
               {/* Demo pages */}
               <Route path="/map-demo" component={MapDemo} />
+
+              {/* FAQ */}
+              <Route path="/faq" component={FAQPage} />
               
               {/* Fallback to 404 */}
               <Route path="(.*)" component={NotFound} />
