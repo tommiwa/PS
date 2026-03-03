@@ -1091,10 +1091,8 @@ export default function AdminSpotBookingManagement() {
   // Cancel booking mutation
   const cancelBookingMutation = useMutation({
     mutationFn: async ({ bookingId, reason }: { bookingId: string; reason: string }) => {
-      const response = await apiRequest("/api/admin/cancel-booking", { method: 'POST', body: {
-        bookingId,
-        reason,
-        cancelledBy: "admin"
+      const response = await apiRequest(`/api/admin/bookings/${bookingId}/cancel`, { method: 'POST', body: {
+        reason
       }});
       return response.json();
     },
