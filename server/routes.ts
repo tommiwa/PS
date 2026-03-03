@@ -5036,6 +5036,83 @@ The BCI ParkShare Team`;
     }
   });
 
+  // POST /api/admin/cancel-booking - Legacy alias (body: { bookingId, reason })
+  app.post("/api/admin/cancel-booking", requireAdmin, async (req: any, res) => {
+    try {
+      const { bookingId, reason } = req.body;
+      if (!bookingId) return res.status(400).json({ error: "bookingId is required" });
+      if (!reason) return res.status(400).json({ error: "Cancellation reason is required" });
+
+      const booking = await storage.getBooking(bookingId);
+      if (!booking) return res.status(404).json({ error: "Booking not found" });
+
+      const cancelledBooking = await storage.cancelBookingWithReason(bookingId, reason);
+
+      if (booking.listingId) {
+        await storage.updateSpotListingStatus(booking.listingId, 'available');
+      }
+
+      await auditService.logAction("CANCEL", "booking", {
+        entityId: bookingId,
+        message: `Booking ${bookingId} cancelled by admin: ${reason}`,
+        before: booking,
+        after: cancelledBooking
+      });
+
+      setImmediate(async () => {
+        try {
+          const renter = await storage.getUser(booking.renterId);
+          const listing = booking.listingId ? await storage.getSpotListing(booking.listingId) : null;
+          const spot = await storage.getParkingSpot(booking.spotId);
+          if (renter && spot) {
+            const renterName = renter.firstName && renter.lastName
+              ? `${renter.firstName} ${renter.lastName}`
+              : renter.firstName || renter.lastName || renter.email || 'User';
+            const spotLocation = spot.locationId ? await storage.getLocation(spot.locationId) : null;
+            const isWorkplaceServicesListing = listing?.createdByAdmin === true;
+            const bookingDetails = {
+              id: booking.id,
+              spotNumber: spot.spotNumber,
+              location: spotLocation?.office || 'BCI Campus',
+              building: spotLocation?.building || 'BCI Campus',
+              bookingDate: booking.bookingDate,
+              cancelledBy: 'Admin',
+              cancelledByRole: 'admin' as const,
+              isWorkplaceServicesListing,
+              reason
+            };
+            let ownerInfo: { name: string; email: string; id: string } | null = null;
+            if (isWorkplaceServicesListing) {
+              ownerInfo = { name: 'BCI Workplace Services', email: WORKPLACE_SERVICES_EMAIL, id: 'workplace-services' };
+            } else if (listing?.ownerId) {
+              const owner = await storage.getUser(listing.ownerId);
+              if (owner && owner.email) {
+                const ownerName = owner.firstName && owner.lastName
+                  ? `${owner.firstName} ${owner.lastName}`
+                  : owner.firstName || owner.lastName || owner.email || 'Owner';
+                ownerInfo = { name: ownerName, email: owner.email, id: owner.id };
+              }
+            }
+            const renterPrefs = await storage.getNotificationPreferences(renter.id);
+            await sendBookingCancellationNotification(
+              { name: renterName, email: renter.email || '', id: renter.id },
+              bookingDetails,
+              renterPrefs || {},
+              ownerInfo
+            );
+          }
+        } catch (e) {
+          console.error('[Admin Cancel] Notification error:', e);
+        }
+      });
+
+      res.json({ success: true, booking: cancelledBooking });
+    } catch (error) {
+      console.error("Failed to cancel booking (legacy route):", error);
+      res.status(500).json({ error: "Failed to cancel booking" });
+    }
+  });
+
   // POST /api/admin/bookings/:id/refund - Mark payment refunded (Admin only)
   app.post("/api/admin/bookings/:id/refund", requireAdmin, async (req: any, res) => {
     try {
