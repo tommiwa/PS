@@ -270,6 +270,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Find the primary/default vehicle or use the first one
         const primaryVehicle = userVehicles.find(v => v.isDefault) || userVehicles[0];
         vehicleInfo = {
+          year: primaryVehicle.year,
           make: primaryVehicle.make,
           model: primaryVehicle.model,
           color: primaryVehicle.color

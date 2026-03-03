@@ -87,7 +87,11 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
     if (authUser && !authDataHydratedRef.current) {
       authDataHydratedRef.current = true;
       const vehicleDetails = authUser.vehicleInfo 
-        ? `${authUser.vehicleInfo.model || ''}${authUser.vehicleInfo.color ? ` (${authUser.vehicleInfo.color})` : ''}`.trim()
+        ? [
+            authUser.vehicleInfo.year,
+            authUser.vehicleInfo.make,
+            authUser.vehicleInfo.model
+          ].filter(Boolean).join(' ') + (authUser.vehicleInfo.color ? ` (${authUser.vehicleInfo.color})` : '')
         : "";
       setFormData(prev => ({
         ...prev,
@@ -544,7 +548,7 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
               
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="vehicleInfo" className="text-sm font-semibold">Vehicle (Model & Color)</Label>
+                  <Label htmlFor="vehicleInfo" className="text-sm font-semibold">Vehicle</Label>
                   {authUser?.vehicleInfo?.model && (
                     <Badge variant="outline" className="text-xs h-5">
                       <User className="h-3 w-3 mr-1" />
@@ -555,7 +559,7 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
                 <div className="relative">
                   <Car className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="e.g., Camry (Blue)"
+                    placeholder="e.g., 2026 Toyota Camry (Blue)"
                     value={formData.vehicleInfo}
                     onChange={(e) => updateFormData("vehicleInfo", e.target.value)}
                     required

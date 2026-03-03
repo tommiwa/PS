@@ -16,6 +16,7 @@ interface AuthUser {
   acceptedTermsVersion?: number | null;
   acceptedTermsAt?: string | null;
   vehicleInfo?: { 
+    year?: number | null;
     make?: string; 
     model?: string; 
     color?: string; 
