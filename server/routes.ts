@@ -4024,8 +4024,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get BCI payroll summary for admin - shows bookings grouped by payroll deduction month
-  // Payroll logic: bookings before 20th = same month deduction, on/after 20th = next month deduction
+  // Get BCI payroll summary for admin - shows bookings grouped by calendar month
   app.get("/api/admin/payroll-summary", requireAdmin, async (req, res) => {
     try {
       const now = new Date();
@@ -4033,12 +4032,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentYear = now.getFullYear();
       const currentPeriod = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
       
-      // Get BCI bookings for current payroll period only (bookings that will be deducted this month)
-      // This means: bookings from 20th of previous month through 19th of current month
-      const periodStartDate = new Date(currentYear, currentMonth - 1, 20);
-      const periodEndDate = new Date(currentYear, currentMonth, 19);
-      const periodStartStr = periodStartDate.toISOString().split('T')[0];
-      const periodEndStr = periodEndDate.toISOString().split('T')[0];
+      // Get BCI bookings for current calendar month only (1st to last day of month)
+      const periodStartStr = `${currentPeriod}-01`;
+      const lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
+      const periodEndStr = `${currentPeriod}-${String(lastDay).padStart(2, '0')}`;
       
       // Get all spots, listings to identify true Workplace Services spots
       // Workplace Services spots = BCI-managed AND no owner (ownerId is null)
@@ -4064,18 +4061,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (b.status !== 'confirmed' && b.status !== 'completed') return false;
         // No longer skip excluded bookings - we want to show them as "Removed"
         
-        // Check if booking falls into current payroll period based on deduction month logic
-        const bookingDate = new Date(b.bookingDate + "T12:00:00");
-        const dayOfMonth = bookingDate.getDate();
-        const deductionMonth = dayOfMonth < 20 
-          ? bookingDate.getMonth() 
-          : (bookingDate.getMonth() + 1) % 12;
-        const deductionYear = dayOfMonth < 20 
-          ? bookingDate.getFullYear() 
-          : (bookingDate.getMonth() === 11 ? bookingDate.getFullYear() + 1 : bookingDate.getFullYear());
-        const bookingDeductionPeriod = `${deductionYear}-${String(deductionMonth + 1).padStart(2, '0')}`;
-        
-        return bookingDeductionPeriod === currentPeriod;
+        // Check if booking falls into current calendar month
+        return b.bookingDate >= periodStartStr && b.bookingDate <= periodEndStr;
       });
       
       // Calculate deduction month for each booking
@@ -4091,15 +4078,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? `${location.office} - ${location.building} ${location.level}`.trim() 
           : "Unknown";
         
+        // Deduction period = calendar month of the booking date
         const bookingDate = new Date(booking.bookingDate + "T12:00:00");
-        const dayOfMonth = bookingDate.getDate();
-        // Before 20th = same month, on/after 20th = next month
-        const deductionMonth = dayOfMonth < 20 
-          ? bookingDate.getMonth() 
-          : (bookingDate.getMonth() + 1) % 12;
-        const deductionYear = dayOfMonth < 20 
-          ? bookingDate.getFullYear() 
-          : (bookingDate.getMonth() === 11 ? bookingDate.getFullYear() + 1 : bookingDate.getFullYear());
+        const deductionMonth = bookingDate.getMonth();
+        const deductionYear = bookingDate.getFullYear();
         
         return {
           id: booking.id,
@@ -4186,18 +4168,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         (b.status === 'completed' || b.status === 'confirmed' || b.status === 'cancelled')
       );
       
-      // Calculate deduction period for each booking
+      // Deduction period = calendar month of the booking date
       const periodsSet = new Set<string>();
       bciBookings.forEach(booking => {
         const bookingDate = new Date(booking.bookingDate + "T12:00:00");
-        const dayOfMonth = bookingDate.getDate();
-        const deductionMonth = dayOfMonth < 20 
-          ? bookingDate.getMonth() 
-          : (bookingDate.getMonth() + 1) % 12;
-        const deductionYear = dayOfMonth < 20 
-          ? bookingDate.getFullYear() 
-          : (bookingDate.getMonth() === 11 ? bookingDate.getFullYear() + 1 : bookingDate.getFullYear());
-        periodsSet.add(`${deductionYear}-${String(deductionMonth + 1).padStart(2, '0')}`);
+        periodsSet.add(`${bookingDate.getFullYear()}-${String(bookingDate.getMonth() + 1).padStart(2, '0')}`);
       });
       
       // Convert to sorted array with labels

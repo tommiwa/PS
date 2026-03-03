@@ -10,15 +10,15 @@ export interface ReportFilters {
 }
 
 export function useReportFilters() {
-  // Default to last 30 days
+  // Default to previous calendar month (1st to last day)
   const getDefaultDates = () => {
-    const to = new Date();
-    const from = new Date();
-    from.setDate(from.getDate() - 30);
+    const now = new Date();
+    const firstOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastOfPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0);
     
     return {
-      from: from.toISOString().split('T')[0],
-      to: to.toISOString().split('T')[0]
+      from: firstOfPrevMonth.toISOString().split('T')[0],
+      to: lastOfPrevMonth.toISOString().split('T')[0]
     };
   };
 

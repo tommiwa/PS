@@ -2397,8 +2397,7 @@ export default function AdminSpotBookingManagement() {
                 </div>
               </div>
               <p className="text-sm text-muted-foreground">
-                Bookings are grouped by payroll deduction month. Bookings before the 20th are deducted in the same month, 
-                otherwise deducted in the following month.
+                Bookings are grouped by calendar month. Each booking is deducted from payroll in the same month as the parking date.
               </p>
             </CardHeader>
             <CardContent className="space-y-6">

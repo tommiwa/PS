@@ -9,8 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle, User, Zap, Accessibility, Building, CreditCard, Timer, Info, Phone, Banknote, Heart, Tag, Sparkles, Map } from "lucide-react"
-import { isWeekend, parseISO } from "date-fns"
-import { format, addMonths } from "date-fns"
+import { isWeekend, parseISO, format } from "date-fns"
 import type { ParkingSpot as DBParkingSpot } from "@shared/schema"
 import { isPastDate, getTodayString } from "@/utils/date-utils"
 import { useAuth } from "@/contexts/auth-context"
@@ -120,13 +119,10 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
   const [submitError, setSubmitError] = useState("")
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
 
-  // Calculate payroll deduction month for BCI-managed spots
+  // Deduction month = calendar month of the booking date
   const getPayrollDeductionMonth = (bookingDate: string): string => {
     const date = new Date(bookingDate + "T12:00:00");
-    const dayOfMonth = date.getDate();
-    // If before 20th, deduct same month; otherwise next month
-    const deductionDate = dayOfMonth < 20 ? date : addMonths(date, 1);
-    return format(deductionDate, "MMMM yyyy");
+    return format(date, "MMMM yyyy");
   }
 
   // Determine if this is a Workplace Services spot (payroll eligible)
@@ -488,7 +484,7 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
                         Deduction month: {getPayrollDeductionMonth(formData.date)}
                       </p>
                       <p className="text-xs text-amber-600/80 mt-1">
-                        Bookings before the 20th are deducted in the same month, otherwise the next month.
+                        Bookings are deducted in the same calendar month as the parking date.
                       </p>
                     </div>
                   </div>
