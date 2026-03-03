@@ -164,7 +164,7 @@ const adminOperationsItems = [
     url: "/admin/issues",
     icon: AlertCircle,
     roles: ["admin"],
-    tooltip: "View and manage user feedbacks"
+    tooltip: "View and manage user feedback"
   },
   {
     title: "Audit Logs",

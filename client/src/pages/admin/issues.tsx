@@ -182,7 +182,7 @@ export default function AdminIssuesPage() {
         subtitle: `All Issues — Exported ${format(new Date(), "MMM d, yyyy")}`,
         data: allIssues,
         columns,
-        filename: `user-feedbacks-${format(new Date(), "yyyy-MM-dd")}`,
+        filename: `user-feedback-${format(new Date(), "yyyy-MM-dd")}`,
         summary: {
           totalRecords: allIssues.length,
           additionalStats: [
@@ -192,9 +192,9 @@ export default function AdminIssuesPage() {
           ],
         },
       })
-      toast({ title: "Export Complete", description: "User feedbacks exported to Excel successfully." })
+      toast({ title: "Export Complete", description: "User feedback exported to Excel successfully." })
     } catch {
-      toast({ title: "Export Failed", description: "Could not export feedbacks.", variant: "destructive" })
+      toast({ title: "Export Failed", description: "Could not export feedback.", variant: "destructive" })
     }
   }
 
