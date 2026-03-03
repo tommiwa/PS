@@ -371,7 +371,7 @@ export default function AdminIssuesPage() {
             User Feedback
           </h1>
           <p className="text-muted-foreground mt-1">
-            Manage and track feedbacks from users
+            Manage and track feedback from users
           </p>
         </div>
         <div className="flex items-center gap-2">
