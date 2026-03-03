@@ -305,23 +305,23 @@ function FAQCategorySection({ category }: { category: FAQCategory }) {
   )
 }
 
-function ContactCard() {
+function StickyContactFooter() {
   return (
-    <div className="mb-6 rounded-md border bg-muted/40 px-4 py-4">
-      <p className="text-sm font-semibold text-foreground mb-3">Still need help?</p>
-      <div className="flex flex-col gap-2">
+    <div className="border-t bg-muted/30 px-4 sm:px-6 py-3 shrink-0">
+      <p className="text-xs font-semibold text-foreground mb-2">Still need help?</p>
+      <div className="flex flex-wrap gap-x-6 gap-y-1">
         <a
           href="mailto:workplaceservices@bci.ca"
-          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
-          <Mail className="h-4 w-4 shrink-0" />
+          <Mail className="h-3.5 w-3.5 shrink-0" />
           workplaceservices@bci.ca
         </a>
         <a
           href="tel:7784103232"
-          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
-          <Phone className="h-4 w-4 shrink-0" />
+          <Phone className="h-3.5 w-3.5 shrink-0" />
           778-410-3232
         </a>
       </div>
@@ -368,21 +368,20 @@ export default function FAQPage() {
             {generalFAQs.map((category, index) => (
               <FAQCategorySection key={index} category={category} />
             ))}
-            <ContactCard />
           </TabsContent>
           <TabsContent value="renter" className="mt-0 p-4 sm:p-6">
             {renterFAQs.map((category, index) => (
               <FAQCategorySection key={index} category={category} />
             ))}
-            <ContactCard />
           </TabsContent>
           <TabsContent value="owner" className="mt-0 p-4 sm:p-6">
             {ownerFAQs.map((category, index) => (
               <FAQCategorySection key={index} category={category} />
             ))}
-            <ContactCard />
           </TabsContent>
         </div>
+
+        <StickyContactFooter />
       </Tabs>
     </div>
   )
