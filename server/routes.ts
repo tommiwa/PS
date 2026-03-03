@@ -686,6 +686,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // TEMPORARY ADMIN CLEANUP: Cancel all available listings for a specific user by email or name
+  // Usage: POST /api/admin/cleanup-user-listings { "email": "jeff.morris@bci.ca" }
+  //    or: POST /api/admin/cleanup-user-listings { "name": "Jeff Morris" }
+  // Add ?dryRun=true to preview without making changes
+  app.post("/api/admin/cleanup-user-listings", requireAdmin, async (req: any, res) => {
+    try {
+      const { email, name } = req.body;
+      const dryRun = req.query.dryRun === 'true';
+
+      if (!email && !name) {
+        return res.status(400).json({ error: "Provide either 'email' or 'name' in the request body" });
+      }
+
+      // Find the user
+      let targetUser: any = null;
+      if (email) {
+        targetUser = await storage.getUserByEmail(email);
+      } else {
+        const parts = name.trim().split(/\s+/);
+        const firstName = parts[0];
+        const lastName = parts.slice(1).join(' ');
+        const allUsers = await storage.getAllUsers?.() || [];
+        targetUser = allUsers.find((u: any) =>
+          u.firstName?.toLowerCase() === firstName.toLowerCase() &&
+          u.lastName?.toLowerCase() === lastName.toLowerCase()
+        );
+      }
+
+      if (!targetUser) {
+        return res.status(404).json({ error: `No user found matching: ${email || name}` });
+      }
+
+      // Get all their listings
+      const allListings = await db
+        .select()
+        .from(spotListings)
+        .where(eq(spotListings.ownerId, targetUser.id));
+
+      const availableListings = allListings.filter((l: any) => l.status === 'available');
+      const availableIds = availableListings.map((l: any) => l.id);
+
+      // Get active bookings on those listings
+      let affectedBookings: any[] = [];
+      if (availableIds.length > 0) {
+        affectedBookings = await db
+          .select()
+          .from(bookings)
+          .where(
+            and(
+              inArray(bookings.listingId, availableIds),
+              inArray(bookings.status, ['pending', 'confirmed', 'upcoming', 'active'])
+            )
+          );
+      }
+
+      if (dryRun) {
+        return res.json({
+          dryRun: true,
+          user: { id: targetUser.id, name: `${targetUser.firstName} ${targetUser.lastName}`, email: targetUser.email },
+          totalListings: allListings.length,
+          availableListingsToCancel: availableListings.length,
+          activeBookingsToCancel: affectedBookings.length,
+          listingIds: availableIds,
+        });
+      }
+
+      // Cancel bookings first
+      if (affectedBookings.length > 0) {
+        await db
+          .update(bookings)
+          .set({
+            status: 'cancelled',
+            cancellationReason: 'Listing cancelled by admin (bulk cleanup)',
+            updatedAt: new Date()
+          })
+          .where(inArray(bookings.id, affectedBookings.map((b: any) => b.id)));
+      }
+
+      // Cancel the listings
+      if (availableIds.length > 0) {
+        await db
+          .update(spotListings)
+          .set({ status: 'cancelled', updatedAt: new Date() })
+          .where(inArray(spotListings.id, availableIds));
+      }
+
+      await auditService.logAction("UPDATE", "spot_listing", {
+        message: `Admin bulk cleanup: cancelled ${availableIds.length} listings and ${affectedBookings.length} bookings for user ${targetUser.firstName} ${targetUser.lastName} (${targetUser.email})`,
+        entityId: targetUser.id
+      });
+
+      res.json({
+        success: true,
+        user: { id: targetUser.id, name: `${targetUser.firstName} ${targetUser.lastName}`, email: targetUser.email },
+        listingsCancelled: availableIds.length,
+        bookingsCancelled: affectedBookings.length,
+        message: `Successfully cancelled ${availableIds.length} listings and ${affectedBookings.length} bookings for ${targetUser.firstName} ${targetUser.lastName}`
+      });
+    } catch (error) {
+      console.error("Error in cleanup-user-listings:", error);
+      res.status(500).json({ error: "Cleanup failed", details: String(error) });
+    }
+  });
+
   // Restore deleted user (Admin only)
   app.patch("/api/admin/users/:id/restore", requireAdmin, async (req: any, res) => {
     try {
