@@ -126,14 +126,11 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
   }
 
   // Determine if this is a Workplace Services spot (payroll eligible)
-  // A Workplace Services spot is one listed by admin (not permanently assigned to an employee)
-  // When admin creates a listing, the backend sets assignedUserName to "BCI Workplace Services"
-  // If an individual owner created the listing, their name appears instead → peer-to-peer with cash/e-transfer
-  const isWorkplaceServicesSpot = (): boolean => {
-    return (spot as any).assignedUserName === 'BCI Workplace Services';
-  }
-  
-  const isPayrollSpot = isWorkplaceServicesSpot();
+  // The API explicitly returns createdByAdmin=true when an admin created the listing.
+  // Also accept assignedUserName check as a fallback for backward compatibility.
+  const isPayrollSpot =
+    (spot as any).createdByAdmin === true ||
+    (spot as any).assignedUserName === 'BCI Workplace Services';
 
   // Countdown timer effect
   useEffect(() => {
