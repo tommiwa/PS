@@ -125,12 +125,13 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
     return format(date, "MMMM yyyy");
   }
 
-  // Determine if this is a Workplace Services spot (payroll eligible)
-  // The API explicitly returns createdByAdmin=true when an admin created the listing.
-  // Also accept assignedUserName check as a fallback for backward compatibility.
+  // Determine if this is a Workplace Services spot (payroll eligible).
+  // Three ways to identify: admin created the listing, owner name is WPS, or the spot
+  // is BCI-managed with no personal owner assigned (pure WPS pool spot).
   const isPayrollSpot =
     (spot as any).createdByAdmin === true ||
-    (spot as any).assignedUserName === 'BCI Workplace Services';
+    (spot as any).assignedUserName === 'BCI Workplace Services' ||
+    (spot.isBciManaged === true && !spot.ownerId);
 
   // Countdown timer effect
   useEffect(() => {

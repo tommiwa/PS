@@ -7160,7 +7160,8 @@ The BCI ParkShare Team`;
         listingType,
         dailyRate: dailyRateString,
         status: "available",
-        donateToCharity: donateToCharity || false
+        donateToCharity: donateToCharity || false,
+        createdByAdmin: true  // Admin-created listings always use payroll deduction
       };
 
       if (listingType === "single" && singleDate) {
