@@ -57,3 +57,7 @@ WORKPLACE_SERVICES_EMAIL = "lijin.joseji@bci.ca"
 
 [userenv.production]
 WORKPLACE_SERVICES_EMAIL = "workplaceservices@bci.ca"
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 20000
