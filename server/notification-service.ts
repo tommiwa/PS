@@ -1725,7 +1725,7 @@ The BCI ParkShare Team`;
     content,
     theme: 'success',
     titleColor: '#16a34a',
-    ctaButton: { text: 'View My Spot Listings', url: `${APP_URL}/my-listings` }
+    ctaButton: { text: 'Go to My Dashboard', url: `${APP_URL}/dashboard` }
   });
 
   return {
