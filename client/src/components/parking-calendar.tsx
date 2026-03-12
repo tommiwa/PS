@@ -113,8 +113,14 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
         spotData.set(spot.id, { price, isExpired, isBooked, isLocked });
       }
 
+      const sortedSpots = [...spotsForDate].sort((a, b) => {
+        const priceA = spotData.get(a.id)?.price ?? 0;
+        const priceB = spotData.get(b.id)?.price ?? 0;
+        return priceA - priceB;
+      });
+
       newMap.set(date.toISOString(), {
-        spots: spotsForDate,
+        spots: sortedSpots,
         spotData
       });
     }
@@ -250,7 +256,7 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
       case "electric":
         return <Zap className="h-3 w-3 text-green-600 dark:text-green-400" />
       case "tesla_ev":
-        return <Zap className="h-3 w-3 text-red-600 dark:text-red-400" />
+        return <Zap className="h-3 w-3 text-indigo-600 dark:text-indigo-400" />
       case "accessible":
         return <Accessibility className="h-3 w-3 text-purple-600 dark:text-purple-400" />
       case "reserved":
@@ -292,7 +298,7 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
       case "electric":
         return "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-200 dark:border-green-700"
       case "tesla_ev":
-        return "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/50 dark:text-red-200 dark:border-red-700"
+        return "bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900/50 dark:text-indigo-200 dark:border-indigo-700"
       case "accessible":
         return "bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/50 dark:text-purple-200 dark:border-purple-700"
       case "reserved":
