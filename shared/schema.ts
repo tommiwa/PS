@@ -1198,6 +1198,36 @@ export const spotAssignmentHistory = pgTable("spot_assignment_history", {
   index("IDX_spot_assignment_history_action").on(table.action),
 ]);
 
+// Scheduled Spot Assignment statuses
+export const scheduledAssignmentStatuses = z.enum(["pending", "applied", "cancelled"]);
+export type ScheduledAssignmentStatus = z.infer<typeof scheduledAssignmentStatuses>;
+
+// Scheduled Spot Assignments Table
+export const scheduledSpotAssignments = pgTable("scheduled_spot_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  spotId: varchar("spot_id").notNull().references(() => parkingSpots.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  scheduledDate: date("scheduled_date").notNull(),
+  cancelFutureBookings: boolean("cancel_future_bookings").notNull().default(false),
+  status: text("status").notNull().$type<ScheduledAssignmentStatus>().default("pending"),
+  actorId: varchar("actor_id"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("IDX_scheduled_spot_assignments_spot_id").on(table.spotId),
+  index("IDX_scheduled_spot_assignments_user_id").on(table.userId),
+  index("IDX_scheduled_spot_assignments_status").on(table.status),
+  index("IDX_scheduled_spot_assignments_scheduled_date").on(table.scheduledDate),
+]);
+
+export const insertScheduledSpotAssignmentSchema = createInsertSchema(scheduledSpotAssignments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertScheduledSpotAssignment = z.infer<typeof insertScheduledSpotAssignmentSchema>;
+export type ScheduledSpotAssignment = typeof scheduledSpotAssignments.$inferSelect;
+
 // Locker Types Table
 export const lockerTypesTable = pgTable("locker_types", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),

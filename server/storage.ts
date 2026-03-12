@@ -58,13 +58,16 @@ import {
   type AppConfig,
   type InsertAppConfig,
   type ApiKey,
-  type InsertApiKey
+  type InsertApiKey,
+  type ScheduledSpotAssignment,
+  type InsertScheduledSpotAssignment,
+  type ScheduledAssignmentStatus
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { auditDecorator } from "./audit-service";
 import { type IAuditStorage } from "./audit-storage";
 import { db } from "./db";
-import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, locations, spotTypesTable, termsVersions, spotAssignmentHistory, spotLocks, lockers, lockerWaitlist, lockerAssignmentHistory, lockerTypesTable, appConfigs, apiKeys } from "@shared/schema";
+import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, locations, spotTypesTable, termsVersions, spotAssignmentHistory, spotLocks, lockers, lockerWaitlist, lockerAssignmentHistory, lockerTypesTable, appConfigs, apiKeys, scheduledSpotAssignments } from "@shared/schema";
 import { eq, or, ilike, asc, and, notExists, sql as sqlOp, count, desc, inArray, isNull } from "drizzle-orm";
 
 // Storage interface with comprehensive CRUD methods
@@ -371,6 +374,14 @@ export interface IStorage {
   getApiKeyByHash(keyHash: string): Promise<ApiKey | undefined>;
   revokeApiKeyAdmin(id: string): Promise<boolean>;
   updateApiKeyLastUsed(id: string): Promise<void>;
+  
+  // Scheduled Spot Assignment operations
+  createScheduledAssignment(data: InsertScheduledSpotAssignment): Promise<ScheduledSpotAssignment>;
+  getScheduledAssignments(spotId?: string): Promise<ScheduledSpotAssignment[]>;
+  getScheduledAssignment(id: string): Promise<ScheduledSpotAssignment | undefined>;
+  updateScheduledAssignment(id: string, updates: Partial<InsertScheduledSpotAssignment> & { status?: ScheduledAssignmentStatus }): Promise<ScheduledSpotAssignment | undefined>;
+  getPendingScheduledAssignmentsDue(): Promise<ScheduledSpotAssignment[]>;
+  cancelSpotPendingScheduledAssignments(spotId: string): Promise<number>;
 }
 
 export class MemStorage implements IStorage {
@@ -3994,6 +4005,56 @@ export class MemStorage implements IStorage {
 
   async updateApiKeyLastUsed(id: string): Promise<void> {
     await db.update(apiKeys).set({ lastUsedAt: new Date() }).where(eq(apiKeys.id, id));
+  }
+
+  async createScheduledAssignment(data: InsertScheduledSpotAssignment): Promise<ScheduledSpotAssignment> {
+    const [result] = await db.insert(scheduledSpotAssignments).values(data).returning();
+    return result;
+  }
+
+  async getScheduledAssignments(spotId?: string): Promise<ScheduledSpotAssignment[]> {
+    if (spotId) {
+      return db.select().from(scheduledSpotAssignments)
+        .where(and(eq(scheduledSpotAssignments.spotId, spotId), eq(scheduledSpotAssignments.status, 'pending')))
+        .orderBy(desc(scheduledSpotAssignments.createdAt));
+    }
+    return db.select().from(scheduledSpotAssignments)
+      .where(eq(scheduledSpotAssignments.status, 'pending'))
+      .orderBy(desc(scheduledSpotAssignments.createdAt));
+  }
+
+  async getScheduledAssignment(id: string): Promise<ScheduledSpotAssignment | undefined> {
+    const [result] = await db.select().from(scheduledSpotAssignments).where(eq(scheduledSpotAssignments.id, id)).limit(1);
+    return result;
+  }
+
+  async updateScheduledAssignment(id: string, updates: Partial<InsertScheduledSpotAssignment> & { status?: ScheduledAssignmentStatus }): Promise<ScheduledSpotAssignment | undefined> {
+    const [result] = await db.update(scheduledSpotAssignments).set(updates).where(eq(scheduledSpotAssignments.id, id)).returning();
+    return result;
+  }
+
+  async getPendingScheduledAssignmentsDue(): Promise<ScheduledSpotAssignment[]> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split('T')[0];
+    return db.select().from(scheduledSpotAssignments)
+      .where(and(
+        eq(scheduledSpotAssignments.status, 'pending'),
+        sqlOp`${scheduledSpotAssignments.scheduledDate} <= ${todayStr}`
+      ))
+      .orderBy(asc(scheduledSpotAssignments.scheduledDate));
+  }
+
+  async cancelSpotPendingScheduledAssignments(spotId: string): Promise<number> {
+    const cancelledStatus: ScheduledAssignmentStatus = 'cancelled';
+    const result = await db.update(scheduledSpotAssignments)
+      .set({ status: cancelledStatus })
+      .where(and(
+        eq(scheduledSpotAssignments.spotId, spotId),
+        eq(scheduledSpotAssignments.status, 'pending')
+      ))
+      .returning();
+    return result.length;
   }
 
   // Audit decorators will be applied via server initialization

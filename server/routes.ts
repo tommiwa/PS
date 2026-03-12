@@ -6009,10 +6009,20 @@ The BCI ParkShare Team`;
       const assignSpotSchema = z.object({
         spotId: z.string().min(1, "spotId is required"),
         userId: z.string().min(1, "userId is required"),
-        isBciManaged: z.boolean().optional()
+        isBciManaged: z.boolean().optional(),
+        scheduledDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "scheduledDate must be in YYYY-MM-DD format").optional(),
+        cancelFutureBookings: z.boolean().optional()
       });
       
-      const { spotId, userId, isBciManaged } = assignSpotSchema.parse(req.body);
+      const { spotId, userId, isBciManaged, scheduledDate, cancelFutureBookings } = assignSpotSchema.parse(req.body);
+
+      // Validate scheduledDate is a real calendar date if provided
+      if (scheduledDate) {
+        const parsed = new Date(scheduledDate + 'T00:00:00');
+        if (isNaN(parsed.getTime())) {
+          return res.status(400).json({ error: "Invalid scheduledDate: not a valid calendar date" });
+        }
+      }
 
       // Get spot info before assignment for audit logging
       const existingSpot = await storage.getParkingSpot(spotId);
@@ -6025,16 +6035,14 @@ The BCI ParkShare Team`;
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-      
-      // Validate department restriction for Department Reserved spots
-      // Look up the spot type to check if it's "Department Reserved" (by name/slug, not hardcoded ID)
+
+      // Validate department restriction for Department Reserved spots (applies to both immediate and scheduled)
       if (existingSpot.spotTypeId && existingSpot.reservedForDepartmentId) {
         const spotType = await storage.getSpotType(existingSpot.spotTypeId);
         const isDepartmentReserved = spotType?.name === 'Department Reserved' || 
                                       spotType?.slug === 'department-reserved';
         
         if (isDepartmentReserved && user.departmentId !== existingSpot.reservedForDepartmentId) {
-          // Get department name for better error message
           const department = await storage.getDepartment(existingSpot.reservedForDepartmentId);
           const deptName = department?.name || 'the restricted department';
           return res.status(400).json({ 
@@ -6042,7 +6050,111 @@ The BCI ParkShare Team`;
           });
         }
       }
-      
+
+      // Handle scheduled future assignment
+      if (scheduledDate) {
+        const scheduledDateObj = new Date(scheduledDate + 'T00:00:00');
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (scheduledDateObj > today) {
+          // Cancel any existing pending scheduled assignments for this spot
+          const cancelledCount = await storage.cancelSpotPendingScheduledAssignments(spotId);
+          if (cancelledCount > 0) {
+            console.log(`[Scheduled Assignment] Cancelled ${cancelledCount} existing pending assignment(s) for spot ${spotId}`);
+          }
+
+          const actorId = getAuthenticatedUserId(req);
+
+          // Create the scheduled assignment record
+          const scheduledAssignment = await storage.createScheduledAssignment({
+            spotId,
+            userId,
+            scheduledDate,
+            cancelFutureBookings: cancelFutureBookings || false,
+            status: 'pending',
+            actorId: actorId || undefined,
+            notes: `Scheduled assignment for ${scheduledDate}`
+          });
+
+          // If cancelFutureBookings is true, cancel bookings from scheduledDate onwards immediately
+          if (cancelFutureBookings) {
+            try {
+              const allBookings = await storage.getBookingsBySpot(spotId);
+              const cutoffDate = new Date(scheduledDate + 'T00:00:00');
+              cutoffDate.setHours(0, 0, 0, 0);
+
+              const futureBookings = allBookings.filter(booking => {
+                const bookingDate = new Date(booking.bookingDate);
+                bookingDate.setHours(0, 0, 0, 0);
+                return bookingDate >= cutoffDate && booking.status !== 'cancelled';
+              });
+
+              if (futureBookings.length > 0) {
+                const location = await storage.getLocation(existingSpot.locationId);
+                const locationName = location ? `${location.office} - ${location.level}` : 'Unknown Location';
+                const buildingName = location?.building || 'Unknown Building';
+
+                const bookingsByRenter = new Map<string, typeof futureBookings>();
+
+                for (const booking of futureBookings) {
+                  await storage.updateBooking(booking.id, {
+                    status: 'cancelled',
+                    adminNotes: `Automatically cancelled due to scheduled spot assignment effective ${scheduledDate}`
+                  });
+
+                  const renterBookings = bookingsByRenter.get(booking.renterId) || [];
+                  renterBookings.push(booking);
+                  bookingsByRenter.set(booking.renterId, renterBookings);
+                }
+
+                const { sendBookingsCancelledDueToUnassignmentNotification } = await import('./notification-service');
+
+                for (const [renterId, renterBookings] of Array.from(bookingsByRenter.entries())) {
+                  const renter = await storage.getUser(renterId);
+                  if (renter) {
+                    const renterName = `${renter.firstName || ''} ${renter.lastName || ''}`.trim() || 'User';
+                    const cancelledBookingDetails = renterBookings.map((b: typeof renterBookings[0]) => ({
+                      bookingDate: b.bookingDate,
+                      spotNumber: existingSpot.spotNumber,
+                      location: locationName,
+                      building: buildingName
+                    }));
+
+                    const renterPrefs = await storage.getNotificationPreferences(renter.id);
+                    await sendBookingsCancelledDueToUnassignmentNotification(
+                      { name: renterName, email: renter.email || null, id: renter.id },
+                      cancelledBookingDetails,
+                      'Spot has been scheduled for reassignment',
+                      renterPrefs || {}
+                    );
+                  }
+                }
+
+                console.log(`[Scheduled Assignment] Cancelled ${futureBookings.length} bookings from ${scheduledDate} onwards for spot ${spotId}`);
+              }
+            } catch (cancelError) {
+              console.error('[Scheduled Assignment] Error cancelling future bookings:', cancelError);
+            }
+          }
+
+          // Audit the scheduled assignment
+          await auditService.logAction("SCHEDULE_ASSIGN", "parking_spot", {
+            entityId: spotId,
+            message: `Scheduled parking spot ${existingSpot.spotNumber} assignment to ${user?.firstName} ${user?.lastName} (${user?.email}) for ${scheduledDate}`,
+            before: existingSpot,
+            after: { scheduledAssignment }
+          });
+
+          return res.json({
+            scheduled: true,
+            scheduledAssignment,
+            message: `Assignment scheduled for ${scheduledDate}`
+          });
+        }
+        // If scheduledDate is today or past, fall through to immediate assignment
+      }
+
       // Check if user has an active waiting list entry and mark it as assigned
       const waitingListEntry = await storage.getWaitingListByUser(userId);
       if (waitingListEntry) {
@@ -6216,6 +6328,71 @@ The BCI ParkShare Team`;
       }
       console.error("Error assigning parking spot:", error);
       res.status(500).json({ error: "Failed to assign parking spot" });
+    }
+  });
+
+  // Get all pending scheduled assignments (Admin only)
+  app.get("/api/admin/scheduled-assignments", requireAdmin, async (req, res) => {
+    try {
+      const spotId = req.query.spotId as string | undefined;
+      const assignments = await storage.getScheduledAssignments(spotId);
+
+      const enrichedAssignments = await Promise.all(assignments.map(async (assignment) => {
+        const spot = await storage.getParkingSpot(assignment.spotId);
+        const user = await storage.getUser(assignment.userId);
+        const location = spot ? await storage.getLocation(spot.locationId) : null;
+        return {
+          ...assignment,
+          spot: spot ? {
+            id: spot.id,
+            spotNumber: spot.spotNumber,
+            locationId: spot.locationId,
+            location: location ? `${location.office} - ${location.level}` : 'Unknown',
+            building: location?.building || 'Unknown'
+          } : null,
+          user: user ? {
+            id: user.id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email
+          } : null
+        };
+      }));
+
+      res.json(enrichedAssignments);
+    } catch (error) {
+      console.error("Error fetching scheduled assignments:", error);
+      res.status(500).json({ error: "Failed to fetch scheduled assignments" });
+    }
+  });
+
+  // Cancel a pending scheduled assignment (Admin only)
+  app.delete("/api/admin/scheduled-assignments/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const assignment = await storage.getScheduledAssignment(id);
+
+      if (!assignment) {
+        return res.status(404).json({ error: "Scheduled assignment not found" });
+      }
+
+      if (assignment.status !== 'pending') {
+        return res.status(400).json({ error: "Only pending scheduled assignments can be cancelled" });
+      }
+
+      const updated = await storage.updateScheduledAssignment(id, { status: 'cancelled' });
+
+      await auditService.logAction("CANCEL_SCHEDULE", "parking_spot", {
+        entityId: assignment.spotId,
+        message: `Cancelled scheduled assignment for spot ${assignment.spotId} (was scheduled for ${assignment.scheduledDate})`,
+        before: assignment,
+        after: updated
+      });
+
+      res.json({ success: true, assignment: updated });
+    } catch (error) {
+      console.error("Error cancelling scheduled assignment:", error);
+      res.status(500).json({ error: "Failed to cancel scheduled assignment" });
     }
   });
 

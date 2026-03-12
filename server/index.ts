@@ -546,6 +546,210 @@ If you have questions about the collection of your personal information through 
   setInterval(cleanupExpiredRefreshTokens, 24 * 60 * 60 * 1000);
   log("Refresh token cleanup job scheduled (runs daily)");
 
+  // Background job to apply scheduled spot assignments
+  async function applyScheduledSpotAssignments() {
+    try {
+      const dueAssignments = await storage.getPendingScheduledAssignmentsDue();
+      
+      if (dueAssignments.length === 0) return 0;
+      
+      console.log(`[Scheduled Assignments] Found ${dueAssignments.length} due assignment(s) to apply`);
+      
+      let appliedCount = 0;
+      
+      for (const assignment of dueAssignments) {
+        try {
+          const spot = await storage.getParkingSpot(assignment.spotId);
+          const user = await storage.getUser(assignment.userId);
+          
+          if (!spot || !user) {
+            console.error(`[Scheduled Assignments] Spot or user not found for assignment ${assignment.id}, skipping`);
+            continue;
+          }
+          
+          // Validate department restriction before applying
+          if (spot.spotTypeId && spot.reservedForDepartmentId) {
+            const spotType = await storage.getSpotType(spot.spotTypeId);
+            const isDepartmentReserved = spotType?.name === 'Department Reserved' || spotType?.slug === 'department-reserved';
+            if (isDepartmentReserved && user.departmentId !== spot.reservedForDepartmentId) {
+              console.error(`[Scheduled Assignments] Department restriction: user ${user.email} not in required department for spot ${spot.spotNumber}, cancelling assignment ${assignment.id}`);
+              await storage.updateScheduledAssignment(assignment.id, { status: 'cancelled' });
+              continue;
+            }
+          }
+          
+          // Check if user has an active waiting list entry and mark it as assigned
+          const waitingListEntry = await storage.getWaitingListByUser(assignment.userId);
+          if (waitingListEntry) {
+            await storage.updateWaitingListEntry(waitingListEntry.id, {
+              status: 'assigned',
+              assignedDate: new Date(),
+              assignedSpotId: assignment.spotId
+            });
+          }
+          
+          // Cancel bookings from scheduledDate onwards if cancelFutureBookings was set
+          if (assignment.cancelFutureBookings) {
+            try {
+              const allBookings = await storage.getBookingsBySpot(assignment.spotId);
+              const cutoffDate = new Date(assignment.scheduledDate + 'T00:00:00');
+              cutoffDate.setHours(0, 0, 0, 0);
+              
+              const futureBookings = allBookings.filter(booking => {
+                const bookingDate = new Date(booking.bookingDate);
+                bookingDate.setHours(0, 0, 0, 0);
+                return bookingDate >= cutoffDate && booking.status !== 'cancelled';
+              });
+              
+              if (futureBookings.length > 0) {
+                const location = await storage.getLocation(spot.locationId);
+                const locationName = location ? `${location.office} - ${location.level}` : 'Unknown Location';
+                const buildingName = location?.building || 'Unknown Building';
+                
+                const bookingsByRenter = new Map<string, typeof futureBookings>();
+                
+                for (const booking of futureBookings) {
+                  await storage.updateBooking(booking.id, {
+                    status: 'cancelled',
+                    adminNotes: `Automatically cancelled due to scheduled spot assignment effective ${assignment.scheduledDate}`
+                  });
+                  
+                  const renterBookings = bookingsByRenter.get(booking.renterId) || [];
+                  renterBookings.push(booking);
+                  bookingsByRenter.set(booking.renterId, renterBookings);
+                }
+                
+                const { sendBookingsCancelledDueToUnassignmentNotification } = await import('./notification-service');
+                
+                for (const [renterId, renterBookings] of Array.from(bookingsByRenter.entries())) {
+                  const renter = await storage.getUser(renterId);
+                  if (renter) {
+                    const renterName = `${renter.firstName || ''} ${renter.lastName || ''}`.trim() || 'User';
+                    const cancelledBookingDetails = renterBookings.map((b: typeof renterBookings[0]) => ({
+                      bookingDate: b.bookingDate,
+                      spotNumber: spot.spotNumber,
+                      location: locationName,
+                      building: buildingName
+                    }));
+                    
+                    const renterPrefs = await storage.getNotificationPreferences(renter.id);
+                    await sendBookingsCancelledDueToUnassignmentNotification(
+                      { name: renterName, email: renter.email || null, id: renter.id },
+                      cancelledBookingDetails,
+                      'Spot has been assigned to a new owner',
+                      renterPrefs || {}
+                    );
+                  }
+                }
+                
+                console.log(`[Scheduled Assignments] Cancelled ${futureBookings.length} bookings for spot ${spot.spotNumber}`);
+              }
+            } catch (cancelError) {
+              console.error(`[Scheduled Assignments] Error cancelling bookings for assignment ${assignment.id}:`, cancelError);
+            }
+          }
+          
+          // Update spot ownership (preserve existing isBciManaged like immediate assign does)
+          const updateData = {
+            ownerId: assignment.userId,
+            isBookable: false,
+            isBciManaged: spot.isBciManaged ?? false
+          };
+          
+          const updatedSpot = await storage.updateParkingSpot(assignment.spotId, updateData);
+          
+          if (!updatedSpot) {
+            console.error(`[Scheduled Assignments] Failed to update spot ${assignment.spotId}`);
+            continue;
+          }
+          
+          // Record spot assignment history
+          await storage.recordSpotAssignment({
+            spotId: assignment.spotId,
+            userId: assignment.userId,
+            action: 'assigned',
+            effectiveAt: new Date(),
+            actorId: assignment.actorId || undefined,
+            notes: `Applied scheduled assignment (scheduled for ${assignment.scheduledDate})`
+          });
+          
+          // Add owner role if needed
+          if (user && !user.roles.includes("owner")) {
+            await storage.addUserRole(assignment.userId, "owner");
+          }
+          
+          // Send spot assignment email
+          try {
+            if (user?.email) {
+              const { createSpotAssignmentNotification, sendEmailNotification } = await import('./notification-service');
+              const location = await storage.getLocation(updatedSpot.locationId);
+              const locationName = location ? `${location.office} - ${location.level}` : 'Unknown';
+              const buildingName = location?.building || 'Unknown';
+              
+              const notification = createSpotAssignmentNotification(
+                { name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email, email: user.email },
+                { spotNumber: updatedSpot.spotNumber, location: locationName, building: buildingName }
+              );
+              await sendEmailNotification(notification);
+              console.log(`[Scheduled Assignments] Assignment email sent to ${user.email}`);
+            }
+          } catch (emailError) {
+            console.error(`[Scheduled Assignments] Failed to send email for assignment ${assignment.id}:`, emailError);
+          }
+          
+          // Mark as applied
+          await storage.updateScheduledAssignment(assignment.id, { status: 'applied' });
+          
+          // Audit
+          await auditStorage.createAuditLog({
+            correlationId: `scheduled-assign-${assignment.id}`,
+            action: 'ASSIGN',
+            entityType: 'parking_spot',
+            entityId: assignment.spotId,
+            actorId: 'SYSTEM',
+            actorEmail: 'system@bci.ca',
+            actorRole: 'system',
+            success: true,
+            message: `Applied scheduled assignment: spot ${spot.spotNumber} assigned to ${user.firstName} ${user.lastName} (${user.email}) - originally scheduled for ${assignment.scheduledDate}`,
+            before: spot,
+            after: updatedSpot,
+            requestMeta: {
+              method: 'SYSTEM',
+              path: '/system/scheduled-assignment',
+              ip: '127.0.0.1'
+            }
+          });
+          
+          appliedCount++;
+          console.log(`[Scheduled Assignments] Applied assignment ${assignment.id}: spot ${spot.spotNumber} -> ${user.email}`);
+        } catch (assignError) {
+          console.error(`[Scheduled Assignments] Error applying assignment ${assignment.id}:`, assignError);
+        }
+      }
+      
+      if (appliedCount > 0) {
+        console.log(`[Scheduled Assignments] Successfully applied ${appliedCount}/${dueAssignments.length} scheduled assignment(s)`);
+      }
+      
+      return appliedCount;
+    } catch (error) {
+      console.error("[Scheduled Assignments] Error in scheduled assignment job:", error);
+      return 0;
+    }
+  }
+  
+  // Run scheduled assignments check on startup
+  log("Running initial scheduled assignment check...");
+  await applyScheduledSpotAssignments();
+  
+  // Schedule via node-cron to run at midnight daily
+  const cron = await import('node-cron');
+  cron.default.schedule('0 0 * * *', async () => {
+    console.log('[Scheduled Assignments] Running midnight scheduled assignment check...');
+    await applyScheduledSpotAssignments();
+  });
+  log("Scheduled assignment job configured (runs at midnight daily + startup)");
+
   // Data fix: correctly set created_by_admin on single-day listings
   // Only single-day listings split from admin-created parent period/recurring listings should be true
   // Step 1: Reset any incorrectly set flags (from previous broad migration)
