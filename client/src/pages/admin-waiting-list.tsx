@@ -18,10 +18,15 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { TablePagination } from "@/components/shared/TablePagination"
 import { 
   Users, Clock, ArrowRight, RefreshCw, Trash2, Download, FileText,
-  Eye, EyeOff, AlertTriangle, Timer, Target, UserPlus, Plus, XCircle, Pencil, Loader2
+  Eye, EyeOff, AlertTriangle, Timer, Target, UserPlus, Plus, XCircle, Pencil, Loader2, CalendarDays, Info
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Switch } from "@/components/ui/switch"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { format } from "date-fns"
 import type { WaitingList, ParkingSpotWithUser, SpotType, SpotTypeTable, Location } from "@shared/schema"
 import { quickExportWaitingListPDF, quickExportWaitingListExcel } from "@/utils/export-utils"
 
@@ -34,6 +39,9 @@ export default function AdminWaitingList() {
   const [showAssignDialog, setShowAssignDialog] = useState(false)
   const [showAddToWaitingDialog, setShowAddToWaitingDialog] = useState(false)
   const [selectedSpotForAssign, setSelectedSpotForAssign] = useState<ParkingSpotWithUser | null>(null)
+  const [waitingListScheduledDate, setWaitingListScheduledDate] = useState<Date | null>(null)
+  const [waitingListCancelFutureBookings, setWaitingListCancelFutureBookings] = useState(true)
+  const [waitingListDatePickerOpen, setWaitingListDatePickerOpen] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [editWaitingListItem, setEditWaitingListItem] = useState<WaitingList | null>(null)
   const [editFormData, setEditFormData] = useState({
@@ -159,26 +167,38 @@ export default function AdminWaitingList() {
   }
 
   const assignFromWaitingListMutation = useMutation({
-    mutationFn: async ({ userId, spotId }: { userId: string; spotId: string }) => {
+    mutationFn: async ({ userId, spotId, scheduledDate, cancelFutureBookings }: { userId: string; spotId: string; scheduledDate?: Date | null; cancelFutureBookings?: boolean }) => {
+      const isScheduled = scheduledDate && scheduledDate.toDateString() !== new Date().toDateString();
+      const body: { userId: string; spotId: string; scheduledDate?: string; cancelFutureBookings?: boolean } = { userId, spotId };
+      if (isScheduled) {
+        body.scheduledDate = format(scheduledDate!, "yyyy-MM-dd");
+        body.cancelFutureBookings = cancelFutureBookings;
+      }
       return await apiRequest(`/api/admin/assign-spot`, {
         method: "POST",
-        body: { userId, spotId },
+        body,
       })
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      const isScheduled = variables.scheduledDate && variables.scheduledDate.toDateString() !== new Date().toDateString();
       queryClient.invalidateQueries({ queryKey: ["/api/waiting-list"] })
       queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/active"] })
       queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] })
       queryClient.invalidateQueries({ queryKey: ["/api/admin/all-spots"] })
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] })
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/scheduled-assignments"] })
       toast({
         title: "Success",
-        description: "Spot assigned successfully from waiting list.",
+        description: isScheduled
+          ? `Spot assignment scheduled for ${format(variables.scheduledDate!, "PPP")}.`
+          : "Spot assigned successfully from waiting list.",
         variant: "success",
       })
       setShowAssignDialog(false)
       setSelectedWaitingListItem(null)
       setSelectedSpotForAssign(null)
+      setWaitingListScheduledDate(null)
+      setWaitingListCancelFutureBookings(true)
     },
     onError: (error: any) => {
       toast({
@@ -471,7 +491,9 @@ export default function AdminWaitingList() {
     if (selectedWaitingListItem && selectedSpotForAssign) {
       assignFromWaitingListMutation.mutate({
         userId: selectedWaitingListItem.userId,
-        spotId: selectedSpotForAssign.id
+        spotId: selectedSpotForAssign.id,
+        scheduledDate: waitingListScheduledDate,
+        cancelFutureBookings: waitingListCancelFutureBookings
       })
     }
   }
@@ -938,6 +960,63 @@ export default function AdminWaitingList() {
               </div>
             )}
 
+            <div>
+              <label className="text-sm font-medium">Effective Date</label>
+              <Popover open={waitingListDatePickerOpen} onOpenChange={setWaitingListDatePickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                    data-testid="button-waiting-list-effective-date"
+                  >
+                    <CalendarDays className="mr-2 h-4 w-4" />
+                    {waitingListScheduledDate
+                      ? format(waitingListScheduledDate, "PPP")
+                      : "Today (immediate)"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={waitingListScheduledDate || undefined}
+                    defaultMonth={waitingListScheduledDate || new Date()}
+                    onSelect={(date) => {
+                      setWaitingListScheduledDate(date || null);
+                      setWaitingListDatePickerOpen(false);
+                    }}
+                    disabled={(date) => {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      return date < today;
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {waitingListScheduledDate && waitingListScheduledDate.toDateString() !== new Date().toDateString() && (
+              <div className="space-y-3">
+                <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800">
+                  <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <AlertDescription className="text-blue-700 dark:text-blue-300">
+                    Ownership will transfer on <strong>{format(waitingListScheduledDate, "PPP")}</strong>.
+                  </AlertDescription>
+                </Alert>
+                <div className="flex items-center justify-between gap-4 p-3 bg-muted rounded-lg">
+                  <div className="text-sm">
+                    <p className="font-medium">Cancel existing bookings from {format(waitingListScheduledDate, "MMM d")} onwards?</p>
+                    <p className="text-muted-foreground">Affected renters will be notified automatically.</p>
+                  </div>
+                  <Switch
+                    checked={waitingListCancelFutureBookings}
+                    onCheckedChange={setWaitingListCancelFutureBookings}
+                    data-testid="switch-waiting-list-cancel-future-bookings"
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-2 pt-4">
               <Button
                 onClick={handleConfirmAssign}
@@ -945,7 +1024,11 @@ export default function AdminWaitingList() {
                 className="flex-1"
                 data-testid="button-confirm-assign"
               >
-                {assignFromWaitingListMutation.isPending ? "Assigning..." : "Assign Spot"}
+                {assignFromWaitingListMutation.isPending 
+                  ? (waitingListScheduledDate && waitingListScheduledDate.toDateString() !== new Date().toDateString() ? "Scheduling..." : "Assigning...")
+                  : waitingListScheduledDate && waitingListScheduledDate.toDateString() !== new Date().toDateString()
+                    ? "Schedule Assignment"
+                    : "Assign Spot"}
               </Button>
               <Button
                 variant="outline"
@@ -953,6 +1036,8 @@ export default function AdminWaitingList() {
                   setShowAssignDialog(false)
                   setSelectedWaitingListItem(null)
                   setSelectedSpotForAssign(null)
+                  setWaitingListScheduledDate(null)
+                  setWaitingListCancelFutureBookings(true)
                 }}
                 className="flex-1"
                 data-testid="button-cancel-assign"

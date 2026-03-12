@@ -30,6 +30,7 @@ import { EnhancedFilters, type FilterConfig, type FilterValues } from "@/compone
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { TablePagination } from "@/components/shared/TablePagination"
+import { Switch } from "@/components/ui/switch"
 import { 
   Users, Car, Clock, AlertTriangle, TrendingUp, Plus, 
   ListOrdered, CalendarDays,
@@ -75,18 +76,25 @@ export default function AdminParkingManagement() {
   const [selectedUserForAvailableSpot, setSelectedUserForAvailableSpot] = useState("")
   const [userPickerOpen, setUserPickerOpen] = useState(false)
   const [assignAvailableSpotFormData, setAssignAvailableSpotFormData] = useState({
-    isBciManaged: true
+    isBciManaged: true,
+    scheduledDate: null as Date | null,
+    cancelFutureBookings: true
   })
   const [activeSpotTab, setActiveSpotTab] = useState("bci-managed")
   const [unallocatedFilterType, setUnallocatedFilterType] = useState("all")
   
   
+  const [effectiveDatePickerOpen, setEffectiveDatePickerOpen] = useState(false)
+  const [availableSpotEffectiveDatePickerOpen, setAvailableSpotEffectiveDatePickerOpen] = useState(false)
+
   // Form state for direct assignment dialog
   const [directAssignFormData, setDirectAssignFormData] = useState({
     userId: "",
     duration: "permanent",
     isBciManaged: true,
-    notes: ""
+    notes: "",
+    scheduledDate: null as Date | null,
+    cancelFutureBookings: true
   })
   
   // User search state for direct assignment
@@ -628,20 +636,32 @@ export default function AdminParkingManagement() {
   // Mutation for direct assignment
   const directAssignMutation = useMutation({
     mutationFn: async ({ spotId, assignmentData }: { spotId: string; assignmentData: typeof directAssignFormData }) => {
+      const isScheduled = assignmentData.scheduledDate && assignmentData.scheduledDate.toDateString() !== new Date().toDateString();
+      const body: { spotId: string; userId: string; isBciManaged: boolean; scheduledDate?: string; cancelFutureBookings?: boolean } = {
+        spotId, userId: assignmentData.userId, isBciManaged: assignmentData.isBciManaged
+      };
+      if (isScheduled) {
+        body.scheduledDate = format(assignmentData.scheduledDate!, "yyyy-MM-dd");
+        body.cancelFutureBookings = assignmentData.cancelFutureBookings;
+      }
       return await apiRequest(`/api/admin/assign-spot`, {
         method: "POST",
-        body: { spotId, userId: assignmentData.userId, isBciManaged: assignmentData.isBciManaged },
+        body,
       });
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      const isScheduled = variables.assignmentData.scheduledDate && variables.assignmentData.scheduledDate.toDateString() !== new Date().toDateString();
       queryClient.invalidateQueries({ queryKey: ["/api/admin/all-spots"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] });
       queryClient.invalidateQueries({ queryKey: ["/api/waiting-list"] });
       queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/active"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/scheduled-assignments"] });
       toast({
         title: "Success",
-        description: "Spot assigned directly to user successfully.",
+        description: isScheduled
+          ? `Spot assignment scheduled for ${format(variables.assignmentData.scheduledDate!, "PPP")}.`
+          : "Spot assigned directly to user successfully.",
         variant: "success",
       });
       setShowDirectAssignDialog(false);
@@ -650,7 +670,9 @@ export default function AdminParkingManagement() {
         userId: "",
         duration: "permanent",
         isBciManaged: true,
-        notes: ""
+        notes: "",
+        scheduledDate: null,
+        cancelFutureBookings: true
       });
     },
     onError: (error: any) => {
@@ -749,31 +771,42 @@ export default function AdminParkingManagement() {
 
   // Mutation to assign available spot to user
   const assignAvailableSpotMutation = useMutation({
-    mutationFn: async ({ spotId, userId, isBciManaged }: { spotId: string; userId: string; isBciManaged: boolean }) => {
+    mutationFn: async ({ spotId, userId, isBciManaged, scheduledDate, cancelFutureBookings }: { spotId: string; userId: string; isBciManaged: boolean; scheduledDate?: Date | null; cancelFutureBookings?: boolean }) => {
+      const isScheduled = scheduledDate && scheduledDate.toDateString() !== new Date().toDateString();
+      const body: { spotId: string; userId: string; isBciManaged: boolean; scheduledDate?: string; cancelFutureBookings?: boolean } = { spotId, userId, isBciManaged };
+      if (isScheduled) {
+        body.scheduledDate = format(scheduledDate!, "yyyy-MM-dd");
+        body.cancelFutureBookings = cancelFutureBookings;
+      }
       return await apiRequest(`/api/admin/assign-spot`, {
         method: "POST",
-        body: { spotId, userId, isBciManaged },
+        body,
       });
     },
-    onSuccess: (response) => {
+    onSuccess: (_response, variables) => {
+      const isScheduled = variables.scheduledDate && variables.scheduledDate.toDateString() !== new Date().toDateString();
       queryClient.invalidateQueries({ queryKey: ["/api/admin/all-spots"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] });
-      // Also invalidate waiting list queries since user may have been removed from waiting list
       queryClient.invalidateQueries({ queryKey: ["/api/waiting-list"] });
       queryClient.invalidateQueries({ queryKey: ["/api/waiting-list/active"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/scheduled-assignments"] });
       const userName = allUsers.find(user => user.id === selectedUserForAvailableSpot)?.name || "user";
       const spotNumber = selectedAvailableSpot?.spotNumber || 'Unknown';
       toast({
         title: "Success",
-        description: `Spot ${spotNumber} has been assigned to ${userName}.`,
+        description: isScheduled
+          ? `Spot ${spotNumber} assignment to ${userName} scheduled for ${format(variables.scheduledDate!, "PPP")}.`
+          : `Spot ${spotNumber} has been assigned to ${userName}.`,
         variant: "success",
       });
       setShowAssignAvailableSpotDialog(false);
       setSelectedAvailableSpot(null);
       setSelectedUserForAvailableSpot("");
       setAssignAvailableSpotFormData({
-        isBciManaged: true
+        isBciManaged: true,
+        scheduledDate: null,
+        cancelFutureBookings: true
       });
     },
     onError: (error: any) => {
@@ -813,6 +846,61 @@ export default function AdminParkingManagement() {
     },
   });
 
+  type ScheduledAssignment = {
+    id: string;
+    spotId: string;
+    spotNumber: string;
+    locationName: string;
+    userId: string;
+    userName: string;
+    userEmail: string;
+    scheduledDate: string;
+    cancelFutureBookings: boolean;
+    createdAt: string;
+  };
+
+  const { data: scheduledAssignments = [], isLoading: isLoadingScheduledAssignments } = useQuery<ScheduledAssignment[]>({
+    queryKey: ["/api/admin/scheduled-assignments"],
+    queryFn: async () => {
+      const response = await fetch("/api/admin/scheduled-assignments", { credentials: 'include' });
+      if (!response.ok) return [];
+      return response.json();
+    },
+  });
+
+  const cancelScheduledAssignmentMutation = useMutation({
+    mutationFn: async (assignmentId: string) => {
+      return await apiRequest(`/api/admin/scheduled-assignments/${assignmentId}`, {
+        method: "DELETE",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/scheduled-assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/all-spots"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/unallocated-spots"] });
+      toast({
+        title: "Success",
+        description: "Scheduled assignment cancelled successfully.",
+        variant: "success",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to cancel scheduled assignment.",
+        variant: "error",
+      });
+    },
+  });
+
+  const scheduledAssignmentsBySpotId = useMemo(() => {
+    const map = new Map<string, ScheduledAssignment>();
+    for (const sa of scheduledAssignments) {
+      map.set(sa.spotId, sa);
+    }
+    return map;
+  }, [scheduledAssignments]);
+
   // Helper functions
   const handleEditSpot = (spot: ParkingSpot) => {
     setSelectedSpot(spot);
@@ -847,7 +935,9 @@ export default function AdminParkingManagement() {
       userId: "",
       duration: "permanent",
       isBciManaged: spot?.isBciManaged ?? true,
-      notes: ""
+      notes: "",
+      scheduledDate: null,
+      cancelFutureBookings: true
     });
     setShowDirectAssignDialog(true);
   };
@@ -860,7 +950,9 @@ export default function AdminParkingManagement() {
   const handleAssignAvailableSpot = (spot: ParkingSpot) => {
     setSelectedAvailableSpot(spot);
     setAssignAvailableSpotFormData({
-      isBciManaged: spot?.isBciManaged ?? true
+      isBciManaged: spot?.isBciManaged ?? true,
+      scheduledDate: null,
+      cancelFutureBookings: true
     });
     setShowAssignAvailableSpotDialog(true);
   };
@@ -2004,7 +2096,22 @@ export default function AdminParkingManagement() {
                               />
                             </TableCell>
                             <TableCell className="font-medium" data-testid={`text-spot-number-${spot.id}`}>
-                              {spot.spotNumber}
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {spot.spotNumber}
+                                {scheduledAssignmentsBySpotId.has(spot.id) && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Badge variant="secondary" className="bg-amber-50 text-amber-700 border-amber-200 text-xs">
+                                        <Clock className="h-3 w-3 mr-1" />
+                                        Scheduled {new Date(scheduledAssignmentsBySpotId.get(spot.id)!.scheduledDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                      </Badge>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      Scheduled for {scheduledAssignmentsBySpotId.get(spot.id)!.userName} on {new Date(scheduledAssignmentsBySpotId.get(spot.id)!.scheduledDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell data-testid={`text-spot-location-${spot.id}`}>
                               {spot.locationName}
@@ -2351,7 +2458,22 @@ export default function AdminParkingManagement() {
                             />
                           </TableCell>
                           <TableCell className="font-medium" data-testid={`text-unallocated-spot-number-${spot.id}`}>
-                            {spot.spotNumber}
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {spot.spotNumber}
+                              {scheduledAssignmentsBySpotId.has(spot.id) && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge variant="secondary" className="bg-amber-50 text-amber-700 border-amber-200 text-xs">
+                                      <Clock className="h-3 w-3 mr-1" />
+                                      Scheduled {new Date(scheduledAssignmentsBySpotId.get(spot.id)!.scheduledDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    Scheduled for {scheduledAssignmentsBySpotId.get(spot.id)!.userName} on {new Date(scheduledAssignmentsBySpotId.get(spot.id)!.scheduledDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell data-testid={`text-unallocated-spot-location-${spot.id}`}>
                             {spot.locationName}
@@ -2802,6 +2924,90 @@ export default function AdminParkingManagement() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {scheduledAssignments.length > 0 && (
+        <Card className="mt-6" data-testid="card-scheduled-assignments">
+          <CardHeader>
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-amber-600" />
+                Pending Scheduled Assignments ({scheduledAssignments.length})
+              </CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isLoadingScheduledAssignments ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading scheduled assignments...
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table data-testid="table-scheduled-assignments">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Spot</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Assigned To</TableHead>
+                      <TableHead>Effective Date</TableHead>
+                      <TableHead>Cancel Bookings</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {scheduledAssignments.map((sa) => (
+                      <TableRow key={sa.id} data-testid={`row-scheduled-assignment-${sa.id}`}>
+                        <TableCell className="font-medium">{sa.spotNumber}</TableCell>
+                        <TableCell>{sa.locationName}</TableCell>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{sa.userName}</p>
+                            <p className="text-xs text-muted-foreground">{sa.userEmail}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="bg-amber-50 text-amber-700 border-amber-200">
+                            {new Date(sa.scheduledDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {sa.cancelFutureBookings ? (
+                            <Badge variant="secondary" className="bg-red-50 text-red-700 border-red-200">Yes</Badge>
+                          ) : (
+                            <Badge variant="outline">No</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={async () => {
+                              const confirmed = await confirm({
+                                title: "Cancel Scheduled Assignment",
+                                description: `Cancel the scheduled assignment of spot ${sa.spotNumber} to ${sa.userName} on ${new Date(sa.scheduledDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}?`,
+                                confirmText: "Cancel Assignment",
+                                cancelText: "Keep",
+                                variant: "destructive"
+                              });
+                              if (confirmed) {
+                                cancelScheduledAssignmentMutation.mutate(sa.id);
+                              }
+                            }}
+                            disabled={cancelScheduledAssignmentMutation.isPending}
+                            data-testid={`button-cancel-scheduled-${sa.id}`}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Add Spot Dialog */}
       <Dialog open={showAddSpotDialog} onOpenChange={setShowAddSpotDialog}>
@@ -3305,6 +3511,63 @@ export default function AdminParkingManagement() {
                 data-testid="input-direct-assign-notes"
               />
             </div>
+
+            <div>
+              <label className="text-sm font-medium">Effective Date</label>
+              <Popover open={effectiveDatePickerOpen} onOpenChange={setEffectiveDatePickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                    data-testid="button-direct-assign-effective-date"
+                  >
+                    <CalendarDays className="mr-2 h-4 w-4" />
+                    {directAssignFormData.scheduledDate
+                      ? format(directAssignFormData.scheduledDate, "PPP")
+                      : "Today (immediate)"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={directAssignFormData.scheduledDate || undefined}
+                    defaultMonth={directAssignFormData.scheduledDate || new Date()}
+                    onSelect={(date) => {
+                      setDirectAssignFormData(prev => ({ ...prev, scheduledDate: date || null }));
+                      setEffectiveDatePickerOpen(false);
+                    }}
+                    disabled={(date) => {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      return date < today;
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {directAssignFormData.scheduledDate && directAssignFormData.scheduledDate.toDateString() !== new Date().toDateString() && (
+              <div className="space-y-3">
+                <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800">
+                  <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <AlertDescription className="text-blue-700 dark:text-blue-300">
+                    Ownership will transfer on <strong>{format(directAssignFormData.scheduledDate, "PPP")}</strong>. The current owner retains the spot until then.
+                  </AlertDescription>
+                </Alert>
+                <div className="flex items-center justify-between gap-4 p-3 bg-muted rounded-lg">
+                  <div className="text-sm">
+                    <p className="font-medium">Cancel existing bookings from {format(directAssignFormData.scheduledDate, "MMM d")} onwards?</p>
+                    <p className="text-muted-foreground">Affected renters will be notified automatically.</p>
+                  </div>
+                  <Switch
+                    checked={directAssignFormData.cancelFutureBookings}
+                    onCheckedChange={(checked) => setDirectAssignFormData(prev => ({ ...prev, cancelFutureBookings: checked }))}
+                    data-testid="switch-cancel-future-bookings"
+                  />
+                </div>
+              </div>
+            )}
             
             {/* Show future bookings warning for reassignment */}
             {selectedSpotForAssign?.ownerId && (
@@ -3379,10 +3642,12 @@ export default function AdminParkingManagement() {
                 className="flex-1"
                 data-testid="button-confirm-direct-assign"
               >
-                {directAssignMutation.isPending ? "Assigning..." : 
-                 directAssignFutureBookings && directAssignFutureBookings.count > 0 
-                   ? `Reassign & Cancel ${directAssignFutureBookings.count} Booking${directAssignFutureBookings.count > 1 ? 's' : ''}`
-                   : "Assign Spot"}
+                {directAssignMutation.isPending ? (directAssignFormData.scheduledDate && directAssignFormData.scheduledDate.toDateString() !== new Date().toDateString() ? "Scheduling..." : "Assigning...") : 
+                 directAssignFormData.scheduledDate && directAssignFormData.scheduledDate.toDateString() !== new Date().toDateString()
+                   ? "Schedule Assignment"
+                   : directAssignFutureBookings && directAssignFutureBookings.count > 0 
+                     ? `Reassign & Cancel ${directAssignFutureBookings.count} Booking${directAssignFutureBookings.count > 1 ? 's' : ''}`
+                     : "Assign Spot"}
               </Button>
               <Button
                 variant="outline"
@@ -3553,6 +3818,63 @@ export default function AdminParkingManagement() {
                     </PopoverContent>
                   </Popover>
                 </div>
+
+                <div>
+                  <label className="text-sm font-medium">Effective Date</label>
+                  <Popover open={availableSpotEffectiveDatePickerOpen} onOpenChange={setAvailableSpotEffectiveDatePickerOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal"
+                        data-testid="button-available-spot-effective-date"
+                      >
+                        <CalendarDays className="mr-2 h-4 w-4" />
+                        {assignAvailableSpotFormData.scheduledDate
+                          ? format(assignAvailableSpotFormData.scheduledDate, "PPP")
+                          : "Today (immediate)"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={assignAvailableSpotFormData.scheduledDate || undefined}
+                        defaultMonth={assignAvailableSpotFormData.scheduledDate || new Date()}
+                        onSelect={(date) => {
+                          setAssignAvailableSpotFormData(prev => ({ ...prev, scheduledDate: date || null }));
+                          setAvailableSpotEffectiveDatePickerOpen(false);
+                        }}
+                        disabled={(date) => {
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          return date < today;
+                        }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {assignAvailableSpotFormData.scheduledDate && assignAvailableSpotFormData.scheduledDate.toDateString() !== new Date().toDateString() && (
+                  <div className="space-y-3">
+                    <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800">
+                      <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      <AlertDescription className="text-blue-700 dark:text-blue-300">
+                        Ownership will transfer on <strong>{format(assignAvailableSpotFormData.scheduledDate, "PPP")}</strong>.
+                      </AlertDescription>
+                    </Alert>
+                    <div className="flex items-center justify-between gap-4 p-3 bg-muted rounded-lg">
+                      <div className="text-sm">
+                        <p className="font-medium">Cancel existing bookings from {format(assignAvailableSpotFormData.scheduledDate, "MMM d")} onwards?</p>
+                        <p className="text-muted-foreground">Affected renters will be notified automatically.</p>
+                      </div>
+                      <Switch
+                        checked={assignAvailableSpotFormData.cancelFutureBookings}
+                        onCheckedChange={(checked) => setAssignAvailableSpotFormData(prev => ({ ...prev, cancelFutureBookings: checked }))}
+                        data-testid="switch-available-spot-cancel-future-bookings"
+                      />
+                    </div>
+                  </div>
+                )}
                 
                 {/* Show future bookings warning for available spot assignment */}
                 {isLoadingAvailableSpotBookings ? (
@@ -3601,7 +3923,9 @@ export default function AdminParkingManagement() {
                         assignAvailableSpotMutation.mutate({
                           spotId: selectedAvailableSpot.id,
                           userId: selectedUserForAvailableSpot,
-                          isBciManaged: assignAvailableSpotFormData.isBciManaged
+                          isBciManaged: assignAvailableSpotFormData.isBciManaged,
+                          scheduledDate: assignAvailableSpotFormData.scheduledDate,
+                          cancelFutureBookings: assignAvailableSpotFormData.cancelFutureBookings
                         });
                       }
                     }}
@@ -3609,10 +3933,12 @@ export default function AdminParkingManagement() {
                     className="flex-1"
                     data-testid="button-confirm-assign-available-spot"
                   >
-                    {assignAvailableSpotMutation.isPending ? "Assigning..." : 
-                     availableSpotFutureBookings && availableSpotFutureBookings.count > 0 
-                       ? `Assign & Cancel ${availableSpotFutureBookings.count} Booking${availableSpotFutureBookings.count > 1 ? 's' : ''}`
-                       : "Assign Spot"}
+                    {assignAvailableSpotMutation.isPending ? (assignAvailableSpotFormData.scheduledDate && assignAvailableSpotFormData.scheduledDate.toDateString() !== new Date().toDateString() ? "Scheduling..." : "Assigning...") : 
+                     assignAvailableSpotFormData.scheduledDate && assignAvailableSpotFormData.scheduledDate.toDateString() !== new Date().toDateString()
+                       ? "Schedule Assignment"
+                       : availableSpotFutureBookings && availableSpotFutureBookings.count > 0 
+                         ? `Assign & Cancel ${availableSpotFutureBookings.count} Booking${availableSpotFutureBookings.count > 1 ? 's' : ''}`
+                         : "Assign Spot"}
                   </Button>
                   <Button
                     variant="outline"
