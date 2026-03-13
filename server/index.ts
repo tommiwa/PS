@@ -9,6 +9,7 @@ import { db } from "./db";
 import { spotLocks, spotListings, bookings, parkingSpots, refreshTokens } from "@shared/schema";
 import { and, eq, lt, lte, inArray, notInArray, sql, isNull, or } from "drizzle-orm";
 import { setupWebSocket, broadcastLockEvent } from "./websocket";
+import { runMigrations } from "./migrations";
 
 const app = express();
 app.use(cookieParser());
@@ -58,6 +59,8 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  await runMigrations();
+
   // Initialize audit service with database-backed storage
   auditService.setStorage(auditStorage);
   
