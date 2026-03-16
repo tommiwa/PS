@@ -77,16 +77,34 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [viewRole, setViewRole] = useState<UserRole | null>(null);
 
+  const PROACTIVE_REFRESH_KEY = 'bci_proactive_refresh_at';
+  const PROACTIVE_REFRESH_INTERVAL_MS = 5 * 24 * 60 * 60 * 1000; // 5 days
+
   const attemptTokenRefresh = async (): Promise<boolean> => {
     try {
       const response = await fetch('/api/auth/refresh', {
         method: 'POST',
         credentials: 'include',
       });
+      if (response.ok) {
+        try { localStorage.setItem(PROACTIVE_REFRESH_KEY, String(Date.now())); } catch {}
+      }
       return response.ok;
     } catch {
       return false;
     }
+  };
+
+  // Proactively rotate the refresh token while the session is still valid.
+  // This resets Safari ITP's 7-day cookie timer before it can clear the cookie,
+  // preventing silent logouts on mobile devices.
+  const proactiveTokenRefresh = async () => {
+    let lastRefresh = 0;
+    try { lastRefresh = parseInt(localStorage.getItem(PROACTIVE_REFRESH_KEY) || '0', 10); } catch {}
+    const due = !lastRefresh || (Date.now() - lastRefresh) > PROACTIVE_REFRESH_INTERVAL_MS;
+    if (!due) return;
+    console.log("[Auth] Proactive token refresh triggered (ITP prevention)");
+    await attemptTokenRefresh();
   };
 
   const fetchUser = async () => {
@@ -99,6 +117,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const userData = await response.json();
         setUser(userData);
         try { sessionStorage.setItem('bci_had_session', '1'); } catch {}
+        // Proactively rotate the refresh token if it's been > 5 days.
+        // Do this in the background so it doesn't block the UI.
+        proactiveTokenRefresh().catch(() => {});
       } else if (response.status === 401) {
         setUser(null);
         
@@ -148,6 +169,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     fetchUser();
   }, []);
+
+  // Proactively refresh on app resume (tab/app becomes visible again).
+  // On mobile, users frequently background and resume — this ensures the
+  // refresh token cookie is rotated before iOS ITP's 7-day timer fires.
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && user) {
+        proactiveTokenRefresh().catch(() => {});
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [user]);
 
   // Initialize view role from backend session
   useEffect(() => {
