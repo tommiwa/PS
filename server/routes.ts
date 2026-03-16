@@ -6343,6 +6343,10 @@ The BCI ParkShare Team`;
         const location = spot ? await storage.getLocation(spot.locationId) : null;
         return {
           ...assignment,
+          spotNumber: spot?.spotNumber || 'Unknown',
+          locationName: location ? `${location.office} - ${location.level}` : 'Unknown',
+          userName: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown' : 'Unknown',
+          userEmail: user?.email || 'Unknown',
           spot: spot ? {
             id: spot.id,
             spotNumber: spot.spotNumber,
