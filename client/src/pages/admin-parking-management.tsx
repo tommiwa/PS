@@ -2099,17 +2099,15 @@ export default function AdminParkingManagement() {
                               <div className="flex items-center gap-2 flex-wrap">
                                 {spot.spotNumber}
                                 {scheduledAssignmentsBySpotId.has(spot.id) && (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Badge variant="secondary" className="bg-amber-50 text-amber-700 border-amber-200 text-xs">
-                                        <Clock className="h-3 w-3 mr-1" />
-                                        Scheduled {new Date(scheduledAssignmentsBySpotId.get(spot.id)!.scheduledDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                      </Badge>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      Scheduled for {scheduledAssignmentsBySpotId.get(spot.id)!.userName} on {new Date(scheduledAssignmentsBySpotId.get(spot.id)!.scheduledDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                                    </TooltipContent>
-                                  </Tooltip>
+                                  <div className="flex flex-col gap-0.5">
+                                    <Badge variant="secondary" className="bg-amber-50 text-amber-700 border-amber-200 text-xs w-fit">
+                                      <Clock className="h-3 w-3 mr-1" />
+                                      Scheduled {new Date(scheduledAssignmentsBySpotId.get(spot.id)!.scheduledDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                    </Badge>
+                                    <span className="text-xs text-muted-foreground">
+                                      &#8594; {scheduledAssignmentsBySpotId.get(spot.id)!.userName}
+                                    </span>
+                                  </div>
                                 )}
                               </div>
                             </TableCell>
@@ -2461,17 +2459,15 @@ export default function AdminParkingManagement() {
                             <div className="flex items-center gap-2 flex-wrap">
                               {spot.spotNumber}
                               {scheduledAssignmentsBySpotId.has(spot.id) && (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Badge variant="secondary" className="bg-amber-50 text-amber-700 border-amber-200 text-xs">
-                                      <Clock className="h-3 w-3 mr-1" />
-                                      Scheduled {new Date(scheduledAssignmentsBySpotId.get(spot.id)!.scheduledDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                    </Badge>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    Scheduled for {scheduledAssignmentsBySpotId.get(spot.id)!.userName} on {new Date(scheduledAssignmentsBySpotId.get(spot.id)!.scheduledDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                                  </TooltipContent>
-                                </Tooltip>
+                                <div className="flex flex-col gap-0.5">
+                                  <Badge variant="secondary" className="bg-amber-50 text-amber-700 border-amber-200 text-xs w-fit">
+                                    <Clock className="h-3 w-3 mr-1" />
+                                    Scheduled {new Date(scheduledAssignmentsBySpotId.get(spot.id)!.scheduledDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                  </Badge>
+                                  <span className="text-xs text-muted-foreground">
+                                    &#8594; {scheduledAssignmentsBySpotId.get(spot.id)!.userName}
+                                  </span>
+                                </div>
                               )}
                             </div>
                           </TableCell>
@@ -3547,6 +3543,15 @@ export default function AdminParkingManagement() {
               </Popover>
             </div>
 
+            {selectedSpotForAssign && scheduledAssignmentsBySpotId.has(selectedSpotForAssign.id) && (
+              <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
+                <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                <AlertDescription className="text-amber-700 dark:text-amber-300">
+                  This spot already has a scheduled transfer to <strong>{scheduledAssignmentsBySpotId.get(selectedSpotForAssign.id)!.userName}</strong> on <strong>{new Date(scheduledAssignmentsBySpotId.get(selectedSpotForAssign.id)!.scheduledDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</strong>. Saving will cancel it and replace it with this new assignment.
+                </AlertDescription>
+              </Alert>
+            )}
+
             {directAssignFormData.scheduledDate && directAssignFormData.scheduledDate.toDateString() !== new Date().toDateString() && (
               <div className="space-y-3">
                 <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800">
@@ -3853,6 +3858,15 @@ export default function AdminParkingManagement() {
                     </PopoverContent>
                   </Popover>
                 </div>
+
+                {selectedAvailableSpot && scheduledAssignmentsBySpotId.has(selectedAvailableSpot.id) && (
+                  <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
+                    <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    <AlertDescription className="text-amber-700 dark:text-amber-300">
+                      This spot already has a scheduled transfer to <strong>{scheduledAssignmentsBySpotId.get(selectedAvailableSpot.id)!.userName}</strong> on <strong>{new Date(scheduledAssignmentsBySpotId.get(selectedAvailableSpot.id)!.scheduledDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</strong>. Saving will cancel it and replace it with this new assignment.
+                    </AlertDescription>
+                  </Alert>
+                )}
 
                 {assignAvailableSpotFormData.scheduledDate && assignAvailableSpotFormData.scheduledDate.toDateString() !== new Date().toDateString() && (
                   <div className="space-y-3">
