@@ -3326,7 +3326,35 @@ export default function AdminParkingManagement() {
               />
               <p className="text-xs text-muted-foreground mt-1">Office space seat ID for floor plan link (e.g., 34478)</p>
             </div>
-            <div className="flex gap-2 pt-4">
+            {selectedSpot && scheduledAssignmentsBySpotId.has(selectedSpot.id) && (() => {
+              const sa = scheduledAssignmentsBySpotId.get(selectedSpot.id)!;
+              return (
+                <div className="border border-amber-200 bg-amber-50 dark:bg-amber-950 dark:border-amber-800 rounded-md p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                    <span className="text-sm font-medium text-amber-800 dark:text-amber-300">Pending Scheduled Transfer</span>
+                  </div>
+                  <div className="text-sm text-amber-700 dark:text-amber-400 space-y-0.5">
+                    <div><span className="text-muted-foreground">To:</span> <strong>{sa.userName}</strong></div>
+                    <div><span className="text-muted-foreground">Email:</span> {sa.userEmail}</div>
+                    <div><span className="text-muted-foreground">On:</span> {new Date(sa.scheduledDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full border-amber-300 text-amber-700 dark:text-amber-300 dark:border-amber-700"
+                    onClick={() => cancelScheduledAssignmentMutation.mutate(sa.id)}
+                    disabled={cancelScheduledAssignmentMutation.isPending}
+                    data-testid="button-cancel-scheduled-transfer"
+                  >
+                    <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                    {cancelScheduledAssignmentMutation.isPending ? "Cancelling..." : "Cancel Scheduled Transfer"}
+                  </Button>
+                </div>
+              );
+            })()}
+
+            <div className="flex gap-2 pt-2">
               <Button
                 onClick={() => selectedSpot && editSpotMutation.mutate({ 
                   spotId: selectedSpot.id, 
