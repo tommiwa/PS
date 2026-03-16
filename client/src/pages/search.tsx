@@ -101,7 +101,7 @@ export default function Search() {
   
   const [selectedSpot, setSelectedSpot] = useState<DisplaySpot | null>(null)
   const [showBookingForm, setShowBookingForm] = useState(false)
-  const [sortBy, setSortBy] = useState("price")
+  const [sortBy, setSortBy] = useState("date")
   // Default to Calendar for desktop, Tiles for mobile (based on initial screen size)
   const [activeTab, setActiveTab] = useState<string>(() => {
     if (typeof window !== 'undefined') {
