@@ -113,7 +113,19 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
         spotData.set(spot.id, { price, isExpired, isBooked, isLocked });
       }
 
+      const getStatusOrder = (id: string): number => {
+        const data = spotData.get(id);
+        if (!data) return 0;
+        if (data.isExpired) return 3;
+        if (data.isBooked) return 2;
+        if (data.isLocked) return 1;
+        return 0;
+      };
+
       const sortedSpots = [...spotsForDate].sort((a, b) => {
+        const statusA = getStatusOrder(a.id);
+        const statusB = getStatusOrder(b.id);
+        if (statusA !== statusB) return statusA - statusB;
         const priceA = spotData.get(a.id)?.price ?? 0;
         const priceB = spotData.get(b.id)?.price ?? 0;
         return priceA - priceB;
