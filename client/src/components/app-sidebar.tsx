@@ -182,6 +182,13 @@ const adminAnalyticsItems = [
     roles: ["admin"],
     tooltip: "Payroll Reports"
   },
+  {
+    title: "Active Users",
+    url: "/admin/active-users",
+    icon: Users,
+    roles: ["admin"],
+    tooltip: "Active Users Report"
+  },
 ]
 
 // Admin Configuration items

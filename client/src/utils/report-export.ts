@@ -12,6 +12,112 @@ import type {
   SharedPoolUsageReportResponse
 } from '@shared/schema';
 
+export interface ActiveUsersReportData {
+  summary: {
+    loginsToday: number;
+    loginsInPeriod: number;
+    uniqueListers: number;
+    uniqueBookers: number;
+    totalListings: number;
+    totalBookings: number;
+  };
+  loggedInUsers: {
+    userId: string;
+    name: string;
+    department: string;
+    role: string;
+    lastLogin: string | null;
+  }[];
+  listedSpotUsers: {
+    userId: string;
+    name: string;
+    department: string;
+    listingCount: number;
+  }[];
+  bookedSpotUsers: {
+    userId: string;
+    name: string;
+    department: string;
+    bookingCount: number;
+    totalAmount: number;
+  }[];
+  dateRange: { from: string; to: string };
+  generatedAt: string;
+}
+
+export async function exportActiveUsersReport(data: ActiveUsersReportData) {
+  const workbook = new ExcelJS.Workbook();
+  const { dateRange } = data;
+
+  // Summary sheet
+  const summarySheet = workbook.addWorksheet('Summary');
+  summarySheet.mergeCells('A1:B1');
+  const titleCell = summarySheet.getCell('A1');
+  titleCell.value = 'BCI ParkShare - Active Users Report';
+  titleCell.font = { bold: true, size: 16 };
+  summarySheet.mergeCells('A2:B2');
+  summarySheet.getCell('A2').value = `Date Range: ${dateRange.from} to ${dateRange.to}`;
+  summarySheet.getCell('A3').value = `Generated: ${new Date().toLocaleString()}`;
+  summarySheet.addRow([]);
+  const summaryHeaderRow = summarySheet.addRow(['SUMMARY']);
+  summaryHeaderRow.getCell(1).font = { bold: true };
+  summarySheet.addRow(['Metric', 'Value']);
+  summarySheet.addRow(['Logins Today', data.summary.loginsToday]);
+  summarySheet.addRow(['Logins in Period', data.summary.loginsInPeriod]);
+  summarySheet.addRow(['Unique Users Who Listed Spots', data.summary.uniqueListers]);
+  summarySheet.addRow(['Unique Users Who Booked Spots', data.summary.uniqueBookers]);
+  summarySheet.addRow(['Total Listings Created', data.summary.totalListings]);
+  summarySheet.addRow(['Total Bookings Made', data.summary.totalBookings]);
+  summarySheet.getColumn(1).width = 35;
+  summarySheet.getColumn(2).width = 20;
+
+  // Logged In sheet
+  const loginSheet = workbook.addWorksheet('Logged In');
+  const loginHeader = loginSheet.addRow(['Name', 'Department', 'Role', 'Last Login Date', 'Last Login Time']);
+  loginHeader.font = { bold: true };
+  data.loggedInUsers.forEach(u => {
+    const dt = u.lastLogin ? new Date(u.lastLogin) : null;
+    loginSheet.addRow([
+      u.name,
+      u.department,
+      u.role,
+      dt ? dt.toLocaleDateString() : '',
+      dt ? dt.toLocaleTimeString() : ''
+    ]);
+  });
+  loginSheet.getColumn(1).width = 30;
+  loginSheet.getColumn(2).width = 20;
+  loginSheet.getColumn(3).width = 12;
+  loginSheet.getColumn(4).width = 18;
+  loginSheet.getColumn(5).width = 18;
+
+  // Listed Spots sheet
+  const listSheet = workbook.addWorksheet('Listed Spots');
+  const listHeader = listSheet.addRow(['Name', 'Department', 'Listings Created']);
+  listHeader.font = { bold: true };
+  data.listedSpotUsers.forEach(u => {
+    listSheet.addRow([u.name, u.department, u.listingCount]);
+  });
+  listSheet.getColumn(1).width = 30;
+  listSheet.getColumn(2).width = 20;
+  listSheet.getColumn(3).width = 20;
+
+  // Booked Spots sheet
+  const bookSheet = workbook.addWorksheet('Booked Spots');
+  const bookHeader = bookSheet.addRow(['Name', 'Department', 'Bookings Made', 'Total Amount']);
+  bookHeader.font = { bold: true };
+  data.bookedSpotUsers.forEach(u => {
+    bookSheet.addRow([u.name, u.department, u.bookingCount, `$${u.totalAmount.toFixed(2)}`]);
+  });
+  bookSheet.getColumn(1).width = 30;
+  bookSheet.getColumn(2).width = 20;
+  bookSheet.getColumn(3).width = 18;
+  bookSheet.getColumn(4).width = 18;
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  saveAs(new Blob([buffer]), `active-users-report-${new Date().toISOString().split('T')[0]}.xlsx`);
+}
+
 export async function exportOverviewReport(data: ReportOverviewResponse, dateRange?: ReportDateRange) {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Overview');

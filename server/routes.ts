@@ -67,7 +67,8 @@ import {
   getReportUserCompliance,
   getReportWaitlistPerformance,
   getSpotAssignmentReport,
-  getSharedPoolUsageReport
+  getSharedPoolUsageReport,
+  getActiveUsersReport
 } from "./reports-controller";
 import { sendReportEmail, isEmailServiceAvailable } from "./report-service";
 import { getTodayInTimezone, formatDateInTimezone, isDateInPast, isDateTodayOrFuture } from "./timezone";
@@ -9375,6 +9376,7 @@ The BCI ParkShare Team`;
   app.get("/api/admin/reports/waitlist-performance", requireAdmin, getReportWaitlistPerformance);
   app.get("/api/admin/reports/spot-assignments", requireAdmin, getSpotAssignmentReport);
   app.get("/api/admin/reports/shared-pool-usage", requireAdmin, getSharedPoolUsageReport);
+  app.get("/api/admin/reports/active-users", requireAdmin, getActiveUsersReport);
   
   // Email report endpoint
   app.post("/api/admin/reports/:type/email", requireAdmin, async (req: Request, res: Response) => {

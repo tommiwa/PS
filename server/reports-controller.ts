@@ -980,3 +980,129 @@ export async function getSharedPoolUsageReport(req: Request, res: Response) {
     res.status(500).json({ error: "Failed to generate shared pool usage report" });
   }
 }
+
+// GET /api/admin/reports/active-users - Who logged in, listed spots, booked spots
+export async function getActiveUsersReport(req: Request, res: Response) {
+  try {
+    const { from, to } = reportQuerySchema.parse(req.query);
+    const dateRange = calculateDateRange(from, to);
+
+    const fromDate = new Date(dateRange.from + 'T00:00:00');
+    const toDate = new Date(dateRange.to + 'T23:59:59');
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
+
+    const [allUsers, allListings, allBookings, allDepartments] = await Promise.all([
+      storage.getAllUsers(),
+      storage.getAllSpotListings(),
+      storage.getAllBookings(),
+      storage.getDepartments?.() || []
+    ]);
+
+    const deptMap = new Map<number, string>();
+    allDepartments.forEach((d: any) => deptMap.set(d.id, d.name));
+
+    const getDeptName = (user: any) => {
+      if (user.departmentId) return deptMap.get(user.departmentId) || 'Unknown';
+      return 'N/A';
+    };
+
+    // Logged in users within range
+    const loggedInUsers = allUsers
+      .filter(u => {
+        if (!u.lastLogin) return false;
+        const loginDate = new Date(u.lastLogin);
+        return loginDate >= fromDate && loginDate <= toDate;
+      })
+      .map(u => ({
+        userId: u.id,
+        name: `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email || 'Unknown',
+        department: getDeptName(u),
+        role: (u.roles?.[0] || 'renter') as string,
+        lastLogin: u.lastLogin ? new Date(u.lastLogin).toISOString() : null
+      }));
+
+    // Today's logins
+    const loginsToday = allUsers.filter(u => {
+      if (!u.lastLogin) return false;
+      const loginDate = new Date(u.lastLogin);
+      return loginDate >= todayStart && loginDate <= todayEnd;
+    }).length;
+
+    // Users who listed spots in the range (using createdAt on listings)
+    const listingsInRange = allListings.filter((l: any) => {
+      const created = new Date(l.createdAt);
+      return created >= fromDate && created <= toDate && !l.deletedAt;
+    });
+
+    const listerMap = new Map<string, { listingCount: number }>();
+    listingsInRange.forEach((l: any) => {
+      const ownerId = l.ownerId;
+      if (!ownerId) return;
+      const existing = listerMap.get(ownerId) || { listingCount: 0 };
+      existing.listingCount++;
+      listerMap.set(ownerId, existing);
+    });
+
+    const listedSpotUsers = Array.from(listerMap.entries()).map(([userId, data]) => {
+      const user = allUsers.find(u => u.id === userId);
+      return {
+        userId,
+        name: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown' : 'Unknown',
+        department: user ? getDeptName(user) : 'N/A',
+        listingCount: data.listingCount
+      };
+    });
+
+    // Users who booked spots in the range — filter by when the booking was created (action date)
+    const bookingsInRange = allBookings.filter((b: any) => {
+      const createdAt = new Date(b.createdAt);
+      return createdAt >= fromDate && createdAt <= toDate && b.status === 'confirmed';
+    });
+
+    const bookerMap = new Map<string, { bookingCount: number; totalAmount: number }>();
+    bookingsInRange.forEach((b: any) => {
+      const renterId = b.renterId;
+      const existing = bookerMap.get(renterId) || { bookingCount: 0, totalAmount: 0 };
+      existing.bookingCount++;
+      existing.totalAmount += Number(b.dailyRate) || 0;
+      bookerMap.set(renterId, existing);
+    });
+
+    const bookedSpotUsers = Array.from(bookerMap.entries()).map(([userId, data]) => {
+      const user = allUsers.find(u => u.id === userId);
+      return {
+        userId,
+        name: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown' : 'Unknown',
+        department: user ? getDeptName(user) : 'N/A',
+        bookingCount: data.bookingCount,
+        totalAmount: data.totalAmount
+      };
+    });
+
+    const response = {
+      summary: {
+        loginsToday,
+        loginsInPeriod: loggedInUsers.length,
+        uniqueListers: listedSpotUsers.length,
+        uniqueBookers: bookedSpotUsers.length,
+        totalListings: listingsInRange.length,
+        totalBookings: bookingsInRange.length
+      },
+      loggedInUsers,
+      listedSpotUsers,
+      bookedSpotUsers,
+      dateRange,
+      generatedAt: new Date().toISOString()
+    };
+
+    res.json(response);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: "Invalid query parameters", details: error.errors });
+    }
+    console.error("Error generating active users report:", error);
+    res.status(500).json({ error: "Failed to generate active users report" });
+  }
+}
