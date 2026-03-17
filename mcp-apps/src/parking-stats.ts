@@ -72,7 +72,12 @@ async function loadStats(role: string) {
       renderOwnerStats(data);
     }
   } catch (err: any) {
-    contentEl.innerHTML = `<div class="empty-state"><p>Error: ${escapeHtml(err.message)}</p></div>`;
+    const errDiv = document.createElement("div");
+    errDiv.className = "empty-state";
+    const errP = document.createElement("p");
+    errP.textContent = `Error: ${err.message}`;
+    errDiv.appendChild(errP);
+    contentEl.replaceChildren(errDiv);
   }
 }
 
