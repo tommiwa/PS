@@ -18,16 +18,25 @@ interface SpotResult {
   donateToCharity?: boolean;
 }
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function getSpotDateDisplay(spot: SpotResult): string {
   if (spot.listingType === 'single' && spot.singleDate) {
-    return spot.singleDate;
+    return escapeHtml(spot.singleDate);
   }
   if (spot.listingType === 'period' && spot.periodStartDate && spot.periodEndDate) {
-    return `${spot.periodStartDate} to ${spot.periodEndDate}`;
+    return `${escapeHtml(spot.periodStartDate)} to ${escapeHtml(spot.periodEndDate)}`;
   }
   if (spot.listingType === 'recurring' && spot.recurringStartDate && spot.recurringEndDate) {
-    const days = spot.recurringDays?.join(', ') || '';
-    return `${spot.recurringStartDate} to ${spot.recurringEndDate} (${days})`;
+    const days = spot.recurringDays?.map(escapeHtml).join(', ') || '';
+    return `${escapeHtml(spot.recurringStartDate)} to ${escapeHtml(spot.recurringEndDate)} (${days})`;
   }
   return 'N/A';
 }
@@ -58,23 +67,23 @@ function renderSpots(spots: SpotResult[]) {
 
 function renderSpotCard(spot: SpotResult): string {
   const charityBadge = spot.donateToCharity ? `<span class="badge badge-charity">Charity</span>` : "";
-  const listingLabel = spot.listingType === 'single' ? 'Single day' : spot.listingType === 'period' ? 'Period' : spot.listingType === 'recurring' ? 'Recurring' : spot.listingType;
+  const listingLabel = spot.listingType === 'single' ? 'Single day' : spot.listingType === 'period' ? 'Period' : spot.listingType === 'recurring' ? 'Recurring' : escapeHtml(spot.listingType);
   return `
     <div class="spot-card">
       <div class="spot-header">
-        <div class="spot-name">Spot ${spot.spotNumber} ${charityBadge}</div>
-        <div class="spot-price">$${spot.dailyRate}/day</div>
+        <div class="spot-name">Spot ${escapeHtml(spot.spotNumber)} ${charityBadge}</div>
+        <div class="spot-price">$${escapeHtml(spot.dailyRate)}/day</div>
       </div>
       <div class="spot-meta">
         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-        ${spot.location}
+        ${escapeHtml(spot.location)}
       </div>
       <div class="spot-meta">
         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         ${getSpotDateDisplay(spot)}
       </div>
       <div class="spot-badges">
-        <span class="badge badge-type">${spot.spotType}</span>
+        <span class="badge badge-type">${escapeHtml(spot.spotType)}</span>
         <span class="badge badge-listing">${listingLabel}</span>
       </div>
     </div>`;
