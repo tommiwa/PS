@@ -115,12 +115,22 @@ async function loadSpots(location?: string, date?: string) {
       allSpots = JSON.parse(text);
     } catch {
       allSpots = [];
-      contentEl.innerHTML = `<div class="empty-state"><p>${text}</p></div>`;
+      const parseErrDiv = document.createElement("div");
+      parseErrDiv.className = "empty-state";
+      const parseErrP = document.createElement("p");
+      parseErrP.textContent = text;
+      parseErrDiv.appendChild(parseErrP);
+      contentEl.replaceChildren(parseErrDiv);
       return;
     }
     renderSpots(allSpots);
   } catch (err: any) {
-    contentEl.innerHTML = `<div class="empty-state"><p>Error loading spots: ${err.message}</p></div>`;
+    const errDiv = document.createElement("div");
+    errDiv.className = "empty-state";
+    const errP = document.createElement("p");
+    errP.textContent = `Error loading spots: ${err.message}`;
+    errDiv.appendChild(errP);
+    contentEl.replaceChildren(errDiv);
   }
 }
 
