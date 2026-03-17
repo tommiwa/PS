@@ -31,6 +31,15 @@ function esc(str: string): string {
     .replace(/'/g, "&#039;");
 }
 
+function setEmptyState(message: string): void {
+  const div = document.createElement("div");
+  div.className = "empty-state";
+  const p = document.createElement("p");
+  p.textContent = message;
+  div.appendChild(p);
+  contentEl.replaceChildren(div);
+}
+
 function getStatusBadgeClass(status: string): string {
   switch (status.toLowerCase()) {
     case "confirmed": return "badge-confirmed";
@@ -65,7 +74,7 @@ function renderBookings(bookings: BookingResult[]) {
   countEl.textContent = `${filtered.length} booking${filtered.length !== 1 ? "s" : ""}`;
 
   if (filtered.length === 0) {
-    contentEl.innerHTML = `<div class="empty-state"><p>No ${currentFilter === "all" ? "" : esc(currentFilter) + " "}bookings found</p></div>`;
+    setEmptyState(`No ${currentFilter === "all" ? "" : currentFilter + " "}bookings found`);
     return;
   }
 
@@ -114,13 +123,13 @@ async function loadBookings() {
       allBookings = JSON.parse(text);
     } catch {
       allBookings = [];
-      contentEl.innerHTML = `<div class="empty-state"><p>${esc(text)}</p></div>`;
+      setEmptyState(text);
       return;
     }
     renderStats(allBookings);
     renderBookings(allBookings);
   } catch (err: any) {
-    contentEl.innerHTML = `<div class="empty-state"><p>Error: ${esc(err.message)}</p></div>`;
+    setEmptyState(`Error: ${err.message}`);
   }
 }
 
