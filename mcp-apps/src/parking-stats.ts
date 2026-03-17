@@ -59,7 +59,7 @@ function renderOwnerStats(data: any) {
 }
 
 async function loadStats(role: string) {
-  contentEl.innerHTML = `<div class="loading">Loading ${role} statistics...</div>`;
+  contentEl.innerHTML = `<div class="loading">Loading ${escapeHtml(role)} statistics...</div>`;
   try {
     const toolName = role === "renter" ? "get_renter_stats" : "get_owner_stats";
     const result = await app.callServerTool({ name: toolName, arguments: {} });
