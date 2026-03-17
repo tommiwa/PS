@@ -22,15 +22,6 @@ const app = new App({ name: "ParkShare My Bookings", version: "1.0.0" });
 let allBookings: BookingResult[] = [];
 let currentFilter = "all";
 
-function esc(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
 function setEmptyState(message: string): void {
   const div = document.createElement("div");
   div.className = "empty-state";
@@ -78,7 +69,10 @@ function renderBookings(bookings: BookingResult[]) {
     return;
   }
 
-  contentEl.innerHTML = `<div class="booking-list">${filtered.map(renderBookingCard).join("")}</div>`;
+  const list = document.createElement("div");
+  list.className = "booking-list";
+  filtered.forEach(booking => list.appendChild(renderBookingCard(booking)));
+  contentEl.replaceChildren(list);
 
   contentEl.querySelectorAll(".btn-cancel").forEach(btn => {
     btn.addEventListener("click", async (e) => {
@@ -98,20 +92,47 @@ function renderBookings(bookings: BookingResult[]) {
   });
 }
 
-function renderBookingCard(booking: BookingResult): string {
+function renderBookingCard(booking: BookingResult): HTMLElement {
   const canCancel = ["confirmed", "pending"].includes(booking.status.toLowerCase());
-  return `
-    <div class="booking-card">
-      <div class="booking-info">
-        <div class="booking-spot">Spot ${esc(booking.spotNumber)}</div>
-        <div class="booking-detail">Date: ${esc(booking.bookingDate)}</div>
-        <div class="booking-detail">Cost: $${esc(booking.totalAmount)} | Payment: ${esc(booking.paymentStatus)}</div>
-      </div>
-      <div class="booking-actions">
-        <span class="badge ${getStatusBadgeClass(booking.status)}">${esc(booking.status)}</span>
-        ${canCancel ? `<button class="btn btn-danger btn-cancel" data-id="${booking.bookingId}">Cancel</button>` : ""}
-      </div>
-    </div>`;
+
+  const card = document.createElement("div");
+  card.className = "booking-card";
+
+  const info = document.createElement("div");
+  info.className = "booking-info";
+
+  const spot = document.createElement("div");
+  spot.className = "booking-spot";
+  spot.textContent = `Spot ${booking.spotNumber}`;
+
+  const dateEl = document.createElement("div");
+  dateEl.className = "booking-detail";
+  dateEl.textContent = `Date: ${booking.bookingDate}`;
+
+  const cost = document.createElement("div");
+  cost.className = "booking-detail";
+  cost.textContent = `Cost: $${booking.totalAmount} | Payment: ${booking.paymentStatus}`;
+
+  info.append(spot, dateEl, cost);
+
+  const actions = document.createElement("div");
+  actions.className = "booking-actions";
+
+  const badge = document.createElement("span");
+  badge.className = `badge ${getStatusBadgeClass(booking.status)}`;
+  badge.textContent = booking.status;
+  actions.appendChild(badge);
+
+  if (canCancel) {
+    const cancelBtn = document.createElement("button");
+    cancelBtn.className = "btn btn-danger btn-cancel";
+    cancelBtn.dataset.id = String(booking.bookingId);
+    cancelBtn.textContent = "Cancel";
+    actions.appendChild(cancelBtn);
+  }
+
+  card.append(info, actions);
+  return card;
 }
 
 async function loadBookings() {
