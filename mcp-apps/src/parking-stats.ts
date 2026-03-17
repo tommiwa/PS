@@ -6,6 +6,15 @@ const roleTabsEl = document.getElementById("role-tabs")!;
 
 const app = new App({ name: "ParkShare Stats", version: "1.0.0" });
 
+function escapeHtml(value: unknown): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 let currentRole = "renter";
 
 function renderRenterStats(data: any) {
@@ -22,7 +31,7 @@ function renderRenterStats(data: any) {
 
   const html = `<div class="stats-grid">${stats.map(s => `
     <div class="stat-card ${s.color}">
-      <div class="stat-value" ${(s as any).isText ? 'style="font-size:14px"' : ''}>${s.value}</div>
+      <div class="stat-value" ${(s as any).isText ? 'style="font-size:14px"' : ''}>${escapeHtml(s.value)}</div>
       <div class="stat-label">${s.label}</div>
     </div>`).join("")}</div>`;
 
@@ -42,7 +51,7 @@ function renderOwnerStats(data: any) {
 
   const html = `<div class="stats-grid">${stats.map(s => `
     <div class="stat-card ${s.color}">
-      <div class="stat-value">${s.value}</div>
+      <div class="stat-value">${escapeHtml(s.value)}</div>
       <div class="stat-label">${s.label}</div>
     </div>`).join("")}</div>`;
 
@@ -63,7 +72,7 @@ async function loadStats(role: string) {
       renderOwnerStats(data);
     }
   } catch (err: any) {
-    contentEl.innerHTML = `<div class="empty-state"><p>Error: ${err.message}</p></div>`;
+    contentEl.innerHTML = `<div class="empty-state"><p>Error: ${escapeHtml(err.message)}</p></div>`;
   }
 }
 
