@@ -22,6 +22,15 @@ const app = new App({ name: "ParkShare My Bookings", version: "1.0.0" });
 let allBookings: BookingResult[] = [];
 let currentFilter = "all";
 
+function esc(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 function getStatusBadgeClass(status: string): string {
   switch (status.toLowerCase()) {
     case "confirmed": return "badge-confirmed";
@@ -85,12 +94,12 @@ function renderBookingCard(booking: BookingResult): string {
   return `
     <div class="booking-card">
       <div class="booking-info">
-        <div class="booking-spot">Spot ${booking.spotNumber}</div>
-        <div class="booking-detail">Date: ${booking.bookingDate}</div>
-        <div class="booking-detail">Cost: $${booking.totalAmount} | Payment: ${booking.paymentStatus}</div>
+        <div class="booking-spot">Spot ${esc(booking.spotNumber)}</div>
+        <div class="booking-detail">Date: ${esc(booking.bookingDate)}</div>
+        <div class="booking-detail">Cost: $${esc(booking.totalAmount)} | Payment: ${esc(booking.paymentStatus)}</div>
       </div>
       <div class="booking-actions">
-        <span class="badge ${getStatusBadgeClass(booking.status)}">${booking.status}</span>
+        <span class="badge ${getStatusBadgeClass(booking.status)}">${esc(booking.status)}</span>
         ${canCancel ? `<button class="btn btn-danger btn-cancel" data-id="${booking.bookingId}">Cancel</button>` : ""}
       </div>
     </div>`;
@@ -105,13 +114,13 @@ async function loadBookings() {
       allBookings = JSON.parse(text);
     } catch {
       allBookings = [];
-      contentEl.innerHTML = `<div class="empty-state"><p>${text}</p></div>`;
+      contentEl.innerHTML = `<div class="empty-state"><p>${esc(text)}</p></div>`;
       return;
     }
     renderStats(allBookings);
     renderBookings(allBookings);
   } catch (err: any) {
-    contentEl.innerHTML = `<div class="empty-state"><p>Error: ${err.message}</p></div>`;
+    contentEl.innerHTML = `<div class="empty-state"><p>Error: ${esc(err.message)}</p></div>`;
   }
 }
 
