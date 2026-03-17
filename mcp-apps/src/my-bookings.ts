@@ -65,7 +65,7 @@ function renderBookings(bookings: BookingResult[]) {
   countEl.textContent = `${filtered.length} booking${filtered.length !== 1 ? "s" : ""}`;
 
   if (filtered.length === 0) {
-    contentEl.innerHTML = `<div class="empty-state"><p>No ${currentFilter === "all" ? "" : currentFilter + " "}bookings found</p></div>`;
+    contentEl.innerHTML = `<div class="empty-state"><p>No ${currentFilter === "all" ? "" : esc(currentFilter) + " "}bookings found</p></div>`;
     return;
   }
 
