@@ -9,16 +9,24 @@ export interface ReportFilters {
   scope: ReportScope;
 }
 
+// Format a local Date as YYYY-MM-DD without UTC conversion
+function toLocalDateString(date: Date): string {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 export function useReportFilters() {
-  // Default to previous calendar month (1st to last day)
+  // Default to current calendar month (1st to last day)
   const getDefaultDates = () => {
     const now = new Date();
-    const firstOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const lastOfPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+    const firstOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastOfCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
     
     return {
-      from: firstOfPrevMonth.toISOString().split('T')[0],
-      to: lastOfPrevMonth.toISOString().split('T')[0]
+      from: toLocalDateString(firstOfCurrentMonth),
+      to: toLocalDateString(lastOfCurrentMonth)
     };
   };
 

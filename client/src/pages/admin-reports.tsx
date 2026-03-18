@@ -230,7 +230,19 @@ export default function AdminReportsPage() {
                 <CardHeader>
                   <div className="flex justify-between items-start flex-wrap gap-2">
                     <div>
-                      <CardTitle>Usage by Employee</CardTitle>
+                      <CardTitle className="flex items-center gap-3 flex-wrap">
+                        Usage by Employee
+                        {(() => {
+                          const from = new Date(filters.dateFrom + 'T00:00:00');
+                          const to = new Date(sharedPoolDateTo + 'T00:00:00');
+                          const fromLabel = from.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                          const toLabel = to.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                          const label = fromLabel === toLabel ? fromLabel : `${fromLabel} – ${toLabel}`;
+                          return (
+                            <span className="text-sm font-normal text-muted-foreground">{label}</span>
+                          );
+                        })()}
+                      </CardTitle>
                       <CardDescription>
                         {(() => {
                           const allBookings = sharedPoolUsageQuery.data!.usageByUser.flatMap(u => u.bookings);
