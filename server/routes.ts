@@ -3109,16 +3109,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`[Booking] Using CORRECT listing ${listing.id} with price: dailyRate=${actualDailyRate}, totalAmount=${actualTotalAmount}`);
 
-      // Create the booking with the authenticated user as renter
-      const newBooking = await storage.createBooking({
-        ...validatedData,
-        renterId: userId,
-        // Ensure ownerId matches the spot owner
-        ownerId: spot.ownerId || "unassigned",
-        // SECURITY: Override frontend prices with actual database prices
-        dailyRate: actualDailyRate.toString(),
-        totalAmount: actualTotalAmount.toString()
-      } as any); // Type assertion since we're adding required fields server-side
+      // RACE CONDITION PREVENTION: Wrap the duplicate check + booking insert in a
+      // transaction with SELECT FOR UPDATE on the listing row.
+      // This ensures that two concurrent requests cannot both pass the availability
+      // check and both succeed — only one will acquire the row lock; the other will
+      // block until the first commits, then see the listing is no longer 'available'.
+      let newBooking: any;
+      try {
+        newBooking = await db.transaction(async (tx) => {
+          // Lock the listing row for this transaction to prevent concurrent inserts
+          const lockedListings = await tx
+            .select({ id: spotListings.id, status: spotListings.status })
+            .from(spotListings)
+            .where(eq(spotListings.id, listing.id))
+            .for('update');
+
+          const lockedListing = lockedListings[0];
+
+          // Re-check listing status inside the transaction (may have changed)
+          if (!lockedListing || lockedListing.status !== 'available') {
+            throw Object.assign(new Error("Spot no longer available"), { statusCode: 409, userMessage: "This spot has just been booked by another user. Please choose a different date." });
+          }
+
+          // Re-check for any existing non-cancelled booking on this spot+date inside the transaction
+          const dupBookings = await tx
+            .select({ id: bookings.id })
+            .from(bookings)
+            .where(and(
+              eq(bookings.spotId, validatedData.spotId),
+              eq(bookings.bookingDate, validatedData.bookingDate),
+              not(eq(bookings.status, 'cancelled'))
+            ))
+            .limit(1);
+
+          if (dupBookings.length > 0) {
+            throw Object.assign(new Error("Duplicate booking"), { statusCode: 409, userMessage: "This spot has already been booked for that date." });
+          }
+
+          // Insert the booking inside the transaction
+          const [created] = await tx
+            .insert(bookings)
+            .values({
+              ...validatedData,
+              renterId: userId,
+              ownerId: spot.ownerId || "unassigned",
+              dailyRate: actualDailyRate.toString(),
+              totalAmount: actualTotalAmount.toString(),
+            } as any)
+            .returning();
+
+          return created;
+        });
+      } catch (txErr: any) {
+        if (txErr.statusCode === 409) {
+          console.warn(`[Booking] Duplicate booking prevented for spot ${validatedData.spotId} on ${bookingDate}: ${txErr.message}`);
+          return res.status(409).json({ 
+            error: "Spot no longer available", 
+            message: txErr.userMessage || "This spot has already been booked. Please try a different date." 
+          });
+        }
+        // Re-throw unexpected errors to be caught by outer try/catch
+        throw txErr;
+      }
 
       // Handle period listings: split into individual day listings
       // This ensures each day remains independently bookable in the share pool
@@ -3418,9 +3470,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       res.json(newBooking);
-    } catch (error) {
+    } catch (error: any) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid booking data", details: error.errors });
+      }
+      // Handle PostgreSQL unique constraint violation (last line of defence against race conditions)
+      if (error?.code === '23505' && error?.constraint?.includes('UDX_bookings_active_spot_date')) {
+        console.warn("[Booking] Unique constraint violation prevented duplicate booking:", error.detail);
+        return res.status(409).json({ 
+          error: "Spot no longer available", 
+          message: "This spot has already been booked for that date. Please try a different date." 
+        });
       }
       console.error("Error creating booking:", error);
       res.status(500).json({ error: "Failed to create booking" });

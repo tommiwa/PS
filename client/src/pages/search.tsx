@@ -1031,6 +1031,7 @@ export default function Search() {
               onCancel={handleCancelBooking}
               selectedDate={userActiveLock?.bookingDate || selectedSpot.availability?.date || searchCriteria.date}
               isDateLocked={true}
+              isExternallyPending={createBookingMutation.isPending}
             />
           )}
         </DialogContent>

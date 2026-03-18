@@ -9,6 +9,20 @@ interface MigrationCheck {
 
 const migrations: MigrationCheck[] = [
   {
+    name: "bookings_unique_active_spot_date",
+    checkQuery: `SELECT EXISTS (
+      SELECT FROM pg_indexes
+      WHERE schemaname = 'public'
+        AND tablename = 'bookings'
+        AND indexname = 'UDX_bookings_active_spot_date'
+    )`,
+    migrationStatements: [
+      `CREATE UNIQUE INDEX IF NOT EXISTS "UDX_bookings_active_spot_date"
+       ON bookings (spot_id, booking_date)
+       WHERE status NOT IN ('cancelled')`
+    ],
+  },
+  {
     name: "scheduled_spot_assignments",
     checkQuery: `SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'scheduled_spot_assignments')`,
     migrationStatements: [

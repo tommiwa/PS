@@ -48,9 +48,10 @@ interface BookingFormProps {
   onCancel: () => void
   selectedDate?: string // Pre-selected date from calendar
   isDateLocked?: boolean // Whether date can be changed
+  isExternallyPending?: boolean // Set to true while parent mutation is in-flight
 }
 
-export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLocked = false }: BookingFormProps) {
+export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLocked = false, isExternallyPending = false }: BookingFormProps) {
   // Get authenticated user for auto-population
   const { user: authUser } = useAuth();
   const { toast } = useToast();
@@ -118,6 +119,18 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
   const [dateError, setDateError] = useState("")
   const [submitError, setSubmitError] = useState("")
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+
+  // Reset local isSubmitting when the parent mutation settles (completes or errors)
+  // so the user can retry after a failed submission without closing the dialog.
+  const prevExternalPendingRef = useRef(false);
+  useEffect(() => {
+    const wasExternallyPending = prevExternalPendingRef.current;
+    prevExternalPendingRef.current = isExternallyPending;
+    // When external pending transitions from true → false, the mutation settled
+    if (wasExternallyPending && !isExternallyPending) {
+      setIsSubmitting(false);
+    }
+  }, [isExternallyPending]);
 
   // Deduction month = calendar month of the booking date
   const getPayrollDeductionMonth = (bookingDate: string): string => {
@@ -224,6 +237,10 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Guard against re-entry (double-tap, rapid re-submit)
+    if (isSubmitting || isExternallyPending) return;
+
     setSubmitError("")
     setDateError("")
     setValidationErrors({})
@@ -239,18 +256,15 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
     
     setIsSubmitting(true)
     
-    try {
-      // For BCI-managed spots, set payment method to Payroll
-      const submitData = {
-        ...formData,
-        spotId: spot.id,
-        paymentMethod: isPayrollSpot ? "Payroll" : formData.paymentMethod
-      };
-      // Simply pass the data to parent - parent handles the mutation and toasts
-      onSubmit(submitData)
-    } finally {
-      setIsSubmitting(false)
-    }
+    // For BCI-managed spots, set payment method to Payroll
+    const submitData = {
+      ...formData,
+      spotId: spot.id,
+      paymentMethod: isPayrollSpot ? "Payroll" : formData.paymentMethod
+    };
+    // Pass the data to parent - parent handles the mutation and toasts.
+    // isSubmitting stays true until parent clears it via isExternallyPending.
+    onSubmit(submitData)
   }
 
   const getSpotTypeIcon = () => {
@@ -632,11 +646,11 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
             </Button>
             <Button 
               type="submit" 
-              disabled={isSubmitting || !formData.paymentMethod}
+              disabled={isSubmitting || isExternallyPending || !formData.paymentMethod}
               className="flex-1"
               data-testid="button-submit-booking"
             >
-              {isSubmitting ? (
+              {(isSubmitting || isExternallyPending) ? (
                 <>
                   <Clock className="h-4 w-4 mr-2 animate-spin" />
                   Processing...
