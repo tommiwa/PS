@@ -25,12 +25,30 @@ export async function apiRequest(
     ...(options.body ? { "Content-Type": "application/json" } : {}),
   };
 
-  const res = await fetch(url, {
+  const fetchOptions: RequestInit = {
     method: options.method,
     headers,
     body: options.body ? JSON.stringify(options.body) : undefined,
     credentials: "include",
-  });
+  };
+
+  const res = await fetch(url, fetchOptions);
+
+  if (res.status === 401) {
+    try {
+      const refreshRes = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (refreshRes.ok) {
+        const retryRes = await fetch(url, fetchOptions);
+        await throwIfResNotOk(retryRes);
+        return retryRes;
+      }
+    } catch {
+      // If the refresh request itself fails, fall through to throw the original 401
+    }
+  }
 
   await throwIfResNotOk(res);
   return res;
