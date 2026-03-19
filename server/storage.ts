@@ -421,18 +421,30 @@ export class MemStorage implements IStorage {
 
   private async initializeSeedData() {
     try {
+      // In production, remove any seed-admin listings that may have been created by mistake
+      if (process.env.NODE_ENV === 'production') {
+        const removed = await db.delete(spotListings).where(eq(spotListings.ownerId, 'seed-admin')).returning({ id: spotListings.id });
+        if (removed.length > 0) {
+          console.log(`[startup] Removed ${removed.length} sample seed listing(s) from production database`);
+        }
+      }
+
       // Check if parking spots already exist in database
       const existingSpots = await db.select().from(parkingSpots).limit(1);
       
       if (existingSpots.length > 0) {
-        // Database already has spots - check if we need to add sample deal-tier listings
-        const existingSeedListings = await db.select().from(spotListings)
-          .where(eq(spotListings.ownerId, 'seed-admin')).limit(1);
-        if (existingSeedListings.length === 0) {
-          console.log('Adding sample deal-tier listings to existing spots...');
-          await this.createSampleDealListings();
+        // Database already has spots - check if we need to add sample deal-tier listings (dev only)
+        if (process.env.NODE_ENV !== 'production') {
+          const existingSeedListings = await db.select().from(spotListings)
+            .where(eq(spotListings.ownerId, 'seed-admin')).limit(1);
+          if (existingSeedListings.length === 0) {
+            console.log('Adding sample deal-tier listings to existing spots...');
+            await this.createSampleDealListings();
+          } else {
+            console.log('Database already contains parking spots and sample listings, skipping seed data');
+          }
         } else {
-          console.log('Database already contains parking spots and sample listings, skipping seed data');
+          console.log('Database already contains parking spots, skipping seed data');
         }
         return;
       }
@@ -517,7 +529,9 @@ export class MemStorage implements IStorage {
         console.log(`Successfully inserted ${parkingSpotsData.length} parking spots into database`);
       }
 
-      await this.createSampleDealListings();
+      if (process.env.NODE_ENV !== 'production') {
+        await this.createSampleDealListings();
+      }
     } catch (error) {
       console.error('Error initializing seed data:', error);
       // Don't throw - let the application continue even if seed fails
