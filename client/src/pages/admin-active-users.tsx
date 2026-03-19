@@ -24,11 +24,11 @@ const MONTHS = [
 
 function getDefaultDates() {
   const now = new Date();
-  const firstOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const lastOfPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+  const firstOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const lastOfCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
   return {
-    from: firstOfPrevMonth.toISOString().split('T')[0],
-    to: lastOfPrevMonth.toISOString().split('T')[0]
+    from: firstOfCurrentMonth.toISOString().split('T')[0],
+    to: lastOfCurrentMonth.toISOString().split('T')[0]
   };
 }
 
