@@ -425,8 +425,15 @@ export class MemStorage implements IStorage {
       const existingSpots = await db.select().from(parkingSpots).limit(1);
       
       if (existingSpots.length > 0) {
-        // Database already has spots, no need to seed
-        console.log('Database already contains parking spots, skipping seed data');
+        // Database already has spots - check if we need to add sample deal-tier listings
+        const existingSeedListings = await db.select().from(spotListings)
+          .where(eq(spotListings.ownerId, 'seed-admin')).limit(1);
+        if (existingSeedListings.length === 0) {
+          console.log('Adding sample deal-tier listings to existing spots...');
+          await this.createSampleDealListings();
+        } else {
+          console.log('Database already contains parking spots and sample listings, skipping seed data');
+        }
         return;
       }
       
@@ -509,9 +516,57 @@ export class MemStorage implements IStorage {
         await db.insert(parkingSpots).values(parkingSpotsData);
         console.log(`Successfully inserted ${parkingSpotsData.length} parking spots into database`);
       }
+
+      await this.createSampleDealListings();
     } catch (error) {
       console.error('Error initializing seed data:', error);
       // Don't throw - let the application continue even if seed fails
+    }
+  }
+
+  private async createSampleDealListings() {
+    try {
+      const sampleSpots = await db.select().from(parkingSpots).limit(10);
+      if (sampleSpots.length < 10) {
+        console.log('Not enough spots for sample deal listings');
+        return;
+      }
+
+      const today = new Date();
+      const sampleListings = [
+        { spotId: sampleSpots[0].id, dailyRate: "0.00", notes: "Free spot" },
+        { spotId: sampleSpots[1].id, dailyRate: "3.00", notes: "Steal deal" },
+        { spotId: sampleSpots[2].id, dailyRate: "5.00", notes: "Steal deal" },
+        { spotId: sampleSpots[3].id, dailyRate: "7.00", notes: "Hot deal" },
+        { spotId: sampleSpots[4].id, dailyRate: "10.00", notes: "Hot deal" },
+        { spotId: sampleSpots[5].id, dailyRate: "11.00", notes: "Top deal" },
+        { spotId: sampleSpots[6].id, dailyRate: "12.00", notes: "Top deal" },
+        { spotId: sampleSpots[7].id, dailyRate: "15.00", notes: "Regular price" },
+        { spotId: sampleSpots[8].id, dailyRate: "4.00", notes: "Steal deal - charity", donateToCharity: true },
+        { spotId: sampleSpots[9].id, dailyRate: "8.00", notes: "Hot deal - charity", donateToCharity: true },
+      ];
+
+      for (const listing of sampleListings) {
+        for (let d = 0; d < 5; d++) {
+          const date = new Date(today);
+          date.setDate(today.getDate() + d);
+          const dateStr = date.toISOString().split('T')[0];
+          await db.insert(spotListings).values({
+            spotId: listing.spotId,
+            ownerId: "seed-admin",
+            listingType: "single" as any,
+            singleDate: dateStr,
+            dailyRate: listing.dailyRate,
+            status: "available" as any,
+            notes: listing.notes,
+            donateToCharity: (listing as any).donateToCharity ?? false,
+            createdByAdmin: true,
+          });
+        }
+      }
+      console.log('Successfully created sample deal-tier listings for 10 spots across 5 days');
+    } catch (error) {
+      console.error('Error creating sample deal listings:', error);
     }
   }
 

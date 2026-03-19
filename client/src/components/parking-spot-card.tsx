@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import { MapPin, Car, Zap, Accessibility, Building, Building2, User, Clock, Calendar, Map, Gift, Tag, Sun, Heart, CreditCard } from "lucide-react"
+import { MapPin, Car, Zap, Accessibility, Building, Building2, User, Clock, Calendar, Map, Gift, Tag, Sun, Heart, CreditCard, Flame } from "lucide-react"
 import type { ParkingSpot, ParkingSpotWithUser } from "@shared/schema"
 import { useAuth } from "@/contexts/auth-context"
 import { useLock } from "@/contexts/LockContext"
@@ -264,8 +264,44 @@ export function ParkingSpotCard({
         </Tooltip>
       );
     }
-    // Top Deal tag - price > $0 and <= $12
-    else if (price > 0 && price <= 12) {
+    // Steal tag - price > $0 and <= $5
+    else if (price > 0 && price <= 5) {
+      tags.push(
+        <Tooltip key="steal" delayDuration={100}>
+          <TooltipTrigger asChild>
+            <span className="cursor-help">
+              <Badge className="gap-1 bg-violet-500 text-white border-violet-600 hover:bg-violet-600">
+                <Zap className="h-3 w-3" />
+                Steal
+              </Badge>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent className="z-[100]">
+            <p>Incredible value! This spot is $5/day or less — the best price you'll find!</p>
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+    // Hot Deal tag - price > $5 and <= $10
+    else if (price > 5 && price <= 10) {
+      tags.push(
+        <Tooltip key="hot-deal" delayDuration={100}>
+          <TooltipTrigger asChild>
+            <span className="cursor-help">
+              <Badge className="gap-1 bg-orange-500 text-white border-orange-600 hover:bg-orange-600">
+                <Flame className="h-3 w-3" />
+                Hot Deal
+              </Badge>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent className="z-[100]">
+            <p>This spot is $10/day or less — one of the hottest deals available!</p>
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+    // Top Deal tag - price > $10 and <= $12
+    else if (price > 10 && price <= 12) {
       tags.push(
         <Tooltip key="top-deal" delayDuration={100}>
           <TooltipTrigger asChild>

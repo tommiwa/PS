@@ -15,7 +15,9 @@ import {
   Car,
   Accessibility,
   Building,
-  Heart
+  Heart,
+  Flame,
+  Tag
 } from "lucide-react"
 import { format, startOfWeek, addDays, addWeeks, addMonths, subWeeks, subMonths, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, getDay } from "date-fns"
 import { isPastDate } from "@/utils/date-utils"
@@ -220,6 +222,14 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
     }
     // Fallback to primary donateToCharity
     return spot.donateToCharity || false;
+  }
+
+  const getDealIcon = (price: number, size: string = "h-3 w-3") => {
+    if (price <= 0) return null;
+    if (price <= 5) return <Zap className={`${size} text-violet-500`} />;
+    if (price <= 10) return <Flame className={`${size} text-orange-500`} />;
+    if (price <= 12) return <Tag className={`${size} text-teal-500`} />;
+    return null;
   }
 
   const getSpotsForDate = (date: Date): ParkingSpot[] => {
@@ -530,6 +540,7 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                                 {isCharityOnDate(spot, currentDate) && (
                                   <Heart className="h-3 w-3 text-pink-500 fill-pink-500" />
                                 )}
+                                {getDealIcon(spotInfo?.price || spot.price)}
                                 ${spotInfo?.price || spot.price}
                               </div>
                               <div className="text-xs text-muted-foreground">per day</div>
@@ -647,6 +658,7 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                               {isCharityOnDate(spot, day) && (
                                 <Heart className="h-2.5 w-2.5 text-pink-500 fill-pink-500" />
                               )}
+                              {getDealIcon(spotInfo?.price || spot.price, "h-2.5 w-2.5")}
                               ${spotInfo?.price || spot.price}
                             </span>
                           )}
@@ -751,6 +763,7 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                               {isCharityOnDate(spot, day) && (
                                 <Heart className="h-2 w-2 text-pink-500 fill-pink-500" />
                               )}
+                              {getDealIcon(spotInfo?.price || spot.price, "h-2 w-2")}
                               ${spotInfo?.price || spot.price}
                             </span>
                           )}
@@ -916,6 +929,7 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                           {isCharityOnDate(spot, expandedDay.date) && (
                             <Heart className="h-4 w-4 text-pink-500 fill-pink-500" />
                           )}
+                          {getDealIcon(spotInfo?.price || spot.price, "h-4 w-4")}
                           ${spotInfo?.price || spot.price}
                         </span>
                       )}

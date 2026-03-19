@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle, User, Zap, Accessibility, Building, CreditCard, Timer, Info, Phone, Banknote, Heart, Tag, Sparkles, Map } from "lucide-react"
+import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle, User, Zap, Accessibility, Building, CreditCard, Timer, Info, Phone, Banknote, Heart, Tag, Sparkles, Map, Flame } from "lucide-react"
 import { isWeekend, parseISO, format } from "date-fns"
 import type { ParkingSpot as DBParkingSpot } from "@shared/schema"
 import { isPastDate, getTodayString } from "@/utils/date-utils"
@@ -339,7 +339,9 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
                 const bookingDate = formData.date;
                 const isCharityListing = spot.dateToCharity?.[bookingDate] ?? spot.donateToCharity ?? false;
                 const isWeekendBooking = bookingDate && isWeekend(parseISO(bookingDate));
-                const isTopDeal = spot.price <= 10;
+                const isSteal = spot.price > 0 && spot.price <= 5;
+                const isHotDeal = spot.price > 5 && spot.price <= 10;
+                const isTopDeal = spot.price > 10 && spot.price <= 12;
                 
                 return (
                   <div className="flex items-center gap-1.5 flex-wrap">
@@ -359,6 +361,38 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
                         </TooltipContent>
                       </Tooltip>
                     )}
+                    {isSteal && (
+                      <Tooltip delayDuration={100}>
+                        <TooltipTrigger asChild>
+                          <span className="cursor-help inline-flex">
+                            <Badge className="bg-violet-500 text-white border-violet-600 hover:bg-violet-600 flex items-center gap-1 cursor-help">
+                              <Zap className="h-3 w-3" />
+                              Steal
+                            </Badge>
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="max-w-xs z-[100]">
+                          <p className="font-medium">Steal</p>
+                          <p className="text-xs text-muted-foreground">Incredible value! This spot is $5/day or less — the best price you'll find!</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                    {isHotDeal && (
+                      <Tooltip delayDuration={100}>
+                        <TooltipTrigger asChild>
+                          <span className="cursor-help inline-flex">
+                            <Badge className="bg-orange-500 text-white border-orange-600 hover:bg-orange-600 flex items-center gap-1 cursor-help">
+                              <Flame className="h-3 w-3" />
+                              Hot Deal
+                            </Badge>
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="max-w-xs z-[100]">
+                          <p className="font-medium">Hot Deal</p>
+                          <p className="text-xs text-muted-foreground">This spot is $10/day or less — one of the hottest deals available!</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
                     {isTopDeal && (
                       <Tooltip delayDuration={100}>
                         <TooltipTrigger asChild>
@@ -371,7 +405,7 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
                         </TooltipTrigger>
                         <TooltipContent side="bottom" className="max-w-xs z-[100]">
                           <p className="font-medium">Great Value</p>
-                          <p className="text-xs text-muted-foreground">This spot is priced at $10/day or less - one of the best deals available!</p>
+                          <p className="text-xs text-muted-foreground">This spot is priced at $12/day or less - one of the best deals available!</p>
                         </TooltipContent>
                       </Tooltip>
                     )}
