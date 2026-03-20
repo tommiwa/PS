@@ -188,16 +188,17 @@ function EntryCard({ entry, isOwnerView }: { entry: CalendarEntry; isOwnerView: 
   const colorClass = getEntryColor(entry)
   const shortLocation = entry.location.split(" - ")[0] ?? entry.location
   const personName = entry.personName
+  const personLabel = isOwnerView ? "Renter" : "Owner"
   return (
     <div className={`flex-1 min-h-0 rounded p-1 flex flex-col gap-0.5 overflow-hidden ${colorClass}`}>
       <div className="font-semibold text-xs leading-tight truncate">Spot {entry.spotNumber}</div>
       <div className="text-[10px] leading-tight truncate opacity-80">{shortLocation}</div>
       {personName && (
-        <div className="text-[10px] leading-tight truncate opacity-75 hidden sm:block">
-          {personName}
+        <div className="text-[10px] leading-tight truncate opacity-80">
+          <span className="opacity-70">{personLabel}: </span>{personName}
         </div>
       )}
-      <div className="text-[10px] leading-tight opacity-70 hidden md:block">
+      <div className="text-[10px] leading-tight opacity-70 hidden sm:block">
         ${Number(entry.dailyRate).toFixed(2)}/day
       </div>
     </div>
