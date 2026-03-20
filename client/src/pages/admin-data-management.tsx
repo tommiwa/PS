@@ -35,7 +35,10 @@ import {
   insertSpotTypeSchema,
   type InsertSpotType,
   type SpotTypeTable,
-  type AppConfig
+  type AppConfig,
+  insertFeatureAnnouncementSchema,
+  type InsertFeatureAnnouncement,
+  type FeatureAnnouncement
 } from "@shared/schema"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Tooltip as UITooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -58,7 +61,8 @@ import {
   ArrowUp,
   ArrowDown,
   Key,
-  Copy
+  Copy,
+  Sparkles
 } from "lucide-react"
 
 // Department form schema
@@ -95,6 +99,17 @@ const spotTypeFormSchema = insertSpotTypeSchema.extend({
 type SpotTypeFormData = z.infer<typeof spotTypeFormSchema>;
 
 type SortDirection = 'asc' | 'desc' | null;
+
+// Announcement form schema
+const announcementFormSchema = insertFeatureAnnouncementSchema.extend({
+  title: z.string().min(1, "Title is required").max(150, "Title must be less than 150 characters"),
+  description: z.string().min(1, "Description is required").max(500, "Description must be less than 500 characters"),
+  badgeLabel: z.string().max(30, "Badge label must be less than 30 characters").optional().or(z.literal("")),
+  sortOrder: z.number().int().min(0, "Sort order must be 0 or greater").default(0),
+  enabled: z.boolean().default(true),
+});
+
+type AnnouncementFormData = z.infer<typeof announcementFormSchema>;
 
 export default function AdminDataManagement() {
   const { confirm } = useConfirm()
@@ -159,6 +174,11 @@ export default function AdminDataManagement() {
   const [newKeyName, setNewKeyName] = useState("")
   const [createdKeyValue, setCreatedKeyValue] = useState("")
   const [showCreateKeyDialog, setShowCreateKeyDialog] = useState(false)
+
+  // Announcements state
+  const [showAddAnnouncementDialog, setShowAddAnnouncementDialog] = useState(false)
+  const [showEditAnnouncementDialog, setShowEditAnnouncementDialog] = useState(false)
+  const [editingAnnouncement, setEditingAnnouncement] = useState<FeatureAnnouncement | null>(null)
 
   // Active tab state
   const [activeTab, setActiveTab] = useState("departments")
@@ -248,6 +268,33 @@ export default function AdminDataManagement() {
   const { data: apiKeys = [], isLoading: apiKeysLoading } = useQuery<any[]>({
     queryKey: ['/api/admin/api-keys'],
   });
+
+  const { data: announcements = [], isLoading: isLoadingAnnouncements } = useQuery<FeatureAnnouncement[]>({
+    queryKey: ['/api/admin/announcements'],
+  });
+
+  // Announcement forms
+  const addAnnouncementForm = useForm<AnnouncementFormData>({
+    resolver: zodResolver(announcementFormSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      badgeLabel: "",
+      sortOrder: 0,
+      enabled: true,
+    }
+  })
+
+  const editAnnouncementForm = useForm<AnnouncementFormData>({
+    resolver: zodResolver(announcementFormSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      badgeLabel: "",
+      sortOrder: 0,
+      enabled: true,
+    }
+  })
 
 
   // Filtered and sorted data
@@ -729,6 +776,68 @@ export default function AdminDataManagement() {
     },
   });
 
+  // Announcement mutations
+  const createAnnouncementMutation = useMutation({
+    mutationFn: async (data: AnnouncementFormData): Promise<FeatureAnnouncement> => {
+      const body = { ...data, badgeLabel: data.badgeLabel || null };
+      const res = await apiRequest('/api/admin/announcements', { method: 'POST', body });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/announcements'] });
+      setShowAddAnnouncementDialog(false);
+      addAnnouncementForm.reset();
+      toast({ title: "Announcement Created", description: "The announcement has been added." });
+    },
+    onError: (error: any) => {
+      toast({ variant: "destructive", title: "Error", description: error.message || "Failed to create announcement" });
+    },
+  });
+
+  const updateAnnouncementMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: AnnouncementFormData }): Promise<FeatureAnnouncement> => {
+      const body = { ...data, badgeLabel: data.badgeLabel || null };
+      const res = await apiRequest(`/api/admin/announcements/${id}`, { method: 'PATCH', body });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/announcements'] });
+      setShowEditAnnouncementDialog(false);
+      setEditingAnnouncement(null);
+      editAnnouncementForm.reset();
+      toast({ title: "Announcement Updated" });
+    },
+    onError: (error: any) => {
+      toast({ variant: "destructive", title: "Error", description: error.message || "Failed to update announcement" });
+    },
+  });
+
+  const deleteAnnouncementMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest(`/api/admin/announcements/${id}`, { method: 'DELETE' });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/announcements'] });
+      toast({ title: "Announcement Deleted" });
+    },
+    onError: (error: any) => {
+      toast({ variant: "destructive", title: "Error", description: error.message || "Failed to delete announcement" });
+    },
+  });
+
+  const toggleAnnouncementMutation = useMutation({
+    mutationFn: async ({ id, enabled }: { id: number; enabled: boolean }) => {
+      const res = await apiRequest(`/api/admin/announcements/${id}`, { method: 'PATCH', body: { enabled } });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/announcements'] });
+    },
+    onError: (error: any) => {
+      toast({ variant: "destructive", title: "Error", description: error.message || "Failed to toggle announcement" });
+    },
+  });
+
   // Sort handlers
   const handleDepartmentSort = (field: 'name' | 'createdAt') => {
     if (departmentSortField === field) {
@@ -1077,7 +1186,7 @@ export default function AdminDataManagement() {
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="departments" data-testid="tab-departments" className="gap-2">
             <Building2 className="h-4 w-4 !text-blue-600" />
             Departments
@@ -1097,6 +1206,10 @@ export default function AdminDataManagement() {
           <TabsTrigger value="api-keys" data-testid="tab-api-keys" className="gap-2">
             <Key className="h-4 w-4 !text-amber-600" />
             API Keys
+          </TabsTrigger>
+          <TabsTrigger value="whats-new" data-testid="tab-whats-new" className="gap-2">
+            <Sparkles className="h-4 w-4 !text-violet-600" />
+            What's New
           </TabsTrigger>
         </TabsList>
 
@@ -2087,7 +2200,309 @@ export default function AdminDataManagement() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* What's New Tab */}
+        <TabsContent value="whats-new">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 !text-violet-600" />
+                  What's New Announcements
+                </CardTitle>
+                <Button
+                  onClick={() => { addAnnouncementForm.reset(); setShowAddAnnouncementDialog(true); }}
+                  data-testid="button-add-announcement"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Announcement
+                </Button>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Manage feature announcements shown to users when they log in. Users see only new announcements they haven't dismissed yet.
+              </p>
+            </CardHeader>
+            <CardContent>
+              {isLoadingAnnouncements ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                </div>
+              ) : announcements.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Sparkles className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p>No announcements yet</p>
+                  <p className="text-sm mt-1">Add an announcement to inform users about new features.</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Badge</TableHead>
+                      <TableHead>Sort Order</TableHead>
+                      <TableHead>Enabled</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {announcements.map((announcement) => (
+                      <TableRow key={announcement.id}>
+                        <TableCell className="font-medium max-w-[150px]">
+                          <span className="truncate block">{announcement.title}</span>
+                        </TableCell>
+                        <TableCell className="max-w-[200px]">
+                          <span className="text-sm text-muted-foreground truncate block">{announcement.description}</span>
+                        </TableCell>
+                        <TableCell>
+                          {announcement.badgeLabel ? (
+                            <span className="inline-flex items-center rounded-md bg-secondary px-2 py-0.5 text-xs font-medium">
+                              {announcement.badgeLabel}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm">{announcement.sortOrder}</TableCell>
+                        <TableCell>
+                          <Switch
+                            checked={announcement.enabled}
+                            onCheckedChange={(checked) => toggleAnnouncementMutation.mutate({ id: announcement.id, enabled: checked })}
+                            data-testid={`switch-announcement-enabled-${announcement.id}`}
+                          />
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {new Date(announcement.createdAt).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setEditingAnnouncement(announcement);
+                                editAnnouncementForm.reset({
+                                  title: announcement.title,
+                                  description: announcement.description,
+                                  badgeLabel: announcement.badgeLabel || "",
+                                  sortOrder: announcement.sortOrder,
+                                  enabled: announcement.enabled,
+                                });
+                                setShowEditAnnouncementDialog(true);
+                              }}
+                              data-testid={`button-edit-announcement-${announcement.id}`}
+                            >
+                              <Edit className="h-4 w-4 mr-1" />
+                              Edit
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={async () => {
+                                const confirmed = await confirm({
+                                  title: "Delete Announcement",
+                                  description: `Are you sure you want to delete "${announcement.title}"? This action cannot be undone.`,
+                                  confirmText: "Delete",
+                                  cancelText: "Cancel",
+                                  variant: "destructive"
+                                });
+                                if (confirmed) {
+                                  deleteAnnouncementMutation.mutate(announcement.id);
+                                }
+                              }}
+                              disabled={deleteAnnouncementMutation.isPending}
+                              data-testid={`button-delete-announcement-${announcement.id}`}
+                            >
+                              <Trash2 className="h-4 w-4 mr-1" />
+                              Delete
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
+
+      {/* Add Announcement Dialog */}
+      <Dialog open={showAddAnnouncementDialog} onOpenChange={setShowAddAnnouncementDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Announcement</DialogTitle>
+          </DialogHeader>
+          <Form {...addAnnouncementForm}>
+            <form onSubmit={addAnnouncementForm.handleSubmit((data) => createAnnouncementMutation.mutate(data))} className="space-y-4">
+              <FormField
+                control={addAnnouncementForm.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Title</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. Faster booking flow" {...field} data-testid="input-announcement-title" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={addAnnouncementForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Brief description of the feature or change..." rows={3} {...field} data-testid="input-announcement-description" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={addAnnouncementForm.control}
+                  name="badgeLabel"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Badge Label <span className="text-muted-foreground text-xs">(optional)</span></FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. New, Improved, Fixed" {...field} value={field.value ?? ""} data-testid="input-announcement-badge" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={addAnnouncementForm.control}
+                  name="sortOrder"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Sort Order</FormLabel>
+                      <FormControl>
+                        <Input type="number" min={0} {...field} onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)} data-testid="input-announcement-sort-order" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={addAnnouncementForm.control}
+                name="enabled"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-3">
+                    <FormControl>
+                      <Switch checked={field.value} onCheckedChange={field.onChange} data-testid="switch-announcement-new-enabled" />
+                    </FormControl>
+                    <FormLabel className="!mt-0">Enabled</FormLabel>
+                  </FormItem>
+                )}
+              />
+              <div className="flex gap-2 justify-end">
+                <Button type="button" variant="outline" onClick={() => setShowAddAnnouncementDialog(false)}>Cancel</Button>
+                <Button type="submit" disabled={createAnnouncementMutation.isPending} data-testid="button-submit-add-announcement">
+                  {createAnnouncementMutation.isPending ? "Adding..." : "Add Announcement"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Announcement Dialog */}
+      <Dialog open={showEditAnnouncementDialog} onOpenChange={setShowEditAnnouncementDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Announcement</DialogTitle>
+          </DialogHeader>
+          <Form {...editAnnouncementForm}>
+            <form onSubmit={editAnnouncementForm.handleSubmit((data) => {
+              if (!editingAnnouncement) return;
+              updateAnnouncementMutation.mutate({ id: editingAnnouncement.id, data });
+            })} className="space-y-4">
+              <FormField
+                control={editAnnouncementForm.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Title</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. Faster booking flow" {...field} data-testid="input-edit-announcement-title" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editAnnouncementForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Brief description of the feature or change..." rows={3} {...field} data-testid="input-edit-announcement-description" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={editAnnouncementForm.control}
+                  name="badgeLabel"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Badge Label <span className="text-muted-foreground text-xs">(optional)</span></FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. New, Improved, Fixed" {...field} value={field.value ?? ""} data-testid="input-edit-announcement-badge" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editAnnouncementForm.control}
+                  name="sortOrder"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Sort Order</FormLabel>
+                      <FormControl>
+                        <Input type="number" min={0} {...field} onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)} data-testid="input-edit-announcement-sort-order" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={editAnnouncementForm.control}
+                name="enabled"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-3">
+                    <FormControl>
+                      <Switch checked={field.value} onCheckedChange={field.onChange} data-testid="switch-edit-announcement-enabled" />
+                    </FormControl>
+                    <FormLabel className="!mt-0">Enabled</FormLabel>
+                  </FormItem>
+                )}
+              />
+              <div className="flex gap-2 justify-end">
+                <Button type="button" variant="outline" onClick={() => setShowEditAnnouncementDialog(false)}>Cancel</Button>
+                <Button type="submit" disabled={updateAnnouncementMutation.isPending} data-testid="button-submit-edit-announcement">
+                  {updateAnnouncementMutation.isPending ? "Updating..." : "Update Announcement"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
 
       {/* Create API Key Dialog */}
       <Dialog open={showCreateKeyDialog} onOpenChange={(open) => { if (!open) { setShowCreateKeyDialog(false); setCreatedKeyValue(""); setNewKeyName(""); } else { setShowCreateKeyDialog(true); } }}>

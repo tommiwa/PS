@@ -9806,6 +9806,108 @@ The BCI ParkShare Team`;
     }
   });
 
+  // ===========================
+  // Feature Announcements routes
+  // ===========================
+
+  // GET /api/announcements - Get unseen announcements for the authenticated user
+  app.get("/api/announcements", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+      const announcements = await storage.getUnseenAnnouncements(userId);
+      res.json(announcements);
+    } catch (error) {
+      console.error("Error fetching announcements:", error);
+      res.status(500).json({ error: "Failed to fetch announcements" });
+    }
+  });
+
+  // POST /api/announcements/dismiss - Dismiss all announcements (mark as seen up to current max)
+  app.post("/api/announcements/dismiss", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+      await storage.dismissAnnouncements(userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error dismissing announcements:", error);
+      res.status(500).json({ error: "Failed to dismiss announcements" });
+    }
+  });
+
+  // GET /api/admin/announcements - List all announcements (admin)
+  app.get("/api/admin/announcements", requireAdmin, async (req: any, res) => {
+    try {
+      const announcements = await storage.getAllAnnouncements();
+      res.json(announcements);
+    } catch (error) {
+      console.error("Error fetching admin announcements:", error);
+      res.status(500).json({ error: "Failed to fetch announcements" });
+    }
+  });
+
+  // POST /api/admin/announcements - Create a new announcement (admin)
+  app.post("/api/admin/announcements", requireAdmin, async (req: any, res) => {
+    try {
+      const { insertFeatureAnnouncementSchema } = await import("@shared/schema");
+      const data = insertFeatureAnnouncementSchema.parse(req.body);
+      const announcement = await storage.createAnnouncement(data);
+      res.status(201).json(announcement);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input", details: error.errors });
+      }
+      console.error("Error creating announcement:", error);
+      res.status(500).json({ error: "Failed to create announcement" });
+    }
+  });
+
+  // PATCH /api/admin/announcements/:id - Update an announcement (admin)
+  app.patch("/api/admin/announcements/:id", requireAdmin, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid announcement ID" });
+      }
+      const { updateFeatureAnnouncementSchema } = await import("@shared/schema");
+      const updates = updateFeatureAnnouncementSchema.parse(req.body);
+      const announcement = await storage.updateAnnouncement(id, updates);
+      if (!announcement) {
+        return res.status(404).json({ error: "Announcement not found" });
+      }
+      res.json(announcement);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input", details: error.errors });
+      }
+      console.error("Error updating announcement:", error);
+      res.status(500).json({ error: "Failed to update announcement" });
+    }
+  });
+
+  // DELETE /api/admin/announcements/:id - Delete an announcement (admin)
+  app.delete("/api/admin/announcements/:id", requireAdmin, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid announcement ID" });
+      }
+      const success = await storage.deleteAnnouncement(id);
+      if (!success) {
+        return res.status(404).json({ error: "Announcement not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting announcement:", error);
+      res.status(500).json({ error: "Failed to delete announcement" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

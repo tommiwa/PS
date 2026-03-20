@@ -61,13 +61,16 @@ import {
   type InsertApiKey,
   type ScheduledSpotAssignment,
   type InsertScheduledSpotAssignment,
-  type ScheduledAssignmentStatus
+  type ScheduledAssignmentStatus,
+  type FeatureAnnouncement,
+  type InsertFeatureAnnouncement,
+  type UpdateFeatureAnnouncement
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { auditDecorator } from "./audit-service";
 import { type IAuditStorage } from "./audit-storage";
 import { db } from "./db";
-import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, locations, spotTypesTable, termsVersions, spotAssignmentHistory, spotLocks, lockers, lockerWaitlist, lockerAssignmentHistory, lockerTypesTable, appConfigs, apiKeys, scheduledSpotAssignments } from "@shared/schema";
+import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, locations, spotTypesTable, termsVersions, spotAssignmentHistory, spotLocks, lockers, lockerWaitlist, lockerAssignmentHistory, lockerTypesTable, appConfigs, apiKeys, scheduledSpotAssignments, featureAnnouncements } from "@shared/schema";
 import { eq, or, ilike, asc, and, notExists, sql as sqlOp, count, desc, inArray, isNull } from "drizzle-orm";
 
 // Storage interface with comprehensive CRUD methods
@@ -382,6 +385,14 @@ export interface IStorage {
   updateScheduledAssignment(id: string, updates: Partial<InsertScheduledSpotAssignment> & { status?: ScheduledAssignmentStatus }): Promise<ScheduledSpotAssignment | undefined>;
   getPendingScheduledAssignmentsDue(): Promise<ScheduledSpotAssignment[]>;
   cancelSpotPendingScheduledAssignments(spotId: string): Promise<number>;
+
+  // Feature Announcements operations
+  getAllAnnouncements(): Promise<FeatureAnnouncement[]>;
+  getUnseenAnnouncements(userId: string): Promise<FeatureAnnouncement[]>;
+  dismissAnnouncements(userId: string): Promise<void>;
+  createAnnouncement(data: InsertFeatureAnnouncement): Promise<FeatureAnnouncement>;
+  updateAnnouncement(id: number, updates: UpdateFeatureAnnouncement): Promise<FeatureAnnouncement | undefined>;
+  deleteAnnouncement(id: number): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -4124,6 +4135,46 @@ export class MemStorage implements IStorage {
       ))
       .returning();
     return result.length;
+  }
+
+  // Feature Announcements operations
+  async getAllAnnouncements(): Promise<FeatureAnnouncement[]> {
+    return db.select().from(featureAnnouncements).orderBy(asc(featureAnnouncements.sortOrder), asc(featureAnnouncements.createdAt));
+  }
+
+  async getUnseenAnnouncements(userId: string): Promise<FeatureAnnouncement[]> {
+    const user = await this.getUser(userId);
+    const lastSeenId = user?.lastSeenAnnouncementId ?? 0;
+    const results = await db.select().from(featureAnnouncements)
+      .where(and(
+        eq(featureAnnouncements.enabled, true),
+        sqlOp`${featureAnnouncements.id} > ${lastSeenId}`
+      ))
+      .orderBy(asc(featureAnnouncements.sortOrder), asc(featureAnnouncements.createdAt));
+    return results;
+  }
+
+  async dismissAnnouncements(userId: string): Promise<void> {
+    const maxResult = await db.select({ maxId: sqlOp<number>`MAX(${featureAnnouncements.id})` }).from(featureAnnouncements).where(eq(featureAnnouncements.enabled, true));
+    const maxId = maxResult[0]?.maxId ?? 0;
+    if (maxId > 0) {
+      await db.update(users).set({ lastSeenAnnouncementId: maxId }).where(eq(users.id, userId));
+    }
+  }
+
+  async createAnnouncement(data: InsertFeatureAnnouncement): Promise<FeatureAnnouncement> {
+    const [result] = await db.insert(featureAnnouncements).values(data).returning();
+    return result;
+  }
+
+  async updateAnnouncement(id: number, updates: UpdateFeatureAnnouncement): Promise<FeatureAnnouncement | undefined> {
+    const [result] = await db.update(featureAnnouncements).set(updates).where(eq(featureAnnouncements.id, id)).returning();
+    return result;
+  }
+
+  async deleteAnnouncement(id: number): Promise<boolean> {
+    const result = await db.delete(featureAnnouncements).where(eq(featureAnnouncements.id, id));
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Audit decorators will be applied via server initialization

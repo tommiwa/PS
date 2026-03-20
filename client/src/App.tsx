@@ -19,6 +19,7 @@ import { LockProvider } from "@/contexts/LockContext";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ConfirmProvider } from "@/hooks/use-confirm";
 import { NotificationCenter } from "@/components/notification-center";
+import { WhatsNewController } from "@/components/whats-new-modal";
 import { LogOut, Loader2, FileText, CheckCircle2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import parkShareLogo from "@assets/logo.png";
@@ -408,6 +409,7 @@ function AuthenticatedApp() {
 
   return (
     <SidebarProvider style={style as React.CSSProperties}>
+      <WhatsNewController />
       <div className="flex h-screen w-full">
         <AppSidebar userRole={userRole} />
         <div className="flex flex-col flex-1 min-w-0 h-full overflow-hidden">

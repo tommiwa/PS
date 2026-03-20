@@ -38,6 +38,7 @@ export const users = pgTable("users", {
   lastLogin: timestamp("last_login"),
   acceptedTermsVersion: integer("accepted_terms_version"),
   acceptedTermsAt: timestamp("accepted_terms_at"),
+  lastSeenAnnouncementId: integer("last_seen_announcement_id"),
   deletedAt: timestamp("deleted_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -1539,3 +1540,28 @@ export const refreshTokens = pgTable("refresh_tokens", {
 });
 
 export type RefreshToken = typeof refreshTokens.$inferSelect;
+
+// Feature Announcements Table - "What's New" system
+export const featureAnnouncements = pgTable("feature_announcements", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  badgeLabel: text("badge_label"), // e.g. "New", "Improved", "Fixed"
+  enabled: boolean("enabled").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertFeatureAnnouncementSchema = createInsertSchema(featureAnnouncements).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const updateFeatureAnnouncementSchema = createInsertSchema(featureAnnouncements).omit({
+  id: true,
+  createdAt: true,
+}).partial();
+
+export type InsertFeatureAnnouncement = z.infer<typeof insertFeatureAnnouncementSchema>;
+export type UpdateFeatureAnnouncement = z.infer<typeof updateFeatureAnnouncementSchema>;
+export type FeatureAnnouncement = typeof featureAnnouncements.$inferSelect;

@@ -9,6 +9,28 @@ interface MigrationCheck {
 
 const migrations: MigrationCheck[] = [
   {
+    name: "feature_announcements_table",
+    checkQuery: `SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'feature_announcements')`,
+    migrationStatements: [
+      `CREATE TABLE IF NOT EXISTS feature_announcements (
+        id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        badge_label TEXT,
+        enabled BOOLEAN NOT NULL DEFAULT true,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )`,
+    ],
+  },
+  {
+    name: "users_last_seen_announcement_id",
+    checkQuery: `SELECT EXISTS (SELECT FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'last_seen_announcement_id')`,
+    migrationStatements: [
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen_announcement_id INTEGER`,
+    ],
+  },
+  {
     name: "bookings_unique_active_spot_date",
     checkQuery: `SELECT EXISTS (
       SELECT FROM pg_indexes
