@@ -198,6 +198,9 @@ function EntryCard({ entry, isOwnerView }: { entry: CalendarEntry; isOwnerView: 
           <span className="opacity-70">{personLabel}: </span>{personName}
         </div>
       )}
+      <div className="text-[10px] leading-tight opacity-80 font-medium">
+        {getStatusLabel(entry.status)}
+      </div>
       <div className="text-[10px] leading-tight opacity-70 hidden sm:block">
         ${Number(entry.dailyRate).toFixed(2)}/day
       </div>
