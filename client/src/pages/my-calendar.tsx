@@ -184,6 +184,26 @@ function EntryChip({ entry }: { entry: CalendarEntry }) {
   )
 }
 
+function EntryCard({ entry, isOwnerView }: { entry: CalendarEntry; isOwnerView: boolean }) {
+  const colorClass = getEntryColor(entry)
+  const shortLocation = entry.location.split(" - ")[0] ?? entry.location
+  const personName = entry.personName
+  return (
+    <div className={`flex-1 min-h-0 rounded p-1 flex flex-col gap-0.5 overflow-hidden ${colorClass}`}>
+      <div className="font-semibold text-xs leading-tight truncate">Spot {entry.spotNumber}</div>
+      <div className="text-[10px] leading-tight truncate opacity-80">{shortLocation}</div>
+      {personName && (
+        <div className="text-[10px] leading-tight truncate opacity-75 hidden sm:block">
+          {personName}
+        </div>
+      )}
+      <div className="text-[10px] leading-tight opacity-70 hidden md:block">
+        ${Number(entry.dailyRate).toFixed(2)}/day
+      </div>
+    </div>
+  )
+}
+
 function DayCell({
   date,
   entries,
@@ -200,6 +220,7 @@ function DayCell({
   const visible = entries.slice(0, maxVisible)
   const overflow = entries.length - maxVisible
   const isCurrentDay = isToday(date)
+  const single = entries.length === 1
 
   const dateNumber = (
     <span
@@ -218,7 +239,7 @@ function DayCell({
   if (entries.length === 0) {
     return (
       <div
-        className={`min-h-[72px] sm:min-h-[90px] lg:min-h-[110px] p-1 border-r border-b border-border flex flex-col ${
+        className={`min-h-[80px] sm:min-h-[100px] lg:min-h-[120px] p-1 border-r border-b border-border flex flex-col ${
           !isCurrentMonth ? "bg-muted/20" : ""
         }`}
       >
@@ -229,17 +250,23 @@ function DayCell({
 
   const trigger = (
     <div
-      className={`min-h-[72px] sm:min-h-[90px] lg:min-h-[110px] p-1 border-r border-b border-border flex flex-col cursor-pointer hover-elevate ${
+      className={`min-h-[80px] sm:min-h-[100px] lg:min-h-[120px] p-1 border-r border-b border-border flex flex-col cursor-pointer hover-elevate ${
         !isCurrentMonth ? "bg-muted/20" : ""
       }`}
     >
       {dateNumber}
-      <div className="flex flex-col gap-0.5 flex-1">
-        {visible.map((e, i) => (
-          <EntryChip key={`${e.id}-${e.date}-${i}`} entry={e} />
-        ))}
-        {overflow > 0 && (
-          <div className="text-xs text-muted-foreground pl-0.5">+{overflow}</div>
+      <div className="flex flex-col gap-0.5 flex-1 min-h-0">
+        {single ? (
+          <EntryCard entry={entries[0]} isOwnerView={isOwnerView} />
+        ) : (
+          <>
+            {visible.map((e, i) => (
+              <EntryChip key={`${e.id}-${e.date}-${i}`} entry={e} />
+            ))}
+            {overflow > 0 && (
+              <div className="text-xs text-muted-foreground pl-0.5">+{overflow}</div>
+            )}
+          </>
         )}
       </div>
     </div>
