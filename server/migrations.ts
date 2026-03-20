@@ -31,6 +31,13 @@ const migrations: MigrationCheck[] = [
     ],
   },
   {
+    name: "feature_announcements_badge_color",
+    checkQuery: `SELECT EXISTS (SELECT FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'feature_announcements' AND column_name = 'badge_color')`,
+    migrationStatements: [
+      `ALTER TABLE feature_announcements ADD COLUMN IF NOT EXISTS badge_color TEXT`,
+    ],
+  },
+  {
     name: "bookings_unique_active_spot_date",
     checkQuery: `SELECT EXISTS (
       SELECT FROM pg_indexes

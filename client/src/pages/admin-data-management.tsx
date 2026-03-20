@@ -38,7 +38,7 @@ import {
   type AppConfig,
   insertFeatureAnnouncementSchema,
   type InsertFeatureAnnouncement,
-  type FeatureAnnouncement
+  type FeatureAnnouncement,
 } from "@shared/schema"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Tooltip as UITooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -100,11 +100,29 @@ type SpotTypeFormData = z.infer<typeof spotTypeFormSchema>;
 
 type SortDirection = 'asc' | 'desc' | null;
 
+const BADGE_COLOR_OPTIONS = [
+  { value: null, label: "Default", bg: "bg-secondary", text: "text-secondary-foreground" },
+  { value: "blue", label: "Blue", bg: "bg-blue-100 dark:bg-blue-900", text: "text-blue-800 dark:text-blue-200" },
+  { value: "green", label: "Green", bg: "bg-green-100 dark:bg-green-900", text: "text-green-800 dark:text-green-200" },
+  { value: "red", label: "Red", bg: "bg-red-100 dark:bg-red-900", text: "text-red-800 dark:text-red-200" },
+  { value: "yellow", label: "Yellow", bg: "bg-yellow-100 dark:bg-yellow-900", text: "text-yellow-800 dark:text-yellow-200" },
+  { value: "purple", label: "Purple", bg: "bg-purple-100 dark:bg-purple-900", text: "text-purple-800 dark:text-purple-200" },
+  { value: "orange", label: "Orange", bg: "bg-orange-100 dark:bg-orange-900", text: "text-orange-800 dark:text-orange-200" },
+] as const;
+
+function getBadgeColorClasses(color: string | null | undefined) {
+  const found = BADGE_COLOR_OPTIONS.find((c) => c.value === (color ?? null));
+  return found
+    ? `${found.bg} ${found.text}`
+    : `${BADGE_COLOR_OPTIONS[0].bg} ${BADGE_COLOR_OPTIONS[0].text}`;
+}
+
 // Announcement form schema
 const announcementFormSchema = insertFeatureAnnouncementSchema.extend({
   title: z.string().min(1, "Title is required").max(150, "Title must be less than 150 characters"),
   description: z.string().min(1, "Description is required").max(500, "Description must be less than 500 characters"),
   badgeLabel: z.string().max(30, "Badge label must be less than 30 characters").optional().or(z.literal("")),
+  badgeColor: z.string().nullable().optional(),
   sortOrder: z.number().int().min(0, "Sort order must be 0 or greater").default(0),
   enabled: z.boolean().default(true),
 });
@@ -280,6 +298,7 @@ export default function AdminDataManagement() {
       title: "",
       description: "",
       badgeLabel: "",
+      badgeColor: null,
       sortOrder: 0,
       enabled: true,
     }
@@ -291,6 +310,7 @@ export default function AdminDataManagement() {
       title: "",
       description: "",
       badgeLabel: "",
+      badgeColor: null,
       sortOrder: 0,
       enabled: true,
     }
@@ -779,7 +799,7 @@ export default function AdminDataManagement() {
   // Announcement mutations
   const createAnnouncementMutation = useMutation({
     mutationFn: async (data: AnnouncementFormData): Promise<FeatureAnnouncement> => {
-      const body = { ...data, badgeLabel: data.badgeLabel || null };
+      const body = { ...data, badgeLabel: data.badgeLabel || null, badgeColor: data.badgeColor || null };
       const res = await apiRequest('/api/admin/announcements', { method: 'POST', body });
       return res.json();
     },
@@ -796,7 +816,7 @@ export default function AdminDataManagement() {
 
   const updateAnnouncementMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: AnnouncementFormData }): Promise<FeatureAnnouncement> => {
-      const body = { ...data, badgeLabel: data.badgeLabel || null };
+      const body = { ...data, badgeLabel: data.badgeLabel || null, badgeColor: data.badgeColor || null };
       const res = await apiRequest(`/api/admin/announcements/${id}`, { method: 'PATCH', body });
       return res.json();
     },
@@ -2259,7 +2279,7 @@ export default function AdminDataManagement() {
                         </TableCell>
                         <TableCell>
                           {announcement.badgeLabel ? (
-                            <span className="inline-flex items-center rounded-md bg-secondary px-2 py-0.5 text-xs font-medium">
+                            <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${getBadgeColorClasses(announcement.badgeColor)}`}>
                               {announcement.badgeLabel}
                             </span>
                           ) : (
@@ -2288,6 +2308,7 @@ export default function AdminDataManagement() {
                                   title: announcement.title,
                                   description: announcement.description,
                                   badgeLabel: announcement.badgeLabel || "",
+                                  badgeColor: announcement.badgeColor || null,
                                   sortOrder: announcement.sortOrder,
                                   enabled: announcement.enabled,
                                 });
@@ -2395,6 +2416,34 @@ export default function AdminDataManagement() {
               </div>
               <FormField
                 control={addAnnouncementForm.control}
+                name="badgeColor"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Badge Color <span className="text-muted-foreground text-xs">(optional)</span></FormLabel>
+                    <FormControl>
+                      <div className="flex flex-wrap gap-2" data-testid="badge-color-picker-add">
+                        {BADGE_COLOR_OPTIONS.map((color) => {
+                          const isSelected = (field.value ?? null) === color.value;
+                          return (
+                            <button
+                              key={color.value ?? "default"}
+                              type="button"
+                              onClick={() => field.onChange(color.value)}
+                              className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium transition-all ${color.bg} ${color.text} ${isSelected ? "ring-2 ring-offset-1 ring-foreground" : "opacity-70 hover:opacity-100"}`}
+                              data-testid={`badge-color-option-${color.value ?? "default"}`}
+                            >
+                              {color.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={addAnnouncementForm.control}
                 name="enabled"
                 render={({ field }) => (
                   <FormItem className="flex items-center gap-3">
@@ -2481,6 +2530,34 @@ export default function AdminDataManagement() {
                   )}
                 />
               </div>
+              <FormField
+                control={editAnnouncementForm.control}
+                name="badgeColor"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Badge Color <span className="text-muted-foreground text-xs">(optional)</span></FormLabel>
+                    <FormControl>
+                      <div className="flex flex-wrap gap-2" data-testid="badge-color-picker-edit">
+                        {BADGE_COLOR_OPTIONS.map((color) => {
+                          const isSelected = (field.value ?? null) === color.value;
+                          return (
+                            <button
+                              key={color.value ?? "default"}
+                              type="button"
+                              onClick={() => field.onChange(color.value)}
+                              className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium transition-all ${color.bg} ${color.text} ${isSelected ? "ring-2 ring-offset-1 ring-foreground" : "opacity-70 hover:opacity-100"}`}
+                              data-testid={`badge-color-edit-option-${color.value ?? "default"}`}
+                            >
+                              {color.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={editAnnouncementForm.control}
                 name="enabled"

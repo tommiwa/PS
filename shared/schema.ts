@@ -1547,19 +1547,27 @@ export const featureAnnouncements = pgTable("feature_announcements", {
   title: text("title").notNull(),
   description: text("description").notNull(),
   badgeLabel: text("badge_label"), // e.g. "New", "Improved", "Fixed"
+  badgeColor: text("badge_color"), // e.g. "blue", "green", "red", "yellow", "purple", "orange", null=default
   enabled: boolean("enabled").notNull().default(true),
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const ANNOUNCEMENT_BADGE_COLORS = ["blue", "green", "red", "yellow", "purple", "orange"] as const;
+export type AnnouncementBadgeColor = (typeof ANNOUNCEMENT_BADGE_COLORS)[number];
+
 export const insertFeatureAnnouncementSchema = createInsertSchema(featureAnnouncements).omit({
   id: true,
   createdAt: true,
+}).extend({
+  badgeColor: z.enum(ANNOUNCEMENT_BADGE_COLORS).nullable().optional(),
 });
 
 export const updateFeatureAnnouncementSchema = createInsertSchema(featureAnnouncements).omit({
   id: true,
   createdAt: true,
+}).extend({
+  badgeColor: z.enum(ANNOUNCEMENT_BADGE_COLORS).nullable().optional(),
 }).partial();
 
 export type InsertFeatureAnnouncement = z.infer<typeof insertFeatureAnnouncementSchema>;

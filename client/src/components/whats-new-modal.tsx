@@ -2,11 +2,34 @@ import { useState } from "react"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Sparkles } from "lucide-react"
 import { apiRequest, queryClient } from "@/lib/queryClient"
 import type { FeatureAnnouncement } from "@shared/schema"
+
+const BADGE_COLOR_MAP: Record<string, string> = {
+  blue: "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200",
+  green: "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200",
+  red: "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200",
+  yellow: "bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200",
+  purple: "bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200",
+  orange: "bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200",
+};
+
+function getBadgeClasses(color: string | null | undefined) {
+  if (color && BADGE_COLOR_MAP[color]) {
+    return BADGE_COLOR_MAP[color];
+  }
+  return "bg-secondary text-secondary-foreground";
+}
+
+function AnnouncementBadge({ label, color }: { label: string; color: string | null | undefined }) {
+  return (
+    <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${getBadgeClasses(color)}`}>
+      {label}
+    </span>
+  );
+}
 
 function SingleAnnouncementView({ announcement }: { announcement: FeatureAnnouncement }) {
   return (
@@ -19,9 +42,7 @@ function SingleAnnouncementView({ announcement }: { announcement: FeatureAnnounc
           <div className="flex flex-wrap items-center gap-2 mb-1">
             <h3 className="font-semibold text-base leading-tight">{announcement.title}</h3>
             {announcement.badgeLabel && (
-              <Badge variant="secondary" className="text-xs">
-                {announcement.badgeLabel}
-              </Badge>
+              <AnnouncementBadge label={announcement.badgeLabel} color={announcement.badgeColor} />
             )}
           </div>
           <p className="text-sm text-muted-foreground leading-relaxed">{announcement.description}</p>
@@ -41,9 +62,7 @@ function AnnouncementItem({ announcement }: { announcement: FeatureAnnouncement 
         <div className="flex flex-wrap items-center gap-2 mb-0.5">
           <h3 className="font-semibold text-sm leading-tight">{announcement.title}</h3>
           {announcement.badgeLabel && (
-            <Badge variant="secondary" className="text-xs">
-              {announcement.badgeLabel}
-            </Badge>
+            <AnnouncementBadge label={announcement.badgeLabel} color={announcement.badgeColor} />
           )}
         </div>
         <p className="text-sm text-muted-foreground leading-relaxed">{announcement.description}</p>
