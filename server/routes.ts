@@ -2074,6 +2074,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Check if the authenticated user has conflicting bookings on given dates
+  // IMPORTANT: Must be registered BEFORE /api/bookings/:id to avoid route shadowing
+  app.get("/api/bookings/check-conflict", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      const datesParam = req.query.dates as string;
+      if (!datesParam) {
+        return res.status(400).json({ error: "dates query parameter is required (comma-separated YYYY-MM-DD values)" });
+      }
+
+      const requestedDates = datesParam.split(",").map(d => d.trim()).filter(Boolean);
+      if (requestedDates.length === 0) {
+        return res.status(400).json({ error: "At least one date is required" });
+      }
+
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (requestedDates.some(d => !dateRegex.test(d))) {
+        return res.status(400).json({ error: "Invalid date format. Use YYYY-MM-DD" });
+      }
+
+      const userBookings = await storage.getBookingsByRenter(userId);
+      
+      const activeStatuses = ["confirmed", "pending"];
+      const conflictingDates = requestedDates.filter(date =>
+        userBookings.some(b => b.bookingDate === date && activeStatuses.includes(b.status))
+      );
+
+      res.json({ conflictingDates });
+    } catch (error) {
+      console.error("Error checking booking conflict:", error);
+      res.status(500).json({ error: "Failed to check booking conflict" });
+    }
+  });
+
   // Get single booking by ID
   app.get("/api/bookings/:id", isAuthenticated, async (req, res) => {
     try {

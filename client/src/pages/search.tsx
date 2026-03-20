@@ -6,6 +6,7 @@ import { ParkingSpotCard } from "@/components/parking-spot-card"
 import { ParkingCalendar } from "@/components/parking-calendar"
 import { BookingForm } from "@/components/booking-form"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -110,6 +111,10 @@ export default function Search() {
     return "calendar"
   })
   const [isAcquiringLock, setIsAcquiringLock] = useState(false)
+  const [conflictDialogOpen, setConflictDialogOpen] = useState(false)
+  const [conflictDates, setConflictDates] = useState<string[]>([])
+  const [pendingBookingArgs, setPendingBookingArgs] = useState<{ spot: DisplaySpot; bookingData: any } | null>(null)
+  const [isCheckingConflict, setIsCheckingConflict] = useState(false)
   const { toast } = useToast()
   const { userActiveLock, lockedListings, acquireLock, releaseLock, clearUserLock } = useLock()
   const { user } = useAuth()
@@ -281,6 +286,7 @@ export default function Search() {
       return apiRequest('/api/bookings', { method: 'POST', body: dataWithLock })
     },
     onSuccess: () => {
+      setIsCheckingConflict(false)
       toast({
         title: "Booking Created",
         description: "Your parking spot has been successfully booked!"
@@ -297,6 +303,7 @@ export default function Search() {
       queryClient.invalidateQueries({ queryKey: ['/api/available-spots'] })
     },
     onError: (error: any) => {
+      setIsCheckingConflict(false)
       const errorMessage = getErrorMessage(error, "Failed to create booking. Please try again.");
       
       // Check if lock expired
@@ -437,23 +444,62 @@ export default function Search() {
     }
   }
 
-  // Handle actual booking submission from form
-  const handleBookingFormSubmit = (spot: DisplaySpot, bookingData: any) => {
-    // Get listing ID and daily rate from spot data (enriched by API)
+  // Actually execute the booking mutation (called after conflict check passes or user confirms)
+  const executeBooking = (spot: DisplaySpot, bookingData: any) => {
     const listingId = (spot as any).listingId
     const dailyRate = (spot as any).dailyRate || spot.price
-    
-    // Note: Don't check listingId here - let backend handle validation
-    // This allows backend to return proper error messages (lock expired, etc.)
-    
+
     createBookingMutation.mutate({
       spotId: spot.id,
-      listingId: listingId || '', // Provide empty string if missing, backend will validate
+      listingId: listingId || '',
       bookingDate: bookingData.date,
       dailyRate: dailyRate,
       totalAmount: dailyRate,
       notes: bookingData.specialInstructions
     })
+  }
+
+  // Handle actual booking submission from form — checks for duplicate bookings first
+  const handleBookingFormSubmit = async (spot: DisplaySpot, bookingData: any) => {
+    setIsCheckingConflict(true)
+    try {
+      // Collect all dates being booked. Currently the booking flow submits a
+      // single date, but we also support checking multiple dates for future
+      // period/recurring booking flows by gathering any extra dates that may
+      // be attached to the booking data or the spot's availability list.
+      const datesToCheck = Array.from(new Set([
+        bookingData.date,
+        ...(bookingData.dates ?? []),
+      ].filter(Boolean)))
+
+      if (datesToCheck.length > 0) {
+        const params = new URLSearchParams({ dates: datesToCheck.join(",") })
+        const res = await apiRequest(`/api/bookings/check-conflict?${params}`)
+        const result = await res.json()
+        const conflicting: string[] = result?.conflictingDates ?? []
+
+        if (conflicting.length > 0) {
+          setPendingBookingArgs({ spot, bookingData })
+          setConflictDates(conflicting)
+          setConflictDialogOpen(true)
+          setIsCheckingConflict(false)
+          return
+        }
+      }
+
+      // No conflict — proceed immediately.
+      // Keep isCheckingConflict true until mutation starts to avoid a gap
+      // where isExternallyPending briefly becomes false.
+      executeBooking(spot, bookingData)
+    } catch (err) {
+      console.warn('[handleBookingFormSubmit] Conflict check failed:', err)
+      setIsCheckingConflict(false)
+      toast({
+        title: "Could Not Verify Duplicates",
+        description: "Unable to check for existing bookings. Please try again.",
+        variant: "destructive"
+      })
+    }
   }
 
   // Handle cancelling booking - release lock and close dialog
@@ -1031,11 +1077,83 @@ export default function Search() {
               onCancel={handleCancelBooking}
               selectedDate={userActiveLock?.bookingDate || selectedSpot.availability?.date || searchCriteria.date}
               isDateLocked={true}
-              isExternallyPending={createBookingMutation.isPending}
+              isExternallyPending={createBookingMutation.isPending || isCheckingConflict}
             />
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Duplicate Booking Confirmation Dialog */}
+      <AlertDialog open={conflictDialogOpen} onOpenChange={(open) => {
+        setConflictDialogOpen(open)
+        if (!open) {
+          setPendingBookingArgs(null)
+          setConflictDates([])
+        }
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>You Already Have a Booking on This Day</AlertDialogTitle>
+            <AlertDialogDescription>
+              {conflictDates.length === 1 ? (
+                <>
+                  You already have an active booking on{" "}
+                  <span className="font-medium text-foreground">
+                    {new Date(conflictDates[0] + "T12:00:00").toLocaleDateString("en-CA", {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </span>
+                  . Do you still want to book this spot?
+                </>
+              ) : (
+                <>
+                  You already have active bookings on the following dates:{" "}
+                  <span className="font-medium text-foreground">
+                    {conflictDates
+                      .map(d =>
+                        new Date(d + "T12:00:00").toLocaleDateString("en-CA", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })
+                      )
+                      .join(", ")}
+                  </span>
+                  . Do you still want to proceed?
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setConflictDialogOpen(false)
+                setPendingBookingArgs(null)
+                setConflictDates([])
+              }}
+              data-testid="button-conflict-cancel"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setConflictDialogOpen(false)
+                if (pendingBookingArgs) {
+                  executeBooking(pendingBookingArgs.spot, pendingBookingArgs.bookingData)
+                }
+                setPendingBookingArgs(null)
+                setConflictDates([])
+              }}
+              data-testid="button-conflict-confirm"
+            >
+              Book Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
