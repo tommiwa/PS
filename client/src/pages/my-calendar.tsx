@@ -12,6 +12,7 @@ import {
   MapPin,
   DollarSign,
   Tag,
+  User,
 } from "lucide-react"
 import {
   format,
@@ -40,6 +41,7 @@ interface RenterBookingView {
   location: string
   dailyRate: string | number
   status: BookingStatus
+  ownerName?: string | null
 }
 
 interface OwnerListingView {
@@ -54,6 +56,7 @@ interface OwnerListingView {
   spot: { spotNumber?: string; location?: string } | null
   dailyRate: string | number
   status: ListingStatus
+  renterName?: string | null
 }
 
 type CalendarEntry = {
@@ -64,6 +67,7 @@ type CalendarEntry = {
   dailyRate: number
   status: string
   type: "booking" | "listing"
+  personName?: string | null
 }
 
 const DAY_NAME_TO_INDEX: Record<string, number> = {
@@ -123,6 +127,7 @@ function listingToCalendarEntries(listing: OwnerListingView): CalendarEntry[] {
     dailyRate,
     status,
     type: "listing" as const,
+    personName: listing.renterName ?? null,
   }))
 }
 
@@ -135,6 +140,7 @@ function bookingToCalendarEntry(booking: RenterBookingView): CalendarEntry {
     dailyRate: Number(booking.dailyRate ?? 0),
     status: booking.status ?? "confirmed",
     type: "booking",
+    personName: booking.ownerName ?? null,
   }
 }
 
@@ -182,10 +188,12 @@ function DayCell({
   date,
   entries,
   isCurrentMonth,
+  isOwnerView,
 }: {
   date: Date
   entries: CalendarEntry[]
   isCurrentMonth: boolean
+  isOwnerView: boolean
 }) {
   const [open, setOpen] = useState(false)
   const maxVisible = 2
@@ -195,7 +203,7 @@ function DayCell({
 
   const dateNumber = (
     <span
-      className={`text-xs font-medium self-end mb-1 h-5 w-5 flex items-center justify-center rounded-full flex-shrink-0 ${
+      className={`text-xs font-medium self-end mb-0.5 h-5 w-5 flex items-center justify-center rounded-full flex-shrink-0 ${
         isCurrentDay
           ? "bg-primary text-primary-foreground"
           : isCurrentMonth
@@ -210,7 +218,7 @@ function DayCell({
   if (entries.length === 0) {
     return (
       <div
-        className={`min-h-[80px] p-1 border-r border-b border-border flex flex-col ${
+        className={`min-h-[72px] sm:min-h-[90px] lg:min-h-[110px] p-1 border-r border-b border-border flex flex-col ${
           !isCurrentMonth ? "bg-muted/20" : ""
         }`}
       >
@@ -221,7 +229,7 @@ function DayCell({
 
   const trigger = (
     <div
-      className={`min-h-[80px] p-1 border-r border-b border-border flex flex-col cursor-pointer hover-elevate ${
+      className={`min-h-[72px] sm:min-h-[90px] lg:min-h-[110px] p-1 border-r border-b border-border flex flex-col cursor-pointer hover-elevate ${
         !isCurrentMonth ? "bg-muted/20" : ""
       }`}
     >
@@ -231,7 +239,7 @@ function DayCell({
           <EntryChip key={`${e.id}-${e.date}-${i}`} entry={e} />
         ))}
         {overflow > 0 && (
-          <div className="text-xs text-muted-foreground pl-1">+{overflow} more</div>
+          <div className="text-xs text-muted-foreground pl-0.5">+{overflow}</div>
         )}
       </div>
     </div>
@@ -242,11 +250,18 @@ function DayCell({
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent className="w-72 p-3" align="center">
         <p className="text-sm font-semibold mb-2">{format(date, "EEEE, MMMM d, yyyy")}</p>
-        <div className="flex flex-col gap-2 max-h-60 overflow-y-auto">
+        <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
           {entries.map((entry, i) => {
             const entryDateLabel = entry.date
               ? format(parseISO(entry.date), "MMMM d, yyyy")
               : format(date, "MMMM d, yyyy")
+            const personLabel = isOwnerView
+              ? entry.personName
+                ? `Renter: ${entry.personName}`
+                : null
+              : entry.personName
+              ? `Owner: ${entry.personName}`
+              : null
             return (
               <div
                 key={`${entry.id}-${entry.date}-${i}`}
@@ -281,6 +296,12 @@ function DayCell({
                   <Tag className="h-3 w-3 ml-2 flex-shrink-0" />
                   <span className="capitalize">{entry.type === "booking" ? "Rental" : "Your Listing"}</span>
                 </div>
+                {personLabel && (
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <User className="h-3 w-3 flex-shrink-0" />
+                    <span className="truncate">{personLabel}</span>
+                  </div>
+                )}
               </div>
             )
           })}
@@ -329,29 +350,30 @@ export default function MyCalendar() {
   const prevMonth = () => setCurrentMonth((d) => subMonths(d, 1))
   const nextMonth = () => setCurrentMonth((d) => addMonths(d, 1))
 
-  const dayHeaders = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+  const dayHeadersFull = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+  const dayHeadersShort = ["S", "M", "T", "W", "T", "F", "S"]
 
   const totalEntries = entries.length
 
   return (
-    <div className="p-4 md:p-6 max-w-5xl mx-auto">
-      <div className="mb-4 flex items-center gap-3">
-        <CalendarDays className="h-6 w-6 text-primary flex-shrink-0" />
+    <div className="h-full flex flex-col overflow-hidden p-3 md:p-4">
+      <div className="mb-3 flex items-center gap-3 flex-shrink-0">
+        <CalendarDays className="h-5 w-5 text-primary flex-shrink-0" />
         <div>
-          <h1 className="text-xl font-semibold">My Calendar</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-lg font-semibold leading-tight">My Calendar</h1>
+          <p className="text-xs text-muted-foreground">
             {isOwnerView
-              ? "A monthly view of all your spot listings"
-              : "A monthly view of all your bookings"}
+              ? "Monthly view of your spot listings"
+              : "Monthly view of your bookings"}
           </p>
         </div>
       </div>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
+      <Card className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <CardHeader className="pb-2 flex-shrink-0">
+          <div className="flex items-center justify-between gap-2">
             <CardTitle className="text-base">{format(currentMonth, "MMMM yyyy")}</CardTitle>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <Button variant="outline" size="icon" onClick={prevMonth} aria-label="Previous month">
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -368,25 +390,29 @@ export default function MyCalendar() {
             </p>
           )}
         </CardHeader>
-        <CardContent className="p-0">
+
+        <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
           {isLoading ? (
-            <div className="p-4 grid grid-cols-7 gap-1">
+            <div className="p-3 grid grid-cols-7 gap-1 flex-1">
               {Array.from({ length: 35 }).map((_, i) => (
                 <Skeleton key={i} className="h-[80px] rounded" />
               ))}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <div className="min-w-[560px]">
-                <div className="grid grid-cols-7 border-l border-t border-border">
-                  {dayHeaders.map((d) => (
+            <div className="flex-1 min-h-0 overflow-auto">
+              <div className="min-w-[320px] h-full flex flex-col">
+                <div className="grid grid-cols-7 border-l border-t border-border flex-shrink-0">
+                  {dayHeadersFull.map((d, i) => (
                     <div
                       key={d}
-                      className="text-xs font-medium text-muted-foreground text-center py-2 border-r border-b border-border bg-muted/30"
+                      className="text-xs font-medium text-muted-foreground text-center py-1.5 border-r border-b border-border bg-muted/30"
                     >
-                      {d}
+                      <span className="hidden sm:inline">{d}</span>
+                      <span className="sm:hidden">{dayHeadersShort[i]}</span>
                     </div>
                   ))}
+                </div>
+                <div className="grid grid-cols-7 border-l border-border flex-1">
                   {calendarDays.map((date) => {
                     const dateStr = format(date, "yyyy-MM-dd")
                     const dayEntries = entriesByDate[dateStr] ?? []
@@ -396,6 +422,7 @@ export default function MyCalendar() {
                         date={date}
                         entries={dayEntries}
                         isCurrentMonth={isSameMonth(date, currentMonth)}
+                        isOwnerView={isOwnerView}
                       />
                     )
                   })}
@@ -407,31 +434,31 @@ export default function MyCalendar() {
       </Card>
 
       {!isLoading && totalEntries > 0 && (
-        <div className="mt-4 flex flex-wrap gap-3 text-xs text-muted-foreground items-center">
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground items-center flex-shrink-0">
           <span className="font-medium text-foreground">Legend:</span>
           {isOwnerView ? (
             <>
               <span className="flex items-center gap-1">
-                <span className="inline-block h-3 w-3 rounded bg-emerald-600 flex-shrink-0" />
+                <span className="inline-block h-2.5 w-2.5 rounded bg-emerald-600 flex-shrink-0" />
                 Available
               </span>
               <span className="flex items-center gap-1">
-                <span className="inline-block h-3 w-3 rounded bg-primary flex-shrink-0" />
+                <span className="inline-block h-2.5 w-2.5 rounded bg-primary flex-shrink-0" />
                 Booked / Used
               </span>
               <span className="flex items-center gap-1">
-                <span className="inline-block h-3 w-3 rounded bg-muted border border-border flex-shrink-0" />
+                <span className="inline-block h-2.5 w-2.5 rounded bg-muted border border-border flex-shrink-0" />
                 Cancelled / Unused
               </span>
             </>
           ) : (
             <>
               <span className="flex items-center gap-1">
-                <span className="inline-block h-3 w-3 rounded bg-primary flex-shrink-0" />
+                <span className="inline-block h-2.5 w-2.5 rounded bg-primary flex-shrink-0" />
                 Confirmed
               </span>
               <span className="flex items-center gap-1">
-                <span className="inline-block h-3 w-3 rounded bg-muted border border-border flex-shrink-0" />
+                <span className="inline-block h-2.5 w-2.5 rounded bg-muted border border-border flex-shrink-0" />
                 Cancelled
               </span>
             </>
