@@ -30,6 +30,7 @@ import Search from "@/pages/search";
 import Admin from "@/pages/admin";
 import Profile from "@/pages/profile-working";
 import MyBookings from "@/pages/my-bookings";
+import MyCalendar from "@/pages/my-calendar";
 import MySpots from "@/pages/my-spots";
 import AdminUserManagement from "@/pages/admin-user-management";
 import AdminAnalytics from "@/pages/admin-analytics";
@@ -502,6 +503,7 @@ function AuthenticatedApp() {
               <Route path="/my-bookings">
                 <MyBookings />
               </Route>
+              <Route path="/my-calendar" component={MyCalendar} />
               
               {/* Owner-specific pages */}
               <Route path="/my-listings">

@@ -64,6 +64,13 @@ const ownerManagementItems = [
     tooltip: "Spots you're renting out"
   },
   {
+    title: "My Calendar",
+    url: "/my-calendar",
+    icon: CalendarCheck,
+    roles: ["owner"],
+    tooltip: "Monthly view of your listings"
+  },
+  {
     title: "Dashboard",
     url: "/dashboard",
     icon: Home,
@@ -109,6 +116,13 @@ const mainMenuItems = [
     icon: Calendar,
     roles: ["renter"],
     tooltip: "My Bookings"
+  },
+  {
+    title: "My Calendar",
+    url: "/my-calendar",
+    icon: CalendarCheck,
+    roles: ["renter"],
+    tooltip: "Monthly view of your bookings"
   },
   {
     title: "Dashboard",
@@ -362,6 +376,12 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["/api/my-bookings"] }),
         queryClient.invalidateQueries({ queryKey: ["/api/my-spots"] }),
+      ]);
+    },
+    "/my-calendar": async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/my-bookings"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/my-listings"] }),
       ]);
     },
   };
