@@ -147,17 +147,17 @@ function bookingToCalendarEntry(booking: RenterBookingView): CalendarEntry {
 function getEntryColor(entry: CalendarEntry): string {
   if (entry.type === "booking") {
     if (entry.status === "cancelled") {
-      return "bg-muted text-muted-foreground border border-border"
+      return "bg-gray-100 text-gray-400 dark:bg-gray-800/50 dark:text-gray-500"
     }
-    return "bg-primary text-primary-foreground"
+    return "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
   } else {
     if (entry.status === "cancelled" || entry.status === "unused") {
-      return "bg-muted text-muted-foreground border border-border"
+      return "bg-gray-100 text-gray-400 dark:bg-gray-800/50 dark:text-gray-500"
     }
     if (entry.status === "booked" || entry.status === "used") {
-      return "bg-primary text-primary-foreground"
+      return "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300"
     }
-    return "bg-emerald-600 text-white dark:bg-emerald-700"
+    return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
   }
 }
 
@@ -439,26 +439,26 @@ export default function MyCalendar() {
           {isOwnerView ? (
             <>
               <span className="flex items-center gap-1">
-                <span className="inline-block h-2.5 w-2.5 rounded bg-emerald-600 flex-shrink-0" />
+                <span className="inline-block h-2.5 w-2.5 rounded bg-emerald-100 border border-emerald-300 flex-shrink-0" />
                 Available
               </span>
               <span className="flex items-center gap-1">
-                <span className="inline-block h-2.5 w-2.5 rounded bg-primary flex-shrink-0" />
+                <span className="inline-block h-2.5 w-2.5 rounded bg-violet-100 border border-violet-300 flex-shrink-0" />
                 Booked / Used
               </span>
               <span className="flex items-center gap-1">
-                <span className="inline-block h-2.5 w-2.5 rounded bg-muted border border-border flex-shrink-0" />
+                <span className="inline-block h-2.5 w-2.5 rounded bg-gray-100 border border-gray-300 flex-shrink-0" />
                 Cancelled / Unused
               </span>
             </>
           ) : (
             <>
               <span className="flex items-center gap-1">
-                <span className="inline-block h-2.5 w-2.5 rounded bg-primary flex-shrink-0" />
+                <span className="inline-block h-2.5 w-2.5 rounded bg-blue-100 border border-blue-300 flex-shrink-0" />
                 Confirmed
               </span>
               <span className="flex items-center gap-1">
-                <span className="inline-block h-2.5 w-2.5 rounded bg-muted border border-border flex-shrink-0" />
+                <span className="inline-block h-2.5 w-2.5 rounded bg-gray-100 border border-gray-300 flex-shrink-0" />
                 Cancelled
               </span>
             </>
