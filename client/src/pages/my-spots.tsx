@@ -562,7 +562,11 @@ export default function MySpots() {
     },
   })
 
+  const requiresInstructions = paymentFormData.paymentType === "interac_transfer" || paymentFormData.paymentType === "cash"
+  const instructionsMissing = requiresInstructions && !paymentFormData.paymentInstructions.trim()
+
   const handleSavePaymentPreferences = () => {
+    if (instructionsMissing) return
     updatePaymentPreferencesMutation.mutate(paymentFormData)
   }
 
@@ -1310,7 +1314,12 @@ export default function MySpots() {
               </Select>
             </div>
             <div>
-              <Label htmlFor="payment-instructions">Payment Instructions</Label>
+              <div className="flex items-center gap-1 mb-1.5">
+                <Label htmlFor="payment-instructions">Payment Instructions</Label>
+                {requiresInstructions && (
+                  <span className="text-xs text-destructive font-medium">* Required</span>
+                )}
+              </div>
               <Textarea
                 id="payment-instructions"
                 placeholder={paymentFormData.paymentType === "interac_transfer" 
@@ -1318,12 +1327,19 @@ export default function MySpots() {
                   : "e.g., Meet me at BCI main Building Lobby or message me on Teams"}
                 value={paymentFormData.paymentInstructions}
                 onChange={(e) => setPaymentFormData(prev => ({ ...prev, paymentInstructions: e.target.value }))}
-                className="min-h-24"
+                className={`min-h-24 ${instructionsMissing ? "border-destructive focus-visible:ring-destructive" : ""}`}
                 data-testid="textarea-payment-instructions"
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                This will be shown to renters when they book your spot.
-              </p>
+              {instructionsMissing && (
+                <p className="text-xs text-destructive mt-1">
+                  Instructions are required for {paymentFormData.paymentType === "interac_transfer" ? "Interac Transfer" : "Cash"} — renters need to know how to pay you.
+                </p>
+              )}
+              {!instructionsMissing && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  This will appear directly on each renter's booking page so they know how to pay you.
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2">
@@ -1336,7 +1352,7 @@ export default function MySpots() {
             </Button>
             <Button
               onClick={handleSavePaymentPreferences}
-              disabled={updatePaymentPreferencesMutation.isPending}
+              disabled={updatePaymentPreferencesMutation.isPending || instructionsMissing}
               className="w-full sm:w-auto min-h-11"
               data-testid="button-save-payment-preferences"
             >

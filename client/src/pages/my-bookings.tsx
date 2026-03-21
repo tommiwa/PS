@@ -1378,6 +1378,19 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                 <span className="text-sm text-red-700 dark:text-red-300">This booking was cancelled</span>
               </div>
             )}
+
+            {/* How to Pay — shown for Cash/Interac bookings that aren't payroll or cancelled */}
+            {!isPayroll && !isCancelled && (booking as any).ownerPaymentInstructions && (
+              <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <div className="flex items-center gap-2 mb-1">
+                  <CreditCard className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                  <span className="text-xs font-semibold text-blue-700 dark:text-blue-300 uppercase tracking-wide">How to Pay</span>
+                </div>
+                <p className="text-sm text-blue-800 dark:text-blue-200 whitespace-pre-wrap leading-snug">
+                  {(booking as any).ownerPaymentInstructions}
+                </p>
+              </div>
+            )}
           </div>
           
           {/* Actions Column */}
