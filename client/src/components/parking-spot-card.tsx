@@ -47,7 +47,8 @@ export function ParkingSpotCard({
   onBook, 
   showBookButton = true 
 }: ParkingSpotCardProps) {
-  const { user } = useAuth();
+  const { user, getCurrentViewRole } = useAuth();
+  const isRenterView = getCurrentViewRole() === "renter";
   const { lockedListings, userActiveLock } = useLock();
 
   // Check if spot is locked (and by another user) using composite key if date is available
@@ -175,8 +176,10 @@ export function ParkingSpotCard({
   }
 
   // Department restriction badge for department-reserved spots
+  // Hidden from renters — department reservations are admin notes only
   const getDepartmentRestrictionBadge = () => {
     if (!spot.reservedForDepartmentName) return null;
+    if (isRenterView) return null;
     
     return (
       <Tooltip>

@@ -305,7 +305,18 @@ export default function Search() {
     onError: (error: any) => {
       setIsCheckingConflict(false)
       const errorMessage = getErrorMessage(error, "Failed to create booking. Please try again.");
-      
+
+      // Always release the lock on any booking failure so the user can try
+      // another spot immediately without waiting for it to expire.
+      if (userActiveLock) {
+        const lockIdToRelease = userActiveLock.lockId;
+        clearUserLock();
+        releaseLock(lockIdToRelease).catch(() => {});
+      }
+
+      setShowBookingForm(false)
+      setSelectedSpot(null)
+
       // Check if lock expired
       if (errorMessage.toLowerCase().includes('lock')) {
         toast({
@@ -313,8 +324,6 @@ export default function Search() {
           description: "Your reservation expired. Please try again.",
           variant: "destructive"
         })
-        setShowBookingForm(false)
-        setSelectedSpot(null)
       } else {
         toast({
           title: "Booking Failed",
