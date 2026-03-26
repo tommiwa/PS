@@ -2012,7 +2012,7 @@ export default function Profile() {
                     Spot Alerts
                   </CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    Get an email notification whenever a parking spot matching your preferences becomes available. You book it — we never book it for you.
+                    Receive an email whenever a parking spot matching your preferences becomes available. All booking decisions remain yours.
                   </p>
                 </CardHeader>
                 <CardContent className="p-4 md:p-6">
@@ -2065,28 +2065,6 @@ export default function Profile() {
               </Card>
             </TabsContent>
 
-            {/* Spot Alerts Tab - all roles */}
-            <TabsContent value="spot-alerts" className="space-y-4 md:space-y-6">
-              <Card>
-                <CardHeader className="p-4 md:p-6">
-                  <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
-                    <Zap className="h-5 w-5 md:h-6 md:w-6" />
-                    Spot Alerts
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Get an email notification whenever a parking spot matching your preferences becomes available. You book it — we never book it for you.
-                  </p>
-                </CardHeader>
-                <CardContent className="p-4 md:p-6">
-                  <SpotAlertsContent
-                    subscription={spotAlertSubscription}
-                    isLoading={isLoadingSpotAlert}
-                    onUpdate={(data) => updateSpotAlertMutation.mutate(data)}
-                    isPending={updateSpotAlertMutation.isPending}
-                  />
-                </CardContent>
-              </Card>
-            </TabsContent>
 
           </Tabs>
         </div>
