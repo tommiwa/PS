@@ -3278,7 +3278,7 @@ export class MemStorage implements IStorage {
       LEFT JOIN departments spot_owner_dept ON spot_owner.department_id = spot_owner_dept.id
       LEFT JOIN payment_preferences pp ON ps.owner_id = pp.user_id
       WHERE 
-        (b.status = 'confirmed' OR b.status = 'pending')
+        (b.status = 'confirmed' OR b.status = 'pending' OR b.status = 'completed')
         AND b.booking_date >= ${today}
         ${isBciOnly ? sqlOp`AND ps.is_bci_managed = true AND ps.owner_id IS NULL` : sqlOp`AND (ps.owner_id IS NOT NULL OR ps.is_bci_managed = false)`}
       ORDER BY b.booking_date ASC
