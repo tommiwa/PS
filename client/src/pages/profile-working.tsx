@@ -1295,7 +1295,7 @@ export default function Profile() {
         {/* Desktop Tabs Layout */}
         <div className="hidden md:block">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className={`grid w-full gap-1 mb-4 md:mb-6 ${isRenter() ? 'grid-cols-5' : 'grid-cols-4'}`}>
+            <TabsList className="grid w-full grid-cols-5 gap-1 mb-4 md:mb-6">
               <TabsTrigger value="waiting-list" className="flex items-center gap-2 min-h-11 text-xs md:text-sm">
                 <Calendar className="h-4 w-4 flex-shrink-0" />
                 <span className="hidden sm:inline">{t("profile.tabs.waitingList")}</span>
@@ -1311,13 +1311,11 @@ export default function Profile() {
                 <span className="hidden sm:inline">{t("profile.tabs.notifications")}</span>
                 <span className="sm:hidden">Alerts</span>
               </TabsTrigger>
-              {isRenter() && (
               <TabsTrigger value="spot-alerts" data-testid="tab-spot-alerts" className="flex items-center gap-2 min-h-11 text-xs md:text-sm">
                 <Zap className="h-4 w-4 flex-shrink-0" />
                 <span className="hidden sm:inline">Spot Alerts</span>
-                <span className="sm:hidden">Alerts</span>
+                <span className="sm:hidden">Spot</span>
               </TabsTrigger>
-              )}
               <TabsTrigger value="app-settings" className="flex items-center gap-2 min-h-11 text-xs md:text-sm">
                 <Settings className="h-4 w-4 flex-shrink-0" />
                 <span className="hidden sm:inline">{t("profile.tabs.appSettings")}</span>
@@ -2005,8 +2003,7 @@ export default function Profile() {
               </Card>
             </TabsContent>
 
-            {/* Spot Alerts Tab - renters only */}
-            {isRenter() && (
+            {/* Spot Alerts Tab - all roles */}
             <TabsContent value="spot-alerts" className="space-y-4 md:space-y-6">
               <Card>
                 <CardHeader className="p-4 md:p-6">
@@ -2028,7 +2025,6 @@ export default function Profile() {
                 </CardContent>
               </Card>
             </TabsContent>
-            )}
 
             {/* App Settings Tab */}
             <TabsContent value="app-settings" className="space-y-4 md:space-y-6">
@@ -2069,8 +2065,7 @@ export default function Profile() {
               </Card>
             </TabsContent>
 
-            {/* Spot Alerts Tab - renters only */}
-            {isRenter() && (
+            {/* Spot Alerts Tab - all roles */}
             <TabsContent value="spot-alerts" className="space-y-4 md:space-y-6">
               <Card>
                 <CardHeader className="p-4 md:p-6">
@@ -2092,7 +2087,6 @@ export default function Profile() {
                 </CardContent>
               </Card>
             </TabsContent>
-            )}
 
           </Tabs>
         </div>
