@@ -374,7 +374,7 @@ function AuthenticatedApp() {
   const [, setLocation] = useLocation();
   const [termsDialogOpen, setTermsDialogOpen] = useState(false);
   
-  const { data: terms } = useQuery<TermsVersion>({
+  const { data: terms, isLoading: termsLoading } = useQuery<TermsVersion>({
     queryKey: ["/api/legal/terms"],
   });
   
@@ -561,13 +561,20 @@ function AuthenticatedApp() {
                       </DialogTitle>
                     </DialogHeader>
                     <ScrollArea className="h-[65vh] pr-4">
-                      {terms ? (
+                      {termsLoading ? (
+                        <div className="flex items-center justify-center py-12">
+                          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                        </div>
+                      ) : terms ? (
                         <div className="max-w-none" data-testid="terms-dialog-content">
                           <FormattedTermsContent content={terms.content} />
                         </div>
                       ) : (
-                        <div className="flex items-center justify-center py-12">
-                          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                        <div className="flex items-center justify-center py-12 text-center">
+                          <div className="space-y-2">
+                            <FileText className="h-8 w-8 text-muted-foreground mx-auto" />
+                            <p className="text-muted-foreground text-sm">Terms temporarily unavailable. Please try again later.</p>
+                          </div>
                         </div>
                       )}
                     </ScrollArea>

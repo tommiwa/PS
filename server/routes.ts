@@ -6,7 +6,7 @@ import { broadcastLockEvent } from "./websocket";
 import { setupAuth, isAuthenticated, requireAdmin, getAuthenticatedUserId, getAuthenticatedUserRole, getAuthenticatedUserBaseRole } from "./replitAuth";
 import { z } from "zod";
 import { db } from "./db";
-import { parkingSpots, spotLocks, spotListings, bookings, issues, insertIssueSchema, updateIssueSchema, issueStatuses } from "@shared/schema";
+import { parkingSpots, spotLocks, spotListings, bookings, issues, insertIssueSchema, updateIssueSchema, issueStatuses, termsVersions } from "@shared/schema";
 import { inArray, and, eq, lt, gt, not, or, sql } from "drizzle-orm";
 import { 
   sendAssignmentNotification, 
@@ -234,7 +234,122 @@ const auditQuerySchema = z.object({
   pageSize: z.string().optional().refine(val => !val || (!isNaN(Number(val)) && Number(val) > 0 && Number(val) <= 100), "Page size must be 1-100"),
 });
 
+const DEFAULT_TERMS_CONTENT = `# BCI ParkShare — Terms and Conditions
+
+**Version 1.0 — Effective January 1, 2025**
+
+## 1. Acceptance of Terms
+
+By accessing or using the BCI ParkShare application ("the Application"), you agree to be bound by these Terms and Conditions. If you do not agree to these terms, you may not use the Application.
+
+## 2. Description of Service
+
+BCI ParkShare is an internal workplace parking management system operated by BCI Workplace Services. The Application facilitates the booking, sharing, and management of parking spaces within BCI facilities.
+
+## 3. User Responsibilities
+
+**3.1 Account Use**
+You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account. You must notify the system administrator immediately of any unauthorized use of your account.
+
+**3.2 Accurate Information**
+You agree to provide accurate, current, and complete information when registering and using the Application, including vehicle registration details and contact information.
+
+**3.3 Acceptable Use**
+You agree to use the Application only for its intended purposes. You must not:
+- Attempt to circumvent the booking system or reserve spaces you do not intend to use
+- Share your account credentials with other users
+- Use the Application for any unlawful purpose
+- Interfere with or disrupt the Application or its servers
+
+## 4. Parking Space Bookings
+
+**4.1 Booking Obligations**
+When you book a parking space, you are committing to use that space during the reserved period. Repeated no-shows or late cancellations may result in restrictions on future bookings.
+
+**4.2 Cancellation Policy**
+Bookings should be cancelled as soon as you know you will not need the space, to allow other users to book it. The system may impose penalties for habitual late cancellations.
+
+**4.3 Space Usage**
+You must only park in the specific space assigned to your booking. Unauthorized use of spaces belonging to other bookings may result in your vehicle being ticketed or towed at your expense.
+
+## 5. Spot Owners
+
+**5.1 Listing Accuracy**
+If you list a parking space, you must ensure the information provided is accurate, including availability, location, and any restrictions.
+
+**5.2 Availability**
+Spot owners must honour confirmed bookings. Repeatedly cancelling confirmed bookings may result in suspension of listing privileges.
+
+## 6. Privacy and Data
+
+**6.1 Data Collection**
+The Application collects personal information including your name, email address, employee ID, and vehicle registration details. This information is used solely for the purpose of operating the parking management system.
+
+**6.2 Data Use**
+Your information will not be shared outside of BCI Workplace Services except as required by law. Usage data may be used in aggregate, anonymised form for reporting and system improvement.
+
+**6.3 Data Retention**
+Your data will be retained for as long as your account is active and for a reasonable period thereafter in accordance with BCI data retention policies.
+
+## 7. Limitation of Liability
+
+BCI Workplace Services provides this Application on an "as is" basis. To the fullest extent permitted by law, BCI Workplace Services shall not be liable for:
+- Any damage to your vehicle while using BCI parking facilities
+- Loss of use of the Application due to technical issues
+- Any indirect, incidental, or consequential damages arising from use of the Application
+
+## 8. Modifications to Terms
+
+BCI Workplace Services reserves the right to modify these Terms and Conditions at any time. You will be notified of material changes and will be required to accept the updated terms before continuing to use the Application.
+
+## 9. Termination
+
+BCI Workplace Services may suspend or terminate your access to the Application at any time for violation of these terms or for any other reason at its sole discretion.
+
+## 10. Governing Law
+
+These Terms and Conditions are governed by the laws applicable to BCI Workplace Services operations. Any disputes arising from use of this Application shall be resolved in accordance with BCI internal dispute resolution procedures.
+
+## 11. Contact
+
+If you have questions about these Terms and Conditions, please contact the BCI Workplace Services support team through your manager or the IT helpdesk.`;
+
+async function seedTermsIfMissing(): Promise<void> {
+  try {
+    const activeTerms = await storage.getActiveTermsVersion();
+    if (!activeTerms) {
+      console.log("[Startup] No active terms version found. Checking for any existing versions...");
+      const allVersions = await storage.getAllTermsVersions();
+      if (allVersions.length > 0) {
+        // Activate the most recent existing version
+        const latest = allVersions[0];
+        console.log(`[Startup] Activating existing terms version ${latest.version}...`);
+        await db
+          .update(termsVersions)
+          .set({ isActive: true, updatedAt: new Date() })
+          .where(eq(termsVersions.id, latest.id));
+        console.log(`[Startup] Terms version ${latest.version} activated.`);
+      } else {
+        // No terms at all — insert the default
+        console.log("[Startup] No terms versions found. Seeding default terms...");
+        await storage.createTermsVersion({
+          version: 1,
+          content: DEFAULT_TERMS_CONTENT,
+          isActive: true,
+          publishedAt: new Date(),
+        });
+        console.log("[Startup] Default terms version seeded successfully.");
+      }
+    }
+  } catch (error) {
+    console.error("[Startup] Failed to seed default terms:", error);
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Seed default terms and conditions if none exist
+  await seedTermsIfMissing();
+
   // Setup authentication middleware
   await setupAuth(app);
 

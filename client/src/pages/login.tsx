@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { BCIHeroLogo } from "@/components/bci-logo";
-import { ArrowRight, AlertCircle, FileText, CheckCircle2 } from "lucide-react";
+import { ArrowRight, AlertCircle, FileText, CheckCircle2, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -145,7 +145,7 @@ export default function Login() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [termsDialogOpen, setTermsDialogOpen] = useState(false);
 
-  const { data: terms } = useQuery<TermsVersion>({
+  const { data: terms, isLoading: termsLoading } = useQuery<TermsVersion>({
     queryKey: ["/api/legal/terms"],
   });
 
@@ -227,12 +227,20 @@ export default function Login() {
                       </DialogTitle>
                     </DialogHeader>
                     <ScrollArea className="h-[60vh] pr-4">
-                      {terms ? (
+                      {termsLoading ? (
+                        <div className="flex items-center justify-center py-12">
+                          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                        </div>
+                      ) : terms ? (
                         <div className="max-w-none" data-testid="terms-dialog-content">
                           <FormattedTermsContent content={terms.content} />
                         </div>
                       ) : (
-                        <p className="text-muted-foreground">Loading terms...</p>
+                        <div className="flex items-center justify-center py-12 text-center">
+                          <div className="space-y-2">
+                            <p className="text-muted-foreground text-sm">Terms temporarily unavailable. Please try again later.</p>
+                          </div>
+                        </div>
                       )}
                     </ScrollArea>
                   </DialogContent>
