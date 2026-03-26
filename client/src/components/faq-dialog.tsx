@@ -74,6 +74,21 @@ const generalFAQs: FAQCategory[] = [
       },
     ],
   },
+  {
+    title: "Electric Vehicle Charging",
+    items: [
+      {
+        question: "Which stalls have EV chargers?",
+        answer:
+          "Three types of EV chargers are available in the parkade. Tesla chargers are located in stalls 32–34. Single-outlet non-Tesla chargers are in stalls 37–40. Dual-outlet non-Tesla chargers are in stalls 41–42, 51–54, and 91–94.",
+      },
+      {
+        question: "Is EV charging included in the cost?",
+        answer:
+          "Yes. Use of the EV charger is included in the cost of the parking stall — there is no additional charge for charging your vehicle.",
+      },
+    ],
+  },
 ]
 
 // ── Renter ─────────────────────────────────────────────────────────────────
