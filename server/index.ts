@@ -123,12 +123,12 @@ Please read the ParkShare Privacy Notice, which describes how we collect and use
 
 ## Definitions
 
-- **"App"** means BCI's ParkShare application.
-- **"BCI"** means British Columbia Investment Management Corporation.
-- **"Tenant"** means a User who lists their parking stall through the App.
-- **"Subtenant"** means a User who books a parking stall through the App.
-- **"Sublease Agreement"** means the agreement between a Tenant and BCI governing the terms and conditions under which the Tenant is permitted to sublease their parking stall.
-- **"User"** means any BCI personnel who access or use the App, whether as a Tenant or Subtenant.
+- "App" means BCI's ParkShare application.
+- "BCI" means British Columbia Investment Management Corporation.
+- "Tenant" means a User who lists their parking stall through the App.
+- "Subtenant" means a User who books a parking stall through the App.
+- "Sublease Agreement" means the agreement between a Tenant and BCI governing the terms and conditions under which the Tenant is permitted to sublease their parking stall.
+- "User" means any BCI personnel who access or use the App, whether as a Tenant or Subtenant.
 
 ---
 
