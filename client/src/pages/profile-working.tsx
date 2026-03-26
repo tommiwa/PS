@@ -1177,8 +1177,7 @@ export default function Profile() {
             </AccordionItem>
           )}
 
-          {/* Spot Alerts Section - renters only */}
-          {isRenter() && (
+          {/* Spot Alerts Section - all roles */}
           <AccordionItem value="spot-alerts" className="border rounded-lg px-4">
             <AccordionTrigger className="hover:no-underline py-4 min-h-[44px]">
               <div className="flex items-center justify-between w-full mr-4">
@@ -1202,7 +1201,6 @@ export default function Profile() {
               />
             </AccordionContent>
           </AccordionItem>
-          )}
 
           <AccordionItem value="app-settings" className="border rounded-lg px-4">
             <AccordionTrigger className="hover:no-underline py-4 min-h-[44px]">
@@ -1266,8 +1264,7 @@ export default function Profile() {
             </AccordionContent>
           </AccordionItem>
           
-          {/* Spot Alerts Section - renters only */}
-          {isRenter() && (
+          {/* Spot Alerts Section - all roles */}
           <AccordionItem value="spot-alerts" className="border rounded-lg px-4">
             <AccordionTrigger className="hover:no-underline py-4 min-h-[44px]">
               <div className="flex items-center justify-between w-full mr-4">
@@ -1291,7 +1288,6 @@ export default function Profile() {
               />
             </AccordionContent>
           </AccordionItem>
-          )}
           
           </Accordion>
         </div>
