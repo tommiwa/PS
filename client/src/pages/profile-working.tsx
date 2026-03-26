@@ -44,12 +44,14 @@ import {
   User,
   Palette,
   Globe,
-  AlertTriangle
+  AlertTriangle,
+  Sparkles,
+  DollarSign
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useTheme } from "@/contexts/theme-context"
 import { useLanguage } from "@/hooks/use-language"
-import type { Vehicle, WaitingList, NotificationPreferences, UpdateNotificationPreferences, PaymentPreferences, UpdatePaymentPreferences, ParkingSpot, Department, SpotTypeTable } from "@shared/schema"
+import type { Vehicle, WaitingList, NotificationPreferences, UpdateNotificationPreferences, PaymentPreferences, UpdatePaymentPreferences, ParkingSpot, Department, SpotTypeTable, BookingSubscription } from "@shared/schema"
 import { insertPaymentPreferencesSchema } from "@shared/schema"
 
 // Waiting list enrollment form schema
@@ -84,6 +86,179 @@ const profileEditSchema = z.object({
 type VehicleForm = z.infer<typeof vehicleSchema>;
 type PaymentPreferencesForm = z.infer<typeof paymentPreferencesSchema>;
 type ProfileEditForm = z.infer<typeof profileEditSchema>;
+
+const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const DAY_FULL_LABELS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+function AutoBookingSection({
+  subscription,
+  isLoading,
+  onUpdate,
+  isPending
+}: {
+  subscription: BookingSubscription | null | undefined;
+  isLoading: boolean;
+  onUpdate: (updates: { isEnabled?: boolean; daysOfWeek?: number[]; maxPrice?: string | null }) => void;
+  isPending: boolean;
+}) {
+  const isEnabled = subscription?.isEnabled ?? false;
+  const daysOfWeek = (subscription?.daysOfWeek ?? []) as number[];
+  const maxPrice = subscription?.maxPrice ?? "";
+  
+  const [localMaxPrice, setLocalMaxPrice] = useState(maxPrice ? String(maxPrice) : "");
+  
+  useEffect(() => {
+    setLocalMaxPrice(maxPrice ? String(maxPrice) : "");
+  }, [maxPrice]);
+
+  const toggleDay = (day: number) => {
+    const newDays = daysOfWeek.includes(day)
+      ? daysOfWeek.filter((d) => d !== day)
+      : [...daysOfWeek, day].sort((a, b) => a - b);
+    onUpdate({ daysOfWeek: newDays });
+  };
+
+  const handleToggleEnabled = (checked: boolean) => {
+    onUpdate({ isEnabled: checked });
+  };
+
+  const handleMaxPriceBlur = () => {
+    const parsed = parseFloat(localMaxPrice);
+    if (!localMaxPrice || isNaN(parsed)) {
+      onUpdate({ maxPrice: null });
+    } else {
+      onUpdate({ maxPrice: parsed.toFixed(2) });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Enable/Disable Toggle */}
+      <div className="flex items-center justify-between p-4 bg-primary/5 dark:bg-primary/10 border border-primary/20 rounded-lg">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <Label className="font-semibold text-base">Auto-Booking</Label>
+            {isPending && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {isEnabled
+              ? "Auto-booking is active. We'll book a spot on your selected days when available."
+              : "Enable to have spots automatically booked for you on your chosen days."}
+          </p>
+        </div>
+        <Switch
+          checked={isEnabled}
+          onCheckedChange={handleToggleEnabled}
+          disabled={isPending}
+          data-testid="switch-auto-booking-enabled"
+        />
+      </div>
+
+      {/* Settings (visible only when enabled) */}
+      {isEnabled && (
+        <div className="space-y-4">
+          {/* Day of Week Selector */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Days to Auto-Book</Label>
+            <p className="text-xs text-muted-foreground">Select the days of the week you need parking.</p>
+            <div className="flex flex-wrap gap-2">
+              {DAY_LABELS.map((label, index) => {
+                const isSelected = daysOfWeek.includes(index);
+                return (
+                  <button
+                    key={index}
+                    type="button"
+                    disabled={isPending}
+                    onClick={() => toggleDay(index)}
+                    data-testid={`button-day-${label.toLowerCase()}`}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium border transition-colors ${
+                      isSelected
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background text-muted-foreground border-input hover-elevate"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Max Price */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Max Daily Price</Label>
+            <p className="text-xs text-muted-foreground">Only book spots at or below this daily rate. Leave empty for any price.</p>
+            <div className="relative">
+              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="e.g., 15.00"
+                className="pl-8"
+                value={localMaxPrice}
+                onChange={(e) => setLocalMaxPrice(e.target.value)}
+                onBlur={handleMaxPriceBlur}
+                disabled={isPending}
+                data-testid="input-max-price"
+              />
+            </div>
+          </div>
+
+          {/* Summary Card */}
+          {daysOfWeek.length > 0 && (
+            <div className="p-4 bg-primary/5 dark:bg-primary/10 border border-primary/20 rounded-lg space-y-2">
+              <h4 className="text-sm font-semibold flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-primary" />
+                Active Subscription Summary
+              </h4>
+              <div className="flex flex-wrap gap-1.5">
+                {daysOfWeek.map((d) => (
+                  <Badge key={d} variant="secondary" className="bg-primary/10 text-primary dark:bg-primary/20 text-xs">
+                    {DAY_FULL_LABELS[d]}
+                  </Badge>
+                ))}
+              </div>
+              {maxPrice && (
+                <p className="text-sm text-muted-foreground">
+                  Up to <span className="font-medium text-foreground">${parseFloat(String(maxPrice)).toFixed(2)}</span> per day
+                </p>
+              )}
+              {!maxPrice && (
+                <p className="text-sm text-muted-foreground">Any price accepted</p>
+              )}
+            </div>
+          )}
+
+          {daysOfWeek.length === 0 && (
+            <div className="p-4 border border-dashed rounded-lg text-center">
+              <p className="text-sm text-muted-foreground">Select at least one day to activate auto-booking.</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!isEnabled && (
+        <div className="p-4 border border-dashed rounded-lg space-y-2 text-center">
+          <Sparkles className="h-8 w-8 text-muted-foreground mx-auto" />
+          <p className="text-sm font-medium">Set it and forget it</p>
+          <p className="text-sm text-muted-foreground">
+            Enable auto-booking to automatically reserve a parking spot on your selected days whenever one is available within your price limit.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Profile() {
   const { user, isOwner, isRenter, isAdmin, refreshUser } = useAuth()
@@ -176,6 +351,12 @@ export default function Profile() {
   // Query assigned spots
   const { data: assignedSpots = [], isLoading: isLoadingAssignedSpots } = useQuery<ParkingSpot[]>({
     queryKey: ["/api/users", user?.id, "assigned-spots"],
+    enabled: !!user?.id
+  });
+
+  // Query booking subscription
+  const { data: bookingSubscription, isLoading: isLoadingSubscription } = useQuery<BookingSubscription | null>({
+    queryKey: ["/api/profile/subscription"],
     enabled: !!user?.id
   });
 
@@ -431,6 +612,28 @@ export default function Profile() {
     onError: (error) => {
       toast({
         title: "Failed to Save Payment Preferences",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Booking subscription mutation
+  const updateSubscriptionMutation = useMutation({
+    mutationFn: async (updates: { isEnabled?: boolean; daysOfWeek?: number[]; maxPrice?: string | null }) => {
+      if (!user) throw new Error("User not found");
+      const response = await apiRequest(`/api/profile/subscription`, {
+        method: 'PUT',
+        body: updates
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/profile/subscription"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to Save",
         description: error instanceof Error ? error.message : "Please try again.",
         variant: "destructive"
       });
@@ -1057,13 +1260,48 @@ export default function Profile() {
             </AccordionContent>
           </AccordionItem>
           
+          {/* Auto-Booking Section - Mobile */}
+          <AccordionItem value="auto-booking" className="border rounded-lg px-4">
+              <AccordionTrigger className="hover:no-underline py-4 min-h-[44px]">
+                <div className="flex items-center justify-between w-full mr-4">
+                  <div className="flex items-center gap-3">
+                    <Sparkles className="h-5 w-5 text-primary flex-shrink-0" />
+                    <div className="text-left">
+                      <h3 className="font-medium text-sm md:text-base">Auto-Booking</h3>
+                      <p className="text-xs md:text-sm text-muted-foreground break-words">
+                        {isLoadingSubscription ? "Loading..." :
+                         bookingSubscription?.isEnabled ? 
+                           `Active • ${(bookingSubscription.daysOfWeek || []).length} day${(bookingSubscription.daysOfWeek || []).length !== 1 ? 's' : ''} selected` :
+                           "Automatically book spots on your schedule"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {bookingSubscription?.isEnabled && (
+                      <Badge variant="secondary" className="bg-primary/10 text-primary dark:bg-primary/20 text-xs">
+                        On
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="pb-4 md:pb-6">
+                <AutoBookingSection
+                  subscription={bookingSubscription}
+                  isLoading={isLoadingSubscription}
+                  onUpdate={(updates) => updateSubscriptionMutation.mutate(updates)}
+                  isPending={updateSubscriptionMutation.isPending}
+                />
+              </AccordionContent>
+            </AccordionItem>
+          
           </Accordion>
         </div>
 
         {/* Desktop Tabs Layout */}
         <div className="hidden md:block">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-5 gap-1 mb-4 md:mb-6">
+            <TabsList className="grid w-full gap-1 mb-4 md:mb-6 grid-cols-5">
               <TabsTrigger value="waiting-list" className="flex items-center gap-2 min-h-11 text-xs md:text-sm">
                 <Calendar className="h-4 w-4 flex-shrink-0" />
                 <span className="hidden sm:inline">{t("profile.tabs.waitingList")}</span>
@@ -1078,6 +1316,11 @@ export default function Profile() {
                 <Bell className="h-4 w-4 flex-shrink-0" />
                 <span className="hidden sm:inline">{t("profile.tabs.notifications")}</span>
                 <span className="sm:hidden">Alerts</span>
+              </TabsTrigger>
+              <TabsTrigger value="auto-booking" data-testid="tab-auto-booking" className="flex items-center gap-2 min-h-11 text-xs md:text-sm">
+                <Sparkles className="h-4 w-4 flex-shrink-0" />
+                <span className="hidden sm:inline">Auto-Booking</span>
+                <span className="sm:hidden">Auto</span>
               </TabsTrigger>
               <TabsTrigger value="app-settings" className="flex items-center gap-2 min-h-11 text-xs md:text-sm">
                 <Settings className="h-4 w-4 flex-shrink-0" />
@@ -1804,6 +2047,29 @@ export default function Profile() {
                 </CardContent>
               </Card>
             </TabsContent>
+
+            {/* Auto-Booking Tab - Desktop */}
+            <TabsContent value="auto-booking" className="space-y-4 md:space-y-6">
+                <Card>
+                  <CardHeader className="p-4 md:p-6">
+                    <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+                      <Sparkles className="h-5 w-5 md:h-6 md:w-6" />
+                      Auto-Booking Subscription
+                    </CardTitle>
+                    <p className="text-sm md:text-base text-muted-foreground">
+                      Set up automatic spot booking on your chosen days when spots are available within your price limit.
+                    </p>
+                  </CardHeader>
+                  <CardContent className="p-4 md:p-6">
+                    <AutoBookingSection
+                      subscription={bookingSubscription}
+                      isLoading={isLoadingSubscription}
+                      onUpdate={(updates) => updateSubscriptionMutation.mutate(updates)}
+                      isPending={updateSubscriptionMutation.isPending}
+                    />
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
           </Tabs>
         </div>

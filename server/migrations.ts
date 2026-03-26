@@ -38,6 +38,22 @@ const migrations: MigrationCheck[] = [
     ],
   },
   {
+    name: "booking_subscriptions",
+    checkQuery: `SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'booking_subscriptions')`,
+    migrationStatements: [
+      `CREATE TABLE IF NOT EXISTS booking_subscriptions (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id VARCHAR NOT NULL UNIQUE,
+        is_enabled BOOLEAN NOT NULL DEFAULT false,
+        days_of_week INTEGER[] NOT NULL DEFAULT ARRAY[]::integer[],
+        max_price DECIMAL(10, 2),
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )`,
+      `CREATE INDEX IF NOT EXISTS "IDX_booking_subscriptions_user_id" ON booking_subscriptions (user_id)`,
+    ],
+  },
+  {
     name: "bookings_unique_active_spot_date",
     checkQuery: `SELECT EXISTS (
       SELECT FROM pg_indexes

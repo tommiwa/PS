@@ -24,6 +24,9 @@ import {
   type InsertPaymentPreferences,
   type UpdatePaymentPreferences,
   type PaymentType,
+  type BookingSubscription,
+  type InsertBookingSubscription,
+  type UpdateBookingSubscription,
   type InAppNotification,
   type InsertInAppNotification,
   type NotificationType,
@@ -70,7 +73,7 @@ import { randomUUID } from "crypto";
 import { auditDecorator } from "./audit-service";
 import { type IAuditStorage } from "./audit-storage";
 import { db } from "./db";
-import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, locations, spotTypesTable, termsVersions, spotAssignmentHistory, spotLocks, lockers, lockerWaitlist, lockerAssignmentHistory, lockerTypesTable, appConfigs, apiKeys, scheduledSpotAssignments, featureAnnouncements } from "@shared/schema";
+import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, bookingSubscriptions, locations, spotTypesTable, termsVersions, spotAssignmentHistory, spotLocks, lockers, lockerWaitlist, lockerAssignmentHistory, lockerTypesTable, appConfigs, apiKeys, scheduledSpotAssignments, featureAnnouncements } from "@shared/schema";
 import { eq, or, ilike, asc, and, notExists, sql as sqlOp, count, desc, inArray, isNull } from "drizzle-orm";
 
 // Storage interface with comprehensive CRUD methods
@@ -193,6 +196,10 @@ export interface IStorage {
   createPaymentPreferences(userId: string, preferences: InsertPaymentPreferences): Promise<PaymentPreferences>;
   updatePaymentPreferences(userId: string, updates: UpdatePaymentPreferences): Promise<PaymentPreferences>;
   deletePaymentPreferences(userId: string): Promise<boolean>;
+  
+  // Booking Subscription operations
+  getBookingSubscription(userId: string): Promise<BookingSubscription | undefined>;
+  upsertBookingSubscription(userId: string, updates: UpdateBookingSubscription): Promise<BookingSubscription>;
   
   // Department operations
   getDepartments(): Promise<Department[]>;
@@ -1973,6 +1980,43 @@ export class MemStorage implements IStorage {
     await db.delete(paymentPreferences).where(eq(paymentPreferences.id, existing.id));
     this.paymentPreferences.delete(existing.id);
     return true;
+  }
+
+  async getBookingSubscription(userId: string): Promise<BookingSubscription | undefined> {
+    const result = await db.select()
+      .from(bookingSubscriptions)
+      .where(eq(bookingSubscriptions.userId, userId))
+      .limit(1);
+    
+    return result[0];
+  }
+
+  async upsertBookingSubscription(userId: string, updates: UpdateBookingSubscription): Promise<BookingSubscription> {
+    const existing = await this.getBookingSubscription(userId);
+    
+    if (!existing) {
+      const insertData = {
+        userId,
+        isEnabled: updates.isEnabled ?? false,
+        daysOfWeek: updates.daysOfWeek ?? [],
+        maxPrice: updates.maxPrice ?? null,
+      };
+      const [created] = await db.insert(bookingSubscriptions).values(insertData).returning();
+      return created;
+    }
+    
+    const updateData: Partial<typeof bookingSubscriptions.$inferInsert> = {};
+    if (updates.isEnabled !== undefined) updateData.isEnabled = updates.isEnabled;
+    if (updates.daysOfWeek !== undefined) updateData.daysOfWeek = updates.daysOfWeek;
+    if (updates.maxPrice !== undefined) updateData.maxPrice = updates.maxPrice;
+    updateData.updatedAt = new Date();
+    
+    const [updated] = await db.update(bookingSubscriptions)
+      .set(updateData)
+      .where(eq(bookingSubscriptions.id, existing.id))
+      .returning();
+    
+    return updated;
   }
 
   // Department operations

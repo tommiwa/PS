@@ -33,6 +33,7 @@ import {
   insertUserSchema,
   insertPaymentPreferencesSchema,
   updatePaymentPreferencesSchema,
+  updateBookingSubscriptionSchema,
   insertTermsVersionSchema,
   insertLockerSchema,
   insertLockerWaitlistSchema,
@@ -1012,6 +1013,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error updating payment preferences:", error);
       res.status(500).json({ error: "Failed to update payment preferences" });
+    }
+  });
+
+  // Booking Subscription Routes
+  // GET /api/profile/subscription - Get current user's booking subscription
+  app.get("/api/profile/subscription", isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUserId = getAuthenticatedUserId(req);
+      if (!currentUserId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+      
+      const subscription = await storage.getBookingSubscription(currentUserId);
+      res.json(subscription || null);
+    } catch (error) {
+      console.error("Error fetching booking subscription:", error);
+      res.status(500).json({ error: "Failed to fetch booking subscription" });
+    }
+  });
+
+  // PUT /api/profile/subscription - Create or update current user's booking subscription
+  app.put("/api/profile/subscription", isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUserId = getAuthenticatedUserId(req);
+      if (!currentUserId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      const validatedUpdates = updateBookingSubscriptionSchema.parse(req.body);
+      
+      const subscription = await storage.upsertBookingSubscription(currentUserId, validatedUpdates);
+      res.json(subscription);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input data", details: error.errors });
+      }
+      console.error("Error updating booking subscription:", error);
+      res.status(500).json({ error: "Failed to update booking subscription" });
     }
   });
 

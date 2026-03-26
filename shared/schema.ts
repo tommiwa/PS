@@ -428,6 +428,37 @@ export const insertVehicleSchema = createInsertSchema(vehicles).omit({
 export type InsertVehicle = z.infer<typeof insertVehicleSchema>;
 export type Vehicle = typeof vehicles.$inferSelect;
 
+// Booking Subscriptions Table
+export const bookingSubscriptions = pgTable("booking_subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().unique(), // References users.id - one subscription per user
+  isEnabled: boolean("is_enabled").notNull().default(false),
+  daysOfWeek: integer("days_of_week").array().notNull().default(sql`ARRAY[]::integer[]`), // [1,2,3] for Mon-Wed
+  maxPrice: decimal("max_price", { precision: 10, scale: 2 }), // Max daily rate willing to pay
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertBookingSubscriptionSchema = createInsertSchema(bookingSubscriptions).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateBookingSubscriptionSchema = createInsertSchema(bookingSubscriptions).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial().extend({
+  daysOfWeek: z.array(z.number().int().min(0).max(6)).optional(),
+});
+
+export type InsertBookingSubscription = z.infer<typeof insertBookingSubscriptionSchema>;
+export type UpdateBookingSubscription = z.infer<typeof updateBookingSubscriptionSchema>;
+export type BookingSubscription = typeof bookingSubscriptions.$inferSelect;
+
 // Payment Preferences Table
 export const paymentTypes = z.enum(["interac_transfer", "cash"]);
 export type PaymentType = z.infer<typeof paymentTypes>;
