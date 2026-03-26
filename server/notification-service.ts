@@ -221,7 +221,7 @@ export interface EmailNotification {
   subject: string;
   text: string;
   html: string;
-  type: 'assignment' | 'welcome' | 'booking_confirmation' | 'booking_cancelled' | 'payment_reminder' | 'spot_availability' | 'weekly_report' | 'system_maintenance' | 'general' | 'waiting_list_enrollment' | 'waiting_list_admin' | 'issue_report';
+  type: 'assignment' | 'welcome' | 'booking_confirmation' | 'booking_cancelled' | 'payment_reminder' | 'spot_availability' | 'weekly_report' | 'system_maintenance' | 'general' | 'waiting_list_enrollment' | 'waiting_list_admin' | 'issue_report' | 'spot_alert';
 }
 
 export interface InAppNotification {
@@ -2698,6 +2698,88 @@ The BCI ParkShare Team`;
     console.log(`✓ Feedback resolved email sent to ${reporter.email} (cc: ${DEVSECOPS_EMAIL}): ${feedback.title}`);
   } catch (error) {
     console.error('❌ Error sending feedback resolved notification:', error);
+  }
+
+  return results;
+}
+
+/**
+ * Send a Spot Alert email to a subscriber when a matching listing becomes available.
+ * The email includes spot details and a direct "Book This Spot" CTA button.
+ * No spot is ever booked automatically — booking remains a human action.
+ */
+export async function sendSpotAlertEmail(
+  user: { name: string; email: string },
+  listing: {
+    id: string;
+    spotNumber: string;
+    location: string;
+    date: string;
+    dailyRate: number;
+  }
+): Promise<{ emailSent: boolean }> {
+  const results = { emailSent: false };
+
+  try {
+    const bookingUrl = `${APP_URL}/book?listing=${listing.id}`;
+    const subject = `Spot Alert: ${listing.spotNumber} available on ${formatFriendlyDate(listing.date)}`;
+
+    const text = `Hi ${user.name},
+
+A parking spot matching your alert preferences is now available!
+
+SPOT DETAILS:
+- Spot Number: ${listing.spotNumber}
+- Location: ${listing.location}
+- Date: ${formatFriendlyDate(listing.date)}
+- Daily Rate: $${listing.dailyRate.toFixed(2)}
+
+Book this spot before it's taken:
+${bookingUrl}
+
+This spot is available on a first-come, first-served basis.
+
+Warm regards,
+The BCI ParkShare Team`;
+
+    const content = `
+      <p>Hi ${user.name},</p>
+      <p>A parking spot matching your alert preferences is now available. Act fast — spots are booked on a first-come, first-served basis.</p>
+
+      <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
+        <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Spot Details</h3>
+        <ul style="margin: 0; padding: 0; list-style: none;">
+          <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Spot Number:</strong> ${listing.spotNumber}</li>
+          <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Location:</strong> ${listing.location}</li>
+          <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Date:</strong> ${formatFriendlyDate(listing.date)}</li>
+          <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Daily Rate:</strong> $${listing.dailyRate.toFixed(2)}</li>
+        </ul>
+      </div>
+
+      <p style="font-size: 14px; color: #64748b;">This spot is available on a first-come, first-served basis. Clicking the button below will take you to the booking page where you can complete your reservation.</p>
+    `;
+
+    const html = wrapEmailTemplate({
+      title: 'Parking Spot Available',
+      content,
+      theme: 'primary',
+      ctaButton: { text: 'Book This Spot', url: bookingUrl }
+    });
+
+    const notification: EmailNotification = {
+      to: user.email,
+      subject,
+      text,
+      html,
+      type: 'spot_alert'
+    };
+
+    const emailResult = await sendEmailNotification(notification);
+    results.emailSent = emailResult.success;
+
+    console.log(`✓ Spot alert email sent to ${user.name} (${user.email}) for spot ${listing.spotNumber} on ${listing.date}`);
+  } catch (error) {
+    console.error(`❌ Error sending spot alert email to ${user.email}:`, error);
   }
 
   return results;

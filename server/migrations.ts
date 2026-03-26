@@ -9,6 +9,23 @@ interface MigrationCheck {
 
 const migrations: MigrationCheck[] = [
   {
+    name: "spot_alert_subscriptions_table",
+    checkQuery: `SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'spot_alert_subscriptions')`,
+    migrationStatements: [
+      `CREATE TABLE IF NOT EXISTS spot_alert_subscriptions (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id VARCHAR NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+        is_active BOOLEAN NOT NULL DEFAULT false,
+        days_of_week INTEGER[] NOT NULL DEFAULT ARRAY[]::integer[],
+        max_daily_price DECIMAL(10,2),
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )`,
+      `CREATE INDEX IF NOT EXISTS "IDX_spot_alert_subscriptions_user_id" ON spot_alert_subscriptions (user_id)`,
+      `CREATE INDEX IF NOT EXISTS "IDX_spot_alert_subscriptions_is_active" ON spot_alert_subscriptions (is_active)`,
+    ],
+  },
+  {
     name: "feature_announcements_table",
     checkQuery: `SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'feature_announcements')`,
     migrationStatements: [

@@ -67,13 +67,15 @@ import {
   type ScheduledAssignmentStatus,
   type FeatureAnnouncement,
   type InsertFeatureAnnouncement,
-  type UpdateFeatureAnnouncement
+  type UpdateFeatureAnnouncement,
+  type SpotAlertSubscription,
+  type UpdateSpotAlertSubscription
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { auditDecorator } from "./audit-service";
 import { type IAuditStorage } from "./audit-storage";
 import { db } from "./db";
-import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, bookingSubscriptions, locations, spotTypesTable, termsVersions, spotAssignmentHistory, spotLocks, lockers, lockerWaitlist, lockerAssignmentHistory, lockerTypesTable, appConfigs, apiKeys, scheduledSpotAssignments, featureAnnouncements } from "@shared/schema";
+import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, bookingSubscriptions, locations, spotTypesTable, termsVersions, spotAssignmentHistory, spotLocks, lockers, lockerWaitlist, lockerAssignmentHistory, lockerTypesTable, appConfigs, apiKeys, scheduledSpotAssignments, featureAnnouncements, spotAlertSubscriptions } from "@shared/schema";
 import { eq, or, ilike, asc, and, notExists, sql as sqlOp, count, desc, inArray, isNull } from "drizzle-orm";
 
 // Storage interface with comprehensive CRUD methods
@@ -400,6 +402,11 @@ export interface IStorage {
   createAnnouncement(data: InsertFeatureAnnouncement): Promise<FeatureAnnouncement>;
   updateAnnouncement(id: number, updates: UpdateFeatureAnnouncement): Promise<FeatureAnnouncement | undefined>;
   deleteAnnouncement(id: number): Promise<boolean>;
+
+  // Spot Alert Subscription operations
+  getSpotAlertSubscription(userId: string): Promise<SpotAlertSubscription | undefined>;
+  upsertSpotAlertSubscription(userId: string, data: UpdateSpotAlertSubscription): Promise<SpotAlertSubscription>;
+  getActiveSpotAlertSubscribers(): Promise<SpotAlertSubscription[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -4219,6 +4226,34 @@ export class MemStorage implements IStorage {
   async deleteAnnouncement(id: number): Promise<boolean> {
     const result = await db.delete(featureAnnouncements).where(eq(featureAnnouncements.id, id));
     return (result.rowCount ?? 0) > 0;
+  }
+
+  // Spot Alert Subscription operations
+  async getSpotAlertSubscription(userId: string): Promise<SpotAlertSubscription | undefined> {
+    const [result] = await db.select().from(spotAlertSubscriptions).where(eq(spotAlertSubscriptions.userId, userId));
+    return result;
+  }
+
+  async upsertSpotAlertSubscription(userId: string, data: UpdateSpotAlertSubscription): Promise<SpotAlertSubscription> {
+    const existing = await this.getSpotAlertSubscription(userId);
+    if (existing) {
+      const [result] = await db
+        .update(spotAlertSubscriptions)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(spotAlertSubscriptions.userId, userId))
+        .returning();
+      return result;
+    } else {
+      const [result] = await db
+        .insert(spotAlertSubscriptions)
+        .values({ userId, isActive: false, daysOfWeek: [], maxDailyPrice: null, ...data })
+        .returning();
+      return result;
+    }
+  }
+
+  async getActiveSpotAlertSubscribers(): Promise<SpotAlertSubscription[]> {
+    return db.select().from(spotAlertSubscriptions).where(eq(spotAlertSubscriptions.isActive, true));
   }
 
   // Audit decorators will be applied via server initialization

@@ -20,6 +20,7 @@ import {
   sendWeeklySummaryNotification,
   sendSystemMaintenanceNotification,
   sendEmailNotification,
+  sendSpotAlertEmail,
   wrapEmailTemplate,
   type InAppNotification,
   type EmailNotification
@@ -1054,6 +1055,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Spot Alert Subscription Routes
+  // GET /api/users/:userId/spot-alert-subscription - Get user's spot alert subscription
+  app.get("/api/users/:userId/spot-alert-subscription", isAuthenticated, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const currentUserId = getAuthenticatedUserId(req);
+      if (!currentUserId) return res.status(401).json({ error: "User not authenticated" });
+
+      const currentUser = await storage.getUser(currentUserId);
+      const isAdmin = currentUser?.roles?.includes('admin');
+      if (!isAdmin && currentUserId !== userId) return res.status(403).json({ error: "Access denied" });
+
+      const subscription = await storage.getSpotAlertSubscription(userId);
+      res.json(subscription || null);
+    } catch (error) {
+      console.error("Error fetching spot alert subscription:", error);
+      res.status(500).json({ error: "Failed to fetch spot alert subscription" });
+    }
+  });
+
+  // PATCH /api/users/:userId/spot-alert-subscription - Update user's spot alert subscription
+  app.patch("/api/users/:userId/spot-alert-subscription", isAuthenticated, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const currentUserId = getAuthenticatedUserId(req);
+      if (!currentUserId) return res.status(401).json({ error: "User not authenticated" });
+
+      const currentUser = await storage.getUser(currentUserId);
+      const isAdmin = currentUser?.roles?.includes('admin');
+      if (!isAdmin && currentUserId !== userId) return res.status(403).json({ error: "Access denied" });
+
+      const { updateSpotAlertSubscriptionSchema } = await import("@shared/schema");
+      const validatedData = updateSpotAlertSubscriptionSchema.parse(req.body);
+
+      const subscription = await storage.upsertSpotAlertSubscription(userId, validatedData);
+      res.json(subscription);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input data", details: error.errors });
+      }
+      console.error("Error updating spot alert subscription:", error);
+      res.status(500).json({ error: "Failed to update spot alert subscription" });
+    }
+  });
+
   // Vehicle Routes
   // Get user's vehicles
   app.get("/api/users/:userId/vehicles", isAuthenticated, async (req: any, res) => {
@@ -1650,10 +1696,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
         after: newListing
       });
 
-      // DISABLED: Spot availability notifications to waiting list users
-      // This was sending bulk emails every time a spot was listed.
-      // Future: Re-enable with a subscribe/opt-in system so only subscribed users receive these.
-      // See: https://github.com/bci-parkshare/future - subscribe option for spot availability alerts
+      // Trigger spot alert emails to matching subscribers (async, fire-and-forget)
+      (async () => {
+        try {
+          const subscribers = await storage.getActiveSpotAlertSubscribers();
+          if (subscribers.length === 0) return;
+
+          // Get dates covered by this listing
+          const listingDates = getListingDates(newListing as any);
+          if (listingDates.length === 0) return;
+
+          const listingRate = parseFloat(newListing.dailyRate);
+          const spot = await storage.getParkingSpot(newListing.spotId);
+          if (!spot) return;
+
+          // Get location name for the spot
+          let locationName = 'BCI Parkade';
+          if (spot.locationId) {
+            const loc = await storage.getLocation(spot.locationId);
+            if (loc) locationName = `${loc.office} - ${loc.building}`;
+          }
+
+          for (const subscriber of subscribers) {
+            // Skip if subscriber is the listing owner
+            if (subscriber.userId === newListing.ownerId) continue;
+
+            // Check max price filter
+            if (subscriber.maxDailyPrice && listingRate > parseFloat(subscriber.maxDailyPrice)) continue;
+
+            // Check days-of-week filter: find first listing date matching subscriber's preferred days
+            const matchingDate = subscriber.daysOfWeek && subscriber.daysOfWeek.length > 0
+              ? listingDates.find(d => {
+                  const dow = new Date(d + 'T12:00:00').getDay();
+                  return subscriber.daysOfWeek.includes(dow);
+                })
+              : listingDates[0]; // No day preference — any date matches
+
+            if (!matchingDate) continue;
+
+            // Get subscriber user info
+            const user = await storage.getUser(subscriber.userId);
+            if (!user?.email) continue;
+            const userName = user.firstName && user.lastName
+              ? `${user.firstName} ${user.lastName}`
+              : user.firstName || user.email;
+
+            // Send spot alert email (fire-and-forget per subscriber)
+            sendSpotAlertEmail(
+              { name: userName, email: user.email },
+              {
+                id: newListing.id,
+                spotNumber: spot.spotNumber,
+                location: locationName,
+                date: matchingDate,
+                dailyRate: listingRate
+              }
+            ).catch(err => console.error(`[SpotAlerts] Failed to send alert to ${user.email}:`, err));
+          }
+        } catch (err) {
+          console.error('[SpotAlerts] Error processing spot alert subscribers:', err);
+        }
+      })();
       
       res.json(newListing);
     } catch (error) {

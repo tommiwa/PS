@@ -45,13 +45,11 @@ import {
   Palette,
   Globe,
   AlertTriangle,
-  Sparkles,
-  DollarSign
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useTheme } from "@/contexts/theme-context"
 import { useLanguage } from "@/hooks/use-language"
-import type { Vehicle, WaitingList, NotificationPreferences, UpdateNotificationPreferences, PaymentPreferences, UpdatePaymentPreferences, ParkingSpot, Department, SpotTypeTable, BookingSubscription } from "@shared/schema"
+import type { Vehicle, WaitingList, NotificationPreferences, UpdateNotificationPreferences, PaymentPreferences, UpdatePaymentPreferences, ParkingSpot, Department, SpotTypeTable, SpotAlertSubscription } from "@shared/schema"
 import { insertPaymentPreferencesSchema } from "@shared/schema"
 
 // Waiting list enrollment form schema
@@ -87,175 +85,152 @@ type VehicleForm = z.infer<typeof vehicleSchema>;
 type PaymentPreferencesForm = z.infer<typeof paymentPreferencesSchema>;
 type ProfileEditForm = z.infer<typeof profileEditSchema>;
 
-const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const DAY_FULL_LABELS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DAY_FULL_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-function AutoBookingSection({
+function SpotAlertsContent({
   subscription,
   isLoading,
   onUpdate,
   isPending
 }: {
-  subscription: BookingSubscription | null | undefined;
+  subscription: SpotAlertSubscription | null | undefined;
   isLoading: boolean;
-  onUpdate: (updates: { isEnabled?: boolean; daysOfWeek?: number[]; maxPrice?: string | null }) => void;
+  onUpdate: (data: { isActive?: boolean; daysOfWeek?: number[]; maxDailyPrice?: string | null }) => void;
   isPending: boolean;
 }) {
-  const isEnabled = subscription?.isEnabled ?? false;
-  const daysOfWeek = (subscription?.daysOfWeek ?? []) as number[];
-  const maxPrice = subscription?.maxPrice ?? "";
-  
-  const [localMaxPrice, setLocalMaxPrice] = useState(maxPrice ? String(maxPrice) : "");
-  
+  const [isActive, setIsActive] = useState<boolean>(false);
+  const [selectedDays, setSelectedDays] = useState<number[]>([]);
+  const [maxPrice, setMaxPrice] = useState<string>('');
+  const [isDirty, setIsDirty] = useState(false);
+
   useEffect(() => {
-    setLocalMaxPrice(maxPrice ? String(maxPrice) : "");
-  }, [maxPrice]);
+    if (subscription !== undefined) {
+      setIsActive(subscription?.isActive ?? false);
+      setSelectedDays(subscription?.daysOfWeek ?? []);
+      setMaxPrice(subscription?.maxDailyPrice ? String(parseFloat(subscription.maxDailyPrice)) : '');
+      setIsDirty(false);
+    }
+  }, [subscription]);
 
   const toggleDay = (day: number) => {
-    const newDays = daysOfWeek.includes(day)
-      ? daysOfWeek.filter((d) => d !== day)
-      : [...daysOfWeek, day].sort((a, b) => a - b);
-    onUpdate({ daysOfWeek: newDays });
+    setSelectedDays(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]);
+    setIsDirty(true);
   };
 
-  const handleToggleEnabled = (checked: boolean) => {
-    onUpdate({ isEnabled: checked });
+  const handleToggleActive = (val: boolean) => {
+    setIsActive(val);
+    setIsDirty(true);
   };
 
-  const handleMaxPriceBlur = () => {
-    const parsed = parseFloat(localMaxPrice);
-    if (!localMaxPrice || isNaN(parsed)) {
-      onUpdate({ maxPrice: null });
-    } else {
-      onUpdate({ maxPrice: parsed.toFixed(2) });
-    }
+  const handlePriceChange = (val: string) => {
+    setMaxPrice(val);
+    setIsDirty(true);
+  };
+
+  const handleSave = () => {
+    const maxDailyPrice = maxPrice && parseFloat(maxPrice) > 0 ? parseFloat(maxPrice).toFixed(2) : null;
+    onUpdate({ isActive, daysOfWeek: selectedDays, maxDailyPrice });
+    setIsDirty(false);
   };
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-6 w-6 animate-spin" />
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Enable/Disable Toggle */}
-      <div className="flex items-center justify-between p-4 bg-primary/5 dark:bg-primary/10 border border-primary/20 rounded-lg">
+      <div className="flex items-center justify-between p-4 border rounded-lg">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <Label className="font-semibold text-base">Auto-Booking</Label>
-            {isPending && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+            <Zap className="h-4 w-4" />
+            <Label className="text-sm font-medium">Email Alerts</Label>
           </div>
-          <p className="text-sm text-muted-foreground">
-            {isEnabled
-              ? "Auto-booking is active. We'll book a spot on your selected days when available."
-              : "Enable to have spots automatically booked for you on your chosen days."}
+          <p className="text-xs text-muted-foreground">
+            Receive an email when a matching spot becomes available
           </p>
         </div>
         <Switch
-          checked={isEnabled}
-          onCheckedChange={handleToggleEnabled}
-          disabled={isPending}
-          data-testid="switch-auto-booking-enabled"
+          checked={isActive}
+          onCheckedChange={handleToggleActive}
+          data-testid="switch-spot-alert-active"
         />
       </div>
 
-      {/* Settings (visible only when enabled) */}
-      {isEnabled && (
-        <div className="space-y-4">
-          {/* Day of Week Selector */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">Days to Auto-Book</Label>
-            <p className="text-xs text-muted-foreground">Select the days of the week you need parking.</p>
-            <div className="flex flex-wrap gap-2">
-              {DAY_LABELS.map((label, index) => {
-                const isSelected = daysOfWeek.includes(index);
-                return (
-                  <button
-                    key={index}
-                    type="button"
-                    disabled={isPending}
-                    onClick={() => toggleDay(index)}
-                    data-testid={`button-day-${label.toLowerCase()}`}
-                    className={`px-3 py-1.5 rounded-md text-sm font-medium border transition-colors ${
-                      isSelected
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-background text-muted-foreground border-input hover-elevate"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Max Price */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Max Daily Price</Label>
-            <p className="text-xs text-muted-foreground">Only book spots at or below this daily rate. Leave empty for any price.</p>
-            <div className="relative">
-              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="e.g., 15.00"
-                className="pl-8"
-                value={localMaxPrice}
-                onChange={(e) => setLocalMaxPrice(e.target.value)}
-                onBlur={handleMaxPriceBlur}
-                disabled={isPending}
-                data-testid="input-max-price"
-              />
-            </div>
-          </div>
-
-          {/* Summary Card */}
-          {daysOfWeek.length > 0 && (
-            <div className="p-4 bg-primary/5 dark:bg-primary/10 border border-primary/20 rounded-lg space-y-2">
-              <h4 className="text-sm font-semibold flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-primary" />
-                Active Subscription Summary
-              </h4>
-              <div className="flex flex-wrap gap-1.5">
-                {daysOfWeek.map((d) => (
-                  <Badge key={d} variant="secondary" className="bg-primary/10 text-primary dark:bg-primary/20 text-xs">
-                    {DAY_FULL_LABELS[d]}
-                  </Badge>
-                ))}
-              </div>
-              {maxPrice && (
-                <p className="text-sm text-muted-foreground">
-                  Up to <span className="font-medium text-foreground">${parseFloat(String(maxPrice)).toFixed(2)}</span> per day
-                </p>
-              )}
-              {!maxPrice && (
-                <p className="text-sm text-muted-foreground">Any price accepted</p>
-              )}
-            </div>
-          )}
-
-          {daysOfWeek.length === 0 && (
-            <div className="p-4 border border-dashed rounded-lg text-center">
-              <p className="text-sm text-muted-foreground">Select at least one day to activate auto-booking.</p>
-            </div>
-          )}
+      {/* Days of week filter */}
+      <div className="space-y-3">
+        <div>
+          <Label className="text-sm font-medium">Notify me for these days</Label>
+          <p className="text-xs text-muted-foreground mt-0.5">Leave all unselected to match any day</p>
         </div>
+        <div className="flex flex-wrap gap-2">
+          {DAY_LABELS.map((label, idx) => {
+            const selected = selectedDays.includes(idx);
+            return (
+              <Button
+                key={idx}
+                type="button"
+                variant={selected ? "default" : "outline"}
+                size="sm"
+                className="w-12 toggle-elevate"
+                aria-label={DAY_FULL_LABELS[idx]}
+                onClick={() => toggleDay(idx)}
+                data-testid={`day-btn-${label.toLowerCase()}`}
+              >
+                {label}
+              </Button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Max daily price filter */}
+      <div className="space-y-2">
+        <Label htmlFor="max-daily-price" className="text-sm font-medium">Max daily rate (optional)</Label>
+        <p className="text-xs text-muted-foreground">Only alert me if the spot costs at or below this price</p>
+        <div className="flex items-center gap-2 max-w-xs">
+          <span className="text-sm text-muted-foreground">$</span>
+          <Input
+            id="max-daily-price"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="No limit"
+            value={maxPrice}
+            onChange={(e) => handlePriceChange(e.target.value)}
+            data-testid="input-max-daily-price"
+            className="flex-1"
+          />
+          <span className="text-sm text-muted-foreground">/day</span>
+        </div>
+      </div>
+
+      {/* Info message when inactive */}
+      {!isActive && (
+        <Alert>
+          <Bell className="h-4 w-4" />
+          <AlertDescription className="text-sm">
+            Spot alerts are currently disabled. Enable them above to start receiving email notifications when matching spots become available.
+          </AlertDescription>
+        </Alert>
       )}
 
-      {!isEnabled && (
-        <div className="p-4 border border-dashed rounded-lg space-y-2 text-center">
-          <Sparkles className="h-8 w-8 text-muted-foreground mx-auto" />
-          <p className="text-sm font-medium">Set it and forget it</p>
-          <p className="text-sm text-muted-foreground">
-            Enable auto-booking to automatically reserve a parking spot on your selected days whenever one is available within your price limit.
-          </p>
-        </div>
-      )}
+      {/* Save Button */}
+      <div className="flex justify-end pt-2">
+        <Button
+          onClick={handleSave}
+          disabled={isPending || !isDirty}
+          data-testid="btn-save-spot-alerts"
+        >
+          {isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+          Save Preferences
+        </Button>
+      </div>
     </div>
   );
 }
@@ -354,9 +329,9 @@ export default function Profile() {
     enabled: !!user?.id
   });
 
-  // Query booking subscription
-  const { data: bookingSubscription, isLoading: isLoadingSubscription } = useQuery<BookingSubscription | null>({
-    queryKey: ["/api/profile/subscription"],
+  // Query spot alert subscription
+  const { data: spotAlertSubscription, isLoading: isLoadingSpotAlert } = useQuery<SpotAlertSubscription | null>({
+    queryKey: ["/api/users", user?.id, "spot-alert-subscription"],
     enabled: !!user?.id
   });
 
@@ -618,22 +593,27 @@ export default function Profile() {
     }
   });
 
-  // Booking subscription mutation
-  const updateSubscriptionMutation = useMutation({
-    mutationFn: async (updates: { isEnabled?: boolean; daysOfWeek?: number[]; maxPrice?: string | null }) => {
+  // Spot alert subscription mutation
+  const updateSpotAlertMutation = useMutation({
+    mutationFn: async (data: { isActive?: boolean; daysOfWeek?: number[]; maxDailyPrice?: string | null }) => {
       if (!user) throw new Error("User not found");
-      const response = await apiRequest(`/api/profile/subscription`, {
-        method: 'PUT',
-        body: updates
+      const response = await apiRequest(`/api/users/${user.id}/spot-alert-subscription`, {
+        method: 'PATCH',
+        body: data
       });
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/profile/subscription"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "spot-alert-subscription"] });
+      toast({
+        title: "Spot Alerts Updated",
+        description: "Your spot alert preferences have been saved.",
+        variant: "default"
+      });
     },
     onError: (error) => {
       toast({
-        title: "Failed to Save",
+        title: "Failed to Update Spot Alerts",
         description: error instanceof Error ? error.message : "Please try again.",
         variant: "destructive"
       });
@@ -1197,7 +1177,33 @@ export default function Profile() {
             </AccordionItem>
           )}
 
-          {/* App Settings Section */}
+          {/* Spot Alerts Section - renters only */}
+          {isRenter() && (
+          <AccordionItem value="spot-alerts" className="border rounded-lg px-4">
+            <AccordionTrigger className="hover:no-underline py-4 min-h-[44px]">
+              <div className="flex items-center justify-between w-full mr-4">
+                <div className="flex items-center gap-3">
+                  <Zap className="h-5 w-5 text-primary flex-shrink-0" />
+                  <div className="text-left">
+                    <h3 className="font-medium text-sm md:text-base">Spot Alerts</h3>
+                    <p className="text-xs md:text-sm text-muted-foreground break-words">
+                      {spotAlertSubscription?.isActive ? 'Active — email alerts enabled' : 'Inactive — no alerts sent'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pb-4 md:pb-6">
+              <SpotAlertsContent
+                subscription={spotAlertSubscription}
+                isLoading={isLoadingSpotAlert}
+                onUpdate={(data) => updateSpotAlertMutation.mutate(data)}
+                isPending={updateSpotAlertMutation.isPending}
+              />
+            </AccordionContent>
+          </AccordionItem>
+          )}
+
           <AccordionItem value="app-settings" className="border rounded-lg px-4">
             <AccordionTrigger className="hover:no-underline py-4 min-h-[44px]">
               <div className="flex items-center justify-between w-full mr-4">
@@ -1260,40 +1266,32 @@ export default function Profile() {
             </AccordionContent>
           </AccordionItem>
           
-          {/* Auto-Booking Section - Mobile */}
-          <AccordionItem value="auto-booking" className="border rounded-lg px-4">
-              <AccordionTrigger className="hover:no-underline py-4 min-h-[44px]">
-                <div className="flex items-center justify-between w-full mr-4">
-                  <div className="flex items-center gap-3">
-                    <Sparkles className="h-5 w-5 text-primary flex-shrink-0" />
-                    <div className="text-left">
-                      <h3 className="font-medium text-sm md:text-base">Auto-Booking</h3>
-                      <p className="text-xs md:text-sm text-muted-foreground break-words">
-                        {isLoadingSubscription ? "Loading..." :
-                         bookingSubscription?.isEnabled ? 
-                           `Active • ${(bookingSubscription.daysOfWeek || []).length} day${(bookingSubscription.daysOfWeek || []).length !== 1 ? 's' : ''} selected` :
-                           "Automatically book spots on your schedule"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {bookingSubscription?.isEnabled && (
-                      <Badge variant="secondary" className="bg-primary/10 text-primary dark:bg-primary/20 text-xs">
-                        On
-                      </Badge>
-                    )}
+          {/* Spot Alerts Section - renters only */}
+          {isRenter() && (
+          <AccordionItem value="spot-alerts" className="border rounded-lg px-4">
+            <AccordionTrigger className="hover:no-underline py-4 min-h-[44px]">
+              <div className="flex items-center justify-between w-full mr-4">
+                <div className="flex items-center gap-3">
+                  <Zap className="h-5 w-5 text-primary flex-shrink-0" />
+                  <div className="text-left">
+                    <h3 className="font-medium text-sm md:text-base">Spot Alerts</h3>
+                    <p className="text-xs md:text-sm text-muted-foreground break-words">
+                      {spotAlertSubscription?.isActive ? 'Active — email alerts enabled' : 'Inactive — no alerts sent'}
+                    </p>
                   </div>
                 </div>
-              </AccordionTrigger>
-              <AccordionContent className="pb-4 md:pb-6">
-                <AutoBookingSection
-                  subscription={bookingSubscription}
-                  isLoading={isLoadingSubscription}
-                  onUpdate={(updates) => updateSubscriptionMutation.mutate(updates)}
-                  isPending={updateSubscriptionMutation.isPending}
-                />
-              </AccordionContent>
-            </AccordionItem>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pb-4 md:pb-6">
+              <SpotAlertsContent
+                subscription={spotAlertSubscription}
+                isLoading={isLoadingSpotAlert}
+                onUpdate={(data) => updateSpotAlertMutation.mutate(data)}
+                isPending={updateSpotAlertMutation.isPending}
+              />
+            </AccordionContent>
+          </AccordionItem>
+          )}
           
           </Accordion>
         </div>
@@ -1301,7 +1299,7 @@ export default function Profile() {
         {/* Desktop Tabs Layout */}
         <div className="hidden md:block">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full gap-1 mb-4 md:mb-6 grid-cols-5">
+            <TabsList className={`grid w-full gap-1 mb-4 md:mb-6 ${isRenter() ? 'grid-cols-5' : 'grid-cols-4'}`}>
               <TabsTrigger value="waiting-list" className="flex items-center gap-2 min-h-11 text-xs md:text-sm">
                 <Calendar className="h-4 w-4 flex-shrink-0" />
                 <span className="hidden sm:inline">{t("profile.tabs.waitingList")}</span>
@@ -1317,11 +1315,13 @@ export default function Profile() {
                 <span className="hidden sm:inline">{t("profile.tabs.notifications")}</span>
                 <span className="sm:hidden">Alerts</span>
               </TabsTrigger>
-              <TabsTrigger value="auto-booking" data-testid="tab-auto-booking" className="flex items-center gap-2 min-h-11 text-xs md:text-sm">
-                <Sparkles className="h-4 w-4 flex-shrink-0" />
-                <span className="hidden sm:inline">Auto-Booking</span>
-                <span className="sm:hidden">Auto</span>
+              {isRenter() && (
+              <TabsTrigger value="spot-alerts" data-testid="tab-spot-alerts" className="flex items-center gap-2 min-h-11 text-xs md:text-sm">
+                <Zap className="h-4 w-4 flex-shrink-0" />
+                <span className="hidden sm:inline">Spot Alerts</span>
+                <span className="sm:hidden">Alerts</span>
               </TabsTrigger>
+              )}
               <TabsTrigger value="app-settings" className="flex items-center gap-2 min-h-11 text-xs md:text-sm">
                 <Settings className="h-4 w-4 flex-shrink-0" />
                 <span className="hidden sm:inline">{t("profile.tabs.appSettings")}</span>
@@ -2009,6 +2009,31 @@ export default function Profile() {
               </Card>
             </TabsContent>
 
+            {/* Spot Alerts Tab - renters only */}
+            {isRenter() && (
+            <TabsContent value="spot-alerts" className="space-y-4 md:space-y-6">
+              <Card>
+                <CardHeader className="p-4 md:p-6">
+                  <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+                    <Zap className="h-5 w-5 md:h-6 md:w-6" />
+                    Spot Alerts
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Get an email notification whenever a parking spot matching your preferences becomes available. You book it — we never book it for you.
+                  </p>
+                </CardHeader>
+                <CardContent className="p-4 md:p-6">
+                  <SpotAlertsContent
+                    subscription={spotAlertSubscription}
+                    isLoading={isLoadingSpotAlert}
+                    onUpdate={(data) => updateSpotAlertMutation.mutate(data)}
+                    isPending={updateSpotAlertMutation.isPending}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+            )}
+
             {/* App Settings Tab */}
             <TabsContent value="app-settings" className="space-y-4 md:space-y-6">
               <Card>
@@ -2048,28 +2073,30 @@ export default function Profile() {
               </Card>
             </TabsContent>
 
-            {/* Auto-Booking Tab - Desktop */}
-            <TabsContent value="auto-booking" className="space-y-4 md:space-y-6">
-                <Card>
-                  <CardHeader className="p-4 md:p-6">
-                    <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
-                      <Sparkles className="h-5 w-5 md:h-6 md:w-6" />
-                      Auto-Booking Subscription
-                    </CardTitle>
-                    <p className="text-sm md:text-base text-muted-foreground">
-                      Set up automatic spot booking on your chosen days when spots are available within your price limit.
-                    </p>
-                  </CardHeader>
-                  <CardContent className="p-4 md:p-6">
-                    <AutoBookingSection
-                      subscription={bookingSubscription}
-                      isLoading={isLoadingSubscription}
-                      onUpdate={(updates) => updateSubscriptionMutation.mutate(updates)}
-                      isPending={updateSubscriptionMutation.isPending}
-                    />
-                  </CardContent>
-                </Card>
-              </TabsContent>
+            {/* Spot Alerts Tab - renters only */}
+            {isRenter() && (
+            <TabsContent value="spot-alerts" className="space-y-4 md:space-y-6">
+              <Card>
+                <CardHeader className="p-4 md:p-6">
+                  <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+                    <Zap className="h-5 w-5 md:h-6 md:w-6" />
+                    Spot Alerts
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Get an email notification whenever a parking spot matching your preferences becomes available. You book it — we never book it for you.
+                  </p>
+                </CardHeader>
+                <CardContent className="p-4 md:p-6">
+                  <SpotAlertsContent
+                    subscription={spotAlertSubscription}
+                    isLoading={isLoadingSpotAlert}
+                    onUpdate={(data) => updateSpotAlertMutation.mutate(data)}
+                    isPending={updateSpotAlertMutation.isPending}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+            )}
 
           </Tabs>
         </div>

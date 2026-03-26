@@ -1604,3 +1604,39 @@ export const updateFeatureAnnouncementSchema = createInsertSchema(featureAnnounc
 export type InsertFeatureAnnouncement = z.infer<typeof insertFeatureAnnouncementSchema>;
 export type UpdateFeatureAnnouncement = z.infer<typeof updateFeatureAnnouncementSchema>;
 export type FeatureAnnouncement = typeof featureAnnouncements.$inferSelect;
+
+// Spot Alert Subscriptions Table
+// Renters can subscribe to be notified when spots matching their preferences become available.
+// When a matching listing is created, they receive an email with a "Book This Spot" CTA.
+// No spot is ever booked automatically — booking remains a human action.
+export const spotAlertSubscriptions = pgTable("spot_alert_subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  isActive: boolean("is_active").notNull().default(false),
+  // Days of week (0=Sunday, 1=Monday, ..., 6=Saturday) the renter wants to be notified about
+  daysOfWeek: integer("days_of_week").array().notNull().default(sql`ARRAY[]::integer[]`),
+  // Maximum daily price the renter is willing to pay (null = no limit)
+  maxDailyPrice: decimal("max_daily_price", { precision: 10, scale: 2 }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => [
+  index("IDX_spot_alert_subscriptions_user_id").on(table.userId),
+  index("IDX_spot_alert_subscriptions_is_active").on(table.isActive),
+]);
+
+export const insertSpotAlertSubscriptionSchema = createInsertSchema(spotAlertSubscriptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateSpotAlertSubscriptionSchema = createInsertSchema(spotAlertSubscriptions).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+
+export type InsertSpotAlertSubscription = z.infer<typeof insertSpotAlertSubscriptionSchema>;
+export type UpdateSpotAlertSubscription = z.infer<typeof updateSpotAlertSubscriptionSchema>;
+export type SpotAlertSubscription = typeof spotAlertSubscriptions.$inferSelect;
