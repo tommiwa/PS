@@ -2721,7 +2721,7 @@ export async function sendSpotAlertEmail(
   const results = { emailSent: false };
 
   try {
-    const bookingUrl = `${APP_URL}/book?listing=${listing.id}`;
+    const bookingUrl = `${APP_URL}/search`;
     const subject = `Spot Alert: ${listing.spotNumber} available on ${formatFriendlyDate(listing.date)}`;
 
     const text = `Hi ${user.name},
