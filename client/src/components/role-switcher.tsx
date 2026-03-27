@@ -56,12 +56,12 @@ export function RoleSwitcher() {
     return usersWithSpots.includes(userId);
   };
 
-  const handleRoleSwitch = async (role: UserRole) => {
+  const handleRoleSwitch = (role: UserRole) => {
     if (role === "admin") {
-      await resetViewRole(); // Reset to admin view
-      setLocation("/admin", { replace: true }); // Admin goes to /admin, not /dashboard
+      resetViewRole(); // fire-and-forget; backend persists in background
+      setLocation("/admin", { replace: true });
     } else {
-      await switchViewRole(role); // Switch to other role view
+      switchViewRole(role); // fire-and-forget; backend persists in background
       
       // Redirect to appropriate landing page for the role
       if (role === "owner") {
