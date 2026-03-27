@@ -50,6 +50,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { useTheme } from "@/contexts/theme-context"
 import { useLanguage } from "@/hooks/use-language"
 import { isNewFeature } from "@/lib/utils"
+import { useNewBadgeDays } from "@/hooks/use-new-badge-days"
 import type { Vehicle, WaitingList, NotificationPreferences, UpdateNotificationPreferences, PaymentPreferences, UpdatePaymentPreferences, ParkingSpot, Department, SpotTypeTable, SpotAlertSubscription } from "@shared/schema"
 import { insertPaymentPreferencesSchema } from "@shared/schema"
 
@@ -245,6 +246,7 @@ export default function Profile() {
   const { theme, setTheme } = useTheme()
   const { language, setLanguage, t } = useLanguage()
   const { confirm } = useConfirm()
+  const newBadgeDays = useNewBadgeDays()
   
   // State for various settings and drawers
   const [activeTab, setActiveTab] = useState("waiting-list")
@@ -1189,7 +1191,7 @@ export default function Profile() {
                   <div className="text-left">
                     <div className="flex items-center gap-2">
                       <h3 className="font-medium text-sm md:text-base">Spot Alerts</h3>
-                      {isNewFeature(SPOT_ALERTS_INTRODUCED_ON) && (
+                      {isNewFeature(SPOT_ALERTS_INTRODUCED_ON, newBadgeDays) && (
                         <Badge variant="default" className="text-xs px-1.5 py-0 no-default-active-elevate">New!</Badge>
                       )}
                     </div>
@@ -1281,7 +1283,7 @@ export default function Profile() {
                   <div className="text-left">
                     <div className="flex items-center gap-2">
                       <h3 className="font-medium text-sm md:text-base">Spot Alerts</h3>
-                      {isNewFeature(SPOT_ALERTS_INTRODUCED_ON) && (
+                      {isNewFeature(SPOT_ALERTS_INTRODUCED_ON, newBadgeDays) && (
                         <Badge variant="default" className="text-xs px-1.5 py-0 no-default-active-elevate">New!</Badge>
                       )}
                     </div>
@@ -1328,7 +1330,7 @@ export default function Profile() {
                 <Zap className="h-4 w-4 flex-shrink-0" />
                 <span className="hidden sm:inline">Spot Alerts</span>
                 <span className="sm:hidden">Spot</span>
-                {isNewFeature(SPOT_ALERTS_INTRODUCED_ON) && (
+                {isNewFeature(SPOT_ALERTS_INTRODUCED_ON, newBadgeDays) && (
                   <Badge variant="default" className="text-xs px-1.5 py-0 no-default-active-elevate">New!</Badge>
                 )}
               </TabsTrigger>

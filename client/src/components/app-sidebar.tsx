@@ -46,6 +46,7 @@ import { queryClient } from "@/lib/queryClient"
 import { useToast } from "@/hooks/use-toast"
 import { useState } from "react"
 import { isNewFeature } from "@/lib/utils"
+import { useNewBadgeDays } from "@/hooks/use-new-badge-days"
 
 // Owner-specific navigation items - grouped by category
 // Group 1: Managing their own spots
@@ -248,6 +249,7 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
   const [refreshing, setRefreshing] = useState<string | null>(null);
   const { setOpenMobile } = useSidebar();
   const { canInstall, install } = usePwaInstall();
+  const newBadgeDays = useNewBadgeDays();
   
   // Get effective role: use view role if set (for admin viewing as other role), 
   // otherwise use user's actual roles
@@ -511,7 +513,7 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
       }
       
       const tooltipText = getTooltipText(item);
-      const hasNewBadge = 'introducedOn' in item && item.introducedOn instanceof Date && isNewFeature(item.introducedOn);
+      const hasNewBadge = 'introducedOn' in item && item.introducedOn instanceof Date && isNewFeature(item.introducedOn, newBadgeDays);
       
       return (
         <SidebarMenuItem key={item.title}>

@@ -8179,6 +8179,14 @@ The BCI ParkShare Team`;
           dataType: 'number',
           category: 'booking',
           description: 'Minimum hours before the booking date that cancellation is allowed. Users cannot cancel bookings within this time window.'
+        },
+        {
+          key: 'new_badge_days',
+          value: '30',
+          label: 'New Badge Duration (days)',
+          dataType: 'number',
+          category: 'system',
+          description: 'Number of days a "New!" badge appears on newly introduced features before automatically disappearing.'
         }
       ];
       
