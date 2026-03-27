@@ -161,7 +161,13 @@ function getEntryColor(entry: CalendarEntry): string {
   }
 }
 
-function getStatusLabel(status: string): string {
+function getStatusLabel(status: string, entryType?: "booking" | "listing", entryDate?: string): string {
+  if (entryType === "booking" && (status === "confirmed" || status === "completed") && entryDate) {
+    const today = format(new Date(), "yyyy-MM-dd")
+    if (entryDate > today) return "Upcoming"
+    if (entryDate === today) return "Active"
+    return "Completed"
+  }
   const labels: Record<string, string> = {
     confirmed: "Confirmed",
     completed: "Completed",
@@ -199,7 +205,7 @@ function EntryCard({ entry, isOwnerView }: { entry: CalendarEntry; isOwnerView: 
         </div>
       )}
       <div className="text-[10px] leading-tight opacity-80 font-medium">
-        {getStatusLabel(entry.status)}
+        {getStatusLabel(entry.status, entry.type, entry.date)}
       </div>
       <div className="text-[10px] leading-tight opacity-70 hidden sm:block">
         ${Number(entry.dailyRate).toFixed(2)}/day
@@ -310,7 +316,7 @@ function DayCell({
                         : ""
                     }`}
                   >
-                    {getStatusLabel(entry.status)}
+                    {getStatusLabel(entry.status, entry.type, entry.date)}
                   </Badge>
                 </div>
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -361,9 +367,11 @@ export default function MyCalendar() {
 
   const isLoading = isOwnerView ? isLoadingListings : isLoadingBookings
 
-  const entries: CalendarEntry[] = isOwnerView
+  const allEntries: CalendarEntry[] = isOwnerView
     ? ownerListings.flatMap((l) => listingToCalendarEntries(l))
     : renterBookings.map((b) => bookingToCalendarEntry(b))
+
+  const entries: CalendarEntry[] = allEntries.filter((e) => e.status !== "cancelled")
 
   const entriesByDate = entries.reduce<Record<string, CalendarEntry[]>>((acc, entry) => {
     if (!entry.date) return acc
@@ -479,18 +487,14 @@ export default function MyCalendar() {
               </span>
               <span className="flex items-center gap-1">
                 <span className="inline-block h-2.5 w-2.5 rounded bg-gray-100 border border-gray-300 flex-shrink-0" />
-                Cancelled / Unused
+                Unused
               </span>
             </>
           ) : (
             <>
               <span className="flex items-center gap-1">
                 <span className="inline-block h-2.5 w-2.5 rounded bg-blue-100 border border-blue-300 flex-shrink-0" />
-                Confirmed
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="inline-block h-2.5 w-2.5 rounded bg-gray-100 border border-gray-300 flex-shrink-0" />
-                Cancelled
+                Upcoming / Active / Completed
               </span>
             </>
           )}
