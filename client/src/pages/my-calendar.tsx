@@ -149,6 +149,12 @@ function getEntryColor(entry: CalendarEntry): string {
     if (entry.status === "cancelled") {
       return "bg-gray-100 text-gray-400 dark:bg-gray-800/50 dark:text-gray-500"
     }
+    if (entry.status === "confirmed" || entry.status === "completed") {
+      const today = format(new Date(), "yyyy-MM-dd")
+      if (entry.date > today) return "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+      if (entry.date === today) return "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
+      return "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300"
+    }
     return "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
   } else {
     if (entry.status === "cancelled" || entry.status === "unused") {
@@ -494,7 +500,15 @@ export default function MyCalendar() {
             <>
               <span className="flex items-center gap-1">
                 <span className="inline-block h-2.5 w-2.5 rounded bg-blue-100 border border-blue-300 flex-shrink-0" />
-                Upcoming / Active / Completed
+                Upcoming
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="inline-block h-2.5 w-2.5 rounded bg-green-100 border border-green-300 flex-shrink-0" />
+                Active
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="inline-block h-2.5 w-2.5 rounded bg-violet-100 border border-violet-300 flex-shrink-0" />
+                Completed
               </span>
             </>
           )}
