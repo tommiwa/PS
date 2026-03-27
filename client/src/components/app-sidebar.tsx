@@ -45,6 +45,7 @@ import { usePwaInstall } from "@/hooks/use-pwa-install"
 import { queryClient } from "@/lib/queryClient"
 import { useToast } from "@/hooks/use-toast"
 import { useState } from "react"
+import { isNewFeature } from "@/lib/utils"
 
 // Owner-specific navigation items - grouped by category
 // Group 1: Managing their own spots
@@ -68,7 +69,8 @@ const ownerManagementItems = [
     url: "/my-calendar",
     icon: CalendarCheck,
     roles: ["owner"],
-    tooltip: "Monthly view of your listings"
+    tooltip: "Monthly view of your listings",
+    introducedOn: new Date("2026-03-20")
   },
   {
     title: "Dashboard",
@@ -122,7 +124,8 @@ const mainMenuItems = [
     url: "/my-calendar",
     icon: CalendarCheck,
     roles: ["renter"],
-    tooltip: "Monthly view of your bookings"
+    tooltip: "Monthly view of your bookings",
+    introducedOn: new Date("2026-03-20")
   },
   {
     title: "Dashboard",
@@ -508,7 +511,7 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
       }
       
       const tooltipText = getTooltipText(item);
-      const hasNewBadge = 'isNew' in item && item.isNew;
+      const hasNewBadge = 'introducedOn' in item && item.introducedOn instanceof Date && isNewFeature(item.introducedOn);
       
       return (
         <SidebarMenuItem key={item.title}>
@@ -527,8 +530,8 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
                 <span className="flex items-center gap-2 flex-1">
                   {displayTitle}
                   {hasNewBadge ? (
-                    <Badge variant="secondary" className="ml-auto text-xs px-1.5 py-0">
-                      New
+                    <Badge variant="default" className="ml-auto text-xs px-1.5 py-0">
+                      New!
                     </Badge>
                   ) : null}
                 </span>
@@ -543,8 +546,8 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
                 <span className="flex items-center gap-2 flex-1">
                   {displayTitle}
                   {hasNewBadge ? (
-                    <Badge variant="secondary" className="ml-auto text-xs px-1.5 py-0">
-                      New
+                    <Badge variant="default" className="ml-auto text-xs px-1.5 py-0">
+                      New!
                     </Badge>
                   ) : null}
                 </span>

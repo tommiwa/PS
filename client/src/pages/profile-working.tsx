@@ -49,8 +49,11 @@ import {
 import { useAuth } from "@/contexts/auth-context"
 import { useTheme } from "@/contexts/theme-context"
 import { useLanguage } from "@/hooks/use-language"
+import { isNewFeature } from "@/lib/utils"
 import type { Vehicle, WaitingList, NotificationPreferences, UpdateNotificationPreferences, PaymentPreferences, UpdatePaymentPreferences, ParkingSpot, Department, SpotTypeTable, SpotAlertSubscription } from "@shared/schema"
 import { insertPaymentPreferencesSchema } from "@shared/schema"
+
+const SPOT_ALERTS_INTRODUCED_ON = new Date("2026-03-20");
 
 // Waiting list enrollment form schema
 const waitingListFormSchema = z.object({
@@ -1184,7 +1187,12 @@ export default function Profile() {
                 <div className="flex items-center gap-3">
                   <Zap className="h-5 w-5 text-primary flex-shrink-0" />
                   <div className="text-left">
-                    <h3 className="font-medium text-sm md:text-base">Spot Alerts</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium text-sm md:text-base">Spot Alerts</h3>
+                      {isNewFeature(SPOT_ALERTS_INTRODUCED_ON) && (
+                        <Badge variant="default" className="text-xs px-1.5 py-0 no-default-active-elevate">New!</Badge>
+                      )}
+                    </div>
                     <p className="text-xs md:text-sm text-muted-foreground break-words">
                       {spotAlertSubscription?.isActive ? 'Active — email alerts enabled' : 'Inactive — no alerts sent'}
                     </p>
@@ -1271,7 +1279,12 @@ export default function Profile() {
                 <div className="flex items-center gap-3">
                   <Zap className="h-5 w-5 text-primary flex-shrink-0" />
                   <div className="text-left">
-                    <h3 className="font-medium text-sm md:text-base">Spot Alerts</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium text-sm md:text-base">Spot Alerts</h3>
+                      {isNewFeature(SPOT_ALERTS_INTRODUCED_ON) && (
+                        <Badge variant="default" className="text-xs px-1.5 py-0 no-default-active-elevate">New!</Badge>
+                      )}
+                    </div>
                     <p className="text-xs md:text-sm text-muted-foreground break-words">
                       {spotAlertSubscription?.isActive ? 'Active — email alerts enabled' : 'Inactive — no alerts sent'}
                     </p>
@@ -1315,6 +1328,9 @@ export default function Profile() {
                 <Zap className="h-4 w-4 flex-shrink-0" />
                 <span className="hidden sm:inline">Spot Alerts</span>
                 <span className="sm:hidden">Spot</span>
+                {isNewFeature(SPOT_ALERTS_INTRODUCED_ON) && (
+                  <Badge variant="default" className="text-xs px-1.5 py-0 no-default-active-elevate">New!</Badge>
+                )}
               </TabsTrigger>
               <TabsTrigger value="app-settings" className="flex items-center gap-2 min-h-11 text-xs md:text-sm">
                 <Settings className="h-4 w-4 flex-shrink-0" />
