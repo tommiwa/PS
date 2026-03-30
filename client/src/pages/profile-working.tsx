@@ -124,6 +124,9 @@ function SpotAlertsContent({
 
   const handleToggleActive = (val: boolean) => {
     setIsActive(val);
+    if (val && !maxPrice) {
+      setMaxPrice('15');
+    }
     setIsDirty(true);
   };
 
@@ -166,62 +169,72 @@ function SpotAlertsContent({
         />
       </div>
 
-      {/* Days of week filter */}
-      <div className="space-y-3">
-        <div>
-          <Label className="text-sm font-medium">Notify me for these days</Label>
-          <p className="text-xs text-muted-foreground mt-0.5">Leave all unselected to match any day</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {DAY_LABELS.map((label, idx) => {
-            const selected = selectedDays.includes(idx);
-            return (
-              <Button
-                key={idx}
-                type="button"
-                variant={selected ? "default" : "outline"}
-                size="sm"
-                className="w-12 toggle-elevate"
-                aria-label={DAY_FULL_LABELS[idx]}
-                onClick={() => toggleDay(idx)}
-                data-testid={`day-btn-${label.toLowerCase()}`}
-              >
-                {label}
-              </Button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Max daily price filter */}
-      <div className="space-y-2">
-        <Label htmlFor="max-daily-price" className="text-sm font-medium">Max daily rate (optional)</Label>
-        <p className="text-xs text-muted-foreground">Only alert me if the spot costs at or below this price</p>
-        <div className="flex items-center gap-2 max-w-xs">
-          <span className="text-sm text-muted-foreground">$</span>
-          <Input
-            id="max-daily-price"
-            type="number"
-            min="0"
-            step="0.01"
-            placeholder="No limit"
-            value={maxPrice}
-            onChange={(e) => handlePriceChange(e.target.value)}
-            data-testid="input-max-daily-price"
-            className="flex-1"
-          />
-          <span className="text-sm text-muted-foreground">/day</span>
-        </div>
-      </div>
-
-      {/* Info message when inactive */}
-      {!isActive && (
+      {/* Filters — only shown when alerts are enabled */}
+      {!isActive ? (
         <Alert>
           <Bell className="h-4 w-4" />
           <AlertDescription className="text-sm">
-            Spot alerts are currently disabled. Enable them above to start receiving email notifications when matching spots become available.
+            Enable alerts above to customise which days and price range you want to be notified for, so you only hear about spots that match what you need.
           </AlertDescription>
         </Alert>
+      ) : (
+        <>
+          {/* Filter nudge */}
+          <Alert>
+            <Zap className="h-4 w-4" />
+            <AlertDescription className="text-sm">
+              We recommend selecting specific days and a max daily rate. We've defaulted the rate to $15/day — adjust it if needed, or clear it to receive alerts for all prices.
+            </AlertDescription>
+          </Alert>
+
+          {/* Days of week filter */}
+          <div className="space-y-3">
+            <div>
+              <Label className="text-sm font-medium">Notify me for these days</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">Leave all unselected to match any day</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {DAY_LABELS.map((label, idx) => {
+                const selected = selectedDays.includes(idx);
+                return (
+                  <Button
+                    key={idx}
+                    type="button"
+                    variant={selected ? "default" : "outline"}
+                    size="sm"
+                    className="w-12 toggle-elevate"
+                    aria-label={DAY_FULL_LABELS[idx]}
+                    onClick={() => toggleDay(idx)}
+                    data-testid={`day-btn-${label.toLowerCase()}`}
+                  >
+                    {label}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Max daily price filter */}
+          <div className="space-y-2">
+            <Label htmlFor="max-daily-price" className="text-sm font-medium">Max daily rate (optional)</Label>
+            <p className="text-xs text-muted-foreground">Only alert me if the spot costs at or below this price</p>
+            <div className="flex items-center gap-2 max-w-xs">
+              <span className="text-sm text-muted-foreground">$</span>
+              <Input
+                id="max-daily-price"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="No limit"
+                value={maxPrice}
+                onChange={(e) => handlePriceChange(e.target.value)}
+                data-testid="input-max-daily-price"
+                className="flex-1"
+              />
+              <span className="text-sm text-muted-foreground">/day</span>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Save Button */}
