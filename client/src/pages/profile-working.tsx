@@ -169,15 +169,8 @@ function SpotAlertsContent({
         />
       </div>
 
-      {/* Filters — only shown when alerts are enabled */}
-      {!isActive ? (
-        <Alert>
-          <Bell className="h-4 w-4" />
-          <AlertDescription className="text-sm">
-            Enable alerts above to customise which days and price range you want to be notified for, so you only hear about spots that match what you need.
-          </AlertDescription>
-        </Alert>
-      ) : (
+      {/* Filters + Save — only shown when alerts are enabled */}
+      {isActive && (
         <>
           {/* Filter nudge */}
           <Alert>
@@ -234,20 +227,20 @@ function SpotAlertsContent({
               <span className="text-sm text-muted-foreground">/day</span>
             </div>
           </div>
+
+          {/* Save Button */}
+          <div className="flex justify-end pt-2">
+            <Button
+              onClick={handleSave}
+              disabled={isPending || !isDirty}
+              data-testid="btn-save-spot-alerts"
+            >
+              {isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Save Preferences
+            </Button>
+          </div>
         </>
       )}
-
-      {/* Save Button */}
-      <div className="flex justify-end pt-2">
-        <Button
-          onClick={handleSave}
-          disabled={isPending || !isDirty}
-          data-testid="btn-save-spot-alerts"
-        >
-          {isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-          Save Preferences
-        </Button>
-      </div>
     </div>
   );
 }
