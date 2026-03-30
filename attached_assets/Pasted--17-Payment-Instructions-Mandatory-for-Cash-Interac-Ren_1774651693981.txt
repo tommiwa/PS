@@ -1,0 +1,25 @@
+#17 - Payment Instructions — Mandatory for Cash/Interac + Renter Display
+What & Why
+Payment preferences (type + instructions) are saved once per owner and automatically apply to every new listing they create — owners don't need to re-enter them each time. When the payment type is Cash or Interac, the owner must provide instructions so renters know how to pay. For period or recurring listings, which split into individual daily bookings, those instructions must be carried through to every individual daily booking — so every renter, regardless of which day they booked, can see exactly how to pay.
+
+The Payment Preferences modal should enforce this, and make it unmistakably clear to the owner that whatever they write will appear directly on each renter's booking page.
+
+Done looks like
+Payment preferences are saved once and automatically applied whenever the owner creates a new listing — no need to re-enter each time
+In the Payment Preferences modal, when the payment type is Cash or Interac, the Payment Instructions field is required — the "Save Preferences" button is disabled (or shows an inline validation error) if the field is left empty
+A clear, prominent helper message appears beneath the instructions field (e.g. "This will be shown to renters on their booking page so they know how to pay you") — visible whenever Cash or Interac is selected
+If the payment type is changed to a non-cash/non-Interac type, the instructions field becomes optional and the required indicator disappears
+For period or recurring listings, the payment instructions are associated with each individual daily booking generated from that listing — not just the parent listing
+On the renter's "My Bookings" page, the "How to Pay" section is only shown when the booking has not yet been paid — that is, when the payment status is still pending/unpaid. Once the renter marks payment as sent (or the booking moves to any paid status), the "How to Pay" section is hidden
+Each individual booking (including those from period/recurring splits) shows the owner's payment instructions under a clear "How to Pay" label — only while payment is outstanding
+On the owner's view, instructions are shown once per spot — not repeated on every booking row beneath it
+Out of scope
+Changing what payment types are available
+Sending payment instructions by email or push notification
+Allowing per-listing override of payment preferences (preferences are global per owner)
+Tasks
+Mandatory validation in Payment Preferences modal — When Cash or Interac is selected, mark the Payment Instructions textarea as required. Disable the save button or show an inline error if submitted empty. Add helper text below the field clearly explaining it will appear on renters' booking pages.
+Conditional required indicator — Dynamically show/hide the required marker and helper text based on the selected payment type. When a non-Cash/non-Interac type is selected, the field reverts to optional with no helper text.
+Propagate instructions to individual daily bookings — When a period or recurring listing is created and split into individual daily bookings, ensure the owner's payment type and instructions are stored on (or resolvable from) each individual booking record — not just the parent.
+Display instructions on renter's booking page — unpaid only — For each booking where the payment type is Cash or Interac AND the booking has not yet been paid (payment status is pending/unpaid), show the owner's payment instructions under a "How to Pay" label. If the owner has no instructions saved, show a static fallback message instead (e.g. "Contact the owner to arrange payment details"). If the booking is already paid (payment marked as sent or any paid status), hide the "How to Pay" section entirely. This applies to both one-off bookings and individual daily bookings from period/recurring listings.
+Owner view — show instructions once per spot — On the owner's bookings/listings view, display payment instructions at the spot level only, not duplicated on every child booking row beneath it.
