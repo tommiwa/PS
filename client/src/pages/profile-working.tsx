@@ -124,10 +124,15 @@ function SpotAlertsContent({
 
   const handleToggleActive = (val: boolean) => {
     setIsActive(val);
-    if (val && !maxPrice) {
-      setMaxPrice('15');
+    if (val) {
+      if (!maxPrice) setMaxPrice('15');
+      setIsDirty(true);
+    } else {
+      // Auto-save immediately when disabling — Save button is hidden when inactive
+      const maxDailyPrice = maxPrice && parseFloat(maxPrice) > 0 ? parseFloat(maxPrice).toFixed(2) : null;
+      onUpdate({ isActive: false, daysOfWeek: selectedDays, maxDailyPrice });
+      setIsDirty(false);
     }
-    setIsDirty(true);
   };
 
   const handlePriceChange = (val: string) => {
