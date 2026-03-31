@@ -1,0 +1,81 @@
+Monthly Shout Out - Jan / Feb 2026
+Hello IT-BR-Enterprise Solutions
+Here are the highlights from our work from the months of January and February 2026 (in no particular order):
+ 
+AI-Powered Case Creation for PDVAL System
+
+Developed an AI-powered workflow to automatically extract structured investment and security valuation data from unstructured PDFs, eliminating the need for data preparers in Finance to manually read through lengthy documents and transcribe data. This automation saves ~160 hours annually across PCF/GPF/IRR asset classes, improves data quality by reducing transcription errors, and enables faster case turnaround. Please reach out to Calvin Louie if you have any questions.
+
+Affinity Connector in Claude - CRM Intelligence Through Natural Language
+
+BCI's first MCP server connects Claude directly to Affinity CRM, enabling PE teams to query relationship data conversationally, transforming complex CRM navigation into simple questions. Built with enterprise security and templated for replication across other systems, this breakthrough unlocks intelligence that previously required manual data exports and hours of analysis. Please reach out to Shu Liu if you have any questions.
+
+Client Cash Redistribution (I&RR)
+
+Automated the IRR client cash redistribution process end-to-end. The system now automatically monitors cash balances held on behalf of clients, identifies any surplus above the minimum threshold, and triggers redistribution instructions to CashOps, all without manual intervention. Please reach out to Prathmesh Deshmukh if you have any questions.
+
+WPS Knowledge Agent
+
+Powered by Claude Sonnet 4.5, an agentic solution was built using AIRIA for the Workplace Services team, designed to enable intelligent interaction with the WPS SharePoint repository, synced with over 4,500 structured and unstructured documents. Leveraging advanced customized retrieval and summarization techniques, the system extracts, synthesizes, and reasons over information across multiple artifacts to deliver contextual, accurate, and actionable insights. Please reach out to Arun S. if you have any questions.
+
+Private Equity Chronograph GP module implementation
+
+This project implemented the GP Chronograph module to complement the existing LP module used by Private Equity. This project was developed in partnership with Private Equity. The four-month project successfully completed in January. Please reach out to Randy if you have any questions.
+
+Quarterly Planning Replit App
+
+Replit was used to build an app that assists with Technology department quarterly planning. It has moved us away from a spreadsheet-based process to a transparent, centralized location for planning and tracking progress on key initiatives, as well as managing team capacity. Please reach out to Janet Omolo if you have any questions.
+
+SuperD Derivative Trade Processing Optimizations
+
+A huge shout-out for the overhaul of SuperD derivative trade processing in ActiveBatch and EDM! This is a major win — not only are we saving hours of time every week across both Technology and Business areas, but we've also meaningfully reduced our operational risk. And with increasing trade volumes, the timing couldn't be better! Completed for Technology, Investment Operations and Finance. Please reach out to Brent Iverson if you have any questions.
+
+Microsoft Dataverse Feed Automation
+
+This solution was built for Capital Markets. Designed and delivered the first Power Automate synchronization that automatically pushes analyst recommendations from the Microsoft Dataverse into the on-prem PMRS database, eliminating manual work and enabling downstream teams to consume analyst recommendations. Please reach out to Aali Mohammed if you have any questions.
+
+Automated SharePoint Integration in Appian
+
+Successfully established a direct Appian-to-SharePoint integration for the Finance Valuations team, automating report package storage and eliminating 50-100 annual hours of manual document handling. The solution automatically creates folder hierarchies and uploads case outputs to SharePoint, strengthening the Finance Valuations team's SOC1 audit compliance. By implementing direct integration using Azure Entra ID authentication, we avoided dependencies on intermediate tools like Power Automate or email workflows, reducing infrastructure complexity and support requirements. This reusable integration pattern can be applied across other Service Delivery teams with similar document management needs. For more information please reach out to Calvin Louie.
+
+SimCorp Pay Rec - Fee Auto-matching
+
+When fees are collected once a month IAB has to manually match data from NT and SCD when there is a variance. Finance engaged us for this project. Enhancement has been implemented to the existing NT Cash Payment recon workflow to enable auto matching for those fee day transactions. his will result in saving of approximate 15 hours manual work per year and prevent possible human errors related to the manual process. Please reach out to Jie Shu if you have any questions.
+
+Quarterly IRR Cost Allocation
+
+The quarterly cost allocation process has been transformed from a labor-intensive manual workflow into an automated Power App solution. This work was delivered for IRR. The previous process required 8+ hours of manual Excel manipulation each quarter to calculate pool allocations across investment entities. The new system pulls source data directly from the eFront Data Warehouse, applies allocation rules automatically, and produces validated output in minutes. Business users can now run the process independently through a self-service interface, freeing up Technology resources while giving the I&RR team faster turnaround. Please reach out to Nick Capron if you have any questions.
+
+Private Equity Appian Valuations – Rejections and Amendments Report
+
+This tool tracks valuation cases that have been amended or rejected, enabling better oversight of the valuations workflow. It also provides insights into which valuations trigger more errors and highlights opportunities for process enhancement and optimization. Please reach out to Matthew Michaelis if you have any questions.
+
+HR Payroll & 401k Provider change
+
+This project replaced BCI's existing payroll and 401k providers for our US-based employees. Technology worked closely with the business and vendors to identify and address cyber risks and provided support to coordinate and align internal stakeholders. The project successfully completed January 20. Please reach out to Cam Elford if you have any questions.
+
+Enterprise Legal Tracker
+
+Technology and Legal Operations partnered to build an automation that introduces a new approach to metrics tracking for the Enterprise Legal team. The solution leverages AI (Claude) to interpret and process tasks arriving in Legal inboxes, eliminating the need for manual data entry, saving 5-10 hours of manual effort per month. Legal team members simply forward task assignment emails to a designated inbox. Claude's natural language processing capabilities analyze the email content to extract key task details (Internal Counsel, Work Type, Clients, Summary, deadlines, etc.), populate relevant fields to inform metrics reporting, automatically create properly formatted entries in the Legal Affairs task tracker and assign tasks to the appropriate team member. Please reach out to Thomas Yu if you have any questions.
+
+Smart Shield Implementation
+
+Successfully implemented Kainos Smart Shield in our Workday Sandbox and Preview Workday environments to ensure sensitive data and documents remain protected during Project Keystone testing and configuration activities. Smart Shield is a Workday overlay that automatically masks and protects confidential information (i.e. compensation, performance data, personal employee details) and documents from unauthorized users while proxying as other people/roles. Proxy functionality is essential for testing and configuration, but without Smart Shield, users could inadvertently access data and documents they shouldn't see. This tool ensures everyone can do their jobs effectively while keeping sensitive information and documents secure. Please reach out to Jonny Trirogoff if you have any questions.
+
+S&P/TSX Index Restatements for Dec 30 – Jan 5th
+
+This project was executed for Finance, ISR, Capital Markets and Technology. In early January, the vendor for the TSX Index and constituent data issued a restatement with corrected data, spanning multiple days. Downstream systems in Performance, CM&CI and other groups were affected, as they require accurate data for fund management and reporting. Given the scope of this restatement, it was very time sensitive to reload, master and publish the corrections to enable end of year reporting to proceed. As part of this effort, new functionality was implemented to the EDM index constituent export solution pipeline to improve turnaround for such large-scale restatements in the future. Please reach out to Yan Lyesin if you have any questions.
+
+Primary Exchange Pricing
+
+Updated the daily Bloomberg pricing process to source Equity prices from the primary exchanges. Previously it was using Composite Id pricing, which occasionally resulted in discrepancies during certain market events such as after-hours trading. This change aligns all prices with Finance's pricing directive and ensures consistency with front office pricing expectations when valuing the securities and funds in Simcorp. This improvement reduces manual reconciliation efforts for Finance and significantly reduces price ID overrides for the MIITS team resulting in cleaner, more accurate data that is fit for purpose. Please reach out to Johnson Lam if you have any questions.
+
+Project DECODE (Position Data Decomposition)
+
+Project DECODE was wrapped up in January, where the MIITS team provided expertise and reference data support for creating universal look-through of composite holdings (funds, ETFs, Derivatives, etc.) by implementing new functionality and providing reference data maintenance. These contributions helped this Data & Analytics led project achieve its objectives ahead of schedule, creating numerous enterprise-wide benefits. For more information, please reach out to Yan Lyesin or check out this article: (https://bcinvestment.sharepoint.com/teams/CDO-CC-DataCommunity/SitePages/(BCI)-Position-Data-Decomposition-(Project-Decode)--The-Power-of-BCI-Collaboration.aspx). 
+This initiative was undertaken for Finance, Investment Operations, ISR, Private Equity, Technology, Public Markets and Legal. Please reach out to Yan Lyesin (for MIITS) if you have any questions.
+
+
+I must admit that I was genuinely impressed by the number of accomplishments that directly enhanced or  augmented core business functions. Keep up the excellent work!
+Kenwyn
+ 
