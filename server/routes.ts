@@ -2646,6 +2646,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const dateToListing = new Map<string, {listingId: string, dailyRate: number}>();
           // Key: date string, Value: sale calendar label (if any sale is active for this listing)
           const dateToSaleLabel = new Map<string, string>();
+          const dateToSaleColor = new Map<string, string>();
           const allDates: string[] = [];
           const listingIdToType = new Map<string, 'single' | 'period' | 'recurring'>();
           
@@ -2681,6 +2682,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               });
               if (isDateInSaleWindow(listing, dateStr) && !dateToSaleLabel.has(dateStr)) {
                 dateToSaleLabel.set(dateStr, listing.saleCalendarLabel!);
+                dateToSaleColor.set(dateStr, listing.saleCalendarColor || 'fuchsia');
               }
             } else if (listing.listingType === 'period' && listing.periodStartDate && listing.periodEndDate) {
               // Period listing - expand to all dates in range (format Date objects first)
@@ -2698,6 +2700,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 }
                 if (isDateInSaleWindow(listing, dateStr) && !dateToSaleLabel.has(dateStr)) {
                   dateToSaleLabel.set(dateStr, listing.saleCalendarLabel!);
+                  dateToSaleColor.set(dateStr, listing.saleCalendarColor || 'fuchsia');
                 }
               }
             } else if (listing.listingType === 'recurring' && listing.recurringStartDate && listing.recurringEndDate && listing.daysOfWeek) {
@@ -2734,6 +2737,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   }
                   if (isDateInSaleWindow(listing, dateStr) && !dateToSaleLabel.has(dateStr)) {
                     dateToSaleLabel.set(dateStr, listing.saleCalendarLabel!);
+                    dateToSaleColor.set(dateStr, listing.saleCalendarColor || 'fuchsia');
                   }
                 }
               }
@@ -2837,9 +2841,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
           // Convert dateToSaleLabel map to object for JSON serialization
           const dateToSaleLabelObj: Record<string, string> = {};
-          dateToSaleLabel.forEach((value, key) => {
-            dateToSaleLabelObj[key] = value;
-          });
+          dateToSaleLabel.forEach((value, key) => { dateToSaleLabelObj[key] = value; });
+          const dateToSaleColorObj: Record<string, string> = {};
+          dateToSaleColor.forEach((value, key) => { dateToSaleColorObj[key] = value; });
           
           // Get owner payment preferences for display
           let ownerPaymentInstructions: string | null = null;
@@ -2874,7 +2878,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             dateToPrice: dateToPrice, // Map of date -> {listingId, dailyRate} for accurate pricing
             dateToCharity: dateToCharity, // Map of date -> boolean for charity status
             dateToSaleLabel: dateToSaleLabelObj, // Map of date -> sale calendar label (if on sale)
+            dateToSaleColor: dateToSaleColorObj, // Map of date -> sale badge color
             saleCalendarLabel: primarySaleCalendarLabel, // Primary sale label for first available date
+            saleCalendarColor: firstDate ? (dateToSaleColorObj[firstDate] || null) : null, // Primary color for first available date
             donateToCharity: primaryDonateToCharity, // Primary charity status for first available date
             createdByAdmin: primaryListingObj?.createdByAdmin || false,
             isAvailable: availabilityDates.length > 0, // True if spot has future availability
@@ -10318,6 +10324,7 @@ The BCI ParkShare Team`;
         endDate: z.string().refine((d) => !isNaN(Date.parse(d)), "Invalid end date"),
         discountType: z.enum(["percentage", "fixed_price"]),
         discountValue: z.number().positive("Discount value must be positive"),
+        labelColor: z.enum(["fuchsia", "violet", "blue", "green", "orange", "red", "amber", "rose"]).default("fuchsia"),
       }).refine((d) => new Date(d.startDate) <= new Date(d.endDate), {
         message: "End date must be on or after start date",
         path: ["endDate"],
@@ -10358,6 +10365,7 @@ The BCI ParkShare Team`;
         endDate: z.string().refine((d) => !isNaN(Date.parse(d)), "Invalid end date").optional(),
         discountType: z.enum(["percentage", "fixed_price"]).optional(),
         discountValue: z.number().positive("Discount value must be positive").optional(),
+        labelColor: z.enum(["fuchsia", "violet", "blue", "green", "orange", "red", "amber", "rose"]).optional(),
       });
 
       const body = schema.parse(req.body);

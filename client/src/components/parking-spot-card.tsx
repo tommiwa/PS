@@ -7,6 +7,7 @@ import type { ParkingSpot, ParkingSpotWithUser } from "@shared/schema"
 import { useAuth } from "@/contexts/auth-context"
 import { useLock } from "@/contexts/LockContext"
 import { formatDateFromDB } from "@/lib/date-utils"
+import { getSaleBadgeClasses } from "@/lib/sale-badge-colors"
 
 // Extend spot types to include activeLock and availability from API enrichment
 type SpotWithLock = (ParkingSpot | ParkingSpotWithUser) & {
@@ -34,7 +35,9 @@ type SpotWithLock = (ParkingSpot | ParkingSpotWithUser) & {
   ownerPaymentInstructions?: string | null
   ownerPaymentType?: string | null
   saleCalendarLabel?: string | null
+  saleCalendarColor?: string | null
   dateToSaleLabel?: Record<string, string>
+  dateToSaleColor?: Record<string, string>
 }
 
 interface ParkingSpotCardProps {
@@ -216,6 +219,15 @@ export function ParkingSpotCard({
     return null;
   };
 
+  // Get sale badge color for current date
+  const getActiveSaleColor = (): string => {
+    const dateStr = spot.availability?.date;
+    if (dateStr && spot.dateToSaleColor?.[dateStr]) {
+      return spot.dateToSaleColor[dateStr];
+    }
+    return spot.saleCalendarColor || 'fuchsia';
+  };
+
   // Get promotional tags based on price and date
   const getPromotionalTags = () => {
     const tags: JSX.Element[] = [];
@@ -224,12 +236,13 @@ export function ParkingSpotCard({
 
     // Admin sale event badge — highest priority, distinct from automated deal badges
     const saleLabel = getActiveSaleLabel();
+    const saleColor = getActiveSaleColor();
     if (saleLabel && spot.isBciManaged) {
       tags.push(
         <Tooltip key="sale-event" delayDuration={100}>
           <TooltipTrigger asChild>
             <span className="cursor-help">
-              <Badge className="gap-1 bg-fuchsia-600 text-white border-fuchsia-700 hover:bg-fuchsia-700">
+              <Badge className={`gap-1 ${getSaleBadgeClasses(saleColor, 'solid')}`}>
                 <Sparkles className="h-3 w-3" />
                 {saleLabel}
               </Badge>

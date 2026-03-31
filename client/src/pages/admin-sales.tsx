@@ -13,7 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Tag, Plus, Power, PowerOff, Trash2, Calendar, Percent, DollarSign, AlertTriangle, CheckCircle2, Info, Pencil } from "lucide-react";
+import { Tag, Plus, Power, PowerOff, Trash2, Calendar, Percent, DollarSign, AlertTriangle, CheckCircle2, Info, Pencil, Sparkles } from "lucide-react";
+import { getSaleBadgeClasses, SALE_COLOR_OPTIONS, type SaleBadgeColor } from "@/lib/sale-badge-colors";
 import { format } from "date-fns";
 
 type SaleEventStatus = "active" | "inactive";
@@ -23,6 +24,7 @@ interface SaleEvent {
   id: string;
   name: string;
   calendarLabel: string;
+  labelColor: string;
   startDate: string;
   endDate: string;
   discountType: DiscountType;
@@ -42,6 +44,7 @@ interface PreviewResult {
 const createSaleEventSchema = z.object({
   name: z.string().min(1, "Event name is required").max(100, "Name too long"),
   calendarLabel: z.string().min(1, "Calendar label is required").max(30, "Label must be 30 characters or less"),
+  labelColor: z.enum(["fuchsia", "violet", "blue", "green", "orange", "red", "amber", "rose"]).default("fuchsia"),
   startDate: z.string().refine((d) => !isNaN(Date.parse(d)), "Invalid start date"),
   endDate: z.string().refine((d) => !isNaN(Date.parse(d)), "Invalid end date"),
   discountType: z.enum(["percentage", "fixed_price"]),
@@ -105,6 +108,7 @@ export default function AdminSalesPage() {
     defaultValues: {
       name: "",
       calendarLabel: "",
+      labelColor: "fuchsia",
       startDate: "",
       endDate: "",
       discountType: "percentage",
@@ -117,6 +121,7 @@ export default function AdminSalesPage() {
     defaultValues: {
       name: "",
       calendarLabel: "",
+      labelColor: "fuchsia",
       startDate: "",
       endDate: "",
       discountType: "percentage",
@@ -129,6 +134,7 @@ export default function AdminSalesPage() {
     editForm.reset({
       name: event.name,
       calendarLabel: event.calendarLabel,
+      labelColor: (event.labelColor as SaleBadgeColor) || "fuchsia",
       startDate: event.startDate,
       endDate: event.endDate,
       discountType: event.discountType as DiscountType,
@@ -369,6 +375,32 @@ export default function AdminSalesPage() {
                   </FormItem>
                 )}
               />
+              <FormField
+                control={form.control}
+                name="labelColor"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Badge Color</FormLabel>
+                    <FormControl>
+                      <div className="flex flex-wrap gap-2">
+                        {SALE_COLOR_OPTIONS.map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => field.onChange(opt.value)}
+                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium transition-all ${getSaleBadgeClasses(opt.value, 'subtle')} ${field.value === opt.value ? 'ring-2 ring-offset-1 ring-current' : 'opacity-60 hover:opacity-100'}`}
+                          >
+                            <Sparkles className="h-3 w-3" />
+                            {form.watch("calendarLabel") || opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                    <p className="text-xs text-muted-foreground">Choose a color for the sale badge. Each color previews how the badge will look with your calendar label.</p>
+                  </FormItem>
+                )}
+              />
               <div className="grid grid-cols-2 gap-3">
                 <FormField
                   control={form.control}
@@ -510,6 +542,32 @@ export default function AdminSalesPage() {
                   </FormItem>
                 )}
               />
+              <FormField
+                control={editForm.control}
+                name="labelColor"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Badge Color</FormLabel>
+                    <FormControl>
+                      <div className="flex flex-wrap gap-2">
+                        {SALE_COLOR_OPTIONS.map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => field.onChange(opt.value)}
+                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium transition-all ${getSaleBadgeClasses(opt.value, 'subtle')} ${field.value === opt.value ? 'ring-2 ring-offset-1 ring-current' : 'opacity-60 hover:opacity-100'}`}
+                          >
+                            <Sparkles className="h-3 w-3" />
+                            {editForm.watch("calendarLabel") || opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                    <p className="text-xs text-muted-foreground">Choose a color for the sale badge. Each color previews how the badge will look with your calendar label.</p>
+                  </FormItem>
+                )}
+              />
               <div className="grid grid-cols-2 gap-3">
                 <FormField
                   control={editForm.control}
@@ -641,8 +699,12 @@ function SaleEventCard({ event, onActivate, onDeactivate, onEdit, onDelete, isAc
         <div className="flex items-start justify-between gap-2 flex-wrap">
           <div className="flex-1 min-w-0">
             <CardTitle className="text-base font-semibold">{event.name}</CardTitle>
-            <CardDescription className="text-xs mt-0.5">
-              Calendar label: <span className="font-medium text-foreground">{event.calendarLabel}</span>
+            <CardDescription className="text-xs mt-0.5 flex items-center gap-1.5 flex-wrap">
+              <span>Badge preview:</span>
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-xs font-medium ${getSaleBadgeClasses(event.labelColor, 'subtle')}`}>
+                <Sparkles className="h-3 w-3" />
+                {event.calendarLabel}
+              </span>
             </CardDescription>
           </div>
           <SaleEventStatusBadge status={event.status} />

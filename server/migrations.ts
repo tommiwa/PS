@@ -160,6 +160,20 @@ const migrations: MigrationCheck[] = [
       `ALTER TABLE spot_listings ADD COLUMN IF NOT EXISTS sale_end_date TEXT`,
     ],
   },
+  {
+    name: "sale_events_label_color_col",
+    checkQuery: `SELECT EXISTS (SELECT FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'sale_events' AND column_name = 'label_color')`,
+    migrationStatements: [
+      `ALTER TABLE sale_events ADD COLUMN IF NOT EXISTS label_color TEXT NOT NULL DEFAULT 'fuchsia'`,
+    ],
+  },
+  {
+    name: "spot_listings_sale_calendar_color_col",
+    checkQuery: `SELECT EXISTS (SELECT FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'spot_listings' AND column_name = 'sale_calendar_color')`,
+    migrationStatements: [
+      `ALTER TABLE spot_listings ADD COLUMN IF NOT EXISTS sale_calendar_color VARCHAR(20)`,
+    ],
+  },
 ];
 
 export async function runMigrations(): Promise<void> {

@@ -12,6 +12,7 @@ import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle, User, Zap, Acc
 import { isWeekend, parseISO, format } from "date-fns"
 import type { ParkingSpot as DBParkingSpot } from "@shared/schema"
 import { isPastDate, getTodayString } from "@/utils/date-utils"
+import { getSaleBadgeClasses } from "@/lib/sale-badge-colors"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { useQuery } from "@tanstack/react-query"
@@ -41,7 +42,9 @@ export interface ParkingSpot extends DBParkingSpot {
   dateToCharity?: Record<string, boolean>
   floorPlanBaseUrl?: string | null
   saleCalendarLabel?: string | null
+  saleCalendarColor?: string | null
   dateToSaleLabel?: Record<string, string>
+  dateToSaleColor?: Record<string, string>
 }
 
 interface BookingFormProps {
@@ -345,6 +348,7 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
                 const isHotDeal = spot.price > 5 && spot.price <= 10;
                 const isTopDeal = spot.price > 10 && spot.price <= 12;
                 const saleLabel = (bookingDate && spot.dateToSaleLabel?.[bookingDate]) || spot.saleCalendarLabel || null;
+                const saleColor = (bookingDate && spot.dateToSaleColor?.[bookingDate]) || spot.saleCalendarColor || 'fuchsia';
                 
                 return (
                   <div className="flex items-center gap-1.5 flex-wrap">
@@ -432,7 +436,7 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
                       <Tooltip delayDuration={100}>
                         <TooltipTrigger asChild>
                           <span className="cursor-help inline-flex">
-                            <Badge className="bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200 hover:bg-fuchsia-200 dark:bg-fuchsia-900/30 dark:text-fuchsia-300 dark:border-fuchsia-700 flex items-center gap-1 cursor-help">
+                            <Badge className={`${getSaleBadgeClasses(saleColor, 'subtle')} flex items-center gap-1 cursor-help`}>
                               <Sparkles className="h-3 w-3" />
                               {saleLabel}
                             </Badge>

@@ -207,12 +207,16 @@ export const saleEvents = pgTable("sale_events", {
   endDate: date("end_date").notNull(),
   discountType: text("discount_type").notNull().$type<DiscountType>(), // "percentage" or "fixed_price"
   discountValue: decimal("discount_value", { precision: 10, scale: 2 }).notNull(), // % or flat price
+  labelColor: text("label_color").notNull().default("fuchsia"), // Badge color: fuchsia | violet | blue | green | orange | red | amber | rose
   status: text("status").notNull().$type<SaleEventStatus>().default("inactive"),
   affectedListingCount: integer("affected_listing_count").default(0),
   createdBy: varchar("created_by"), // Admin user ID who created this
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
+
+export const saleEventLabelColors = z.enum(["fuchsia", "violet", "blue", "green", "orange", "red", "amber", "rose"]);
+export type SaleEventLabelColor = z.infer<typeof saleEventLabelColors>;
 
 export const insertSaleEventSchema = createInsertSchema(saleEvents).omit({
   id: true,
@@ -224,6 +228,7 @@ export const insertSaleEventSchema = createInsertSchema(saleEvents).omit({
   discountValue: z.number().positive("Discount value must be positive"),
   startDate: z.string().refine((d) => !isNaN(Date.parse(d)), "Invalid start date"),
   endDate: z.string().refine((d) => !isNaN(Date.parse(d)), "Invalid end date"),
+  labelColor: saleEventLabelColors.default("fuchsia"),
 });
 
 export type InsertSaleEvent = z.infer<typeof insertSaleEventSchema>;
@@ -270,6 +275,7 @@ export const spotListings = pgTable("spot_listings", {
   saleEventId: varchar("sale_event_id"), // References sale_events.id - set when this listing is part of a sale
   originalDailyRate: decimal("original_daily_rate", { precision: 10, scale: 2 }), // Pre-sale rate preserved for restoration
   saleCalendarLabel: text("sale_calendar_label"), // Cached label for display
+  saleCalendarColor: varchar("sale_calendar_color", { length: 20 }), // Cached badge color from sale event
   saleStartDate: text("sale_start_date"), // Effective sale window start (YYYY-MM-DD), for partial-overlap period/recurring listings
   saleEndDate: text("sale_end_date"), // Effective sale window end (YYYY-MM-DD), for partial-overlap period/recurring listings
   createdAt: timestamp("created_at").notNull().defaultNow(),
