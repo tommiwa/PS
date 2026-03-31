@@ -2644,9 +2644,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Build date-to-listing mapping for proper price display
           // Key: date string, Value: {listingId, dailyRate}
           const dateToListing = new Map<string, {listingId: string, dailyRate: number}>();
+          // Key: date string, Value: sale calendar label (if any sale is active for this listing)
+          const dateToSaleLabel = new Map<string, string>();
           const allDates: string[] = [];
           const listingIdToType = new Map<string, 'single' | 'period' | 'recurring'>();
           
+          // Helper: compute effective daily rate for a specific date, respecting sale window
+          const effectiveRateForDate = (listing: typeof listings[0], dateStr: string): number => {
+            if (listing.saleEventId && listing.saleStartDate && listing.saleEndDate && listing.originalDailyRate) {
+              if (dateStr < listing.saleStartDate || dateStr > listing.saleEndDate) {
+                return Number(listing.originalDailyRate);
+              }
+            }
+            return Number(listing.dailyRate);
+          };
+
+          // Helper: check if dateStr is within the listing's sale window
+          const isDateInSaleWindow = (listing: typeof listings[0], dateStr: string): boolean => {
+            if (!listing.saleCalendarLabel) return false;
+            if (listing.saleStartDate && listing.saleEndDate) {
+              return dateStr >= listing.saleStartDate && dateStr <= listing.saleEndDate;
+            }
+            return true; // No window bounds stored: assume entire listing is in window
+          };
+
           for (const listing of listings) {
             listingIdToType.set(listing.id, listing.listingType);
             
@@ -2656,8 +2677,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               allDates.push(dateStr);
               dateToListing.set(dateStr, {
                 listingId: listing.id,
-                dailyRate: listing.dailyRate
+                dailyRate: effectiveRateForDate(listing, dateStr)
               });
+              if (isDateInSaleWindow(listing, dateStr) && !dateToSaleLabel.has(dateStr)) {
+                dateToSaleLabel.set(dateStr, listing.saleCalendarLabel!);
+              }
             } else if (listing.listingType === 'period' && listing.periodStartDate && listing.periodEndDate) {
               // Period listing - expand to all dates in range (format Date objects first)
               const startStr = await formatDateInTimezone(listing.periodStartDate);
@@ -2669,8 +2693,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 if (!dateToListing.has(dateStr)) {
                   dateToListing.set(dateStr, {
                     listingId: listing.id,
-                    dailyRate: listing.dailyRate
+                    dailyRate: effectiveRateForDate(listing, dateStr)
                   });
+                }
+                if (isDateInSaleWindow(listing, dateStr) && !dateToSaleLabel.has(dateStr)) {
+                  dateToSaleLabel.set(dateStr, listing.saleCalendarLabel!);
                 }
               }
             } else if (listing.listingType === 'recurring' && listing.recurringStartDate && listing.recurringEndDate && listing.daysOfWeek) {
@@ -2702,8 +2729,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   if (!dateToListing.has(dateStr)) {
                     dateToListing.set(dateStr, {
                       listingId: listing.id,
-                      dailyRate: listing.dailyRate
+                      dailyRate: effectiveRateForDate(listing, dateStr)
                     });
+                  }
+                  if (isDateInSaleWindow(listing, dateStr) && !dateToSaleLabel.has(dateStr)) {
+                    dateToSaleLabel.set(dateStr, listing.saleCalendarLabel!);
                   }
                 }
               }
@@ -2805,6 +2835,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           dateToListing.forEach((value, key) => {
             dateToPrice[key] = value;
           });
+          // Convert dateToSaleLabel map to object for JSON serialization
+          const dateToSaleLabelObj: Record<string, string> = {};
+          dateToSaleLabel.forEach((value, key) => {
+            dateToSaleLabelObj[key] = value;
+          });
           
           // Get owner payment preferences for display
           let ownerPaymentInstructions: string | null = null;
@@ -2826,6 +2861,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             : ((spot as any).assignedUserName || null);
 
           // Enrich spot with listing data and booking information
+          const primarySaleCalendarLabel = firstDate ? (dateToSaleLabelObj[firstDate] || null) : null;
           return {
             ...spot,
             assignedUserName: displayOwnerName,
@@ -2837,6 +2873,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             bookedDates: bookedDates, // Array of dates that are already booked
             dateToPrice: dateToPrice, // Map of date -> {listingId, dailyRate} for accurate pricing
             dateToCharity: dateToCharity, // Map of date -> boolean for charity status
+            dateToSaleLabel: dateToSaleLabelObj, // Map of date -> sale calendar label (if on sale)
+            saleCalendarLabel: primarySaleCalendarLabel, // Primary sale label for first available date
             donateToCharity: primaryDonateToCharity, // Primary charity status for first available date
             createdByAdmin: primaryListingObj?.createdByAdmin || false,
             isAvailable: availabilityDates.length > 0, // True if spot has future availability
@@ -3407,7 +3445,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // SECURITY: Calculate price from database listing, NOT from frontend
-      const actualDailyRate = Number(listing.dailyRate);
+      // If the listing is on sale but the booking date falls outside the sale window, use original rate
+      let effectiveDailyRate = Number(listing.dailyRate);
+      if (listing.saleEventId && listing.saleStartDate && listing.saleEndDate && listing.originalDailyRate) {
+        const bookingDateStr = String(bookingDate).slice(0, 10);
+        if (bookingDateStr < listing.saleStartDate || bookingDateStr > listing.saleEndDate) {
+          effectiveDailyRate = Number(listing.originalDailyRate);
+          console.log(`[Booking] Date ${bookingDateStr} is outside sale window [${listing.saleStartDate}, ${listing.saleEndDate}], using original rate ${effectiveDailyRate}`);
+        }
+      }
+      const actualDailyRate = effectiveDailyRate;
       const actualTotalAmount = actualDailyRate; // Single day booking
 
       console.log(`[Booking] Using CORRECT listing ${listing.id} with price: dailyRate=${actualDailyRate}, totalAmount=${actualTotalAmount}`);
@@ -10216,6 +10263,230 @@ The BCI ParkShare Team`;
     } catch (error) {
       console.error("Error deleting announcement:", error);
       res.status(500).json({ error: "Failed to delete announcement" });
+    }
+  });
+
+  // ===== Sale Events API (Admin only) =====
+
+  // GET /api/admin/sale-events - List all sale events
+  app.get("/api/admin/sale-events", requireAdmin, async (req: any, res) => {
+    try {
+      const events = await storage.getAllSaleEvents();
+      res.json(events);
+    } catch (error) {
+      console.error("Error fetching sale events:", error);
+      res.status(500).json({ error: "Failed to fetch sale events" });
+    }
+  });
+
+  // GET /api/admin/sale-events/preview - Preview how many WPS listings would be affected
+  // IMPORTANT: This must be registered BEFORE the /:id route to avoid being shadowed
+  app.get("/api/admin/sale-events/preview", requireAdmin, async (req: any, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      if (!startDate || !endDate) {
+        return res.status(400).json({ error: "startDate and endDate query params required" });
+      }
+      const preview = await storage.previewSaleEventListings(startDate as string, endDate as string);
+      res.json(preview);
+    } catch (error) {
+      console.error("Error previewing sale event:", error);
+      res.status(500).json({ error: "Failed to preview sale event" });
+    }
+  });
+
+  // GET /api/admin/sale-events/:id - Get a single sale event
+  app.get("/api/admin/sale-events/:id", requireAdmin, async (req: any, res) => {
+    try {
+      const event = await storage.getSaleEvent(req.params.id);
+      if (!event) return res.status(404).json({ error: "Sale event not found" });
+      res.json(event);
+    } catch (error) {
+      console.error("Error fetching sale event:", error);
+      res.status(500).json({ error: "Failed to fetch sale event" });
+    }
+  });
+
+  // POST /api/admin/sale-events - Create a new sale event (does NOT activate automatically)
+  app.post("/api/admin/sale-events", requireAdmin, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      const schema = z.object({
+        name: z.string().min(1, "Name is required"),
+        calendarLabel: z.string().min(1, "Calendar label is required"),
+        startDate: z.string().refine((d) => !isNaN(Date.parse(d)), "Invalid start date"),
+        endDate: z.string().refine((d) => !isNaN(Date.parse(d)), "Invalid end date"),
+        discountType: z.enum(["percentage", "fixed_price"]),
+        discountValue: z.number().positive("Discount value must be positive"),
+      }).refine((d) => new Date(d.startDate) <= new Date(d.endDate), {
+        message: "End date must be on or after start date",
+        path: ["endDate"],
+      });
+
+      const body = schema.parse(req.body);
+
+      // Validate percentage discount
+      if (body.discountType === 'percentage' && body.discountValue > 100) {
+        return res.status(400).json({ error: "Percentage discount cannot exceed 100%" });
+      }
+
+      const event = await storage.createSaleEvent({ ...body, createdBy: userId || undefined });
+      res.status(201).json(event);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input data", details: error.errors });
+      }
+      console.error("Error creating sale event:", error);
+      res.status(500).json({ error: "Failed to create sale event" });
+    }
+  });
+
+  // PUT /api/admin/sale-events/:id - Update a sale event (only allowed when inactive)
+  app.put("/api/admin/sale-events/:id", requireAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const event = await storage.getSaleEvent(id);
+      if (!event) return res.status(404).json({ error: "Sale event not found" });
+      if (event.status === 'active') {
+        return res.status(400).json({ error: "Cannot edit an active sale event. Deactivate it first." });
+      }
+
+      const schema = z.object({
+        name: z.string().min(1, "Name is required").optional(),
+        calendarLabel: z.string().min(1, "Calendar label is required").optional(),
+        startDate: z.string().refine((d) => !isNaN(Date.parse(d)), "Invalid start date").optional(),
+        endDate: z.string().refine((d) => !isNaN(Date.parse(d)), "Invalid end date").optional(),
+        discountType: z.enum(["percentage", "fixed_price"]).optional(),
+        discountValue: z.number().positive("Discount value must be positive").optional(),
+      });
+
+      const body = schema.parse(req.body);
+
+      if (body.discountType === 'percentage' && (body.discountValue ?? 0) > 100) {
+        return res.status(400).json({ error: "Percentage discount cannot exceed 100%" });
+      }
+
+      const updated = await storage.updateSaleEvent(id, body);
+      if (!updated) return res.status(404).json({ error: "Sale event not found" });
+      res.json(updated);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input data", details: error.errors });
+      }
+      console.error("Error updating sale event:", error);
+      res.status(500).json({ error: "Failed to update sale event" });
+    }
+  });
+
+  // POST /api/admin/sale-events/:id/activate - Activate a sale event (reprice WPS listings)
+  app.post("/api/admin/sale-events/:id/activate", requireAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const event = await storage.getSaleEvent(id);
+      if (!event) return res.status(404).json({ error: "Sale event not found" });
+      if (event.status === 'active') {
+        return res.status(400).json({ error: "Sale event is already active" });
+      }
+
+      const { updatedListings } = await storage.activateSaleEvent(id);
+
+      // Async: send spot alert emails for all updated listings (fire-and-forget)
+      (async () => {
+        try {
+          if (updatedListings.length === 0) return;
+          const subscribers = await storage.getActiveSpotAlertSubscribers();
+          if (subscribers.length === 0) return;
+
+          for (const updated of updatedListings) {
+            const spot = await storage.getParkingSpot(updated.spotId);
+            if (!spot) continue;
+
+            let locationName = 'BCI Parkade';
+            if (spot.locationId) {
+              const loc = await storage.getLocation(spot.locationId);
+              if (loc) locationName = `${loc.office} - ${loc.building}`;
+            }
+
+            const listing = await storage.getSpotListing(updated.id);
+            if (!listing) continue;
+            // Filter dates to only those within the sale window (startDate/endDate)
+            const allListingDates = getListingDates(listing as any);
+            const listingDates = allListingDates.filter(d => d >= event.startDate && d <= event.endDate);
+            if (listingDates.length === 0) continue;
+
+            const listingRate = parseFloat(updated.dailyRate);
+
+            for (const subscriber of subscribers) {
+              if (subscriber.userId === listing.ownerId) continue;
+              if (subscriber.maxDailyPrice && listingRate > parseFloat(subscriber.maxDailyPrice)) continue;
+
+              const matchingDate = subscriber.daysOfWeek && subscriber.daysOfWeek.length > 0
+                ? listingDates.find(d => {
+                    const dow = new Date(d + 'T12:00:00').getDay();
+                    return subscriber.daysOfWeek.includes(dow);
+                  })
+                : listingDates[0];
+
+              if (!matchingDate) continue;
+
+              const user = await storage.getUser(subscriber.userId);
+              if (!user?.email) continue;
+              const userName = user.firstName && user.lastName
+                ? `${user.firstName} ${user.lastName}`
+                : user.firstName || user.email;
+
+              sendSpotAlertEmail(
+                { name: userName, email: user.email },
+                {
+                  id: listing.id,
+                  spotNumber: spot.spotNumber,
+                  location: locationName,
+                  date: matchingDate,
+                  dailyRate: listingRate
+                }
+              ).catch(err => console.error(`[SaleAlerts] Failed to send alert to ${user.email}:`, err));
+            }
+          }
+        } catch (err) {
+          console.error('[SaleAlerts] Error processing spot alert subscribers after activation:', err);
+        }
+      })();
+
+      res.json({ success: true, updatedCount: updatedListings.length });
+    } catch (error) {
+      console.error("Error activating sale event:", error);
+      res.status(500).json({ error: "Failed to activate sale event" });
+    }
+  });
+
+  // POST /api/admin/sale-events/:id/deactivate - Deactivate a sale event (restore prices)
+  app.post("/api/admin/sale-events/:id/deactivate", requireAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const event = await storage.getSaleEvent(id);
+      if (!event) return res.status(404).json({ error: "Sale event not found" });
+      if (event.status !== 'active') {
+        return res.status(400).json({ error: "Sale event is not active" });
+      }
+
+      const { restoredCount } = await storage.deactivateSaleEvent(id);
+      res.json({ success: true, restoredCount });
+    } catch (error) {
+      console.error("Error deactivating sale event:", error);
+      res.status(500).json({ error: "Failed to deactivate sale event" });
+    }
+  });
+
+  // DELETE /api/admin/sale-events/:id - Delete a sale event
+  app.delete("/api/admin/sale-events/:id", requireAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const success = await storage.deleteSaleEvent(id);
+      if (!success) return res.status(404).json({ error: "Sale event not found" });
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting sale event:", error);
+      res.status(500).json({ error: "Failed to delete sale event" });
     }
   });
 

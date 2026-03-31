@@ -17,7 +17,8 @@ import {
   Building,
   Heart,
   Flame,
-  Tag
+  Tag,
+  Sparkles
 } from "lucide-react"
 import { format, startOfWeek, addDays, addWeeks, addMonths, subWeeks, subMonths, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, getDay } from "date-fns"
 import { isPastDate } from "@/utils/date-utils"
@@ -44,6 +45,8 @@ interface ParkingSpot extends BookingFormSpot {
   bookedDates?: string[] // Array of dates that are already booked
   dateToPrice?: Record<string, {listingId: string, dailyRate: number}> // Map date -> price
   dateToCharity?: Record<string, boolean> // Map date -> charity status
+  dateToSaleLabel?: Record<string, string> // Map date -> sale calendar label
+  saleCalendarLabel?: string | null // Primary sale label
   donateToCharity?: boolean // Primary charity status
   activeLock?: {
     lockId: string
@@ -222,6 +225,16 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
     }
     // Fallback to primary donateToCharity
     return spot.donateToCharity || false;
+  }
+
+  // Helper to get sale label for a spot on a specific date — only shows when the date is within the sale window
+  const getSaleLabelOnDate = (spot: ParkingSpot, date: Date): string | null => {
+    if (!spot.isBciManaged) return null;
+    const dateStr = formatLocalDate(date);
+    if (spot.dateToSaleLabel && spot.dateToSaleLabel[dateStr]) {
+      return spot.dateToSaleLabel[dateStr];
+    }
+    return null;
   }
 
   const getDealIcon = (price: number, size: string = "h-3 w-3") => {
@@ -574,6 +587,12 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                                 Indoor
                               </Badge>
                             )}
+                            {getSaleLabelOnDate(spot, currentDate) && (
+                              <Badge className="text-xs gap-1 bg-fuchsia-600 text-white border-fuchsia-700">
+                                <Sparkles className="h-3 w-3" />
+                                {getSaleLabelOnDate(spot, currentDate)}
+                              </Badge>
+                            )}
                           </>
                         )}
                         {getOwnershipBadge(spot.isOwned || false)}
@@ -667,6 +686,12 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                           <Badge variant="secondary" className="text-xs bg-gray-500 text-white mt-1">
                             Booked
                           </Badge>
+                        )}
+                        {!isBooked && !isExpired && !isLocked && getSaleLabelOnDate(spot, day) && (
+                          <div className="flex items-center gap-0.5 mt-0.5 text-fuchsia-600 dark:text-fuchsia-400 font-semibold text-[10px]">
+                            <Sparkles className="h-2.5 w-2.5" />
+                            {getSaleLabelOnDate(spot, day)}
+                          </div>
                         )}
                       </div>
                     )
@@ -770,6 +795,12 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                         </div>
                         {isBooked && (
                           <div className="text-xs text-gray-600 dark:text-gray-400">Booked</div>
+                        )}
+                        {!isBooked && !isExpired && !isLocked && getSaleLabelOnDate(spot, day) && (
+                          <div className="flex items-center gap-0.5 mt-0.5 text-fuchsia-600 dark:text-fuchsia-400 font-semibold text-[9px] truncate">
+                            <Sparkles className="h-2 w-2 shrink-0" />
+                            <span className="truncate">{getSaleLabelOnDate(spot, day)}</span>
+                          </div>
                         )}
                       </div>
                     )
@@ -925,13 +956,21 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
                           Pending
                         </Badge>
                       ) : (
-                        <span className="font-bold text-lg text-primary flex items-center gap-1">
-                          {isCharityOnDate(spot, expandedDay.date) && (
-                            <Heart className="h-4 w-4 text-pink-500 fill-pink-500" />
+                        <div className="flex flex-col items-end gap-1">
+                          <span className="font-bold text-lg text-primary flex items-center gap-1">
+                            {isCharityOnDate(spot, expandedDay.date) && (
+                              <Heart className="h-4 w-4 text-pink-500 fill-pink-500" />
+                            )}
+                            {getDealIcon(spotInfo?.price || spot.price, "h-4 w-4")}
+                            ${spotInfo?.price || spot.price}
+                          </span>
+                          {getSaleLabelOnDate(spot, expandedDay.date) && (
+                            <Badge className="gap-1 bg-fuchsia-600 text-white border-fuchsia-700 text-xs">
+                              <Sparkles className="h-3 w-3" />
+                              {getSaleLabelOnDate(spot, expandedDay.date)}
+                            </Badge>
                           )}
-                          {getDealIcon(spotInfo?.price || spot.price, "h-4 w-4")}
-                          ${spotInfo?.price || spot.price}
-                        </span>
+                        </div>
                       )}
                     </div>
                   </div>

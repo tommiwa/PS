@@ -105,6 +105,61 @@ const migrations: MigrationCheck[] = [
       `CREATE INDEX IF NOT EXISTS "IDX_scheduled_spot_assignments_scheduled_date" ON scheduled_spot_assignments (scheduled_date)`,
     ],
   },
+  {
+    name: "sale_events_table_v2",
+    checkQuery: `SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'sale_events')`,
+    migrationStatements: [
+      `CREATE TABLE IF NOT EXISTS sale_events (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        name TEXT NOT NULL,
+        calendar_label TEXT NOT NULL,
+        start_date DATE NOT NULL,
+        end_date DATE NOT NULL,
+        discount_type TEXT NOT NULL,
+        discount_value DECIMAL(10,2) NOT NULL,
+        status TEXT NOT NULL DEFAULT 'inactive',
+        affected_listing_count INTEGER NOT NULL DEFAULT 0,
+        created_by VARCHAR,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )`,
+    ],
+  },
+  {
+    name: "spot_listings_sale_event_id_col",
+    checkQuery: `SELECT EXISTS (SELECT FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'spot_listings' AND column_name = 'sale_event_id')`,
+    migrationStatements: [
+      `ALTER TABLE spot_listings ADD COLUMN IF NOT EXISTS sale_event_id VARCHAR`,
+    ],
+  },
+  {
+    name: "spot_listings_original_daily_rate_col",
+    checkQuery: `SELECT EXISTS (SELECT FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'spot_listings' AND column_name = 'original_daily_rate')`,
+    migrationStatements: [
+      `ALTER TABLE spot_listings ADD COLUMN IF NOT EXISTS original_daily_rate DECIMAL(10,2)`,
+    ],
+  },
+  {
+    name: "spot_listings_sale_calendar_label_col",
+    checkQuery: `SELECT EXISTS (SELECT FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'spot_listings' AND column_name = 'sale_calendar_label')`,
+    migrationStatements: [
+      `ALTER TABLE spot_listings ADD COLUMN IF NOT EXISTS sale_calendar_label VARCHAR(100)`,
+    ],
+  },
+  {
+    name: "spot_listings_sale_start_date_col",
+    checkQuery: `SELECT EXISTS (SELECT FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'spot_listings' AND column_name = 'sale_start_date')`,
+    migrationStatements: [
+      `ALTER TABLE spot_listings ADD COLUMN IF NOT EXISTS sale_start_date TEXT`,
+    ],
+  },
+  {
+    name: "spot_listings_sale_end_date_col",
+    checkQuery: `SELECT EXISTS (SELECT FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'spot_listings' AND column_name = 'sale_end_date')`,
+    migrationStatements: [
+      `ALTER TABLE spot_listings ADD COLUMN IF NOT EXISTS sale_end_date TEXT`,
+    ],
+  },
 ];
 
 export async function runMigrations(): Promise<void> {

@@ -64,7 +64,8 @@ import {
   Banknote,
   X,
   Heart,
-  RotateCcw
+  RotateCcw,
+  Sparkles
 } from "lucide-react"
 import type { Booking, BookingStatus, ParkingSpot } from "@shared/schema"
 import { quickExportBookingsPDF, quickExportBookingsExcel, generateParkingReceiptPDF, type ParkingReceiptData } from "@/utils/export-utils"
@@ -145,6 +146,9 @@ interface BookingAvailabilityData {
   recurringStartDate?: string;
   recurringEndDate?: string;
   daysOfWeek?: string[];
+  saleEventId?: number | null;
+  saleCalendarLabel?: string | null;
+  originalDailyRate?: string | null;
 }
 
 interface PendingPaymentData {
@@ -3337,7 +3341,12 @@ export default function AdminSpotBookingManagement() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Daily Rate</Label>
-                  <p className="font-medium text-lg">${selectedAvailabilityListing.dailyRate}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-lg">${selectedAvailabilityListing.dailyRate}</p>
+                    {selectedAvailabilityListing.originalDailyRate && (
+                      <p className="text-sm text-muted-foreground line-through">${selectedAvailabilityListing.originalDailyRate}</p>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <Label>Listing Type</Label>
@@ -3347,6 +3356,21 @@ export default function AdminSpotBookingManagement() {
                   </Badge>
                 </div>
               </div>
+
+              {selectedAvailabilityListing.saleCalendarLabel && (
+                <div>
+                  <Label>Active Sale Event</Label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge className="gap-1 bg-fuchsia-600 text-white border-fuchsia-700">
+                      <Sparkles className="h-3 w-3" />
+                      {selectedAvailabilityListing.saleCalendarLabel}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      This listing is currently part of a discount sale event
+                    </span>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label>Availability</Label>

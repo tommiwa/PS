@@ -20,7 +20,8 @@ import {
   AlertCircle,
   MessageSquare,
   HelpCircle,
-  Download
+  Download,
+  Tag
 } from "lucide-react"
 import { Link, useLocation, useRoute } from "wouter"
 import {
@@ -174,6 +175,13 @@ const adminOperationsItems = [
     icon: CalendarCheck,
     roles: ["admin"],
     tooltip: "Booking Management"
+  },
+  {
+    title: "Sales & Promotions",
+    url: "/admin/sales",
+    icon: Tag,
+    roles: ["admin"],
+    tooltip: "Manage discount sale events for WPS listings"
   },
   {
     title: "User Feedback",

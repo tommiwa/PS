@@ -69,13 +69,16 @@ import {
   type InsertFeatureAnnouncement,
   type UpdateFeatureAnnouncement,
   type SpotAlertSubscription,
-  type UpdateSpotAlertSubscription
+  type UpdateSpotAlertSubscription,
+  type SaleEvent,
+  type InsertSaleEvent,
+  type SaleEventStatus
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { auditDecorator } from "./audit-service";
 import { type IAuditStorage } from "./audit-storage";
 import { db } from "./db";
-import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, bookingSubscriptions, locations, spotTypesTable, termsVersions, spotAssignmentHistory, spotLocks, lockers, lockerWaitlist, lockerAssignmentHistory, lockerTypesTable, appConfigs, apiKeys, scheduledSpotAssignments, featureAnnouncements, spotAlertSubscriptions } from "@shared/schema";
+import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, bookingSubscriptions, locations, spotTypesTable, termsVersions, spotAssignmentHistory, spotLocks, lockers, lockerWaitlist, lockerAssignmentHistory, lockerTypesTable, appConfigs, apiKeys, scheduledSpotAssignments, featureAnnouncements, spotAlertSubscriptions, saleEvents } from "@shared/schema";
 import { eq, or, ilike, asc, and, notExists, sql as sqlOp, count, desc, inArray, isNull } from "drizzle-orm";
 
 // Storage interface with comprehensive CRUD methods
@@ -407,6 +410,19 @@ export interface IStorage {
   getSpotAlertSubscription(userId: string): Promise<SpotAlertSubscription | undefined>;
   upsertSpotAlertSubscription(userId: string, data: UpdateSpotAlertSubscription): Promise<SpotAlertSubscription>;
   getActiveSpotAlertSubscribers(): Promise<SpotAlertSubscription[]>;
+
+  // Sale Event operations
+  getAllSaleEvents(): Promise<SaleEvent[]>;
+  getSaleEvent(id: string): Promise<SaleEvent | undefined>;
+  createSaleEvent(data: InsertSaleEvent & { createdBy?: string }): Promise<SaleEvent>;
+  updateSaleEvent(id: string, updates: Partial<InsertSaleEvent> & { status?: SaleEventStatus; affectedListingCount?: number }): Promise<SaleEvent | undefined>;
+  deleteSaleEvent(id: string): Promise<boolean>;
+  // Preview how many BCI-managed listings would be affected by a sale event
+  previewSaleEventListings(startDate: string, endDate: string): Promise<{ count: number; listingIds: string[] }>;
+  // Activate sale: reprice affected WPS listings and return updated ones
+  activateSaleEvent(id: string): Promise<{ updatedListings: Array<{ id: string; spotId: string; dailyRate: string; originalDailyRate: string | null }> }>;
+  // Deactivate sale: restore original prices for affected listings
+  deactivateSaleEvent(id: string): Promise<{ restoredCount: number }>;
 }
 
 export class MemStorage implements IStorage {
@@ -4254,6 +4270,235 @@ export class MemStorage implements IStorage {
 
   async getActiveSpotAlertSubscribers(): Promise<SpotAlertSubscription[]> {
     return db.select().from(spotAlertSubscriptions).where(eq(spotAlertSubscriptions.isActive, true));
+  }
+
+  // ===== Sale Event Operations =====
+
+  async getAllSaleEvents(): Promise<SaleEvent[]> {
+    return db.select().from(saleEvents).orderBy(desc(saleEvents.createdAt));
+  }
+
+  async getSaleEvent(id: string): Promise<SaleEvent | undefined> {
+    const [result] = await db.select().from(saleEvents).where(eq(saleEvents.id, id));
+    return result;
+  }
+
+  async createSaleEvent(data: InsertSaleEvent & { createdBy?: string }): Promise<SaleEvent> {
+    const { discountValue, ...rest } = data;
+    const [result] = await db.insert(saleEvents).values({
+      ...rest,
+      discountValue: String(discountValue),
+      createdBy: data.createdBy || null,
+    }).returning();
+    return result;
+  }
+
+  async updateSaleEvent(id: string, updates: Partial<InsertSaleEvent> & { status?: SaleEventStatus; affectedListingCount?: number }): Promise<SaleEvent | undefined> {
+    const { discountValue, ...restUpdates } = updates;
+    const setData: Partial<typeof saleEvents.$inferInsert> & { updatedAt: Date } = {
+      ...restUpdates,
+      updatedAt: new Date(),
+    };
+    if (discountValue !== undefined) {
+      setData.discountValue = String(discountValue);
+    }
+    const [result] = await db.update(saleEvents).set(setData).where(eq(saleEvents.id, id)).returning();
+    return result;
+  }
+
+  async deleteSaleEvent(id: string): Promise<boolean> {
+    // First deactivate if active (restore prices)
+    const event = await this.getSaleEvent(id);
+    if (event && event.status === 'active') {
+      await this.deactivateSaleEvent(id);
+    }
+    const result = await db.delete(saleEvents).where(eq(saleEvents.id, id)).returning({ id: saleEvents.id });
+    return result.length > 0;
+  }
+
+  async previewSaleEventListings(startDate: string, endDate: string): Promise<{ count: number; listingIds: string[] }> {
+    // Find all available BCI-managed spot listings whose available dates overlap with [startDate, endDate]
+    // We need listings that have isBciManaged=true on their spot and status='available' and not soft-deleted
+    const bciSpots = await db.select({ id: parkingSpots.id })
+      .from(parkingSpots)
+      .where(and(eq(parkingSpots.isBciManaged, true), eq(parkingSpots.isActive, true)));
+    
+    if (bciSpots.length === 0) return { count: 0, listingIds: [] };
+    
+    const bciSpotIds = bciSpots.map(s => s.id);
+    
+    // Select extra fields needed for recurring daysOfWeek validation
+    const candidates = await db.select({
+      id: spotListings.id,
+      listingType: spotListings.listingType,
+      daysOfWeek: spotListings.daysOfWeek,
+      recurringStartDate: spotListings.recurringStartDate,
+      recurringEndDate: spotListings.recurringEndDate,
+    })
+      .from(spotListings)
+      .where(
+        and(
+          inArray(spotListings.spotId, bciSpotIds),
+          eq(spotListings.status, 'available'),
+          isNull(spotListings.deletedAt),
+          isNull(spotListings.saleEventId), // Not already in a sale
+          or(
+            // single date within range
+            and(
+              eq(spotListings.listingType, 'single'),
+              sqlOp`${spotListings.singleDate} >= ${startDate}`,
+              sqlOp`${spotListings.singleDate} <= ${endDate}`
+            ),
+            // period overlaps range
+            and(
+              eq(spotListings.listingType, 'period'),
+              sqlOp`${spotListings.periodStartDate} <= ${endDate}`,
+              sqlOp`${spotListings.periodEndDate} >= ${startDate}`
+            ),
+            // recurring: date range overlaps (pre-filter; will verify daysOfWeek below)
+            and(
+              eq(spotListings.listingType, 'recurring'),
+              sqlOp`${spotListings.recurringStartDate} <= ${endDate}`,
+              or(
+                isNull(spotListings.recurringEndDate),
+                sqlOp`${spotListings.recurringEndDate} >= ${startDate}`
+              )
+            )
+          )
+        )
+      );
+    
+    // Post-filter recurring listings: verify at least one occurrence falls within the sale window
+    // daysOfWeek is stored as text names (e.g., "monday", "tuesday") matching codebase convention
+    const dayNameToNumber: Record<string, number> = {
+      'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3,
+      'thursday': 4, 'friday': 5, 'saturday': 6
+    };
+
+    const saleStart = new Date(startDate + 'T00:00:00Z');
+    const saleEnd = new Date(endDate + 'T00:00:00Z');
+
+    const validListingIds = candidates
+      .filter(listing => {
+        if (listing.listingType !== 'recurring') return true; // Single/period already validated by SQL
+        if (!listing.daysOfWeek || listing.daysOfWeek.length === 0) return false; // No days configured
+
+        const windowStart = listing.recurringStartDate
+          ? new Date(Math.max(new Date(listing.recurringStartDate + 'T00:00:00Z').getTime(), saleStart.getTime()))
+          : saleStart;
+        const windowEnd = listing.recurringEndDate
+          ? new Date(Math.min(new Date(listing.recurringEndDate + 'T00:00:00Z').getTime(), saleEnd.getTime()))
+          : saleEnd;
+
+        if (windowStart > windowEnd) return false;
+
+        // Convert text day names to numeric day indices (0=Sunday ... 6=Saturday)
+        const allowedDays = new Set(
+          (listing.daysOfWeek as string[])
+            .map(day => dayNameToNumber[day.toLowerCase()])
+            .filter(n => n !== undefined)
+        );
+
+        // Check each day in the overlap window to see if any configured day occurs
+        for (let d = new Date(windowStart); d <= windowEnd; d.setUTCDate(d.getUTCDate() + 1)) {
+          if (allowedDays.has(d.getUTCDay())) return true;
+        }
+        return false;
+      })
+      .map(l => l.id);
+    
+    return { count: validListingIds.length, listingIds: validListingIds };
+  }
+
+  async activateSaleEvent(id: string): Promise<{ updatedListings: Array<{ id: string; spotId: string; dailyRate: string; originalDailyRate: string | null }> }> {
+    const event = await this.getSaleEvent(id);
+    if (!event) throw new Error(`Sale event ${id} not found`);
+
+    const { listingIds } = await this.previewSaleEventListings(event.startDate, event.endDate);
+    if (listingIds.length === 0) {
+      await db.update(saleEvents).set({ status: 'active', affectedListingCount: 0, updatedAt: new Date() }).where(eq(saleEvents.id, id));
+      return { updatedListings: [] };
+    }
+
+    // Fetch current listings to compute discounted price
+    const currentListings = await db.select({
+      id: spotListings.id,
+      spotId: spotListings.spotId,
+      dailyRate: spotListings.dailyRate,
+      originalDailyRate: spotListings.originalDailyRate,
+    }).from(spotListings).where(inArray(spotListings.id, listingIds));
+
+    const discountValue = parseFloat(event.discountValue);
+    const updatedListings: Array<{ id: string; spotId: string; dailyRate: string; originalDailyRate: string | null }> = [];
+
+    for (const listing of currentListings) {
+      const currentRate = parseFloat(listing.dailyRate);
+      let newRate: number;
+      if (event.discountType === 'percentage') {
+        newRate = Math.max(0, currentRate * (1 - discountValue / 100));
+      } else {
+        newRate = Math.max(0, discountValue);
+      }
+      const newRateStr = newRate.toFixed(2);
+      
+      await db.update(spotListings).set({
+        dailyRate: newRateStr,
+        originalDailyRate: listing.originalDailyRate || listing.dailyRate,
+        saleEventId: id,
+        saleCalendarLabel: event.calendarLabel,
+        saleStartDate: event.startDate,
+        saleEndDate: event.endDate,
+        updatedAt: new Date(),
+      }).where(eq(spotListings.id, listing.id));
+
+      updatedListings.push({
+        id: listing.id,
+        spotId: listing.spotId,
+        dailyRate: newRateStr,
+        originalDailyRate: listing.originalDailyRate || listing.dailyRate,
+      });
+    }
+
+    // Mark sale event as active
+    await db.update(saleEvents).set({
+      status: 'active',
+      affectedListingCount: updatedListings.length,
+      updatedAt: new Date(),
+    }).where(eq(saleEvents.id, id));
+
+    return { updatedListings };
+  }
+
+  async deactivateSaleEvent(id: string): Promise<{ restoredCount: number }> {
+    // Find listings tied to this sale event
+    const affectedListings = await db.select({
+      id: spotListings.id,
+      originalDailyRate: spotListings.originalDailyRate,
+    }).from(spotListings).where(eq(spotListings.saleEventId, id));
+
+    let restoredCount = 0;
+    for (const listing of affectedListings) {
+      if (listing.originalDailyRate) {
+        await db.update(spotListings).set({
+          dailyRate: listing.originalDailyRate,
+          originalDailyRate: null,
+          saleEventId: null,
+          saleCalendarLabel: null,
+          saleStartDate: null,
+          saleEndDate: null,
+          updatedAt: new Date(),
+        }).where(eq(spotListings.id, listing.id));
+        restoredCount++;
+      }
+    }
+
+    // Mark sale event as inactive
+    await db.update(saleEvents).set({
+      status: 'inactive',
+      updatedAt: new Date(),
+    }).where(eq(saleEvents.id, id));
+
+    return { restoredCount };
   }
 
   // Audit decorators will be applied via server initialization

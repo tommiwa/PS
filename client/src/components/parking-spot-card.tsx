@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import { MapPin, Car, Zap, Accessibility, Building, Building2, User, Clock, Calendar, Map, Gift, Tag, Sun, Heart, CreditCard, Flame } from "lucide-react"
+import { MapPin, Car, Zap, Accessibility, Building, Building2, User, Clock, Calendar, Map, Gift, Tag, Sun, Heart, CreditCard, Flame, Sparkles } from "lucide-react"
 import type { ParkingSpot, ParkingSpotWithUser } from "@shared/schema"
 import { useAuth } from "@/contexts/auth-context"
 import { useLock } from "@/contexts/LockContext"
@@ -33,6 +33,8 @@ type SpotWithLock = (ParkingSpot | ParkingSpotWithUser) & {
   createdByAdmin?: boolean
   ownerPaymentInstructions?: string | null
   ownerPaymentType?: string | null
+  saleCalendarLabel?: string | null
+  dateToSaleLabel?: Record<string, string>
 }
 
 interface ParkingSpotCardProps {
@@ -205,11 +207,40 @@ export function ParkingSpotCard({
     return day === 0 || day === 6; // 0 = Sunday, 6 = Saturday
   }
 
+  // Get sale calendar label for current date — only show when the specific date is within the sale window
+  const getActiveSaleLabel = (): string | null => {
+    const dateStr = spot.availability?.date;
+    if (dateStr && spot.dateToSaleLabel?.[dateStr]) {
+      return spot.dateToSaleLabel[dateStr];
+    }
+    return null;
+  };
+
   // Get promotional tags based on price and date
   const getPromotionalTags = () => {
     const tags: JSX.Element[] = [];
     const price = getDisplayPrice();
     const dateStr = spot.availability?.date;
+
+    // Admin sale event badge — highest priority, distinct from automated deal badges
+    const saleLabel = getActiveSaleLabel();
+    if (saleLabel && spot.isBciManaged) {
+      tags.push(
+        <Tooltip key="sale-event" delayDuration={100}>
+          <TooltipTrigger asChild>
+            <span className="cursor-help">
+              <Badge className="gap-1 bg-fuchsia-600 text-white border-fuchsia-700 hover:bg-fuchsia-700">
+                <Sparkles className="h-3 w-3" />
+                {saleLabel}
+              </Badge>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent className="z-[100]">
+            <p>Special promotion by BCI Workplace Services: {saleLabel}</p>
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
 
     // Charity donation tag - highest priority, show first
     if (spot.donateToCharity) {

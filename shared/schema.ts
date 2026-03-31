@@ -192,6 +192,43 @@ export interface ParkingSpotWithSafeUserData extends ParkingSpot {
   floorPlanBaseUrl?: string | null;
 }
 
+// Sale Events Table - Admin-managed time-limited discount events for WPS spot listings
+export const discountTypes = z.enum(["percentage", "fixed_price"]);
+export type DiscountType = z.infer<typeof discountTypes>;
+
+export const saleEventStatuses = z.enum(["active", "inactive"]);
+export type SaleEventStatus = z.infer<typeof saleEventStatuses>;
+
+export const saleEvents = pgTable("sale_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(), // e.g., "Easter Week Sale"
+  calendarLabel: text("calendar_label").notNull(), // Short label for calendar/badge e.g., "Easter Deal"
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
+  discountType: text("discount_type").notNull().$type<DiscountType>(), // "percentage" or "fixed_price"
+  discountValue: decimal("discount_value", { precision: 10, scale: 2 }).notNull(), // % or flat price
+  status: text("status").notNull().$type<SaleEventStatus>().default("inactive"),
+  affectedListingCount: integer("affected_listing_count").default(0),
+  createdBy: varchar("created_by"), // Admin user ID who created this
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertSaleEventSchema = createInsertSchema(saleEvents).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  affectedListingCount: true,
+}).extend({
+  discountType: discountTypes,
+  discountValue: z.number().positive("Discount value must be positive"),
+  startDate: z.string().refine((d) => !isNaN(Date.parse(d)), "Invalid start date"),
+  endDate: z.string().refine((d) => !isNaN(Date.parse(d)), "Invalid end date"),
+});
+
+export type InsertSaleEvent = z.infer<typeof insertSaleEventSchema>;
+export type SaleEvent = typeof saleEvents.$inferSelect;
+
 // Spot Listings Table
 export const listingTypes = z.enum(["single", "period", "recurring"]);
 export type ListingType = z.infer<typeof listingTypes>;
@@ -229,6 +266,12 @@ export const spotListings = pgTable("spot_listings", {
   originalListingType: text("original_listing_type").$type<ListingType>(), // Tracks original type when period/recurring listings are split into single-day entries
   createdBy: varchar("created_by"), // User ID of who created the listing (admin or owner)
   createdByAdmin: boolean("created_by_admin").default(false), // True if listing was created by an admin
+  // Sale event fields
+  saleEventId: varchar("sale_event_id"), // References sale_events.id - set when this listing is part of a sale
+  originalDailyRate: decimal("original_daily_rate", { precision: 10, scale: 2 }), // Pre-sale rate preserved for restoration
+  saleCalendarLabel: text("sale_calendar_label"), // Cached label for display
+  saleStartDate: text("sale_start_date"), // Effective sale window start (YYYY-MM-DD), for partial-overlap period/recurring listings
+  saleEndDate: text("sale_end_date"), // Effective sale window end (YYYY-MM-DD), for partial-overlap period/recurring listings
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
   deletedAt: timestamp("deleted_at"), // Soft delete timestamp - null means active
