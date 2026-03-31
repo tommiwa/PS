@@ -4317,16 +4317,12 @@ export class MemStorage implements IStorage {
   }
 
   async previewSaleEventListings(startDate: string, endDate: string): Promise<{ count: number; listingIds: string[] }> {
-    // Find all available BCI-managed spot listings whose available dates overlap with [startDate, endDate]
-    // We need listings that have isBciManaged=true on their spot and status='available' and not soft-deleted
-    const bciSpots = await db.select({ id: parkingSpots.id })
-      .from(parkingSpots)
-      .where(and(eq(parkingSpots.isBciManaged, true), eq(parkingSpots.isActive, true)));
-    
-    if (bciSpots.length === 0) return { count: 0, listingIds: [] };
-    
-    const bciSpotIds = bciSpots.map(s => s.id);
-    
+    // Find all WPS admin-created listings whose available dates overlap with [startDate, endDate].
+    // We filter by createdByAdmin=true on the listing — this is the definitive guard that ensures
+    // employee peer-to-peer listings are NEVER touched, even if the underlying spot is company-owned.
+    // We do NOT filter by isBciManaged on the spot because all spots in this system are company-owned,
+    // making that flag redundant and misleading as a filter.
+
     // Select extra fields needed for recurring daysOfWeek validation
     const candidates = await db.select({
       id: spotListings.id,
@@ -4338,7 +4334,6 @@ export class MemStorage implements IStorage {
       .from(spotListings)
       .where(
         and(
-          inArray(spotListings.spotId, bciSpotIds),
           eq(spotListings.createdByAdmin, true), // Only WPS/admin-created listings — never touch peer-to-peer employee listings
           eq(spotListings.status, 'available'),
           isNull(spotListings.deletedAt),
