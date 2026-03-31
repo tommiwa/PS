@@ -92,6 +92,8 @@ interface DisplaySpot extends DBParkingSpot {
   listingId?: string
   donateToCharity?: boolean // Primary charity flag
   dateToCharity?: Record<string, boolean> // Map of date -> charity status
+  saleCalendarLabel?: string | null // Primary sale label for first available date
+  dateToSaleLabel?: Record<string, string> // Map of date -> sale label
 }
 
 export default function Search() {
@@ -199,6 +201,9 @@ export default function Search() {
       // Preserve owner payment instructions from API
       ownerPaymentInstructions: (spot as any).ownerPaymentInstructions,
       ownerPaymentType: (spot as any).ownerPaymentType,
+      // Preserve sale label info from API
+      saleCalendarLabel: (spot as any).saleCalendarLabel,
+      dateToSaleLabel: (spot as any).dateToSaleLabel,
     }
     
     // If spot has availability dates, create one entry per date

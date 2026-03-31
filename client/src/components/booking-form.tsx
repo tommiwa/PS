@@ -40,6 +40,8 @@ export interface ParkingSpot extends DBParkingSpot {
   donateToCharity?: boolean
   dateToCharity?: Record<string, boolean>
   floorPlanBaseUrl?: string | null
+  saleCalendarLabel?: string | null
+  dateToSaleLabel?: Record<string, string>
 }
 
 interface BookingFormProps {
@@ -342,6 +344,7 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
                 const isSteal = spot.price > 0 && spot.price <= 5;
                 const isHotDeal = spot.price > 5 && spot.price <= 10;
                 const isTopDeal = spot.price > 10 && spot.price <= 12;
+                const saleLabel = (bookingDate && spot.dateToSaleLabel?.[bookingDate]) || spot.saleCalendarLabel || null;
                 
                 return (
                   <div className="flex items-center gap-1.5 flex-wrap">
@@ -422,6 +425,22 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
                         <TooltipContent side="bottom" className="max-w-xs z-[100]">
                           <p className="font-medium">Weekend Booking</p>
                           <p className="text-xs text-muted-foreground">This booking is for a weekend day - perfect for personal errands or weekend activities!</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                    {saleLabel && (
+                      <Tooltip delayDuration={100}>
+                        <TooltipTrigger asChild>
+                          <span className="cursor-help inline-flex">
+                            <Badge className="bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200 hover:bg-fuchsia-200 dark:bg-fuchsia-900/30 dark:text-fuchsia-300 dark:border-fuchsia-700 flex items-center gap-1 cursor-help">
+                              <Sparkles className="h-3 w-3" />
+                              {saleLabel}
+                            </Badge>
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="max-w-xs z-[100]">
+                          <p className="font-medium">Limited-Time Sale</p>
+                          <p className="text-xs text-muted-foreground">This spot is part of a BCI-managed sale event. The discounted rate is already reflected in the price shown.</p>
                         </TooltipContent>
                       </Tooltip>
                     )}
