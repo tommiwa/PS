@@ -258,7 +258,7 @@ export default function AdminSalesPage() {
             Sales &amp; Promotions
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Create time-limited discount sale events that apply to company-owned parking spots managed by WPS.
+            Create time-limited discount sale events that apply to WPS-listed spots only — employee peer-to-peer listings are never affected.
           </p>
         </div>
         <Button onClick={() => { setCreateDialogOpen(true); setPreviewResult(null); form.reset(); }}>
@@ -272,7 +272,7 @@ export default function AdminSalesPage() {
         <div className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
           <p className="font-medium">How sale events work</p>
           <ul className="list-disc ml-4 space-y-0.5 text-blue-700 dark:text-blue-300">
-            <li><strong>Only company-owned (WPS) spots are affected</strong> — spots shared by employees peer-to-peer are never touched</li>
+            <li><strong>Only WPS-listed spots are affected</strong> — if an employee has listed their own assigned spot (even a company-owned one), that listing is never touched</li>
             <li>Save the event first, then activate it when you're ready — activating applies the discount automatically</li>
             <li>When activated, matching spots are repriced and employees with spot alerts are notified by email</li>
             <li>Deactivating a sale restores all original prices — no emails are sent to employees</li>

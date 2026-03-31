@@ -4339,6 +4339,7 @@ export class MemStorage implements IStorage {
       .where(
         and(
           inArray(spotListings.spotId, bciSpotIds),
+          eq(spotListings.createdByAdmin, true), // Only WPS/admin-created listings — never touch peer-to-peer employee listings
           eq(spotListings.status, 'available'),
           isNull(spotListings.deletedAt),
           isNull(spotListings.saleEventId), // Not already in a sale
