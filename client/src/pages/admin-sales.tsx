@@ -266,11 +266,11 @@ export default function AdminSalesPage() {
         <div className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
           <p className="font-medium">How sale events work</p>
           <ul className="list-disc ml-4 space-y-0.5 text-blue-700 dark:text-blue-300">
-            <li>Sales only affect WPS / BCI-managed listings (<strong>isBciManaged = true</strong>)</li>
-            <li>Owner-listed spots are never touched</li>
-            <li>Activating a sale reprices matching available listings and notifies eligible spot-alert subscribers</li>
-            <li>Deactivating restores the original price — no alert emails are sent on deactivation</li>
-            <li>A listing can only belong to one sale at a time</li>
+            <li>Sales apply only to BCI-managed parking spots — employee-listed spots are never affected</li>
+            <li>Save the event first, then activate it when you're ready — activating applies the discount automatically</li>
+            <li>When activated, matching spots are repriced and employees with spot alerts are notified by email</li>
+            <li>Deactivating a sale restores all original prices — no emails are sent to employees</li>
+            <li>A spot can only be part of one active sale at a time</li>
           </ul>
         </div>
       </div>
