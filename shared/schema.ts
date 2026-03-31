@@ -389,6 +389,9 @@ export const insertBookingSchema = createInsertSchema(bookings).omit({
   updatedAt: true,
   renterId: true,
   ownerId: true,
+}).extend({
+  dailyRate: z.union([z.string(), z.number()]).transform((v) => String(v)),
+  totalAmount: z.union([z.string(), z.number()]).transform((v) => String(v)),
 });
 
 export type InsertBooking = z.infer<typeof insertBookingSchema>;
