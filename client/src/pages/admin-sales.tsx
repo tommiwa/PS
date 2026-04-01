@@ -301,24 +301,31 @@ export default function AdminSalesPage() {
       </div>
 
       {/* Promotion Templates Panel */}
-      <div className="rounded-md border bg-card">
+      <div className="rounded-md border border-violet-200 dark:border-violet-800 overflow-hidden">
         <button
           type="button"
           onClick={() => setTemplatesOpen((o) => !o)}
-          className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover-elevate rounded-md"
+          className="w-full flex items-center justify-between gap-3 px-4 py-4 text-left bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-950/40 dark:to-purple-950/40 hover-elevate"
         >
-          <div className="flex items-center gap-2">
-            <Brain className="h-5 w-5 text-primary shrink-0" />
-            <span className="font-semibold text-sm">Promotion Templates</span>
-            <Badge variant="outline" className="text-xs">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center h-9 w-9 rounded-md bg-violet-100 dark:bg-violet-900/50 shrink-0">
+              <Brain className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+            </div>
+            <div>
+              <p className="font-semibold text-sm text-foreground">Promotion Templates</p>
+              <p className="text-xs text-muted-foreground">Quick-start your next sale event</p>
+            </div>
+            <Badge className="bg-violet-100 dark:bg-violet-900/50 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-700 text-xs ml-1">
               {HOLIDAY_TEMPLATES.length + smartTemplates.length + creativeTemplates.length} templates
             </Badge>
           </div>
-          {templatesOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+          {templatesOpen
+            ? <ChevronUp className="h-4 w-4 text-violet-500 shrink-0" />
+            : <ChevronDown className="h-4 w-4 text-violet-500 shrink-0" />}
         </button>
 
         {templatesOpen && (
-          <div className="border-t px-4 pb-4 pt-3">
+          <div className="border-t border-violet-100 dark:border-violet-800/50 bg-card px-4 pb-4 pt-3">
             <p className="text-xs text-muted-foreground mb-3">
               Click "Use Template" to pre-fill the create form. Nothing is saved until you submit.
             </p>
