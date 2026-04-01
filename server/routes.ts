@@ -1843,7 +1843,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const matchingDate = subscriber.daysOfWeek && subscriber.daysOfWeek.length > 0
               ? listingDates.find(d => {
                   const dow = new Date(d + 'T12:00:00').getDay();
-                  return subscriber.daysOfWeek.includes(dow);
+                  return subscriber.daysOfWeek.map(Number).includes(dow);
                 })
               : listingDates[0]; // No day preference — any date matches
 

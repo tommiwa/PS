@@ -322,6 +322,7 @@ export default function MySpots() {
       queryClient.invalidateQueries({ queryKey: ['/api/spot-listings'] })
       queryClient.invalidateQueries({ queryKey: ['/api/listings'] })
       queryClient.invalidateQueries({ queryKey: ['/api/available-spots'] })
+      queryClient.invalidateQueries({ queryKey: ['/api/my-listings'] })
       toast({
         title: "Success",
         description: "Listing created successfully",
