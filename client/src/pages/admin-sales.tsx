@@ -269,7 +269,7 @@ export default function AdminSalesPage() {
   const inactiveSales = saleEvents.filter((e) => e.status === "inactive");
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
+    <div className="px-4 py-6 sm:px-6 lg:px-8 max-w-screen-xl mx-auto space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -323,10 +323,19 @@ export default function AdminSalesPage() {
               Click "Use Template" to pre-fill the create form. Nothing is saved until you submit.
             </p>
             <Tabs defaultValue="holiday">
-              <TabsList className="mb-3">
-                <TabsTrigger value="holiday">Holiday Templates</TabsTrigger>
-                <TabsTrigger value="smart">Smart Templates</TabsTrigger>
-                <TabsTrigger value="creative">Creative Promos</TabsTrigger>
+              <TabsList className="mb-3 w-full sm:w-auto">
+                <TabsTrigger value="holiday" className="flex-1 sm:flex-none text-xs sm:text-sm">
+                  <span className="sm:hidden">Holidays</span>
+                  <span className="hidden sm:inline">Holiday Templates</span>
+                </TabsTrigger>
+                <TabsTrigger value="smart" className="flex-1 sm:flex-none text-xs sm:text-sm">
+                  <span className="sm:hidden">Smart</span>
+                  <span className="hidden sm:inline">Smart Templates</span>
+                </TabsTrigger>
+                <TabsTrigger value="creative" className="flex-1 sm:flex-none text-xs sm:text-sm">
+                  <span className="sm:hidden">Creative</span>
+                  <span className="hidden sm:inline">Creative Promos</span>
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="holiday">
@@ -372,7 +381,7 @@ export default function AdminSalesPage() {
           {activeSales.length > 0 && (
             <section className="space-y-3">
               <h2 className="text-lg font-semibold text-foreground">Active Sales</h2>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {activeSales.map((event) => (
                   <SaleEventCard
                     key={event.id}
@@ -391,7 +400,7 @@ export default function AdminSalesPage() {
           {inactiveSales.length > 0 && (
             <section className="space-y-3">
               <h2 className="text-lg font-semibold text-foreground">Inactive / Past Sales</h2>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {inactiveSales.map((event) => (
                   <SaleEventCard
                     key={event.id}
@@ -838,13 +847,13 @@ function SaleEventCard({ event, onActivate, onDeactivate, onEdit, onDelete, isAc
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="grid grid-cols-2 gap-2 text-sm">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
           <div className="flex items-center gap-1.5 text-muted-foreground">
-            <Calendar className="h-3.5 w-3.5" />
-            <span>{formatDate(event.startDate)} – {formatDate(event.endDate)}</span>
+            <Calendar className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">{formatDate(event.startDate)} – {formatDate(event.endDate)}</span>
           </div>
           <div className="flex items-center gap-1.5 text-muted-foreground">
-            {event.discountType === "percentage" ? <Percent className="h-3.5 w-3.5" /> : <DollarSign className="h-3.5 w-3.5" />}
+            {event.discountType === "percentage" ? <Percent className="h-3.5 w-3.5 shrink-0" /> : <DollarSign className="h-3.5 w-3.5 shrink-0" />}
             <DiscountDisplay type={event.discountType} value={event.discountValue} />
           </div>
         </div>
