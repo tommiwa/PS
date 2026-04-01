@@ -360,28 +360,6 @@ export default function AdminSpotBookingManagement() {
     }
   }
 
-  // Refresh data when tab changes
-  useEffect(() => {
-    // Invalidate relevant queries based on the active tab
-    switch (activeTab) {
-      case "availability":
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-availability", scope] })
-        break
-      case "active":
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/active-bookings", scope] })
-        break
-      case "pending-payments":
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-payments", scope] })
-        break
-      case "payroll-summary":
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/payroll-summary"] })
-        break
-      case "past":
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/past-bookings"] })
-        break
-    }
-  }, [activeTab, scope])
-  
   // When scope changes, switch to appropriate tab if current tab doesn't apply
   useEffect(() => {
     // If switching to BCI scope and on pending-payments tab, switch to payroll-summary
@@ -401,16 +379,22 @@ export default function AdminSpotBookingManagement() {
     }
   }, [showBookingDetails])
 
-  // Fetch active bookings
+  const STALE_TIME = 2 * 60 * 1000; // 2 minutes
+
+  // Fetch active bookings — deferred until the "Active/Upcoming Bookings" tab is visited
   const { data: activeBookings = [], isLoading: isLoadingActive } = useQuery<AdminBookingData[]>({
     queryKey: ["/api/admin/active-bookings", scope],
-    queryFn: () => fetch(`/api/admin/active-bookings?scope=${scope}`).then(r => r.json())
+    queryFn: () => fetch(`/api/admin/active-bookings?scope=${scope}`).then(r => r.json()),
+    enabled: activeTab === 'active',
+    staleTime: STALE_TIME
   });
 
-  // Fetch booking activity data
+  // Fetch booking activity data — deferred until the "Active/Upcoming Bookings" tab is visited
   const { data: bookingActivity, isLoading: isLoadingActivity } = useQuery({
     queryKey: ["/api/admin/booking-activity", scope],
-    queryFn: () => fetch(`/api/admin/booking-activity?scope=${scope}&pageSize=100`).then(r => r.json())
+    queryFn: () => fetch(`/api/admin/booking-activity?scope=${scope}&pageSize=50`).then(r => r.json()),
+    enabled: activeTab === 'active',
+    staleTime: STALE_TIME
   });
 
   // Fetch past bookings with server-side pagination (only when tab is active)
@@ -435,30 +419,34 @@ export default function AdminSpotBookingManagement() {
       }
       return fetch(`/api/admin/past-bookings?${params.toString()}`).then(r => r.json());
     },
-    enabled: activeTab === 'past'
+    enabled: activeTab === 'past',
+    staleTime: STALE_TIME
   });
   
   const pastBookings = pastBookingsResponse?.data ?? [];
   const pastBookingsTotal = pastBookingsResponse?.total ?? 0;
 
-  // Fetch booking availability
+  // Fetch booking availability — loads immediately as this is the default tab
   const { data: bookingAvailability = [], isLoading: isLoadingAvailability } = useQuery<BookingAvailabilityData[]>({
     queryKey: ["/api/admin/booking-availability", scope],
-    queryFn: () => fetch(`/api/admin/booking-availability?scope=${scope}`).then(r => r.json())
+    queryFn: () => fetch(`/api/admin/booking-availability?scope=${scope}`).then(r => r.json()),
+    staleTime: STALE_TIME
   });
 
-  // Fetch pending payments (only for peer-to-peer scope)
+  // Fetch pending payments — deferred until the "Pending Payments" tab is visited
   const { data: pendingPayments = [], isLoading: isLoadingPendingPayments } = useQuery<PendingPaymentData[]>({
     queryKey: ["/api/admin/pending-payments", scope],
     queryFn: () => fetch(`/api/admin/pending-payments?scope=${scope}`).then(r => r.json()),
-    enabled: scope === 'all' // Only fetch for peer-to-peer (All Spots) view
+    enabled: scope === 'all' && activeTab === 'pending-payments',
+    staleTime: STALE_TIME
   });
 
-  // Fetch payroll summary (only for BCI scope)
+  // Fetch payroll summary — loads on BCI mount (powers at-a-glance summary cards)
   const { data: payrollSummary, isLoading: isLoadingPayrollSummary } = useQuery<PayrollSummaryData>({
     queryKey: ["/api/admin/payroll-summary"],
     queryFn: () => fetch("/api/admin/payroll-summary").then(r => r.json()),
-    enabled: scope === 'bci' // Only fetch for Shared Pool view
+    enabled: scope === 'bci',
+    staleTime: STALE_TIME
   });
 
   // Calculate active totals for the first period (excluding removed bookings)
@@ -478,17 +466,19 @@ export default function AdminSpotBookingManagement() {
   const { data: payrollPeriodsData } = useQuery<{ periods: { value: string; label: string }[] }>({
     queryKey: ["/api/admin/payroll-periods"],
     queryFn: () => fetch("/api/admin/payroll-periods").then(r => r.json()),
-    enabled: scope === 'bci' // Only fetch for Shared Pool view
+    enabled: scope === 'bci',
+    staleTime: STALE_TIME
   });
 
   const payrollPeriodFilterOptions = useMemo(() => {
     return payrollPeriodsData?.periods || [];
   }, [payrollPeriodsData]);
 
-  // Fetch booking analytics
+  // Fetch booking analytics — loads on mount (small, powers the summary cards)
   const { data: bookingAnalytics, isLoading: isLoadingAnalytics } = useQuery<BookingAnalytics>({
     queryKey: ["/api/admin/booking-analytics", scope],
-    queryFn: () => fetch(`/api/admin/booking-analytics?scope=${scope}`).then(r => r.json())
+    queryFn: () => fetch(`/api/admin/booking-analytics?scope=${scope}`).then(r => r.json()),
+    staleTime: STALE_TIME
   });
 
   // Fetch pending disputes (lazy-loaded when dialog opens)
