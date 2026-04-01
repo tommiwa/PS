@@ -9,13 +9,15 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Tag, Plus, Power, PowerOff, Trash2, Calendar, Percent, DollarSign, AlertTriangle, CheckCircle2, Info, Pencil, Sparkles } from "lucide-react";
-import { getSaleBadgeClasses, SALE_COLOR_OPTIONS, type SaleBadgeColor } from "@/lib/sale-badge-colors";
+import { Tag, Plus, Power, PowerOff, Trash2, Calendar, Percent, DollarSign, AlertTriangle, CheckCircle2, Info, Pencil, Sparkles, ChevronDown, ChevronUp, Brain } from "lucide-react";
+import { getSaleBadgeClasses, SALE_COLOR_OPTIONS, SALE_COLOR_DOT, type SaleBadgeColor } from "@/lib/sale-badge-colors";
 import { format } from "date-fns";
+import { HOLIDAY_TEMPLATES, buildSmartTemplates, buildCreativeTemplates, type PromotionTemplate } from "@/lib/promotion-templates";
 
 type SaleEventStatus = "active" | "inactive";
 type DiscountType = "percentage" | "fixed_price";
@@ -98,6 +100,9 @@ export default function AdminSalesPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [previewResult, setPreviewResult] = useState<PreviewResult | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
+  const smartTemplates = buildSmartTemplates();
+  const creativeTemplates = buildCreativeTemplates();
 
   const { data: saleEvents = [], isLoading } = useQuery<SaleEvent[]>({
     queryKey: ["/api/admin/sale-events"],
@@ -246,6 +251,20 @@ export default function AdminSalesPage() {
     }
   };
 
+  const handleUseTemplate = (template: PromotionTemplate) => {
+    form.reset({
+      name: template.name,
+      calendarLabel: template.calendarLabel,
+      labelColor: template.labelColor,
+      startDate: template.startDate,
+      endDate: template.endDate,
+      discountType: template.discountType,
+      discountValue: template.discountValue,
+    });
+    setPreviewResult(null);
+    setCreateDialogOpen(true);
+  };
+
   const activeSales = saleEvents.filter((e) => e.status === "active");
   const inactiveSales = saleEvents.filter((e) => e.status === "inactive");
 
@@ -279,6 +298,63 @@ export default function AdminSalesPage() {
             <li>A spot can only be part of one active sale at a time</li>
           </ul>
         </div>
+      </div>
+
+      {/* Promotion Templates Panel */}
+      <div className="rounded-md border bg-card">
+        <button
+          type="button"
+          onClick={() => setTemplatesOpen((o) => !o)}
+          className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover-elevate rounded-md"
+        >
+          <div className="flex items-center gap-2">
+            <Brain className="h-5 w-5 text-primary shrink-0" />
+            <span className="font-semibold text-sm">Promotion Templates</span>
+            <Badge variant="outline" className="text-xs">
+              {HOLIDAY_TEMPLATES.length + smartTemplates.length + creativeTemplates.length} templates
+            </Badge>
+          </div>
+          {templatesOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+        </button>
+
+        {templatesOpen && (
+          <div className="border-t px-4 pb-4 pt-3">
+            <p className="text-xs text-muted-foreground mb-3">
+              Click "Use Template" to pre-fill the create form. Nothing is saved until you submit.
+            </p>
+            <Tabs defaultValue="holiday">
+              <TabsList className="mb-3">
+                <TabsTrigger value="holiday">Holiday Templates</TabsTrigger>
+                <TabsTrigger value="smart">Smart Templates</TabsTrigger>
+                <TabsTrigger value="creative">Creative Promos</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="holiday">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {HOLIDAY_TEMPLATES.map((t) => (
+                    <TemplateCard key={t.name} template={t} onUse={() => handleUseTemplate(t)} />
+                  ))}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="smart">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {smartTemplates.map((t) => (
+                    <TemplateCard key={t.name} template={t} onUse={() => handleUseTemplate(t)} />
+                  ))}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="creative">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {creativeTemplates.map((t) => (
+                    <TemplateCard key={t.name} template={t} onUse={() => handleUseTemplate(t)} />
+                  ))}
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
+        )}
       </div>
 
       {isLoading ? (
@@ -677,6 +753,57 @@ export default function AdminSalesPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function TemplateCard({ template, onUse }: { template: PromotionTemplate; onUse: () => void }) {
+  const dotClass = SALE_COLOR_DOT[template.labelColor] ?? "bg-fuchsia-500";
+  const badgeClasses = getSaleBadgeClasses(template.labelColor, "subtle");
+
+  function formatTemplateDate(dateStr: string) {
+    try {
+      return format(new Date(dateStr + "T00:00:00"), "MMM d");
+    } catch {
+      return dateStr;
+    }
+  }
+
+  return (
+    <Card className="flex flex-col">
+      <CardHeader className="pb-2 pt-3 px-3">
+        <div className="flex items-start gap-2">
+          <span className={`mt-1 h-2.5 w-2.5 rounded-full shrink-0 ${dotClass}`} />
+          <CardTitle className="text-sm font-semibold leading-snug">{template.name}</CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent className="px-3 pb-3 flex flex-col gap-2 flex-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-xs font-medium ${badgeClasses}`}>
+            <Sparkles className="h-3 w-3" />
+            {template.calendarLabel}
+          </span>
+          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-xs font-medium ${badgeClasses}`}>
+            {template.discountType === "percentage"
+              ? <><Percent className="h-3 w-3" />{template.discountValue}% off</>
+              : <><DollarSign className="h-3 w-3" />${template.discountValue.toFixed(2)} flat</>
+            }
+          </span>
+        </div>
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <Calendar className="h-3 w-3 shrink-0" />
+          <span>{formatTemplateDate(template.startDate)} – {formatTemplateDate(template.endDate)}</span>
+        </div>
+        {template.rationale && (
+          <p className="text-xs text-muted-foreground italic leading-snug">{template.rationale}</p>
+        )}
+        <div className="mt-auto pt-1">
+          <Button size="sm" variant="outline" onClick={onUse} className="w-full gap-1">
+            <Plus className="h-3.5 w-3.5" />
+            Use Template
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
