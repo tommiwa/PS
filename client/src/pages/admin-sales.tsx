@@ -5,16 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Tag, Plus, Power, PowerOff, Trash2, Calendar, Percent, DollarSign, AlertTriangle, CheckCircle2, Info, Pencil, Sparkles, ChevronDown, ChevronUp, Brain } from "lucide-react";
+import { Tag, Plus, Power, PowerOff, Trash2, Calendar, Percent, DollarSign, AlertTriangle, CheckCircle2, Info, Pencil, Sparkles, ChevronDown, ChevronUp, Brain, Bell } from "lucide-react";
 import { getSaleBadgeClasses, SALE_COLOR_OPTIONS, SALE_COLOR_DOT, type SaleBadgeColor } from "@/lib/sale-badge-colors";
 import { format } from "date-fns";
 import { HOLIDAY_TEMPLATES, buildSmartTemplates, buildCreativeTemplates, type PromotionTemplate } from "@/lib/promotion-templates";
@@ -33,6 +34,8 @@ interface SaleEvent {
   discountValue: string;
   status: SaleEventStatus;
   affectedListingCount: number | null;
+  notifyPastRenters: boolean;
+  notifyActiveRenters: boolean;
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
@@ -51,6 +54,8 @@ const createSaleEventSchema = z.object({
   endDate: z.string().refine((d) => !isNaN(Date.parse(d)), "Invalid end date"),
   discountType: z.enum(["percentage", "fixed_price"]),
   discountValue: z.coerce.number().positive("Must be a positive number"),
+  notifyPastRenters: z.boolean().default(false),
+  notifyActiveRenters: z.boolean().default(false),
 }).refine((d) => new Date(d.startDate) <= new Date(d.endDate), {
   message: "End date must be on or after start date",
   path: ["endDate"],
@@ -118,6 +123,8 @@ export default function AdminSalesPage() {
       endDate: "",
       discountType: "percentage",
       discountValue: 10,
+      notifyPastRenters: false,
+      notifyActiveRenters: false,
     },
   });
 
@@ -131,6 +138,8 @@ export default function AdminSalesPage() {
       endDate: "",
       discountType: "percentage",
       discountValue: 10,
+      notifyPastRenters: false,
+      notifyActiveRenters: false,
     },
   });
 
@@ -144,6 +153,8 @@ export default function AdminSalesPage() {
       endDate: event.endDate,
       discountType: event.discountType as DiscountType,
       discountValue: parseFloat(event.discountValue),
+      notifyPastRenters: event.notifyPastRenters ?? false,
+      notifyActiveRenters: event.notifyActiveRenters ?? false,
     });
   };
 
@@ -182,13 +193,16 @@ export default function AdminSalesPage() {
   const activateMutation = useMutation({
     mutationFn: async (id: string) => {
       const res = await apiRequest(`/api/admin/sale-events/${id}/activate`, { method: "POST" });
-      return res.json() as Promise<{ updatedCount: number }>;
+      return res.json() as Promise<{ updatedCount: number; notifiedCount: number; promoEnabled: boolean }>;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/sale-events"] });
+      const notifiedPart = data.promoEnabled
+        ? `Promotion activated · ${data.notifiedCount} user${data.notifiedCount !== 1 ? "s" : ""} notified.`
+        : `${data.updatedCount} WPS listing(s) repriced. Spot alert emails are being sent to eligible subscribers.`;
       toast({
         title: "Sale activated",
-        description: `${data.updatedCount} WPS listing(s) have been repriced. Spot alert emails are being sent to eligible subscribers.`,
+        description: notifiedPart,
       });
     },
     onError: (error: Error) => {
@@ -565,6 +579,51 @@ export default function AdminSalesPage() {
                 )}
               />
 
+              {/* Notify on Activation */}
+              <div className="space-y-3 rounded-md border p-4">
+                <div className="flex items-center gap-2">
+                  <Bell className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-sm font-medium">Notify on Activation</p>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Send a promotional email to selected audiences when this sale is activated. Spot owners are always excluded. Users who are eligible for both a spot alert and a promo email will only receive one email.
+                </p>
+                <FormField
+                  control={form.control}
+                  name="notifyPastRenters"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between gap-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-sm">Notify past renters</FormLabel>
+                        <FormDescription className="text-xs">
+                          Users who have completed at least one booking in ParkShare.
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch checked={field.value} onCheckedChange={field.onChange} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="notifyActiveRenters"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between gap-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-sm">Notify active renters</FormLabel>
+                        <FormDescription className="text-xs">
+                          Users whose current role is renter (or renter + admin).
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch checked={field.value} onCheckedChange={field.onChange} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
               {/* Preview Section */}
               <div className="space-y-2">
                 <Button type="button" variant="outline" size="sm" onClick={handlePreview} disabled={previewLoading}>
@@ -731,6 +790,50 @@ export default function AdminSalesPage() {
                   </FormItem>
                 )}
               />
+              {/* Notify on Activation */}
+              <div className="space-y-3 rounded-md border p-4">
+                <div className="flex items-center gap-2">
+                  <Bell className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-sm font-medium">Notify on Activation</p>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Send a promotional email to selected audiences when this sale is activated. Spot owners are always excluded.
+                </p>
+                <FormField
+                  control={editForm.control}
+                  name="notifyPastRenters"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between gap-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-sm">Notify past renters</FormLabel>
+                        <FormDescription className="text-xs">
+                          Users who have completed at least one booking in ParkShare.
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch checked={field.value} onCheckedChange={field.onChange} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="notifyActiveRenters"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between gap-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-sm">Notify active renters</FormLabel>
+                        <FormDescription className="text-xs">
+                          Users whose current role is renter (or renter + admin).
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch checked={field.value} onCheckedChange={field.onChange} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
               <DialogFooter className="gap-2">
                 <Button type="button" variant="outline" onClick={() => setEditEvent(null)}>
                   Cancel

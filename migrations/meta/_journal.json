@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1775115444591,
+      "tag": "0000_add_notify_flags_to_sale_events",
+      "breakpoints": true
+    }
+  ]
+}

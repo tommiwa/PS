@@ -2784,3 +2784,83 @@ The BCI ParkShare Team`;
 
   return results;
 }
+
+/**
+ * Send a promotion broadcast email to a recipient when a sale event is activated.
+ * Tone is informative and professional — suitable for internal corporate distribution.
+ * No urgency language or marketing-pressure copy.
+ */
+export async function createPromotionBroadcastNotification(
+  user: { name: string; email: string },
+  event: {
+    name: string;
+    startDate: string;
+    endDate: string;
+    discountType: 'percentage' | 'fixed_price';
+    discountValue: number;
+  }
+): Promise<{ emailSent: boolean }> {
+  const results = { emailSent: false };
+
+  try {
+    const searchUrl = `${APP_URL}/search`;
+    const subject = `Reduced Parking Rates Available — ${event.name}`;
+
+    const discountSummary = event.discountType === 'percentage'
+      ? `${event.discountValue.toFixed(0)}% reduced rate`
+      : `$${event.discountValue.toFixed(2)} flat daily rate`;
+
+    const dateRange = formatDateRange(new Date(event.startDate + 'T12:00:00'), new Date(event.endDate + 'T12:00:00'));
+
+    const text = `Hi ${user.name},
+
+Parking spots are available at a ${discountSummary} through ${event.name}.
+
+Available: ${dateRange}
+
+You can view and book available spots in BCI ParkShare:
+${searchUrl}
+
+BCI Workplace Services`;
+
+    const content = `
+      <p>Hi ${user.name},</p>
+      <p>Parking spots are currently available at a reduced rate through the <strong>${event.name}</strong> promotion.</p>
+
+      <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
+        <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 16px; font-weight: 600; color: #1e293b; margin: 0 0 14px 0;">Promotion Details</h3>
+        <ul style="margin: 0; padding: 0; list-style: none;">
+          <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Promotion:</strong> ${event.name}</li>
+          <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Rate:</strong> ${discountSummary}</li>
+          <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Available:</strong> ${dateRange}</li>
+        </ul>
+      </div>
+
+      <p style="font-size: 15px; color: #374151;">Spots are available on a first-come, first-served basis. Visit BCI ParkShare to view availability and complete a booking.</p>
+    `;
+
+    const html = wrapEmailTemplate({
+      title: 'Reduced Parking Rate Available',
+      content,
+      theme: 'primary',
+      ctaButton: { text: 'View Available Spots', url: searchUrl }
+    });
+
+    const notification: EmailNotification = {
+      to: user.email,
+      subject,
+      text,
+      html,
+      type: 'spot_alert'
+    };
+
+    const emailResult = await sendEmailNotification(notification);
+    results.emailSent = emailResult.success;
+
+    console.log(`✓ Promotion broadcast email sent to ${user.name} (${user.email}) for event "${event.name}"`);
+  } catch (error) {
+    console.error(`❌ Error sending promotion broadcast email to ${user.email}:`, error);
+  }
+
+  return results;
+}

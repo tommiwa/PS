@@ -174,6 +174,20 @@ const migrations: MigrationCheck[] = [
       `ALTER TABLE spot_listings ADD COLUMN IF NOT EXISTS sale_calendar_color VARCHAR(20)`,
     ],
   },
+  {
+    name: "sale_events_notify_past_renters_col",
+    checkQuery: `SELECT EXISTS (SELECT FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'sale_events' AND column_name = 'notify_past_renters')`,
+    migrationStatements: [
+      `ALTER TABLE sale_events ADD COLUMN IF NOT EXISTS notify_past_renters BOOLEAN NOT NULL DEFAULT false`,
+    ],
+  },
+  {
+    name: "sale_events_notify_active_renters_col",
+    checkQuery: `SELECT EXISTS (SELECT FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'sale_events' AND column_name = 'notify_active_renters')`,
+    migrationStatements: [
+      `ALTER TABLE sale_events ADD COLUMN IF NOT EXISTS notify_active_renters BOOLEAN NOT NULL DEFAULT false`,
+    ],
+  },
 ];
 
 export async function runMigrations(): Promise<void> {

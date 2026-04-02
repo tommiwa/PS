@@ -21,6 +21,7 @@ import {
   sendSystemMaintenanceNotification,
   sendEmailNotification,
   sendSpotAlertEmail,
+  createPromotionBroadcastNotification,
   wrapEmailTemplate,
   type InAppNotification,
   type EmailNotification
@@ -10325,6 +10326,8 @@ The BCI ParkShare Team`;
         discountType: z.enum(["percentage", "fixed_price"]),
         discountValue: z.number().positive("Discount value must be positive"),
         labelColor: z.enum(["fuchsia", "violet", "blue", "green", "orange", "red", "amber", "rose"]).default("fuchsia"),
+        notifyPastRenters: z.boolean().default(false),
+        notifyActiveRenters: z.boolean().default(false),
       }).refine((d) => new Date(d.startDate) <= new Date(d.endDate), {
         message: "End date must be on or after start date",
         path: ["endDate"],
@@ -10366,6 +10369,8 @@ The BCI ParkShare Team`;
         discountType: z.enum(["percentage", "fixed_price"]).optional(),
         discountValue: z.number().positive("Discount value must be positive").optional(),
         labelColor: z.enum(["fuchsia", "violet", "blue", "green", "orange", "red", "amber", "rose"]).optional(),
+        notifyPastRenters: z.boolean().optional(),
+        notifyActiveRenters: z.boolean().optional(),
       });
 
       const body = schema.parse(req.body);
@@ -10398,69 +10403,135 @@ The BCI ParkShare Team`;
 
       const { updatedListings } = await storage.activateSaleEvent(id);
 
-      // Async: send spot alert emails for all updated listings (fire-and-forget)
+      // Resolve notification recipients synchronously (needed for response count)
+      // Step 1: Build promo recipient set (union of past/active renters, owners excluded)
+      const notifyPastRenters = event.notifyPastRenters ?? false;
+      const notifyActiveRenters = event.notifyActiveRenters ?? false;
+      const promoRecipientIds = new Set<string>();
+
+      if (notifyPastRenters || notifyActiveRenters) {
+        try {
+          const allUsers = await storage.getAllUsers();
+          for (const user of allUsers) {
+            if (!user.email) continue;
+            if (user.status !== 'active') continue;
+            // Universal exclusion: spot owners never receive promotion emails
+            if (user.roles.includes('owner')) continue;
+
+            let qualifies = false;
+            if (notifyPastRenters) {
+              const userBookings = await storage.getBookingsByRenter(user.id);
+              if (userBookings.some(b => b.status === 'completed')) qualifies = true;
+            }
+            if (!qualifies && notifyActiveRenters) {
+              if (user.roles.includes('renter')) qualifies = true;
+            }
+            if (qualifies) promoRecipientIds.add(user.id);
+          }
+        } catch (err) {
+          console.error('[PromoBroadcast] Error resolving recipient list:', err);
+        }
+      }
+
+      // Total notified = promo recipients (they replace spot alerts for overlapping users)
+      const notifiedCount = promoRecipientIds.size;
+
+      // Async: dispatch all emails (fire-and-forget)
       (async () => {
         try {
-          if (updatedListings.length === 0) return;
-          const subscribers = await storage.getActiveSpotAlertSubscribers();
-          if (subscribers.length === 0) return;
+          // Track users who received any email to guarantee one email per user per activation
+          const emailedUserIds = new Set<string>();
 
-          for (const updated of updatedListings) {
-            const spot = await storage.getParkingSpot(updated.spotId);
-            if (!spot) continue;
-
-            let locationName = 'BCI Parkade';
-            if (spot.locationId) {
-              const loc = await storage.getLocation(spot.locationId);
-              if (loc) locationName = `${loc.office} - ${loc.building}`;
-            }
-
-            const listing = await storage.getSpotListing(updated.id);
-            if (!listing) continue;
-            // Filter dates to only those within the sale window (startDate/endDate)
-            const allListingDates = getListingDates(listing as any);
-            const listingDates = allListingDates.filter(d => d >= event.startDate && d <= event.endDate);
-            if (listingDates.length === 0) continue;
-
-            const listingRate = parseFloat(updated.dailyRate);
-
-            for (const subscriber of subscribers) {
-              if (subscriber.userId === listing.ownerId) continue;
-              if (subscriber.maxDailyPrice && listingRate > parseFloat(subscriber.maxDailyPrice)) continue;
-
-              const matchingDate = subscriber.daysOfWeek && subscriber.daysOfWeek.length > 0
-                ? listingDates.find(d => {
-                    const dow = new Date(d + 'T12:00:00').getDay();
-                    return subscriber.daysOfWeek.includes(dow);
-                  })
-                : listingDates[0];
-
-              if (!matchingDate) continue;
-
-              const user = await storage.getUser(subscriber.userId);
+          // Step 2: Send promotion broadcast emails first
+          if (promoRecipientIds.size > 0) {
+            for (const userId of Array.from(promoRecipientIds)) {
+              const user = await storage.getUser(userId);
               if (!user?.email) continue;
               const userName = user.firstName && user.lastName
                 ? `${user.firstName} ${user.lastName}`
                 : user.firstName || user.email;
 
-              sendSpotAlertEmail(
+              emailedUserIds.add(userId);
+              createPromotionBroadcastNotification(
                 { name: userName, email: user.email },
                 {
-                  id: listing.id,
-                  spotNumber: spot.spotNumber,
-                  location: locationName,
-                  date: matchingDate,
-                  dailyRate: listingRate
+                  name: event.name,
+                  startDate: event.startDate,
+                  endDate: event.endDate,
+                  discountType: event.discountType as 'percentage' | 'fixed_price',
+                  discountValue: parseFloat(event.discountValue),
                 }
-              ).catch(err => console.error(`[SaleAlerts] Failed to send alert to ${user.email}:`, err));
+              ).catch(err => console.error(`[PromoBroadcast] Failed to send promo email to ${user.email}:`, err));
+            }
+            console.log(`[PromoBroadcast] Dispatched promotion emails to ${promoRecipientIds.size} recipients`);
+          }
+
+          // Step 3: Send spot alert emails — skip any user already emailed via promo
+          if (updatedListings.length > 0) {
+            const subscribers = await storage.getActiveSpotAlertSubscribers();
+
+            for (const updated of updatedListings) {
+              const spot = await storage.getParkingSpot(updated.spotId);
+              if (!spot) continue;
+
+              let locationName = 'BCI Parkade';
+              if (spot.locationId) {
+                const loc = await storage.getLocation(spot.locationId);
+                if (loc) locationName = `${loc.office} - ${loc.building}`;
+              }
+
+              const listing = await storage.getSpotListing(updated.id);
+              if (!listing) continue;
+              const allListingDates = getListingDates(listing as any);
+              const listingDates = allListingDates.filter(d => d >= event.startDate && d <= event.endDate);
+              if (listingDates.length === 0) continue;
+
+              const listingRate = parseFloat(updated.dailyRate);
+
+              for (const subscriber of subscribers) {
+                // Skip if already emailed (promo email takes precedence)
+                if (emailedUserIds.has(subscriber.userId)) continue;
+                if (subscriber.userId === listing.ownerId) continue;
+                if (subscriber.maxDailyPrice && listingRate > parseFloat(subscriber.maxDailyPrice)) continue;
+
+                const matchingDate = subscriber.daysOfWeek && subscriber.daysOfWeek.length > 0
+                  ? listingDates.find(d => {
+                      const dow = new Date(d + 'T12:00:00').getDay();
+                      return subscriber.daysOfWeek.includes(dow);
+                    })
+                  : listingDates[0];
+
+                if (!matchingDate) continue;
+
+                const user = await storage.getUser(subscriber.userId);
+                if (!user?.email) continue;
+                const userName = user.firstName && user.lastName
+                  ? `${user.firstName} ${user.lastName}`
+                  : user.firstName || user.email;
+
+                // Mark as emailed before sending to prevent duplicate spot alerts across listings
+                emailedUserIds.add(subscriber.userId);
+
+                sendSpotAlertEmail(
+                  { name: userName, email: user.email },
+                  {
+                    id: listing.id,
+                    spotNumber: spot.spotNumber,
+                    location: locationName,
+                    date: matchingDate,
+                    dailyRate: listingRate
+                  }
+                ).catch(err => console.error(`[SaleAlerts] Failed to send alert to ${user.email}:`, err));
+              }
             }
           }
+
         } catch (err) {
-          console.error('[SaleAlerts] Error processing spot alert subscribers after activation:', err);
+          console.error('[SaleAlerts] Error processing notifications after activation:', err);
         }
       })();
 
-      res.json({ success: true, updatedCount: updatedListings.length });
+      res.json({ success: true, updatedCount: updatedListings.length, notifiedCount, promoEnabled: notifyPastRenters || notifyActiveRenters });
     } catch (error) {
       console.error("Error activating sale event:", error);
       res.status(500).json({ error: "Failed to activate sale event" });

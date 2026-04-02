@@ -210,6 +210,8 @@ export const saleEvents = pgTable("sale_events", {
   labelColor: text("label_color").notNull().default("fuchsia"), // Badge color: fuchsia | violet | blue | green | orange | red | amber | rose
   status: text("status").notNull().$type<SaleEventStatus>().default("inactive"),
   affectedListingCount: integer("affected_listing_count").default(0),
+  notifyPastRenters: boolean("notify_past_renters").notNull().default(false), // Notify users with at least one completed booking
+  notifyActiveRenters: boolean("notify_active_renters").notNull().default(false), // Notify users whose current role is renter or renter+admin
   createdBy: varchar("created_by"), // Admin user ID who created this
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
