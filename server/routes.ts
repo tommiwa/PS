@@ -10424,7 +10424,8 @@ The BCI ParkShare Team`;
               if (userBookings.some(b => b.status === 'completed')) qualifies = true;
             }
             if (!qualifies && notifyActiveRenters) {
-              if (user.roles.includes('renter')) qualifies = true;
+              // Any active non-owner user qualifies (owner exclusion is already handled above)
+              qualifies = true;
             }
             if (qualifies) promoRecipientIds.add(user.id);
           }
