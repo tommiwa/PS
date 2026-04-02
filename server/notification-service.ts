@@ -2835,11 +2835,11 @@ BCI Workplace Services`;
       <!-- Discount hero banner (table-based for email client compatibility) -->
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; border-radius: 12px; overflow: hidden; margin: 0 0 24px 0;">
         <tr>
-          <td align="center" bgcolor="#1e40af" style="background-color: #1e40af; border-radius: 12px; padding: 32px 24px; text-align: center;">
-            <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 12px; font-weight: 700; color: #bfdbfe; letter-spacing: 2px; text-transform: uppercase; margin: 0 0 12px 0;">Limited-Time Offer</p>
+          <td align="center" bgcolor="#065f46" style="background-color: #065f46; border-radius: 12px; padding: 32px 24px; text-align: center;">
+            <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 12px; font-weight: 700; color: #6ee7b7; letter-spacing: 2px; text-transform: uppercase; margin: 0 0 12px 0;">Limited-Time Offer</p>
             <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 48px; font-weight: 800; color: #ffffff; margin: 0 0 10px 0; line-height: 1; letter-spacing: -1px;">${discountBadge}</p>
-            <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 19px; font-weight: 600; color: #dbeafe; margin: 0 0 4px 0;">${event.name}</p>
-            <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 13px; color: #93c5fd; margin: 0;">on BCI parking spots</p>
+            <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 19px; font-weight: 600; color: #d1fae5; margin: 0 0 4px 0;">${event.name}</p>
+            <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 13px; color: #a7f3d0; margin: 0;">on BCI parking spots</p>
           </td>
         </tr>
       </table>
