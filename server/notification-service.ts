@@ -2834,13 +2834,17 @@ BCI Workplace Services`;
     const content = `
       <p style="font-size: 15px; color: #374151; margin: 0 0 20px 0;">Hi ${firstName},</p>
 
-      <!-- Discount hero banner -->
-      <div style="background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 50%, #8b5cf6 100%); border-radius: 12px; padding: 28px 24px; margin: 0 0 24px 0; text-align: center;">
-        <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 13px; font-weight: 600; color: #ddd6fe; letter-spacing: 1.5px; text-transform: uppercase; margin: 0 0 10px 0;">Limited-Time Offer</p>
-        <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 42px; font-weight: 800; color: #ffffff; margin: 0 0 8px 0; line-height: 1;">${discountBadge}</p>
-        <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #ede9fe; margin: 0 0 4px 0;">${event.name}</p>
-        <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 14px; color: #c4b5fd; margin: 0;">on BCI parking spots</p>
-      </div>
+      <!-- Discount hero banner (table-based for email client compatibility) -->
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; border-radius: 12px; overflow: hidden; margin: 0 0 24px 0;">
+        <tr>
+          <td align="center" bgcolor="#6d28d9" style="background-color: #6d28d9; border-radius: 12px; padding: 32px 24px; text-align: center;">
+            <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 12px; font-weight: 700; color: #ddd6fe; letter-spacing: 2px; text-transform: uppercase; margin: 0 0 12px 0;">Limited-Time Offer</p>
+            <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 48px; font-weight: 800; color: #ffffff; margin: 0 0 10px 0; line-height: 1; letter-spacing: -1px;">${discountBadge}</p>
+            <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 19px; font-weight: 600; color: #ede9fe; margin: 0 0 4px 0;">${event.name}</p>
+            <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 13px; color: #c4b5fd; margin: 0;">on BCI parking spots</p>
+          </td>
+        </tr>
+      </table>
 
       <p style="font-size: 15px; color: #374151; margin: 0 0 20px 0;">
         A limited-time promotion is now active. Parking spots are available at <strong>${discountSummary}</strong> — grab a spot before they're gone.
