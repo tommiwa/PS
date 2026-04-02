@@ -2820,11 +2820,13 @@ export async function createPromotionBroadcastNotification(
 
     const text = `Hi ${firstName},
 
-${event.name} is now active — parking spots are available at ${discountSummary}.
+${event.name} is now active — daily parking spots listed in BCI ParkShare are available at ${discountSummary}.
 
 Available: ${dateRange}
 
-Spots are booked on a first-come, first-served basis. View available dates and reserve yours now:
+This offer applies to individual day bookings made through ParkShare only and does not affect long-term parking contracts.
+
+View available spots and book now:
 ${searchUrl}
 
 BCI Workplace Services`;
@@ -2845,7 +2847,7 @@ BCI Workplace Services`;
       </table>
 
       <p style="font-size: 15px; color: #374151; margin: 0 0 20px 0;">
-        A limited-time promotion is now active. Parking spots are available at <strong>${discountSummary}</strong> — grab a spot before they're gone.
+        A limited-time promotion is now active. Daily parking spots listed in BCI ParkShare are available at <strong>${discountSummary}</strong>. This offer applies to individual day bookings made through ParkShare and does not affect long-term parking contracts.
       </p>
 
       <!-- Details card -->
@@ -2880,7 +2882,7 @@ BCI Workplace Services`;
       </div>
 
       <p style="font-size: 14px; color: #64748b; margin: 0 0 4px 0;">
-        Spots are available on a first-come, first-served basis and subject to availability. Book early to secure your preferred dates.
+        Spots are available on a first-come, first-served basis and subject to availability. This promotion applies to daily bookings through BCI ParkShare only and has no effect on long-term parking arrangements or contracts.
       </p>
     `;
 
