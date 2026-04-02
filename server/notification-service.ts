@@ -2804,46 +2804,90 @@ export async function createPromotionBroadcastNotification(
 
   try {
     const searchUrl = `${APP_URL}/search`;
-    const subject = `Reduced Parking Rates Available — ${event.name}`;
+    const subject = `Limited-Time Parking Offer — ${event.name}`;
+
+    const discountBadge = event.discountType === 'percentage'
+      ? `${event.discountValue.toFixed(0)}% OFF`
+      : `$${event.discountValue.toFixed(2)}/day`;
 
     const discountSummary = event.discountType === 'percentage'
-      ? `${event.discountValue.toFixed(0)}% reduced rate`
-      : `$${event.discountValue.toFixed(2)} flat daily rate`;
+      ? `${event.discountValue.toFixed(0)}% off the regular daily rate`
+      : `a flat rate of $${event.discountValue.toFixed(2)} per day`;
 
     const dateRange = formatDateRange(new Date(event.startDate + 'T12:00:00'), new Date(event.endDate + 'T12:00:00'));
 
-    const text = `Hi ${user.name},
+    const firstName = user.name.split(' ')[0] || user.name;
 
-Parking spots are available at a ${discountSummary} through ${event.name}.
+    const text = `Hi ${firstName},
+
+${event.name} is now active — parking spots are available at ${discountSummary}.
 
 Available: ${dateRange}
 
-You can view and book available spots in BCI ParkShare:
+Spots are booked on a first-come, first-served basis. View available dates and reserve yours now:
 ${searchUrl}
 
 BCI Workplace Services`;
 
-    const content = `
-      <p>Hi ${user.name},</p>
-      <p>Parking spots are currently available at a reduced rate through the <strong>${event.name}</strong> promotion.</p>
+    const PROMO_PURPLE = '#7c3aed';
 
-      <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid ${BCI_BLUE};">
-        <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 16px; font-weight: 600; color: #1e293b; margin: 0 0 14px 0;">Promotion Details</h3>
-        <ul style="margin: 0; padding: 0; list-style: none;">
-          <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Promotion:</strong> ${event.name}</li>
-          <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Rate:</strong> ${discountSummary}</li>
-          <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Available:</strong> ${dateRange}</li>
-        </ul>
+    const content = `
+      <p style="font-size: 15px; color: #374151; margin: 0 0 20px 0;">Hi ${firstName},</p>
+
+      <!-- Discount hero banner -->
+      <div style="background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 50%, #8b5cf6 100%); border-radius: 12px; padding: 28px 24px; margin: 0 0 24px 0; text-align: center;">
+        <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 13px; font-weight: 600; color: #ddd6fe; letter-spacing: 1.5px; text-transform: uppercase; margin: 0 0 10px 0;">Limited-Time Offer</p>
+        <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 42px; font-weight: 800; color: #ffffff; margin: 0 0 8px 0; line-height: 1;">${discountBadge}</p>
+        <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #ede9fe; margin: 0 0 4px 0;">${event.name}</p>
+        <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 14px; color: #c4b5fd; margin: 0;">on BCI parking spots</p>
       </div>
 
-      <p style="font-size: 15px; color: #374151;">Spots are available on a first-come, first-served basis. Visit BCI ParkShare to view availability and complete a booking.</p>
+      <p style="font-size: 15px; color: #374151; margin: 0 0 20px 0;">
+        A limited-time promotion is now active. Parking spots are available at <strong>${discountSummary}</strong> — grab a spot before they're gone.
+      </p>
+
+      <!-- Details card -->
+      <div style="background-color: #faf5ff; border-radius: 12px; padding: 20px 24px; margin: 0 0 24px 0; border: 1px solid #e9d5ff;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e9d5ff; vertical-align: top; width: 36%;">
+              <span style="font-size: 13px; font-weight: 600; color: #6b21a8; text-transform: uppercase; letter-spacing: 0.5px;">Promotion</span>
+            </td>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e9d5ff; vertical-align: top;">
+              <span style="font-size: 15px; color: #1e293b; font-weight: 500;">${event.name}</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e9d5ff; vertical-align: top;">
+              <span style="font-size: 13px; font-weight: 600; color: #6b21a8; text-transform: uppercase; letter-spacing: 0.5px;">Rate</span>
+            </td>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e9d5ff; vertical-align: top;">
+              <span style="font-size: 16px; color: ${PROMO_PURPLE}; font-weight: 700;">${discountBadge}</span>
+              <span style="font-size: 13px; color: #64748b; margin-left: 6px;">${event.discountType === 'percentage' ? 'off regular price' : 'flat daily rate'}</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 0; vertical-align: top;">
+              <span style="font-size: 13px; font-weight: 600; color: #6b21a8; text-transform: uppercase; letter-spacing: 0.5px;">Dates</span>
+            </td>
+            <td style="padding: 10px 0; vertical-align: top;">
+              <span style="font-size: 15px; color: #1e293b; font-weight: 500;">${dateRange}</span>
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <p style="font-size: 14px; color: #64748b; margin: 0 0 4px 0;">
+        Spots are available on a first-come, first-served basis and subject to availability. Book early to secure your preferred dates.
+      </p>
     `;
 
     const html = wrapEmailTemplate({
-      title: 'Reduced Parking Rate Available',
+      title: `${event.name} — Parking Promotion`,
+      titleColor: PROMO_PURPLE,
       content,
       theme: 'primary',
-      ctaButton: { text: 'View Available Spots', url: searchUrl }
+      ctaButton: { text: 'View & Book Available Spots', url: searchUrl }
     });
 
     const notification: EmailNotification = {
