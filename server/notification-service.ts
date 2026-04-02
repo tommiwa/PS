@@ -2716,13 +2716,49 @@ export async function sendSpotAlertEmail(
     location: string;
     date: string;
     dailyRate: number;
+    listingType?: 'single' | 'period' | 'recurring';
+    periodStartDate?: string | null;
+    periodEndDate?: string | null;
+    periodDays?: number | null;
+    recurringStartDate?: string | null;
+    recurringEndDate?: string | null;
   }
 ): Promise<{ emailSent: boolean }> {
   const results = { emailSent: false };
 
   try {
     const bookingUrl = `${APP_URL}/search`;
-    const subject = `Spot Alert: ${listing.spotNumber} available on ${formatFriendlyDate(listing.date)}`;
+
+    // Build subject and date display based on listing type
+    let subjectDatePart: string;
+    let textDateLine: string;
+    let htmlDateItem: string;
+
+    if (listing.listingType === 'period' && listing.periodStartDate && listing.periodEndDate) {
+      const startStr = formatFriendlyDate(listing.periodStartDate);
+      const endStr = formatFriendlyDate(listing.periodEndDate);
+      const msPerDay = 1000 * 60 * 60 * 24;
+      const dayCount = listing.periodDays != null
+        ? listing.periodDays
+        : Math.round((new Date(listing.periodEndDate + 'T12:00:00').getTime() - new Date(listing.periodStartDate + 'T12:00:00').getTime()) / msPerDay) + 1;
+      const dayLabel = ` (${dayCount} day${dayCount === 1 ? '' : 's'})`;
+      subjectDatePart = `${startStr} – ${endStr}`;
+      textDateLine = `- Date Range: ${startStr} – ${endStr}${dayLabel}`;
+      htmlDateItem = `<li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Date Range:</strong> ${startStr} – ${endStr}${dayLabel}</li>`;
+    } else if (listing.listingType === 'recurring' && listing.recurringStartDate) {
+      const startStr = formatFriendlyDate(listing.recurringStartDate);
+      const endStr = listing.recurringEndDate ? formatFriendlyDate(listing.recurringEndDate) : null;
+      const rangeStr = endStr ? `${startStr} – ${endStr}` : `Starting ${startStr}`;
+      subjectDatePart = rangeStr;
+      textDateLine = `- Date Range: ${rangeStr} (Recurring booking)`;
+      htmlDateItem = `<li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Date Range:</strong> ${rangeStr} <span style="color: #64748b;">(Recurring booking)</span></li>`;
+    } else {
+      subjectDatePart = formatFriendlyDate(listing.date);
+      textDateLine = `- Date: ${formatFriendlyDate(listing.date)}`;
+      htmlDateItem = `<li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Date:</strong> ${formatFriendlyDate(listing.date)}</li>`;
+    }
+
+    const subject = `Spot Alert: ${listing.spotNumber} available on ${subjectDatePart}`;
 
     const text = `Hi ${user.name},
 
@@ -2731,7 +2767,7 @@ A parking spot matching your alert preferences is now available!
 SPOT DETAILS:
 - Spot Number: ${listing.spotNumber}
 - Location: ${listing.location}
-- Date: ${formatFriendlyDate(listing.date)}
+${textDateLine}
 - Daily Rate: $${listing.dailyRate.toFixed(2)}
 
 Book this spot before it's taken:
@@ -2751,7 +2787,7 @@ The BCI ParkShare Team`;
         <ul style="margin: 0; padding: 0; list-style: none;">
           <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Spot Number:</strong> ${listing.spotNumber}</li>
           <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Location:</strong> ${listing.location}</li>
-          <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Date:</strong> ${formatFriendlyDate(listing.date)}</li>
+          ${htmlDateItem}
           <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Daily Rate:</strong> $${listing.dailyRate.toFixed(2)}</li>
         </ul>
       </div>
@@ -2777,7 +2813,7 @@ The BCI ParkShare Team`;
     const emailResult = await sendEmailNotification(notification);
     results.emailSent = emailResult.success;
 
-    console.log(`✓ Spot alert email sent to ${user.name} (${user.email}) for spot ${listing.spotNumber} on ${listing.date}`);
+    console.log(`✓ Spot alert email sent to ${user.name} (${user.email}) for spot ${listing.spotNumber} on ${subjectDatePart}`);
   } catch (error) {
     console.error(`❌ Error sending spot alert email to ${user.email}:`, error);
   }

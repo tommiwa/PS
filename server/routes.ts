@@ -1865,7 +1865,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 spotNumber: spot.spotNumber,
                 location: locationName,
                 date: matchingDate,
-                dailyRate: listingRate
+                dailyRate: listingRate,
+                listingType: newListing.listingType as 'single' | 'period' | 'recurring',
+                periodStartDate: newListing.periodStartDate ?? null,
+                periodEndDate: newListing.periodEndDate ?? null,
+                recurringStartDate: newListing.recurringStartDate ?? null,
+                recurringEndDate: newListing.recurringEndDate ?? null,
               }
             ).catch(err => console.error(`[SpotAlerts] Failed to send alert to ${user.email}:`, err));
           }
