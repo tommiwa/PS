@@ -2829,19 +2829,17 @@ ${searchUrl}
 
 BCI Workplace Services`;
 
-    const PROMO_PURPLE = '#7c3aed';
-
     const content = `
       <p style="font-size: 15px; color: #374151; margin: 0 0 20px 0;">Hi ${firstName},</p>
 
       <!-- Discount hero banner (table-based for email client compatibility) -->
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; border-radius: 12px; overflow: hidden; margin: 0 0 24px 0;">
         <tr>
-          <td align="center" bgcolor="#6d28d9" style="background-color: #6d28d9; border-radius: 12px; padding: 32px 24px; text-align: center;">
-            <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 12px; font-weight: 700; color: #ddd6fe; letter-spacing: 2px; text-transform: uppercase; margin: 0 0 12px 0;">Limited-Time Offer</p>
+          <td align="center" bgcolor="#1e40af" style="background-color: #1e40af; border-radius: 12px; padding: 32px 24px; text-align: center;">
+            <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 12px; font-weight: 700; color: #bfdbfe; letter-spacing: 2px; text-transform: uppercase; margin: 0 0 12px 0;">Limited-Time Offer</p>
             <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 48px; font-weight: 800; color: #ffffff; margin: 0 0 10px 0; line-height: 1; letter-spacing: -1px;">${discountBadge}</p>
-            <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 19px; font-weight: 600; color: #ede9fe; margin: 0 0 4px 0;">${event.name}</p>
-            <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 13px; color: #c4b5fd; margin: 0;">on BCI parking spots</p>
+            <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 19px; font-weight: 600; color: #dbeafe; margin: 0 0 4px 0;">${event.name}</p>
+            <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 13px; color: #93c5fd; margin: 0;">on BCI parking spots</p>
           </td>
         </tr>
       </table>
@@ -2851,28 +2849,28 @@ BCI Workplace Services`;
       </p>
 
       <!-- Details card -->
-      <div style="background-color: #faf5ff; border-radius: 12px; padding: 20px 24px; margin: 0 0 24px 0; border: 1px solid #e9d5ff;">
+      <div style="background-color: #eff6ff; border-radius: 12px; padding: 20px 24px; margin: 0 0 24px 0; border: 1px solid #bfdbfe;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
           <tr>
-            <td style="padding: 10px 0; border-bottom: 1px solid #e9d5ff; vertical-align: top; width: 36%;">
-              <span style="font-size: 13px; font-weight: 600; color: #6b21a8; text-transform: uppercase; letter-spacing: 0.5px;">Promotion</span>
+            <td style="padding: 10px 0; border-bottom: 1px solid #bfdbfe; vertical-align: top; width: 36%;">
+              <span style="font-size: 13px; font-weight: 600; color: #1e40af; text-transform: uppercase; letter-spacing: 0.5px;">Promotion</span>
             </td>
-            <td style="padding: 10px 0; border-bottom: 1px solid #e9d5ff; vertical-align: top;">
+            <td style="padding: 10px 0; border-bottom: 1px solid #bfdbfe; vertical-align: top;">
               <span style="font-size: 15px; color: #1e293b; font-weight: 500;">${event.name}</span>
             </td>
           </tr>
           <tr>
-            <td style="padding: 10px 0; border-bottom: 1px solid #e9d5ff; vertical-align: top;">
-              <span style="font-size: 13px; font-weight: 600; color: #6b21a8; text-transform: uppercase; letter-spacing: 0.5px;">Rate</span>
+            <td style="padding: 10px 0; border-bottom: 1px solid #bfdbfe; vertical-align: top;">
+              <span style="font-size: 13px; font-weight: 600; color: #1e40af; text-transform: uppercase; letter-spacing: 0.5px;">Rate</span>
             </td>
-            <td style="padding: 10px 0; border-bottom: 1px solid #e9d5ff; vertical-align: top;">
-              <span style="font-size: 16px; color: ${PROMO_PURPLE}; font-weight: 700;">${discountBadge}</span>
+            <td style="padding: 10px 0; border-bottom: 1px solid #bfdbfe; vertical-align: top;">
+              <span style="font-size: 16px; color: #1e40af; font-weight: 700;">${discountBadge}</span>
               <span style="font-size: 13px; color: #64748b; margin-left: 6px;">${event.discountType === 'percentage' ? 'off regular price' : 'flat daily rate'}</span>
             </td>
           </tr>
           <tr>
             <td style="padding: 10px 0; vertical-align: top;">
-              <span style="font-size: 13px; font-weight: 600; color: #6b21a8; text-transform: uppercase; letter-spacing: 0.5px;">Dates</span>
+              <span style="font-size: 13px; font-weight: 600; color: #1e40af; text-transform: uppercase; letter-spacing: 0.5px;">Dates</span>
             </td>
             <td style="padding: 10px 0; vertical-align: top;">
               <span style="font-size: 15px; color: #1e293b; font-weight: 500;">${dateRange}</span>
@@ -2888,7 +2886,7 @@ BCI Workplace Services`;
 
     const html = wrapEmailTemplate({
       title: `${event.name} — Parking Promotion`,
-      titleColor: PROMO_PURPLE,
+      titleColor: '#1e40af',
       content,
       theme: 'primary',
       ctaButton: { text: 'View & Book Available Spots', url: searchUrl }
