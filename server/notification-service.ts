@@ -2824,7 +2824,7 @@ ${event.name} is now active — daily parking spots listed in BCI ParkShare are 
 
 Available: ${dateRange}
 
-This offer applies to individual day bookings made through ParkShare only and does not affect long-term parking contracts.
+This offer applies to daily bookings through BCI ParkShare only.
 
 View available spots and book now:
 ${searchUrl}
@@ -2847,7 +2847,7 @@ BCI Workplace Services`;
       </table>
 
       <p style="font-size: 15px; color: #374151; margin: 0 0 20px 0;">
-        A limited-time promotion is now active. Daily parking spots listed in BCI ParkShare are available at <strong>${discountSummary}</strong>. This offer applies to individual day bookings made through ParkShare and does not affect long-term parking contracts.
+        A limited-time promotion is now active. Daily parking spots listed in BCI ParkShare are available at <strong>${discountSummary}</strong>.
       </p>
 
       <!-- Details card -->
@@ -2882,7 +2882,7 @@ BCI Workplace Services`;
       </div>
 
       <p style="font-size: 14px; color: #64748b; margin: 0 0 4px 0;">
-        Spots are available on a first-come, first-served basis and subject to availability. This promotion applies to daily bookings through BCI ParkShare only and has no effect on long-term parking arrangements or contracts.
+        Spots are available on a first-come, first-served basis and subject to availability. This promotion applies to daily bookings through BCI ParkShare only.
       </p>
     `;
 
