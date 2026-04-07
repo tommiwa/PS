@@ -450,6 +450,7 @@ If you have questions about the collection of your personal information through 
         .where(and(
           eq(bookings.status, 'confirmed'),
           eq(parkingSpots.isBciManaged, true),
+          isNull(parkingSpots.ownerId), // Only pure WPS pool spots (no owner assigned)
           lt(bookings.bookingDate, todayStr) // Booking date is in the past
         ));
       
