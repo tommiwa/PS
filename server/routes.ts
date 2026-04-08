@@ -7,7 +7,7 @@ import { setupAuth, isAuthenticated, requireAdmin, getAuthenticatedUserId, getAu
 import { z } from "zod";
 import { db } from "./db";
 import { parkingSpots, spotLocks, spotListings, bookings, issues, insertIssueSchema, updateIssueSchema, issueStatuses, termsVersions } from "@shared/schema";
-import { inArray, and, eq, lt, gt, not, or, sql } from "drizzle-orm";
+import { inArray, and, eq, lt, gt, not, or, sql, desc } from "drizzle-orm";
 import { 
   sendAssignmentNotification, 
   sendWelcomeNotification,
@@ -3151,6 +3151,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }
 
+  // DELETE /api/spot-locks/mine - Release the calling user's current active lock
+  // Fallback for cases where client state is stale/missing and lockId is unknown.
+  app.delete("/api/spot-locks/mine", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      const [lock] = await db
+        .select()
+        .from(spotLocks)
+        .where(and(eq(spotLocks.userId, userId), eq(spotLocks.status, 'active')))
+        .orderBy(desc(spotLocks.createdAt))
+        .limit(1);
+
+      if (!lock) {
+        return res.status(204).send(); // Idempotent — no active lock to release
+      }
+
+      await db
+        .update(spotLocks)
+        .set({ status: 'released' })
+        .where(eq(spotLocks.id, lock.id));
+
+      setImmediate(() => {
+        try {
+          broadcastLockEvent('lock.released', {
+            lockId: lock.id,
+            spotId: lock.spotId,
+            listingId: lock.listingId,
+            bookingDate: lock.bookingDate
+          });
+        } catch (error) {
+          console.error('[Lock Broadcast] Failed to broadcast lock.released (mine):', error);
+        }
+      });
+
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error releasing user's active lock:", error);
+      res.status(500).json({ error: "Failed to release lock" });
+    }
+  });
+
   // DELETE /api/spot-locks/:lockId - Release a lock
   app.delete("/api/spot-locks/:lockId", isAuthenticated, async (req: any, res) => {
     try {
@@ -3224,6 +3269,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       console.error("Error releasing lock:", error);
+      res.status(500).json({ error: "Failed to release lock" });
+    }
+  });
+
+  // POST /api/spot-locks/:lockId/release - Beacon-compatible lock release
+  // navigator.sendBeacon() only fires POST requests, so we expose this alias
+  // used exclusively for page-unload / beforeunload scenarios.
+  app.post("/api/spot-locks/:lockId/release", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      const { lockId } = req.params;
+
+      const [lock] = await db
+        .select()
+        .from(spotLocks)
+        .where(eq(spotLocks.id, lockId))
+        .limit(1);
+
+      if (!lock) {
+        return res.status(204).send(); // Idempotent — already gone
+      }
+
+      if (lock.status !== 'active') {
+        return res.status(204).send(); // Idempotent — already released/expired/confirmed
+      }
+
+      const isOwner = lock.userId === userId;
+      const userRole = await getAuthenticatedUserRole(req);
+      const isAdmin = userRole === 'admin';
+
+      if (!isOwner && !isAdmin) {
+        return res.status(403).json({ error: "Not authorized to release this lock" });
+      }
+
+      await db
+        .update(spotLocks)
+        .set({ status: 'released' })
+        .where(eq(spotLocks.id, lockId));
+
+      setImmediate(() => {
+        try {
+          broadcastLockEvent('lock.released', {
+            lockId: lock.id,
+            spotId: lock.spotId,
+            listingId: lock.listingId,
+            bookingDate: lock.bookingDate
+          });
+        } catch (error) {
+          console.error('[Lock Broadcast] Failed to broadcast lock.released (beacon):', error);
+        }
+      });
+
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error releasing lock via beacon:", error);
       res.status(500).json({ error: "Failed to release lock" });
     }
   });
