@@ -996,7 +996,7 @@ export const generateParkingReceiptPDF = (receiptData: ParkingReceiptData, filen
   yPos += 20
   
   // Date
-  const bookingDate = new Date(receiptData.bookingDate)
+  const bookingDate = new Date(receiptData.bookingDate + 'T00:00:00')
   const dateStr = bookingDate.toLocaleDateString('en-US', { 
     weekday: 'short', 
     month: 'short', 
