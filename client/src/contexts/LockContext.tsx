@@ -39,14 +39,6 @@ export function LockProvider({ children }: { children: React.ReactNode }) {
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
   const reconnectAttemptsRef = useRef(0);
   const MAX_RECONNECT_ATTEMPTS = 5;
-  // Keep a ref to the active lock so callbacks (acquireLock, beforeunload) can
-  // read the latest value without needing it in their dependency arrays.
-  const userActiveLockRef = useRef<ActiveLock | null>(null);
-
-  // Sync ref whenever state changes
-  useEffect(() => {
-    userActiveLockRef.current = userActiveLock;
-  }, [userActiveLock]);
 
   // Connect to WebSocket
   const connectWebSocket = useCallback(() => {
@@ -197,24 +189,6 @@ export function LockProvider({ children }: { children: React.ReactNode }) {
     };
   }, [user, connectWebSocket]);
 
-  // Release lock on page unload (navigate away, refresh, tab close)
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      const lock = userActiveLockRef.current;
-      if (lock) {
-        // Use the dedicated POST /release endpoint because sendBeacon only supports POST.
-        // sendBeacon is required here — regular fetch/XHR is unreliable during page unload.
-        const url = `/api/spot-locks/${lock.lockId}/release`;
-        navigator.sendBeacon(url);
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, []);
-
   // Fetch initial active locks on mount
   useEffect(() => {
     const fetchInitialLocks = async () => {
@@ -274,17 +248,17 @@ export function LockProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user]);
 
-  // Acquire lock (with auto-release of existing lock if USER_HAS_ACTIVE_LOCK)
+  // Acquire lock
   const acquireLock = useCallback(
     async (spotId: string, listingId: string, bookingDate: string): Promise<ActiveLock> => {
-      const doAcquire = async (): Promise<ActiveLock> => {
+      try {
         const response = await apiRequest(`/api/spots/${spotId}/locks`, {
           method: 'POST',
           body: { listingId, bookingDate },
         });
 
         const data = await response.json();
-
+        
         const lockInfo: ActiveLock = {
           lockId: data.lockId,
           spotId: data.spotId,
@@ -295,7 +269,7 @@ export function LockProvider({ children }: { children: React.ReactNode }) {
         };
 
         setUserActiveLock(lockInfo);
-
+        
         // Also add to locked listings using composite key
         const compositeKey = `${listingId}|${bookingDate}`;
         setLockedListings((prev) => {
@@ -305,48 +279,11 @@ export function LockProvider({ children }: { children: React.ReactNode }) {
         });
 
         return lockInfo;
-      };
-
-      try {
-        return await doAcquire();
       } catch (error: any) {
-        const rawMessage = error?.message || "";
-        // If blocked by our own stale lock, release it first then retry once
-        if (rawMessage.includes('USER_HAS_ACTIVE_LOCK')) {
-          const currentLock = userActiveLockRef.current;
-          if (currentLock) {
-            // Client knows the lockId — release it directly
-            console.log('[LockContext] Auto-releasing stale lock before retrying:', currentLock.lockId);
-            try {
-              await apiRequest(`/api/spot-locks/${currentLock.lockId}`, { method: 'DELETE' });
-            } catch (releaseError) {
-              console.warn('[LockContext] Could not release stale lock (may have expired):', releaseError);
-            }
-            setUserActiveLock(null);
-            const staleCompositeKey = `${currentLock.listingId}|${currentLock.bookingDate}`;
-            setLockedListings((prev) => {
-              const updated = new Map(prev);
-              updated.delete(staleCompositeKey);
-              return updated;
-            });
-          } else {
-            // Client state is stale/missing — ask server to release any active lock for this user
-            console.log('[LockContext] No local lock ref, releasing via /api/spot-locks/mine');
-            try {
-              await apiRequest('/api/spot-locks/mine', { method: 'DELETE' });
-            } catch (releaseError) {
-              console.warn('[LockContext] Could not release lock via /mine (may not exist):', releaseError);
-            }
-            setUserActiveLock(null);
-          }
-          // Retry once after releasing
-          return await doAcquire();
-        }
         console.error('[LockContext] Error acquiring lock:', error);
         throw error;
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
 

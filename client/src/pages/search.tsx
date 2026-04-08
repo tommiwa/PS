@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { queryClient } from "@/lib/queryClient"
 import { EnhancedSearch, ParsedSearch } from "@/components/enhanced-search"
@@ -122,29 +122,6 @@ export default function Search() {
   const { toast } = useToast()
   const { userActiveLock, lockedListings, acquireLock, releaseLock, clearUserLock } = useLock()
   const { user } = useAuth()
-
-  // Keep a ref to the latest userActiveLock so the unmount cleanup can access it
-  const userActiveLockRef = useRef(userActiveLock);
-  useEffect(() => {
-    userActiveLockRef.current = userActiveLock;
-  }, [userActiveLock]);
-
-  // Keep a ref to releaseLock (stable function, but ref is safer for cleanup closures)
-  const releaseLockRef = useRef(releaseLock);
-  useEffect(() => {
-    releaseLockRef.current = releaseLock;
-  }, [releaseLock]);
-
-  // Release the active lock when the search page unmounts (in-app navigation away)
-  // This covers SPA route changes that don't trigger beforeunload.
-  useEffect(() => {
-    return () => {
-      const lock = userActiveLockRef.current;
-      if (lock) {
-        releaseLockRef.current(lock.lockId).catch(() => {});
-      }
-    };
-  }, []);
 
   // Fetch available parking spots from API - using enriched type that includes availabilityDates and bookedDates
   const { data: dbSpots = [], isLoading, isFetching, error, refetch } = useQuery<EnrichedSpotFromAPI[]>({

@@ -76,7 +76,7 @@ interface ParkingCalendarProps {
 
 export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), onDateChange, isOwnerView = false }: ParkingCalendarProps) {
   const { user } = useAuth();
-  const { lockedListings, userActiveLock, acquireLock, clearUserLock } = useLock();
+  const { lockedListings, userActiveLock, clearUserLock } = useLock();
   const { toast } = useToast();
   const [currentDate, setCurrentDate] = useState(selectedDate)
   const [view, setView] = useState<CalendarView>("week")
@@ -428,7 +428,7 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
     try {
       const dateStr = formatLocalDate(dateToCheck);
       
-      // Get the listingId for this specific date from the spot's dateToPrice map
+      // Get the listingId and dailyRate for this specific date from the spot's dateToPrice map
       const priceInfo = spot.dateToPrice?.[dateStr];
       if (!priceInfo) {
         toast({
@@ -439,11 +439,17 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
         return;
       }
       
-      const { listingId } = priceInfo;
-
-      // Use the centralized acquireLock from LockContext — it handles auto-release
-      // and retry transparently when USER_HAS_ACTIVE_LOCK is returned.
-      await acquireLock(spot.id, listingId, dateStr);
+      const { listingId, dailyRate } = priceInfo;
+      
+      // Acquire lock with composite key (listingId + date)
+      await apiRequest(`/api/locks`, {
+        method: 'POST',
+        body: {
+          spotId: spot.id,
+          listingId,
+          bookingDate: dateStr
+        }
+      });
       
       // Lock acquired successfully, call parent to show booking form
       // Pass the clicked date so the form shows the correct date
@@ -460,11 +466,11 @@ export function ParkingCalendar({ spots, onBookSpot, selectedDate = new Date(), 
           variant: "destructive"
         });
       } else if (rawMessage.includes('USER_HAS_ACTIVE_LOCK')) {
-        // Fallback if auto-release retry also failed
+        // Clear any stale local lock state
         clearUserLock();
         toast({
           title: "Booking In Progress",
-          description: "You have an active booking session on another spot. Please wait a moment and try again.",
+          description: "You have an active booking session on another spot. Please wait a moment and try again, or complete your other booking first.",
           variant: "destructive"
         });
       } else {
