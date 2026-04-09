@@ -566,7 +566,7 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                         <CalendarComponent
                           mode="single"
                           selected={parseDate(formData.endDate)}
-                          defaultMonth={parseDate(formData.endDate) || parseDate(formData.startDate) || new Date()}
+                          defaultMonth={parseDate(formData.startDate) || parseDate(formData.endDate) || new Date()}
                           onSelect={(date) => {
                             const dateStr = formatDateStr(date)
                             updateFormData("endDate", dateStr)

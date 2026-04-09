@@ -4131,7 +4131,7 @@ export default function AdminParkingManagement() {
                         <Calendar
                           mode="single"
                           selected={createAvailabilityFormData.periodEndDate}
-                          defaultMonth={createAvailabilityFormData.periodEndDate || createAvailabilityFormData.periodStartDate || new Date()}
+                          defaultMonth={createAvailabilityFormData.periodStartDate || createAvailabilityFormData.periodEndDate || new Date()}
                           onSelect={(date) => {
                             const updates: any = { periodEndDate: date };
                             if (date && (!createAvailabilityFormData.periodStartDate || createAvailabilityFormData.periodStartDate > date)) {
