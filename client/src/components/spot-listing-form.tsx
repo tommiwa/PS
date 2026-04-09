@@ -564,6 +564,7 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                     <PopoverContent className="w-auto p-0" align="start">
                       {periodEndOpen && (
                         <CalendarComponent
+                          key={formData.startDate || 'end-cal'}
                           mode="single"
                           selected={parseDate(formData.endDate)}
                           defaultMonth={parseDate(formData.startDate) || parseDate(formData.endDate) || new Date()}
