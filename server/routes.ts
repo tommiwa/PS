@@ -2580,9 +2580,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get today's date in configured timezone for filtering
       const todayStr = await getTodayInTimezone();
       
-      // Filter bookings to only confirmed/completed and today/future dates
+      // Filter bookings to only confirmed/pending/completed and today/future dates
       const relevantBookings = await Promise.all(allBookings.map(async (booking) => {
-        const isConfirmedOrCompleted = booking.status === 'confirmed' || booking.status === 'completed';
+        const isConfirmedOrCompleted = booking.status === 'confirmed' || booking.status === 'completed' || booking.status === 'pending';
         const bookingDateStr = await formatDateInTimezone(booking.bookingDate);
         const isTodayOrFuture = bookingDateStr >= todayStr;
         
