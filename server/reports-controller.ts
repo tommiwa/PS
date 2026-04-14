@@ -227,8 +227,8 @@ export async function getReportUtilization(req: Request, res: Response) {
     const isListingAvailableOnDate = (listing: any, dateStr: string): boolean => {
       const checkDate = new Date(dateStr + 'T12:00:00');
       
-      // Only include active/available listings
-      if (listing.status !== 'available') return false;
+      // Exclude only cancelled listings — booked/used/unused spots were still available for sharing on that date
+      if (listing.status === 'cancelled') return false;
       
       if (listing.listingType === 'single') {
         return toDateStr(listing.singleDate) === dateStr;
