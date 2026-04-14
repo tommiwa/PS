@@ -18,25 +18,16 @@ interface SpotResult {
   donateToCharity?: boolean;
 }
 
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
 function getSpotDateDisplay(spot: SpotResult): string {
   if (spot.listingType === 'single' && spot.singleDate) {
-    return escapeHtml(spot.singleDate);
+    return spot.singleDate;
   }
   if (spot.listingType === 'period' && spot.periodStartDate && spot.periodEndDate) {
-    return `${escapeHtml(spot.periodStartDate)} to ${escapeHtml(spot.periodEndDate)}`;
+    return `${spot.periodStartDate} to ${spot.periodEndDate}`;
   }
   if (spot.listingType === 'recurring' && spot.recurringStartDate && spot.recurringEndDate) {
-    const days = spot.recurringDays?.map(escapeHtml).join(', ') || '';
-    return `${escapeHtml(spot.recurringStartDate)} to ${escapeHtml(spot.recurringEndDate)} (${days})`;
+    const days = spot.recurringDays?.join(', ') || '';
+    return `${spot.recurringStartDate} to ${spot.recurringEndDate} (${days})`;
   }
   return 'N/A';
 }
@@ -62,31 +53,93 @@ function renderSpots(spots: SpotResult[]) {
     return;
   }
   countEl.textContent = `${spots.length} spot${spots.length !== 1 ? "s" : ""} available`;
-  contentEl.innerHTML = `<div class="spots-grid">${spots.map(renderSpotCard).join("")}</div>`;
+  const grid = document.createElement("div");
+  grid.className = "spots-grid";
+  spots.forEach(spot => grid.appendChild(renderSpotCard(spot)));
+  contentEl.replaceChildren(grid);
 }
 
-function renderSpotCard(spot: SpotResult): string {
-  const charityBadge = spot.donateToCharity ? `<span class="badge badge-charity">Charity</span>` : "";
-  const listingLabel = spot.listingType === 'single' ? 'Single day' : spot.listingType === 'period' ? 'Period' : spot.listingType === 'recurring' ? 'Recurring' : escapeHtml(spot.listingType);
-  return `
-    <div class="spot-card">
-      <div class="spot-header">
-        <div class="spot-name">Spot ${escapeHtml(spot.spotNumber)} ${charityBadge}</div>
-        <div class="spot-price">$${escapeHtml(spot.dailyRate)}/day</div>
-      </div>
-      <div class="spot-meta">
-        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-        ${escapeHtml(spot.location)}
-      </div>
-      <div class="spot-meta">
-        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        ${getSpotDateDisplay(spot)}
-      </div>
-      <div class="spot-badges">
-        <span class="badge badge-type">${escapeHtml(spot.spotType)}</span>
-        <span class="badge badge-listing">${listingLabel}</span>
-      </div>
-    </div>`;
+function makeSvg(paths: { tag: string; attrs: Record<string, string> }[]): SVGSVGElement {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("width", "12");
+  svg.setAttribute("height", "12");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "2");
+  for (const { tag, attrs } of paths) {
+    const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+    svg.appendChild(el);
+  }
+  return svg;
+}
+
+function renderSpotCard(spot: SpotResult): HTMLElement {
+  const card = document.createElement("div");
+  card.className = "spot-card";
+
+  const header = document.createElement("div");
+  header.className = "spot-header";
+
+  const nameDiv = document.createElement("div");
+  nameDiv.className = "spot-name";
+  nameDiv.appendChild(document.createTextNode(`Spot ${spot.spotNumber} `));
+  if (spot.donateToCharity) {
+    const badge = document.createElement("span");
+    badge.className = "badge badge-charity";
+    badge.textContent = "Charity";
+    nameDiv.appendChild(badge);
+  }
+
+  const priceDiv = document.createElement("div");
+  priceDiv.className = "spot-price";
+  priceDiv.textContent = `$${spot.dailyRate}/day`;
+
+  header.appendChild(nameDiv);
+  header.appendChild(priceDiv);
+
+  const locationMeta = document.createElement("div");
+  locationMeta.className = "spot-meta";
+  locationMeta.appendChild(makeSvg([
+    { tag: "path", attrs: { d: "M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" } },
+    { tag: "circle", attrs: { cx: "12", cy: "10", r: "3" } },
+  ]));
+  locationMeta.appendChild(document.createTextNode(` ${spot.location}`));
+
+  const dateMeta = document.createElement("div");
+  dateMeta.className = "spot-meta";
+  dateMeta.appendChild(makeSvg([
+    { tag: "rect", attrs: { x: "3", y: "4", width: "18", height: "18", rx: "2" } },
+    { tag: "line", attrs: { x1: "16", y1: "2", x2: "16", y2: "6" } },
+    { tag: "line", attrs: { x1: "8", y1: "2", x2: "8", y2: "6" } },
+    { tag: "line", attrs: { x1: "3", y1: "10", x2: "21", y2: "10" } },
+  ]));
+  dateMeta.appendChild(document.createTextNode(` ${getSpotDateDisplay(spot)}`));
+
+  const badgesDiv = document.createElement("div");
+  badgesDiv.className = "spot-badges";
+
+  const typeBadge = document.createElement("span");
+  typeBadge.className = "badge badge-type";
+  typeBadge.textContent = spot.spotType;
+
+  const listingBadge = document.createElement("span");
+  listingBadge.className = "badge badge-listing";
+  listingBadge.textContent =
+    spot.listingType === 'single' ? 'Single day' :
+    spot.listingType === 'period' ? 'Period' :
+    spot.listingType === 'recurring' ? 'Recurring' :
+    spot.listingType;
+
+  badgesDiv.appendChild(typeBadge);
+  badgesDiv.appendChild(listingBadge);
+
+  card.appendChild(header);
+  card.appendChild(locationMeta);
+  card.appendChild(dateMeta);
+  card.appendChild(badgesDiv);
+  return card;
 }
 
 function filterSpots() {
