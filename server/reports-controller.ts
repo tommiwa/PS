@@ -265,23 +265,24 @@ export async function getReportUtilization(req: Request, res: Response) {
     for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
       const dateStr = date.toISOString().split('T')[0];
       
-      // Count bookings on this date (handle both Date objects and strings)
+      // Count confirmed/pending bookings on this date
       const dayBookings = bookings.filter((b: any) => {
         const bDateStr = b.bookingDate instanceof Date 
           ? b.bookingDate.toISOString().split('T')[0]
           : String(b.bookingDate).split('T')[0];
-        return bDateStr === dateStr;
+        return bDateStr === dateStr && (b.status === 'confirmed' || b.status === 'pending');
       });
       const bookedSpots = dayBookings.length;
-      
-      // Count unique spots with available listings on this date
-      const spotsWithListings = new Set<string>();
+      const bookedSpotIds = new Set(dayBookings.map((b: any) => String(b.spotId)));
+
+      // Available for sharing = spots with listings on this date that have NOT been booked
+      const availableSpots = new Set<string>();
       listings.forEach((l: any) => {
-        if (isListingAvailableOnDate(l, dateStr)) {
-          spotsWithListings.add(l.spotId);
+        if (isListingAvailableOnDate(l, dateStr) && !bookedSpotIds.has(String(l.spotId))) {
+          availableSpots.add(String(l.spotId));
         }
       });
-      const availableForSharing = spotsWithListings.size;
+      const availableForSharing = availableSpots.size;
       
       dailyOccupancy.push({
         date: dateStr,
