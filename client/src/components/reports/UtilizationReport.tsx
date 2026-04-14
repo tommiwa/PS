@@ -202,9 +202,9 @@ export function UtilizationReport({ data, isLoading, hideStatCards = false }: Ut
           return (
             <div className="bg-background border rounded-md shadow p-3 text-sm space-y-1">
               <p className="font-semibold">{formatDate(label)}</p>
-              <p className="text-[#8b5cf6]">Booked Spots: {booked}</p>
-              <p className="text-[#f59e0b]">Available for Sharing: {available}</p>
-              <p className="text-[#3b82f6]">Occupancy Rate: {rate}%</p>
+              <p className="text-[#c4b5fd]">Booked Spots: {booked}</p>
+              <p className="text-[#fcd34d]">Available for Sharing: {available}</p>
+              <p className="text-[#93c5fd]">Occupancy Rate: {rate}%</p>
             </div>
           );
         };
@@ -239,9 +239,9 @@ export function UtilizationReport({ data, isLoading, hideStatCards = false }: Ut
                         : 'Occupancy Rate %'
                     }
                   />
-                  <Bar yAxisId="left" dataKey="bookedSpots" stackId="occupancy" fill="#8b5cf6" name="bookedSpots" />
-                  <Bar yAxisId="left" dataKey="availableForSharing" stackId="occupancy" fill="#f59e0b" name="availableForSharing" />
-                  <Line yAxisId="right" type="monotone" dataKey="occupancyRate" stroke="#3b82f6" strokeWidth={2} dot={false} name="occupancyRate" />
+                  <Bar yAxisId="left" dataKey="bookedSpots" stackId="occupancy" fill="#c4b5fd" name="bookedSpots" />
+                  <Bar yAxisId="left" dataKey="availableForSharing" stackId="occupancy" fill="#fcd34d" name="availableForSharing" />
+                  <Line yAxisId="right" type="monotone" dataKey="occupancyRate" stroke="#93c5fd" strokeWidth={2} dot={false} name="occupancyRate" />
                 </ComposedChart>
               </ResponsiveContainer>
             </CardContent>
