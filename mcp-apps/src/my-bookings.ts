@@ -49,12 +49,27 @@ function renderStats(bookings: BookingResult[]) {
     .filter(b => b.status.toLowerCase() !== "cancelled")
     .reduce((sum, b) => sum + parseFloat(b.totalAmount || "0"), 0);
 
-  statsEl.innerHTML = `
-    <div class="stat-card"><div class="stat-value">${total}</div><div class="stat-label">Total Bookings</div></div>
-    <div class="stat-card"><div class="stat-value">${confirmed}</div><div class="stat-label">Confirmed</div></div>
-    <div class="stat-card"><div class="stat-value">${pending}</div><div class="stat-label">Pending</div></div>
-    <div class="stat-card"><div class="stat-value">$${totalSpent.toFixed(0)}</div><div class="stat-label">Total Spent</div></div>
-  `;
+  const statItems = [
+    { value: String(total), label: "Total Bookings" },
+    { value: String(confirmed), label: "Confirmed" },
+    { value: String(pending), label: "Pending" },
+    { value: `$${totalSpent.toFixed(0)}`, label: "Total Spent" },
+  ];
+  statsEl.replaceChildren(
+    ...statItems.map(({ value, label }) => {
+      const card = document.createElement("div");
+      card.className = "stat-card";
+      const valEl = document.createElement("div");
+      valEl.className = "stat-value";
+      valEl.textContent = value;
+      const labelEl = document.createElement("div");
+      labelEl.className = "stat-label";
+      labelEl.textContent = label;
+      card.appendChild(valEl);
+      card.appendChild(labelEl);
+      return card;
+    })
+  );
 }
 
 function renderBookings(bookings: BookingResult[]) {
