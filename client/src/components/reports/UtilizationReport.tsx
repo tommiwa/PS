@@ -1,7 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, ComposedChart, Line } from 'recharts';
+import type { TooltipProps } from 'recharts';
+import type { ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent';
 import { BarChart3, Layers, MapPin, ParkingSquare, TrendingUp } from 'lucide-react';
 import type { ReportUtilizationResponse } from '@shared/schema';
 
@@ -177,29 +179,75 @@ export function UtilizationReport({ data, isLoading, hideStatCards = false }: Ut
         </div>
       )}
 
-      {data.dailyOccupancy.length > 0 && (
-        <Card data-testid="card-daily-occupancy">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Occupancy Timeline
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={data.dailyOccupancy}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="availableForSharing" stroke="#f59e0b" name="Available for Sharing" strokeWidth={2} />
-                <Line type="monotone" dataKey="bookedSpots" stroke="#8b5cf6" name="Booked Spots" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      )}
+      {data.dailyOccupancy.length > 0 && (() => {
+        const chartData = data.dailyOccupancy.map((d) => {
+          const total = d.bookedSpots + d.availableForSharing;
+          const occupancyRate = total > 0 ? parseFloat(((d.bookedSpots / total) * 100).toFixed(1)) : 0;
+          return { ...d, occupancyRate };
+        });
+
+        const dayCount = chartData.length;
+        const tickInterval = dayCount <= 14 ? 0 : dayCount <= 60 ? 6 : 14;
+
+        const formatDate = (dateStr: string) => {
+          const d = new Date(dateStr + 'T00:00:00');
+          return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        };
+
+        const CustomTooltip = ({ active, payload, label }: TooltipProps<ValueType, NameType>) => {
+          if (!active || !payload || !payload.length) return null;
+          const booked = payload.find((p) => p.dataKey === 'bookedSpots')?.value ?? 0;
+          const available = payload.find((p) => p.dataKey === 'availableForSharing')?.value ?? 0;
+          const rate = payload.find((p) => p.dataKey === 'occupancyRate')?.value ?? 0;
+          return (
+            <div className="bg-background border rounded-md shadow p-3 text-sm space-y-1">
+              <p className="font-semibold">{formatDate(label)}</p>
+              <p className="text-[#8b5cf6]">Booked Spots: {booked}</p>
+              <p className="text-[#f59e0b]">Available for Sharing: {available}</p>
+              <p className="text-[#3b82f6]">Occupancy Rate: {rate}%</p>
+            </div>
+          );
+        };
+
+        return (
+          <Card data-testid="card-daily-occupancy">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                Occupancy Timeline
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={320}>
+                <ComposedChart data={chartData} margin={{ top: 8, right: 40, left: 0, bottom: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="date"
+                    tickFormatter={formatDate}
+                    interval={tickInterval}
+                    tick={{ fontSize: 12 }}
+                  />
+                  <YAxis yAxisId="left" allowDecimals={false} />
+                  <YAxis yAxisId="right" orientation="right" tickFormatter={(v) => `${v}%`} domain={[0, 100]} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend
+                    formatter={(value) =>
+                      value === 'bookedSpots'
+                        ? 'Booked Spots'
+                        : value === 'availableForSharing'
+                        ? 'Available for Sharing'
+                        : 'Occupancy Rate %'
+                    }
+                  />
+                  <Bar yAxisId="left" dataKey="bookedSpots" stackId="occupancy" fill="#8b5cf6" name="bookedSpots" />
+                  <Bar yAxisId="left" dataKey="availableForSharing" stackId="occupancy" fill="#f59e0b" name="availableForSharing" />
+                  <Line yAxisId="right" type="monotone" dataKey="occupancyRate" stroke="#3b82f6" strokeWidth={2} dot={false} name="occupancyRate" />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        );
+      })()}
     </div>
   );
 }

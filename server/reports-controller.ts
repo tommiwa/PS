@@ -265,12 +265,12 @@ export async function getReportUtilization(req: Request, res: Response) {
     for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
       const dateStr = date.toISOString().split('T')[0];
       
-      // Count confirmed/pending bookings on this date
+      // Count confirmed/pending/completed bookings on this date
       const dayBookings = bookings.filter((b: any) => {
         const bDateStr = b.bookingDate instanceof Date 
           ? b.bookingDate.toISOString().split('T')[0]
           : String(b.bookingDate).split('T')[0];
-        return bDateStr === dateStr && (b.status === 'confirmed' || b.status === 'pending');
+        return bDateStr === dateStr && (b.status === 'confirmed' || b.status === 'pending' || b.status === 'completed');
       });
       const bookedSpots = dayBookings.length;
       const bookedSpotIds = new Set(dayBookings.map((b: any) => String(b.spotId)));
