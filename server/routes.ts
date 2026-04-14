@@ -2768,11 +2768,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (isPast && !isBooked) {
               // Past date that was never booked = expired
               expiredDates.push(dateStr);
-            } else if (!isPast) {
-              // Today or future date = available
+            } else if (!isPast && !isBooked) {
+              // Today or future date that is not booked = truly available
               availabilityDates.push(dateStr);
             }
-            // Note: Past booked dates are excluded from both arrays
+            // Note: Past booked dates and future booked dates are excluded from both arrays
           }
           
           // Determine if listing is fully expired (all dates are past and unbooked)
