@@ -207,11 +207,12 @@ export async function getReportUtilization(req: Request, res: Response) {
       };
     });
     
-    // Filter listings by scope
+    // Filter listings by scope — also exclude orphaned listings (spot no longer exists)
     const listings = allListings.filter((l: any) => {
       const spot = allSpots.find(s => s.id === l.spotId);
+      if (!spot) return false;
       if (scope === 'bci') {
-        return spot?.isBciManaged === true;
+        return spot.isBciManaged === true;
       }
       return true;
     });
