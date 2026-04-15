@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -13,9 +14,28 @@ interface UtilizationReportProps {
   hideStatCards?: boolean;
 }
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+function getCssVar(name: string): string {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return raw ? `hsl(${raw})` : '';
+}
+
+function useChartColors() {
+  return useMemo(() => ({
+    chart1: getCssVar('--chart-1'),
+    chart2: getCssVar('--chart-2'),
+    chart3: getCssVar('--chart-3'),
+    chart4: getCssVar('--chart-4'),
+    chart5: getCssVar('--chart-5'),
+    muted: getCssVar('--muted-foreground'),
+    border: getCssVar('--border'),
+  }), []);
+}
 
 export function UtilizationReport({ data, isLoading, hideStatCards = false }: UtilizationReportProps) {
+  const colors = useChartColors();
+
+  const COLORS = [colors.chart1, colors.chart2, colors.chart3, colors.chart4, colors.chart5];
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -107,13 +127,20 @@ export function UtilizationReport({ data, isLoading, hideStatCards = false }: Ut
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={data.locationBreakdown}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="location" angle={-45} textAnchor="end" height={100} />
-                <YAxis />
-                <Tooltip />
+                <CartesianGrid strokeDasharray="3 3" stroke={colors.border} />
+                <XAxis dataKey="location" angle={-45} textAnchor="end" height={100} tick={{ fill: colors.muted, fontSize: 12 }} />
+                <YAxis tick={{ fill: colors.muted, fontSize: 12 }} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: getCssVar('--card'),
+                    border: `1px solid ${colors.border}`,
+                    borderRadius: '6px',
+                    color: getCssVar('--card-foreground'),
+                  }}
+                />
                 <Legend />
-                <Bar dataKey="totalSpots" fill="#3b82f6" name="Total Spots" />
-                <Bar dataKey="occupiedSpots" fill="#10b981" name="Occupied" />
+                <Bar dataKey="totalSpots" fill={colors.chart1} name="Total Spots" />
+                <Bar dataKey="occupiedSpots" fill={colors.chart2} name="Occupied" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -142,7 +169,14 @@ export function UtilizationReport({ data, isLoading, hideStatCards = false }: Ut
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: getCssVar('--card'),
+                      border: `1px solid ${colors.border}`,
+                      borderRadius: '6px',
+                      color: getCssVar('--card-foreground'),
+                    }}
+                  />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -200,11 +234,11 @@ export function UtilizationReport({ data, isLoading, hideStatCards = false }: Ut
           const available = payload.find((p) => p.dataKey === 'availableForSharing')?.value ?? 0;
           const rate = payload.find((p) => p.dataKey === 'occupancyRate')?.value ?? 0;
           return (
-            <div className="bg-background border rounded-md shadow p-3 text-sm space-y-1">
-              <p className="font-semibold">{formatDate(label)}</p>
-              <p className="text-[#c4b5fd]">Booked Spots: {booked}</p>
-              <p className="text-[#fcd34d]">Available for Sharing: {available}</p>
-              <p className="text-[#93c5fd]">Occupancy Rate: {rate}%</p>
+            <div className="bg-card border border-border rounded-md shadow-sm p-3 text-sm space-y-1">
+              <p className="font-semibold text-card-foreground">{formatDate(label)}</p>
+              <p style={{ color: colors.chart1 }}>Booked Spots: {booked}</p>
+              <p style={{ color: colors.chart3 }}>Available for Sharing: {available}</p>
+              <p style={{ color: colors.chart5 }}>Occupancy Rate: {rate}%</p>
             </div>
           );
         };
@@ -220,15 +254,15 @@ export function UtilizationReport({ data, isLoading, hideStatCards = false }: Ut
             <CardContent>
               <ResponsiveContainer width="100%" height={320}>
                 <ComposedChart data={chartData} margin={{ top: 8, right: 40, left: 0, bottom: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
+                  <CartesianGrid strokeDasharray="3 3" stroke={colors.border} />
                   <XAxis
                     dataKey="date"
                     tickFormatter={formatDate}
                     interval={tickInterval}
-                    tick={{ fontSize: 12 }}
+                    tick={{ fontSize: 12, fill: colors.muted }}
                   />
-                  <YAxis yAxisId="left" allowDecimals={false} />
-                  <YAxis yAxisId="right" orientation="right" tickFormatter={(v) => `${v}%`} domain={[0, 100]} />
+                  <YAxis yAxisId="left" allowDecimals={false} tick={{ fontSize: 12, fill: colors.muted }} />
+                  <YAxis yAxisId="right" orientation="right" tickFormatter={(v) => `${v}%`} domain={[0, 100]} tick={{ fontSize: 12, fill: colors.muted }} />
                   <Tooltip content={<CustomTooltip />} />
                   <Legend
                     formatter={(value) =>
@@ -239,9 +273,9 @@ export function UtilizationReport({ data, isLoading, hideStatCards = false }: Ut
                         : 'Occupancy Rate %'
                     }
                   />
-                  <Bar yAxisId="left" dataKey="bookedSpots" stackId="occupancy" fill="#c4b5fd" name="bookedSpots" />
-                  <Bar yAxisId="left" dataKey="availableForSharing" stackId="occupancy" fill="#fcd34d" name="availableForSharing" />
-                  <Line yAxisId="right" type="monotone" dataKey="occupancyRate" stroke="#93c5fd" strokeWidth={2} dot={false} name="occupancyRate" />
+                  <Bar yAxisId="left" dataKey="bookedSpots" stackId="occupancy" fill={colors.chart1} name="bookedSpots" />
+                  <Bar yAxisId="left" dataKey="availableForSharing" stackId="occupancy" fill={colors.chart3} name="availableForSharing" />
+                  <Line yAxisId="right" type="monotone" dataKey="occupancyRate" stroke={colors.chart5} strokeWidth={2} dot={false} name="occupancyRate" />
                 </ComposedChart>
               </ResponsiveContainer>
             </CardContent>
