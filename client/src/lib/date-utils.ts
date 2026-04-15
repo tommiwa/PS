@@ -47,3 +47,18 @@ export function formatDateForDB(date: Date | string): string {
 export function getTodayDateString(): string {
   return formatDateForDB(new Date());
 }
+
+/**
+ * Map a dateRange filter value to a human-readable translated label.
+ * Accepts the `t` translation function from useLanguage() so this utility
+ * remains decoupled from the hook itself.
+ */
+export function getDateRangeLabel(range: string, t: (key: string) => string): string {
+  switch (range) {
+    case 'last-7-days': return t('dateRange.last7Days');
+    case 'last-30-days': return t('dateRange.last30Days');
+    case 'last-3-months': return t('dateRange.last3Months');
+    case 'last-year': return t('dateRange.lastYear');
+    default: return t('dateRange.last30Days');
+  }
+}

@@ -48,13 +48,14 @@ import type {
 import { useCardsVisibility } from "@/hooks/use-cards-visibility"
 import { Tooltip as UITooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useLanguage } from "@/hooks/use-language"
+import { getDateRangeLabel } from "@/lib/date-utils"
 
 export default function AdminAnalytics() {
   const queryClient = useQueryClient();
   const [dateRange, setDateRange] = useState("last-30-days");
   const { cardsVisible, toggleCards } = useCardsVisibility('analytics');
   const { t } = useLanguage();
-  
+
   // Helper function to convert dateRange to monthsBack for revenue API
   const getMonthsBack = (range: string): number => {
     switch (range) {
@@ -294,7 +295,7 @@ export default function AdminAnalytics() {
                 <div className="text-2xl font-bold">
                   {overviewQuery.data?.totalBookings.toLocaleString() || 0}
                 </div>
-                <p className="text-xs text-muted-foreground">{t('analytics.thisYear')}</p>
+                <p className="text-xs text-muted-foreground">{getDateRangeLabel(dateRange, t)}</p>
               </>
             )}
           </CardContent>
@@ -320,7 +321,7 @@ export default function AdminAnalytics() {
                 <div className="text-2xl font-bold">
                   {overviewQuery.data?.activeUsers || 0}
                 </div>
-                <p className="text-xs text-muted-foreground">{t('analytics.monthlyActive')}</p>
+                <p className="text-xs text-muted-foreground">{getDateRangeLabel(dateRange, t)}</p>
               </>
             )}
           </CardContent>

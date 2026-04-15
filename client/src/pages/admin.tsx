@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
 import { exportToExcel, type ExportData } from "@/utils/export-utils"
+import { getDateRangeLabel } from "@/lib/date-utils"
 import { 
   Users, Car, CalendarCheck, BarChart3, FileText, Shield,
   TrendingUp, Clock, MapPin, AlertTriangle, ArrowRight,
@@ -57,10 +58,11 @@ type DashboardScope = 'all' | 'bci';
 export default function Admin() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
-  const [dateRange, setDateRange] = useState("last-7-days")
+  const [dateRange, setDateRange] = useState("last-30-days")
   const [scope, setScope] = useState<DashboardScope>('all')
   const { cardsVisible, toggleCards, setCardsVisible } = useCardsVisibility('analytics')
   const { t } = useLanguage()
+
   const { toast } = useToast()
 
   // Ensure analytics cards are visible by default on Admin Dashboard
@@ -708,7 +710,7 @@ export default function Admin() {
                     <div className="text-2xl font-bold">
                       {overviewQuery.data?.totalBookings.toLocaleString() || 0}
                     </div>
-                    <p className="text-xs text-muted-foreground">{t('analytics.thisYear')}</p>
+                    <p className="text-xs text-muted-foreground">{getDateRangeLabel(dateRange, t)}</p>
                   </>
                 )}
               </CardContent>
@@ -734,7 +736,7 @@ export default function Admin() {
                     <div className="text-2xl font-bold">
                       {overviewQuery.data?.activeUsers || 0}
                     </div>
-                    <p className="text-xs text-muted-foreground">{t('analytics.monthlyActive')}</p>
+                    <p className="text-xs text-muted-foreground">{getDateRangeLabel(dateRange, t)}</p>
                   </>
                 )}
               </CardContent>
