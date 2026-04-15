@@ -605,10 +605,13 @@ export default function Admin() {
                 {cardsVisible ? t('tooltip.analytics.hideCards') : t('tooltip.analytics.toggleCards')}
               </TooltipContent>
             </Tooltip>
-            <Select value={dateRange} onValueChange={setDateRange}>
+            <Select value={dateRange} onValueChange={setDateRange} disabled={overviewQuery.isFetching}>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <SelectTrigger className="w-[180px]" data-testid="select-date-range">
+                    {overviewQuery.isFetching && (
+                      <Loader2 className="h-3 w-3 animate-spin shrink-0 mr-1" />
+                    )}
                     <SelectValue />
                   </SelectTrigger>
                 </TooltipTrigger>
@@ -670,7 +673,7 @@ export default function Admin() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {overviewQuery.isLoading ? (
+                {overviewQuery.isFetching ? (
                   <>
                     <Skeleton className="h-8 w-20 mb-2" />
                     <Skeleton className="h-4 w-24" />
@@ -698,7 +701,7 @@ export default function Admin() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {overviewQuery.isLoading ? (
+                {overviewQuery.isFetching ? (
                   <>
                     <Skeleton className="h-8 w-16 mb-2" />
                     <Skeleton className="h-4 w-16" />
@@ -724,7 +727,7 @@ export default function Admin() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {overviewQuery.isLoading ? (
+                {overviewQuery.isFetching ? (
                   <>
                     <Skeleton className="h-8 w-12 mb-2" />
                     <Skeleton className="h-4 w-20" />
@@ -750,7 +753,7 @@ export default function Admin() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {overviewQuery.isLoading ? (
+                {overviewQuery.isFetching ? (
                   <>
                     <Skeleton className="h-8 w-16 mb-2" />
                     <Skeleton className="h-4 w-16" />

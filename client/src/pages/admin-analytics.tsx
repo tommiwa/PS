@@ -258,10 +258,13 @@ export default function AdminAnalytics() {
               {t('tooltip.analytics.refreshData')}
             </TooltipContent>
           </UITooltip>
-          <Select value={dateRange} onValueChange={setDateRange}>
+          <Select value={dateRange} onValueChange={setDateRange} disabled={overviewQuery.isFetching}>
             <UITooltip>
               <TooltipTrigger asChild>
                 <SelectTrigger className="w-[180px]" data-testid="select-date-range">
+                  {overviewQuery.isFetching && (
+                    <Loader2 className="h-3 w-3 animate-spin shrink-0 mr-1" />
+                  )}
                   <SelectValue />
                 </SelectTrigger>
               </TooltipTrigger>
@@ -301,7 +304,7 @@ export default function AdminAnalytics() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {overviewQuery.isLoading ? (
+            {overviewQuery.isFetching ? (
               <>
                 <Skeleton className="h-8 w-20 mb-2" />
                 <Skeleton className="h-4 w-24" />
@@ -329,7 +332,7 @@ export default function AdminAnalytics() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {overviewQuery.isLoading ? (
+            {overviewQuery.isFetching ? (
               <>
                 <Skeleton className="h-8 w-16 mb-2" />
                 <Skeleton className="h-4 w-16" />
@@ -355,7 +358,7 @@ export default function AdminAnalytics() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {overviewQuery.isLoading ? (
+            {overviewQuery.isFetching ? (
               <>
                 <Skeleton className="h-8 w-12 mb-2" />
                 <Skeleton className="h-4 w-20" />
@@ -381,7 +384,7 @@ export default function AdminAnalytics() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {overviewQuery.isLoading ? (
+            {overviewQuery.isFetching ? (
               <>
                 <Skeleton className="h-8 w-16 mb-2" />
                 <Skeleton className="h-4 w-24" />
@@ -409,7 +412,7 @@ export default function AdminAnalytics() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {overviewQuery.isLoading ? (
+            {overviewQuery.isFetching ? (
               <>
                 <Skeleton className="h-8 w-16 mb-2" />
                 <Skeleton className="h-4 w-16" />
@@ -435,7 +438,7 @@ export default function AdminAnalytics() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {overviewQuery.isLoading ? (
+            {overviewQuery.isFetching ? (
               <>
                 <Skeleton className="h-8 w-16 mb-2" />
                 <Skeleton className="h-4 w-24" />
