@@ -67,9 +67,55 @@ export default function AdminAnalytics() {
     }
   };
 
+  // Helper to get date range for queries
+  const getDateRange = (range: string) => {
+    const toDate = new Date().toISOString().split('T')[0];
+    let fromDate: string;
+    switch (range) {
+      case 'last-7-days': {
+        const date = new Date();
+        date.setDate(date.getDate() - 7);
+        fromDate = date.toISOString().split('T')[0];
+        break;
+      }
+      case 'last-30-days': {
+        const date = new Date();
+        date.setDate(date.getDate() - 30);
+        fromDate = date.toISOString().split('T')[0];
+        break;
+      }
+      case 'last-3-months': {
+        const date = new Date();
+        date.setMonth(date.getMonth() - 3);
+        fromDate = date.toISOString().split('T')[0];
+        break;
+      }
+      case 'last-year': {
+        const date = new Date();
+        date.setFullYear(date.getFullYear() - 1);
+        fromDate = date.toISOString().split('T')[0];
+        break;
+      }
+      default: {
+        const date = new Date();
+        date.setDate(date.getDate() - 30);
+        fromDate = date.toISOString().split('T')[0];
+      }
+    }
+    return { fromDate, toDate };
+  };
+
+  const { fromDate, toDate } = getDateRange(dateRange);
+
   // React Query hooks for fetching real analytics data
   const overviewQuery = useQuery<AnalyticsOverviewResponse>({
-    queryKey: ['/api/admin/analytics-overview'],
+    queryKey: ['/api/admin/analytics-overview', { from: fromDate, to: toDate }],
+    queryFn: async () => {
+      const params = new URLSearchParams({ from: fromDate, to: toDate });
+      const response = await fetch(`/api/admin/analytics-overview?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch analytics overview');
+      return response.json();
+    },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
