@@ -232,6 +232,40 @@ const migrations: MigrationCheck[] = [
     ],
   },
   {
+    name: "backfill_split_listing_original_listing_type",
+    checkQuery: `
+      SELECT NOT EXISTS (
+        SELECT 1
+        FROM spot_listings
+        WHERE listing_type = 'single'
+          AND original_listing_type IS NULL
+          AND (
+            (period_start_date IS NOT NULL AND period_end_date IS NOT NULL)
+            OR recurring_start_date IS NOT NULL
+          )
+      ) AS exists
+    `,
+    migrationStatements: [
+      `
+        UPDATE spot_listings
+        SET original_listing_type = 'period',
+            updated_at = NOW()
+        WHERE listing_type = 'single'
+          AND original_listing_type IS NULL
+          AND period_start_date IS NOT NULL
+          AND period_end_date IS NOT NULL
+      `,
+      `
+        UPDATE spot_listings
+        SET original_listing_type = 'recurring',
+            updated_at = NOW()
+        WHERE listing_type = 'single'
+          AND original_listing_type IS NULL
+          AND recurring_start_date IS NOT NULL
+      `,
+    ],
+  },
+  {
     name: "fix_orphaned_booked_listing_statuses",
     checkQuery: `
       SELECT NOT EXISTS (
