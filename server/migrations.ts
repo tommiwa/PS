@@ -221,11 +221,10 @@ const migrations: MigrationCheck[] = [
         UPDATE bookings
         SET listing_id = cl.id,
             updated_at = NOW()
-        FROM spot_listings sl
-        JOIN candidate_listings cl
-          ON cl.spot_id = sl.spot_id
-         AND cl.single_date = bookings.booking_date
+        FROM spot_listings sl, candidate_listings cl
         WHERE bookings.listing_id = sl.id
+          AND cl.spot_id = sl.spot_id
+          AND cl.single_date = bookings.booking_date
           AND sl.status = 'cancelled'
           AND sl.listing_type IN ('period', 'recurring')
           AND bookings.status != 'cancelled'

@@ -1212,6 +1212,7 @@ export class MemStorage implements IStorage {
       notes: insertListing.notes ?? null,
       donateToCharity: insertListing.donateToCharity ?? false,
       createdByAdmin: insertListing.createdByAdmin ?? false,
+      originalListingType: (insertListing.originalListingType as ListingType) ?? null,
     }).returning();
     
     // Auto-enable bookability on the spot when a listing is created
