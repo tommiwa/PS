@@ -3642,9 +3642,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
-        // Cancel the original period listing since it's been split into individual days
+        // Archive the original period listing since it's been split into individual days.
+        // cancelSpotListing sets status + audit note; deleteSpotListing sets deletedAt so it
+        // is excluded from all normal queries (which filter by isNull(deletedAt)).
         await storage.cancelSpotListing(listing.id, 'Split into individual day listings due to partial booking');
-        console.log(`[Booking] Cancelled original period listing ${listing.id}`);
+        await storage.deleteSpotListing(listing.id);
+        console.log(`[Booking] Archived original period listing ${listing.id}`);
       } else if (listing.listingType === 'recurring' && listing.recurringStartDate && listing.daysOfWeek?.length) {
         // Handle recurring listings: split into individual day listings (same approach as period)
         // This ensures each day remains independently bookable
@@ -3753,9 +3756,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
-        // Cancel the original recurring listing since it's been split into individual days
+        // Archive the original recurring listing since it's been split into individual days.
+        // cancelSpotListing sets status + audit note; deleteSpotListing sets deletedAt so it
+        // is excluded from all normal queries (which filter by isNull(deletedAt)).
         await storage.cancelSpotListing(listing.id, 'Split into individual day listings due to partial booking');
-        console.log(`[Booking] Cancelled original recurring listing ${listing.id}`);
+        await storage.deleteSpotListing(listing.id);
+        console.log(`[Booking] Archived original recurring listing ${listing.id}`);
       } else {
         // For single-day listings, just mark as booked
         await storage.updateSpotListingStatus(listing.id, 'booked');

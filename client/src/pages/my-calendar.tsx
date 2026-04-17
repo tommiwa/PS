@@ -376,23 +376,9 @@ export default function MyCalendar() {
 
   const isLoading = isOwnerView ? isLoadingListings : isLoadingBookings
 
-  const rawEntries: CalendarEntry[] = isOwnerView
+  const allEntries: CalendarEntry[] = isOwnerView
     ? ownerListings.flatMap((l) => listingToCalendarEntries(l))
     : renterBookings.map((b) => bookingToCalendarEntry(b))
-
-  // For owner view, deduplicate by (date, spotNumber) so that split listings
-  // (recurring parent + individual single children for the same spot/date) don't appear twice.
-  const allEntries: CalendarEntry[] = isOwnerView
-    ? (() => {
-        const seen = new Set<string>()
-        return rawEntries.filter((e) => {
-          const key = `${e.date}|${e.spotId ?? e.spotNumber}`
-          if (seen.has(key)) return false
-          seen.add(key)
-          return true
-        })
-      })()
-    : rawEntries
 
   const entries: CalendarEntry[] = allEntries.filter((e) => e.status !== "cancelled")
 
