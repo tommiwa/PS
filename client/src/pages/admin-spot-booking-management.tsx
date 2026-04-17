@@ -493,10 +493,14 @@ export default function AdminSpotBookingManagement() {
 
   // Fetch audit logs for selected booking (lazy-loaded when dialog opens)
   const { data: auditLogs = [], isLoading: isLoadingAuditLogs } = useQuery<AuditLogData[]>({
-    queryKey: ["/api/admin/audits", selectedBooking?.id],
-    queryFn: async () => {
-      const response = await fetch(`/api/admin/audits?entityType=booking&entityId=${selectedBooking?.id}`).then(r => r.json());
-      return response.items ?? [];
+    queryKey: ["/api/admin/audits", { entityType: 'booking', entityId: selectedBooking?.id }],
+    queryFn: async ({ queryKey }) => {
+      const params = queryKey[1] as Record<string, unknown>;
+      const searchParams = new URLSearchParams({ entityType: String(params.entityType), entityId: String(params.entityId) });
+      const response = await fetch(`/api/admin/audits?${searchParams}`, { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to fetch audit logs');
+      const data = await response.json();
+      return data.items ?? [];
     },
     enabled: showBookingDetails && !!selectedBooking?.id
   });

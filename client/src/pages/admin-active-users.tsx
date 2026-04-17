@@ -45,13 +45,7 @@ export default function AdminActiveUsersPage() {
   const isDateRangeValid = Boolean(dateFrom && dateTo && dateFrom <= dateTo);
 
   const query = useQuery<ActiveUsersReportData>({
-    queryKey: ['/api/admin/reports/active-users', dateFrom, dateTo],
-    queryFn: async () => {
-      const params = new URLSearchParams({ from: dateFrom, to: dateTo });
-      const response = await fetch(`/api/admin/reports/active-users?${params}`);
-      if (!response.ok) throw new Error('Failed to fetch active users report');
-      return response.json();
-    },
+    queryKey: ['/api/admin/reports/active-users', { from: dateFrom, to: dateTo }],
     enabled: isDateRangeValid
   });
 

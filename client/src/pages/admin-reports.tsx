@@ -39,33 +39,13 @@ export default function AdminReportsPage() {
 
   // Shared Pool Usage Query
   const sharedPoolUsageQuery = useQuery<SharedPoolUsageReportResponse>({
-    queryKey: ['/api/admin/reports/shared-pool-usage', filters.dateFrom, sharedPoolDateTo],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        from: filters.dateFrom,
-        to: sharedPoolDateTo
-      });
-      const response = await fetch(`/api/admin/reports/shared-pool-usage?${params}`);
-      if (!response.ok) throw new Error('Failed to fetch shared pool usage report');
-      return response.json();
-    },
+    queryKey: ['/api/admin/reports/shared-pool-usage', { from: filters.dateFrom, to: sharedPoolDateTo }],
     enabled: isDateRangeValid
   });
 
   // Spot Assignment Report Query - fetch all actions (assignments and unassignments)
   const spotAssignmentQuery = useQuery<SpotAssignmentReportResponse>({
-    queryKey: ['/api/admin/reports/spot-assignments', filters.dateFrom, filters.dateTo],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        from: filters.dateFrom,
-        to: filters.dateTo,
-        action: 'all',
-        scope: 'bci'
-      });
-      const response = await fetch(`/api/admin/reports/spot-assignments?${params}`);
-      if (!response.ok) throw new Error('Failed to fetch spot assignment report');
-      return response.json();
-    },
+    queryKey: ['/api/admin/reports/spot-assignments', { from: filters.dateFrom, to: filters.dateTo, action: 'all', scope: 'bci' }],
     enabled: isDateRangeValid
   });
 

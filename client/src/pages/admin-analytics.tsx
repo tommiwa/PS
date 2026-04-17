@@ -110,12 +110,6 @@ export default function AdminAnalytics() {
   // React Query hooks for fetching real analytics data
   const overviewQuery = useQuery<AnalyticsOverviewResponse>({
     queryKey: ['/api/admin/analytics-overview', { from: fromDate, to: toDate }],
-    queryFn: async () => {
-      const params = new URLSearchParams({ from: fromDate, to: toDate });
-      const response = await fetch(`/api/admin/analytics-overview?${params}`);
-      if (!response.ok) throw new Error('Failed to fetch analytics overview');
-      return response.json();
-    },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 

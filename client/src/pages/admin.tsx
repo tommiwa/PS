@@ -151,16 +151,6 @@ export default function Admin() {
   // React Query hooks for fetching real analytics data with scope and date range parameters
   const overviewQuery = useQuery<AnalyticsOverviewResponse>({
     queryKey: ['/api/admin/analytics-overview', { scope, from: fromDate, to: toDate }],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        scope,
-        from: fromDate,
-        to: toDate
-      });
-      const response = await fetch(`/api/admin/analytics-overview?${params}`);
-      if (!response.ok) throw new Error('Failed to fetch analytics overview');
-      return response.json();
-    },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
@@ -185,17 +175,7 @@ export default function Admin() {
   });
 
   const utilizationQuery = useQuery<ReportUtilizationResponse>({
-    queryKey: ['/api/admin/reports/utilization', fromDate, toDate, scope],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        from: fromDate,
-        to: toDate,
-        scope: scope
-      });
-      const response = await fetch(`/api/admin/reports/utilization?${params}`);
-      if (!response.ok) throw new Error('Failed to fetch utilization report');
-      return response.json();
-    },
+    queryKey: ['/api/admin/reports/utilization', { from: fromDate, to: toDate, scope }],
     staleTime: 5 * 60 * 1000,
   });
 
