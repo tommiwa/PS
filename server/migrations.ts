@@ -232,6 +232,36 @@ const migrations: MigrationCheck[] = [
       `,
     ],
   },
+  {
+    name: "fix_orphaned_booked_listing_statuses",
+    checkQuery: `
+      SELECT NOT EXISTS (
+        SELECT 1
+        FROM spot_listings sl
+        WHERE sl.status = 'booked'
+          AND NOT EXISTS (
+            SELECT 1
+            FROM bookings b
+            WHERE b.listing_id = sl.id
+              AND b.status != 'cancelled'
+          )
+      ) AS exists
+    `,
+    migrationStatements: [
+      `
+        UPDATE spot_listings
+        SET status = 'available',
+            updated_at = NOW()
+        WHERE status = 'booked'
+          AND NOT EXISTS (
+            SELECT 1
+            FROM bookings b
+            WHERE b.listing_id = spot_listings.id
+              AND b.status != 'cancelled'
+          )
+      `,
+    ],
+  },
 ];
 
 export async function runMigrations(): Promise<void> {
