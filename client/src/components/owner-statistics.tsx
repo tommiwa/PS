@@ -71,7 +71,7 @@ const tooltipStyle = {
 }
 
 const fmt = (n: number) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(n)
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 
 type NumericSortKey = keyof Pick<OwnerSpotPerformance, 'totalBookings' | 'totalIncome' | 'occupancyRate' | 'avgBookingValue' | 'cancellationRate'>
 type StringSortKey = 'spotNumber' | 'locationName'
