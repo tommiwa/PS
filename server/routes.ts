@@ -7,6 +7,7 @@ import { setupAuth, isAuthenticated, requireAdmin, getAuthenticatedUserId, getAu
 import { z } from "zod";
 import { db } from "./db";
 import { parkingSpots, spotLocks, spotListings, bookings, issues, insertIssueSchema, updateIssueSchema, issueStatuses, termsVersions } from "@shared/schema";
+import type { Booking } from "@shared/schema";
 import { inArray, and, eq, lt, gt, not, or, sql } from "drizzle-orm";
 import { 
   sendAssignmentNotification, 
@@ -3954,6 +3955,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get renter dashboard statistics (Authenticated renters)
+  // Helper: compute period date ranges for renter statistics
+  function getRenterPeriodRanges(period: string, now: Date): {
+    currentStart: string; currentEnd: string;
+    prevStart: string; prevEnd: string;
+    label: string;
+  } {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+    // Clamp day to last valid day of month to prevent JS date rollover (e.g. Mar 31 → Feb 28)
+    const clampDay = (year: number, month: number, day: number): Date => {
+      const lastDay = new Date(year, month + 1, 0).getDate();
+      return new Date(year, month, Math.min(day, lastDay));
+    };
+
+    // Each window: current = start → today; previous = equivalent window ending same relative day
+    if (period === 'week') {
+      const daysFromMon = (now.getDay() + 6) % 7;
+      const monStart = new Date(now); monStart.setDate(now.getDate() - daysFromMon); monStart.setHours(0,0,0,0);
+      const prevStart = new Date(monStart); prevStart.setDate(monStart.getDate() - 7);
+      const prevEnd = new Date(now); prevEnd.setDate(now.getDate() - 7);
+      return { currentStart: fmt(monStart), currentEnd: fmt(now), prevStart: fmt(prevStart), prevEnd: fmt(prevEnd), label: 'This Week' };
+    } else if (period === '3months') {
+      const curStart = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+      const prevEnd = clampDay(now.getFullYear(), now.getMonth() - 3, now.getDate());
+      const prevStart = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+      return { currentStart: fmt(curStart), currentEnd: fmt(now), prevStart: fmt(prevStart), prevEnd: fmt(prevEnd), label: 'Last 3 Months' };
+    } else if (period === '6months') {
+      const curStart = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+      const prevEnd = clampDay(now.getFullYear(), now.getMonth() - 6, now.getDate());
+      const prevStart = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+      return { currentStart: fmt(curStart), currentEnd: fmt(now), prevStart: fmt(prevStart), prevEnd: fmt(prevEnd), label: 'Last 6 Months' };
+    } else if (period === 'year') {
+      const curStart = new Date(now.getFullYear(), 0, 1);
+      const prevStart = new Date(now.getFullYear() - 1, 0, 1);
+      const prevEnd = clampDay(now.getFullYear() - 1, now.getMonth(), now.getDate());
+      return { currentStart: fmt(curStart), currentEnd: fmt(now), prevStart: fmt(prevStart), prevEnd: fmt(prevEnd), label: 'This Year' };
+    } else {
+      // Default: month
+      const curStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const prevEnd = clampDay(now.getFullYear(), now.getMonth() - 1, now.getDate());
+      return { currentStart: fmt(curStart), currentEnd: fmt(now), prevStart: fmt(prevStart), prevEnd: fmt(prevEnd), label: 'This Month' };
+    }
+  }
+
+  // Helper: filter bookings by period range and status
+  function filterRenterBookings(
+    allBookings: Booking[],
+    start: string,
+    end: string,
+    status: string
+  ): Booking[] {
+    return allBookings.filter(b => {
+      const d = b.bookingDate.toString();
+      if (d < start || d > end) return false;
+      if (status === 'all') return true;
+      return b.status === status;
+    });
+  }
+
+  // Helper: compute % change (returns null if prev is 0)
+  function pctChange(current: number, previous: number): number | null {
+    if (previous === 0) return null;
+    return Number((((current - previous) / previous) * 100).toFixed(1));
+  }
+
   app.get("/api/renter/dashboard-stats", isAuthenticated, async (req: any, res) => {
     try {
       const userId = getAuthenticatedUserId(req);
@@ -3961,53 +4029,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "User not authenticated" });
       }
 
-      // Get today's date in configured timezone
+      const VALID_PERIODS = ['week', 'month', '3months', '6months', 'year'];
+      const VALID_STATUSES = ['all', 'confirmed', 'completed', 'cancelled'];
+      const rawPeriod = (req.query.period as string) || 'month';
+      const rawStatus = (req.query.status as string) || 'all';
+      const period = VALID_PERIODS.includes(rawPeriod) ? rawPeriod : 'month';
+      const status = VALID_STATUSES.includes(rawStatus) ? rawStatus : 'all';
+
       const today = await getTodayInTimezone();
       const now = new Date();
       const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-      // Fetch all bookings for this renter
       const allBookings = await storage.getBookingsByRenter(userId);
 
-      // Calculate Active Bookings (confirmed bookings with dates >= today)
-      const activeBookings = allBookings.filter(booking => 
-        booking.status === 'confirmed' && 
-        booking.bookingDate >= today
-      ).length;
+      // Active bookings: future bookings matching status filter (status='all' → confirmed only)
+      const activeBookings = allBookings.filter(b => {
+        if (b.bookingDate < today) return false;
+        if (status === 'all') return b.status === 'confirmed';
+        return b.status === status;
+      }).length;
 
-      // Calculate This Month Spent and Bookings Count
-      const thisMonthBookings = allBookings.filter(booking => {
-        const bookingDate = booking.bookingDate.toString();
-        return bookingDate.startsWith(currentMonth) && 
-               (booking.paymentStatus === 'paid' || booking.paymentStatus === 'received');
+      // Period ranges
+      const { currentStart, currentEnd, prevStart, prevEnd, label } = getRenterPeriodRanges(period, now);
+
+      const currentBookings = filterRenterBookings(allBookings, currentStart, currentEnd, status);
+      const prevBookings = filterRenterBookings(allBookings, prevStart, prevEnd, status);
+
+      // Spending: gate on payment status (paid/received only — excludes pending/refunded)
+      const isPaid = (b: Booking) => b.paymentStatus === 'paid' || b.paymentStatus === 'received';
+      const currentPaid = currentBookings.filter(isPaid);
+      const prevPaid = prevBookings.filter(isPaid);
+      const currentSpent = currentPaid.reduce((t, b) => t + parseFloat(b.totalAmount.toString()), 0);
+      const prevSpent = prevPaid.reduce((t, b) => t + parseFloat(b.totalAmount.toString()), 0);
+      const currentAvg = currentPaid.length > 0 ? currentSpent / currentPaid.length : 0;
+      const prevAvg = prevPaid.length > 0 ? prevSpent / prevPaid.length : 0;
+
+      // Legacy fields (always month/all)
+      const thisMonthBkgs = allBookings.filter(b => {
+        const d = b.bookingDate.toString();
+        return d.startsWith(currentMonth) && (b.paymentStatus === 'paid' || b.paymentStatus === 'received');
       });
+      const thisMonthSpent = thisMonthBkgs.reduce((t, b) => t + parseFloat(b.totalAmount.toString()), 0);
 
-      const thisMonthSpent = thisMonthBookings.reduce((total, booking) => {
-        return total + parseFloat(booking.totalAmount.toString());
-      }, 0);
-
-      // Calculate Past Year Spent and Bookings Count (last 12 months)
-      const oneYearAgo = new Date(now);
-      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+      const oneYearAgo = new Date(now); oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
       const oneYearAgoStr = oneYearAgo.toISOString().split('T')[0];
-      
-      const pastYearBookings = allBookings.filter(booking => {
-        const bookingDate = booking.bookingDate.toString();
-        return bookingDate >= oneYearAgoStr && 
-               (booking.paymentStatus === 'paid' || booking.paymentStatus === 'received');
+      const pastYearBkgs = allBookings.filter(b => {
+        const d = b.bookingDate.toString();
+        const inRange = d >= oneYearAgoStr && (b.paymentStatus === 'paid' || b.paymentStatus === 'received');
+        if (!inRange) return false;
+        if (status === 'all') return true;
+        return b.status === status;
       });
+      const pastYearSpent = pastYearBkgs.reduce((t, b) => t + parseFloat(b.totalAmount.toString()), 0);
 
-      const pastYearSpent = pastYearBookings.reduce((total, booking) => {
-        return total + parseFloat(booking.totalAmount.toString());
-      }, 0);
+      // Confirmed and completed counts derived from the status-filtered currentBookings dataset
+      // (consistent with all other summary card metrics — same filter applied)
+      const periodConfirmedCount = currentBookings.filter(b => b.status === 'confirmed').length;
+      const periodCompletedCount = currentBookings.filter(b => b.status === 'completed').length;
+      const prevPeriodConfirmedCount = prevBookings.filter(b => b.status === 'confirmed').length;
+      const prevPeriodCompletedCount = prevBookings.filter(b => b.status === 'completed').length;
 
-      // Return renter dashboard statistics
       res.json({
+        period,
+        status,
+        periodLabel: label,
+        bookings: currentBookings.length,
+        spent: Number(currentSpent.toFixed(2)),
+        averageCostPerBooking: Number(currentAvg.toFixed(2)),
+        bookingsChange: pctChange(currentBookings.length, prevBookings.length),
+        spentChange: pctChange(currentSpent, prevSpent),
+        averageCostChange: pctChange(currentAvg, prevAvg),
+        periodConfirmedCount,
+        periodCompletedCount,
+        periodConfirmedChange: pctChange(periodConfirmedCount, prevPeriodConfirmedCount),
+        periodCompletedChange: pctChange(periodCompletedCount, prevPeriodCompletedCount),
+        // Legacy fields
         activeBookings,
         thisMonthSpent: Number(thisMonthSpent.toFixed(2)),
-        thisMonthBookings: thisMonthBookings.length,
+        thisMonthBookings: thisMonthBkgs.length,
         pastYearSpent: Number(pastYearSpent.toFixed(2)),
-        pastYearBookings: pastYearBookings.length,
+        pastYearBookings: pastYearBkgs.length,
         generatedAt: now.toISOString()
       });
     } catch (error) {
@@ -4024,144 +4125,235 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "User not authenticated" });
       }
 
-      const monthsBack = req.query.monthsBack ? parseInt(req.query.monthsBack as string) : 6;
-      
-      // Get today's date in configured timezone
+      const VALID_PERIODS = ['week', 'month', '3months', '6months', 'year'];
+      const VALID_STATUSES = ['all', 'confirmed', 'completed', 'cancelled'];
+      const rawPeriod = (req.query.period as string) || 'month';
+      const rawStatus = (req.query.status as string) || 'all';
+      const period = VALID_PERIODS.includes(rawPeriod) ? rawPeriod : 'month';
+      const status = VALID_STATUSES.includes(rawStatus) ? rawStatus : 'all';
+
       const today = await getTodayInTimezone();
       const now = new Date();
+      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-      // Fetch all bookings for this renter
       const allBookings = await storage.getBookingsByRenter(userId);
 
-      // Calculate basic stats (same as dashboard-stats)
-      const activeBookings = allBookings.filter(booking => 
-        booking.status === 'confirmed' && 
-        booking.bookingDate >= today
-      ).length;
+      // Active bookings: future bookings matching status filter (status='all' → confirmed only)
+      const activeBookings = allBookings.filter(b => {
+        if (b.bookingDate < today) return false;
+        if (status === 'all') return b.status === 'confirmed';
+        return b.status === status;
+      }).length;
 
-      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-      const thisMonthBookings = allBookings.filter(booking => {
-        const bookingDate = booking.bookingDate.toString();
-        return bookingDate.startsWith(currentMonth) && 
-               (booking.paymentStatus === 'paid' || booking.paymentStatus === 'received');
+      // Period ranges
+      const { currentStart, currentEnd, prevStart, prevEnd, label } = getRenterPeriodRanges(period, now);
+
+      const currentBookings = filterRenterBookings(allBookings, currentStart, currentEnd, status);
+      const prevBookings = filterRenterBookings(allBookings, prevStart, prevEnd, status);
+
+      // Spending: gate on payment status (paid/received only — excludes pending/refunded)
+      const isPaid = (b: Booking) => b.paymentStatus === 'paid' || b.paymentStatus === 'received';
+      const currentPaid = currentBookings.filter(isPaid);
+      const prevPaid = prevBookings.filter(isPaid);
+      const currentSpent = currentPaid.reduce((t, b) => t + parseFloat(b.totalAmount.toString()), 0);
+      const prevSpent = prevPaid.reduce((t, b) => t + parseFloat(b.totalAmount.toString()), 0);
+      const currentAvg = currentPaid.length > 0 ? currentSpent / currentPaid.length : 0;
+      const prevAvg = prevPaid.length > 0 ? prevSpent / prevPaid.length : 0;
+
+      // Legacy fields
+      const thisMonthBkgs = allBookings.filter(b => {
+        const d = b.bookingDate.toString();
+        return d.startsWith(currentMonth) && (b.paymentStatus === 'paid' || b.paymentStatus === 'received');
       });
+      const thisMonthSpent = thisMonthBkgs.reduce((t, b) => t + parseFloat(b.totalAmount.toString()), 0);
 
-      const thisMonthSpent = thisMonthBookings.reduce((total, booking) => {
-        return total + parseFloat(booking.totalAmount.toString());
-      }, 0);
+      const oneYearAgo = new Date(now); oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+      const oneYearAgoStr = oneYearAgo.toISOString().split('T')[0];
+      const pastYearBkgs = allBookings.filter(b => {
+        const d = b.bookingDate.toString();
+        const inRange = d >= oneYearAgoStr && (b.paymentStatus === 'paid' || b.paymentStatus === 'received');
+        if (!inRange) return false;
+        if (status === 'all') return true;
+        return b.status === status;
+      });
+      const pastYearSpent = pastYearBkgs.reduce((t, b) => t + parseFloat(b.totalAmount.toString()), 0);
 
-      // Get monthly spending data for charts
-      const monthlySpendingMap = new Map<string, { spent: number; bookings: number; year: number }>();
-      
-      for (let i = 0; i < monthsBack; i++) {
-        const date = new Date(now);
-        date.setMonth(date.getMonth() - i);
-        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        const monthName = date.toLocaleDateString('en-US', { month: 'short' });
-        
-        const monthBookings = allBookings.filter(booking => {
-          const bookingDate = booking.bookingDate.toString();
-          return bookingDate.startsWith(monthKey) && 
-                 (booking.paymentStatus === 'paid' || booking.paymentStatus === 'received');
-        });
+      // Build spending chart data based on period
+      const spendingData: { label: string; spent: number; bookings: number }[] = [];
 
-        const monthSpent = monthBookings.reduce((total, booking) => {
-          return total + parseFloat(booking.totalAmount.toString());
-        }, 0);
+      if (period === 'week') {
+        // Show Mon-Sun of current week, capped at today (no future days)
+        const dayOfWeek = now.getDay();
+        const daysFromMon = (dayOfWeek + 6) % 7;
+        const weekStart = new Date(now); weekStart.setDate(now.getDate() - daysFromMon); weekStart.setHours(0,0,0,0);
+        const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        for (let i = 0; i < 7; i++) {
+          const d = new Date(weekStart); d.setDate(weekStart.getDate() + i);
+          const dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+          if (dStr > today) break; // stop at today; don't show future days
+          const dayBkgs = currentBookings.filter(b => b.bookingDate.toString() === dStr);
+          const dayPaid = dayBkgs.filter(isPaid);
+          spendingData.push({
+            label: dayNames[i],
+            spent: Number(dayPaid.reduce((t, b) => t + parseFloat(b.totalAmount.toString()), 0).toFixed(2)),
+            bookings: dayBkgs.length
+          });
+        }
+      } else if (period === 'month') {
+        // Show each day of current month, capped at today (no future days)
+        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        for (let day = 1; day <= daysInMonth; day++) {
+          const dStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+          if (dStr > today) break; // stop at today; don't show future days
+          const dayBkgs = currentBookings.filter(b => b.bookingDate.toString() === dStr);
+          const dayPaid = dayBkgs.filter(isPaid);
+          spendingData.push({
+            label: String(day),
+            spent: Number(dayPaid.reduce((t, b) => t + parseFloat(b.totalAmount.toString()), 0).toFixed(2)),
+            bookings: dayBkgs.length
+          });
+        }
+      } else {
+        // Show months aligned to the period range
+        // year: Jan 1 → current month; 3months: (now-2months) → now; 6months: (now-5months) → now
+        let binStart: Date;
+        let binCount: number;
+        if (period === 'year') {
+          binStart = new Date(now.getFullYear(), 0, 1); // Jan 1
+          binCount = now.getMonth() + 1; // Jan through current month
+        } else if (period === '3months') {
+          binStart = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+          binCount = 3;
+        } else { // 6months
+          binStart = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+          binCount = 6;
+        }
+        const showYear = period === 'year' || binStart.getFullYear() !== now.getFullYear();
+        for (let i = 0; i < binCount; i++) {
+          const d = new Date(binStart.getFullYear(), binStart.getMonth() + i, 1);
+          const monthKey = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+          const monthBkgs = currentBookings.filter(b => b.bookingDate.toString().startsWith(monthKey));
+          const monthPaid = monthBkgs.filter(isPaid);
+          spendingData.push({
+            label: d.toLocaleDateString('en-US', { month: 'short', year: showYear ? '2-digit' : undefined }),
+            spent: Number(monthPaid.reduce((t, b) => t + parseFloat(b.totalAmount.toString()), 0).toFixed(2)),
+            bookings: monthBkgs.length
+          });
+        }
+      }
 
-        monthlySpendingMap.set(monthName, {
-          spent: Number(monthSpent.toFixed(2)),
-          bookings: monthBookings.length,
-          year: date.getFullYear()
+      // Legacy monthlySpending (6 months, all statuses, paid/received)
+      const monthlySpendingArr: { month: string; spent: number; bookings: number; year: number }[] = [];
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const mk = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+        const mb = allBookings.filter(b => b.bookingDate.toString().startsWith(mk) && (b.paymentStatus === 'paid' || b.paymentStatus === 'received'));
+        monthlySpendingArr.push({
+          month: d.toLocaleDateString('en-US', { month: 'short' }),
+          spent: Number(mb.reduce((t, b) => t + parseFloat(b.totalAmount.toString()), 0).toFixed(2)),
+          bookings: mb.length,
+          year: d.getFullYear()
         });
       }
 
-      const monthlySpending = Array.from(monthlySpendingMap.entries())
-        .map(([month, data]) => ({
-          month,
-          ...data
-        }))
-        .reverse(); // Show oldest to newest
+      // Top locations: use paid bookings only for accurate spending amounts
+      // Batch-fetch all spots and locations to avoid N+1 queries
+      const uniqueSpotIds = [...new Set(currentPaid.map(b => b.spotId))];
+      const [allLocations, fetchedSpots] = await Promise.all([
+        storage.getLocations(),
+        Promise.all(uniqueSpotIds.map(id => storage.getParkingSpot(id)))
+      ]);
+      const locationById = new Map(allLocations.map(l => [l.id, l]));
+      const spotById = new Map(
+        fetchedSpots.filter((s): s is NonNullable<typeof s> => s != null).map(s => [s.id, s])
+      );
 
-      // Get top locations with detailed stats
-      const locationStatsMap = new Map<number, { 
-        locationName: string; 
-        bookingsCount: number; 
-        totalSpent: number;
-        lastBookedDate: string;
+      const locationStatsMap = new Map<number, {
+        locationName: string; bookingsCount: number; totalSpent: number; lastBookedDate: string;
       }>();
 
-      for (const booking of allBookings) {
-        if (booking.paymentStatus === 'paid' || booking.paymentStatus === 'received') {
-          const spot = await storage.getParkingSpot(booking.spotId);
-          if (spot && spot.locationId) {
-            const location = await storage.getLocation(spot.locationId);
-            if (location) {
-              const existing = locationStatsMap.get(location.id) || {
-                locationName: `${location.office} - ${location.building}`,
-                bookingsCount: 0,
-                totalSpent: 0,
-                lastBookedDate: booking.bookingDate
-              };
-
-              existing.bookingsCount += 1;
-              existing.totalSpent += parseFloat(booking.totalAmount.toString());
-              
-              // Update last booked date if this booking is more recent
-              if (booking.bookingDate > existing.lastBookedDate) {
-                existing.lastBookedDate = booking.bookingDate;
-              }
-
-              locationStatsMap.set(location.id, existing);
-            }
+      for (const booking of currentPaid) {
+        const spot = spotById.get(booking.spotId);
+        if (spot?.locationId) {
+          const location = locationById.get(spot.locationId);
+          if (location) {
+            const existing = locationStatsMap.get(location.id) || {
+              locationName: `${location.office} - ${location.building}`,
+              bookingsCount: 0, totalSpent: 0, lastBookedDate: booking.bookingDate
+            };
+            existing.bookingsCount += 1;
+            existing.totalSpent += parseFloat(booking.totalAmount.toString());
+            if (booking.bookingDate > existing.lastBookedDate) existing.lastBookedDate = booking.bookingDate;
+            locationStatsMap.set(location.id, existing);
           }
         }
       }
 
       const topLocations = Array.from(locationStatsMap.entries())
-        .map(([locationId, stats]) => ({
-          locationId,
-          ...stats,
-          totalSpent: Number(stats.totalSpent.toFixed(2))
-        }))
-        .sort((a, b) => b.bookingsCount - a.bookingsCount)
-        .slice(0, 5); // Top 5 locations
+        .map(([locationId, stats]) => ({ locationId, ...stats, totalSpent: Number(stats.totalSpent.toFixed(2)) }))
+        .sort((a, b) => b.totalSpent - a.totalSpent)
+        .slice(0, 5);
 
-      // Calculate recent activity
-      const upcomingBookings = allBookings.filter(booking => 
-        booking.status === 'confirmed' && 
-        booking.bookingDate >= today
-      ).length;
+      // Status distribution: uses period+status filtered bookings so donut reflects selected filters
+      const statusMap = new Map<string, { count: number; amount: number }>();
+      for (const s of ['confirmed', 'completed', 'cancelled']) {
+        statusMap.set(s, { count: 0, amount: 0 });
+      }
+      for (const b of currentBookings) {
+        if (!statusMap.has(b.status)) continue;
+        const entry = statusMap.get(b.status)!;
+        entry.count += 1;
+        entry.amount += isPaid(b) ? parseFloat(b.totalAmount.toString()) : 0;
+      }
+      const statusDistribution = Array.from(statusMap.entries())
+        .map(([s, v]) => ({ status: s, count: v.count, amount: Number(v.amount.toFixed(2)) }));
 
-      const weekAgo = new Date(now);
-      weekAgo.setDate(weekAgo.getDate() - 7);
+      // Recent activity
+      const upcomingBookings = activeBookings;
+      const weekAgo = new Date(now); weekAgo.setDate(weekAgo.getDate() - 7);
       const weekAgoStr = await formatDateInTimezone(weekAgo, 'yyyy-MM-dd');
-
-      const completedThisWeek = allBookings.filter(booking => 
-        booking.status === 'confirmed' && 
-        booking.bookingDate >= weekAgoStr && 
-        booking.bookingDate < today
+      const completedThisWeek = allBookings.filter(b =>
+        b.status === 'completed' && b.bookingDate >= weekAgoStr && b.bookingDate < today
       ).length;
-
-      const cancelledThisMonth = allBookings.filter(booking => {
-        const bookingDate = booking.bookingDate.toString();
-        return booking.status === 'cancelled' && bookingDate.startsWith(currentMonth);
+      const cancelledThisMonth = allBookings.filter(b => {
+        const d = b.bookingDate.toString();
+        return b.status === 'cancelled' && d.startsWith(currentMonth);
       }).length;
 
-      const favoriteLocations = locationStatsMap.size;
-
-      // Return comprehensive renter statistics
       res.json({
         stats: {
+          period,
+          status,
+          periodLabel: label,
+          bookings: currentBookings.length,
+          spent: Number(currentSpent.toFixed(2)),
+          averageCostPerBooking: Number(currentAvg.toFixed(2)),
+          bookingsChange: pctChange(currentBookings.length, prevBookings.length),
+          spentChange: pctChange(currentSpent, prevSpent),
+          averageCostChange: pctChange(currentAvg, prevAvg),
+          // Period-dynamic confirmed/completed counts — derived from same status-filtered dataset
+          periodConfirmedCount: currentBookings.filter(b => b.status === 'confirmed').length,
+          periodCompletedCount: currentBookings.filter(b => b.status === 'completed').length,
+          periodConfirmedChange: pctChange(
+            currentBookings.filter(b => b.status === 'confirmed').length,
+            prevBookings.filter(b => b.status === 'confirmed').length
+          ),
+          periodCompletedChange: pctChange(
+            currentBookings.filter(b => b.status === 'completed').length,
+            prevBookings.filter(b => b.status === 'completed').length
+          ),
+          // Legacy fields
           activeBookings,
+          pastYearSpent: Number(pastYearSpent.toFixed(2)),
           thisMonthSpent: Number(thisMonthSpent.toFixed(2)),
-          thisMonthBookings: thisMonthBookings.length,
-          favoriteLocations,
-          totalBookings: allBookings.length,
+          thisMonthBookings: thisMonthBkgs.length,
+          pastYearBookings: pastYearBkgs.length,
           generatedAt: now.toISOString()
         },
-        monthlySpending,
+        spendingData,
+        monthlySpending: monthlySpendingArr,
         topLocations,
+        statusDistribution,
         recentActivity: {
           upcomingBookings,
           completedThisWeek,

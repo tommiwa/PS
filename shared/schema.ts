@@ -734,13 +734,40 @@ export interface DashboardStatsResponse {
 }
 
 // Renter Dashboard Stats API Response Types
+export type RenterStatsPeriod = 'week' | 'month' | '3months' | '6months' | 'year';
+export type RenterStatsStatus = 'all' | 'confirmed' | 'completed' | 'cancelled';
+
 export interface RenterDashboardStatsResponse {
+  // Period context
+  period: RenterStatsPeriod;
+  status: RenterStatsStatus;
+  periodLabel: string;
+  // Current period metrics
+  bookings: number;
+  spent: number;
+  averageCostPerBooking: number;
+  // Period-over-period % change (null if no previous data)
+  bookingsChange: number | null;
+  spentChange: number | null;
+  averageCostChange: number | null;
+  // Period-dynamic confirmed/completed counts (respond to both period and status)
+  periodConfirmedCount: number;
+  periodCompletedCount: number;
+  periodConfirmedChange: number | null;
+  periodCompletedChange: number | null;
+  // Legacy fields kept for backward compat
   activeBookings: number;
+  pastYearSpent: number;
   thisMonthSpent: number;
   thisMonthBookings: number;
-  pastYearSpent: number;
   pastYearBookings: number;
   generatedAt: string;
+}
+
+export interface RenterSpendingDataPoint {
+  label: string;
+  spent: number;
+  bookings: number;
 }
 
 export interface RenterMonthlySpending {
@@ -758,16 +785,24 @@ export interface RenterLocationStats {
   lastBookedDate: string;
 }
 
+export interface RenterStatusDistribution {
+  status: string;
+  count: number;
+  amount: number;
+}
+
 export interface RenterBookingTrend {
-  period: string; // e.g., "Week 1", "Week 2", etc.
+  period: string;
   bookings: number;
   spent: number;
 }
 
 export interface RenterStatisticsResponse {
   stats: RenterDashboardStatsResponse;
+  spendingData: RenterSpendingDataPoint[];
   monthlySpending: RenterMonthlySpending[];
   topLocations: RenterLocationStats[];
+  statusDistribution: RenterStatusDistribution[];
   recentActivity: {
     upcomingBookings: number;
     completedThisWeek: number;
