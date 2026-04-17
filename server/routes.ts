@@ -3613,8 +3613,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`[Booking] Created booked single-day listing for ${bookingDate}: ${bookedListing.id}`);
         
         // Update the booking to reference the new single-day listing instead of the period listing
-        // Direct DB update: storage.updateBooking uses Partial<InsertBooking> which silently drops listingId
-        await db.update(bookings).set({ listingId: bookedListing.id }).where(eq(bookings.id, newBooking.id));
+        await storage.updateBooking(newBooking.id, { listingId: bookedListing.id });
         console.log(`[Booking] Updated booking ${newBooking.id} to reference listing ${bookedListing.id}`);
         
         // Create individual single-day listings for each remaining date (status: 'available')
@@ -3725,8 +3724,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`[Booking] Created booked single-day listing for ${bookingDate}: ${bookedListing.id}`);
         
         // Update the booking to reference the new single-day listing
-        // Direct DB update: storage.updateBooking uses Partial<InsertBooking> which silently drops listingId
-        await db.update(bookings).set({ listingId: bookedListing.id }).where(eq(bookings.id, newBooking.id));
+        await storage.updateBooking(newBooking.id, { listingId: bookedListing.id });
         console.log(`[Booking] Updated booking ${newBooking.id} to reference listing ${bookedListing.id}`);
         
         // Create individual single-day listings for each remaining date (status: 'available')

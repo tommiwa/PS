@@ -148,7 +148,7 @@ export interface IStorage {
   getBookingsByListing(listingId: string): Promise<Booking[]>;
   getAllBookings(): Promise<Booking[]>;
   createBooking(booking: InsertBooking): Promise<Booking>;
-  updateBooking(id: string, updates: Partial<InsertBooking>): Promise<Booking | undefined>;
+  updateBooking(id: string, updates: Partial<typeof bookings.$inferInsert>): Promise<Booking | undefined>;
   deleteBooking(id: string): Promise<boolean>;
   // Payment marking functionality
   markPaymentReceived(id: string, paymentReceived: boolean): Promise<Booking | undefined>;
@@ -1471,7 +1471,7 @@ export class MemStorage implements IStorage {
     return createdBooking;
   }
 
-  async updateBooking(id: string, updates: Partial<InsertBooking>): Promise<Booking | undefined> {
+  async updateBooking(id: string, updates: Partial<typeof bookings.$inferInsert>): Promise<Booking | undefined> {
     // Query database first
     const existing = await db.select().from(bookings).where(eq(bookings.id, id)).limit(1);
     if (existing.length === 0) return undefined;
