@@ -1379,8 +1379,8 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               </div>
             )}
 
-            {/* How to Pay — shown for Cash/Interac bookings that aren't payroll or cancelled */}
-            {!isPayroll && !isCancelled && (booking as any).ownerPaymentInstructions && (
+            {/* How to Pay — shown only when payment is genuinely due: past date, pending payment, not payroll or cancelled */}
+            {!isPayroll && !isCancelled && isPastDate && paymentStatus === 'pending' && (booking as any).ownerPaymentInstructions && (
               <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
                 <div className="flex items-center gap-2 mb-1">
                   <CreditCard className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
