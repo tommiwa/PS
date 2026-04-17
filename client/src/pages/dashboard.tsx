@@ -447,14 +447,14 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
                       </p>
                     </CardHeader>
                     <CardContent>
-                      {renterStatsQuery.data.statusDistribution.every(s => s.count === 0) ? (
+                      {(renterStatsQuery.data.statusDistribution ?? []).every(s => s.count === 0) ? (
                         <p className="text-sm text-muted-foreground text-center py-8">No bookings in this period</p>
                       ) : (
                         <div className="h-[250px]">
                           <ResponsiveContainer width="100%" height="100%">
                             <RechartsPieChart>
                               <Pie
-                                data={renterStatsQuery.data.statusDistribution}
+                                data={renterStatsQuery.data.statusDistribution ?? []}
                                 dataKey="count"
                                 nameKey="status"
                                 cx="50%"
@@ -463,7 +463,7 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
                                 outerRadius={90}
                                 paddingAngle={3}
                               >
-                                {renterStatsQuery.data.statusDistribution.map((entry, index) => (
+                                {(renterStatsQuery.data.statusDistribution ?? []).map((entry, index) => (
                                   <Cell
                                     key={entry.status}
                                     fill={STATUS_COLORS[entry.status] || `hsl(var(--chart-${(index % 4) + 1}))`}
