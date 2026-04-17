@@ -217,18 +217,19 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
     if (!renterStatsQuery.data) return;
     const data = renterStatsQuery.data.spendingData;
     const periodLabel = renterStatsQuery.data.stats.periodLabel;
-    const statusFilter = STATUS_OPTIONS.find(s => s.value === renterStatus)?.label || renterStatus;
 
     const rows = [
-      ['period', 'bucket', 'status_filter', 'bookings', 'amount_spent'],
-      ...data.map(d => [periodLabel, d.label, statusFilter, String(d.bookings), d.spent.toFixed(2)])
+      [`Period: ${periodLabel}`],
+      [],
+      ['Date', 'Bookings', 'Amount Spent'],
+      ...data.map(d => [d.label, String(d.bookings), d.spent.toFixed(2)])
     ];
-    const csv = rows.map(r => r.map(cell => `"${cell}"`).join(',')).join('\n');
+    const csv = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `spending-${renterPeriod}-${renterStatus}.csv`;
+    a.download = `spending-${renterPeriod}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };

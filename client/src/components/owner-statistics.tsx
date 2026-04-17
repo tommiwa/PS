@@ -175,24 +175,23 @@ export function OwnerStatistics() {
 
   const handleExportCSV = () => {
     if (!data) return
-    const headers = ['Booking ID', 'Date', 'Spot', 'Location', 'Renter Name', 'Renter Email', 'Status', 'Payment Status', 'Amount']
     const rows = data.filteredBookingsCSV.map((b: OwnerBookingCSVRow) => [
-      b.bookingId,
       b.bookingDate,
       b.spotNumber,
       b.locationName,
-      b.renterName,
-      b.renterEmail,
-      b.status,
-      b.paymentStatus,
       b.amount.toFixed(2),
     ])
-    const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const csv = [
+      [`Period: ${data.periodLabel}`],
+      [],
+      ['Date', 'Spot', 'Location', 'Amount'],
+      ...rows,
+    ].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `bookings-${period}-${statusParam}.csv`
+    a.download = `bookings-${period}.csv`
     a.click()
     URL.revokeObjectURL(url)
   }
