@@ -1,7 +1,7 @@
 # BCI Parking Spot Sharing Application
 
 ## Overview
-This project is a corporate parking spot sharing application for BCI company. Its main purpose is to efficiently allocate 150 parking spots among 1000 employees across 4 locations, streamlining parking management and optimizing spot utilization. The system supports administrators and renters, with administrators managing unallocated spots. The application aims to provide a user-friendly experience for BCI employees.
+This project is a corporate parking spot sharing application designed for BCI to efficiently manage and optimize the utilization of 150 parking spots among 1000 employees across 4 locations. It streamlines parking management, supports administrators and renters, and aims to provide a user-friendly experience for BCI employees. The system supports multi-role access (admin, owner, renter) with dynamic role assignment and aims to address the challenge of limited parking resources.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -15,7 +15,7 @@ Preferred communication style: Simple, everyday language.
 - **Routing**: Wouter
 - **State Management**: TanStack React Query
 - **Theme**: Light/dark mode
-- **UI/UX Decisions**: Professional blue and neutral gray color palette, Inter font family, Tailwind's 8-point grid system, custom components, standardized location format, and role-specific dashboards with dynamic content and navigation. Sidebar navigation includes dedicated "Configuration" section with "System Settings" page for system-wide admin settings (Departments, Locations, Spot Types, App Settings) separated from personal "Account" section (Profile) for clear UX separation.
+- **UI/UX Decisions**: Professional blue and neutral gray color palette, Inter font family, Tailwind's 8-point grid system, custom components, standardized location format, and role-specific dashboards with dynamic content and navigation. Sidebar navigation includes a "Configuration" section for system-wide admin settings and a separate "Account" section for personal profiles.
 
 ### Backend
 - **Runtime**: Node.js with Express.js
@@ -28,65 +28,47 @@ Preferred communication style: Simple, everyday language.
 - **Primary Database**: PostgreSQL (Neon Database)
 - **Schema Management**: Drizzle migrations
 - **Session Storage**: PostgreSQL
-- **Storage Architecture**: Database-first, with in-memory caching for performance. All critical data persists to the database.
+- **Storage Architecture**: Database-first, with in-memory caching for performance.
 
 ### Authentication & Authorization
 - **User Management**: Multi-role access control (admin, owner, renter) with dynamic role assignment.
 - **Authentication**: Server-side session management, Replit OIDC for employee login.
-- **Persistent Login (Refresh Tokens)**: 30-day refresh tokens stored as httpOnly cookies (`bci_refresh_token`). When the 7-day session expires, the frontend silently calls `POST /api/auth/refresh` to restore the session without requiring OIDC re-login. Tokens are SHA-256 hashed in `refresh_tokens` table, rotated on each use (old token revoked, new one issued), and cleaned up daily. Supports Safari/Chrome on iPhone and Chrome on Android (including PWA mode). Tokens are revoked on explicit logout.
+- **Persistent Login**: 30-day refresh tokens (httpOnly cookies) for seamless re-authentication.
 - **Permission System**: Route and component-level checks.
 - **Role Assignment Logic**: Default "renter" on first login, "owner" for users with assigned spots, "admin" via hardcoded emails or manual assignment.
 - **"View As" Functionality**: Admin-only session-based role impersonation.
-- **Terms & Conditions**: Mandatory one-time acceptance system with versioned legal terms, simplified with emojis.
-- **User Migration**: When a user logs in with OIDC and their email matches an existing admin-created user but with different ID, the system automatically migrates all data by transferring foreign key references (parking spots, bookings, spot listings, spot assignment history, notifications, vehicles, etc.) from the old user record to the new OIDC-based record before deleting the old user.
+- **Terms & Conditions**: Mandatory one-time acceptance system with versioned legal terms.
+- **User Migration**: Automatic data migration for users logging in via OIDC whose email matches an existing admin-created user, transferring all associated data to the new OIDC-based record.
 
 ### Key Features
-- **Booking System**: Real-time management with status tracking, custom calendar, search & filtering. Includes business rules for reserved spots (non-bookable), intelligent display of booked spots, support for period listings, and data consistency across views. Tiles and calendar views are synchronized - booked spots (shown as grey/disabled in calendar) are automatically filtered from tiles view to prevent duplicate bookings. Booking form intelligently auto-populates user data (phone, vehicle license) from session and database using hydration pattern to handle async auth loading without race conditions.
-- **Concurrent Booking Prevention**: Production-ready pessimistic locking system with configurable reservation lock timeout (default 2 minutes) and date-specific composite keys prevents race conditions when multiple users attempt to book the same spot. Architecture includes: composite key locking (listingId + bookingDate) ensuring only specific dates show PENDING status, atomic lock acquisition using SELECT FOR UPDATE transactions, GET /api/active-locks endpoint for initial lock state hydration, real-time WebSocket updates across all clients with bookingDate in events, yellow "PENDING" visual states in both tiles and calendar views managed via LockContext composite key Map, countdown timer in booking dialog, automatic 30-second cleanup job for expired locks, backend validation requiring valid locks before booking creation, admin override capability to release any lock, and configurable lock timeout via admin App Settings panel with validation to ensure positive timeout values.
-- **Admin Management**: Comprehensive user, bulk spot, waiting list, and reference data management (Departments, Locations, Spot Types, App Settings) with full CRUD operations and safeguards for reserved spots. Streamlined "Create Availability" feature.
-- **App Configuration System**: Admin-only system settings management via "App Settings" tab in System Settings page. Includes configurable lock timeout with robust validation (enforces positive values, falls back to default on invalid data), secure API endpoints with type-aware validation, and user-friendly UI that converts milliseconds to seconds for timeout settings.
-- **Notification System**: Real-time alerts via email and in-app notifications. Configurable email notification preferences grouped by category (Bookings, Payments, Spot Management, Reports & System) with master toggle and per-type toggles. Preferences stored in notification_preferences table with fields: emailNotifications (master), bookingConfirmations, bookingCancellations, paymentReminders, paymentUpdates, spotAvailability, spotAssignment, weeklyReports, systemMaintenance. All notification service functions check user preferences before sending emails while in-app notifications always fire.
-- **Spot Listing Creation**: Owners can list spots with single day, period, or recurring options.
-- **Admin Dashboard Metrics**: Real-time, server-side calculated metrics for occupancy, revenue, registrations, and usage patterns, with scope filtering for "All Spots" vs. "BCI Managed Spots".
-- **Renter Dashboard Statistics**: Comprehensive real-time statistics dashboard for renters featuring stat cards (active bookings, monthly spending, favorite locations, booking history), monthly spending trends visualization using Recharts, top 5 locations by booking frequency with spending details, recent activity metrics (upcoming/completed/cancelled bookings), and quick action links. All data fetched from dedicated API endpoints (/api/renter/dashboard-stats, /api/renter/statistics) with proper timezone handling and real-time calculations.
-- **Spot Booking Management**: Five-tab interface for detailed booking views, filters, actions, and an audit history timeline. Includes scope filtering.
-- **Peer-to-Peer Booking Management**: Admin tools for managing peer-to-peer bookings, including actions, listing controls, payment management, and an audit trail.
-- **Dispute Resolution System**: Full dispute lifecycle management with creation, tracking, refund processing, and audit snapshots.
-- **Enhanced Database Schema**: Includes admin metadata fields on bookings and spot listings, and a dedicated disputes table.
+- **Booking System**: Real-time management with status tracking, custom calendar, search & filtering, including support for period listings and concurrent booking prevention using pessimistic locking with configurable reservation lock timeouts.
+- **Admin Management**: Comprehensive user, bulk spot, waiting list, and reference data management (Departments, Locations, Spot Types, App Settings) with CRUD operations and safeguards.
+- **App Configuration System**: Admin-only system settings management via "App Settings" tab, including configurable lock timeout.
+- **Notification System**: Real-time alerts via email and in-app notifications with configurable preferences.
+- **Spot Listing Creation**: Owners can list spots with single day, period, or recurring options, including a "Donate to Charity" option.
+- **Dashboards**: Admin dashboard metrics (occupancy, revenue), Renter dashboard statistics (spending trends, booking history), and Owner Statistics Dashboard (V2) with dynamic reporting, KPIs, and charts.
+- **Spot Booking Management**: Five-tab interface for detailed booking views, filters, actions, and an audit history timeline.
+- **Peer-to-Peer Booking Management**: Admin tools for managing peer-to-peer bookings.
+- **Dispute Resolution System**: Full dispute lifecycle management.
 - **Pagination System**: Client-side pagination across all admin pages.
-- **My Bookings Page (Renter/Owner)**: Redesigned with role-based display, colorful tab icons, stat cards, enhanced filters, professional action buttons (Cancel, Mark Paid, Download Receipt), and comprehensive export functionality.
-- **Reports Hub (Admin-only)**: Streamlined analytics and reporting system with two essential reports: Spot Assignments and Utilization. Features shared filter controls (date range and scope), professional Excel export, and email delivery via SendGrid, with data visualization using Recharts.
-- **Spot Assignment History Tracking**: Automated audit trail system that records all BCI-managed spot assignments and unassignments with complete user details, effective dates, and actor tracking. Includes dedicated reporting tab showing newly assigned/unassigned users with department information, email links, and Excel/PDF export capabilities.
-- **Audit Log System**: Database-persisted audit logging with hash chaining for security and integrity. All audit logs stored in PostgreSQL with automated 1-year retention policy (daily cleanup job deletes logs older than 365 days). System tracks all user actions, entity changes, and administrative activities with complete actor details and request metadata.
-- **Timezone Management System**: Full PST/PDT timezone support with configurable system-wide timezone setting. Backend utilities handle all date operations (available spots, booking validation, analytics, reports, audit exports) in configured timezone. Admin can select from common US timezones via System Settings > App Settings. Timezone config stored in app_configs table with default "America/Los_Angeles". Frontend utilities available for client-side date handling with automatic timezone detection and caching.
-- **Issue Tracking System**: Simple issue reporting system allowing all authenticated users to report problems via "Report an Issue" dialog in sidebar footer. Issues include title, description, and priority level (low/medium/high/urgent). Admin-only "Reported Issues" page under Operations section provides table view with status filtering (backlog/todo/in_progress/completed) and priority filtering. Admins can update issue status with real-time cache invalidation.
-- **Department Reserved Spots**: Spots can be configured as "Department Reserved" with a specific department restriction. When assigning users to these spots, both frontend and backend validation ensures only users from the matching department can be assigned. The assignment dialog shows a red warning and disables the assign button when a department mismatch is detected. Backend API returns descriptive error messages for department restriction violations.
-- **Donate to Charity Option**: When creating spot listings (both owner and admin), users can opt to donate all proceeds to charity. Listings with this option display a pink "Charity" badge with a heart icon on spot cards and in My Bookings. The badge appears as a promotional tag for renters browsing available spots, encouraging bookings that support charitable causes. The donateToCharity flag is stored on the spot_listings table.
-
-- **MCP Server (Model Context Protocol)**: MCP routes registered on the main Express app (port 5000) -- no separate port needed. Exposes 2 general-purpose tools via both SSE and Streamable HTTP transports with API key authentication. API keys are system-wide (not per-user), managed by admins via System Settings > API Keys tab. Keys are SHA-256 hashed and stored in `api_keys` table (max 10 system-wide keys). Tools: search_available_spots, get_locations. No user-specific or admin endpoints exposed. Server file: server/mcp.ts, started from server/index.ts. Endpoints: /mcp/sse (SSE transport), /mcp/stream (Streamable HTTP), /mcp/health (status).
-- **MCP Apps (Interactive UIs)**: search_available_spots supports MCP Apps - interactive HTML interfaces that render directly inside AI chat clients like Claude Desktop. Built with @modelcontextprotocol/ext-apps, UIs are bundled as self-contained HTML files using vite-plugin-singlefile. Source files in mcp-apps/src/, built HTML in mcp-apps/dist/. Build with: `bash mcp-apps/build.sh`. Apps adapt to host themes and support bidirectional tool calls.
+- **My Bookings Page**: Redesigned with role-based display, filters, and export functionality.
+- **Reports Hub (Admin-only)**: Streamlined analytics and reporting system for Spot Assignments and Utilization, with export capabilities.
+- **Spot Assignment History Tracking**: Automated audit trail for BCI-managed spot assignments.
+- **Audit Log System**: Database-persisted audit logging with hash chaining and 1-year retention.
+- **Timezone Management System**: Full PST/PDT timezone support with configurable system-wide timezone setting and backend/frontend utilities.
+- **Issue Tracking System**: Simple issue reporting for all authenticated users, with admin management of reported issues.
+- **Department Reserved Spots**: Spots can be configured as "Department Reserved" with validation ensuring only users from the matching department can be assigned.
+- **MCP Server (Model Context Protocol)**: Exposes general-purpose tools (search_available_spots, get_locations) via SSE and Streamable HTTP with API key authentication for AI chat clients.
+- **MCP Apps (Interactive UIs)**: Interactive HTML interfaces for tools like `search_available_spots`, designed for rendering inside AI chat clients.
 
 ## External Dependencies
 
 ### Third-party Services
 - **Neon Database**: Serverless PostgreSQL
 - **Email Service**: Dual-provider support with automatic failover
-  - **Microsoft 365 Graph API** (Primary): Uses Azure AD app registration for corporate email delivery from @bci.ca domain
-  - **Mandrill** (Secondary/Fallback): Mailchimp's transactional email service with API key authentication
-  - **Provider Priority**: MS365 is used first if configured; Mandrill is used as fallback or if MS365 is not configured
-  - **Mock Mode**: When neither provider is configured, emails are logged to console for development
-
-### Email Configuration (Environment Variables)
-**Microsoft 365 (Recommended for corporate use):**
-- `MS365_TENANT_ID`: Azure AD tenant ID
-- `MS365_CLIENT_ID`: Application (client) ID from Azure app registration
-- `MS365_CLIENT_SECRET`: Client secret from Azure app registration
-- `MS365_SENDER_EMAIL`: The M365 mailbox to send from (e.g., noreply@bci.ca)
-
-**Mandrill (Mailchimp Transactional Email):**
-- `MANDRILL_API_KEY`: Mandrill API key (found in Mandrill dashboard under Settings > SMTP & API Info)
-- `MANDRILL_FROM_EMAIL`: Sender email address (optional, defaults to noreply@bci.ca)
-- `MANDRILL_FROM_NAME`: Sender display name (optional, defaults to "BCI ParkShare")
+  - **Microsoft 365 Graph API** (Primary): Corporate email delivery via Azure AD.
+  - **Mandrill** (Secondary/Fallback): Mailchimp's transactional email service.
+  - **Mock Mode**: Console logging for development when neither is configured.
 
 ### Key Libraries
 - **@tanstack/react-query**: Server state management

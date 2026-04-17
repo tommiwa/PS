@@ -827,6 +827,101 @@ export interface OwnerStatisticsResponse {
   generatedAt: string;
 }
 
+// Owner Statistics V2 Types
+export type OwnerStatsPeriod = 'week' | 'month' | '3months' | '6months' | 'year' | 'lastyear' | 'custom';
+export type OwnerStatsStatus = 'all' | 'confirmed' | 'paid' | 'received' | 'pending' | 'cancelled';
+
+export interface OwnerSpotPerformance {
+  spotId: string;
+  spotNumber: string;
+  locationName: string;
+  totalBookings: number;
+  totalIncome: number;
+  occupancyRate: number;
+  avgBookingValue: number;
+  cancellationRate: number;
+}
+
+export interface OwnerTopRenter {
+  userId: string;
+  name: string;
+  email: string;
+  bookingCount: number;
+  totalPaid: number;
+}
+
+export interface OwnerIncomeTrendPoint {
+  label: string;
+  earned: number;
+  cancelled: number;
+}
+
+export interface OwnerStatusBreakdown {
+  status: string;
+  count: number;
+  amount: number;
+}
+
+export interface OwnerDayOfWeekData {
+  day: string;
+  shortDay: string;
+  bookings: number;
+}
+
+export interface OwnerRenterSummary {
+  totalSpent: number;
+  bookingCount: number;
+  spendingTrend: Array<{ label: string; spent: number }>;
+}
+
+export interface OwnerOwnedSpotMeta {
+  id: string;
+  spotNumber: string;
+  locationName: string;
+}
+
+export interface OwnerBookingCSVRow {
+  bookingId: string;
+  bookingDate: string;
+  spotNumber: string;
+  locationName: string;
+  renterName: string;
+  renterEmail: string;
+  status: string;
+  paymentStatus: string;
+  amount: number;
+}
+
+export interface OwnerStatisticsV2Response {
+  // KPIs
+  totalIncome: number;
+  totalBookings: number;
+  cancelledCount: number;
+  pendingCount: number;
+  occupancyRate: number;
+  avgBookingValue: number;
+  upcomingRevenue: number;
+  lostRevenue: number;
+  // Charts
+  incomeTrend: OwnerIncomeTrendPoint[];
+  prevPeriodTrend: OwnerIncomeTrendPoint[];
+  statusBreakdown: OwnerStatusBreakdown[];
+  dayOfWeekData: OwnerDayOfWeekData[];
+  // Tables
+  spotPerformance: OwnerSpotPerformance[];
+  topRenters: OwnerTopRenter[];
+  // Spot list for filter dropdown
+  ownedSpots: OwnerOwnedSpotMeta[];
+  // Renter summary (same period)
+  renterSummary: OwnerRenterSummary;
+  // Booking-level data for CSV export
+  filteredBookingsCSV: OwnerBookingCSVRow[];
+  // Meta
+  periodLabel: string;
+  totalDaysInPeriod: number;
+  generatedAt: string;
+}
+
 // Analytics API Response Types
 export interface AnalyticsOverviewResponse {
   totalRevenue: number;

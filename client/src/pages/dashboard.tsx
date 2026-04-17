@@ -1,4 +1,5 @@
 import { DashboardStats } from "@/components/dashboard-stats"
+import { OwnerStatistics } from "@/components/owner-statistics"
 import { BookingCard } from "@/components/booking-card"
 import { ParkingSpotCard } from "@/components/parking-spot-card"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -26,7 +27,6 @@ import type {
   AnalyticsIssuesResponse,
   AnalyticsUsageResponse,
   RenterStatisticsResponse,
-  OwnerStatisticsResponse,
   RenterStatsPeriod,
   RenterStatsStatus
 } from "@shared/schema"
@@ -151,11 +151,6 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
     staleTime: 5 * 60 * 1000,
   });
 
-  const ownerStatsQuery = useQuery<OwnerStatisticsResponse>({
-    queryKey: ['/api/owner/statistics'],
-    enabled: effectiveRole === "owner",
-    staleTime: 5 * 60 * 1000,
-  });
 
   const isLoading = overviewQuery.isLoading || revenueQuery.isLoading || 
                    topPerformersQuery.isLoading || issuesQuery.isLoading || 
@@ -169,7 +164,7 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
     queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-usage'] });
     queryClient.invalidateQueries({ queryKey: ['/api/renter/statistics'] });
     queryClient.invalidateQueries({ queryKey: ['/api/renter/dashboard-stats'] });
-    queryClient.invalidateQueries({ queryKey: ['/api/owner/statistics'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/owner/statistics/v2'] });
   };
 
   const SectionError = ({ title, onRetry }: { title: string; onRetry: () => void }) => (
@@ -271,48 +266,7 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
 
         {effectiveRole === "owner" && (
           <div className="space-y-6" data-testid="section-owner-dashboard">
-            <h2 className="text-2xl font-semibold">Detailed Statistics</h2>
-            {ownerStatsQuery.isLoading ? (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Skeleton className="h-[300px]" data-testid="skeleton-chart-1" />
-              </div>
-            ) : ownerStatsQuery.error ? (
-              <Card className="border-destructive" data-testid="card-stats-error">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-destructive">
-                    <AlertTriangle className="h-5 w-5" />
-                    Failed to Load Statistics
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">We couldn't load your statistics. Please refresh the page or try again later.</p>
-                </CardContent>
-              </Card>
-            ) : ownerStatsQuery.data ? (
-              <Card data-testid="card-monthly-earnings">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-primary" />
-                    Monthly Income & Spending Trends
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={ownerStatsQuery.data.monthlyEarnings}>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                        <XAxis dataKey="month" className="text-xs" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
-                        <YAxis className="text-xs" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
-                        <RechartsTooltip {...tooltipStyle} />
-                        <Legend />
-                        <Bar dataKey="earned" fill="hsl(142, 76%, 36%)" radius={[4, 4, 0, 0]} name="Income ($)" />
-                        <Bar dataKey="spent" fill="hsl(24, 94%, 50%)" radius={[4, 4, 0, 0]} name="Spent ($)" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : null}
+            <OwnerStatistics />
           </div>
         )}
 
@@ -543,12 +497,14 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
         </div>
       )}
 
-      <DashboardStats
-        userRole={effectiveRole}
-        onCardClick={handleStatCardClick}
-        renterPeriod={renterPeriod}
-        renterStatus={renterStatus}
-      />
+      {effectiveRole !== "owner" && (
+        <DashboardStats
+          userRole={effectiveRole}
+          onCardClick={handleStatCardClick}
+          renterPeriod={renterPeriod}
+          renterStatus={renterStatus}
+        />
+      )}
       
       {renderRoleSpecificContent()}
     </div>

@@ -7,7 +7,7 @@ import { setupAuth, isAuthenticated, requireAdmin, getAuthenticatedUserId, getAu
 import { z } from "zod";
 import { db } from "./db";
 import { parkingSpots, spotLocks, spotListings, bookings, issues, insertIssueSchema, updateIssueSchema, issueStatuses, termsVersions } from "@shared/schema";
-import type { Booking } from "@shared/schema";
+import type { Booking, ParkingSpot, User, OwnerStatisticsV2Response } from "@shared/schema";
 import { inArray, and, eq, lt, gt, not, or, sql } from "drizzle-orm";
 import { 
   sendAssignmentNotification, 
@@ -4486,6 +4486,404 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Error fetching owner statistics:", error);
+      res.status(500).json({ error: "Failed to fetch owner statistics" });
+    }
+  });
+
+  // Owner Statistics V2 — rich reporting dashboard
+  app.get("/api/owner/statistics/v2", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) return res.status(401).json({ error: "User not authenticated" });
+
+      // Require owner or admin role
+      const callerUser = await storage.getUser(userId);
+      const callerRoles: string[] = (callerUser?.roles ?? []);
+      if (!callerRoles.includes('owner') && !callerRoles.includes('admin')) {
+        return res.status(403).json({ error: "Owner role required" });
+      }
+
+      const now = new Date();
+      const todayStr = now.toISOString().split('T')[0];
+
+      // ---------- Parse and validate query params ----------
+      const VALID_PERIODS = ['week', 'month', '3months', '6months', 'year', 'lastyear', 'custom'];
+      const VALID_STATUSES = ['all', 'confirmed', 'paid', 'received', 'pending', 'cancelled'];
+      const periodParam = (req.query.period as string) || 'month';
+      const statusParam = (req.query.status as string) || 'all';
+      const spotIdParam = (req.query.spotId as string) || 'all';
+      const startDateParam = req.query.startDate as string | undefined;
+      const endDateParam = req.query.endDate as string | undefined;
+
+      if (!VALID_PERIODS.includes(periodParam)) {
+        return res.status(400).json({ message: `Invalid period. Must be one of: ${VALID_PERIODS.join(', ')}` });
+      }
+      const statusValues = statusParam.split(',').map(s => s.trim()).filter(Boolean);
+      if (statusParam !== 'all' && !statusValues.every(s => VALID_STATUSES.includes(s))) {
+        return res.status(400).json({ message: `Invalid status value(s). Must be one of: ${VALID_STATUSES.join(', ')}` });
+      }
+      if (periodParam === 'custom') {
+        if (!startDateParam || !endDateParam) {
+          return res.status(400).json({ message: 'Custom period requires startDate and endDate query params (YYYY-MM-DD)' });
+        }
+        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+        if (!dateRegex.test(startDateParam) || !dateRegex.test(endDateParam)) {
+          return res.status(400).json({ message: 'startDate and endDate must be in YYYY-MM-DD format' });
+        }
+        if (startDateParam > endDateParam) {
+          return res.status(400).json({ message: 'startDate must be on or before endDate' });
+        }
+      }
+
+      // ---------- Resolve date range ----------
+      let rangeStart: Date;
+      let rangeEnd: Date = new Date(now);
+      rangeEnd.setHours(23, 59, 59, 999);
+      let periodLabel = 'This Month';
+
+      if (periodParam === 'custom' && startDateParam && endDateParam) {
+        rangeStart = new Date(startDateParam + 'T00:00:00');
+        rangeEnd = new Date(endDateParam + 'T23:59:59');
+        periodLabel = `${startDateParam} – ${endDateParam}`;
+      } else if (periodParam === 'week') {
+        const dow = now.getDay();
+        const daysFromMon = (dow + 6) % 7;
+        rangeStart = new Date(now); rangeStart.setDate(now.getDate() - daysFromMon); rangeStart.setHours(0,0,0,0);
+        periodLabel = 'This Week';
+      } else if (periodParam === '3months') {
+        rangeStart = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+        periodLabel = 'Last 3 Months';
+      } else if (periodParam === '6months') {
+        rangeStart = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+        periodLabel = 'Last 6 Months';
+      } else if (periodParam === 'year') {
+        rangeStart = new Date(now.getFullYear(), 0, 1);
+        periodLabel = 'This Year';
+      } else if (periodParam === 'lastyear') {
+        rangeStart = new Date(now.getFullYear() - 1, 0, 1);
+        rangeEnd = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59);
+        periodLabel = `${now.getFullYear() - 1}`;
+      } else {
+        // month (default)
+        rangeStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        periodLabel = 'This Month';
+      }
+
+      // Compute totalDaysInPeriod dynamically from actual range (handles leap years, variable month lengths)
+      const totalDaysInPeriod = Math.max(1, Math.round((rangeEnd.getTime() - rangeStart.getTime()) / 86400000) + 1);
+
+      const rangeStartStr = rangeStart.toISOString().split('T')[0];
+      const rangeEndStr = rangeEnd.toISOString().split('T')[0];
+
+      // ---------- Previous period (for period-over-period) ----------
+      // prevRangeEnd is 1ms before rangeStart; prevRangeStart mirrors the same duration
+      const periodMs = rangeEnd.getTime() - rangeStart.getTime();
+      const prevRangeEnd = new Date(rangeStart.getTime() - 1);
+      const prevRangeStart = new Date(rangeStart.getTime() - periodMs);
+      const prevStartStr = prevRangeStart.toISOString().split('T')[0];
+      const prevEndStr = prevRangeEnd.toISOString().split('T')[0];
+
+      // ---------- Get owned spots ----------
+      const allSpots = await storage.getAllParkingSpots();
+      let ownedSpots = allSpots.filter(s => s.assignedUserId === userId || s.ownerId === userId);
+      if (spotIdParam !== 'all') {
+        ownedSpots = ownedSpots.filter(s => s.id === spotIdParam);
+      }
+
+      // Fetch all locations for name lookup
+      const allLocations = await storage.getLocations();
+      const locationById = new Map(allLocations.map(l => [l.id, l]));
+
+      const getSpotLocationName = (spot: ParkingSpot): string => {
+        if (spot.locationId) {
+          const loc = locationById.get(spot.locationId);
+          if (loc) return `${loc.office} – ${loc.building}`;
+        }
+        return spot.spotNumber || 'Unknown Location';
+      };
+
+      // Build ownedSpots meta for dropdown
+      const ownedSpotsMeta = allSpots
+        .filter(s => s.assignedUserId === userId || s.ownerId === userId)
+        .map(s => ({ id: s.id, spotNumber: s.spotNumber, locationName: getSpotLocationName(s) }));
+
+      // ---------- Status filter helper (supports comma-separated multi-select) ----------
+      const selectedStatuses = statusParam === 'all' ? null : statusParam.split(',').map(s => s.trim()).filter(Boolean);
+      const statusMatchesFilter = (booking: Booking): boolean => {
+        if (!selectedStatuses || selectedStatuses.length === 0) return true;
+        return selectedStatuses.some(s => {
+          if (s === 'paid') return booking.paymentStatus === 'paid';
+          if (s === 'received') return booking.paymentStatus === 'received';
+          return booking.status === s;
+        });
+      };
+
+      const isEarned = (booking: Booking) =>
+        booking.paymentStatus === 'paid' || booking.paymentStatus === 'received';
+
+      // ---------- Collect all bookings for owned spots (single fetch per spot) ----------
+      // Load ALL bookings per spot once; derive period/upcoming/prevPeriod subsets in memory
+      const allSpotBookingsMap: Map<string, Booking[]> = new Map();
+      await Promise.all(ownedSpots.map(async spot => {
+        const bkgs = await storage.getBookingsBySpot(spot.id);
+        allSpotBookingsMap.set(spot.id, bkgs);
+      }));
+
+      const spotBookingsMap: Map<string, Booking[]> = new Map();
+      for (const spot of ownedSpots) {
+        const allBkgs = allSpotBookingsMap.get(spot.id) || [];
+        const inPeriod = allBkgs.filter(b => {
+          const d = b.bookingDate.toString();
+          return d >= rangeStartStr && d <= rangeEndStr;
+        });
+        spotBookingsMap.set(spot.id, inPeriod);
+      }
+
+      const allPeriodBookings = Array.from(spotBookingsMap.values()).flat();
+      const filteredBookings = allPeriodBookings.filter(statusMatchesFilter);
+
+      // ---------- KPI calculations ----------
+      const earnedBookings = filteredBookings.filter(isEarned);
+      const totalIncome = earnedBookings.reduce((t, b) => t + parseFloat(b.totalAmount?.toString() || '0'), 0);
+      const totalBookings = filteredBookings.length;
+      const cancelledCount = allPeriodBookings.filter(b => b.status === 'cancelled').length;
+      const pendingCount = allPeriodBookings.filter(b => b.status === 'pending').length;
+
+      // Occupancy: (confirmed + paid + received bookings) / (numSpots × totalDaysInPeriod) * 100
+      const occupiedBookings = filteredBookings.filter(b =>
+        b.status === 'confirmed' || b.paymentStatus === 'paid' || b.paymentStatus === 'received'
+      );
+      const occupancyRate = ownedSpots.length > 0
+        ? Math.min(100, Math.round((occupiedBookings.length / (ownedSpots.length * totalDaysInPeriod)) * 10000) / 100)
+        : 0;
+
+      const avgBookingValue = earnedBookings.length > 0 ? totalIncome / earnedBookings.length : 0;
+
+      // Upcoming revenue: confirmed bookings not yet paid/received, on future dates
+      // Uses allSpotBookingsMap (already loaded above) — no additional DB calls needed
+      let upcomingRevenue = 0;
+      for (const spot of ownedSpots) {
+        const bkgs = allSpotBookingsMap.get(spot.id) || [];
+        upcomingRevenue += bkgs
+          .filter(b => b.status === 'confirmed' && b.paymentStatus === 'pending' && b.bookingDate.toString() >= todayStr)
+          .reduce((t, b) => t + parseFloat(b.totalAmount?.toString() || '0'), 0);
+      }
+
+      // Lost revenue: sum of cancelled bookings in period
+      const lostRevenue = allPeriodBookings
+        .filter(b => b.status === 'cancelled')
+        .reduce((t, b) => t + parseFloat(b.totalAmount?.toString() || '0'), 0);
+
+      // ---------- Income trend (with granularity logic) ----------
+      type TrendBin = { label: string; earned: number; cancelled: number };
+      const buildTrendBins = (bookings: Booking[], start: Date, end: Date): TrendBin[] => {
+        const diffDays = Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
+        const bins: TrendBin[] = [];
+
+        if (diffDays <= 14) {
+          // Daily
+          for (let i = 0; i < diffDays; i++) {
+            const d = new Date(start); d.setDate(start.getDate() + i);
+            const dStr = d.toISOString().split('T')[0];
+            if (dStr > todayStr) break;
+            const dayBkgs = bookings.filter(b => b.bookingDate.toString() === dStr);
+            bins.push({
+              label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+              earned: Number(dayBkgs.filter(isEarned).reduce((t, b) => t + parseFloat(b.totalAmount?.toString() || '0'), 0).toFixed(2)),
+              cancelled: Number(dayBkgs.filter(b => b.status === 'cancelled').reduce((t, b) => t + parseFloat(b.totalAmount?.toString() || '0'), 0).toFixed(2))
+            });
+          }
+        } else if (diffDays <= 92) {
+          // Weekly
+          const weekStart = new Date(start);
+          while (weekStart <= end) {
+            const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6);
+            const wsStr = weekStart.toISOString().split('T')[0];
+            const weStr = weekEnd.toISOString().split('T')[0];
+            if (wsStr > todayStr) break;
+            const weekBkgs = bookings.filter(b => { const d = b.bookingDate.toString(); return d >= wsStr && d <= weStr; });
+            bins.push({
+              label: weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+              earned: Number(weekBkgs.filter(isEarned).reduce((t, b) => t + parseFloat(b.totalAmount?.toString() || '0'), 0).toFixed(2)),
+              cancelled: Number(weekBkgs.filter(b => b.status === 'cancelled').reduce((t, b) => t + parseFloat(b.totalAmount?.toString() || '0'), 0).toFixed(2))
+            });
+            weekStart.setDate(weekStart.getDate() + 7);
+          }
+        } else {
+          // Monthly
+          const cur = new Date(start.getFullYear(), start.getMonth(), 1);
+          while (cur <= end) {
+            const mk = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}`;
+            if (mk > todayStr.substring(0,7)) break;
+            const monthBkgs = bookings.filter(b => b.bookingDate.toString().startsWith(mk));
+            bins.push({
+              label: cur.toLocaleDateString('en-US', { month: 'short', year: diffDays > 365 ? '2-digit' : undefined }),
+              earned: Number(monthBkgs.filter(isEarned).reduce((t, b) => t + parseFloat(b.totalAmount?.toString() || '0'), 0).toFixed(2)),
+              cancelled: Number(monthBkgs.filter(b => b.status === 'cancelled').reduce((t, b) => t + parseFloat(b.totalAmount?.toString() || '0'), 0).toFixed(2))
+            });
+            cur.setMonth(cur.getMonth() + 1);
+          }
+        }
+        return bins;
+      };
+
+      // Use filteredBookings for all owner-side chart/table sections
+      const incomeTrend = buildTrendBins(filteredBookings, rangeStart, rangeEnd);
+
+      // Previous period bookings for trend comparison (also filtered by status)
+      let prevPeriodTrend: TrendBin[] = [];
+      {
+        // Re-use allSpotBookingsMap — no additional DB calls
+        const prevBookings: Booking[] = [];
+        for (const spot of ownedSpots) {
+          const bkgs = allSpotBookingsMap.get(spot.id) || [];
+          const prevInPeriod = bkgs.filter(b => {
+            const d = b.bookingDate.toString(); return d >= prevStartStr && d <= prevEndStr;
+          });
+          prevBookings.push(...prevInPeriod.filter(statusMatchesFilter));
+        }
+        prevPeriodTrend = buildTrendBins(prevBookings, prevRangeStart, prevRangeEnd);
+      }
+
+      // ---------- Status breakdown (uses filteredBookings for consistency) ----------
+      const statusBreakdownMap = new Map<string, { count: number; amount: number }>();
+      for (const s of ['paid', 'received', 'confirmed', 'pending', 'cancelled']) {
+        statusBreakdownMap.set(s, { count: 0, amount: 0 });
+      }
+      for (const b of filteredBookings) {
+        const rawKey = isEarned(b) ? b.paymentStatus : b.status;
+        // Normalize 'completed' → 'confirmed' to keep breakdown aligned with UI filter taxonomy
+        const key = rawKey === 'completed' ? 'confirmed' : (rawKey ?? 'pending');
+        const entry = statusBreakdownMap.get(key) || { count: 0, amount: 0 };
+        entry.count += 1;
+        entry.amount += parseFloat(b.totalAmount?.toString() || '0');
+        statusBreakdownMap.set(key, entry);
+      }
+      const statusBreakdown = Array.from(statusBreakdownMap.entries())
+        .filter(([, v]) => v.count > 0)
+        .map(([s, v]) => ({ status: s, count: v.count, amount: Number(v.amount.toFixed(2)) }));
+
+      // ---------- Day-of-week popularity (uses filteredBookings) ----------
+      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const shortDayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const dowCounts = new Array(7).fill(0);
+      for (const b of filteredBookings) {
+        const d = new Date(b.bookingDate.toString() + 'T12:00:00');
+        dowCounts[d.getDay()]++;
+      }
+      const dayOfWeekData = dayNames.map((day, i) => ({ day, shortDay: shortDayNames[i], bookings: dowCounts[i] }));
+
+      // ---------- Per-spot performance (applies status filter per spot) ----------
+      const spotPerformance = await Promise.all(ownedSpots.map(async spot => {
+        const allSpotBkgs = spotBookingsMap.get(spot.id) || [];
+        const bkgs = allSpotBkgs.filter(statusMatchesFilter);
+        const allCancelled = allSpotBkgs.filter(b => b.status === 'cancelled');
+        const earned = bkgs.filter(isEarned);
+        // Occupancy includes confirmed + paid + received (consistent with overall occupancy)
+        const spotOccupied = bkgs.filter(b =>
+          b.status === 'confirmed' || b.paymentStatus === 'paid' || b.paymentStatus === 'received'
+        );
+        const income = earned.reduce((t, b) => t + parseFloat(b.totalAmount?.toString() || '0'), 0);
+        const occ = totalDaysInPeriod > 0 ? Math.min(100, Math.round((spotOccupied.length / totalDaysInPeriod) * 10000) / 100) : 0;
+        return {
+          spotId: spot.id,
+          spotNumber: spot.spotNumber,
+          locationName: getSpotLocationName(spot),
+          totalBookings: bkgs.length,
+          totalIncome: Number(income.toFixed(2)),
+          occupancyRate: occ,
+          avgBookingValue: earned.length > 0 ? Number((income / earned.length).toFixed(2)) : 0,
+          cancellationRate: allSpotBkgs.length > 0 ? Math.round((allCancelled.length / allSpotBkgs.length) * 10000) / 100 : 0,
+        };
+      }));
+
+      // ---------- Top renters (uses filteredBookings) ----------
+      const renterStatsMap = new Map<string, { bookingCount: number; totalPaid: number }>();
+      for (const b of filteredBookings) {
+        if (!b.renterId) continue;
+        const entry = renterStatsMap.get(b.renterId) || { bookingCount: 0, totalPaid: 0 };
+        entry.bookingCount += 1;
+        if (isEarned(b)) entry.totalPaid += parseFloat(b.totalAmount?.toString() || '0');
+        renterStatsMap.set(b.renterId, entry);
+      }
+      const topRenterIds = Array.from(renterStatsMap.entries())
+        .sort((a, b) => b[1].bookingCount - a[1].bookingCount)
+        .slice(0, 5)
+        .map(([id]) => id);
+      const topRenters = await Promise.all(topRenterIds.map(async uid => {
+        const u = await storage.getUser(uid);
+        const stats = renterStatsMap.get(uid)!;
+        return {
+          userId: uid,
+          name: u ? `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email : uid,
+          email: u?.email || '',
+          bookingCount: stats.bookingCount,
+          totalPaid: Number(stats.totalPaid.toFixed(2)),
+        };
+      }));
+
+      // ---------- Filtered bookings list for CSV export ----------
+      // Fetch renter names for CSV in batch
+      const csvUserIds = [...new Set(filteredBookings.map(b => b.renterId).filter(Boolean))];
+      const csvUsers = await Promise.all(csvUserIds.map(uid => storage.getUser(uid)));
+      const csvUserMap = new Map(csvUsers.filter(Boolean).map(u => [u!.id, u!]));
+      const spotMeta = new Map(ownedSpots.map(s => [s.id, s]));
+      const filteredBookingsCSV = filteredBookings.map(b => {
+        const u = csvUserMap.get(b.renterId);
+        const s = spotMeta.get(b.spotId);
+        return {
+          bookingId: b.id,
+          bookingDate: b.bookingDate.toString(),
+          spotNumber: s?.spotNumber || b.spotId,
+          locationName: s ? getSpotLocationName(s) : '',
+          renterName: u ? `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email : (b.renterId || ''),
+          renterEmail: u?.email || '',
+          status: b.status,
+          paymentStatus: b.paymentStatus,
+          amount: Number(parseFloat(b.totalAmount?.toString() || '0').toFixed(2)),
+        };
+      });
+
+      // ---------- Renter summary (same period, current user as renter) ----------
+      const renterBkgs = await storage.getBookingsByRenter(userId);
+      const renterPeriodBkgs = renterBkgs.filter(b => {
+        const d = b.bookingDate.toString(); return d >= rangeStartStr && d <= rangeEndStr;
+      });
+      const renterEarned = renterPeriodBkgs.filter(b => b.paymentStatus === 'paid' || b.paymentStatus === 'received');
+      const renterTotalSpent = renterEarned.reduce((t, b) => t + parseFloat(b.totalAmount?.toString() || '0'), 0);
+      const renterSpendingTrend = buildTrendBins(renterPeriodBkgs, rangeStart, rangeEnd)
+        .map(bin => ({ label: bin.label, spent: bin.earned }));
+
+      const renterSummary = {
+        totalSpent: Number(renterTotalSpent.toFixed(2)),
+        bookingCount: renterPeriodBkgs.length,
+        spendingTrend: renterSpendingTrend,
+      };
+
+      res.json({
+        totalIncome: Number(totalIncome.toFixed(2)),
+        totalBookings,
+        cancelledCount,
+        pendingCount,
+        occupancyRate,
+        avgBookingValue: Number(avgBookingValue.toFixed(2)),
+        upcomingRevenue: Number(upcomingRevenue.toFixed(2)),
+        lostRevenue: Number(lostRevenue.toFixed(2)),
+        incomeTrend,
+        prevPeriodTrend,
+        statusBreakdown,
+        dayOfWeekData,
+        spotPerformance,
+        topRenters,
+        ownedSpots: ownedSpotsMeta,
+        renterSummary,
+        filteredBookingsCSV,
+        periodLabel,
+        totalDaysInPeriod,
+        generatedAt: now.toISOString(),
+      } as OwnerStatisticsV2Response);
+    } catch (error) {
+      console.error("Error fetching owner statistics v2:", error);
       res.status(500).json({ error: "Failed to fetch owner statistics" });
     }
   });
