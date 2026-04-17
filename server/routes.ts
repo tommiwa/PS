@@ -2462,8 +2462,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Determine if this listing is effectively booked
         const isBooked = booking !== null;
         
+        // Defensive fallback: if the DB says 'booked' but no active booking record is linked,
+        // the listing is an orphan (e.g. from a failed period/recurring split). Treat as available
+        // in the API response so the frontend never shows "Unknown Renter".
+        const effectiveStatus = (listing.status === 'booked' && !isBooked) ? 'available' : listing.status;
+        
         return {
           ...listing,
+          status: effectiveStatus,
           spot: {
             spotNumber: spot?.spotNumber || 'Unknown',
             location: locationName,
@@ -3607,7 +3613,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`[Booking] Created booked single-day listing for ${bookingDate}: ${bookedListing.id}`);
         
         // Update the booking to reference the new single-day listing instead of the period listing
-        await storage.updateBooking(newBooking.id, { listingId: bookedListing.id } as any);
+        // Direct DB update: storage.updateBooking uses Partial<InsertBooking> which silently drops listingId
+        await db.update(bookings).set({ listingId: bookedListing.id }).where(eq(bookings.id, newBooking.id));
         console.log(`[Booking] Updated booking ${newBooking.id} to reference listing ${bookedListing.id}`);
         
         // Create individual single-day listings for each remaining date (status: 'available')
@@ -3718,7 +3725,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`[Booking] Created booked single-day listing for ${bookingDate}: ${bookedListing.id}`);
         
         // Update the booking to reference the new single-day listing
-        await storage.updateBooking(newBooking.id, { listingId: bookedListing.id } as any);
+        // Direct DB update: storage.updateBooking uses Partial<InsertBooking> which silently drops listingId
+        await db.update(bookings).set({ listingId: bookedListing.id }).where(eq(bookings.id, newBooking.id));
         console.log(`[Booking] Updated booking ${newBooking.id} to reference listing ${bookedListing.id}`);
         
         // Create individual single-day listings for each remaining date (status: 'available')

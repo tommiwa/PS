@@ -188,6 +188,50 @@ const migrations: MigrationCheck[] = [
       `ALTER TABLE sale_events ADD COLUMN IF NOT EXISTS notify_active_renters BOOLEAN NOT NULL DEFAULT false`,
     ],
   },
+  {
+    name: "fix_orphaned_booking_listing_ids",
+    checkQuery: `
+      SELECT NOT EXISTS (
+        SELECT 1
+        FROM bookings b
+        JOIN spot_listings sl ON sl.id = b.listing_id
+        WHERE sl.status = 'cancelled'
+          AND sl.listing_type IN ('period', 'recurring')
+          AND b.status != 'cancelled'
+          AND EXISTS (
+            SELECT 1
+            FROM spot_listings sl2
+            WHERE sl2.spot_id = b.spot_id
+              AND sl2.single_date = b.booking_date
+              AND sl2.listing_type = 'single'
+              AND sl2.status = 'booked'
+          )
+      ) AS exists
+    `,
+    migrationStatements: [
+      `
+        WITH candidate_listings AS (
+          SELECT DISTINCT ON (spot_id, single_date)
+            id, spot_id, single_date
+          FROM spot_listings
+          WHERE listing_type = 'single'
+            AND status = 'booked'
+          ORDER BY spot_id, single_date, created_at DESC
+        )
+        UPDATE bookings
+        SET listing_id = cl.id,
+            updated_at = NOW()
+        FROM spot_listings sl
+        JOIN candidate_listings cl
+          ON cl.spot_id = sl.spot_id
+         AND cl.single_date = bookings.booking_date
+        WHERE bookings.listing_id = sl.id
+          AND sl.status = 'cancelled'
+          AND sl.listing_type IN ('period', 'recurring')
+          AND bookings.status != 'cancelled'
+      `,
+    ],
+  },
 ];
 
 export async function runMigrations(): Promise<void> {
