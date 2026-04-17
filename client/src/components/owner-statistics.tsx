@@ -14,7 +14,7 @@ import {
   ResponsiveContainer
 } from "recharts"
 import {
-  TrendingUp, TrendingDown, DollarSign, Calendar, Target, AlertTriangle,
+  TrendingUp, DollarSign, Calendar, Target, AlertTriangle,
   Users, Clock, Download, RefreshCw, ChevronUp, ChevronDown, ChevronsUpDown,
   Car, MapPin, BarChart3
 } from "lucide-react"
@@ -139,6 +139,11 @@ export function OwnerStatistics() {
       prevEarned: data.prevPeriodTrend[i]?.earned ?? null,
     }))
   }, [data?.incomeTrend, data?.prevPeriodTrend])
+
+  const uniqueRentersCount = useMemo(() => {
+    if (!data?.filteredBookingsCSV) return 0
+    return new Set(data.filteredBookingsCSV.map(b => b.renterEmail)).size
+  }, [data?.filteredBookingsCSV])
 
   const sortedSpotPerformance = useMemo(() => {
     if (!data?.spotPerformance) return []
@@ -352,10 +357,7 @@ export function OwnerStatistics() {
               <KpiCard
                 title="Total Bookings"
                 value={String(data.totalBookings)}
-                sub={[
-                  data.cancelledCount > 0 ? `${data.cancelledCount} cancelled` : null,
-                  data.pendingCount > 0 ? `${data.pendingCount} pending` : null,
-                ].filter(Boolean).join(', ') || data.periodLabel}
+                sub={data.periodLabel}
                 icon={<Calendar className="h-4 w-4" />}
                 variant="neutral"
                 testId="kpi-total-bookings"
@@ -385,12 +387,12 @@ export function OwnerStatistics() {
                 testId="kpi-upcoming"
               />
               <KpiCard
-                title="Lost Revenue"
-                value={fmt(data.lostRevenue)}
-                sub="from cancellations"
-                icon={<TrendingDown className="h-4 w-4" />}
-                variant="attention"
-                testId="kpi-lost"
+                title="Unique Renters"
+                value={String(uniqueRentersCount)}
+                sub="people who parked with you"
+                icon={<Users className="h-4 w-4" />}
+                variant="positive"
+                testId="kpi-unique-renters"
               />
             </div>
           ) : null}
