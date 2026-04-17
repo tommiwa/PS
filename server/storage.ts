@@ -429,7 +429,6 @@ export class MemStorage implements IStorage {
   private users: Map<string, User>;
   private parkingSpots: Map<string, ParkingSpot>;
   private spotListings: Map<string, SpotListing>;
-  private bookings: Map<string, Booking>;
   private waitingList: Map<string, WaitingList>;
   private vehicles: Map<string, Vehicle>;
   private notificationPreferences: Map<string, NotificationPreferences>;
@@ -441,7 +440,6 @@ export class MemStorage implements IStorage {
     this.users = new Map();
     this.parkingSpots = new Map();
     this.spotListings = new Map();
-    this.bookings = new Map();
     this.waitingList = new Map();
     this.vehicles = new Map();
     this.notificationPreferences = new Map();
@@ -1388,18 +1386,11 @@ export class MemStorage implements IStorage {
   async getBooking(id: string): Promise<Booking | undefined> {
     const result = await db.select().from(bookings).where(eq(bookings.id, id)).limit(1);
     if (result.length === 0) return undefined;
-    
-    // Update memory cache for performance
-    this.bookings.set(result[0].id, result[0]);
     return result[0];
   }
 
   async getBookingsByRenter(renterId: string): Promise<Booking[]> {
-    const renterBookings = await db.select().from(bookings).where(eq(bookings.renterId, renterId));
-    
-    // Update memory cache
-    renterBookings.forEach(booking => this.bookings.set(booking.id, booking));
-    return renterBookings;
+    return db.select().from(bookings).where(eq(bookings.renterId, renterId));
   }
 
   async getBookingsByUser(userId: string): Promise<Booking[]> {
@@ -1408,35 +1399,19 @@ export class MemStorage implements IStorage {
   }
 
   async getBookingsByOwner(ownerId: string): Promise<Booking[]> {
-    const ownerBookings = await db.select().from(bookings).where(eq(bookings.ownerId, ownerId));
-    
-    // Update memory cache
-    ownerBookings.forEach(booking => this.bookings.set(booking.id, booking));
-    return ownerBookings;
+    return db.select().from(bookings).where(eq(bookings.ownerId, ownerId));
   }
 
   async getBookingsBySpot(spotId: string): Promise<Booking[]> {
-    const spotBookings = await db.select().from(bookings).where(eq(bookings.spotId, spotId));
-    
-    // Update memory cache
-    spotBookings.forEach(booking => this.bookings.set(booking.id, booking));
-    return spotBookings;
+    return db.select().from(bookings).where(eq(bookings.spotId, spotId));
   }
 
   async getBookingsByListing(listingId: string): Promise<Booking[]> {
-    const listingBookings = await db.select().from(bookings).where(eq(bookings.listingId, listingId));
-    
-    // Update memory cache
-    listingBookings.forEach(booking => this.bookings.set(booking.id, booking));
-    return listingBookings;
+    return db.select().from(bookings).where(eq(bookings.listingId, listingId));
   }
 
   async getAllBookings(): Promise<Booking[]> {
-    const allBookings = await db.select().from(bookings);
-    
-    // Update memory cache
-    allBookings.forEach(booking => this.bookings.set(booking.id, booking));
-    return allBookings;
+    return db.select().from(bookings);
   }
 
   async createBooking(insertBooking: InsertBooking & { renterId: string; ownerId: string }): Promise<Booking> {
@@ -1465,9 +1440,6 @@ export class MemStorage implements IStorage {
       updatedAt: now
     }).returning();
     
-    // Also update in-memory cache for backwards compatibility
-    this.bookings.set(id, createdBooking);
-    
     return createdBooking;
   }
 
@@ -1486,17 +1458,11 @@ export class MemStorage implements IStorage {
       .where(eq(bookings.id, id))
       .returning();
 
-    // Update memory cache for performance
-    this.bookings.set(id, updatedBooking);
     return updatedBooking;
   }
 
   async deleteBooking(id: string): Promise<boolean> {
     const deleted = await db.delete(bookings).where(eq(bookings.id, id));
-    
-    // Also delete from memory cache
-    this.bookings.delete(id);
-    
     return (deleted.rowCount ?? 0) > 0;
   }
 
@@ -1526,8 +1492,6 @@ export class MemStorage implements IStorage {
       .where(eq(bookings.id, id))
       .returning();
 
-    // Update memory cache for performance
-    this.bookings.set(id, updatedBooking);
     return updatedBooking;
   }
 
@@ -1556,8 +1520,6 @@ export class MemStorage implements IStorage {
       .where(eq(bookings.id, id))
       .returning();
 
-    // Update memory cache for performance
-    this.bookings.set(id, updatedBooking);
     return updatedBooking;
   }
 
@@ -1571,11 +1533,7 @@ export class MemStorage implements IStorage {
   }
 
   async getBookingsForDate(date: string): Promise<Booking[]> {
-    const dateBookings = await db.select().from(bookings).where(eq(bookings.bookingDate, date));
-    
-    // Update memory cache
-    dateBookings.forEach(booking => this.bookings.set(booking.id, booking));
-    return dateBookings;
+    return db.select().from(bookings).where(eq(bookings.bookingDate, date));
   }
 
   // Waiting List operations
