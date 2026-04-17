@@ -4557,6 +4557,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const dow = now.getDay();
         const daysFromMon = (dow + 6) % 7;
         rangeStart = new Date(now); rangeStart.setDate(now.getDate() - daysFromMon); rangeStart.setHours(0,0,0,0);
+        // End at Sunday (6 days after Monday start)
+        rangeEnd = new Date(rangeStart); rangeEnd.setDate(rangeStart.getDate() + 6); rangeEnd.setHours(23,59,59,999);
         periodLabel = 'This Week';
       } else if (periodParam === '3months') {
         rangeStart = new Date(now.getFullYear(), now.getMonth() - 2, 1);
@@ -4574,6 +4576,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         // month (default)
         rangeStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        // End at last day of current month
+        rangeEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
         periodLabel = 'This Month';
       }
 

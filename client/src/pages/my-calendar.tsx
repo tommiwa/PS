@@ -46,6 +46,7 @@ interface RenterBookingView {
 
 interface OwnerListingView {
   id: string
+  spotId: string
   listingType: "single" | "period" | "recurring"
   singleDate: string | null
   periodStartDate: string | null
@@ -61,6 +62,7 @@ interface OwnerListingView {
 
 type CalendarEntry = {
   id: string
+  spotId?: string
   date: string
   spotNumber: string
   location: string
@@ -121,6 +123,7 @@ function listingToCalendarEntries(listing: OwnerListingView): CalendarEntry[] {
   const dates = expandListingToDates(listing)
   return dates.map((date) => ({
     id: listing.id,
+    spotId: listing.spotId,
     date,
     spotNumber,
     location,
@@ -373,9 +376,23 @@ export default function MyCalendar() {
 
   const isLoading = isOwnerView ? isLoadingListings : isLoadingBookings
 
-  const allEntries: CalendarEntry[] = isOwnerView
+  const rawEntries: CalendarEntry[] = isOwnerView
     ? ownerListings.flatMap((l) => listingToCalendarEntries(l))
     : renterBookings.map((b) => bookingToCalendarEntry(b))
+
+  // For owner view, deduplicate by (date, spotNumber) so that split listings
+  // (recurring parent + individual single children for the same spot/date) don't appear twice.
+  const allEntries: CalendarEntry[] = isOwnerView
+    ? (() => {
+        const seen = new Set<string>()
+        return rawEntries.filter((e) => {
+          const key = `${e.date}|${e.spotId ?? e.spotNumber}`
+          if (seen.has(key)) return false
+          seen.add(key)
+          return true
+        })
+      })()
+    : rawEntries
 
   const entries: CalendarEntry[] = allEntries.filter((e) => e.status !== "cancelled")
 
