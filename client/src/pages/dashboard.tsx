@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
-import { Calendar, MapPin, Clock, Plus, Users, Car, TrendingUp, BarChart3, PieChart, Target, DollarSign, AlertTriangle, Download, RefreshCw, Loader2, Eye, EyeOff, AlertCircle, Bell } from "lucide-react"
+import { Calendar, MapPin, Clock, Plus, Users, Car, TrendingUp, BarChart3, PieChart, Target, DollarSign, AlertTriangle, Download, RefreshCw, Loader2, Eye, EyeOff, AlertCircle, Bell, ParkingSquare } from "lucide-react"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { useAuth } from "@/contexts/auth-context"
 import { useState, useEffect } from "react"
@@ -392,27 +392,27 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
 
                 {/* Bottom row: Spending by Location + Status Breakdown */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Spending by Location */}
-                  <Card data-testid="card-spending-by-location">
+                  {/* Top Spots by Spend */}
+                  <Card data-testid="card-top-spots-by-spend">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
-                        <MapPin className="h-5 w-5 text-primary" />
-                        Top Locations by Spend
+                        <ParkingSquare className="h-5 w-5 text-primary" />
+                        Top Spots by Spend
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      {renterStatsQuery.data.topLocations.length === 0 ? (
-                        <p className="text-sm text-muted-foreground text-center py-8">No location data for this period</p>
+                      {renterStatsQuery.data.topSpots.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-8">No spot data for this period</p>
                       ) : (
                         <div className="h-[250px]">
                           <ResponsiveContainer width="100%" height="100%">
                             <BarChart
                               layout="vertical"
-                              data={renterStatsQuery.data.topLocations.map(l => ({
-                                name: l.locationName.length > 20 ? l.locationName.substring(0, 18) + '…' : l.locationName,
-                                fullName: l.locationName,
-                                spent: l.totalSpent,
-                                bookings: l.bookingsCount
+                              data={renterStatsQuery.data.topSpots.map(s => ({
+                                name: s.spotNumber.length > 20 ? s.spotNumber.substring(0, 18) + '…' : s.spotNumber,
+                                fullName: s.spotNumber,
+                                spent: s.totalSpent,
+                                bookings: s.bookingsCount
                               }))}
                               margin={{ left: 8, right: 16 }}
                             >

@@ -777,12 +777,11 @@ export interface RenterMonthlySpending {
   year: number;
 }
 
-export interface RenterLocationStats {
-  locationId: number;
-  locationName: string;
+export interface RenterSpotStats {
+  spotId: string;
+  spotNumber: string;
   bookingsCount: number;
   totalSpent: number;
-  lastBookedDate: string;
 }
 
 export interface RenterStatusDistribution {
@@ -801,7 +800,7 @@ export interface RenterStatisticsResponse {
   stats: RenterDashboardStatsResponse;
   spendingData: RenterSpendingDataPoint[];
   monthlySpending: RenterMonthlySpending[];
-  topLocations: RenterLocationStats[];
+  topSpots: RenterSpotStats[];
   statusDistribution: RenterStatusDistribution[];
   recentActivity: {
     upcomingBookings: number;

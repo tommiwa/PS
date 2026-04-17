@@ -4256,41 +4256,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Top locations: use paid bookings only for accurate spending amounts
-      // Batch-fetch all spots and locations to avoid N+1 queries
+      // Top spots: use paid bookings only, group by spotId, look up spotNumber
       const uniqueSpotIds = [...new Set(currentPaid.map(b => b.spotId))];
-      const [allLocations, fetchedSpots] = await Promise.all([
-        storage.getLocations(),
-        Promise.all(uniqueSpotIds.map(id => storage.getParkingSpot(id)))
-      ]);
-      const locationById = new Map(allLocations.map(l => [l.id, l]));
+      const fetchedSpots = await Promise.all(uniqueSpotIds.map(id => storage.getParkingSpot(id)));
       const spotById = new Map(
         fetchedSpots.filter((s): s is NonNullable<typeof s> => s != null).map(s => [s.id, s])
       );
 
-      const locationStatsMap = new Map<number, {
-        locationName: string; bookingsCount: number; totalSpent: number; lastBookedDate: string;
-      }>();
+      const spotStatsMap = new Map<string, { spotNumber: string; bookingsCount: number; totalSpent: number }>();
 
       for (const booking of currentPaid) {
         const spot = spotById.get(booking.spotId);
-        if (spot?.locationId) {
-          const location = locationById.get(spot.locationId);
-          if (location) {
-            const existing = locationStatsMap.get(location.id) || {
-              locationName: `${location.office} - ${location.building}`,
-              bookingsCount: 0, totalSpent: 0, lastBookedDate: booking.bookingDate
-            };
-            existing.bookingsCount += 1;
-            existing.totalSpent += parseFloat(booking.totalAmount.toString());
-            if (booking.bookingDate > existing.lastBookedDate) existing.lastBookedDate = booking.bookingDate;
-            locationStatsMap.set(location.id, existing);
-          }
+        if (spot) {
+          const existing = spotStatsMap.get(booking.spotId) || {
+            spotNumber: spot.spotNumber, bookingsCount: 0, totalSpent: 0
+          };
+          existing.bookingsCount += 1;
+          existing.totalSpent += parseFloat(booking.totalAmount.toString());
+          spotStatsMap.set(booking.spotId, existing);
         }
       }
 
-      const topLocations = Array.from(locationStatsMap.entries())
-        .map(([locationId, stats]) => ({ locationId, ...stats, totalSpent: Number(stats.totalSpent.toFixed(2)) }))
+      const topSpots = Array.from(spotStatsMap.entries())
+        .map(([spotId, stats]) => ({ spotId, ...stats, totalSpent: Number(stats.totalSpent.toFixed(2)) }))
         .sort((a, b) => b.totalSpent - a.totalSpent)
         .slice(0, 5);
 
@@ -4352,7 +4340,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
         spendingData,
         monthlySpending: monthlySpendingArr,
-        topLocations,
+        topSpots,
         statusDistribution,
         recentActivity: {
           upcomingBookings,
