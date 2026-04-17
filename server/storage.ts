@@ -426,26 +426,9 @@ export interface IStorage {
 }
 
 export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-  private parkingSpots: Map<string, ParkingSpot>;
-  private spotListings: Map<string, SpotListing>;
-  private waitingList: Map<string, WaitingList>;
-  private vehicles: Map<string, Vehicle>;
-  private notificationPreferences: Map<string, NotificationPreferences>;
-  private paymentPreferences: Map<string, PaymentPreferences>;
-  private inAppNotifications: Map<string, InAppNotification>;
   private auditStorage: IAuditStorage;
 
   constructor(auditStorage?: IAuditStorage) {
-    this.users = new Map();
-    this.parkingSpots = new Map();
-    this.spotListings = new Map();
-    this.waitingList = new Map();
-    this.vehicles = new Map();
-    this.notificationPreferences = new Map();
-    this.paymentPreferences = new Map();
-    this.inAppNotifications = new Map();
-    
     // Inject audit storage (will be set externally)
     this.auditStorage = auditStorage as IAuditStorage;
     
@@ -635,18 +618,12 @@ export class MemStorage implements IStorage {
       return undefined;
     }
     
-    const user = result[0];
-    // Update in-memory cache
-    this.users.set(id, user);
-    return user;
+    return result[0];
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
     const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
     if (result.length === 0) return undefined;
-    
-    // Update memory cache
-    this.users.set(result[0].id, result[0]);
     return result[0];
   }
 
@@ -693,8 +670,6 @@ export class MemStorage implements IStorage {
         updatedAt: now
       }).returning();
       
-      // Update memory cache
-      this.users.set(userData.id, newUser);
       return newUser;
     } else {
       // UPDATE existing user
@@ -712,8 +687,6 @@ export class MemStorage implements IStorage {
         .where(eq(users.id, userData.id))
         .returning();
       
-      // Update memory cache
-      this.users.set(userData.id, updated);
       return updated;
     }
   }
@@ -726,11 +699,7 @@ export class MemStorage implements IStorage {
       query = query.where(sqlOp`${users.status} != 'deleted'`) as any;
     }
     
-    const allUsers = await query;
-    
-    // Update memory cache
-    allUsers.forEach(user => this.users.set(user.id, user));
-    return allUsers;
+    return await query;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
@@ -752,9 +721,6 @@ export class MemStorage implements IStorage {
       createdAt: now,
       updatedAt: now
     }).returning();
-    
-    // Also update in-memory cache for backwards compatibility
-    this.users.set(id, createdUser);
     
     return createdUser;
   }
@@ -781,12 +747,7 @@ export class MemStorage implements IStorage {
       return undefined;
     }
     
-    const updatedUser = result[0];
-    
-    // Also update in-memory map for consistency
-    this.users.set(id, updatedUser);
-    
-    return updatedUser;
+    return result[0];
   }
 
   async deleteUser(id: string): Promise<boolean> {
@@ -803,14 +764,7 @@ export class MemStorage implements IStorage {
       .where(eq(users.id, id))
       .returning();
     
-    if (result.length === 0) {
-      return false;
-    }
-    
-    // Update memory cache with the soft-deleted user
-    this.users.set(id, result[0]);
-    
-    return true;
+    return result.length > 0;
   }
 
   async reactivateUser(id: string): Promise<User | undefined> {
@@ -830,9 +784,6 @@ export class MemStorage implements IStorage {
     if (result.length === 0) {
       return undefined;
     }
-    
-    // Update memory cache with the reactivated user
-    this.users.set(id, result[0]);
     
     return result[0];
   }
@@ -912,23 +863,11 @@ export class MemStorage implements IStorage {
   // Parking Spot operations
   async getParkingSpot(id: string): Promise<ParkingSpot | undefined> {
     const spots = await db.select().from(parkingSpots).where(eq(parkingSpots.id, id));
-    const spot = spots[0];
-    
-    // Update memory cache for performance
-    if (spot) {
-      this.parkingSpots.set(spot.id, spot);
-    }
-    
-    return spot;
+    return spots[0];
   }
 
   async getParkingSpotsByOwner(ownerId: string): Promise<ParkingSpot[]> {
-    const spots = await db.select().from(parkingSpots).where(eq(parkingSpots.ownerId, ownerId));
-    
-    // Update memory cache for performance
-    spots.forEach(spot => this.parkingSpots.set(spot.id, spot));
-    
-    return spots;
+    return await db.select().from(parkingSpots).where(eq(parkingSpots.ownerId, ownerId));
   }
 
   // Enrich spot with location and spot type info (for user profile display)
@@ -968,12 +907,7 @@ export class MemStorage implements IStorage {
   }
 
   async getAllParkingSpots(): Promise<ParkingSpot[]> {
-    const spots = await db.select().from(parkingSpots);
-    
-    // Update memory cache for performance
-    spots.forEach(spot => this.parkingSpots.set(spot.id, spot));
-    
-    return spots;
+    return await db.select().from(parkingSpots);
   }
 
   // Enriched parking spot methods with user information
@@ -1065,8 +999,6 @@ export class MemStorage implements IStorage {
           : user.firstName || user.lastName || user.email || undefined;
         enrichedSpot.assignedUserEmail = user.email || undefined;
         enrichedSpot.assignedUserDepartment = department?.name || undefined;
-        // Update user cache
-        this.users.set(user.id, user);
       }
     }
     
@@ -1079,13 +1011,7 @@ export class MemStorage implements IStorage {
     const result = await db.select().from(parkingSpots).where(eq(parkingSpots.id, id)).limit(1);
     if (result.length === 0) return undefined;
 
-    const spot = result[0];
-    
-    // Update memory cache for performance
-    this.parkingSpots.set(spot.id, spot);
-    
-    // Enrich with user data (also from database)
-    return this.enrichSpotWithSafeUserInfo(spot);
+    return this.enrichSpotWithSafeUserInfo(result[0]);
   }
 
   async getAllParkingSpotsWithSafeUserData(): Promise<ParkingSpotWithSafeUserData[]> {
@@ -1157,8 +1083,6 @@ export class MemStorage implements IStorage {
           ? `${user.firstName} ${user.lastName}` 
           : user.firstName || user.lastName || user.email || undefined;
         enrichedSpot.assignedUserDepartment = department?.name || undefined;
-        // Update user cache
-        this.users.set(user.id, user);
         // Intentionally NOT including assignedUserEmail for data security
       }
     }
@@ -1184,9 +1108,6 @@ export class MemStorage implements IStorage {
       isBciManaged: insertSpot.isBciManaged ?? false,
       createdAt: new Date()
     }).returning();
-    
-    // Also update in-memory cache for backwards compatibility
-    this.parkingSpots.set(id, createdSpot);
     
     return createdSpot;
   }
@@ -1247,28 +1168,17 @@ export class MemStorage implements IStorage {
   async getSpotListing(id: string): Promise<SpotListing | undefined> {
     const result = await db.select().from(spotListings).where(eq(spotListings.id, id)).limit(1);
     if (result.length === 0) return undefined;
-    
-    // Update memory cache for performance
-    this.spotListings.set(result[0].id, result[0]);
     return result[0];
   }
 
   async getSpotListingsByOwner(ownerId: string): Promise<SpotListing[]> {
-    const listings = await db.select().from(spotListings)
+    return await db.select().from(spotListings)
       .where(and(eq(spotListings.ownerId, ownerId), isNull(spotListings.deletedAt)));
-    
-    // Update memory cache for performance
-    listings.forEach(listing => this.spotListings.set(listing.id, listing));
-    return listings;
   }
 
   async getSpotListingsBySpot(spotId: string): Promise<SpotListing[]> {
-    const listings = await db.select().from(spotListings)
+    return await db.select().from(spotListings)
       .where(and(eq(spotListings.spotId, spotId), isNull(spotListings.deletedAt)));
-    
-    // Update memory cache for performance
-    listings.forEach(listing => this.spotListings.set(listing.id, listing));
-    return listings;
   }
 
   async getAllSpotListings(): Promise<SpotListing[]> {
@@ -1548,11 +1458,7 @@ export class MemStorage implements IStorage {
       return undefined;
     }
     
-    const entry = result[0];
-    // Cache in memory
-    this.waitingList.set(entry.id, entry);
-    
-    return entry;
+    return result[0];
   }
 
   async getWaitingListByUser(userId: string): Promise<WaitingList | undefined> {
@@ -1569,23 +1475,14 @@ export class MemStorage implements IStorage {
       return undefined;
     }
     
-    const entry = result[0];
-    // Cache in memory
-    this.waitingList.set(entry.id, entry);
-    
-    return entry;
+    return result[0];
   }
 
   async getAllWaitingList(): Promise<WaitingList[]> {
-    const entries = await db
+    return await db
       .select()
       .from(waitingList)
       .orderBy(asc(waitingList.priority));
-    
-    // Cache in memory
-    entries.forEach(entry => this.waitingList.set(entry.id, entry));
-    
-    return entries;
   }
 
   async getActiveWaitingList(): Promise<WaitingList[]> {
@@ -1605,9 +1502,6 @@ export class MemStorage implements IStorage {
         )
       ))
       .orderBy(asc(waitingList.priority));
-    
-    // Cache in memory
-    entries.forEach(entry => this.waitingList.set(entry.id, entry));
     
     return entries;
   }
@@ -1632,9 +1526,6 @@ export class MemStorage implements IStorage {
       updatedAt: now
     }).returning();
     
-    // Also update in-memory cache for backwards compatibility
-    this.waitingList.set(createdEntry.id, createdEntry);
-    
     return createdEntry;
   }
 
@@ -1653,11 +1544,7 @@ export class MemStorage implements IStorage {
         return undefined;
       }
       
-      const updatedEntry = result[0];
-      // Also update in memory
-      this.waitingList.set(id, updatedEntry);
-      
-      return updatedEntry;
+      return result[0];
     } catch (error) {
       console.error("Error updating waiting list entry:", error);
       return undefined;
@@ -1675,11 +1562,6 @@ export class MemStorage implements IStorage {
         })
         .where(eq(waitingList.id, id))
         .returning();
-      
-      // Update memory cache
-      if (result.length > 0) {
-        this.waitingList.set(id, result[0]);
-      }
       
       return result.length > 0;
     } catch (error) {
@@ -1706,11 +1588,6 @@ export class MemStorage implements IStorage {
         .where(eq(waitingList.id, id))
         .returning();
       
-      // Remove from memory cache
-      if (result.length > 0) {
-        this.waitingList.delete(id);
-      }
-      
       return result.length > 0;
     } catch (error) {
       console.error("Error permanently deleting waiting list entry:", error);
@@ -1721,9 +1598,6 @@ export class MemStorage implements IStorage {
   async getWaitingListById(id: string): Promise<WaitingList | undefined> {
     const result = await db.select().from(waitingList).where(eq(waitingList.id, id)).limit(1);
     if (result.length === 0) return undefined;
-    
-    // Update memory cache for performance
-    this.waitingList.set(result[0].id, result[0]);
     return result[0];
   }
 
@@ -1745,8 +1619,6 @@ export class MemStorage implements IStorage {
       .where(eq(waitingList.id, waitingListId))
       .returning();
 
-    // Update memory cache for performance
-    this.waitingList.set(waitingListId, updated);
     return updated;
   }
 
@@ -1754,26 +1626,15 @@ export class MemStorage implements IStorage {
   async getVehicle(id: string): Promise<Vehicle | undefined> {
     const result = await db.select().from(vehicles).where(eq(vehicles.id, id)).limit(1);
     if (result.length === 0) return undefined;
-    
-    // Update memory cache for performance
-    this.vehicles.set(result[0].id, result[0]);
     return result[0];
   }
 
   async getVehiclesByUser(userId: string): Promise<Vehicle[]> {
-    const userVehicles = await db.select().from(vehicles).where(eq(vehicles.userId, userId));
-    
-    // Update memory cache
-    userVehicles.forEach(vehicle => this.vehicles.set(vehicle.id, vehicle));
-    return userVehicles;
+    return await db.select().from(vehicles).where(eq(vehicles.userId, userId));
   }
 
   async getAllVehicles(): Promise<Vehicle[]> {
-    const allVehicles = await db.select().from(vehicles);
-    
-    // Update memory cache
-    allVehicles.forEach(vehicle => this.vehicles.set(vehicle.id, vehicle));
-    return allVehicles;
+    return await db.select().from(vehicles);
   }
 
   async createVehicle(userId: string, vehicle: InsertVehicle): Promise<Vehicle> {
@@ -1801,9 +1662,6 @@ export class MemStorage implements IStorage {
       updatedAt: now
     }).returning();
     
-    // Also update in-memory cache for backwards compatibility
-    this.vehicles.set(id, createdVehicle);
-    
     return createdVehicle;
   }
 
@@ -1827,17 +1685,11 @@ export class MemStorage implements IStorage {
       .where(eq(vehicles.id, id))
       .returning();
 
-    // Update memory cache for performance
-    this.vehicles.set(id, updatedVehicle);
     return updatedVehicle;
   }
 
   async deleteVehicle(id: string): Promise<boolean> {
-    // Delete from database first
     await db.delete(vehicles).where(eq(vehicles.id, id));
-    
-    // Delete from memory cache
-    this.vehicles.delete(id);
     return true;
   }
 
@@ -1853,8 +1705,6 @@ export class MemStorage implements IStorage {
       .where(eq(parkingSpots.id, spotId))
       .returning();
 
-    // Update memory cache for performance
-    this.parkingSpots.set(spotId, updatedSpot);
     return updatedSpot;
   }
 
@@ -1871,8 +1721,6 @@ export class MemStorage implements IStorage {
         .returning();
       
       if (updatedSpot) {
-        // Update memory cache for performance
-        this.parkingSpots.set(spotId, updatedSpot);
         updatedSpots.push(updatedSpot);
       }
     }
@@ -1903,9 +1751,6 @@ export class MemStorage implements IStorage {
       .limit(1);
     
     if (result.length === 0) return undefined;
-    
-    // Update memory cache
-    this.paymentPreferences.set(result[0].id, result[0]);
     return result[0];
   }
 
@@ -1917,9 +1762,6 @@ export class MemStorage implements IStorage {
     };
     
     const [newPreferences] = await db.insert(paymentPreferences).values(insertData).returning();
-    
-    // Update memory cache for performance
-    this.paymentPreferences.set(newPreferences.id, newPreferences);
     return newPreferences;
   }
 
@@ -1949,8 +1791,6 @@ export class MemStorage implements IStorage {
       .where(eq(paymentPreferences.id, existing.id))
       .returning();
     
-    // Update memory cache for performance
-    this.paymentPreferences.set(existing.id, updatedPreferences);
     return updatedPreferences;
   }
 
@@ -1959,7 +1799,6 @@ export class MemStorage implements IStorage {
     if (!existing) return false;
     
     await db.delete(paymentPreferences).where(eq(paymentPreferences.id, existing.id));
-    this.paymentPreferences.delete(existing.id);
     return true;
   }
 
@@ -2884,13 +2723,9 @@ export class MemStorage implements IStorage {
         updatedAt: new Date()
       }).returning();
       
-      // Update memory cache
-      this.notificationPreferences.set(userId, newPrefs);
       return newPrefs;
     }
     
-    // Update memory cache
-    this.notificationPreferences.set(userId, result[0]);
     return result[0];
   }
 
@@ -2911,8 +2746,6 @@ export class MemStorage implements IStorage {
       .where(eq(notificationPreferences.userId, userId))
       .returning();
     
-    // Update memory cache
-    this.notificationPreferences.set(userId, updated);
     return updated;
   }
 
@@ -2929,9 +2762,6 @@ export class MemStorage implements IStorage {
     };
     
     const [notification] = await db.insert(inAppNotifications).values(insertData).returning();
-    
-    // Update memory cache
-    this.inAppNotifications.set(notification.id, notification);
     return notification;
   }
 
@@ -2953,8 +2783,6 @@ export class MemStorage implements IStorage {
         .orderBy(desc(inAppNotifications.createdAt));
     }
     
-    // Update memory cache
-    notifications.forEach(notification => this.inAppNotifications.set(notification.id, notification));
     return notifications;
   }
 
@@ -2969,8 +2797,6 @@ export class MemStorage implements IStorage {
       .where(eq(inAppNotifications.id, notificationId))
       .returning();
     
-    // Update memory cache
-    this.inAppNotifications.set(notificationId, updated);
     return updated;
   }
 
@@ -2981,29 +2807,14 @@ export class MemStorage implements IStorage {
         eq(inAppNotifications.userId, userId),
         eq(inAppNotifications.read, false)
       ));
-    
-    // Clear memory cache for this user's notifications to force reload
-    const userNotificationIds = Array.from(this.inAppNotifications.entries())
-      .filter(([_, notif]) => notif.userId === userId)
-      .map(([id]) => id);
-    userNotificationIds.forEach(id => this.inAppNotifications.delete(id));
   }
 
   async deleteInAppNotification(notificationId: string): Promise<void> {
     await db.delete(inAppNotifications).where(eq(inAppNotifications.id, notificationId));
-    
-    // Also delete from memory cache
-    this.inAppNotifications.delete(notificationId);
   }
 
   async deleteAllUserNotifications(userId: string): Promise<void> {
     await db.delete(inAppNotifications).where(eq(inAppNotifications.userId, userId));
-    
-    // Also delete from memory cache
-    const userNotificationIds = Array.from(this.inAppNotifications.entries())
-      .filter(([, notification]) => notification.userId === userId)
-      .map(([id]) => id);
-    userNotificationIds.forEach(id => this.inAppNotifications.delete(id));
   }
 
   async getUnreadNotificationCount(userId: string): Promise<number> {
