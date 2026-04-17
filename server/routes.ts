@@ -4701,12 +4701,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           for (let i = 0; i < diffDays; i++) {
             const d = new Date(start); d.setDate(start.getDate() + i);
             const dStr = d.toISOString().split('T')[0];
-            if (dStr > todayStr) break;
-            const dayBkgs = bookings.filter(b => b.bookingDate.toString() === dStr);
+            const isFuture = dStr > todayStr;
+            const dayBkgs = isFuture ? [] : bookings.filter(b => b.bookingDate.toString() === dStr);
             bins.push({
               label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-              earned: Number(dayBkgs.filter(isEarned).reduce((t, b) => t + parseFloat(b.totalAmount?.toString() || '0'), 0).toFixed(2)),
-              cancelled: Number(dayBkgs.filter(b => b.status === 'cancelled').reduce((t, b) => t + parseFloat(b.totalAmount?.toString() || '0'), 0).toFixed(2))
+              earned: isFuture ? 0 : Number(dayBkgs.filter(isEarned).reduce((t, b) => t + parseFloat(b.totalAmount?.toString() || '0'), 0).toFixed(2)),
+              cancelled: isFuture ? 0 : Number(dayBkgs.filter(b => b.status === 'cancelled').reduce((t, b) => t + parseFloat(b.totalAmount?.toString() || '0'), 0).toFixed(2))
             });
           }
         } else if (diffDays <= 92) {
