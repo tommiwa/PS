@@ -742,7 +742,7 @@ export default function AdminSpotBookingManagement() {
   // Sorting functionality for booking availability
   const { sortState: availabilitySortState, sortedData: sortedAvailability, handleSort: handleAvailabilitySort } = useTableSort(
     filteredAvailability,
-    "spotNumber",
+    "availableFrom",
     "asc"
   );
 
