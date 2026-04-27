@@ -4190,8 +4190,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       const pastYearSpent = pastYearBkgs.reduce((t, b) => t + parseFloat(b.totalAmount.toString()), 0);
 
+      // Fetch city parking daily rate config
+      const cityParkingRateRaw = await storage.getAppConfigValue('city_parking_daily_rate');
+      const cityParkingDailyRate = (() => {
+        const parsed = Number(cityParkingRateRaw);
+        return Number.isFinite(parsed) && parsed > 0 ? parsed : 15;
+      })();
+
+      // Non-cancelled bookings count as "booked days" for city parking comparison
+      const isNotCancelled = (b: Booking) => b.status !== 'cancelled';
+
       // Build spending chart data based on period
-      const spendingData: { label: string; spent: number; bookings: number }[] = [];
+      const spendingData: { label: string; spent: number; bookings: number; bookedDays: number }[] = [];
 
       if (period === 'week') {
         // Show Mon-Sun of current week, capped at today (no future days)
@@ -4208,7 +4218,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           spendingData.push({
             label: dayNames[i],
             spent: Number(dayPaid.reduce((t, b) => t + parseFloat(b.totalAmount.toString()), 0).toFixed(2)),
-            bookings: dayBkgs.length
+            bookings: dayBkgs.length,
+            bookedDays: dayBkgs.filter(isNotCancelled).length
           });
         }
       } else if (period === 'month') {
@@ -4222,7 +4233,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           spendingData.push({
             label: String(day),
             spent: Number(dayPaid.reduce((t, b) => t + parseFloat(b.totalAmount.toString()), 0).toFixed(2)),
-            bookings: dayBkgs.length
+            bookings: dayBkgs.length,
+            bookedDays: dayBkgs.filter(isNotCancelled).length
           });
         }
       } else {
@@ -4249,7 +4261,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           spendingData.push({
             label: d.toLocaleDateString('en-US', { month: 'short', year: showYear ? '2-digit' : undefined }),
             spent: Number(monthPaid.reduce((t, b) => t + parseFloat(b.totalAmount.toString()), 0).toFixed(2)),
-            bookings: monthBkgs.length
+            bookings: monthBkgs.length,
+            bookedDays: monthBkgs.filter(isNotCancelled).length
           });
         }
       }
@@ -4358,7 +4371,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           upcomingBookings,
           completedThisWeek,
           cancelledThisMonth
-        }
+        },
+        cityParkingDailyRate
       });
     } catch (error) {
       console.error("Error fetching detailed renter statistics:", error);
@@ -8832,6 +8846,14 @@ The BCI ParkShare Team`;
           dataType: 'number',
           category: 'booking',
           description: 'Minimum hours before the booking date that cancellation is allowed. Users cannot cancel bookings within this time window.'
+        },
+        {
+          key: 'city_parking_daily_rate',
+          value: '15',
+          label: 'City Parking Daily Rate',
+          dataType: 'number',
+          category: 'Pricing',
+          description: 'Daily rate (CAD) for city/municipal parking used to compare renter spending against equivalent city parking cost. Renters can toggle this comparison on their Statistics page.'
         },
         {
           key: 'new_badge_days',

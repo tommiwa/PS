@@ -768,6 +768,7 @@ export interface RenterSpendingDataPoint {
   label: string;
   spent: number;
   bookings: number;
+  bookedDays: number;
 }
 
 export interface RenterMonthlySpending {
@@ -807,6 +808,7 @@ export interface RenterStatisticsResponse {
     completedThisWeek: number;
     cancelledThisMonth: number;
   };
+  cityParkingDailyRate: number;
 }
 
 // Owner Statistics Response Type

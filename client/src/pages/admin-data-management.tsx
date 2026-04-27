@@ -2096,7 +2096,9 @@ export default function AdminDataManagement() {
                               ? `${Number(config.value) / 1000}s`
                               : config.key === 'cancellation_window_hours'
                                 ? `${config.value} hours`
-                                : config.value}
+                                : config.key === 'city_parking_daily_rate'
+                                  ? `$${config.value}/day`
+                                  : config.value}
                           </TableCell>
                           <TableCell data-testid={`text-config-description-${config.key}`}>
                             {config.description || "-"}
@@ -3036,6 +3038,11 @@ export default function AdminDataManagement() {
                   {editingConfig.key === 'cancellation_window_hours' && (
                     <p className="text-sm text-muted-foreground mt-1">
                       Value in hours (minimum: 1). Users cannot cancel bookings within this many hours of the booking date.
+                    </p>
+                  )}
+                  {editingConfig.key === 'city_parking_daily_rate' && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Value in CAD $/day. Renters see this rate as a comparison on their Statistics page.
                     </p>
                   )}
                   {editingConfig.key === 'timezone' && (

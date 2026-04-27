@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
-import { Calendar, MapPin, Clock, Plus, Users, Car, TrendingUp, BarChart3, PieChart, Target, DollarSign, AlertTriangle, Download, RefreshCw, Loader2, Eye, EyeOff, AlertCircle, Bell, ParkingSquare } from "lucide-react"
+import { Calendar, MapPin, Clock, Plus, Users, Car, TrendingUp, BarChart3, PieChart, Target, DollarSign, AlertTriangle, Download, RefreshCw, Loader2, Eye, EyeOff, AlertCircle, Bell, ParkingSquare, Building2 } from "lucide-react"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { useAuth } from "@/contexts/auth-context"
 import { useState, useEffect } from "react"
@@ -91,6 +91,8 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
   const [renterStatus, setRenterStatus] = useState<RenterStatsStatus>('all');
   // Chart type toggle for spending trend
   const [spendingChartType, setSpendingChartType] = useState<'bar' | 'line'>('bar');
+  // City parking comparison toggle
+  const [showCityParking, setShowCityParking] = useState(false);
 
   const { data: adminMetrics, isLoading: isLoadingMetrics } = useQuery<AdminDashboardMetrics>({
     queryKey: ['/api/admin/dashboard-metrics'],
@@ -300,44 +302,74 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
                         <TrendingUp className="h-5 w-5 text-primary" />
                         Spending Trends — {renterStatsQuery.data.stats.periodLabel}
                       </CardTitle>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-2">
                         <Button
-                          variant={spendingChartType === 'bar' ? 'default' : 'outline'}
+                          variant={showCityParking ? 'default' : 'outline'}
                           size="sm"
-                          onClick={() => setSpendingChartType('bar')}
-                          data-testid="button-chart-type-bar"
+                          onClick={() => setShowCityParking(v => !v)}
+                          data-testid="button-toggle-city-parking"
                         >
-                          <BarChart3 className="h-4 w-4" />
+                          <Building2 className="h-4 w-4 mr-1" />
+                          Compare with city parking
                         </Button>
-                        <Button
-                          variant={spendingChartType === 'line' ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => setSpendingChartType('line')}
-                          data-testid="button-chart-type-line"
-                        >
-                          <TrendingUp className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant={spendingChartType === 'bar' ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setSpendingChartType('bar')}
+                            data-testid="button-chart-type-bar"
+                          >
+                            <BarChart3 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant={spendingChartType === 'line' ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setSpendingChartType('line')}
+                            data-testid="button-chart-type-line"
+                          >
+                            <TrendingUp className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
+                    {showCityParking && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        City parking equivalent at ${renterStatsQuery.data.cityParkingDailyRate}/day
+                      </p>
+                    )}
                   </CardHeader>
                   <CardContent>
                     <div className="h-[300px]">
                       <ResponsiveContainer width="100%" height="100%">
                         {spendingChartType === 'bar' ? (
-                          <BarChart data={renterStatsQuery.data.spendingData}>
+                          <BarChart data={renterStatsQuery.data.spendingData.map(d => ({
+                            ...d,
+                            cityParking: Number((d.bookedDays * renterStatsQuery.data!.cityParkingDailyRate).toFixed(2))
+                          }))}>
                             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                             <XAxis dataKey="label" className="text-xs" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
                             <YAxis className="text-xs" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
-                            <RechartsTooltip {...tooltipStyle} />
+                            <RechartsTooltip {...tooltipStyle} formatter={(value: number | string) => [`$${value}`, undefined]} />
+                            {showCityParking && <Legend />}
                             <Bar dataKey="spent" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Amount Spent ($)" />
+                            {showCityParking && (
+                              <Bar dataKey="cityParking" fill="hsl(var(--chart-3))" radius={[4, 4, 0, 0]} name="City Parking Equiv. ($)" />
+                            )}
                           </BarChart>
                         ) : (
-                          <LineChart data={renterStatsQuery.data.spendingData}>
+                          <LineChart data={renterStatsQuery.data.spendingData.map(d => ({
+                            ...d,
+                            cityParking: Number((d.bookedDays * renterStatsQuery.data!.cityParkingDailyRate).toFixed(2))
+                          }))}>
                             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                             <XAxis dataKey="label" className="text-xs" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
                             <YAxis className="text-xs" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
-                            <RechartsTooltip {...tooltipStyle} />
+                            <RechartsTooltip {...tooltipStyle} formatter={(value: number | string) => [`$${value}`, undefined]} />
+                            {showCityParking && <Legend />}
                             <Line type="monotone" dataKey="spent" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} name="Amount Spent ($)" />
+                            {showCityParking && (
+                              <Line type="monotone" dataKey="cityParking" stroke="hsl(var(--chart-3))" strokeWidth={2} dot={{ r: 3 }} strokeDasharray="5 5" name="City Parking Equiv. ($)" />
+                            )}
                           </LineChart>
                         )}
                       </ResponsiveContainer>
