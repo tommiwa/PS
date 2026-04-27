@@ -90,8 +90,6 @@ export function ReportIssueDialog({ children }: ReportIssueDialogProps) {
   const [issueTitle, setIssueTitle] = useState("")
   const [issueDescription, setIssueDescription] = useState("")
   const [issuePriority, setIssuePriority] = useState("medium")
-  const [issueRating, setIssueRating] = useState<number | null>(null)
-  const [issueHoverRating, setIssueHoverRating] = useState<number | null>(null)
 
   const { toast } = useToast()
 
@@ -127,8 +125,6 @@ export function ReportIssueDialog({ children }: ReportIssueDialogProps) {
     setIssueTitle("")
     setIssueDescription("")
     setIssuePriority("medium")
-    setIssueRating(null)
-    setIssueHoverRating(null)
   }
 
   const switchMode = (next: FeedbackMode) => {
@@ -141,8 +137,6 @@ export function ReportIssueDialog({ children }: ReportIssueDialogProps) {
     setIssueTitle("")
     setIssueDescription("")
     setIssuePriority("medium")
-    setIssueRating(null)
-    setIssueHoverRating(null)
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -201,7 +195,6 @@ export function ReportIssueDialog({ children }: ReportIssueDialogProps) {
       description: issueDescription,
       priority: issuePriority,
       mode: "issue",
-      rating: issueRating,
     })
   }
 
@@ -291,17 +284,6 @@ export function ReportIssueDialog({ children }: ReportIssueDialogProps) {
 
           {mode === "issue" && (
             <>
-              <div className="space-y-2">
-                <Label>Rate Your Experience (Optional)</Label>
-                <StarRating
-                  rating={issueRating}
-                  hoverRating={issueHoverRating}
-                  onRate={(s) => setIssueRating(issueRating === s ? null : s)}
-                  onHover={setIssueHoverRating}
-                  onLeave={() => setIssueHoverRating(null)}
-                  disabled={createIssueMutation.isPending}
-                />
-              </div>
               <div className="space-y-2">
                 <Label htmlFor="issue-title">Title</Label>
                 <Input

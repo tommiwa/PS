@@ -190,7 +190,7 @@ export default function AdminIssuesPage() {
   const positiveModeCount = allIssues.filter(i => getFeedbackMode(i) === "positive").length
   const ratingModeCount = allIssues.filter(i => getFeedbackMode(i) === "rating").length
 
-  const ratedEntries = allIssues.filter(i => i.rating != null && i.rating > 0)
+  const ratedEntries = allIssues.filter(i => i.rating != null && i.rating > 0 && getFeedbackMode(i) !== 'issue')
   const averageRating = ratedEntries.length > 0
     ? ratedEntries.reduce((sum, i) => sum + i.rating!, 0) / ratedEntries.length
     : null
