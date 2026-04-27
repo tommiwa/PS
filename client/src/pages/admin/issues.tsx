@@ -186,6 +186,15 @@ export default function AdminIssuesPage() {
   const completedIssues = allIssues.filter(i => i.status === "completed")
   const urgentCount = activeIssues.filter(i => i.priority === "urgent").length
 
+  const issuesModeCount = allIssues.filter(i => getFeedbackMode(i) === "issue").length
+  const positiveModeCount = allIssues.filter(i => getFeedbackMode(i) === "positive").length
+  const ratingModeCount = allIssues.filter(i => getFeedbackMode(i) === "rating").length
+
+  const ratedEntries = allIssues.filter(i => i.rating != null && i.rating > 0)
+  const averageRating = ratedEntries.length > 0
+    ? ratedEntries.reduce((sum, i) => sum + i.rating!, 0) / ratedEntries.length
+    : null
+
   const getFilteredIssues = (issues: Issue[]) => {
     let filtered = issues
     if (priorityFilter !== "all") {
@@ -436,18 +445,82 @@ export default function AdminIssuesPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4 mb-4">
+      {/* Overall Rating banner */}
+      <Card className="mb-4">
+        <CardContent className="pt-5 pb-5">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-md bg-amber-100 dark:bg-amber-900/30">
+                <Star className="h-6 w-6 text-amber-500 fill-amber-500" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Overall Rating</p>
+                {averageRating !== null ? (
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-2xl font-bold">{averageRating.toFixed(1)}</span>
+                    <span className="text-sm text-muted-foreground">/ 5</span>
+                  </div>
+                ) : (
+                  <p className="text-2xl font-bold text-muted-foreground">—</p>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map((star) => {
+                const filled = averageRating !== null && star <= Math.round(averageRating)
+                return (
+                  <Star
+                    key={star}
+                    className={`h-5 w-5 ${filled ? "fill-amber-400 text-amber-400" : "text-gray-300 dark:text-gray-600"}`}
+                  />
+                )
+              })}
+            </div>
+            <p className="text-sm text-muted-foreground sm:ml-auto">
+              {ratedEntries.length} rated {ratedEntries.length === 1 ? "submission" : "submissions"}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Mode breakdown + status cards */}
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-6 mb-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Issues</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+              <MessageSquare className="h-4 w-4 text-blue-500" />
+              Issues
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{allIssues.length}</div>
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{issuesModeCount}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Active Issues</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+              <ThumbsUp className="h-4 w-4 text-green-500" />
+              Positive
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400">{positiveModeCount}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+              <BarChart2 className="h-4 w-4 text-amber-500" />
+              Ratings
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{ratingModeCount}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Active</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-600">{activeIssues.length}</div>
@@ -463,7 +536,7 @@ export default function AdminIssuesPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Urgent Issues</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Urgent</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">{urgentCount}</div>
