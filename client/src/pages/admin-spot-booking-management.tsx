@@ -384,7 +384,7 @@ export default function AdminSpotBookingManagement() {
   // Fetch active bookings — deferred until the "Active/Upcoming Bookings" tab is visited
   const { data: activeBookings = [], isLoading: isLoadingActive } = useQuery<AdminBookingData[]>({
     queryKey: ["/api/admin/active-bookings", scope],
-    queryFn: () => fetch(`/api/admin/active-bookings?scope=${scope}`).then(r => r.json()),
+    queryFn: () => fetch(`/api/admin/active-bookings?scope=${scope}`, { credentials: 'include' }).then(r => r.json()),
     enabled: activeTab === 'active',
     staleTime: STALE_TIME
   });
@@ -392,7 +392,7 @@ export default function AdminSpotBookingManagement() {
   // Fetch booking activity data — deferred until the "Active/Upcoming Bookings" tab is visited
   const { data: bookingActivity, isLoading: isLoadingActivity } = useQuery({
     queryKey: ["/api/admin/booking-activity", scope],
-    queryFn: () => fetch(`/api/admin/booking-activity?scope=${scope}&pageSize=50`).then(r => r.json()),
+    queryFn: () => fetch(`/api/admin/booking-activity?scope=${scope}&pageSize=50`, { credentials: 'include' }).then(r => r.json()),
     enabled: activeTab === 'active',
     staleTime: STALE_TIME
   });
@@ -417,7 +417,7 @@ export default function AdminSpotBookingManagement() {
       if (selectedPayrollPeriod && scope === 'bci') {
         params.set('payrollPeriod', selectedPayrollPeriod);
       }
-      return fetch(`/api/admin/past-bookings?${params.toString()}`).then(r => r.json());
+      return fetch(`/api/admin/past-bookings?${params.toString()}`, { credentials: 'include' }).then(r => r.json());
     },
     enabled: activeTab === 'past',
     staleTime: STALE_TIME
@@ -429,14 +429,14 @@ export default function AdminSpotBookingManagement() {
   // Fetch booking availability — loads immediately as this is the default tab
   const { data: bookingAvailability = [], isLoading: isLoadingAvailability } = useQuery<BookingAvailabilityData[]>({
     queryKey: ["/api/admin/booking-availability", scope],
-    queryFn: () => fetch(`/api/admin/booking-availability?scope=${scope}`).then(r => r.json()),
+    queryFn: () => fetch(`/api/admin/booking-availability?scope=${scope}`, { credentials: 'include' }).then(r => r.json()),
     staleTime: STALE_TIME
   });
 
   // Fetch pending payments — deferred until the "Pending Payments" tab is visited
   const { data: pendingPayments = [], isLoading: isLoadingPendingPayments } = useQuery<PendingPaymentData[]>({
     queryKey: ["/api/admin/pending-payments", scope],
-    queryFn: () => fetch(`/api/admin/pending-payments?scope=${scope}`).then(r => r.json()),
+    queryFn: () => fetch(`/api/admin/pending-payments?scope=${scope}`, { credentials: 'include' }).then(r => r.json()),
     enabled: scope === 'all' && activeTab === 'pending-payments',
     staleTime: STALE_TIME
   });
@@ -444,7 +444,7 @@ export default function AdminSpotBookingManagement() {
   // Fetch payroll summary — loads on BCI mount (powers at-a-glance summary cards)
   const { data: payrollSummary, isLoading: isLoadingPayrollSummary } = useQuery<PayrollSummaryData>({
     queryKey: ["/api/admin/payroll-summary"],
-    queryFn: () => fetch("/api/admin/payroll-summary").then(r => r.json()),
+    queryFn: () => fetch("/api/admin/payroll-summary", { credentials: 'include' }).then(r => r.json()),
     enabled: scope === 'bci',
     staleTime: STALE_TIME
   });
@@ -465,7 +465,7 @@ export default function AdminSpotBookingManagement() {
   // Fetch available payroll periods for History tab filter (only for BCI scope)
   const { data: payrollPeriodsData } = useQuery<{ periods: { value: string; label: string }[] }>({
     queryKey: ["/api/admin/payroll-periods"],
-    queryFn: () => fetch("/api/admin/payroll-periods").then(r => r.json()),
+    queryFn: () => fetch("/api/admin/payroll-periods", { credentials: 'include' }).then(r => r.json()),
     enabled: scope === 'bci',
     staleTime: STALE_TIME
   });
@@ -477,14 +477,14 @@ export default function AdminSpotBookingManagement() {
   // Fetch booking analytics — loads on mount (small, powers the summary cards)
   const { data: bookingAnalytics, isLoading: isLoadingAnalytics } = useQuery<BookingAnalytics>({
     queryKey: ["/api/admin/booking-analytics", scope],
-    queryFn: () => fetch(`/api/admin/booking-analytics?scope=${scope}`).then(r => r.json()),
+    queryFn: () => fetch(`/api/admin/booking-analytics?scope=${scope}`, { credentials: 'include' }).then(r => r.json()),
     staleTime: STALE_TIME
   });
 
   // Fetch pending disputes (lazy-loaded when dialog opens)
   const { data: allDisputes = [], isLoading: isLoadingDisputes } = useQuery<DisputeData[]>({
     queryKey: ["/api/admin/disputes"],
-    queryFn: () => fetch("/api/admin/disputes").then(r => r.json()),
+    queryFn: () => fetch("/api/admin/disputes", { credentials: 'include' }).then(r => r.json()),
     enabled: pendingDisputesDialogOpen
   });
 
@@ -514,7 +514,7 @@ export default function AdminSpotBookingManagement() {
     isActive: boolean;
   }>>({
     queryKey: ["/api/locations"],
-    queryFn: () => fetch("/api/locations").then(r => r.json())
+    queryFn: () => fetch("/api/locations", { credentials: 'include' }).then(r => r.json())
   });
 
   // Transform locations into filter options
@@ -1169,7 +1169,7 @@ export default function AdminSpotBookingManagement() {
       
       // Refetch the booking and update selectedBooking state
       try {
-        const response = await fetch(`/api/bookings/${bookingId}`);
+        const response = await fetch(`/api/bookings/${bookingId}`, { credentials: 'include' });
         if (response.ok) {
           const updatedBooking = await response.json();
           // Update selectedBooking with fresh data
