@@ -78,7 +78,7 @@ import { randomUUID } from "crypto";
 import { auditDecorator } from "./audit-service";
 import { type IAuditStorage } from "./audit-storage";
 import { db } from "./db";
-import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, bookingSubscriptions, locations, spotTypesTable, termsVersions, spotAssignmentHistory, spotLocks, lockers, lockerWaitlist, lockerAssignmentHistory, lockerTypesTable, appConfigs, apiKeys, scheduledSpotAssignments, featureAnnouncements, spotAlertSubscriptions, saleEvents } from "@shared/schema";
+import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, bookingSubscriptions, locations, spotTypesTable, termsVersions, spotAssignmentHistory, spotLocks, lockers, lockerWaitlist, lockerAssignmentHistory, lockerTypesTable, appConfigs, apiKeys, scheduledSpotAssignments, featureAnnouncements, spotAlertSubscriptions, saleEvents, issues } from "@shared/schema";
 import { eq, or, ilike, asc, and, notExists, sql as sqlOp, count, desc, inArray, isNull } from "drizzle-orm";
 
 // Storage interface with comprehensive CRUD methods
@@ -443,6 +443,21 @@ export class MemStorage implements IStorage {
 
   private async initializeSeedData() {
     try {
+      // One-time migration: clear any rating values stored against issue-mode submissions.
+      // Issue-mode entries should never have a rating; nullify any legacy data.
+      const staleCount = await db
+        .select({ count: sqlOp<number>`count(*)` })
+        .from(issues)
+        .where(and(eq(issues.mode, "issue"), sqlOp`${issues.rating} IS NOT NULL`));
+      const staleRatingCount = Number(staleCount[0]?.count ?? 0);
+      if (staleRatingCount > 0) {
+        await db
+          .update(issues)
+          .set({ rating: null })
+          .where(and(eq(issues.mode, "issue"), sqlOp`${issues.rating} IS NOT NULL`));
+        console.log(`[startup] Cleared stale ratings from ${staleRatingCount} issue-mode submission(s)`);
+      }
+
       // In production, remove any seed-admin listings that may have been created by mistake
       if (process.env.NODE_ENV === 'production') {
         const removed = await db.delete(spotListings).where(eq(spotListings.ownerId, 'seed-admin')).returning({ id: spotListings.id });
