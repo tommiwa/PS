@@ -4303,7 +4303,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const topSpots = Array.from(spotStatsMap.entries())
-        .map(([spotId, stats]) => ({ spotId, ...stats, totalSpent: Number(stats.totalSpent.toFixed(2)) }))
+        .map(([spotId, stats]) => {
+          const spot = spotById.get(spotId);
+          return {
+            spotId,
+            ...stats,
+            totalSpent: Number(stats.totalSpent.toFixed(2)),
+            isIndoor: spot?.isIndoor ?? false,
+            isBciManaged: spot?.isBciManaged ?? false,
+          };
+        })
         .sort((a, b) => b.totalSpent - a.totalSpent)
         .slice(0, 5);
 

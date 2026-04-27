@@ -783,6 +783,8 @@ export interface RenterSpotStats {
   spotNumber: string;
   bookingsCount: number;
   totalSpent: number;
+  isIndoor: boolean;
+  isBciManaged: boolean;
 }
 
 export interface RenterStatusDistribution {

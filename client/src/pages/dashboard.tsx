@@ -4,6 +4,7 @@ import { BookingCard } from "@/components/booking-card"
 import { ParkingSpotCard } from "@/components/parking-spot-card"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -446,6 +447,7 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
                       {renterStatsQuery.data.topSpots.length === 0 ? (
                         <p className="text-sm text-muted-foreground text-center py-8">No spot data for this period</p>
                       ) : (
+                        <>
                         <div className="h-[250px]">
                           <ResponsiveContainer width="100%" height="100%">
                             <BarChart
@@ -454,7 +456,9 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
                                 name: s.spotNumber.length > 20 ? s.spotNumber.substring(0, 18) + '…' : s.spotNumber,
                                 fullName: s.spotNumber,
                                 spent: s.totalSpent,
-                                bookings: s.bookingsCount
+                                bookings: s.bookingsCount,
+                                isIndoor: s.isIndoor,
+                                isBciManaged: s.isBciManaged,
                               }))}
                               margin={{ left: 8, right: 16 }}
                             >
@@ -462,17 +466,48 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
                               <XAxis type="number" className="text-xs" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
                               <YAxis type="category" dataKey="name" className="text-xs" tick={{ fill: 'hsl(var(--muted-foreground))' }} width={80} />
                               <RechartsTooltip
-                                contentStyle={tooltipStyle.contentStyle}
-                                labelStyle={tooltipStyle.labelStyle}
-                                formatter={(value: number | string, _name: string, item: object) => {
-                                  const pl = (item as { payload?: { fullName?: string } }).payload;
-                                  return [`$${value}`, pl?.fullName ?? ''];
+                                content={({ active, payload }) => {
+                                  if (!active || !payload?.length) return null;
+                                  const d = payload[0].payload as { fullName: string; spent: number; bookings: number; isIndoor: boolean; isBciManaged: boolean };
+                                  return (
+                                    <div style={tooltipStyle.contentStyle} className="p-2 text-xs space-y-1">
+                                      <p style={tooltipStyle.labelStyle} className="font-medium mb-1">{d.fullName}</p>
+                                      <p style={{ color: 'hsl(var(--muted-foreground))' }}>Spent: <span style={tooltipStyle.labelStyle} className="font-semibold">${d.spent.toFixed(2)}</span></p>
+                                      <p style={{ color: 'hsl(var(--muted-foreground))' }}>Bookings: <span style={tooltipStyle.labelStyle} className="font-semibold">{d.bookings}</span></p>
+                                      {(d.isIndoor || d.isBciManaged) && (
+                                        <div className="flex gap-1 pt-1 flex-wrap">
+                                          {d.isIndoor && (
+                                            <span style={{ backgroundColor: 'hsl(217 91% 90%)', color: 'hsl(217 91% 30%)', borderRadius: '9999px', padding: '1px 7px', fontSize: '10px', fontWeight: 500 }}>
+                                              Indoor
+                                            </span>
+                                          )}
+                                          {d.isBciManaged && (
+                                            <span style={{ backgroundColor: 'hsl(270 60% 90%)', color: 'hsl(270 60% 30%)', borderRadius: '9999px', padding: '1px 7px', fontSize: '10px', fontWeight: 500 }}>
+                                              Reserved
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
                                 }}
                               />
                               <Bar dataKey="spent" fill="hsl(var(--chart-2))" radius={[0, 4, 4, 0]} name="Spent ($)" />
                             </BarChart>
                           </ResponsiveContainer>
                         </div>
+                        {renterStatsQuery.data.topSpots.some(s => s.isIndoor || s.isBciManaged) && (
+                          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
+                            {renterStatsQuery.data.topSpots.filter(s => s.isIndoor || s.isBciManaged).map(s => (
+                              <div key={s.spotId} className="flex items-center gap-1.5 text-xs">
+                                <span className="text-muted-foreground">{s.spotNumber.length > 16 ? s.spotNumber.substring(0, 14) + '…' : s.spotNumber}:</span>
+                                {s.isIndoor && <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-auto no-default-active-elevate">Indoor</Badge>}
+                                {s.isBciManaged && <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-auto no-default-active-elevate">Reserved</Badge>}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        </>
                       )}
                     </CardContent>
                   </Card>
