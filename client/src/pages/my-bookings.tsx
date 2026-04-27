@@ -1353,7 +1353,11 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                 {!isPayroll && paymentStatus === 'pending' && (
                   <>
                     <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
-                    <span className="text-sm text-amber-700 dark:text-amber-300">Payment pending - please mark as paid after transfer</span>
+                    <span className="text-sm text-amber-700 dark:text-amber-300">
+                      {isPastDate
+                        ? "Payment pending - please mark as paid after transfer"
+                        : "Payment pending - payment instructions will appear after your booking date"}
+                    </span>
                   </>
                 )}
                 {!isPayroll && paymentStatus === 'paid' && (
