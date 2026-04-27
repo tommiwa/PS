@@ -234,6 +234,9 @@ export default function AdminIssuesPage() {
             { label: "Active Issues", value: activeIssues.length },
             { label: "Completed", value: completedIssues.length },
             { label: "Urgent", value: urgentCount },
+            { label: "Issues", value: issuesModeCount },
+            { label: "Positive", value: positiveModeCount },
+            { label: "Rating", value: ratingModeCount },
           ],
         },
       })
