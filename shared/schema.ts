@@ -809,6 +809,11 @@ export interface RenterStatisticsResponse {
     cancelledThisMonth: number;
   };
   cityParkingDailyRate: number;
+  convenienceStats: {
+    indoorSpotsCount: number;
+    bciManagedCount: number;
+    totalUniqueSpotsUsed: number;
+  };
 }
 
 // Owner Statistics Response Type

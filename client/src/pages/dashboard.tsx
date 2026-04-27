@@ -374,6 +374,61 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
                         )}
                       </ResponsiveContainer>
                     </div>
+                    {showCityParking && (() => {
+                      const totalSpent = renterStatsQuery.data!.spendingData.reduce((sum, d) => sum + d.spent, 0);
+                      const totalCityParking = renterStatsQuery.data!.spendingData.reduce((sum, d) => sum + d.bookedDays * renterStatsQuery.data!.cityParkingDailyRate, 0);
+                      const savings = totalCityParking - totalSpent;
+                      const saved = savings >= 0;
+                      const { indoorSpotsCount, bciManagedCount, totalUniqueSpotsUsed } = renterStatsQuery.data!.convenienceStats;
+                      return (
+                        <div
+                          className="mt-4 rounded-md border bg-muted/40 p-4 space-y-4"
+                          data-testid="section-city-parking-savings-summary"
+                        >
+                          <div className="grid grid-cols-3 gap-4">
+                            <div className="flex flex-col gap-1">
+                              <span className="text-xs text-muted-foreground">ParkShare Spent</span>
+                              <span className="text-lg font-semibold">${totalSpent.toFixed(2)}</span>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                              <span className="text-xs text-muted-foreground">City Parking Equiv.</span>
+                              <span className="text-lg font-semibold">${totalCityParking.toFixed(2)}</span>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                              <span className="text-xs text-muted-foreground">
+                                {saved ? 'You Saved' : 'Extra Cost'}
+                              </span>
+                              <span className={`text-lg font-semibold ${saved ? 'text-green-600 dark:text-green-400' : 'text-destructive'}`}>
+                                {saved ? '+' : '-'}${Math.abs(savings).toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+                          {totalUniqueSpotsUsed > 0 && (
+                            <>
+                              <Separator />
+                              <div className="grid grid-cols-3 gap-4">
+                                <div className="flex flex-col gap-1">
+                                  <span className="text-xs text-muted-foreground">Spots Used</span>
+                                  <span className="text-base font-medium">{totalUniqueSpotsUsed}</span>
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <span className="text-xs text-muted-foreground">Covered / Indoor</span>
+                                  <span className="text-base font-medium">
+                                    {indoorSpotsCount > 0 ? `${indoorSpotsCount} of ${totalUniqueSpotsUsed}` : 'None'}
+                                  </span>
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <span className="text-xs text-muted-foreground">Reserved Spots</span>
+                                  <span className="text-base font-medium">
+                                    {bciManagedCount > 0 ? `${bciManagedCount} of ${totalUniqueSpotsUsed}` : 'None'}
+                                  </span>
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </CardContent>
                 </Card>
 

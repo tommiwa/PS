@@ -4307,6 +4307,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .sort((a, b) => b.totalSpent - a.totalSpent)
         .slice(0, 5);
 
+      const spotsUsed = [...spotById.values()];
+      const convenienceStats = {
+        indoorSpotsCount: spotsUsed.filter(s => s.isIndoor).length,
+        bciManagedCount: spotsUsed.filter(s => s.isBciManaged).length,
+        totalUniqueSpotsUsed: spotsUsed.length,
+      };
+
       // Status distribution: uses period+status filtered bookings so donut reflects selected filters
       const statusMap = new Map<string, { count: number; amount: number }>();
       for (const s of ['confirmed', 'completed', 'cancelled']) {
@@ -4372,7 +4379,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           completedThisWeek,
           cancelledThisMonth
         },
-        cityParkingDailyRate
+        cityParkingDailyRate,
+        convenienceStats
       });
     } catch (error) {
       console.error("Error fetching detailed renter statistics:", error);
