@@ -295,6 +295,28 @@ const migrations: MigrationCheck[] = [
       `,
     ],
   },
+  {
+    name: "soft_delete_orphaned_split_listings",
+    checkQuery: `
+      SELECT NOT EXISTS (
+        SELECT 1
+        FROM spot_listings
+        WHERE status = 'cancelled'
+          AND admin_notes LIKE '%Split into individual day listings due to partial booking%'
+          AND deleted_at IS NULL
+      ) AS exists
+    `,
+    migrationStatements: [
+      `
+        UPDATE spot_listings
+        SET deleted_at = NOW(),
+            updated_at = NOW()
+        WHERE status = 'cancelled'
+          AND admin_notes LIKE '%Split into individual day listings due to partial booking%'
+          AND deleted_at IS NULL
+      `,
+    ],
+  },
 ];
 
 export async function runMigrations(): Promise<void> {
@@ -309,7 +331,10 @@ export async function runMigrations(): Promise<void> {
 
       log(`Applying migration: ${migration.name}...`);
       for (const statement of migration.migrationStatements) {
-        await pool.query(statement);
+        const stmtResult = await pool.query(statement);
+        if (stmtResult.rowCount !== null && stmtResult.rowCount > 0) {
+          log(`Migration ${migration.name}: affected ${stmtResult.rowCount} row(s)`);
+        }
       }
       log(`Migration applied: ${migration.name}`);
     } catch (error) {
