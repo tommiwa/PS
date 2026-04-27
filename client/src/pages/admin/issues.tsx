@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useConfirm } from "@/hooks/use-confirm"
 import { apiRequest, queryClient } from "@/lib/queryClient"
 import { format } from "date-fns"
-import { AlertCircle, Clock, CheckCircle2, ListTodo, Loader2, RefreshCw, Trash2, Eye, User, Mail, Calendar, Star, FileText, Download, ThumbsUp, BarChart2, MessageSquare } from "lucide-react"
+import { AlertCircle, Clock, CheckCircle2, ListTodo, Loader2, RefreshCw, Trash2, Eye, User, Mail, Calendar, Star, StarHalf, FileText, Download, ThumbsUp, BarChart2, MessageSquare } from "lucide-react"
 import { exportToExcel, type ExportColumn } from "@/utils/export-utils"
 
 type IssueStatus = "backlog" | "todo" | "in_progress" | "completed"
@@ -470,13 +470,19 @@ export default function AdminIssuesPage() {
             </div>
             <div className="flex items-center gap-1">
               {[1, 2, 3, 4, 5].map((star) => {
-                const filled = averageRating !== null && star <= Math.round(averageRating)
-                return (
-                  <Star
-                    key={star}
-                    className={`h-5 w-5 ${filled ? "fill-amber-400 text-amber-400" : "text-gray-300 dark:text-gray-600"}`}
-                  />
-                )
+                if (averageRating === null) {
+                  return <Star key={star} className="h-5 w-5 text-gray-300 dark:text-gray-600" />
+                }
+                const rounded = Math.round(averageRating * 2) / 2
+                const fullStars = Math.floor(rounded)
+                const hasHalf = rounded % 1 !== 0
+                if (star <= fullStars) {
+                  return <Star key={star} className="h-5 w-5 fill-amber-400 text-amber-400" />
+                } else if (star === fullStars + 1 && hasHalf) {
+                  return <StarHalf key={star} className="h-5 w-5 fill-amber-400 text-amber-400" />
+                } else {
+                  return <Star key={star} className="h-5 w-5 text-gray-300 dark:text-gray-600" />
+                }
               })}
             </div>
             <p className="text-sm text-muted-foreground sm:ml-auto">
