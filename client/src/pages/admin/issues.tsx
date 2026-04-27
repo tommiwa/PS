@@ -24,9 +24,10 @@ type IssuePriority = "low" | "medium" | "high" | "urgent"
 type FeedbackMode = "positive" | "rating" | "issue"
 
 interface Issue {
-  id: number
+  id: string
   title: string
   description: string
+  mode: FeedbackMode | null
   priority: IssuePriority
   status: IssueStatus
   rating: number | null
@@ -38,8 +39,9 @@ interface Issue {
   updatedAt: string
 }
 
-function getFeedbackMode(title: string): FeedbackMode {
-  const normalized = title.trim().toLowerCase()
+function getFeedbackMode(issue: Issue): FeedbackMode {
+  if (issue.mode) return issue.mode
+  const normalized = issue.title.trim().toLowerCase()
   if (normalized === "positive feedback") return "positive"
   if (normalized === "rating") return "rating"
   return "issue"
@@ -84,7 +86,7 @@ export default function AdminIssuesPage() {
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
   const [showDetailsDialog, setShowDetailsDialog] = useState(false)
   const [showCompletionDialog, setShowCompletionDialog] = useState(false)
-  const [completionIssueId, setCompletionIssueId] = useState<number | null>(null)
+  const [completionIssueId, setCompletionIssueId] = useState<string | null>(null)
   const [completionNotify, setCompletionNotify] = useState(true)
   const [completionResolutionNotes, setCompletionResolutionNotes] = useState("")
   const { toast } = useToast()
@@ -100,7 +102,7 @@ export default function AdminIssuesPage() {
   })
 
   const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status, notifyUser, resolutionNotes }: { id: number; status: IssueStatus; notifyUser?: boolean; resolutionNotes?: string }) => {
+    mutationFn: async ({ id, status, notifyUser, resolutionNotes }: { id: string; status: IssueStatus; notifyUser?: boolean; resolutionNotes?: string }) => {
       const response = await apiRequest(`/api/admin/issues/${id}`, { method: "PATCH", body: { status, notifyUser, resolutionNotes } })
       return response.json()
     },
@@ -123,7 +125,7 @@ export default function AdminIssuesPage() {
   })
 
   const deleteIssueMutation = useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id: string) => {
       const response = await apiRequest(`/api/admin/issues/${id}`, { method: "DELETE" })
       return response.json()
     },
@@ -143,7 +145,7 @@ export default function AdminIssuesPage() {
     },
   })
 
-  const handleStatusChange = async (issueId: number, newStatus: IssueStatus) => {
+  const handleStatusChange = async (issueId: string, newStatus: IssueStatus) => {
     if (newStatus === 'completed') {
       setCompletionIssueId(issueId)
       setCompletionNotify(true)
@@ -167,7 +169,7 @@ export default function AdminIssuesPage() {
     setCompletionResolutionNotes("")
   }
 
-  const handleDelete = async (issueId: number) => {
+  const handleDelete = async (issueId: string) => {
     const confirmed = await confirm({
       title: "Delete Issue",
       description: "Are you sure you want to delete this issue? This action cannot be undone.",
@@ -190,14 +192,14 @@ export default function AdminIssuesPage() {
       filtered = filtered.filter(i => i.priority === priorityFilter)
     }
     if (modeFilter !== "all") {
-      filtered = filtered.filter(i => getFeedbackMode(i.title) === modeFilter)
+      filtered = filtered.filter(i => getFeedbackMode(i) === modeFilter)
     }
     return filtered
   }
 
   const handleExportToExcel = async () => {
     const columns: ExportColumn[] = [
-      { header: "Mode", dataKey: "title", width: 14, formatter: (val) => modeConfig[getFeedbackMode(val as string)].label },
+      { header: "Mode", dataKey: "mode", width: 14, formatter: (val) => modeConfig[(val as FeedbackMode) ?? "issue"]?.label ?? "Issue" },
       { header: "Title", dataKey: "title", width: 30 },
       { header: "Description", dataKey: "description", width: 40 },
       { header: "Reporter", dataKey: "reporterName", width: 20, formatter: (val) => val || "Unknown" },
@@ -271,7 +273,7 @@ export default function AdminIssuesPage() {
           </TableHeader>
           <TableBody>
             {filteredIssues.map((issue) => {
-              const mode = getFeedbackMode(issue.title)
+              const mode = getFeedbackMode(issue)
               const modeCfg = modeConfig[mode]
               return (
                 <TableRow key={issue.id}>
@@ -596,7 +598,7 @@ export default function AdminIssuesPage() {
             </DialogTitle>
           </DialogHeader>
           {selectedIssue && (() => {
-            const mode = getFeedbackMode(selectedIssue.title)
+            const mode = getFeedbackMode(selectedIssue)
             const modeCfg = modeConfig[mode]
             return (
               <div className="space-y-6">

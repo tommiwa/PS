@@ -1657,10 +1657,14 @@ export const issuePriorities = z.enum(["low", "medium", "high", "urgent"]);
 export type IssuePriority = z.infer<typeof issuePriorities>;
 
 // Issues Table - Simple issue tracking / feedback system
+export const feedbackModes = z.enum(["positive", "rating", "issue"]);
+export type FeedbackMode = z.infer<typeof feedbackModes>;
+
 export const issues = pgTable("issues", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   title: varchar("title").notNull(),
   description: text("description").notNull(),
+  mode: text("mode").notNull().$type<FeedbackMode>().default("issue"),
   priority: text("priority").notNull().$type<IssuePriority>().default("medium"),
   status: text("status").notNull().$type<IssueStatus>().default("backlog"),
   rating: integer("rating"), // Optional app rating 1-5 stars
@@ -1685,6 +1689,8 @@ export const insertIssueSchema = createInsertSchema(issues).omit({
   resolvedBy: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  mode: feedbackModes,
 });
 
 export const updateIssueSchema = createInsertSchema(issues).pick({

@@ -96,7 +96,7 @@ export function ReportIssueDialog({ children }: ReportIssueDialogProps) {
   const { toast } = useToast()
 
   const createIssueMutation = useMutation({
-    mutationFn: async (data: { title: string; description: string; priority: string; rating?: number | null }) => {
+    mutationFn: async (data: { title: string; description: string; priority: string; mode: FeedbackMode; rating?: number | null }) => {
       const response = await apiRequest("/api/issues", { method: "POST", body: data })
       return response.json()
     },
@@ -153,6 +153,7 @@ export function ReportIssueDialog({ children }: ReportIssueDialogProps) {
         title: "Positive Feedback",
         description: positiveMessage.trim() || "No additional message.",
         priority: "low",
+        mode: "positive",
         rating: positiveRating,
       })
       return
@@ -171,6 +172,7 @@ export function ReportIssueDialog({ children }: ReportIssueDialogProps) {
         title: "Rating",
         description: `User submitted a ${ratingValue}-star rating.`,
         priority: "medium",
+        mode: "rating",
         rating: ratingValue,
       })
       return
@@ -198,6 +200,7 @@ export function ReportIssueDialog({ children }: ReportIssueDialogProps) {
       title: issueTitle,
       description: issueDescription,
       priority: issuePriority,
+      mode: "issue",
       rating: issueRating,
     })
   }

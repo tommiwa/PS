@@ -317,6 +317,15 @@ const migrations: MigrationCheck[] = [
       `,
     ],
   },
+  {
+    name: "issues_mode_column",
+    checkQuery: `SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'issues' AND column_name = 'mode')`,
+    migrationStatements: [
+      `ALTER TABLE issues ADD COLUMN IF NOT EXISTS mode TEXT NOT NULL DEFAULT 'issue'`,
+      `UPDATE issues SET mode = 'positive' WHERE LOWER(TRIM(title)) = 'positive feedback' AND mode = 'issue'`,
+      `UPDATE issues SET mode = 'rating' WHERE LOWER(TRIM(title)) = 'rating' AND mode = 'issue'`,
+    ],
+  },
 ];
 
 export async function runMigrations(): Promise<void> {
