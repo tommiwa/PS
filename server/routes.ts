@@ -5894,8 +5894,17 @@ The BCI ParkShare Team`;
       const cancelledBooking = await storage.cancelBookingWithReason(id, "Cancelled by renter");
       
       if (booking.listingId) {
-        await storage.updateSpotListingStatus(booking.listingId, 'available');
-        console.log(`[Cancel Booking] Updated listing ${booking.listingId} status back to 'available'`);
+        const listingToRelease = await storage.getSpotListing(booking.listingId);
+        // If this is a split listing (originalListingType is set), the parent period/recurring
+        // listing is already gone, so soft-delete this orphaned split listing to prevent ghost entries.
+        if (listingToRelease?.originalListingType) {
+          await storage.cancelSpotListing(booking.listingId, "Cancelled by renter");
+          await storage.deleteSpotListing(booking.listingId);
+          console.log(`[Cancel Booking] Soft-deleted orphaned split listing ${booking.listingId} (originalListingType=${listingToRelease.originalListingType})`);
+        } else {
+          await storage.updateSpotListingStatus(booking.listingId, 'available');
+          console.log(`[Cancel Booking] Updated listing ${booking.listingId} status back to 'available'`);
+        }
       }
       
       await auditService.logAction("CANCEL", "booking", {
