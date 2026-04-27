@@ -8,19 +8,91 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { apiRequest } from "@/lib/queryClient"
-import { MessageSquare, Loader2, Star } from "lucide-react"
+import { MessageSquare, Loader2, Star, ThumbsUp, BarChart2, AlertCircle } from "lucide-react"
+
+type FeedbackMode = "positive" | "rating" | "issue"
 
 interface ReportIssueDialogProps {
   children: React.ReactNode
 }
 
+function StarRating({
+  rating,
+  hoverRating,
+  onRate,
+  onHover,
+  onLeave,
+  disabled,
+  required,
+}: {
+  rating: number | null
+  hoverRating: number | null
+  onRate: (star: number) => void
+  onHover: (star: number) => void
+  onLeave: () => void
+  disabled: boolean
+  required?: boolean
+}) {
+  const displayRating = hoverRating !== null ? hoverRating : rating
+  const label =
+    rating === 5
+      ? "Excellent!"
+      : rating === 4
+      ? "Great!"
+      : rating === 3
+      ? "Good"
+      : rating === 2
+      ? "Fair"
+      : "Poor"
+
+  return (
+    <div className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <button
+          key={star}
+          type="button"
+          className="p-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded transition-transform hover:scale-110"
+          onMouseEnter={() => onHover(star)}
+          onMouseLeave={onLeave}
+          onClick={() => onRate(star)}
+          disabled={disabled}
+        >
+          <Star
+            className={`h-7 w-7 transition-colors ${
+              displayRating !== null && star <= displayRating
+                ? "text-amber-400 fill-amber-400"
+                : "text-muted-foreground/30"
+            }`}
+          />
+        </button>
+      ))}
+      {rating !== null && (
+        <span className="ml-2 text-sm text-muted-foreground">{label}</span>
+      )}
+      {required && rating === null && (
+        <span className="ml-2 text-sm text-muted-foreground">Select a star rating</span>
+      )}
+    </div>
+  )
+}
+
 export function ReportIssueDialog({ children }: ReportIssueDialogProps) {
   const [open, setOpen] = useState(false)
-  const [title, setTitle] = useState("")
-  const [description, setDescription] = useState("")
-  const [priority, setPriority] = useState("medium")
-  const [rating, setRating] = useState<number | null>(null)
-  const [hoverRating, setHoverRating] = useState<number | null>(null)
+  const [mode, setMode] = useState<FeedbackMode>("positive")
+
+  const [positiveMessage, setPositiveMessage] = useState("")
+  const [positiveRating, setPositiveRating] = useState<number | null>(null)
+  const [positiveHoverRating, setPositiveHoverRating] = useState<number | null>(null)
+
+  const [ratingValue, setRatingValue] = useState<number | null>(null)
+  const [ratingHoverValue, setRatingHoverValue] = useState<number | null>(null)
+
+  const [issueTitle, setIssueTitle] = useState("")
+  const [issueDescription, setIssueDescription] = useState("")
+  const [issuePriority, setIssuePriority] = useState("medium")
+  const [issueRating, setIssueRating] = useState<number | null>(null)
+  const [issueHoverRating, setIssueHoverRating] = useState<number | null>(null)
+
   const { toast } = useToast()
 
   const createIssueMutation = useMutation({
@@ -34,7 +106,7 @@ export function ReportIssueDialog({ children }: ReportIssueDialogProps) {
         description: "Thank you! Your feedback has been submitted and will be reviewed by our team.",
       })
       setOpen(false)
-      resetForm()
+      resetAll()
     },
     onError: (error: any) => {
       toast({
@@ -45,18 +117,66 @@ export function ReportIssueDialog({ children }: ReportIssueDialogProps) {
     },
   })
 
-  const resetForm = () => {
-    setTitle("")
-    setDescription("")
-    setPriority("medium")
-    setRating(null)
-    setHoverRating(null)
+  const resetAll = () => {
+    setMode("positive")
+    setPositiveMessage("")
+    setPositiveRating(null)
+    setPositiveHoverRating(null)
+    setRatingValue(null)
+    setRatingHoverValue(null)
+    setIssueTitle("")
+    setIssueDescription("")
+    setIssuePriority("medium")
+    setIssueRating(null)
+    setIssueHoverRating(null)
+  }
+
+  const switchMode = (next: FeedbackMode) => {
+    setMode(next)
+    setPositiveMessage("")
+    setPositiveRating(null)
+    setPositiveHoverRating(null)
+    setRatingValue(null)
+    setRatingHoverValue(null)
+    setIssueTitle("")
+    setIssueDescription("")
+    setIssuePriority("medium")
+    setIssueRating(null)
+    setIssueHoverRating(null)
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    
-    if (!title.trim()) {
+
+    if (mode === "positive") {
+      createIssueMutation.mutate({
+        title: "Positive Feedback",
+        description: positiveMessage.trim() || "No additional message.",
+        priority: "low",
+        rating: positiveRating,
+      })
+      return
+    }
+
+    if (mode === "rating") {
+      if (ratingValue === null) {
+        toast({
+          title: "Rating Required",
+          description: "Please select at least one star to submit a rating.",
+          variant: "destructive",
+        })
+        return
+      }
+      createIssueMutation.mutate({
+        title: "Rating",
+        description: `User submitted a ${ratingValue}-star rating.`,
+        priority: "medium",
+        rating: ratingValue,
+      })
+      return
+    }
+
+    if (!issueTitle.trim()) {
       toast({
         title: "Title Required",
         description: "Please provide a title for your feedback.",
@@ -64,8 +184,8 @@ export function ReportIssueDialog({ children }: ReportIssueDialogProps) {
       })
       return
     }
-    
-    if (!description.trim()) {
+
+    if (!issueDescription.trim()) {
       toast({
         title: "Description Required",
         description: "Please provide details about your feedback.",
@@ -74,13 +194,22 @@ export function ReportIssueDialog({ children }: ReportIssueDialogProps) {
       return
     }
 
-    createIssueMutation.mutate({ title, description, priority, rating })
+    createIssueMutation.mutate({
+      title: issueTitle,
+      description: issueDescription,
+      priority: issuePriority,
+      rating: issueRating,
+    })
   }
 
-  const displayRating = hoverRating !== null ? hoverRating : rating
+  const modes: { key: FeedbackMode; label: string; Icon: typeof ThumbsUp }[] = [
+    { key: "positive", label: "Positive", Icon: ThumbsUp },
+    { key: "rating", label: "Rating", Icon: BarChart2 },
+    { key: "issue", label: "Issue / Suggestion", Icon: AlertCircle },
+  ]
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetAll() }}>
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
@@ -91,84 +220,128 @@ export function ReportIssueDialog({ children }: ReportIssueDialogProps) {
             Feedback
           </DialogTitle>
           <DialogDescription>
-            Share your thoughts, report issues, or suggest improvements. Your feedback helps us make the app better!
+            Choose how you'd like to share your feedback below.
           </DialogDescription>
         </DialogHeader>
-        
+
+        <div className="flex gap-2 flex-wrap">
+          {modes.map(({ key, label, Icon }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => switchMode(key)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                mode === key
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-transparent text-muted-foreground border-border hover-elevate"
+              }`}
+              disabled={createIssueMutation.isPending}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {label}
+            </button>
+          ))}
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label>Rate Your Experience (Optional)</Label>
-            <div className="flex items-center gap-1">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  type="button"
-                  className="p-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded transition-transform hover:scale-110"
-                  onMouseEnter={() => setHoverRating(star)}
-                  onMouseLeave={() => setHoverRating(null)}
-                  onClick={() => setRating(rating === star ? null : star)}
+          {mode === "positive" && (
+            <>
+              <div className="space-y-2">
+                <Label>Rate Your Experience (Optional)</Label>
+                <StarRating
+                  rating={positiveRating}
+                  hoverRating={positiveHoverRating}
+                  onRate={(s) => setPositiveRating(positiveRating === s ? null : s)}
+                  onHover={setPositiveHoverRating}
+                  onLeave={() => setPositiveHoverRating(null)}
                   disabled={createIssueMutation.isPending}
-                >
-                  <Star
-                    className={`h-7 w-7 transition-colors ${
-                      displayRating !== null && star <= displayRating
-                        ? 'text-amber-400 fill-amber-400'
-                        : 'text-gray-300 dark:text-gray-600'
-                    }`}
-                  />
-                </button>
-              ))}
-              {rating !== null && (
-                <span className="ml-2 text-sm text-muted-foreground">
-                  {rating === 5 ? "Excellent!" : rating === 4 ? "Great!" : rating === 3 ? "Good" : rating === 2 ? "Fair" : "Poor"}
-                </span>
-              )}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="positive-message">What did you love? (Optional)</Label>
+                <Textarea
+                  id="positive-message"
+                  placeholder="What did you love?"
+                  value={positiveMessage}
+                  onChange={(e) => setPositiveMessage(e.target.value)}
+                  rows={3}
+                  disabled={createIssueMutation.isPending}
+                />
+              </div>
+            </>
+          )}
+
+          {mode === "rating" && (
+            <div className="space-y-2">
+              <Label>Your Rating</Label>
+              <StarRating
+                rating={ratingValue}
+                hoverRating={ratingHoverValue}
+                onRate={(s) => setRatingValue(ratingValue === s ? null : s)}
+                onHover={setRatingHoverValue}
+                onLeave={() => setRatingHoverValue(null)}
+                disabled={createIssueMutation.isPending}
+                required
+              />
             </div>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="title">Title</Label>
-            <Input
-              id="title"
-              placeholder="Brief summary of your feedback"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              disabled={createIssueMutation.isPending}
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              placeholder="Please describe your feedback, issue, or suggestion in detail."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={4}
-              disabled={createIssueMutation.isPending}
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="priority">Priority</Label>
-            <Select value={priority} onValueChange={setPriority} disabled={createIssueMutation.isPending}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select priority" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="low">Low - Minor suggestion</SelectItem>
-                <SelectItem value="medium">Medium - Improvement idea</SelectItem>
-                <SelectItem value="high">High - Significant issue</SelectItem>
-                <SelectItem value="urgent">Urgent - Critical problem</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
+          )}
+
+          {mode === "issue" && (
+            <>
+              <div className="space-y-2">
+                <Label>Rate Your Experience (Optional)</Label>
+                <StarRating
+                  rating={issueRating}
+                  hoverRating={issueHoverRating}
+                  onRate={(s) => setIssueRating(issueRating === s ? null : s)}
+                  onHover={setIssueHoverRating}
+                  onLeave={() => setIssueHoverRating(null)}
+                  disabled={createIssueMutation.isPending}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="issue-title">Title</Label>
+                <Input
+                  id="issue-title"
+                  placeholder="Brief summary of your feedback"
+                  value={issueTitle}
+                  onChange={(e) => setIssueTitle(e.target.value)}
+                  disabled={createIssueMutation.isPending}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="issue-description">Description</Label>
+                <Textarea
+                  id="issue-description"
+                  placeholder="Please describe your feedback, issue, or suggestion in detail."
+                  value={issueDescription}
+                  onChange={(e) => setIssueDescription(e.target.value)}
+                  rows={4}
+                  disabled={createIssueMutation.isPending}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="issue-priority">Priority</Label>
+                <Select value={issuePriority} onValueChange={setIssuePriority} disabled={createIssueMutation.isPending}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select priority" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low - Minor suggestion</SelectItem>
+                    <SelectItem value="medium">Medium - Improvement idea</SelectItem>
+                    <SelectItem value="high">High - Significant issue</SelectItem>
+                    <SelectItem value="urgent">Urgent - Critical problem</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          )}
+
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => setOpen(false)}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => { setOpen(false); resetAll() }}
               disabled={createIssueMutation.isPending}
             >
               Cancel
