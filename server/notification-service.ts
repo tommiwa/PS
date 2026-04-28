@@ -2299,15 +2299,15 @@ export async function sendBookingCancellationNotification(
     // Send notification to spot owner if provided
     if (owner && owner.email) {
       try {
-        const ownerNotification = createOwnerBookingCancellationNotification(owner, user, booking);
-        const ownerEmailResult = await sendEmailNotification(ownerNotification);
-        results.ownerEmailSent = ownerEmailResult.success;
-        
         const bookingDateStr = formatFriendlyDate(booking.bookingDate);
-        
-        // Only send in-app notification if this is a real user (not Workplace Services)
+
+        // Skip all owner notifications (email and in-app) for Workplace Services spots
         const isWpsOwner = owner.id === 'workplace-services';
         if (!isWpsOwner) {
+          const ownerNotification = createOwnerBookingCancellationNotification(owner, user, booking);
+          const ownerEmailResult = await sendEmailNotification(ownerNotification);
+          results.ownerEmailSent = ownerEmailResult.success;
+
           await storage.createInAppNotification({
             userId: owner.id,
             type: 'booking_cancelled',
@@ -2326,7 +2326,11 @@ export async function sendBookingCancellationNotification(
           results.ownerInAppSent = true;
         }
         
-        console.log(`✓ Owner cancellation notification sent to ${owner.name} (email: ${results.ownerEmailSent}, in-app: ${results.ownerInAppSent})`);
+        if (isWpsOwner) {
+          console.log(`✓ Owner cancellation notification suppressed for Workplace Services owner (${owner.name}) — admin spot`);
+        } else {
+          console.log(`✓ Owner cancellation notification sent to ${owner.name} (email: ${results.ownerEmailSent}, in-app: ${results.ownerInAppSent})`);
+        }
       } catch (ownerError) {
         console.error('❌ Error sending owner cancellation notification:', ownerError);
       }
