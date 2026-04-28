@@ -1996,13 +1996,13 @@ export async function sendBookingConfirmationNotification(
     // Send notification to spot owner (or Workplace Services for admin-created listings)
     if (owner && owner.email) {
       try {
-        const ownerNotification = createOwnerBookingNotification(owner, user, booking);
-        const ownerEmailResult = await sendEmailNotification(ownerNotification);
-        results.ownerEmailSent = ownerEmailResult.success;
-        
-        // Only send in-app notification if this is a real user (not Workplace Services)
+        // Only send email and in-app notification if this is a real user (not Workplace Services)
         const isWpsOwner = owner.id === 'workplace-services';
         if (!isWpsOwner) {
+          const ownerNotification = createOwnerBookingNotification(owner, user, booking);
+          const ownerEmailResult = await sendEmailNotification(ownerNotification);
+          results.ownerEmailSent = ownerEmailResult.success;
+
           await storage.createInAppNotification({
             userId: owner.id,
             type: 'booking_confirmation',
@@ -2020,7 +2020,11 @@ export async function sendBookingConfirmationNotification(
           results.ownerInAppSent = true;
         }
         
-        console.log(`✓ Owner notification sent to ${owner.name} (${owner.email}) (email: ${results.ownerEmailSent}, in-app: ${results.ownerInAppSent})`);
+        if (isWpsOwner) {
+          console.log(`↷ Owner notification skipped for Workplace Services owner ${owner.name} (${owner.email}) — admin-listed spot`);
+        } else {
+          console.log(`✓ Owner notification sent to ${owner.name} (${owner.email}) (email: ${results.ownerEmailSent}, in-app: ${results.ownerInAppSent})`);
+        }
       } catch (ownerError) {
         console.error('❌ Error sending owner notification:', ownerError);
       }
