@@ -2948,3 +2948,62 @@ BCI Workplace Services`;
 
   return results;
 }
+
+/**
+ * Sends a full-occupancy celebratory notification to the given recipients.
+ * Called once per day when all available spots for a date become booked.
+ *
+ * @param date        - ISO date string (YYYY-MM-DD)
+ * @param totalSpots  - Combined count of peer-to-peer and admin-listed spots booked
+ * @param recipients  - Array of email addresses to notify
+ */
+export async function sendFullOccupancyNotification(
+  date: string,
+  totalSpots: number,
+  recipients: string[]
+): Promise<void> {
+  if (recipients.length === 0) return;
+
+  const formattedDate = formatFriendlyDate(new Date(date + 'T12:00:00'));
+  const subject = `Full House — ${formattedDate}`;
+
+  const text = `Hi there,
+
+Just a quick note: all ${totalSpots} parking spot${totalSpots !== 1 ? 's' : ''} (peer-to-peer and admin-listed combined) for ${formattedDate} are now booked. Every single one — a full house!
+
+Strong demand today, and the program is clearly working well. Thought you'd appreciate the heads-up.
+
+Warm regards,
+The BCI ParkShare Team`;
+
+  const content = `
+    <p>Hi there,</p>
+    <p>Just a quick note — all <strong>${totalSpots} parking spot${totalSpots !== 1 ? 's' : ''}</strong> (peer-to-peer and admin-listed combined) for <strong>${formattedDate}</strong> are now booked. Every single one — a full house!</p>
+    <div class="highlight-box" style="background-color: #e0f2fe; border-radius: 6px; padding: 16px 20px; margin: 20px 0; font-size: 15px; color: #1e293b;">
+      <strong>Date:</strong>&nbsp;${formattedDate}&nbsp;&nbsp;&bull;&nbsp;&nbsp;<strong>Spots filled:</strong>&nbsp;${totalSpots}
+    </div>
+    <p>Strong demand today, and the program is clearly working well. Thought you'd appreciate the heads-up.</p>
+  `;
+
+  const html = wrapEmailTemplate({
+    title: 'Full Occupancy',
+    content,
+    theme: 'success',
+    ctaButton: { text: 'View Dashboard', url: `${APP_URL}/admin` }
+  });
+
+  for (const recipient of recipients) {
+    try {
+      await sendEmailNotification({
+        to: recipient,
+        subject,
+        text,
+        html,
+        type: 'general'
+      });
+      console.log(`✓ Full occupancy notification sent to ${recipient} for ${date}`);
+    } catch (error) {
+      console.error(`❌ Failed to send full occupancy notification to ${recipient}:`, error);
+    }
+  }
+}

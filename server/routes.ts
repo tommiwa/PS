@@ -8,7 +8,7 @@ import { z } from "zod";
 import { db } from "./db";
 import { parkingSpots, spotLocks, spotListings, bookings, issues, insertIssueSchema, updateIssueSchema, issueStatuses, termsVersions } from "@shared/schema";
 import type { Booking, ParkingSpot, User, OwnerStatisticsV2Response } from "@shared/schema";
-import { inArray, and, eq, lt, gt, not, or, sql } from "drizzle-orm";
+import { inArray, and, eq, lt, gt, not, or, sql, isNull } from "drizzle-orm";
 import { 
   sendAssignmentNotification, 
   sendWelcomeNotification,
@@ -23,6 +23,7 @@ import {
   sendEmailNotification,
   sendSpotAlertEmail,
   createPromotionBroadcastNotification,
+  sendFullOccupancyNotification,
   wrapEmailTemplate,
   type InAppNotification,
   type EmailNotification
@@ -167,6 +168,67 @@ function getMaxFutureDate(): Date {
 function isDateBeyondMaxFuture(dateStr: string): boolean {
   const date = new Date(dateStr);
   return date > getMaxFutureDate();
+}
+
+// In-memory set of dates for which the full-occupancy email has already been sent.
+// Key format: YYYY-MM-DD. Resets on server restart (acceptable per spec — lightweight dedup).
+const fullOccupancyNotifiedDates = new Set<string>();
+
+/**
+ * Checks whether all available spot listings for a given date are now booked.
+ * Returns { isFull, totalBooked } where isFull is true only when no 'available'
+ * listings remain and at least one 'booked' listing exists.
+ *
+ * SQL pre-filters narrow the candidate set before in-code date matching:
+ *  - single listings: singleDate = date
+ *  - period listings: periodStartDate <= date AND periodEndDate >= date
+ *  - recurring listings: recurringStartDate <= date (day-of-week verified in code)
+ */
+async function checkOccupancyForDate(date: string): Promise<{ isFull: boolean; totalBooked: number }> {
+  const candidates = await db
+    .select()
+    .from(spotListings)
+    .where(
+      and(
+        isNull(spotListings.deletedAt),
+        or(
+          // Single-day listings for this exact date
+          and(
+            eq(spotListings.listingType, 'single'),
+            eq(spotListings.singleDate, date)
+          ),
+          // Period listings whose range encompasses this date
+          and(
+            eq(spotListings.listingType, 'period'),
+            sql`${spotListings.periodStartDate} <= ${date}`,
+            sql`${spotListings.periodEndDate} >= ${date}`
+          ),
+          // Recurring listings that started on or before this date (day-of-week checked below)
+          and(
+            eq(spotListings.listingType, 'recurring'),
+            sql`${spotListings.recurringStartDate} <= ${date}`,
+            or(
+              isNull(spotListings.recurringEndDate),
+              sql`${spotListings.recurringEndDate} >= ${date}`
+            )
+          )
+        )
+      )
+    );
+
+  // For recurring listings, verify the day-of-week pattern in code
+  const listingsForDate = candidates.filter(listing =>
+    listing.listingType !== 'recurring' || getListingDates(listing).includes(date)
+  );
+
+  if (listingsForDate.length === 0) {
+    return { isFull: false, totalBooked: 0 };
+  }
+
+  const hasAvailable = listingsForDate.some(l => l.status === 'available');
+  const totalBooked = listingsForDate.filter(l => l.status === 'booked').length;
+
+  return { isFull: !hasAvailable && totalBooked > 0, totalBooked };
 }
 
 // Zod schemas for admin endpoints
@@ -3841,6 +3903,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } catch (emailError) {
           // Log error but don't impact the user experience
           console.error('Failed to send booking confirmation email:', emailError);
+        }
+      });
+
+      // Full-occupancy check — fire-and-forget after the response is sent
+      setImmediate(async () => {
+        try {
+          const occupancyDate = newBooking.bookingDate as string;
+
+          // Skip if we already sent the email for this date today
+          if (fullOccupancyNotifiedDates.has(occupancyDate)) return;
+
+          const { isFull, totalBooked } = await checkOccupancyForDate(occupancyDate);
+          if (!isFull) return;
+
+          // Mark as notified before sending to avoid duplicate sends in concurrent scenarios
+          fullOccupancyNotifiedDates.add(occupancyDate);
+
+          // Gather recipients: WPS email + all admin users
+          const allUsers = await storage.getAllUsers();
+          const adminEmails = allUsers
+            .filter(u => u.roles.includes('admin') && u.email && u.status === 'active')
+            .map(u => u.email as string);
+
+          const recipients = Array.from(new Set([WORKPLACE_SERVICES_EMAIL, ...adminEmails]));
+
+          await sendFullOccupancyNotification(occupancyDate, totalBooked, recipients);
+        } catch (occupancyError) {
+          console.error('[Full Occupancy] Failed to send full-occupancy notification:', occupancyError);
         }
       });
 
