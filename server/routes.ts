@@ -5,7 +5,7 @@ import { storage } from "./storage";
 import { broadcastLockEvent } from "./websocket";
 import { setupAuth, isAuthenticated, requireAdmin, getAuthenticatedUserId, getAuthenticatedUserRole, getAuthenticatedUserBaseRole } from "./replitAuth";
 import { z } from "zod";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { parkingSpots, spotLocks, spotListings, bookings, issues, insertIssueSchema, updateIssueSchema, issueStatuses, termsVersions } from "@shared/schema";
 import type { Booking, ParkingSpot, User, OwnerStatisticsV2Response } from "@shared/schema";
 import { inArray, and, eq, lt, gt, not, or, sql, isNull } from "drizzle-orm";
@@ -170,9 +170,33 @@ function isDateBeyondMaxFuture(dateStr: string): boolean {
   return date > getMaxFutureDate();
 }
 
-// In-memory set of dates for which the full-occupancy email has already been sent.
-// Key format: YYYY-MM-DD. Resets on server restart (acceptable per spec — lightweight dedup).
-const fullOccupancyNotifiedDates = new Set<string>();
+/**
+ * Atomically claims the right to send the full-occupancy email for `date` by
+ * inserting a sentinel row into app_configs.  Uses PostgreSQL's ON CONFLICT DO
+ * NOTHING so that exactly one concurrent caller wins the race.
+ *
+ * Key format: _internal_full_occupancy_notified_YYYY-MM-DD
+ *
+ * Returns true  → this caller is first; the email SHOULD be sent.
+ * Returns false → another process already claimed it OR a DB error occurred;
+ *                 the email MUST NOT be sent (fail-closed).
+ */
+async function claimFullOccupancyNotification(date: string): Promise<boolean> {
+  const key = `_internal_full_occupancy_notified_${date}`;
+  try {
+    const result = await pool.query(
+      `INSERT INTO app_configs (id, key, value, label, category, data_type, description, created_at, updated_at)
+       VALUES (gen_random_uuid(), $1, 'sent', 'Full Occupancy Notified', 'system', 'string', $2, NOW(), NOW())
+       ON CONFLICT (key) DO NOTHING
+       RETURNING id`,
+      [key, `Internal: full-occupancy email sent for ${date}`]
+    );
+    return (result.rowCount ?? 0) === 1;
+  } catch (err: unknown) {
+    console.error('[Full Occupancy] Failed to claim notified date in DB:', err);
+    return false;
+  }
+}
 
 /**
  * Checks whether all available spot listings for a given date are now booked.
@@ -3911,14 +3935,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           const occupancyDate = newBooking.bookingDate as string;
 
-          // Skip if we already sent the email for this date today
-          if (fullOccupancyNotifiedDates.has(occupancyDate)) return;
-
           const { isFull, totalBooked } = await checkOccupancyForDate(occupancyDate);
           if (!isFull) return;
 
-          // Mark as notified before sending to avoid duplicate sends in concurrent scenarios
-          fullOccupancyNotifiedDates.add(occupancyDate);
+          // Atomically claim the notification right — exactly one concurrent caller wins.
+          // Fail-closed: skip send if we could not persist (DB error).
+          const claimed = await claimFullOccupancyNotification(occupancyDate);
+          if (!claimed) return;
 
           // Gather recipients: WPS email + all admin users
           const allUsers = await storage.getAllUsers();
