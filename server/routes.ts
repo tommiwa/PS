@@ -2,6 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { randomUUID } from "crypto";
 import { storage } from "./storage";
+import { getListingDates, maybeNotifyFullOccupancy } from "./occupancy";
 import { broadcastLockEvent } from "./websocket";
 import { setupAuth, isAuthenticated, requireAdmin, getAuthenticatedUserId, getAuthenticatedUserRole, getAuthenticatedUserBaseRole } from "./replitAuth";
 import { z } from "zod";
@@ -87,47 +88,6 @@ const LOCK_DURATION_MS = 120000; // 2 minutes (120 seconds)
 // Listing date validation constants
 const MAX_FUTURE_MONTHS = 6;
 
-// Helper function to get all dates covered by a listing
-function getListingDates(listing: {
-  listingType: string;
-  singleDate?: string | null;
-  periodStartDate?: string | null;
-  periodEndDate?: string | null;
-  recurringStartDate?: string | null;
-  recurringEndDate?: string | null;
-  daysOfWeek?: number[] | null;
-}): string[] {
-  const dates: string[] = [];
-  
-  if (listing.listingType === 'single' && listing.singleDate) {
-    dates.push(listing.singleDate);
-  } else if (listing.listingType === 'period' && listing.periodStartDate && listing.periodEndDate) {
-    // Generate all dates in the period
-    const start = new Date(listing.periodStartDate);
-    const end = new Date(listing.periodEndDate);
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      dates.push(d.toISOString().split('T')[0]);
-    }
-  } else if (listing.listingType === 'recurring' && listing.recurringStartDate && listing.daysOfWeek?.length) {
-    // Generate dates for recurring listing (up to end date or 6 months)
-    const start = new Date(listing.recurringStartDate);
-    const maxFutureDate = new Date();
-    maxFutureDate.setMonth(maxFutureDate.getMonth() + MAX_FUTURE_MONTHS);
-    const end = listing.recurringEndDate 
-      ? new Date(Math.min(new Date(listing.recurringEndDate).getTime(), maxFutureDate.getTime()))
-      : maxFutureDate;
-    
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      const dayOfWeek = d.getDay(); // 0=Sunday, 1=Monday, etc.
-      if (listing.daysOfWeek.includes(dayOfWeek)) {
-        dates.push(d.toISOString().split('T')[0]);
-      }
-    }
-  }
-  
-  return dates;
-}
-
 // Helper function to check if two listings have overlapping dates
 function checkListingOverlap(
   newListing: {
@@ -198,62 +158,6 @@ async function claimFullOccupancyNotification(date: string): Promise<boolean> {
   }
 }
 
-/**
- * Checks whether all available spot listings for a given date are now booked.
- * Returns { isFull, totalBooked } where isFull is true only when no 'available'
- * listings remain and at least one 'booked' listing exists.
- *
- * SQL pre-filters narrow the candidate set before in-code date matching:
- *  - single listings: singleDate = date
- *  - period listings: periodStartDate <= date AND periodEndDate >= date
- *  - recurring listings: recurringStartDate <= date (day-of-week verified in code)
- */
-async function checkOccupancyForDate(date: string): Promise<{ isFull: boolean; totalBooked: number }> {
-  const candidates = await db
-    .select()
-    .from(spotListings)
-    .where(
-      and(
-        isNull(spotListings.deletedAt),
-        or(
-          // Single-day listings for this exact date
-          and(
-            eq(spotListings.listingType, 'single'),
-            eq(spotListings.singleDate, date)
-          ),
-          // Period listings whose range encompasses this date
-          and(
-            eq(spotListings.listingType, 'period'),
-            sql`${spotListings.periodStartDate} <= ${date}`,
-            sql`${spotListings.periodEndDate} >= ${date}`
-          ),
-          // Recurring listings that started on or before this date (day-of-week checked below)
-          and(
-            eq(spotListings.listingType, 'recurring'),
-            sql`${spotListings.recurringStartDate} <= ${date}`,
-            or(
-              isNull(spotListings.recurringEndDate),
-              sql`${spotListings.recurringEndDate} >= ${date}`
-            )
-          )
-        )
-      )
-    );
-
-  // For recurring listings, verify the day-of-week pattern in code
-  const listingsForDate = candidates.filter(listing =>
-    listing.listingType !== 'recurring' || getListingDates(listing).includes(date)
-  );
-
-  if (listingsForDate.length === 0) {
-    return { isFull: false, totalBooked: 0 };
-  }
-
-  const hasAvailable = listingsForDate.some(l => l.status === 'available');
-  const totalBooked = listingsForDate.filter(l => l.status === 'booked').length;
-
-  return { isFull: !hasAvailable && totalBooked > 0, totalBooked };
-}
 
 // Zod schemas for admin endpoints
 const toggleBookabilitySchema = z.object({
@@ -3934,24 +3838,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       setImmediate(async () => {
         try {
           const occupancyDate = newBooking.bookingDate as string;
-
-          const { isFull, totalBooked } = await checkOccupancyForDate(occupancyDate);
-          if (!isFull) return;
-
-          // Atomically claim the notification right — exactly one concurrent caller wins.
-          // Fail-closed: skip send if we could not persist (DB error).
-          const claimed = await claimFullOccupancyNotification(occupancyDate);
-          if (!claimed) return;
-
-          // Gather recipients: WPS email + all admin users
-          const allUsers = await storage.getAllUsers();
-          const adminEmails = allUsers
-            .filter(u => u.roles.includes('admin') && u.email && u.status === 'active')
-            .map(u => u.email as string);
-
-          const recipients = Array.from(new Set([WORKPLACE_SERVICES_EMAIL, ...adminEmails]));
-
-          await sendFullOccupancyNotification(occupancyDate, totalBooked, recipients);
+          await maybeNotifyFullOccupancy(
+            occupancyDate,
+            () => storage.getAllUsers(),
+            WORKPLACE_SERVICES_EMAIL,
+            claimFullOccupancyNotification,
+          );
         } catch (occupancyError) {
           console.error('[Full Occupancy] Failed to send full-occupancy notification:', occupancyError);
         }
