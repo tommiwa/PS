@@ -235,6 +235,36 @@ export function UtilizationReport({ data, isLoading, hideStatCards = false, toda
         const lastDate = chartData[chartData.length - 1]?.date ?? '';
         const showTodayLine = todayStr && lastDate > todayStr;
 
+        const FORECAST_COLOR = 'hsl(38 92% 50%)';
+
+        const legendItems = [
+          { color: colors.chart1, label: 'Booked Spots' },
+          { color: colors.chart3, label: 'Available for Sharing' },
+          { color: colors.chart5, label: 'Occupancy Rate %' },
+          ...(showTodayLine ? [{ color: FORECAST_COLOR, label: 'Forecast', isArea: true }] : []),
+        ];
+
+        const CustomLegend = () => (
+          <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 pt-2 text-xs text-muted-foreground">
+            {legendItems.map((item) => (
+              <span key={item.label} className="flex items-center gap-1.5">
+                {item.isArea ? (
+                  <span
+                    style={{ backgroundColor: item.color, opacity: 0.35, border: `2px solid ${item.color}` }}
+                    className="inline-block h-3 w-5 rounded-sm"
+                  />
+                ) : (
+                  <span
+                    style={{ backgroundColor: item.color }}
+                    className="inline-block h-3 w-3 rounded-sm"
+                  />
+                )}
+                {item.label}
+              </span>
+            ))}
+          </div>
+        );
+
         const CustomTooltip = ({ active, payload, label }: TooltipProps<ValueType, NameType>) => {
           if (!active || !payload || !payload.length) return null;
           const booked = payload.find((p) => p.dataKey === 'bookedSpots')?.value ?? 0;
@@ -274,15 +304,7 @@ export function UtilizationReport({ data, isLoading, hideStatCards = false, toda
                   <YAxis yAxisId="left" allowDecimals={false} tick={{ fontSize: 12, fill: colors.muted }} />
                   <YAxis yAxisId="right" orientation="right" tickFormatter={(v) => `${v}%`} domain={[0, 100]} tick={{ fontSize: 12, fill: colors.muted }} />
                   <Tooltip content={<CustomTooltip />} />
-                  <Legend
-                    formatter={(value) =>
-                      value === 'bookedSpots'
-                        ? 'Booked Spots'
-                        : value === 'availableForSharing'
-                        ? 'Available for Sharing'
-                        : 'Occupancy Rate %'
-                    }
-                  />
+                  <Legend content={<CustomLegend />} />
                   {showTodayLine && (
                     <ReferenceArea
                       x1={todayStr}
