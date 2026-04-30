@@ -162,8 +162,8 @@ export default function Admin() {
     staleTime: 5 * 60 * 1000,
   });
   const todayPST = serverTodayData?.today ?? '';
-  const utilizationFromDate = useMemo(() => todayPST ? addDays(todayPST, -30) : '', [todayPST]);
-  const utilizationToDate = useMemo(() => todayPST ? (futureOutlook > 0 ? addDays(todayPST, futureOutlook) : todayPST) : '', [todayPST, futureOutlook]);
+  const utilizationFromDate = fromDate;
+  const utilizationToDate = useMemo(() => todayPST ? (futureOutlook > 0 ? addDays(todayPST, futureOutlook) : toDate) : '', [todayPST, futureOutlook, toDate]);
 
   // React Query hooks for fetching real analytics data with scope and date range parameters
   const overviewQuery = useQuery<AnalyticsOverviewResponse>({
