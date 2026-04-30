@@ -6585,6 +6585,20 @@ The BCI ParkShare Team`;
         });
       }
 
+      // Rate-limit: allow one reminder per 24 hours per booking
+      const REMINDER_COOLDOWN_HOURS = 24;
+      if (booking.lastOwnerReminderSentAt) {
+        const lastSent = new Date(booking.lastOwnerReminderSentAt).getTime();
+        const cooldownMs = REMINDER_COOLDOWN_HOURS * 60 * 60 * 1000;
+        const nextAllowedAt = new Date(lastSent + cooldownMs);
+        if (Date.now() < nextAllowedAt.getTime()) {
+          return res.status(429).json({
+            error: `You already sent a reminder recently. You can send another one after ${nextAllowedAt.toLocaleString('en-CA', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}.`,
+            nextAllowedAt: nextAllowedAt.toISOString(),
+          });
+        }
+      }
+
       // Check if this is a Workplace Services (admin-created) listing
       const listing = booking.listingId ? await storage.getSpotListing(booking.listingId) : null;
       const isWsListing = listing?.createdByAdmin === true;
@@ -6655,6 +6669,9 @@ The BCI ParkShare Team`;
         message: `Confirmation reminder sent for booking ${id} to ${isWsListing ? WORKPLACE_SERVICES_EMAIL : owner?.email}`,
         after: { action: 'confirmation_reminder_sent', ownerId: booking.ownerId }
       });
+
+      // Stamp the reminder time so the rate-limit can be enforced
+      await storage.updateBooking(id, { lastOwnerReminderSentAt: new Date() });
 
       res.json({ success: true, message: "Confirmation reminder sent to owner" });
     } catch (error) {

@@ -381,6 +381,7 @@ export const bookings = pgTable("bookings", {
   paymentRefundedAt: timestamp("payment_refunded_at"), // When payment was refunded
   refundAmount: decimal("refund_amount", { precision: 10, scale: 2 }), // Amount refunded
   excludedFromPayroll: boolean("excluded_from_payroll").notNull().default(false), // Admin can exclude from payroll reports without deleting
+  lastOwnerReminderSentAt: timestamp("last_owner_reminder_sent_at"), // Rate-limit: tracks when the last owner reminder was sent
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

@@ -1197,6 +1197,15 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     const canNotifyOwner = !isPayroll && booking.status === "confirmed" && paymentStatus === 'paid' && isPastDate && !isCompleted && !isCancelled
     const canCancel = !isPastDate && canCancelWithin24Hours && !isCancelled
     const withinCancellationWindow = !isPastDate && !canCancelWithin24Hours && !isCancelled
+
+    // Rate-limit: compute cooldown state for Notify Owner button
+    const REMINDER_COOLDOWN_HOURS = 24;
+    const lastReminderSent = booking.lastOwnerReminderSentAt ? new Date(booking.lastOwnerReminderSentAt) : null;
+    const nextReminderAllowedAt = lastReminderSent ? new Date(lastReminderSent.getTime() + REMINDER_COOLDOWN_HOURS * 60 * 60 * 1000) : null;
+    const isOwnerReminderOnCooldown = nextReminderAllowedAt !== null && Date.now() < nextReminderAllowedAt.getTime();
+    const ownerReminderCooldownLabel = isOwnerReminderOnCooldown && nextReminderAllowedAt
+      ? `Reminder already sent. You can send another after ${nextReminderAllowedAt.toLocaleString('en-CA', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}.`
+      : 'Send reminder to owner to confirm payment receipt';
     
     // Get status badge with color
     const getBookingStatusBadge = () => {
@@ -1476,14 +1485,14 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                     size="sm"
                     onClick={() => handleNotifyOwner(booking.id, booking.ownerName || 'Workplace Services')}
                     data-testid={`button-notify-owner-${booking.id}`}
-                    disabled={notifyOwnerMutation.isPending}
+                    disabled={notifyOwnerMutation.isPending || isOwnerReminderOnCooldown}
                     className="flex-1 lg:flex-none text-blue-600 hover:text-blue-700"
                   >
                     <Bell className="h-4 w-4 mr-2" />
                     <span className="hidden sm:inline">Notify</span>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Send reminder to owner to confirm payment receipt</TooltipContent>
+                <TooltipContent>{ownerReminderCooldownLabel}</TooltipContent>
               </Tooltip>
             )}
             
@@ -1679,6 +1688,12 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     const canNotifyOwner = !isPayroll && booking.status === "confirmed" && paymentStatus === 'paid' && isPastDate && !isCompleted && !isCancelled
     const canCancel = !isPastDate && canCancelWithin24Hours && !isCancelled
     const withinCancellationWindow = !isPastDate && !canCancelWithin24Hours && !isCancelled
+
+    // Rate-limit: compute cooldown state for Notify Owner button
+    const REMINDER_COOLDOWN_HOURS_ROW = 24;
+    const lastReminderSentRow = booking.lastOwnerReminderSentAt ? new Date(booking.lastOwnerReminderSentAt) : null;
+    const nextReminderAllowedAtRow = lastReminderSentRow ? new Date(lastReminderSentRow.getTime() + REMINDER_COOLDOWN_HOURS_ROW * 60 * 60 * 1000) : null;
+    const isOwnerReminderOnCooldownRow = nextReminderAllowedAtRow !== null && Date.now() < nextReminderAllowedAtRow.getTime();
     
     const getStatusBadge = () => {
       const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
@@ -1750,7 +1765,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
               </Button>
             )}
             {canNotifyOwner && (
-              <Button variant="ghost" size="icon" onClick={() => handleNotifyOwner(booking.id, booking.ownerName || 'Workplace Services')} data-testid={`compact-notify-${booking.id}`} className="text-blue-600 hover:text-blue-700" disabled={notifyOwnerMutation.isPending}>
+              <Button variant="ghost" size="icon" onClick={() => handleNotifyOwner(booking.id, booking.ownerName || 'Workplace Services')} data-testid={`compact-notify-${booking.id}`} className="text-blue-600 hover:text-blue-700" disabled={notifyOwnerMutation.isPending || isOwnerReminderOnCooldownRow}>
                 <Bell className="h-4 w-4" />
               </Button>
             )}

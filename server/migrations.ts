@@ -326,6 +326,13 @@ const migrations: MigrationCheck[] = [
       `UPDATE issues SET mode = 'rating' WHERE LOWER(TRIM(title)) = 'rating' AND mode = 'issue'`,
     ],
   },
+  {
+    name: "bookings_last_owner_reminder_sent_at",
+    checkQuery: `SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'bookings' AND column_name = 'last_owner_reminder_sent_at')`,
+    migrationStatements: [
+      `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS last_owner_reminder_sent_at TIMESTAMP`,
+    ],
+  },
 ];
 
 export async function runMigrations(): Promise<void> {
