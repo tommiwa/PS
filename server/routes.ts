@@ -6534,7 +6534,7 @@ The BCI ParkShare Team`;
           bookingId: id,
           spotNumber: spot?.spotNumber || 'Unknown',
           amount: parseFloat(booking.totalAmount?.toString() || booking.dailyRate?.toString() || '0'),
-          dueDate: new Date(booking.bookingDate),
+          dueDate: new Date(new Date(booking.bookingDate).getTime() + 7 * 24 * 60 * 60 * 1000),
           ownerName,
           ownerEmail: isWsListing ? undefined : (owner?.email || undefined),
           isWorkplaceServicesListing: isWsListing
@@ -6616,35 +6616,38 @@ The BCI ParkShare Team`;
       }
 
       // Send email notification to owner (or WPS email for admin-created listings)
+      const spotLocation = spot?.locationId ? await storage.getLocation(spot.locationId) : null;
+      const notificationBooking = {
+        id,
+        spotNumber: spot?.spotNumber || 'Unknown',
+        location: spotLocation ? spotLocation.office : '',
+        building: spotLocation ? `${spotLocation.building}, ${spotLocation.level}` : '',
+        bookingDate: new Date(booking.bookingDate),
+        amount: parseFloat(booking.totalAmount?.toString() || booking.dailyRate?.toString() || '0'),
+      };
+      const renterInfo = {
+        name: renterName,
+        email: renter?.email || '',
+      };
+
       if (isWsListing) {
-        const { sendPaymentReminderNotification } = await import('./notification-service');
-        await sendPaymentReminderNotification(
-          { name: 'BCI Workplace Services', email: WORKPLACE_SERVICES_EMAIL, id: booking.ownerId! },
-          {
-            bookingId: id,
-            spotNumber: spot?.spotNumber || 'Unknown',
-            amount: parseFloat(booking.totalAmount?.toString() || booking.dailyRate?.toString() || '0'),
-            dueDate: new Date(booking.bookingDate)
-          }
+        await sendPaymentMarkedPaidNotification(
+          { name: 'BCI Workplace Services', email: WORKPLACE_SERVICES_EMAIL },
+          renterInfo,
+          notificationBooking,
+          {}
         );
       } else {
         const ownerNotificationPrefs = await storage.getNotificationPreferences(booking.ownerId!);
-        if (ownerNotificationPrefs?.emailNotifications) {
-          const { sendPaymentReminderNotification } = await import('./notification-service');
-          const ownerName = owner!.firstName && owner!.lastName 
-            ? `${owner!.firstName} ${owner!.lastName}`
-            : owner!.email || 'Owner';
-          
-          await sendPaymentReminderNotification(
-            { name: ownerName, email: owner!.email || '', id: owner!.id },
-            {
-              bookingId: id,
-              spotNumber: spot?.spotNumber || 'Unknown',
-              amount: parseFloat(booking.totalAmount?.toString() || booking.dailyRate?.toString() || '0'),
-              dueDate: new Date(booking.bookingDate)
-            }
-          );
-        }
+        const ownerName = owner!.firstName && owner!.lastName
+          ? `${owner!.firstName} ${owner!.lastName}`
+          : owner!.email || 'Owner';
+        await sendPaymentMarkedPaidNotification(
+          { name: ownerName, email: owner!.email || '' },
+          renterInfo,
+          notificationBooking,
+          ownerNotificationPrefs || {}
+        );
       }
       
       await auditService.logAction("UPDATE", "booking", {
