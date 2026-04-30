@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Link } from "wouter"
 import { useAuth } from "@/contexts/auth-context"
@@ -55,11 +55,30 @@ import { useLanguage } from "@/hooks/use-language"
 // Define DashboardScope type
 type DashboardScope = 'all' | 'bci';
 
+// Compute today's date string in PST/PDT (America/Los_Angeles) on the client
+function getTodayPST(): string {
+  const d = new Date();
+  const pstStr = d.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' });
+  const pst = new Date(pstStr);
+  const yyyy = pst.getFullYear();
+  const mm = String(pst.getMonth() + 1).padStart(2, '0');
+  const dd = String(pst.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+// Add N days to a YYYY-MM-DD string
+function addDays(dateStr: string, n: number): string {
+  const d = new Date(dateStr + 'T12:00:00');
+  d.setDate(d.getDate() + n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export default function Admin() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const [dateRange, setDateRange] = useState("last-30-days")
   const [scope, setScope] = useState<DashboardScope>('all')
+  const [futureOutlook, setFutureOutlook] = useState<0 | 7 | 14>(0)
   const { cardsVisible, toggleCards, setCardsVisible } = useCardsVisibility('analytics')
   const { t } = useLanguage()
 
@@ -148,6 +167,11 @@ export default function Admin() {
   // Get computed date range for all queries
   const { fromDate, toDate } = getDateRange(dateRange);
 
+  // PST-aware dates for the occupancy chart
+  const todayPST = useMemo(() => getTodayPST(), []);
+  const utilizationFromDate = useMemo(() => addDays(todayPST, -30), [todayPST]);
+  const utilizationToDate = useMemo(() => futureOutlook > 0 ? addDays(todayPST, futureOutlook) : todayPST, [todayPST, futureOutlook]);
+
   // React Query hooks for fetching real analytics data with scope and date range parameters
   const overviewQuery = useQuery<AnalyticsOverviewResponse>({
     queryKey: ['/api/admin/analytics-overview', { scope, from: fromDate, to: toDate }],
@@ -175,7 +199,7 @@ export default function Admin() {
   });
 
   const utilizationQuery = useQuery<ReportUtilizationResponse>({
-    queryKey: ['/api/admin/reports/utilization', { from: fromDate, to: toDate, scope }],
+    queryKey: ['/api/admin/reports/utilization', { from: utilizationFromDate, to: utilizationToDate, scope }],
     staleTime: 5 * 60 * 1000,
   });
 
@@ -753,12 +777,34 @@ export default function Admin() {
           </div>
         )}
 
-        {/* Utilization Section */}
-        <UtilizationReport
-          data={utilizationQuery.data}
-          isLoading={utilizationQuery.isLoading}
-          hideStatCards
-        />
+        {/* Occupancy Chart — Future Outlook Selector + Chart */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-medium text-muted-foreground">Future outlook:</span>
+            <div className="flex rounded-md border overflow-hidden" role="group" aria-label="Future outlook">
+              {([0, 7, 14] as const).map((days) => (
+                <button
+                  key={days}
+                  type="button"
+                  onClick={() => setFutureOutlook(days)}
+                  className={`px-3 py-1.5 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 ${
+                    futureOutlook === days
+                      ? 'bg-primary text-primary-foreground font-medium'
+                      : 'bg-background text-muted-foreground hover-elevate'
+                  } ${days !== 0 ? 'border-l' : ''}`}
+                >
+                  {days === 0 ? 'None' : days === 7 ? '+1 Week' : '+2 Weeks'}
+                </button>
+              ))}
+            </div>
+          </div>
+          <UtilizationReport
+            data={utilizationQuery.data}
+            isLoading={utilizationQuery.isLoading}
+            hideStatCards
+            todayStr={futureOutlook > 0 ? todayPST : undefined}
+          />
+        </div>
       </div>
     </div>
   )

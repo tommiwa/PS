@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
 import { storage } from "./storage";
+import { getTodayInTimezone } from "./timezone";
 import type {
   ReportOverviewResponse,
   ReportUtilizationResponse,
@@ -19,15 +20,25 @@ const reportQuerySchema = z.object({
   scope: z.enum(['all', 'bci']).optional().default('all')
 });
 
-// Helper function to calculate date ranges
-function calculateDateRange(from?: string, to?: string): ReportDateRange {
-  const toDate = to ? new Date(to) : new Date();
-  const fromDate = from ? new Date(from) : new Date(toDate.getTime() - 30 * 24 * 60 * 60 * 1000); // Default 30 days
-  
-  return {
-    from: fromDate.toISOString().split('T')[0],
-    to: toDate.toISOString().split('T')[0]
-  };
+// Helper function to calculate date ranges (PST-aware)
+async function calculateDateRange(from?: string, to?: string): Promise<ReportDateRange> {
+  const todayStr = await getTodayInTimezone();
+  const toStr = to || todayStr;
+
+  let fromStr: string;
+  if (from) {
+    fromStr = from;
+  } else {
+    // Default 30 days lookback from toStr
+    const toDate = new Date(toStr + 'T12:00:00');
+    toDate.setDate(toDate.getDate() - 30);
+    const yyyy = toDate.getFullYear();
+    const mm = String(toDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(toDate.getDate()).padStart(2, '0');
+    fromStr = `${yyyy}-${mm}-${dd}`;
+  }
+
+  return { from: fromStr, to: toStr };
 }
 
 // Helper to filter by scope
@@ -42,7 +53,7 @@ function filterByScope<T extends { isBciManaged?: boolean }>(items: T[], scope: 
 export async function getReportOverview(req: Request, res: Response) {
   try {
     const { from, to, scope } = reportQuerySchema.parse(req.query);
-    const dateRange = calculateDateRange(from, to);
+    const dateRange = await calculateDateRange(from, to);
     
     // Fetch all required data
     const [allSpots, allBookings, allUsers, waitingList] = await Promise.all([
@@ -62,10 +73,10 @@ export async function getReportOverview(req: Request, res: Response) {
       return true; // 'all' scope includes all bookings
     });
     
-    // Filter bookings by date range
+    // Filter bookings by date range (string comparison avoids UTC timezone shift)
     const filteredBookings = bookings.filter((b: any) => {
-      const bookingDate = new Date(b.bookingDate);
-      return bookingDate >= new Date(dateRange.from) && bookingDate <= new Date(dateRange.to);
+      const bookingDateStr = String(b.bookingDate).split('T')[0];
+      return bookingDateStr >= dateRange.from && bookingDateStr <= dateRange.to;
     });
     
     // Calculate metrics
@@ -85,15 +96,17 @@ export async function getReportOverview(req: Request, res: Response) {
       ? (activeBookings / bookableSpots) * 100 
       : 0;
     
-    // Quick stats
-    const today = new Date().toISOString().split('T')[0];
+    // Quick stats (use PST today to avoid UTC date boundary issues)
+    const today = await getTodayInTimezone();
     const todayBookings = filteredBookings.filter((b: any) => 
-      b.bookingDate === today
+      String(b.bookingDate).split('T')[0] === today
     ).length;
     
-    const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const oneWeekAgoDate = new Date(today + 'T12:00:00');
+    oneWeekAgoDate.setDate(oneWeekAgoDate.getDate() - 7);
+    const oneWeekAgo = `${oneWeekAgoDate.getFullYear()}-${String(oneWeekAgoDate.getMonth() + 1).padStart(2, '0')}-${String(oneWeekAgoDate.getDate()).padStart(2, '0')}`;
     const thisWeekRevenue = filteredBookings
-      .filter((b: any) => b.bookingDate >= oneWeekAgo)
+      .filter((b: any) => String(b.bookingDate).split('T')[0] >= oneWeekAgo)
       .reduce((sum: number, b: any) => sum + (Number(b.dailyRate) || 0), 0);
     
     const pendingPayments = filteredBookings.filter((b: any) => 
@@ -137,7 +150,7 @@ export async function getReportOverview(req: Request, res: Response) {
 export async function getReportUtilization(req: Request, res: Response) {
   try {
     const { from, to, scope } = reportQuerySchema.parse(req.query);
-    const dateRange = calculateDateRange(from, to);
+    const dateRange = await calculateDateRange(from, to);
     
     // Fetch required data
     const [allSpots, allBookings, locations, spotTypes, allListings] = await Promise.all([
@@ -151,12 +164,12 @@ export async function getReportUtilization(req: Request, res: Response) {
     // Filter by scope
     const spots = filterByScope(allSpots, scope);
     
-    // Filter bookings by date range and scope
+    // Filter bookings by date range and scope (string comparison avoids UTC timezone shift)
     const bookings = allBookings.filter((b: any) => {
       const spot = allSpots.find(s => s.id === b.spotId);
-      const bookingDate = new Date(b.bookingDate);
+      const bookingDateStr = String(b.bookingDate).split('T')[0];
       const scopeMatch = scope === 'all' || spot?.isBciManaged === true;
-      const dateMatch = bookingDate >= new Date(dateRange.from) && bookingDate <= new Date(dateRange.to);
+      const dateMatch = bookingDateStr >= dateRange.from && bookingDateStr <= dateRange.to;
       return scopeMatch && dateMatch;
     });
     
@@ -324,7 +337,7 @@ export async function getReportUtilization(req: Request, res: Response) {
 export async function getReportRevenue(req: Request, res: Response) {
   try {
     const { from, to, scope } = reportQuerySchema.parse(req.query);
-    const dateRange = calculateDateRange(from, to);
+    const dateRange = await calculateDateRange(from, to);
     
     // Fetch required data
     const [allSpots, allBookings, locations, spotTypes, allUsers] = await Promise.all([
@@ -335,12 +348,12 @@ export async function getReportRevenue(req: Request, res: Response) {
       storage.getAllUsers()
     ]);
     
-    // Filter bookings by date range and scope
+    // Filter bookings by date range and scope (string comparison avoids UTC timezone shift)
     const bookings = allBookings.filter((b: any) => {
       const spot = allSpots.find(s => s.id === b.spotId);
-      const bookingDate = new Date(b.bookingDate);
+      const bookingDateStr = String(b.bookingDate).split('T')[0];
       const scopeMatch = scope === 'all' || spot?.isBciManaged === true;
-      const dateMatch = bookingDate >= new Date(dateRange.from) && bookingDate <= new Date(dateRange.to);
+      const dateMatch = bookingDateStr >= dateRange.from && bookingDateStr <= dateRange.to;
       return scopeMatch && dateMatch;
     });
     
@@ -477,7 +490,7 @@ export async function getReportRevenue(req: Request, res: Response) {
 export async function getReportUserCompliance(req: Request, res: Response) {
   try {
     const { from, to, scope } = reportQuerySchema.parse(req.query);
-    const dateRange = calculateDateRange(from, to);
+    const dateRange = await calculateDateRange(from, to);
     
     // Fetch required data
     const [allUsers, allSpots, allBookings, departments, termsVersions] = await Promise.all([
@@ -609,7 +622,7 @@ export async function getReportUserCompliance(req: Request, res: Response) {
 export async function getReportWaitlistPerformance(req: Request, res: Response) {
   try {
     const { from, to, scope } = reportQuerySchema.parse(req.query);
-    const dateRange = calculateDateRange(from, to);
+    const dateRange = await calculateDateRange(from, to);
     
     // Fetch required data
     const [waitingList, allUsers, spotTypes, departments] = await Promise.all([
@@ -800,7 +813,7 @@ export async function getSpotAssignmentReport(req: Request, res: Response) {
     });
     
     const { from, to, action, departmentId, scope } = spotAssignmentQuerySchema.parse(req.query);
-    const dateRange = calculateDateRange(from, to);
+    const dateRange = await calculateDateRange(from, to);
     
     // Get spot assignment history with filters
     const history = await storage.getSpotAssignmentHistory({
@@ -847,7 +860,7 @@ export async function getSharedPoolUsageReport(req: Request, res: Response) {
     });
     
     const { from, to } = sharedPoolQuerySchema.parse(req.query);
-    const today = new Date().toISOString().split('T')[0];
+    const today = await getTodayInTimezone();
     
     const dateRange = {
       from,
@@ -987,7 +1000,7 @@ export async function getSharedPoolUsageReport(req: Request, res: Response) {
 export async function getActiveUsersReport(req: Request, res: Response) {
   try {
     const { from, to } = reportQuerySchema.parse(req.query);
-    const dateRange = calculateDateRange(from, to);
+    const dateRange = await calculateDateRange(from, to);
 
     const fromDate = new Date(dateRange.from + 'T00:00:00');
     const toDate = new Date(dateRange.to + 'T23:59:59');

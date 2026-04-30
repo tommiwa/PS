@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, ComposedChart, Line } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, ComposedChart, Line, ReferenceLine } from 'recharts';
 import type { TooltipProps } from 'recharts';
 import type { ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent';
 import { BarChart3, Layers, MapPin, ParkingSquare, TrendingUp } from 'lucide-react';
@@ -12,6 +12,8 @@ interface UtilizationReportProps {
   data: ReportUtilizationResponse | undefined;
   isLoading: boolean;
   hideStatCards?: boolean;
+  /** When provided, a vertical reference line is drawn at this date to mark "today" */
+  todayStr?: string;
 }
 
 function getCssVar(name: string): string {
@@ -31,7 +33,7 @@ function useChartColors() {
   }), []);
 }
 
-export function UtilizationReport({ data, isLoading, hideStatCards = false }: UtilizationReportProps) {
+export function UtilizationReport({ data, isLoading, hideStatCards = false, todayStr }: UtilizationReportProps) {
   const colors = useChartColors();
 
   const COLORS = [colors.chart1, colors.chart2, colors.chart3, colors.chart4, colors.chart5];
@@ -221,21 +223,29 @@ export function UtilizationReport({ data, isLoading, hideStatCards = false }: Ut
         });
 
         const dayCount = chartData.length;
-        const tickInterval = dayCount <= 14 ? 0 : dayCount <= 60 ? 6 : 14;
+        // Up to 14 days: show every tick; up to 44 days: every 3rd; up to 60: every 6th; else every 14th
+        const tickInterval = dayCount <= 14 ? 0 : dayCount <= 44 ? 3 : dayCount <= 60 ? 6 : 14;
 
         const formatDate = (dateStr: string) => {
           const d = new Date(dateStr + 'T00:00:00');
           return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         };
 
+        // Show reference line only when todayStr is within the chart range and before the last point
+        const lastDate = chartData[chartData.length - 1]?.date ?? '';
+        const showTodayLine = todayStr && lastDate > todayStr;
+
         const CustomTooltip = ({ active, payload, label }: TooltipProps<ValueType, NameType>) => {
           if (!active || !payload || !payload.length) return null;
           const booked = payload.find((p) => p.dataKey === 'bookedSpots')?.value ?? 0;
           const available = payload.find((p) => p.dataKey === 'availableForSharing')?.value ?? 0;
           const rate = payload.find((p) => p.dataKey === 'occupancyRate')?.value ?? 0;
+          const isFuture = todayStr && label > todayStr;
           return (
             <div className="bg-card border border-border rounded-md shadow-sm p-3 text-sm space-y-1">
-              <p className="font-semibold text-card-foreground">{formatDate(label)}</p>
+              <p className="font-semibold text-card-foreground">
+                {formatDate(label)}{isFuture ? ' (forecast)' : ''}
+              </p>
               <p style={{ color: colors.chart1 }}>Booked Spots: {booked}</p>
               <p style={{ color: colors.chart3 }}>Available for Sharing: {available}</p>
               <p style={{ color: colors.chart5 }}>Occupancy Rate: {rate}%</p>
@@ -276,6 +286,16 @@ export function UtilizationReport({ data, isLoading, hideStatCards = false }: Ut
                   <Bar yAxisId="left" dataKey="bookedSpots" stackId="occupancy" fill={colors.chart1} name="bookedSpots" />
                   <Bar yAxisId="left" dataKey="availableForSharing" stackId="occupancy" fill={colors.chart3} name="availableForSharing" />
                   <Line yAxisId="right" type="monotone" dataKey="occupancyRate" stroke={colors.chart5} strokeWidth={2} dot={false} name="occupancyRate" />
+                  {showTodayLine && (
+                    <ReferenceLine
+                      x={todayStr}
+                      yAxisId="left"
+                      stroke={colors.muted}
+                      strokeDasharray="4 3"
+                      strokeWidth={2}
+                      label={{ value: 'Today', position: 'insideTopRight', fontSize: 11, fill: colors.muted }}
+                    />
+                  )}
                 </ComposedChart>
               </ResponsiveContainer>
             </CardContent>
