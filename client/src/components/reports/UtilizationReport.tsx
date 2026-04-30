@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, ComposedChart, Line, ReferenceLine } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, ComposedChart, Line, ReferenceLine, ReferenceArea } from 'recharts';
 import type { TooltipProps } from 'recharts';
 import type { ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent';
 import { BarChart3, Layers, MapPin, ParkingSquare, TrendingUp } from 'lucide-react';
@@ -283,6 +283,16 @@ export function UtilizationReport({ data, isLoading, hideStatCards = false, toda
                         : 'Occupancy Rate %'
                     }
                   />
+                  {showTodayLine && (
+                    <ReferenceArea
+                      x1={todayStr}
+                      x2={lastDate}
+                      yAxisId="left"
+                      fill="hsl(38 92% 50%)"
+                      fillOpacity={0.08}
+                      ifOverflow="visible"
+                    />
+                  )}
                   <Bar yAxisId="left" dataKey="bookedSpots" stackId="occupancy" fill={colors.chart1} name="bookedSpots" />
                   <Bar yAxisId="left" dataKey="availableForSharing" stackId="occupancy" fill={colors.chart3} name="availableForSharing" />
                   <Line yAxisId="right" type="monotone" dataKey="occupancyRate" stroke={colors.chart5} strokeWidth={2} dot={false} name="occupancyRate" />
@@ -290,10 +300,16 @@ export function UtilizationReport({ data, isLoading, hideStatCards = false, toda
                     <ReferenceLine
                       x={todayStr}
                       yAxisId="left"
-                      stroke={colors.muted}
-                      strokeDasharray="4 3"
-                      strokeWidth={2}
-                      label={{ value: 'Today', position: 'insideTopRight', fontSize: 11, fill: colors.muted }}
+                      stroke="hsl(38 92% 50%)"
+                      strokeWidth={2.5}
+                      label={{
+                        value: 'Today',
+                        position: 'insideTopRight',
+                        fontSize: 11,
+                        fontWeight: 600,
+                        fill: 'hsl(38 92% 50%)',
+                        offset: 6,
+                      }}
                     />
                   )}
                 </ComposedChart>
