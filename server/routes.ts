@@ -8,7 +8,7 @@ import { setupAuth, isAuthenticated, requireAdmin, getAuthenticatedUserId, getAu
 import { z } from "zod";
 import { db, pool } from "./db";
 import { parkingSpots, spotLocks, spotListings, bookings, issues, insertIssueSchema, updateIssueSchema, issueStatuses, termsVersions } from "@shared/schema";
-import type { Booking, ParkingSpot, User, OwnerStatisticsV2Response } from "@shared/schema";
+import type { Booking, ParkingSpot, OwnerStatisticsV2Response } from "@shared/schema";
 import { inArray, and, eq, lt, gt, not, or, sql, isNull } from "drizzle-orm";
 import { 
   sendAssignmentNotification, 
