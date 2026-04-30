@@ -8864,6 +8864,19 @@ The BCI ParkShare Team`;
     }
   });
 
+  // ===== SERVER TIME ENDPOINT =====
+
+  // GET /api/admin/today-pst - Returns today's date string in the configured timezone (Admin only)
+  app.get("/api/admin/today-pst", requireAdmin, async (req, res) => {
+    try {
+      const today = await getTodayInTimezone();
+      res.json({ today });
+    } catch (error) {
+      console.error("[TodayPST] Error fetching today's date:", error);
+      res.status(500).json({ error: "Failed to fetch today's date" });
+    }
+  });
+
   // ===== APP CONFIGURATION ENDPOINTS =====
 
   // GET /api/admin/app-configs - Get all app configurations (Admin only)

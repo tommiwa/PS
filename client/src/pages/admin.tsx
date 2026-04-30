@@ -55,17 +55,6 @@ import { useLanguage } from "@/hooks/use-language"
 // Define DashboardScope type
 type DashboardScope = 'all' | 'bci';
 
-// Compute today's date string in PST/PDT (America/Los_Angeles) on the client
-function getTodayPST(): string {
-  const d = new Date();
-  const pstStr = d.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' });
-  const pst = new Date(pstStr);
-  const yyyy = pst.getFullYear();
-  const mm = String(pst.getMonth() + 1).padStart(2, '0');
-  const dd = String(pst.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
-}
-
 // Add N days to a YYYY-MM-DD string
 function addDays(dateStr: string, n: number): string {
   const d = new Date(dateStr + 'T12:00:00');
@@ -167,10 +156,14 @@ export default function Admin() {
   // Get computed date range for all queries
   const { fromDate, toDate } = getDateRange(dateRange);
 
-  // PST-aware dates for the occupancy chart
-  const todayPST = useMemo(() => getTodayPST(), []);
-  const utilizationFromDate = useMemo(() => addDays(todayPST, -30), [todayPST]);
-  const utilizationToDate = useMemo(() => futureOutlook > 0 ? addDays(todayPST, futureOutlook) : todayPST, [todayPST, futureOutlook]);
+  // Fetch today's date in the configured timezone from the server to avoid client-side timezone issues
+  const { data: serverTodayData } = useQuery<{ today: string }>({
+    queryKey: ['/api/admin/today-pst'],
+    staleTime: 5 * 60 * 1000,
+  });
+  const todayPST = serverTodayData?.today ?? '';
+  const utilizationFromDate = useMemo(() => todayPST ? addDays(todayPST, -30) : '', [todayPST]);
+  const utilizationToDate = useMemo(() => todayPST ? (futureOutlook > 0 ? addDays(todayPST, futureOutlook) : todayPST) : '', [todayPST, futureOutlook]);
 
   // React Query hooks for fetching real analytics data with scope and date range parameters
   const overviewQuery = useQuery<AnalyticsOverviewResponse>({
@@ -201,6 +194,7 @@ export default function Admin() {
   const utilizationQuery = useQuery<ReportUtilizationResponse>({
     queryKey: ['/api/admin/reports/utilization', { from: utilizationFromDate, to: utilizationToDate, scope }],
     staleTime: 5 * 60 * 1000,
+    enabled: !!utilizationFromDate && !!utilizationToDate,
   });
 
   // Check if any query is loading
