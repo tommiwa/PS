@@ -3250,29 +3250,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Department-reserved spot check: Verify user belongs to the required department
-      // BYPASS: If the listing was created by an admin, department restriction does not apply —
-      // admins explicitly open the spot to all employees when they create a listing.
-      if (spot.reservedForDepartmentId) {
-        const listingForCheck = validatedData.listingId
-          ? await storage.getSpotListing(validatedData.listingId)
-          : null;
-        const isAdminListing = listingForCheck?.createdByAdmin === true;
-
-        if (!isAdminListing) {
-          const user = await storage.getUser(userId);
-          if (!user || user.departmentId !== spot.reservedForDepartmentId) {
-            const departments = await storage.getDepartments();
-            const dept = departments.find(d => d.id === spot.reservedForDepartmentId);
-            const deptName = dept?.name || 'a specific department';
-            return res.status(403).json({ 
-              error: "This spot is reserved for another department", 
-              reason: `This parking spot is reserved for ${deptName} employees only.` 
-            });
-          }
-        }
-      }
-
       // Note: Removed taxable_benefit check as it's not in the SpotType enum
 
       // NOTE: Temporarily disabled for testing - allow booking own spots

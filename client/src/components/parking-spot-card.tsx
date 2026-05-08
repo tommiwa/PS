@@ -145,7 +145,10 @@ export function ParkingSpotCard({
 
   const getSpotTypeBadge = () => {
     const spotTypeName = spot.spotTypeName;
-    const displayName = spotTypeName || "Regular";
+    const isDepartmentReserved = spotTypeName === "Department Reserved";
+    const displayName = (isDepartmentReserved && isRenterView) 
+      ? "Reserved" 
+      : (spotTypeName || "Regular");
     const { badge: badgeColors } = getSpotTypeColors(spotTypeName);
     
     // Determine tooltip text
