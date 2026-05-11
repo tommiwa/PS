@@ -107,6 +107,7 @@ export default function Search() {
   const [selectedSpot, setSelectedSpot] = useState<DisplaySpot | null>(null)
   const [showBookingForm, setShowBookingForm] = useState(false)
   const [sortBy, setSortBy] = useState("date")
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
   // Default to Calendar for desktop, Tiles for mobile (based on initial screen size)
   const [activeTab, setActiveTab] = useState<string>(() => {
     if (typeof window !== 'undefined') {
@@ -824,30 +825,17 @@ export default function Search() {
   const spotsForTiles = (hasDateFilter ? filteredSpots : baseFilteredSpots).filter(spot => !isSpotBooked(spot))
   const spotsForCalendar = hasDateFilter ? filteredSpots : baseFilteredSpots
   
-  const sortMeta: Record<string, { label: string; direction: "asc" | "desc" }> = {
-    price: { label: "Price (Low to High)", direction: "asc" },
-    date:  { label: "Date (Earliest First)", direction: "asc" },
-  }
-
   const sortedSpots = [...spotsForTiles].sort((a, b) => {
+    const dir = sortDirection === "asc" ? 1 : -1
     switch (sortBy) {
       case "price":
-        return a.price - b.price
-      case "price-desc":
-        return b.price - a.price
+        return dir * (a.price - b.price)
       case "date": {
-        // Sort by earliest availability date first, then lowest price as tiebreaker
+        // Sort by availability date, then lowest price as tiebreaker
         const aDate = a.availabilityDates?.[0] || ''
         const bDate = b.availabilityDates?.[0] || ''
         const dateCmp = aDate.localeCompare(bDate)
-        if (dateCmp !== 0) return dateCmp
-        return a.price - b.price
-      }
-      case "date-desc": {
-        const aDate = a.availabilityDates?.[0] || ''
-        const bDate = b.availabilityDates?.[0] || ''
-        const dateCmp = bDate.localeCompare(aDate)
-        if (dateCmp !== 0) return dateCmp
+        if (dateCmp !== 0) return dir * dateCmp
         return a.price - b.price
       }
       case "best-deal": {
@@ -859,13 +847,13 @@ export default function Search() {
           return 4
         }
         const tierCmp = getTier(a.price) - getTier(b.price)
-        if (tierCmp !== 0) return tierCmp
+        if (tierCmp !== 0) return dir * tierCmp
         return a.price - b.price
       }
       case "spot-number": {
         const aId = a.spotNumber || a.id?.toString() || ''
         const bId = b.spotNumber || b.id?.toString() || ''
-        return aId.localeCompare(bId, undefined, { numeric: true, sensitivity: 'base' })
+        return dir * aId.localeCompare(bId, undefined, { numeric: true, sensitivity: 'base' })
       }
       default:
         return 0
@@ -1027,20 +1015,26 @@ export default function Search() {
             <div className="flex items-center gap-2 w-full md:w-auto">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground cursor-default shrink-0" data-testid="button-sort-direction">
-                    {(sortMeta[sortBy]?.direction ?? "asc") === "asc"
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-1 shrink-0"
+                    data-testid="button-sort-direction"
+                    onClick={() => setSortDirection(d => d === "asc" ? "desc" : "asc")}
+                  >
+                    {sortDirection === "asc"
                       ? <SortAsc className="h-4 w-4" />
                       : <SortDesc className="h-4 w-4" />}
                     <span className="hidden md:inline">
-                      {(sortMeta[sortBy]?.direction ?? "asc") === "asc" ? "Asc" : "Desc"}
+                      {sortDirection === "asc" ? "Asc" : "Desc"}
                     </span>
-                  </div>
+                  </Button>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>
-                    {(sortMeta[sortBy]?.direction ?? "asc") === "asc"
-                      ? `Sorted ascending — ${sortMeta[sortBy]?.label ?? sortBy}`
-                      : `Sorted descending — ${sortMeta[sortBy]?.label ?? sortBy}`}
+                    {sortDirection === "asc"
+                      ? `Currently ascending — click to sort descending`
+                      : `Currently descending — click to sort ascending`}
                   </p>
                 </TooltipContent>
               </Tooltip>
@@ -1048,16 +1042,14 @@ export default function Search() {
                 <TooltipTrigger asChild>
                   <select 
                     value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
+                    onChange={(e) => { setSortBy(e.target.value); setSortDirection("asc") }}
                     className="flex-1 md:flex-initial px-3 py-2 md:py-1 border rounded-md text-sm cursor-pointer min-h-11 md:min-h-0"
                     data-testid="select-sort"
                   >
-                    <option value="date">Date (Earliest First)</option>
-                    <option value="date-desc">Date (Latest First)</option>
-                    <option value="price">Price (Low to High)</option>
-                    <option value="price-desc">Price (High to Low)</option>
+                    <option value="date">Date</option>
+                    <option value="price">Price</option>
                     <option value="best-deal">Best Deal</option>
-                    <option value="spot-number">Spot Number (A→Z)</option>
+                    <option value="spot-number">Spot Number</option>
                   </select>
                 </TooltipTrigger>
                 <TooltipContent>
