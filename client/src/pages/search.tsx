@@ -829,10 +829,10 @@ export default function Search() {
       case "price":
         return a.price - b.price
       case "date": {
-        // Sort by latest availability date first, then lowest price as tiebreaker
+        // Sort by earliest availability date first, then lowest price as tiebreaker
         const aDate = a.availabilityDates?.[0] || ''
         const bDate = b.availabilityDates?.[0] || ''
-        const dateCmp = bDate.localeCompare(aDate)
+        const dateCmp = aDate.localeCompare(bDate)
         if (dateCmp !== 0) return dateCmp
         return a.price - b.price
       }
