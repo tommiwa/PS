@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import { MapPin, Filter, SortAsc, Calendar, Grid, Sparkles, Loader2, RefreshCw } from "lucide-react"
+import { MapPin, Filter, SortAsc, SortDesc, Calendar, Grid, Sparkles, Loader2, RefreshCw } from "lucide-react"
 import { isPastDate } from "@/utils/date-utils"
 import { apiRequest } from "@/lib/queryClient"
 import { type ParkingSpot as DBParkingSpot, type SpotTypeTable } from "@shared/schema"
@@ -824,6 +824,11 @@ export default function Search() {
   const spotsForTiles = (hasDateFilter ? filteredSpots : baseFilteredSpots).filter(spot => !isSpotBooked(spot))
   const spotsForCalendar = hasDateFilter ? filteredSpots : baseFilteredSpots
   
+  const sortMeta: Record<string, { label: string; direction: "asc" | "desc" }> = {
+    price: { label: "Price (Low to High)", direction: "asc" },
+    date:  { label: "Date (Earliest First)", direction: "asc" },
+  }
+
   const sortedSpots = [...spotsForTiles].sort((a, b) => {
     switch (sortBy) {
       case "price":
@@ -1020,7 +1025,25 @@ export default function Search() {
           
           {activeTab === "tiles" && (
             <div className="flex items-center gap-2 w-full md:w-auto">
-              <span className="text-sm text-muted-foreground hidden md:inline">Sort by:</span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground cursor-default shrink-0" data-testid="button-sort-direction">
+                    {(sortMeta[sortBy]?.direction ?? "asc") === "asc"
+                      ? <SortAsc className="h-4 w-4" />
+                      : <SortDesc className="h-4 w-4" />}
+                    <span className="hidden md:inline">
+                      {(sortMeta[sortBy]?.direction ?? "asc") === "asc" ? "Asc" : "Desc"}
+                    </span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>
+                    {(sortMeta[sortBy]?.direction ?? "asc") === "asc"
+                      ? `Sorted ascending — ${sortMeta[sortBy]?.label ?? sortBy}`
+                      : `Sorted descending — ${sortMeta[sortBy]?.label ?? sortBy}`}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <select 
@@ -1039,16 +1062,6 @@ export default function Search() {
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Sort parking spots by date, price, best deal, or spot number</p>
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" className="hidden md:flex" data-testid="button-sort-direction">
-                    <SortAsc className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Sort direction indicator - currently showing ascending order (low to high)</p>
                 </TooltipContent>
               </Tooltip>
             </div>
