@@ -69,6 +69,26 @@ export function getTomorrowInTimezoneSync(): string {
 }
 
 /**
+ * Get the end-of-week (Sunday) date string in YYYY-MM-DD format using the default timezone (synchronous).
+ *
+ * DST-safe: derives today's date components from the target timezone, anchors a UTC
+ * instant at noon on that calendar day, then advances by the number of days until the
+ * next Sunday (or stays on today if today is already Sunday).
+ * Noon UTC is never a DST transition point in any American timezone.
+ */
+export function getEndOfWeekInTimezoneSync(): string {
+  const todayStr = getTodayInTimezoneSync(); // "YYYY-MM-DD" in the target timezone
+  const [year, month, day] = todayStr.split('-').map(Number);
+  // Build a UTC instant at noon on today's timezone-local calendar date.
+  const todayNoonUtcMs = Date.UTC(year, month - 1, day, 12, 0, 0);
+  // Determine the UTC day-of-week (0=Sunday … 6=Saturday) from the noon instant.
+  const dayOfWeek = new Date(todayNoonUtcMs).getUTCDay();
+  const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+  const endOfWeekNoonUtc = new Date(todayNoonUtcMs + daysUntilSunday * 24 * 60 * 60 * 1000);
+  return formatInTimeZone(endOfWeekNoonUtc, DEFAULT_TIMEZONE, 'yyyy-MM-dd');
+}
+
+/**
  * Get today's date string in YYYY-MM-DD format in the configured timezone
  */
 export async function getTodayInTimezone(): Promise<string> {

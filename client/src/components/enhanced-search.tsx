@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { Search, X, Zap, Accessibility, Calendar, Filter, SlidersHorizontal } from "lucide-react"
-import { getTodayInTimezoneSync, getTomorrowInTimezoneSync } from "@/lib/timezone"
+import { getTodayInTimezoneSync, getTomorrowInTimezoneSync, getEndOfWeekInTimezoneSync } from "@/lib/timezone"
 
 export interface ParsedSearch {
   query: string
@@ -59,15 +59,9 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
       } else if (filterValue === "tomorrow") {
         parsed.date = getTomorrowInTimezoneSync()
       } else if (filterValue === "this_week") {
-        // Calculate end of week (Sunday)
-        const today = new Date()
-        const endOfWeek = new Date(today)
-        const dayOfWeek = today.getDay()
-        const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek
-        endOfWeek.setDate(today.getDate() + daysUntilSunday)
         parsed.dateRange = {
-          start: today.toISOString().split('T')[0],
-          end: endOfWeek.toISOString().split('T')[0]
+          start: getTodayInTimezoneSync(),
+          end: getEndOfWeekInTimezoneSync()
         }
       } else if (filterValue === "electric") {
         parsed.spotType = "electric"
