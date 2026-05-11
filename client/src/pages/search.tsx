@@ -828,6 +828,8 @@ export default function Search() {
     switch (sortBy) {
       case "price":
         return a.price - b.price
+      case "price-desc":
+        return b.price - a.price
       case "date": {
         // Sort by earliest availability date first, then lowest price as tiebreaker
         const aDate = a.availabilityDates?.[0] || ''
@@ -835,6 +837,30 @@ export default function Search() {
         const dateCmp = aDate.localeCompare(bDate)
         if (dateCmp !== 0) return dateCmp
         return a.price - b.price
+      }
+      case "date-desc": {
+        const aDate = a.availabilityDates?.[0] || ''
+        const bDate = b.availabilityDates?.[0] || ''
+        const dateCmp = bDate.localeCompare(aDate)
+        if (dateCmp !== 0) return dateCmp
+        return a.price - b.price
+      }
+      case "best-deal": {
+        const getTier = (price: number) => {
+          if (price === 0) return 0
+          if (price <= 5) return 1
+          if (price <= 10) return 2
+          if (price <= 12) return 3
+          return 4
+        }
+        const tierCmp = getTier(a.price) - getTier(b.price)
+        if (tierCmp !== 0) return tierCmp
+        return a.price - b.price
+      }
+      case "spot-number": {
+        const aId = a.spotNumber || a.id?.toString() || ''
+        const bId = b.spotNumber || b.id?.toString() || ''
+        return aId.localeCompare(bId, undefined, { numeric: true, sensitivity: 'base' })
       }
       default:
         return 0
@@ -1003,12 +1029,16 @@ export default function Search() {
                     className="flex-1 md:flex-initial px-3 py-2 md:py-1 border rounded-md text-sm cursor-pointer min-h-11 md:min-h-0"
                     data-testid="select-sort"
                   >
-                    <option value="price">Price (Low to High)</option>
                     <option value="date">Date (Earliest First)</option>
+                    <option value="date-desc">Date (Latest First)</option>
+                    <option value="price">Price (Low to High)</option>
+                    <option value="price-desc">Price (High to Low)</option>
+                    <option value="best-deal">Best Deal</option>
+                    <option value="spot-number">Spot Number (A→Z)</option>
                   </select>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Sort parking spots by price (cheapest first) or by earliest availability date</p>
+                  <p>Sort parking spots by date, price, best deal, or spot number</p>
                 </TooltipContent>
               </Tooltip>
               <Tooltip>
