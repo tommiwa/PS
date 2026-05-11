@@ -42,6 +42,33 @@ export async function getConfiguredTimezone(): Promise<string> {
 }
 
 /**
+ * Get today's date string in YYYY-MM-DD format using the default timezone (synchronous).
+ * Uses DEFAULT_TIMEZONE directly — suitable for UI filters that cannot await.
+ */
+export function getTodayInTimezoneSync(): string {
+  return formatInTimeZone(new Date(), DEFAULT_TIMEZONE, 'yyyy-MM-dd');
+}
+
+/**
+ * Get tomorrow's date string in YYYY-MM-DD format using the default timezone (synchronous).
+ *
+ * DST-safe: derives today's date components from the target timezone, then anchors
+ * a UTC instant at noon on that calendar day before adding exactly 24 hours.
+ * Noon UTC is never a DST transition point in any American timezone, so the
+ * resulting instant always lands unambiguously on the next calendar day.
+ */
+export function getTomorrowInTimezoneSync(): string {
+  const todayStr = getTodayInTimezoneSync(); // "YYYY-MM-DD" in the target timezone
+  const [year, month, day] = todayStr.split('-').map(Number);
+  // Build a UTC instant at noon on today's timezone-local calendar date.
+  // Month in Date.UTC is 0-indexed.
+  const todayNoonUtcMs = Date.UTC(year, month - 1, day, 12, 0, 0);
+  // Add 24 hours to land at noon UTC on the next calendar day.
+  const tomorrowNoonUtc = new Date(todayNoonUtcMs + 24 * 60 * 60 * 1000);
+  return formatInTimeZone(tomorrowNoonUtc, DEFAULT_TIMEZONE, 'yyyy-MM-dd');
+}
+
+/**
  * Get today's date string in YYYY-MM-DD format in the configured timezone
  */
 export async function getTodayInTimezone(): Promise<string> {

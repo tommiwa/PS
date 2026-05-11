@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { Search, X, Zap, Accessibility, Calendar, Filter, SlidersHorizontal } from "lucide-react"
+import { getTodayInTimezoneSync, getTomorrowInTimezoneSync } from "@/lib/timezone"
 
 export interface ParsedSearch {
   query: string
@@ -26,6 +27,7 @@ interface EnhancedSearchProps {
 
 const QUICK_FILTERS = [
   { label: "Today", value: "today", icon: Calendar, type: "date", tooltip: "Filter for parking spots available today" },
+  { label: "Tomorrow", value: "tomorrow", icon: Calendar, type: "date", tooltip: "Filter for parking spots available tomorrow" },
   { label: "This Week", value: "this_week", icon: Calendar, type: "date", tooltip: "Filter for parking spots available this week" },
   { label: "Electric", value: "electric", icon: Zap, type: "spotType", tooltip: "Filter for electric vehicle charging stations with standard EV connectors" },
   { label: "Tesla", value: "tesla_ev", icon: Zap, type: "spotType", tooltip: "Filter for Tesla-specific charging stations optimized for Tesla vehicles" },
@@ -53,7 +55,9 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
     // Handle active filters first
     filters.forEach(filterValue => {
       if (filterValue === "today") {
-        parsed.date = new Date().toISOString().split('T')[0]
+        parsed.date = getTodayInTimezoneSync()
+      } else if (filterValue === "tomorrow") {
+        parsed.date = getTomorrowInTimezoneSync()
       } else if (filterValue === "this_week") {
         // Calculate end of week (Sunday)
         const today = new Date()
@@ -131,11 +135,9 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
 
     // Date parsing from query text
     if (terms.includes("today")) {
-      parsed.date = new Date().toISOString().split('T')[0]
+      parsed.date = getTodayInTimezoneSync()
     } else if (terms.includes("tomorrow")) {
-      const tomorrow = new Date()
-      tomorrow.setDate(tomorrow.getDate() + 1)
-      parsed.date = tomorrow.toISOString().split('T')[0]
+      parsed.date = getTomorrowInTimezoneSync()
     }
 
     return parsed
@@ -179,6 +181,13 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
       // Remove from query if it exists
       newQuery = newQuery.replace(new RegExp(`\\b${filter.value}\\b`, 'gi'), '').replace(/\s+/g, ' ').trim()
     } else {
+      // Date-type filters are mutually exclusive — remove any other date filter first
+      if (filter.type === "date") {
+        const otherDateFilters = QUICK_FILTERS
+          .filter(f => f.type === "date" && f.value !== filter.value)
+          .map(f => f.value)
+        newActiveFilters = newActiveFilters.filter(f => !otherDateFilters.includes(f))
+      }
       newActiveFilters.push(filter.value)
       // Only add to query text if it's not a date filter
       if (filter.type !== "date" && !newQuery.toLowerCase().includes(filter.value.toLowerCase())) {
@@ -214,6 +223,7 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
     // Light, distinct colors for each filter
     const colorMap: Record<string, string> = {
       'today': 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100',
+      'tomorrow': 'bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-100',
       'this_week': 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100',
       'inside': 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100',
       'bci_managed': 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100',
