@@ -69,22 +69,33 @@ export function getTomorrowInTimezoneSync(): string {
 }
 
 /**
- * Get the end-of-week (Sunday) date string in YYYY-MM-DD format using the default timezone (synchronous).
+ * Get the end-of-week date string in YYYY-MM-DD format using the default timezone (synchronous).
+ *
+ * @param weekStartDay - 'sunday' (default) means the week starts on Sunday and ends on Saturday (Canadian/BCI convention).
+ *                       'monday' means the week starts on Monday and ends on Sunday.
  *
  * DST-safe: derives today's date components from the target timezone, anchors a UTC
  * instant at noon on that calendar day, then advances by the number of days until the
- * next Sunday (or stays on today if today is already Sunday).
- * Noon UTC is never a DST transition point in any American timezone.
+ * end of the week.  Noon UTC is never a DST transition point in any American timezone.
  */
-export function getEndOfWeekInTimezoneSync(): string {
+export function getEndOfWeekInTimezoneSync(weekStartDay: string = 'sunday'): string {
   const todayStr = getTodayInTimezoneSync(); // "YYYY-MM-DD" in the target timezone
   const [year, month, day] = todayStr.split('-').map(Number);
   // Build a UTC instant at noon on today's timezone-local calendar date.
   const todayNoonUtcMs = Date.UTC(year, month - 1, day, 12, 0, 0);
   // Determine the UTC day-of-week (0=Sunday … 6=Saturday) from the noon instant.
   const dayOfWeek = new Date(todayNoonUtcMs).getUTCDay();
-  const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
-  const endOfWeekNoonUtc = new Date(todayNoonUtcMs + daysUntilSunday * 24 * 60 * 60 * 1000);
+
+  let daysUntilEnd: number;
+  if (weekStartDay === 'sunday') {
+    // Week: Sunday → Saturday; end day = Saturday (6)
+    daysUntilEnd = (6 - dayOfWeek + 7) % 7;
+  } else {
+    // Week: Monday → Sunday; end day = Sunday (0)
+    daysUntilEnd = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+  }
+
+  const endOfWeekNoonUtc = new Date(todayNoonUtcMs + daysUntilEnd * 24 * 60 * 60 * 1000);
   return formatInTimeZone(endOfWeekNoonUtc, DEFAULT_TIMEZONE, 'yyyy-MM-dd');
 }
 

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react"
+import { useQuery } from "@tanstack/react-query"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -43,6 +44,19 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
 
+  // Fetch the configured week start day (sunday = week ends Saturday, monday = week ends Sunday)
+  const { data: weekStartDayConfig } = useQuery<{ key: string; value: string } | null>({
+    queryKey: ['/api/app-configs/week_start_day'],
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const res = await fetch('/api/app-configs/week_start_day', { credentials: 'include' });
+      if (res.status === 404) return null;
+      if (!res.ok) return null;
+      return res.json();
+    },
+  })
+  const weekStartDay = weekStartDayConfig?.value ?? 'sunday'
+
   // Parse the search query intelligently
   const parseSearchQuery = (searchQuery: string, filters: string[] = activeFilters): ParsedSearch => {
     const parsed: ParsedSearch = {
@@ -61,7 +75,7 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
       } else if (filterValue === "this_week") {
         parsed.dateRange = {
           start: getTodayInTimezoneSync(),
-          end: getEndOfWeekInTimezoneSync()
+          end: getEndOfWeekInTimezoneSync(weekStartDay)
         }
       } else if (filterValue === "electric") {
         parsed.spotType = "electric"
@@ -156,7 +170,7 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
         clearTimeout(debounceTimerRef.current)
       }
     }
-  }, [query, activeFilters])
+  }, [query, activeFilters, weekStartDay])
 
   const handleSearch = () => {
     const parsed = parseSearchQuery(query)

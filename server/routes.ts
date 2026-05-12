@@ -8911,6 +8911,14 @@ The BCI ParkShare Team`;
           dataType: 'number',
           category: 'system',
           description: 'Number of days a "New!" badge appears on newly introduced features before automatically disappearing.'
+        },
+        {
+          key: 'week_start_day',
+          value: 'sunday',
+          label: 'Week Start Day',
+          dataType: 'string',
+          category: 'system',
+          description: 'The first day of the week used for the "This Week" date filter. "sunday" means the week runs Sunday to Saturday (end = Saturday). "monday" means the week runs Monday to Sunday (end = Sunday).'
         }
       ];
       

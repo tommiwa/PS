@@ -301,6 +301,89 @@ If you have questions about the collection of your personal information through 
   // Seed terms and conditions on startup
   await seedTermsAndConditions();
   
+  // Seed default app configs so they are available to all authenticated users
+  // (not just admins who have visited the admin settings page)
+  const seedDefaultAppConfigs = async () => {
+    try {
+      const defaultConfigs = [
+        {
+          key: 'lock_timeout_ms',
+          value: '30000',
+          label: 'Lock Timeout',
+          dataType: 'number',
+          category: 'booking',
+          description: 'Duration in seconds for how long a booking lock is held before it automatically expires. Users must complete their booking within this time.'
+        },
+        {
+          key: 'max_daily_rate',
+          value: '18',
+          label: 'Maximum Daily Rate',
+          dataType: 'number',
+          category: 'booking',
+          description: 'Maximum allowed daily rate for parking spot listings. Owners and admins cannot set rates higher than this amount.'
+        },
+        {
+          key: 'timezone',
+          value: 'America/Los_Angeles',
+          label: 'Application Timezone',
+          dataType: 'string',
+          category: 'system',
+          description: 'The timezone used for displaying and calculating all dates and times in the application (e.g., America/Los_Angeles for PST/PDT)'
+        },
+        {
+          key: 'cancellation_window_hours',
+          value: '24',
+          label: 'Cancellation Window',
+          dataType: 'number',
+          category: 'booking',
+          description: 'Minimum hours before the booking date that cancellation is allowed. Users cannot cancel bookings within this time window.'
+        },
+        {
+          key: 'city_parking_daily_rate',
+          value: '15',
+          label: 'City Parking Daily Rate',
+          dataType: 'number',
+          category: 'Pricing',
+          description: 'Daily rate (CAD) for city/municipal parking used to compare renter spending against equivalent city parking cost. Renters can toggle this comparison on their Statistics page.'
+        },
+        {
+          key: 'new_badge_days',
+          value: '30',
+          label: 'New Badge Duration (days)',
+          dataType: 'number',
+          category: 'system',
+          description: 'Number of days a "New!" badge appears on newly introduced features before automatically disappearing.'
+        },
+        {
+          key: 'week_start_day',
+          value: 'sunday',
+          label: 'Week Start Day',
+          dataType: 'string',
+          category: 'system',
+          description: 'The first day of the week used for the "This Week" date filter. "sunday" means the week runs Sunday to Saturday (end = Saturday). "monday" means the week runs Monday to Sunday (end = Sunday).'
+        }
+      ];
+
+      const existingConfigs = await storage.getAllAppConfigs();
+      const existingKeys = new Set(existingConfigs.map((c: any) => c.key));
+      const missingConfigs = defaultConfigs.filter(d => !existingKeys.has(d.key));
+
+      if (missingConfigs.length > 0) {
+        for (const config of missingConfigs) {
+          try {
+            await storage.createAppConfig(config);
+          } catch (createError) {
+            console.error(`[AppConfigs Seed] Failed to create config ${config.key}:`, createError);
+          }
+        }
+        log(`Seeded ${missingConfigs.length} missing default app config(s)`);
+      }
+    } catch (error) {
+      console.error("[AppConfigs Seed] Error seeding default app configs:", error);
+    }
+  };
+  await seedDefaultAppConfigs();
+  
   // Background cleanup job for expired locks
   async function cleanupExpiredLocks() {
     try {
