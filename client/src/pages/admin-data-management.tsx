@@ -2098,7 +2098,11 @@ export default function AdminDataManagement() {
                                 ? `${config.value} hours`
                                 : config.key === 'city_parking_daily_rate'
                                   ? `$${config.value}/day`
-                                  : config.value}
+                                  : config.key === 'expired_date_window_days'
+                                    ? `${config.value} days`
+                                    : config.dataType === 'boolean'
+                                      ? config.value === 'true' ? 'Enabled' : 'Disabled'
+                                      : config.value}
                           </TableCell>
                           <TableCell data-testid={`text-config-description-${config.key}`}>
                             {config.description || "-"}
@@ -3024,6 +3028,17 @@ export default function AdminDataManagement() {
                       <option value="sunday">Sunday (week ends Saturday)</option>
                       <option value="monday">Monday (week ends Sunday)</option>
                     </select>
+                  ) : editingConfig.key === 'expired_date_window_enabled' ? (
+                    <select
+                      name="value"
+                      defaultValue={editingConfig.value}
+                      required
+                      className="mt-2 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                      data-testid="select-edit-config-expired-date-window-enabled"
+                    >
+                      <option value="true">Enabled — limit past dates shown on calendar</option>
+                      <option value="false">Disabled — show all past unbooked dates</option>
+                    </select>
                   ) : (
                     <Input
                       name="value"
@@ -3054,6 +3069,16 @@ export default function AdminDataManagement() {
                   {editingConfig.key === 'city_parking_daily_rate' && (
                     <p className="text-sm text-muted-foreground mt-1">
                       Value in CAD $/day. Renters see this rate as a comparison on their Statistics page.
+                    </p>
+                  )}
+                  {editingConfig.key === 'expired_date_window_days' && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Number of past days to show on the calendar (minimum: 1). Only applies when the Expired Date Window toggle is enabled.
+                    </p>
+                  )}
+                  {editingConfig.key === 'expired_date_window_enabled' && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      When enabled, configure the number of days using the "Expired Date Window (Days)" setting.
                     </p>
                   )}
                   {editingConfig.key === 'timezone' && (

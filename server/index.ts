@@ -361,6 +361,22 @@ If you have questions about the collection of your personal information through 
           dataType: 'string',
           category: 'system',
           description: 'The first day of the week used for the "This Week" date filter. "sunday" means the week runs Sunday to Saturday (end = Saturday). "monday" means the week runs Monday to Sunday (end = Sunday).'
+        },
+        {
+          key: 'expired_date_window_enabled',
+          value: 'true',
+          label: 'Expired Date Window',
+          dataType: 'boolean',
+          category: 'system',
+          description: 'When enabled, limits how many past unbooked dates appear on the calendar for long-running listings. When disabled, all past unbooked dates are shown.'
+        },
+        {
+          key: 'expired_date_window_days',
+          value: '7',
+          label: 'Expired Date Window (Days)',
+          dataType: 'number',
+          category: 'system',
+          description: 'Number of past days to show as expired/unbooked on the calendar. Only applies when Expired Date Window is enabled. Minimum: 1.'
         }
       ];
 

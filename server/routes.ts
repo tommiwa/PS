@@ -2755,23 +2755,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const bookedDates = uniqueDates.filter(date => bookedDatesSet.has(date));
           
           // Separate dates into expired (past unbooked) and available (today/future).
-          // expiredDates in the response payload is capped to the last 7 days to avoid
-          // inflated calendar counts on long-running recurring listings.
-          // Derive cutoff from todayStr (YYYY-MM-DD, already timezone-correct) to avoid
-          // UTC-shift issues that toISOString() would introduce.
-          const _cutoffDate = new Date(todayStr + 'T00:00:00');
-          _cutoffDate.setDate(_cutoffDate.getDate() - 7);
-          const cutoffStr = [
-            _cutoffDate.getFullYear(),
-            String(_cutoffDate.getMonth() + 1).padStart(2, '0'),
-            String(_cutoffDate.getDate()).padStart(2, '0')
-          ].join('-');
+          // The expired date window is configurable via App Settings:
+          //   expired_date_window_enabled: if 'true', cap expired dates to the configured window
+          //   expired_date_window_days: how many past days to include (default 7)
+          const [windowEnabledRaw, windowDaysRaw] = await Promise.all([
+            storage.getAppConfigValue('expired_date_window_enabled'),
+            storage.getAppConfigValue('expired_date_window_days'),
+          ]);
+          const windowEnabled = windowEnabledRaw !== 'false'; // default: enabled
+          const windowDays = Math.max(1, parseInt(windowDaysRaw || '7', 10) || 7);
+
+          let cutoffStr: string | null = null;
+          if (windowEnabled) {
+            const _cutoffDate = new Date(todayStr + 'T00:00:00');
+            _cutoffDate.setDate(_cutoffDate.getDate() - windowDays);
+            cutoffStr = [
+              _cutoffDate.getFullYear(),
+              String(_cutoffDate.getMonth() + 1).padStart(2, '0'),
+              String(_cutoffDate.getDate()).padStart(2, '0')
+            ].join('-');
+          }
 
           const expiredDates: string[] = [];
           const availabilityDates: string[] = [];
           // Track whether ANY past unbooked date exists (unbounded) for status-transition logic.
-          // This must not use the trimmed expiredDates array so listings expired >7 days ago
-          // are still correctly transitioned to "unused".
+          // This must not use the trimmed expiredDates array so listings expired beyond the
+          // window are still correctly transitioned to "unused".
           let hasAnyExpiredDate = false;
           
           for (const dateStr of uniqueDates) {
@@ -2780,8 +2789,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             if (isPast && !isBooked) {
               hasAnyExpiredDate = true;
-              if (dateStr >= cutoffStr) {
-                // Only include in response payload if within the last 7 days
+              if (!cutoffStr || dateStr >= cutoffStr) {
+                // Include if window is disabled (no cutoff) or date is within the window
                 expiredDates.push(dateStr);
               }
             } else if (!isPast && !isBooked) {
