@@ -2762,11 +2762,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             storage.getAppConfigValue('expired_date_window_enabled'),
             storage.getAppConfigValue('expired_date_window_days'),
           ]);
-          const windowEnabled = windowEnabledRaw !== 'false'; // default: enabled
+          // 'true'     → limit to window (cutoff applies)
+          // 'false'    → show all expired dates (no cutoff)
+          // 'hide_all' → show no expired dates at all
+          const windowSetting = windowEnabledRaw ?? 'true'; // default: enabled
           const windowDays = Math.max(1, parseInt(windowDaysRaw || '7', 10) || 7);
 
           let cutoffStr: string | null = null;
-          if (windowEnabled) {
+          const hideAllExpired = windowSetting === 'hide_all';
+          if (windowSetting === 'true') {
             const _cutoffDate = new Date(todayStr + 'T00:00:00');
             _cutoffDate.setDate(_cutoffDate.getDate() - windowDays);
             cutoffStr = [
@@ -2789,8 +2793,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             if (isPast && !isBooked) {
               hasAnyExpiredDate = true;
-              if (!cutoffStr || dateStr >= cutoffStr) {
-                // Include if window is disabled (no cutoff) or date is within the window
+              if (!hideAllExpired && (!cutoffStr || dateStr >= cutoffStr)) {
+                // Include if not hiding all, and either no cutoff or within the window
                 expiredDates.push(dateStr);
               }
             } else if (!isPast && !isBooked) {

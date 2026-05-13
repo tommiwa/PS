@@ -2101,7 +2101,7 @@ export default function AdminDataManagement() {
                                   : config.key === 'expired_date_window_days'
                                     ? `${config.value} days`
                                     : config.dataType === 'boolean'
-                                      ? config.value === 'true' ? 'Enabled' : 'Disabled'
+                                      ? config.value === 'true' ? 'Enabled' : config.value === 'hide_all' ? 'Hide all' : 'Disabled'
                                       : config.value}
                           </TableCell>
                           <TableCell data-testid={`text-config-description-${config.key}`}>
@@ -3038,6 +3038,7 @@ export default function AdminDataManagement() {
                     >
                       <option value="true">Enabled — limit past dates shown on calendar</option>
                       <option value="false">Disabled — show all past unbooked dates</option>
+                      <option value="hide_all">Hide all — never show expired dates</option>
                     </select>
                   ) : (
                     <Input
