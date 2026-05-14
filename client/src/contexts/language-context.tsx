@@ -266,7 +266,7 @@ const translations: Record<Language, Translations> = {
     "validation.reasonMinLength": "Please provide a reason (at least 10 characters)",
     "validation.makeRequired": "Vehicle make is required",
     "validation.modelRequired": "Vehicle model is required",
-    "validation.yearMin": "Year must be 1990 or later",
+    "validation.yearMin": "Year must be 1900 or later",
     "validation.yearMax": "Year cannot be in the future",
     "validation.licensePlateRequired": "License plate is required",
 
@@ -875,7 +875,7 @@ const translations: Record<Language, Translations> = {
     "validation.reasonMinLength": "Veuillez fournir une raison (au moins 10 caractères)",
     "validation.makeRequired": "La marque du véhicule est requise",
     "validation.modelRequired": "Le modèle du véhicule est requis",
-    "validation.yearMin": "L'année doit être 1990 ou plus tard",
+    "validation.yearMin": "L'année doit être 1900 ou plus tard",
     "validation.yearMax": "L'année ne peut pas être dans le futur",
     "validation.licensePlateRequired": "La plaque d'immatriculation est requise",
 

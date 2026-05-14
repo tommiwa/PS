@@ -68,7 +68,7 @@ type WaitingListFormData = z.infer<typeof waitingListFormSchema>;
 const vehicleSchema = z.object({
   make: z.string().min(1, "Vehicle make is required"),
   model: z.string().min(1, "Vehicle model is required"),
-  year: z.number().min(1990, "Year must be 1990 or later").max(new Date().getFullYear() + 1, "Year cannot be in the future"),
+  year: z.number().min(1900, "Year must be 1900 or later").max(new Date().getFullYear() + 1, "Year cannot be in the future"),
   color: z.string().optional(),
   isElectric: z.boolean().default(false),
   isDefault: z.boolean().default(false)
