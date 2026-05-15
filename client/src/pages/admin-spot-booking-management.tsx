@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react"
+import { formatCurrency } from "@/lib/utils"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { useLocation, useSearch, Link } from "wouter"
 import { queryClient, apiRequest } from "@/lib/queryClient"
@@ -1557,7 +1558,7 @@ export default function AdminSpotBookingManagement() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold" data-testid="stat-payroll-revenue">
-                      ${payrollActiveTotals.amount.toLocaleString()}
+                      ${formatCurrency(payrollActiveTotals.amount)}
                     </div>
                     <p className="text-xs text-green-600">
                       {payrollActiveTotals.periodLabel}
@@ -1584,7 +1585,7 @@ export default function AdminSpotBookingManagement() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold" data-testid="stat-daily-revenue">
-                      ${displayAnalytics.totalDailyRevenue?.toLocaleString() || 0}
+                      ${formatCurrency(displayAnalytics.totalDailyRevenue)}
                     </div>
                     <p className="text-xs text-green-600">Today's revenue</p>
                   </CardContent>
@@ -1804,7 +1805,7 @@ export default function AdminSpotBookingManagement() {
                             {listing.ownerName}
                           </TableCell>
                           <TableCell className="font-medium" data-testid={`text-rate-${listing.id}`}>
-                            ${listing.dailyRate}
+                            ${formatCurrency(listing.dailyRate)}
                           </TableCell>
                           <TableCell data-testid={`text-from-${listing.id}`}>
                             {formatDate(listing.availableFrom)}
@@ -2265,7 +2266,7 @@ export default function AdminSpotBookingManagement() {
                             {formatDate(payment.bookingDate)}
                           </TableCell>
                           <TableCell className="font-medium" data-testid={`text-amount-${payment.id}`}>
-                            ${payment.totalAmount}
+                            ${formatCurrency(payment.totalAmount)}
                           </TableCell>
                           <TableCell data-testid={`text-days-overdue-${payment.id}`}>
                             <Badge variant={payment.daysOverdue > 30 ? 'destructive' : payment.daysOverdue > 7 ? 'secondary' : 'outline'}>
@@ -2787,7 +2788,7 @@ export default function AdminSpotBookingManagement() {
                             </Badge>
                           </TableCell>
                           <TableCell className="font-medium" data-testid={`text-amount-${booking.id}`}>
-                            ${booking.totalAmount}
+                            ${formatCurrency(booking.totalAmount)}
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-1">
@@ -3336,9 +3337,9 @@ export default function AdminSpotBookingManagement() {
                 <div>
                   <Label>Daily Rate</Label>
                   <div className="flex items-center gap-2">
-                    <p className="font-medium text-lg">${selectedAvailabilityListing.dailyRate}</p>
+                    <p className="font-medium text-lg">${formatCurrency(selectedAvailabilityListing.dailyRate)}</p>
                     {selectedAvailabilityListing.originalDailyRate && (
-                      <p className="text-sm text-muted-foreground line-through">${selectedAvailabilityListing.originalDailyRate}</p>
+                      <p className="text-sm text-muted-foreground line-through">${formatCurrency(selectedAvailabilityListing.originalDailyRate)}</p>
                     )}
                   </div>
                 </div>
@@ -3428,7 +3429,7 @@ export default function AdminSpotBookingManagement() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Amount:</span>
-                  <span className="font-medium">${selectedBooking.totalAmount}</span>
+                  <span className="font-medium">${formatCurrency(selectedBooking.totalAmount)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Date:</span>

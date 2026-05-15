@@ -3,6 +3,7 @@ import autoTable from 'jspdf-autotable'
 import ExcelJS from 'exceljs'
 // @ts-expect-error - file-saver types not compatible
 import { saveAs } from 'file-saver'
+import { formatCurrency } from '@/lib/utils'
 import { PARKSHARE_LOGO_BASE64 } from './logo-constant'
 
 export interface ExportColumn {
@@ -312,7 +313,7 @@ export const exportBookingsData = (bookings: any[], title: string = 'Booking Rep
     { header: 'Renter Email', dataKey: 'renterEmail', width: 25 },
     { header: 'Owner Name', dataKey: 'ownerName', width: 18 },
     { header: 'Status', dataKey: 'status', width: 12, formatter: (status) => status?.toUpperCase() || '-' },
-    { header: 'Daily Rate', dataKey: 'dailyRate', width: 12, formatter: (rate) => `$${rate || 0}` },
+    { header: 'Daily Rate', dataKey: 'dailyRate', width: 12, formatter: (rate) => { const n = Number(rate); return isFinite(n) ? `$${formatCurrency(n)}` : 'N/A'; } },
     { header: 'Usage Date', dataKey: 'bookingDate', width: 15, formatter: (date) => date ? new Date(date).toLocaleDateString() : '-' },
     { header: 'Payment Status', dataKey: 'paymentReceived', width: 15, formatter: (received) => received ? 'Received' : 'Pending' }
   ]
@@ -331,7 +332,7 @@ export const exportBookingsData = (bookings: any[], title: string = 'Booking Rep
       additionalStats: [
         { label: 'Confirmed Bookings', value: bookings.filter(b => b.status === 'confirmed').length },
         { label: 'Pending Bookings', value: bookings.filter(b => b.status === 'pending').length },
-        { label: 'Total Revenue', value: `$${bookings.reduce((sum, b) => sum + (b.dailyRate || 0), 0)}` }
+        { label: 'Total Revenue', value: `$${formatCurrency(bookings.reduce((sum, b) => sum + Number(b.dailyRate || 0), 0))}` }
       ]
     }
   }

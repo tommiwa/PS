@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { formatCurrency } from "@/lib/utils"
 import { BookingCard } from "@/components/booking-card"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -468,7 +469,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
           renterEmail: item.renterEmail || 'N/A',
           ownerName: user?.firstName + ' ' + user?.lastName || 'N/A',
           status: item.status ?? 'N/A',
-          dailyRate: item.dailyRate ? `$${item.dailyRate}` : 'N/A',
+          dailyRate: item.dailyRate != null ? Number(item.dailyRate) : null,
           bookingDate: item.singleDate ?? item.periodStartDate ?? 'N/A',
           paymentStatus: item.paymentStatus || 'pending'
         }
@@ -481,7 +482,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
           renterEmail: user?.email || 'N/A',
           ownerName: item.ownerName || item.owner || 'Workplace Services',
           status: item.status || 'N/A',
-          dailyRate: item.dailyRate || item.price || 0,
+          dailyRate: Number(item.dailyRate || item.price) || 0,
           bookingDate: item.bookingDate || item.date || 'N/A',
           paymentStatus: item.paymentStatus || 'pending'
         }
@@ -521,7 +522,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
           renterEmail: item.renterEmail || 'N/A',
           ownerName: user?.firstName + ' ' + user?.lastName || 'N/A',
           status: item.status ?? 'N/A',
-          dailyRate: item.dailyRate ? `$${item.dailyRate}` : 'N/A',
+          dailyRate: item.dailyRate != null ? Number(item.dailyRate) : null,
           bookingDate: item.singleDate ?? item.periodStartDate ?? 'N/A',
           paymentStatus: item.paymentStatus || 'pending'
         }
@@ -534,7 +535,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
           renterEmail: user?.email || 'N/A',
           ownerName: item.ownerName || item.owner || 'Workplace Services',
           status: item.status || 'N/A',
-          dailyRate: item.dailyRate || item.price || 0,
+          dailyRate: Number(item.dailyRate || item.price) || 0,
           bookingDate: item.bookingDate || item.date || 'N/A',
           paymentStatus: item.paymentStatus || 'pending'
         }
@@ -974,7 +975,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                 </div>
                 <div className="text-right">
                   <p className="text-xs text-muted-foreground">{isCompleted ? "You Earned" : isUnused ? "Listed At" : "You'll Earn"}</p>
-                  <p className="text-xl font-bold text-primary">${listing.totalAmount || listing.price || listing.dailyRate}</p>
+                  <p className="text-xl font-bold text-primary">${formatCurrency(listing.totalAmount ?? listing.price ?? listing.dailyRate)}</p>
                 </div>
               </div>
             </div>
@@ -1326,7 +1327,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs text-muted-foreground">Price</p>
-                  <p className="text-sm font-semibold text-primary">${booking.totalAmount || booking.dailyRate}</p>
+                  <p className="text-sm font-semibold text-primary">${formatCurrency(booking.totalAmount ?? booking.dailyRate)}</p>
                 </div>
               </div>
               
@@ -1597,7 +1598,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
             )}
           </div>
           {/* Price */}
-          <div className="hidden md:block text-sm font-medium text-primary">${listing.totalAmount || listing.price || listing.dailyRate}</div>
+          <div className="hidden md:block text-sm font-medium text-primary">${formatCurrency(listing.totalAmount ?? listing.price ?? listing.dailyRate)}</div>
           {/* Actions */}
           <div className="flex justify-end gap-1 col-span-1 md:col-span-1">
             {listing.donateToCharity && (
@@ -1753,7 +1754,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
             <p className="text-xs text-muted-foreground truncate">{booking.location}</p>
           </div>
           <div className="hidden md:block text-sm text-muted-foreground">{booking.bookingDate}</div>
-          <div className="hidden md:block text-sm font-medium text-primary">${booking.totalAmount || booking.dailyRate}</div>
+          <div className="hidden md:block text-sm font-medium text-primary">${formatCurrency(booking.totalAmount ?? booking.dailyRate)}</div>
           <div className="flex justify-end md:justify-start">{getStatusBadge()}</div>
           <div className="flex justify-end gap-1">
             <Button variant="ghost" size="icon" onClick={() => handleViewDetails(booking)} data-testid={`compact-view-${booking.id}`}>
@@ -1938,7 +1939,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">
-                      ${listings.filter((l: SpotListing) => l.status === "used").reduce((sum, l) => sum + Number(l.dailyRate), 0)}
+                      ${formatCurrency(listings.filter((l: SpotListing) => l.status === "used").reduce((sum, l) => sum + Number(l.dailyRate), 0))}
                     </div>
                     <p className="text-xs text-blue-600">From completed rentals</p>
                   </CardContent>
@@ -2380,7 +2381,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Price</p>
-                    <p className="font-medium">${selectedListing.totalAmount || selectedListing.price || selectedListing.dailyRate || '0.00'}</p>
+                    <p className="font-medium">${formatCurrency(selectedListing.totalAmount ?? selectedListing.price ?? selectedListing.dailyRate)}</p>
                   </div>
                   <div className="col-span-2">
                     <p className="text-sm text-muted-foreground">Location</p>
@@ -2444,7 +2445,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Price</p>
-                    <p className="font-medium">${selectedBooking.totalAmount || selectedBooking.dailyRate || '0.00'}</p>
+                    <p className="font-medium">${formatCurrency(selectedBooking.totalAmount ?? selectedBooking.dailyRate)}</p>
                   </div>
                   <div className="col-span-2">
                     <p className="text-sm text-muted-foreground">Location</p>
