@@ -16,8 +16,13 @@ vi.mock('./notification-service', () => ({
   sendFullOccupancyNotification: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock('./timezone', () => ({
+  getTodayInTimezone: vi.fn().mockResolvedValue('2026-07-15'),
+}));
+
 import { checkOccupancyForDate, maybeNotifyFullOccupancy } from './occupancy';
 import { sendFullOccupancyNotification } from './notification-service';
+import { getTodayInTimezone } from './timezone';
 
 const WPS_EMAIL = 'wps@example.com';
 
@@ -105,10 +110,25 @@ describe('maybeNotifyFullOccupancy — full orchestration', () => {
 
   beforeEach(() => {
     vi.mocked(sendFullOccupancyNotification).mockClear();
+    vi.mocked(getTodayInTimezone).mockResolvedValue(TARGET_DATE);
     getAllUsers.mockClear();
     claimNotification.mockClear();
     claimNotification.mockResolvedValue(true);
     setMockListings([]);
+  });
+
+  it('does not send the email when the date is not today', async () => {
+    const FUTURE_DATE = '2026-12-01';
+    vi.mocked(getTodayInTimezone).mockResolvedValueOnce(TARGET_DATE);
+
+    setMockListings([
+      makeListing({ id: 'l1', singleDate: FUTURE_DATE, status: 'booked' }),
+    ]);
+
+    await maybeNotifyFullOccupancy(FUTURE_DATE, getAllUsers, WPS_EMAIL, claimNotification);
+
+    expect(claimNotification).not.toHaveBeenCalled();
+    expect(sendFullOccupancyNotification).not.toHaveBeenCalled();
   });
 
   it('does not send the email and does not claim when available listings remain', async () => {
@@ -164,9 +184,11 @@ describe('maybeNotifyFullOccupancy — full orchestration', () => {
     const DATE_A = '2026-08-01';
     const DATE_B = '2026-08-02';
 
+    vi.mocked(getTodayInTimezone).mockResolvedValueOnce(DATE_A);
     setMockListings([makeListing({ id: 'l1', singleDate: DATE_A, status: 'booked' })]);
     await maybeNotifyFullOccupancy(DATE_A, getAllUsers, WPS_EMAIL, claimNotification);
 
+    vi.mocked(getTodayInTimezone).mockResolvedValueOnce(DATE_B);
     setMockListings([makeListing({ id: 'l2', singleDate: DATE_B, status: 'booked' })]);
     await maybeNotifyFullOccupancy(DATE_B, getAllUsers, WPS_EMAIL, claimNotification);
 

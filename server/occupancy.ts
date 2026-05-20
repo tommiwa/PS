@@ -2,6 +2,7 @@ import { db } from "./db";
 import { spotListings } from "@shared/schema";
 import { and, eq, or, isNull, sql } from "drizzle-orm";
 import { sendFullOccupancyNotification } from "./notification-service";
+import { getTodayInTimezone } from "./timezone";
 
 export const MAX_FUTURE_MONTHS = 6;
 
@@ -109,6 +110,9 @@ export async function maybeNotifyFullOccupancy(
   workplaceServicesEmail: string,
   claimNotification: (date: string) => Promise<boolean>,
 ): Promise<void> {
+  const today = await getTodayInTimezone();
+  if (date !== today) return;
+
   const { isFull, totalBooked } = await checkOccupancyForDate(date);
   if (!isFull) return;
 

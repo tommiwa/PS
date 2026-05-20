@@ -2979,8 +2979,6 @@ export async function sendFullOccupancyNotification(
 
 Just a quick note: all ${totalSpots} parking spot${totalSpots !== 1 ? 's' : ''} (peer-to-peer and admin-listed combined) for ${formattedDate} are now booked. Every single one — a full house!
 
-Strong demand today, and the program is clearly working well. Thought you'd appreciate the heads-up.
-
 Warm regards,
 The BCI ParkShare Team`;
 
@@ -2990,7 +2988,6 @@ The BCI ParkShare Team`;
     <div class="highlight-box" style="background-color: #e0f2fe; border-radius: 6px; padding: 16px 20px; margin: 20px 0; font-size: 15px; color: #1e293b;">
       <strong>Date:</strong>&nbsp;${formattedDate}&nbsp;&nbsp;&bull;&nbsp;&nbsp;<strong>Spots filled:</strong>&nbsp;${totalSpots}
     </div>
-    <p>Strong demand today, and the program is clearly working well. Thought you'd appreciate the heads-up.</p>
   `;
 
   const html = wrapEmailTemplate({
