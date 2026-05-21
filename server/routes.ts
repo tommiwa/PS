@@ -5026,6 +5026,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Renter booking rank endpoint
+  app.get("/api/renter/booking-rank", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) return res.status(401).json({ error: "User not authenticated" });
+
+      // Count non-cancelled bookings per renter across all time
+      const result = await db.execute(sql`
+        SELECT renter_id, COUNT(*)::int AS booking_count
+        FROM bookings
+        WHERE status IN ('confirmed', 'completed', 'paid', 'received')
+        GROUP BY renter_id
+        ORDER BY booking_count DESC
+      `);
+
+      const rows = result.rows as { renter_id: string; booking_count: number }[];
+
+      const userIndex = rows.findIndex(r => r.renter_id === userId);
+      const rank = userIndex >= 0 ? userIndex + 1 : null;
+      const totalBookings = userIndex >= 0 ? Number(rows[userIndex].booking_count) : 0;
+
+      res.json({ rank, totalBookings } as import('@shared/schema').RenterBookingRank);
+    } catch (error) {
+      console.error("Error fetching renter booking rank:", error);
+      res.status(500).json({ error: "Failed to fetch booking rank" });
+    }
+  });
+
   // Analytics API endpoints (Admin only)
   app.get("/api/admin/analytics-overview", requireAdmin, async (req, res) => {
     try {

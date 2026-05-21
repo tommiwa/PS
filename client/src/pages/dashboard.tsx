@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
-import { Calendar, MapPin, Clock, Plus, Users, Car, TrendingUp, BarChart3, PieChart, Target, DollarSign, AlertTriangle, Download, RefreshCw, Loader2, Eye, EyeOff, AlertCircle, Bell, ParkingSquare, Building2 } from "lucide-react"
+import { Calendar, MapPin, Clock, Plus, Users, Car, TrendingUp, BarChart3, PieChart, Target, DollarSign, AlertTriangle, Download, RefreshCw, Loader2, Eye, EyeOff, AlertCircle, Bell, ParkingSquare, Building2, Award } from "lucide-react"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { useAuth } from "@/contexts/auth-context"
 import { useState, useEffect } from "react"
@@ -29,7 +29,8 @@ import type {
   AnalyticsUsageResponse,
   RenterStatisticsResponse,
   RenterStatsPeriod,
-  RenterStatsStatus
+  RenterStatsStatus,
+  RenterBookingRank
 } from "@shared/schema"
 import {
   LineChart,
@@ -141,6 +142,13 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Renter booking rank query — all-time, no filters
+  const renterBookingRankQuery = useQuery<RenterBookingRank>({
+    queryKey: ['/api/renter/booking-rank'],
+    enabled: effectiveRole === "renter",
+    staleTime: 5 * 60 * 1000,
+  });
+
   // Renter statistics query — reacts to period and status
   const renterStatsQuery = useQuery<RenterStatisticsResponse>({
     queryKey: ['/api/renter/statistics', { period: renterPeriod, status: renterStatus }],
@@ -166,6 +174,7 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
     queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-issues'] });
     queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-usage'] });
     queryClient.invalidateQueries({ queryKey: ['/api/renter/statistics'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/renter/booking-rank'] });
     queryClient.invalidateQueries({ queryKey: ['/api/renter/dashboard-stats'] });
     queryClient.invalidateQueries({ queryKey: ['/api/owner/statistics/v2'] });
   };
@@ -295,6 +304,12 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
               </Card>
             ) : renterStatsQuery.data ? (
               <>
+                {/* Booking Rank Widget */}
+                <RenterBookingRankWidget
+                  data={renterBookingRankQuery.data ?? null}
+                  isLoading={renterBookingRankQuery.isLoading}
+                />
+
                 {/* Spending Trends Chart with Bar/Line toggle */}
                 <Card data-testid="card-monthly-spending">
                   <CardHeader>
@@ -630,6 +645,54 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
       )}
       
       {renderRoleSpecificContent()}
+    </div>
+  )
+}
+
+function ordinal(n: number): string {
+  const s = ['th', 'st', 'nd', 'rd']
+  const v = n % 100
+  return n + (s[(v - 20) % 10] || s[v] || s[0])
+}
+
+function RenterBookingRankWidget({ data, isLoading }: { data: RenterBookingRank | null; isLoading: boolean }) {
+  if (isLoading) {
+    return <Skeleton className="h-16 w-full" data-testid="booking-rank-skeleton" />
+  }
+
+  if (!data) return null
+
+  const hasBookings = data.rank !== null && data.totalBookings > 0
+
+  return (
+    <div
+      className="flex items-center gap-4 rounded-md border bg-muted/30 px-5 py-3"
+      data-testid="booking-rank-widget"
+    >
+      <div className="rounded-lg bg-primary/10 p-2 text-primary shrink-0">
+        <Award className="h-5 w-5" />
+      </div>
+      <div className="min-w-0">
+        {hasBookings ? (
+          <>
+            <p className="text-sm font-semibold leading-tight">
+              Booking Rank: {ordinal(data.rank!)}
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {data.rank === 1
+                ? 'You are ranked #1 — great job making use of the shared parking program!'
+                : `You are ranked ${ordinal(data.rank!)} — great job making use of the shared parking program!`}
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-sm font-semibold leading-tight">Booking Leaderboard</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Make your first booking to join the renter leaderboard!
+            </p>
+          </>
+        )}
+      </div>
     </div>
   )
 }

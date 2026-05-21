@@ -908,6 +908,11 @@ export interface OwnerSharingRank {
   totalListedDays: number;
 }
 
+export interface RenterBookingRank {
+  rank: number | null;
+  totalBookings: number;
+}
+
 export interface OwnerStatisticsV2Response {
   // KPIs
   totalIncome: number;
