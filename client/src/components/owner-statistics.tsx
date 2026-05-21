@@ -115,12 +115,16 @@ export function OwnerStatistics() {
 
   const queryParams = { period, status: statusParam, spotId, ...(isCustom ? { startDate: customStart, endDate: customEnd } : {}) }
 
-  const { data: sharingRank, isLoading: rankLoading } = useQuery<OwnerSharingRank>({
+  const { data: sharingRank, isLoading: rankLoading } = useQuery<OwnerSharingRank | null>({
     queryKey: ['/api/owner/sharing-rank'],
     queryFn: async () => {
-      const res = await fetch('/api/owner/sharing-rank', { credentials: 'include' })
-      if (!res.ok) throw new Error('Failed to fetch sharing rank')
-      return res.json()
+      try {
+        const res = await fetch('/api/owner/sharing-rank', { credentials: 'include' })
+        if (!res.ok) return null
+        return res.json()
+      } catch {
+        return null
+      }
     },
     staleTime: 5 * 60 * 1000,
   })
@@ -739,9 +743,7 @@ function SharingRankWidget({ data, isLoading }: { data: OwnerSharingRank | null;
     return <Skeleton className="h-16 w-full" data-testid="sharing-rank-skeleton" />
   }
 
-  if (!data) return null
-
-  const hasListings = data.rank !== null && data.totalListedDays > 0
+  const hasListings = !!data && data.rank !== null && data.totalListedDays > 0
 
   return (
     <div
