@@ -1,11 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockWhere, mockSelect, mockListingsStore } = vi.hoisted(() => {
+const { mockSelect, mockListingsStore, mockBookingsStore } = vi.hoisted(() => {
   const mockListingsStore: Array<Record<string, unknown>> = [];
-  const mockWhere = vi.fn().mockImplementation(() => Promise.resolve(mockListingsStore));
-  const mockFrom = vi.fn().mockReturnValue({ where: mockWhere });
+  const mockBookingsStore: Array<Record<string, unknown>> = [];
+
+  const mockListingsWhere = vi.fn().mockImplementation(() => Promise.resolve([...mockListingsStore]));
+  const mockBookingsWhere = vi.fn().mockImplementation(() => Promise.resolve([...mockBookingsStore]));
+
+  const mockFrom = vi.fn().mockImplementation((table: any) => {
+    // Drizzle stores the SQL table name at Symbol.for('drizzle:Name')
+    const tableName = table?.[Symbol.for('drizzle:Name')] ?? '';
+    if (tableName === 'bookings') {
+      return { where: mockBookingsWhere };
+    }
+    return { where: mockListingsWhere };
+  });
+
   const mockSelect = vi.fn().mockReturnValue({ from: mockFrom });
-  return { mockWhere, mockFrom, mockSelect, mockListingsStore };
+
+  return { mockSelect, mockListingsStore, mockBookingsStore };
 });
 
 vi.mock('./db', () => ({
@@ -31,6 +44,11 @@ function setMockListings(listings: Array<Record<string, unknown>>) {
   listings.forEach(l => mockListingsStore.push(l));
 }
 
+function setMockBookings(bookingRows: Array<Record<string, unknown>>) {
+  mockBookingsStore.length = 0;
+  bookingRows.forEach(b => mockBookingsStore.push(b));
+}
+
 function makeListing(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     id: 'listing-1',
@@ -43,6 +61,15 @@ function makeListing(overrides: Record<string, unknown> = {}): Record<string, un
     daysOfWeek: null,
     status: 'available',
     deletedAt: null,
+    ...overrides,
+  };
+}
+
+function makeBooking(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    id: 'booking-1',
+    bookingDate: '2026-06-01',
+    status: 'confirmed',
     ...overrides,
   };
 }
@@ -60,6 +87,7 @@ function makeUser(overrides: Record<string, unknown> = {}) {
 describe('checkOccupancyForDate', () => {
   beforeEach(() => {
     setMockListings([]);
+    setMockBookings([]);
   });
 
   it('returns isFull=false when there are no listings for the date', async () => {
@@ -73,15 +101,22 @@ describe('checkOccupancyForDate', () => {
       makeListing({ id: 'l1', status: 'booked' }),
       makeListing({ id: 'l2', status: 'available' }),
     ]);
+    setMockBookings([
+      makeBooking({ id: 'b1', status: 'confirmed' }),
+    ]);
     const result = await checkOccupancyForDate('2026-06-01');
     expect(result.isFull).toBe(false);
     expect(result.totalBooked).toBe(1);
   });
 
-  it('returns isFull=true when all listings are booked', async () => {
+  it('returns isFull=true when all listings are booked and bookings table confirms it', async () => {
     setMockListings([
       makeListing({ id: 'l1', status: 'booked' }),
       makeListing({ id: 'l2', status: 'booked' }),
+    ]);
+    setMockBookings([
+      makeBooking({ id: 'b1', status: 'confirmed' }),
+      makeBooking({ id: 'b2', status: 'confirmed' }),
     ]);
     const result = await checkOccupancyForDate('2026-06-01');
     expect(result.isFull).toBe(true);
@@ -90,7 +125,37 @@ describe('checkOccupancyForDate', () => {
 
   it('returns isFull=false when only available listings exist (none booked)', async () => {
     setMockListings([makeListing({ id: 'l1', status: 'available' })]);
+    setMockBookings([]);
     const result = await checkOccupancyForDate('2026-06-01');
+    expect(result.isFull).toBe(false);
+    expect(result.totalBooked).toBe(0);
+  });
+
+  it('totalBooked reflects bookings table count (confirmed + pending + completed)', async () => {
+    // Listings all show as not-available, but bookings table is authoritative for count
+    setMockListings([
+      makeListing({ id: 'l1', status: 'booked' }),
+      makeListing({ id: 'l2', status: 'booked' }),
+      makeListing({ id: 'l3', status: 'booked' }),
+    ]);
+    setMockBookings([
+      makeBooking({ id: 'b1', status: 'confirmed' }),
+      makeBooking({ id: 'b2', status: 'pending' }),
+      makeBooking({ id: 'b3', status: 'completed' }),
+    ]);
+    const result = await checkOccupancyForDate('2026-06-01');
+    expect(result.isFull).toBe(true);
+    expect(result.totalBooked).toBe(3);
+  });
+
+  it('returns isFull=false when bookings count is 0 even if no available listings remain', async () => {
+    // Edge case: listings cancelled/used but no confirmed bookings
+    setMockListings([
+      makeListing({ id: 'l1', status: 'cancelled' }),
+    ]);
+    setMockBookings([]);
+    const result = await checkOccupancyForDate('2026-06-01');
+    // hasAvailable = false (no 'available' status listings), but totalBooked = 0
     expect(result.isFull).toBe(false);
     expect(result.totalBooked).toBe(0);
   });
@@ -115,6 +180,7 @@ describe('maybeNotifyFullOccupancy — full orchestration', () => {
     claimNotification.mockClear();
     claimNotification.mockResolvedValue(true);
     setMockListings([]);
+    setMockBookings([]);
   });
 
   it('does not send the email when the date is not today', async () => {
@@ -124,6 +190,7 @@ describe('maybeNotifyFullOccupancy — full orchestration', () => {
     setMockListings([
       makeListing({ id: 'l1', singleDate: FUTURE_DATE, status: 'booked' }),
     ]);
+    setMockBookings([makeBooking({ id: 'b1', status: 'confirmed' })]);
 
     await maybeNotifyFullOccupancy(FUTURE_DATE, getAllUsers, WPS_EMAIL, claimNotification);
 
@@ -136,6 +203,7 @@ describe('maybeNotifyFullOccupancy — full orchestration', () => {
       makeListing({ id: 'l1', singleDate: TARGET_DATE, status: 'booked' }),
       makeListing({ id: 'l2', singleDate: TARGET_DATE, status: 'available' }),
     ]);
+    setMockBookings([makeBooking({ id: 'b1', status: 'confirmed' })]);
 
     await maybeNotifyFullOccupancy(TARGET_DATE, getAllUsers, WPS_EMAIL, claimNotification);
 
@@ -148,6 +216,10 @@ describe('maybeNotifyFullOccupancy — full orchestration', () => {
     setMockListings([
       makeListing({ id: 'l1', singleDate: TARGET_DATE, status: 'booked' }),
       makeListing({ id: 'l2', singleDate: TARGET_DATE, status: 'booked' }),
+    ]);
+    setMockBookings([
+      makeBooking({ id: 'b1', status: 'confirmed' }),
+      makeBooking({ id: 'b2', status: 'confirmed' }),
     ]);
 
     await maybeNotifyFullOccupancy(TARGET_DATE, getAllUsers, WPS_EMAIL, claimNotification);
@@ -172,6 +244,7 @@ describe('maybeNotifyFullOccupancy — full orchestration', () => {
     setMockListings([
       makeListing({ id: 'l1', singleDate: TARGET_DATE, status: 'booked' }),
     ]);
+    setMockBookings([makeBooking({ id: 'b1', status: 'confirmed' })]);
 
     await maybeNotifyFullOccupancy(TARGET_DATE, getAllUsers, WPS_EMAIL, claimNotification);
 
@@ -186,10 +259,12 @@ describe('maybeNotifyFullOccupancy — full orchestration', () => {
 
     vi.mocked(getTodayInTimezone).mockResolvedValueOnce(DATE_A);
     setMockListings([makeListing({ id: 'l1', singleDate: DATE_A, status: 'booked' })]);
+    setMockBookings([makeBooking({ id: 'b1', status: 'confirmed' })]);
     await maybeNotifyFullOccupancy(DATE_A, getAllUsers, WPS_EMAIL, claimNotification);
 
     vi.mocked(getTodayInTimezone).mockResolvedValueOnce(DATE_B);
     setMockListings([makeListing({ id: 'l2', singleDate: DATE_B, status: 'booked' })]);
+    setMockBookings([makeBooking({ id: 'b2', status: 'confirmed' })]);
     await maybeNotifyFullOccupancy(DATE_B, getAllUsers, WPS_EMAIL, claimNotification);
 
     expect(claimNotification).toHaveBeenCalledTimes(2);
@@ -201,6 +276,7 @@ describe('maybeNotifyFullOccupancy — full orchestration', () => {
     const getUsersWithWPS = vi.fn().mockResolvedValue([wpsAsAdmin]);
 
     setMockListings([makeListing({ id: 'l1', singleDate: TARGET_DATE, status: 'booked' })]);
+    setMockBookings([makeBooking({ id: 'b1', status: 'confirmed' })]);
 
     await maybeNotifyFullOccupancy(TARGET_DATE, getUsersWithWPS, WPS_EMAIL, claimNotification);
 

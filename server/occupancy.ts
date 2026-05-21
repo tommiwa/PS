@@ -1,6 +1,6 @@
 import { db } from "./db";
-import { spotListings } from "@shared/schema";
-import { and, eq, or, isNull, sql } from "drizzle-orm";
+import { spotListings, bookings } from "@shared/schema";
+import { and, eq, or, isNull, inArray, sql } from "drizzle-orm";
 import { sendFullOccupancyNotification } from "./notification-service";
 import { getTodayInTimezone } from "./timezone";
 
@@ -45,6 +45,7 @@ export function getListingDates(listing: {
 }
 
 export async function checkOccupancyForDate(date: string): Promise<{ isFull: boolean; totalBooked: number }> {
+  // Query spot_listings to check if any are still available for this date
   const candidates = await db
     .select()
     .from(spotListings)
@@ -82,7 +83,19 @@ export async function checkOccupancyForDate(date: string): Promise<{ isFull: boo
   }
 
   const hasAvailable = listingsForDate.some(l => l.status === 'available');
-  const totalBooked = listingsForDate.filter(l => l.status === 'booked').length;
+
+  // Count booked spots from the bookings table (confirmed + pending + completed),
+  // mirroring the Reports chart logic, which is the authoritative source of truth.
+  const dayBookings = await db
+    .select()
+    .from(bookings)
+    .where(
+      and(
+        eq(bookings.bookingDate, date),
+        inArray(bookings.status, ['confirmed', 'pending', 'completed'])
+      )
+    );
+  const totalBooked = dayBookings.length;
 
   return { isFull: !hasAvailable && totalBooked > 0, totalBooked };
 }
