@@ -143,8 +143,17 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
   });
 
   // Renter booking rank query — all-time, no filters
-  const renterBookingRankQuery = useQuery<RenterBookingRank>({
+  const renterBookingRankQuery = useQuery<RenterBookingRank | null>({
     queryKey: ['/api/renter/booking-rank'],
+    queryFn: async () => {
+      try {
+        const res = await fetch('/api/renter/booking-rank', { credentials: 'include' });
+        if (!res.ok) return null;
+        return res.json();
+      } catch {
+        return null;
+      }
+    },
     enabled: effectiveRole === "renter",
     staleTime: 5 * 60 * 1000,
   });
@@ -660,9 +669,7 @@ function RenterBookingRankWidget({ data, isLoading }: { data: RenterBookingRank 
     return <Skeleton className="h-16 w-full" data-testid="booking-rank-skeleton" />
   }
 
-  if (!data) return null
-
-  const hasBookings = data.rank !== null && data.totalBookings > 0
+  const hasBookings = !!data && data.rank !== null && data.totalBookings > 0
 
   return (
     <div
