@@ -757,7 +757,7 @@ function SharingRankWidget({ data, isLoading }: { data: OwnerSharingRank | null;
         {hasListings ? (
           <>
             <p className="text-sm font-semibold leading-tight">
-              Sharing Rank: {ordinal(data.rank!)} out of {data.totalOwners} owner{data.totalOwners !== 1 ? 's' : ''}
+              Sharing Rank: {ordinal(data.rank!)}
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">
               {data.rank === 1
