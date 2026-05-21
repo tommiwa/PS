@@ -16,7 +16,7 @@ import {
 import {
   TrendingUp, DollarSign, Calendar, Target, AlertTriangle,
   Users, Clock, Download, RefreshCw, ChevronUp, ChevronDown, ChevronsUpDown,
-  Car, MapPin, BarChart3
+  Car, MapPin, BarChart3, Award
 } from "lucide-react"
 import type {
   OwnerStatisticsV2Response,
@@ -24,6 +24,7 @@ import type {
   OwnerStatsStatus,
   OwnerSpotPerformance,
   OwnerBookingCSVRow,
+  OwnerSharingRank,
 } from "@shared/schema"
 import { useQueryClient } from "@tanstack/react-query"
 
@@ -113,6 +114,16 @@ export function OwnerStatistics() {
   }
 
   const queryParams = { period, status: statusParam, spotId, ...(isCustom ? { startDate: customStart, endDate: customEnd } : {}) }
+
+  const { data: sharingRank, isLoading: rankLoading } = useQuery<OwnerSharingRank>({
+    queryKey: ['/api/owner/sharing-rank'],
+    queryFn: async () => {
+      const res = await fetch('/api/owner/sharing-rank', { credentials: 'include' })
+      if (!res.ok) throw new Error('Failed to fetch sharing rank')
+      return res.json()
+    },
+    staleTime: 5 * 60 * 1000,
+  })
 
   const { data, isLoading, error, refetch } = useQuery<OwnerStatisticsV2Response>({
     queryKey: ['/api/owner/statistics/v2', queryParams],
@@ -321,7 +332,10 @@ export function OwnerStatistics() {
         <Button
           variant="outline"
           size="default"
-          onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/owner/statistics/v2'] })}
+          onClick={() => {
+            queryClient.invalidateQueries({ queryKey: ['/api/owner/statistics/v2'] })
+            queryClient.invalidateQueries({ queryKey: ['/api/owner/sharing-rank'] })
+          }}
           data-testid="button-refresh-stats"
         >
           <RefreshCw className="h-4 w-4" />
@@ -395,6 +409,9 @@ export function OwnerStatistics() {
               />
             </div>
           ) : null}
+
+          {/* Sharing Rank Widget */}
+          <SharingRankWidget data={sharingRank ?? null} isLoading={rankLoading} />
 
           {/* Income Trend + Status Breakdown */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -706,6 +723,55 @@ export function OwnerStatistics() {
           ) : null}
         </TabsContent>
       </Tabs>
+    </div>
+  )
+}
+
+// ---------- Sharing Rank Widget ----------
+function ordinal(n: number): string {
+  const s = ['th', 'st', 'nd', 'rd']
+  const v = n % 100
+  return n + (s[(v - 20) % 10] || s[v] || s[0])
+}
+
+function SharingRankWidget({ data, isLoading }: { data: OwnerSharingRank | null; isLoading: boolean }) {
+  if (isLoading) {
+    return <Skeleton className="h-16 w-full" data-testid="sharing-rank-skeleton" />
+  }
+
+  if (!data) return null
+
+  const hasListings = data.rank !== null && data.totalListedDays > 0
+
+  return (
+    <div
+      className="flex items-center gap-4 rounded-md border bg-muted/30 px-5 py-3"
+      data-testid="sharing-rank-widget"
+    >
+      <div className="rounded-lg bg-primary/10 p-2 text-primary shrink-0">
+        <Award className="h-5 w-5" />
+      </div>
+      <div className="min-w-0">
+        {hasListings ? (
+          <>
+            <p className="text-sm font-semibold leading-tight">
+              Sharing Rank: {ordinal(data.rank!)} out of {data.totalOwners} owner{data.totalOwners !== 1 ? 's' : ''}
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {data.rank === 1
+                ? 'You are ranked #1 — thank you for sharing your spot with your colleagues!'
+                : `You've listed ${data.totalListedDays} spot-day${data.totalListedDays !== 1 ? 's' : ''} — thank you for sharing your spot with your colleagues!`}
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-sm font-semibold leading-tight">Sharing Leaderboard</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              List your spot to join the sharing leaderboard!
+            </p>
+          </>
+        )}
+      </div>
     </div>
   )
 }

@@ -4951,6 +4951,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Owner sharing rank endpoint
+  app.get("/api/owner/sharing-rank", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) return res.status(401).json({ error: "User not authenticated" });
+
+      const callerUser = await storage.getUser(userId);
+      const callerRoles: string[] = (callerUser?.roles ?? []);
+      if (!callerRoles.includes('owner') && !callerRoles.includes('admin')) {
+        return res.status(403).json({ error: "Owner role required" });
+      }
+
+      // Fetch all non-deleted listings
+      const allListings = await db
+        .select({
+          ownerId: spotListings.ownerId,
+          listingType: spotListings.listingType,
+          singleDate: spotListings.singleDate,
+          periodStartDate: spotListings.periodStartDate,
+          periodEndDate: spotListings.periodEndDate,
+          recurringStartDate: spotListings.recurringStartDate,
+          recurringEndDate: spotListings.recurringEndDate,
+          daysOfWeek: spotListings.daysOfWeek,
+        })
+        .from(spotListings)
+        .where(isNull(spotListings.deletedAt));
+
+      // Compute total listed days per owner
+      const daysByOwner = new Map<string, number>();
+      for (const listing of allListings) {
+        let days = 0;
+        if (listing.listingType === 'single') {
+          days = listing.singleDate ? 1 : 0;
+        } else if (listing.listingType === 'period' && listing.periodStartDate && listing.periodEndDate) {
+          const start = new Date(listing.periodStartDate);
+          const end = new Date(listing.periodEndDate);
+          days = Math.max(0, Math.round((end.getTime() - start.getTime()) / 86400000) + 1);
+        } else if (listing.listingType === 'recurring') {
+          const dayNameToNum: Record<string, number> = {
+            'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3,
+            'thursday': 4, 'friday': 5, 'saturday': 6
+          };
+          const numericDays = listing.daysOfWeek
+            ? (listing.daysOfWeek as string[]).map(d => {
+                const lower = String(d).toLowerCase();
+                return lower in dayNameToNum ? dayNameToNum[lower] : parseInt(d, 10);
+              }).filter(n => !isNaN(n))
+            : null;
+          days = getListingDates({
+            listingType: listing.listingType,
+            recurringStartDate: listing.recurringStartDate,
+            recurringEndDate: listing.recurringEndDate,
+            daysOfWeek: numericDays,
+          }).length;
+        }
+        daysByOwner.set(listing.ownerId, (daysByOwner.get(listing.ownerId) ?? 0) + days);
+      }
+
+      // Sort owners by total days descending
+      const ranked = Array.from(daysByOwner.entries())
+        .filter(([, days]) => days > 0)
+        .sort(([, a], [, b]) => b - a);
+
+      const totalOwners = ranked.length;
+      const userIndex = ranked.findIndex(([ownerId]) => ownerId === userId);
+      const rank = userIndex >= 0 ? userIndex + 1 : null;
+      const totalListedDays = daysByOwner.get(userId) ?? 0;
+
+      res.json({ rank, totalOwners, totalListedDays } as import('@shared/schema').OwnerSharingRank);
+    } catch (error) {
+      console.error("Error fetching owner sharing rank:", error);
+      res.status(500).json({ error: "Failed to fetch sharing rank" });
+    }
+  });
+
   // Analytics API endpoints (Admin only)
   app.get("/api/admin/analytics-overview", requireAdmin, async (req, res) => {
     try {

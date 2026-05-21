@@ -902,6 +902,12 @@ export interface OwnerBookingCSVRow {
   amount: number;
 }
 
+export interface OwnerSharingRank {
+  rank: number | null;
+  totalOwners: number;
+  totalListedDays: number;
+}
+
 export interface OwnerStatisticsV2Response {
   // KPIs
   totalIncome: number;
