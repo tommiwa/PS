@@ -4963,7 +4963,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Owner role required" });
       }
 
-      // Fetch all non-deleted listings
+      // Fetch all non-deleted listings, excluding listings owned by admins
       const allListings = await db
         .select({
           ownerId: spotListings.ownerId,
@@ -4974,13 +4974,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           recurringStartDate: spotListings.recurringStartDate,
           recurringEndDate: spotListings.recurringEndDate,
           daysOfWeek: spotListings.daysOfWeek,
+          ownerRoles: users.roles,
         })
         .from(spotListings)
+        .innerJoin(users, eq(spotListings.ownerId, users.id))
         .where(isNull(spotListings.deletedAt));
 
-      // Compute total listed days per owner
+      // Compute total listed days per owner (skip admin-owned listings)
       const daysByOwner = new Map<string, number>();
       for (const listing of allListings) {
+        const ownerRoles: string[] = (listing.ownerRoles as string[]) ?? [];
+        if (ownerRoles.includes('admin')) continue;
         let days = 0;
         if (listing.listingType === 'single') {
           days = listing.singleDate ? 1 : 0;
