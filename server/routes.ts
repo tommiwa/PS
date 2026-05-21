@@ -7,7 +7,7 @@ import { broadcastLockEvent } from "./websocket";
 import { setupAuth, isAuthenticated, requireAdmin, getAuthenticatedUserId, getAuthenticatedUserRole, getAuthenticatedUserBaseRole } from "./replitAuth";
 import { z } from "zod";
 import { db, pool } from "./db";
-import { parkingSpots, spotLocks, spotListings, bookings, issues, insertIssueSchema, updateIssueSchema, issueStatuses, termsVersions } from "@shared/schema";
+import { parkingSpots, spotLocks, spotListings, bookings, issues, insertIssueSchema, updateIssueSchema, issueStatuses, termsVersions, users } from "@shared/schema";
 import type { Booking, ParkingSpot, OwnerStatisticsV2Response } from "@shared/schema";
 import { inArray, and, eq, lt, gt, not, or, sql, isNull } from "drizzle-orm";
 import { 
