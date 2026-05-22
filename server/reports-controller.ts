@@ -1121,3 +1121,170 @@ export async function getActiveUsersReport(req: Request, res: Response) {
     res.status(500).json({ error: "Failed to generate active users report" });
   }
 }
+
+// GET /api/admin/rankings/renters - Renter leaderboard ranked by booking count and spend
+export async function getRenterRankings(req: Request, res: Response) {
+  try {
+    const { from, to } = reportQuerySchema.parse(req.query);
+    const dateRange = await calculateDateRange(from, to);
+
+    const fromDate = new Date(dateRange.from + 'T00:00:00');
+    const toDate = new Date(dateRange.to + 'T23:59:59');
+
+    const [allUsers, allBookings, allDepartments] = await Promise.all([
+      storage.getAllUsers(),
+      storage.getAllBookings(),
+      storage.getDepartments?.() || []
+    ]);
+
+    const deptMap = new Map<number, string>();
+    (allDepartments as any[]).forEach((d: any) => deptMap.set(d.id, d.name));
+
+    const getDeptName = (user: any) => {
+      if (user.departmentId) return deptMap.get(user.departmentId) || 'Unknown';
+      return 'N/A';
+    };
+
+    // Filter bookings: confirmed or completed, within date range (by bookingDate)
+    const eligibleBookings = (allBookings as any[]).filter((b: any) => {
+      if (b.status !== 'confirmed' && b.status !== 'completed') return false;
+      const bDate = new Date(b.bookingDate + 'T12:00:00');
+      return bDate >= fromDate && bDate <= toDate;
+    });
+
+    // Aggregate per renter
+    const renterMap = new Map<string, { bookingCount: number; totalAmount: number }>();
+    eligibleBookings.forEach((b: any) => {
+      const existing = renterMap.get(b.renterId) || { bookingCount: 0, totalAmount: 0 };
+      existing.bookingCount++;
+      existing.totalAmount += Number(b.totalAmount) || Number(b.dailyRate) || 0;
+      renterMap.set(b.renterId, existing);
+    });
+
+    // Build ranked list, sorted by booking count desc then total amount desc
+    const unsorted = Array.from(renterMap.entries()).map(([userId, data]) => {
+      const user = (allUsers as any[]).find((u: any) => u.id === userId);
+      return {
+        userId,
+        name: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown' : 'Unknown',
+        email: user?.email || '',
+        department: user ? getDeptName(user) : 'N/A',
+        bookingCount: data.bookingCount,
+        totalAmount: data.totalAmount
+      };
+    });
+
+    unsorted.sort((a, b) => b.bookingCount - a.bookingCount || b.totalAmount - a.totalAmount);
+
+    // Assign tied ranks
+    let rank = 1;
+    const ranked = unsorted.map((entry, idx) => {
+      if (idx > 0) {
+        const prev = unsorted[idx - 1];
+        if (entry.bookingCount !== prev.bookingCount || entry.totalAmount !== prev.totalAmount) {
+          rank = idx + 1;
+        }
+      }
+      return { ...entry, rank };
+    });
+
+    res.json({ rankings: ranked, dateRange, generatedAt: new Date().toISOString() });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: "Invalid query parameters", details: error.errors });
+    }
+    console.error("Error generating renter rankings:", error);
+    res.status(500).json({ error: "Failed to generate renter rankings" });
+  }
+}
+
+// GET /api/admin/rankings/owners - Owner leaderboard ranked by peer-to-peer booking count and earnings
+export async function getOwnerRankings(req: Request, res: Response) {
+  try {
+    const { from, to } = reportQuerySchema.parse(req.query);
+    const dateRange = await calculateDateRange(from, to);
+
+    const fromDate = new Date(dateRange.from + 'T00:00:00');
+    const toDate = new Date(dateRange.to + 'T23:59:59');
+
+    const [allUsers, allBookings, allListings, allSpots, allDepartments] = await Promise.all([
+      storage.getAllUsers(),
+      storage.getAllBookings(),
+      storage.getAllSpotListings(),
+      storage.getAllParkingSpots?.() || [],
+      storage.getDepartments?.() || []
+    ]);
+
+    const deptMap = new Map<number, string>();
+    (allDepartments as any[]).forEach((d: any) => deptMap.set(d.id, d.name));
+
+    const getDeptName = (user: any) => {
+      if (user.departmentId) return deptMap.get(user.departmentId) || 'Unknown';
+      return 'N/A';
+    };
+
+    // Build lookup maps
+    const listingMap = new Map<string, any>();
+    (allListings as any[]).forEach((l: any) => listingMap.set(l.id, l));
+
+    const spotMap = new Map<string, any>();
+    (allSpots as any[]).forEach((s: any) => spotMap.set(s.id, s));
+
+    // Filter bookings: confirmed or completed, within date range, peer-to-peer only
+    const eligibleBookings = (allBookings as any[]).filter((b: any) => {
+      if (b.status !== 'confirmed' && b.status !== 'completed') return false;
+      const bDate = new Date(b.bookingDate + 'T12:00:00');
+      if (bDate < fromDate || bDate > toDate) return false;
+      // Exclude BCI-managed / admin-created listings
+      const listing = listingMap.get(b.listingId);
+      if (listing?.createdByAdmin === true) return false;
+      const spot = spotMap.get(b.spotId);
+      if (spot?.isBciManaged === true) return false;
+      return true;
+    });
+
+    // Aggregate per owner
+    const ownerMap = new Map<string, { bookingCount: number; totalEarnings: number }>();
+    eligibleBookings.forEach((b: any) => {
+      const existing = ownerMap.get(b.ownerId) || { bookingCount: 0, totalEarnings: 0 };
+      existing.bookingCount++;
+      existing.totalEarnings += Number(b.totalAmount) || Number(b.dailyRate) || 0;
+      ownerMap.set(b.ownerId, existing);
+    });
+
+    // Build ranked list, sorted by booking count desc then earnings desc
+    const unsorted = Array.from(ownerMap.entries()).map(([userId, data]) => {
+      const user = (allUsers as any[]).find((u: any) => u.id === userId);
+      return {
+        userId,
+        name: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown' : 'Unknown',
+        email: user?.email || '',
+        department: user ? getDeptName(user) : 'N/A',
+        bookingCount: data.bookingCount,
+        totalEarnings: data.totalEarnings
+      };
+    });
+
+    unsorted.sort((a, b) => b.bookingCount - a.bookingCount || b.totalEarnings - a.totalEarnings);
+
+    // Assign tied ranks
+    let rank = 1;
+    const ranked = unsorted.map((entry, idx) => {
+      if (idx > 0) {
+        const prev = unsorted[idx - 1];
+        if (entry.bookingCount !== prev.bookingCount || entry.totalEarnings !== prev.totalEarnings) {
+          rank = idx + 1;
+        }
+      }
+      return { ...entry, rank };
+    });
+
+    res.json({ rankings: ranked, dateRange, generatedAt: new Date().toISOString() });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: "Invalid query parameters", details: error.errors });
+    }
+    console.error("Error generating owner rankings:", error);
+    res.status(500).json({ error: "Failed to generate owner rankings" });
+  }
+}

@@ -166,6 +166,8 @@ vi.mock('./reports-controller', () => ({
   getSpotAssignmentReport: vi.fn(async () => ({})),
   getSharedPoolUsageReport: vi.fn(async () => ({})),
   getActiveUsersReport: vi.fn(async () => ({})),
+  getRenterRankings: vi.fn(async () => ({})),
+  getOwnerRankings: vi.fn(async () => ({})),
 }));
 
 vi.mock('./report-service', () => ({

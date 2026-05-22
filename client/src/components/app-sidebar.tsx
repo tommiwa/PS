@@ -21,7 +21,8 @@ import {
   MessageSquare,
   HelpCircle,
   Download,
-  Tag
+  Tag,
+  Trophy
 } from "lucide-react"
 import { Link, useLocation, useRoute } from "wouter"
 import {
@@ -214,6 +215,13 @@ const adminAnalyticsItems = [
     icon: Users,
     roles: ["admin"],
     tooltip: "Active Users Report"
+  },
+  {
+    title: "Parking Leaderboard",
+    url: "/admin/leaderboard",
+    icon: Trophy,
+    roles: ["admin"],
+    tooltip: "Renter and Owner Rankings"
   },
 ]
 

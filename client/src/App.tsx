@@ -43,6 +43,7 @@ import AdminLockerManagement from "@/pages/admin-locker-management";
 import AdminWaitingList from "@/pages/admin-waiting-list";
 import AdminIssuesPage from "@/pages/admin/issues";
 import AdminActiveUsersPage from "@/pages/admin-active-users";
+import AdminLeaderboardPage from "@/pages/admin-leaderboard";
 import AdminSalesPage from "@/pages/admin-sales";
 import NotificationsPage from "@/pages/notifications";
 import MapDemo from "@/pages/map-demo";
@@ -528,6 +529,7 @@ function AuthenticatedApp() {
               <Route path="/admin/waiting-list" component={AdminWaitingList} />
               <Route path="/admin/issues" component={AdminIssuesPage} />
               <Route path="/admin/active-users" component={AdminActiveUsersPage} />
+              <Route path="/admin/leaderboard" component={AdminLeaderboardPage} />
               <Route path="/admin/sales" component={AdminSalesPage} />
               
               {/* Demo pages */}
