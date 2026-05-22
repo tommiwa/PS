@@ -97,17 +97,17 @@ async function exportRenterRankings(
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet('Renter Rankings');
 
-  sheet.mergeCells('A1:F1');
+  sheet.mergeCells('A1:E1');
   const title = sheet.getCell('A1');
   title.value = 'BCI ParkShare — Renter Rankings';
   title.font = { bold: true, size: 16 };
 
-  sheet.mergeCells('A2:F2');
+  sheet.mergeCells('A2:E2');
   sheet.getCell('A2').value = `Date Range: ${dateRange.from} to ${dateRange.to}`;
   sheet.getCell('A3').value = `Generated: ${new Date().toLocaleString()}`;
   sheet.addRow([]);
 
-  const header = sheet.addRow(['Rank', 'Name', 'Email', 'Department', 'Bookings', 'Total Paid']);
+  const header = sheet.addRow(['Rank', 'Name', 'Email', 'Department', 'Bookings']);
   header.font = { bold: true };
   header.eachCell(cell => {
     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2563EB' } };
@@ -115,7 +115,7 @@ async function exportRenterRankings(
   });
 
   rankings.forEach(r => {
-    sheet.addRow([r.rank, r.name, r.email, r.department, r.bookingCount, `$${r.totalAmount.toFixed(2)}`]);
+    sheet.addRow([r.rank, r.name, r.email, r.department, r.bookingCount]);
   });
 
   sheet.getColumn(1).width = 8;
@@ -123,7 +123,6 @@ async function exportRenterRankings(
   sheet.getColumn(3).width = 32;
   sheet.getColumn(4).width = 20;
   sheet.getColumn(5).width = 12;
-  sheet.getColumn(6).width = 15;
 
   const buffer = await workbook.xlsx.writeBuffer();
   saveAs(new Blob([buffer]), `renter-rankings-${dateRange.from}-to-${dateRange.to}.xlsx`);
@@ -136,17 +135,17 @@ async function exportOwnerRankings(
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet('Owner Rankings');
 
-  sheet.mergeCells('A1:F1');
+  sheet.mergeCells('A1:E1');
   const title = sheet.getCell('A1');
   title.value = 'BCI ParkShare — Owner Rankings (Peer-to-Peer)';
   title.font = { bold: true, size: 16 };
 
-  sheet.mergeCells('A2:F2');
+  sheet.mergeCells('A2:E2');
   sheet.getCell('A2').value = `Date Range: ${dateRange.from} to ${dateRange.to}`;
   sheet.getCell('A3').value = `Generated: ${new Date().toLocaleString()}`;
   sheet.addRow([]);
 
-  const header = sheet.addRow(['Rank', 'Name', 'Email', 'Department', 'Bookings Fulfilled', 'Total Earnings']);
+  const header = sheet.addRow(['Rank', 'Name', 'Email', 'Department', 'Bookings Fulfilled']);
   header.font = { bold: true };
   header.eachCell(cell => {
     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2563EB' } };
@@ -154,7 +153,7 @@ async function exportOwnerRankings(
   });
 
   rankings.forEach(r => {
-    sheet.addRow([r.rank, r.name, r.email, r.department, r.bookingCount, `$${r.totalEarnings.toFixed(2)}`]);
+    sheet.addRow([r.rank, r.name, r.email, r.department, r.bookingCount]);
   });
 
   sheet.getColumn(1).width = 8;
@@ -162,7 +161,6 @@ async function exportOwnerRankings(
   sheet.getColumn(3).width = 32;
   sheet.getColumn(4).width = 20;
   sheet.getColumn(5).width = 20;
-  sheet.getColumn(6).width = 18;
 
   const buffer = await workbook.xlsx.writeBuffer();
   saveAs(new Blob([buffer]), `owner-rankings-${dateRange.from}-to-${dateRange.to}.xlsx`);
@@ -473,7 +471,6 @@ export default function AdminLeaderboardPage() {
                         <TableHead>Name</TableHead>
                         <TableHead>Department</TableHead>
                         <TableHead className="text-right">Bookings</TableHead>
-                        <TableHead className="text-right">Total Paid</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -500,9 +497,6 @@ export default function AdminLeaderboardPage() {
                           </TableCell>
                           <TableCell className="text-muted-foreground">{r.department}</TableCell>
                           <TableCell className="text-right font-semibold">{r.bookingCount}</TableCell>
-                          <TableCell className="text-right font-semibold">
-                            ${r.totalAmount.toFixed(2)}
-                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -563,7 +557,6 @@ export default function AdminLeaderboardPage() {
                         <TableHead>Name</TableHead>
                         <TableHead>Department</TableHead>
                         <TableHead className="text-right">Bookings Fulfilled</TableHead>
-                        <TableHead className="text-right">Total Earnings</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -590,9 +583,6 @@ export default function AdminLeaderboardPage() {
                           </TableCell>
                           <TableCell className="text-muted-foreground">{r.department}</TableCell>
                           <TableCell className="text-right font-semibold">{r.bookingCount}</TableCell>
-                          <TableCell className="text-right font-semibold">
-                            ${r.totalEarnings.toFixed(2)}
-                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
