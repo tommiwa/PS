@@ -812,7 +812,7 @@ function SharingRankWidget({ data, isLoading }: { data: OwnerSharingRank | null;
   if (!hasListings) {
     return (
       <div
-        className="flex items-center gap-4 rounded-md border bg-muted/30 px-5 py-4"
+        className="flex items-center gap-2 sm:gap-4 rounded-md border bg-muted/30 px-3 py-3 sm:px-5 sm:py-4"
         data-testid="sharing-rank-widget"
       >
         <div className="rounded-lg bg-muted p-2 text-muted-foreground shrink-0">
@@ -833,12 +833,12 @@ function SharingRankWidget({ data, isLoading }: { data: OwnerSharingRank | null;
 
   return (
     <div
-      className={`rounded-md border ${tier.borderColor} bg-gradient-to-r ${tier.gradient} px-5 py-4`}
+      className={`rounded-md border ${tier.borderColor} bg-gradient-to-r ${tier.gradient} px-3 py-3 sm:px-5 sm:py-4`}
       data-testid="sharing-rank-widget"
     >
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4">
         <div className="shrink-0 text-center">
-          <p className={`text-3xl font-extrabold leading-none ${tier.rankColor}`}>
+          <p className={`text-2xl sm:text-3xl font-extrabold leading-none ${tier.rankColor}`}>
             {ordinal(data.rank!)}
           </p>
           <p className={`text-[10px] font-semibold uppercase tracking-wide mt-1 ${tier.iconColor}`}>
