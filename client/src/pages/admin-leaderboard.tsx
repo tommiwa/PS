@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow
 } from '@/components/ui/table';
-import { Trophy, Users, FileSpreadsheet, Medal, CalendarCheck, DollarSign, TrendingUp, UserCheck, RefreshCw } from 'lucide-react';
+import { Trophy, Crown, Users, FileSpreadsheet, Medal, CalendarCheck, DollarSign, TrendingUp, UserCheck, RefreshCw } from 'lucide-react';
 import ExcelJS from 'exceljs';
 // @ts-ignore
 import { saveAs } from 'file-saver';
@@ -480,13 +480,24 @@ export default function AdminLeaderboardPage() {
                       {renterQuery.data.rankings.map((r) => (
                         <TableRow
                           key={r.userId}
-                          className={r.rank <= 3 ? 'bg-muted/30' : ''}
+                          className={
+                            r.rank === 1
+                              ? 'bg-amber-50 dark:bg-amber-950/30'
+                              : r.rank <= 3
+                              ? 'bg-muted/30'
+                              : ''
+                          }
                           data-testid={`row-renter-rank-${r.rank}`}
                         >
                           <TableCell>
                             <RankBadge rank={r.rank} />
                           </TableCell>
-                          <TableCell className="font-medium">{r.name}</TableCell>
+                          <TableCell className="font-medium">
+                            {r.rank === 1 && (
+                              <Crown className="inline-block w-4 h-4 text-amber-500 mr-1.5 mb-0.5" />
+                            )}
+                            {r.name}
+                          </TableCell>
                           <TableCell className="text-muted-foreground">{r.department}</TableCell>
                           <TableCell className="text-right font-semibold">{r.bookingCount}</TableCell>
                           <TableCell className="text-right font-semibold">
@@ -559,13 +570,24 @@ export default function AdminLeaderboardPage() {
                       {ownerQuery.data.rankings.map((r) => (
                         <TableRow
                           key={r.userId}
-                          className={r.rank <= 3 ? 'bg-muted/30' : ''}
+                          className={
+                            r.rank === 1
+                              ? 'bg-amber-50 dark:bg-amber-950/30'
+                              : r.rank <= 3
+                              ? 'bg-muted/30'
+                              : ''
+                          }
                           data-testid={`row-owner-rank-${r.rank}`}
                         >
                           <TableCell>
                             <RankBadge rank={r.rank} />
                           </TableCell>
-                          <TableCell className="font-medium">{r.name}</TableCell>
+                          <TableCell className="font-medium">
+                            {r.rank === 1 && (
+                              <Crown className="inline-block w-4 h-4 text-amber-500 mr-1.5 mb-0.5" />
+                            )}
+                            {r.name}
+                          </TableCell>
                           <TableCell className="text-muted-foreground">{r.department}</TableCell>
                           <TableCell className="text-right font-semibold">{r.bookingCount}</TableCell>
                           <TableCell className="text-right font-semibold">
