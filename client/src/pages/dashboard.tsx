@@ -313,12 +313,6 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
               </Card>
             ) : renterStatsQuery.data ? (
               <>
-                {/* Booking Rank Widget */}
-                <RenterBookingRankWidget
-                  data={renterBookingRankQuery.data ?? null}
-                  isLoading={renterBookingRankQuery.isLoading}
-                />
-
                 {/* Spending Trends Chart with Bar/Line toggle */}
                 <Card data-testid="card-monthly-spending">
                   <CardHeader>
@@ -607,6 +601,13 @@ export default function Dashboard({ userRole = "owner" }: DashboardProps) {
         </div>
       </div>
       
+      {effectiveRole === "renter" && renterStatsQuery.data && (
+        <RenterBookingRankWidget
+          data={renterBookingRankQuery.data ?? null}
+          isLoading={renterBookingRankQuery.isLoading}
+        />
+      )}
+
       {effectiveRole === "renter" && (
         <div className="flex flex-wrap items-center justify-between gap-3" data-testid="renter-filter-bar">
           <div className="flex flex-wrap items-center gap-2">

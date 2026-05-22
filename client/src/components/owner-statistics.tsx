@@ -230,6 +230,9 @@ export function OwnerStatistics() {
 
   return (
     <div className="space-y-6" data-testid="owner-statistics">
+      {/* Sharing Rank Banner */}
+      <SharingRankWidget data={sharingRank ?? null} isLoading={rankLoading} />
+
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-2" data-testid="owner-filter-bar">
         <Select value={period} onValueChange={v => setPeriod(v as OwnerStatsPeriod)}>
@@ -413,9 +416,6 @@ export function OwnerStatistics() {
               />
             </div>
           ) : null}
-
-          {/* Sharing Rank Widget */}
-          <SharingRankWidget data={sharingRank ?? null} isLoading={rankLoading} />
 
           {/* Income Trend + Status Breakdown */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
