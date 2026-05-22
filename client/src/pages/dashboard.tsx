@@ -768,7 +768,7 @@ function RenterBookingRankWidget({ data, isLoading }: { data: RenterBookingRank 
           <p className={`text-2xl sm:text-3xl font-extrabold leading-none ${tier.rankColor}`}>
             {ordinal(data.rank!)}
           </p>
-          <p className={`text-[10px] font-semibold uppercase tracking-wide mt-1 ${tier.iconColor}`}>
+          <p className={`text-[10px] font-semibold uppercase tracking-wide mt-1 break-words ${tier.iconColor}`}>
             {tier.label}
           </p>
         </div>
@@ -776,8 +776,8 @@ function RenterBookingRankWidget({ data, isLoading }: { data: RenterBookingRank 
           <Icon className="h-5 w-5" />
         </div>
         <div className="min-w-0">
-          <p className="text-sm font-semibold leading-tight">Booking Rank</p>
-          <p className="text-xs text-muted-foreground mt-0.5">{tier.message}</p>
+          <p className="text-sm font-semibold leading-tight break-words">Booking Rank</p>
+          <p className="text-xs text-muted-foreground mt-0.5 break-words">{tier.message}</p>
         </div>
       </div>
     </div>
