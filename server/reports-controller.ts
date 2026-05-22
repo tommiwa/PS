@@ -1157,7 +1157,9 @@ export async function getRenterRankings(req: Request, res: Response) {
     eligibleBookings.forEach((b: any) => {
       const existing = renterMap.get(b.renterId) || { bookingCount: 0, totalAmount: 0 };
       existing.bookingCount++;
-      existing.totalAmount += Number(b.totalAmount) || Number(b.dailyRate) || 0;
+      const rTotal = b.totalAmount != null ? parseFloat(String(b.totalAmount)) : NaN;
+      const rDaily = b.dailyRate != null ? parseFloat(String(b.dailyRate)) : NaN;
+      existing.totalAmount += Number.isFinite(rTotal) ? rTotal : (Number.isFinite(rDaily) ? rDaily : 0);
       renterMap.set(b.renterId, existing);
     });
 
@@ -1207,11 +1209,10 @@ export async function getOwnerRankings(req: Request, res: Response) {
     const fromDate = new Date(dateRange.from + 'T00:00:00');
     const toDate = new Date(dateRange.to + 'T23:59:59');
 
-    const [allUsers, allBookings, allListings, allSpots, allDepartments] = await Promise.all([
+    const [allUsers, allBookings, allListings, allDepartments] = await Promise.all([
       storage.getAllUsers(),
       storage.getAllBookings(),
       storage.getAllSpotListings(),
-      storage.getAllParkingSpots?.() || [],
       storage.getDepartments?.() || []
     ]);
 
@@ -1227,19 +1228,14 @@ export async function getOwnerRankings(req: Request, res: Response) {
     const listingMap = new Map<string, any>();
     (allListings as any[]).forEach((l: any) => listingMap.set(l.id, l));
 
-    const spotMap = new Map<string, any>();
-    (allSpots as any[]).forEach((s: any) => spotMap.set(s.id, s));
-
     // Filter bookings: confirmed or completed, within date range, peer-to-peer only
     const eligibleBookings = (allBookings as any[]).filter((b: any) => {
       if (b.status !== 'confirmed' && b.status !== 'completed') return false;
       const bDate = new Date(b.bookingDate + 'T12:00:00');
       if (bDate < fromDate || bDate > toDate) return false;
-      // Exclude BCI-managed / admin-created listings
+      // Exclude admin-created listings (P2P only)
       const listing = listingMap.get(b.listingId);
       if (listing?.createdByAdmin === true) return false;
-      const spot = spotMap.get(b.spotId);
-      if (spot?.isBciManaged === true) return false;
       return true;
     });
 
@@ -1248,7 +1244,9 @@ export async function getOwnerRankings(req: Request, res: Response) {
     eligibleBookings.forEach((b: any) => {
       const existing = ownerMap.get(b.ownerId) || { bookingCount: 0, totalEarnings: 0 };
       existing.bookingCount++;
-      existing.totalEarnings += Number(b.totalAmount) || Number(b.dailyRate) || 0;
+      const oTotal = b.totalAmount != null ? parseFloat(String(b.totalAmount)) : NaN;
+      const oDaily = b.dailyRate != null ? parseFloat(String(b.dailyRate)) : NaN;
+      existing.totalEarnings += Number.isFinite(oTotal) ? oTotal : (Number.isFinite(oDaily) ? oDaily : 0);
       ownerMap.set(b.ownerId, existing);
     });
 
