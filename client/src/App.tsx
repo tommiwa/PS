@@ -323,7 +323,8 @@ function useNavigationDataRefresh() {
       '/my-listings': ['/api/my-listings', '/api/my-spots'],
       '/my-rentals': ['/api/bookings', '/api/my-spots'],
       '/my-spots': ['/api/my-spots'],
-      '/search': ['/api/admin/all-spots', '/api/bookings']
+      '/search': ['/api/admin/all-spots', '/api/bookings'],
+      '/admin/leaderboard': ['/api/admin/rankings/renters', '/api/admin/rankings/owners']
     };
 
     const queriesToRefresh = routeQueryMap[location];

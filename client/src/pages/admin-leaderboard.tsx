@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow
 } from '@/components/ui/table';
-import { Trophy, Users, FileSpreadsheet, Medal, CalendarCheck, DollarSign, TrendingUp, UserCheck } from 'lucide-react';
+import { Trophy, Users, FileSpreadsheet, Medal, CalendarCheck, DollarSign, TrendingUp, UserCheck, RefreshCw } from 'lucide-react';
 import ExcelJS from 'exceljs';
 // @ts-ignore
 import { saveAs } from 'file-saver';
@@ -186,6 +186,13 @@ export default function AdminLeaderboardPage() {
     enabled: isDateRangeValid
   });
 
+  const isRefreshing = renterQuery.isFetching || ownerQuery.isFetching;
+
+  const handleRefresh = () => {
+    renterQuery.refetch();
+    ownerQuery.refetch();
+  };
+
   const handleMonthSelect = (monthIndex: number) => {
     const first = new Date(currentYear, monthIndex, 1);
     const last = new Date(currentYear, monthIndex + 1, 0);
@@ -195,14 +202,25 @@ export default function AdminLeaderboardPage() {
 
   return (
     <div className="flex-1 space-y-6 p-6" data-testid="page-admin-leaderboard">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3" data-testid="heading-leaderboard">
-          <Trophy className="h-8 w-8 text-yellow-500" />
-          Parking Leaderboard
-        </h1>
-        <p className="text-muted-foreground mt-2">
-          Renter and owner rankings for the selected period.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3" data-testid="heading-leaderboard">
+            <Trophy className="h-8 w-8 text-yellow-500" />
+            Parking Leaderboard
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            Renter and owner rankings for the selected period.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={handleRefresh}
+          disabled={!isDateRangeValid || isRefreshing}
+          data-testid="btn-refresh-leaderboard"
+        >
+          <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+          {isRefreshing ? 'Refreshing…' : 'Refresh'}
+        </Button>
       </div>
 
       {/* Date Range Filters */}
