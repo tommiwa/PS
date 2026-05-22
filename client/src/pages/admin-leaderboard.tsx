@@ -405,20 +405,20 @@ export default function AdminLeaderboardPage() {
       )}
 
       {/* Rankings Tabs */}
-      <Tabs defaultValue="renters" className="w-full">
+      <Tabs defaultValue="owners" className="w-full">
         <TabsList>
-          <TabsTrigger value="renters" className="gap-2">
-            <Users className="h-4 w-4" />
-            Renter Rankings
-            {renterQuery.data && (
-              <Badge variant="secondary" className="ml-1">{renterQuery.data.rankings.length}</Badge>
-            )}
-          </TabsTrigger>
           <TabsTrigger value="owners" className="gap-2">
             <Medal className="h-4 w-4" />
             Owner Rankings
             {ownerQuery.data && (
               <Badge variant="secondary" className="ml-1">{ownerQuery.data.rankings.length}</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="renters" className="gap-2">
+            <Users className="h-4 w-4" />
+            Renter Rankings
+            {renterQuery.data && (
+              <Badge variant="secondary" className="ml-1">{renterQuery.data.rankings.length}</Badge>
             )}
           </TabsTrigger>
         </TabsList>
