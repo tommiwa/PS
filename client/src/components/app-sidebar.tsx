@@ -370,6 +370,12 @@ export function AppSidebar({ userRole = "owner" }: AppSidebarProps) {
         queryClient.invalidateQueries({ queryKey: ["/api/admin/reports/waitlist-performance"] }),
       ]);
     },
+    "/admin/leaderboard": async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/rankings/renters"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/rankings/owners"] }),
+      ]);
+    },
     "/admin/data-management": async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["/api/departments"] }),
