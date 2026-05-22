@@ -305,7 +305,7 @@ export default function AdminLeaderboardPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between gap-2">
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm text-muted-foreground">Total Spend</p>
                   {renterQuery.isLoading ? (
                     <Skeleton className="h-8 w-24 mt-1" />
@@ -316,7 +316,23 @@ export default function AdminLeaderboardPage() {
                         : '0.00'}
                     </p>
                   )}
-                  <p className="text-xs text-muted-foreground mt-1">by renters in period</p>
+                  {renterQuery.isLoading ? (
+                    <Skeleton className="h-3 w-28 mt-1" />
+                  ) : renterQuery.data && renterQuery.data.rankings.length > 0 ? (
+                    (() => {
+                      const topSpender = renterQuery.data.rankings.reduce((best, r) =>
+                        r.totalAmount > best.totalAmount ? r : best
+                      );
+                      return (
+                        <p className="text-xs text-muted-foreground mt-1 truncate" data-testid="stat-top-spender-name">
+                          <span className="font-medium text-foreground">{topSpender.name}</span>
+                          {' '}leads with ${topSpender.totalAmount.toFixed(2)}
+                        </p>
+                      );
+                    })()
+                  ) : (
+                    <p className="text-xs text-muted-foreground mt-1">by renters in period</p>
+                  )}
                 </div>
                 <DollarSign className="h-8 w-8 text-muted-foreground/40 shrink-0" />
               </div>
@@ -327,7 +343,7 @@ export default function AdminLeaderboardPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between gap-2">
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm text-muted-foreground">P2P Revenue</p>
                   {ownerQuery.isLoading ? (
                     <Skeleton className="h-8 w-24 mt-1" />
@@ -338,7 +354,23 @@ export default function AdminLeaderboardPage() {
                         : '0.00'}
                     </p>
                   )}
-                  <p className="text-xs text-muted-foreground mt-1">earned by spot owners</p>
+                  {ownerQuery.isLoading ? (
+                    <Skeleton className="h-3 w-28 mt-1" />
+                  ) : ownerQuery.data && ownerQuery.data.rankings.length > 0 ? (
+                    (() => {
+                      const topEarner = ownerQuery.data.rankings.reduce((best, r) =>
+                        r.totalEarnings > best.totalEarnings ? r : best
+                      );
+                      return (
+                        <p className="text-xs text-muted-foreground mt-1 truncate" data-testid="stat-top-earner-name">
+                          <span className="font-medium text-foreground">{topEarner.name}</span>
+                          {' '}leads with ${topEarner.totalEarnings.toFixed(2)}
+                        </p>
+                      );
+                    })()
+                  ) : (
+                    <p className="text-xs text-muted-foreground mt-1">earned by spot owners</p>
+                  )}
                 </div>
                 <TrendingUp className="h-8 w-8 text-muted-foreground/40 shrink-0" />
               </div>
