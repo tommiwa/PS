@@ -324,7 +324,7 @@ export default function AdminLeaderboardPage() {
                       return (
                         <p className="text-xs text-muted-foreground mt-1 truncate" data-testid="stat-top-spender-name">
                           <span className="font-medium text-foreground">{topSpender.name}</span>
-                          {' '}leads with ${topSpender.totalAmount.toFixed(2)}
+                          {' '}leads
                         </p>
                       );
                     })()
@@ -362,7 +362,7 @@ export default function AdminLeaderboardPage() {
                       return (
                         <p className="text-xs text-muted-foreground mt-1 truncate" data-testid="stat-top-earner-name">
                           <span className="font-medium text-foreground">{topEarner.name}</span>
-                          {' '}leads with ${topEarner.totalEarnings.toFixed(2)}
+                          {' '}leads
                         </p>
                       );
                     })()
