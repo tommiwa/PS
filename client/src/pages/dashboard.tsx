@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
-import { Calendar, MapPin, Clock, Plus, Users, Car, TrendingUp, BarChart3, PieChart, Target, DollarSign, AlertTriangle, Download, RefreshCw, Loader2, Eye, EyeOff, AlertCircle, Bell, ParkingSquare, Building2, Award } from "lucide-react"
+import { Calendar, MapPin, Clock, Plus, Users, Car, TrendingUp, BarChart3, PieChart, Target, DollarSign, AlertTriangle, Download, RefreshCw, Loader2, Eye, EyeOff, AlertCircle, Bell, ParkingSquare, Building2, Award, Trophy, Medal, Flame } from "lucide-react"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { useAuth } from "@/contexts/auth-context"
 import { useState, useEffect } from "react"
@@ -664,41 +664,120 @@ function ordinal(n: number): string {
   return n + (s[(v - 20) % 10] || s[v] || s[0])
 }
 
+interface RankTierConfig {
+  Icon: React.ElementType
+  gradient: string
+  borderColor: string
+  iconBg: string
+  iconColor: string
+  rankColor: string
+  label: string
+  message: string
+}
+
+function getRenterRankTier(rank: number): RankTierConfig {
+  if (rank === 1) return {
+    Icon: Trophy,
+    gradient: 'from-amber-400/25 via-yellow-300/15 to-transparent dark:from-amber-500/30 dark:via-yellow-400/15 dark:to-transparent',
+    borderColor: 'border-amber-400/50 dark:border-amber-500/40',
+    iconBg: 'bg-amber-400/20 dark:bg-amber-500/25',
+    iconColor: 'text-amber-600 dark:text-amber-400',
+    rankColor: 'text-amber-600 dark:text-amber-400',
+    label: 'Champion',
+    message: "You're the #1 most active parker — keep leading the way!",
+  }
+  if (rank <= 3) return {
+    Icon: Medal,
+    gradient: 'from-slate-400/20 via-gray-300/10 to-transparent dark:from-slate-400/25 dark:via-gray-400/15 dark:to-transparent',
+    borderColor: 'border-slate-400/40 dark:border-slate-400/35',
+    iconBg: 'bg-slate-300/30 dark:bg-slate-400/20',
+    iconColor: 'text-slate-600 dark:text-slate-300',
+    rankColor: 'text-slate-600 dark:text-slate-300',
+    label: 'Elite',
+    message: "You're in the top 3 — an elite performer in the parking program!",
+  }
+  if (rank <= 10) return {
+    Icon: Flame,
+    gradient: 'from-orange-400/20 via-red-300/10 to-transparent dark:from-orange-500/25 dark:via-red-400/15 dark:to-transparent',
+    borderColor: 'border-orange-400/40 dark:border-orange-500/35',
+    iconBg: 'bg-orange-400/20 dark:bg-orange-500/20',
+    iconColor: 'text-orange-600 dark:text-orange-400',
+    rankColor: 'text-orange-600 dark:text-orange-400',
+    label: 'Top Performer',
+    message: "You're in the top 10 — momentum is building!",
+  }
+  if (rank <= 25) return {
+    Icon: TrendingUp,
+    gradient: 'from-blue-400/20 via-sky-300/10 to-transparent dark:from-blue-500/25 dark:via-sky-400/15 dark:to-transparent',
+    borderColor: 'border-blue-400/40 dark:border-blue-500/35',
+    iconBg: 'bg-blue-400/20 dark:bg-blue-500/20',
+    iconColor: 'text-blue-600 dark:text-blue-400',
+    rankColor: 'text-blue-600 dark:text-blue-400',
+    label: 'Rising Star',
+    message: "You're in the top 25 — rising through the ranks!",
+  }
+  return {
+    Icon: Award,
+    gradient: 'from-muted/60 to-transparent',
+    borderColor: 'border-border',
+    iconBg: 'bg-muted',
+    iconColor: 'text-muted-foreground',
+    rankColor: 'text-foreground',
+    label: 'Active Contributor',
+    message: "Every booking counts — keep using the shared parking program!",
+  }
+}
+
 function RenterBookingRankWidget({ data, isLoading }: { data: RenterBookingRank | null; isLoading: boolean }) {
   if (isLoading) {
-    return <Skeleton className="h-16 w-full" data-testid="booking-rank-skeleton" />
+    return <Skeleton className="h-24 w-full" data-testid="booking-rank-skeleton" />
   }
 
   const hasBookings = !!data && data.rank !== null && data.totalBookings > 0
 
+  if (!hasBookings) {
+    return (
+      <div
+        className="flex items-center gap-4 rounded-md border bg-muted/30 px-5 py-4"
+        data-testid="booking-rank-widget"
+      >
+        <div className="rounded-lg bg-muted p-2 text-muted-foreground shrink-0">
+          <Award className="h-5 w-5" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold leading-tight">Booking Leaderboard</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Make your first booking to join the renter leaderboard and start climbing the ranks!
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  const tier = getRenterRankTier(data.rank!)
+  const { Icon } = tier
+
   return (
     <div
-      className="flex items-center gap-4 rounded-md border bg-muted/30 px-5 py-3"
+      className={`rounded-md border ${tier.borderColor} bg-gradient-to-r ${tier.gradient} px-5 py-4`}
       data-testid="booking-rank-widget"
     >
-      <div className="rounded-lg bg-primary/10 p-2 text-primary shrink-0">
-        <Award className="h-5 w-5" />
-      </div>
-      <div className="min-w-0">
-        {hasBookings ? (
-          <>
-            <p className="text-sm font-semibold leading-tight">
-              Booking Rank: {ordinal(data.rank!)}
-            </p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {data.rank === 1
-                ? 'You are ranked #1 — great job making use of the shared parking program!'
-                : `You are ranked ${ordinal(data.rank!)} — great job making use of the shared parking program!`}
-            </p>
-          </>
-        ) : (
-          <>
-            <p className="text-sm font-semibold leading-tight">Booking Leaderboard</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Make your first booking to join the renter leaderboard!
-            </p>
-          </>
-        )}
+      <div className="flex items-center gap-4">
+        <div className="shrink-0 text-center">
+          <p className={`text-3xl font-extrabold leading-none ${tier.rankColor}`}>
+            {ordinal(data.rank!)}
+          </p>
+          <p className={`text-[10px] font-semibold uppercase tracking-wide mt-1 ${tier.iconColor}`}>
+            {tier.label}
+          </p>
+        </div>
+        <div className={`rounded-lg ${tier.iconBg} p-2 ${tier.iconColor} shrink-0`}>
+          <Icon className="h-5 w-5" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold leading-tight">Booking Rank</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{tier.message}</p>
+        </div>
       </div>
     </div>
   )
