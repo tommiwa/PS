@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow
 } from '@/components/ui/table';
-import { Trophy, Users, FileSpreadsheet, Medal } from 'lucide-react';
+import { Trophy, Users, FileSpreadsheet, Medal, CalendarCheck, DollarSign, TrendingUp, UserCheck } from 'lucide-react';
 import ExcelJS from 'exceljs';
 // @ts-ignore
 import { saveAs } from 'file-saver';
@@ -257,6 +257,102 @@ export default function AdminLeaderboardPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Summary Stat Cards */}
+      {isDateRangeValid && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4" data-testid="leaderboard-summary-stats">
+          {/* Total Bookings */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Bookings</p>
+                  {renterQuery.isLoading ? (
+                    <Skeleton className="h-8 w-20 mt-1" />
+                  ) : (
+                    <p className="text-2xl font-bold mt-1" data-testid="stat-total-bookings">
+                      {renterQuery.data
+                        ? renterQuery.data.rankings.reduce((sum, r) => sum + r.bookingCount, 0)
+                        : 0}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1">confirmed &amp; completed</p>
+                </div>
+                <CalendarCheck className="h-8 w-8 text-muted-foreground/40 shrink-0" />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Total Spend (Renters) */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Spend</p>
+                  {renterQuery.isLoading ? (
+                    <Skeleton className="h-8 w-24 mt-1" />
+                  ) : (
+                    <p className="text-2xl font-bold mt-1" data-testid="stat-total-spend">
+                      ${renterQuery.data
+                        ? renterQuery.data.rankings.reduce((sum, r) => sum + r.totalAmount, 0).toFixed(2)
+                        : '0.00'}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1">by renters in period</p>
+                </div>
+                <DollarSign className="h-8 w-8 text-muted-foreground/40 shrink-0" />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Total P2P Revenue (Owners) */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm text-muted-foreground">P2P Revenue</p>
+                  {ownerQuery.isLoading ? (
+                    <Skeleton className="h-8 w-24 mt-1" />
+                  ) : (
+                    <p className="text-2xl font-bold mt-1" data-testid="stat-p2p-revenue">
+                      ${ownerQuery.data
+                        ? ownerQuery.data.rankings.reduce((sum, r) => sum + r.totalEarnings, 0).toFixed(2)
+                        : '0.00'}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1">earned by spot owners</p>
+                </div>
+                <TrendingUp className="h-8 w-8 text-muted-foreground/40 shrink-0" />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Unique Participants */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm text-muted-foreground">Participants</p>
+                  {renterQuery.isLoading && ownerQuery.isLoading ? (
+                    <Skeleton className="h-8 w-16 mt-1" />
+                  ) : (
+                    <p className="text-2xl font-bold mt-1" data-testid="stat-participants">
+                      {(() => {
+                        const ids = new Set<string>();
+                        renterQuery.data?.rankings.forEach(r => ids.add(r.userId));
+                        ownerQuery.data?.rankings.forEach(r => ids.add(r.userId));
+                        return ids.size;
+                      })()}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1">unique users active</p>
+                </div>
+                <UserCheck className="h-8 w-8 text-muted-foreground/40 shrink-0" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Rankings Tabs */}
       <Tabs defaultValue="renters" className="w-full">
