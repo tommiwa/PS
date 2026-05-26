@@ -793,6 +793,7 @@ export default function Admin() {
             </div>
           </div>
           <UtilizationReport
+            key={futureOutlook}
             data={utilizationQuery.data}
             isLoading={utilizationQuery.isLoading}
             hideStatCards

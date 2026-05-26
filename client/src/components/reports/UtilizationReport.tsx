@@ -182,18 +182,14 @@ function DayBookingsList({ date, scope, onBack }: { date: string; scope?: string
 
 export function UtilizationReport({ data, isLoading, hideStatCards = false, todayStr, scope }: UtilizationReportProps) {
   const colors = useChartColors();
-  const [selectedDate, setSelectedDate] = useState<string | null>(() => {
-    try {
-      return localStorage.getItem('utilization-last-drilled-date') ?? todayStr ?? null;
-    } catch {
-      return todayStr ?? null;
-    }
-  });
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   const handleDateSelect = (date: string | null) => {
     setSelectedDate(date);
     if (date) {
       try { localStorage.setItem('utilization-last-drilled-date', date); } catch {}
+    } else {
+      try { localStorage.removeItem('utilization-last-drilled-date'); } catch {}
     }
   };
 
