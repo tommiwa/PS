@@ -325,8 +325,8 @@ export interface IStorage {
   }>;
   
   // Spot Booking Management methods
-  getBookingAvailability(isBciOnly?: boolean, page?: number, limit?: number): Promise<{ data: BookingAvailabilityData[]; total: number; page: number; limit: number; totalPages: number }>;
-  getPendingPaymentBookings(isBciOnly?: boolean, page?: number, limit?: number): Promise<{ data: PendingPaymentData[]; total: number; page: number; limit: number; totalPages: number }>;
+  getBookingAvailability(isBciOnly?: boolean, page?: number, limit?: number, filters?: { search?: string; listingType?: string; location?: string }): Promise<{ data: BookingAvailabilityData[]; total: number; page: number; limit: number; totalPages: number }>;
+  getPendingPaymentBookings(isBciOnly?: boolean, page?: number, limit?: number, filters?: { search?: string; location?: string; daysOverdue?: string }): Promise<{ data: PendingPaymentData[]; total: number; page: number; limit: number; totalPages: number }>;
   getActiveBookings(isBciOnly?: boolean, page?: number, limit?: number, filters?: { search?: string; status?: string; location?: string; dateFrom?: string; dateTo?: string; role?: string }): Promise<{ data: AdminBookingData[]; total: number; page: number; limit: number; totalPages: number }>;
   getPastBookings(isBciOnly?: boolean, page?: number, limit?: number, payrollPeriod?: string, filters?: { search?: string; status?: string; location?: string; dateFrom?: string; dateTo?: string }): Promise<{ data: AdminBookingData[]; total: number; page: number; limit: number; totalPages: number }>;
   
@@ -2845,7 +2845,7 @@ export class MemStorage implements IStorage {
   }
 
   // Spot Booking Management methods
-  async getBookingAvailability(isBciOnly?: boolean, page: number = 1, limit: number = 9999): Promise<{ data: BookingAvailabilityData[]; total: number; page: number; limit: number; totalPages: number }> {
+  async getBookingAvailability(isBciOnly?: boolean, page: number = 1, limit: number = 9999, filters?: { search?: string; listingType?: string; location?: string }): Promise<{ data: BookingAvailabilityData[]; total: number; page: number; limit: number; totalPages: number }> {
     const today = new Date().toISOString().split('T')[0];
     
     const availableListings = await db
@@ -2988,6 +2988,27 @@ export class MemStorage implements IStorage {
         .map(entry => entry.enrichedData);
     }
 
+    // Apply search and filter params before pagination
+    const search = filters?.search?.trim().toLowerCase() || '';
+    const listingTypeFilter = filters?.listingType && filters.listingType !== 'all' ? filters.listingType : '';
+    const locationFilter = filters?.location && filters.location !== 'all' ? filters.location.toLowerCase() : '';
+
+    if (search || listingTypeFilter || locationFilter) {
+      filteredEntries = filteredEntries.filter(entry => {
+        if (search) {
+          const matchesSearch =
+            entry.spotNumber?.toLowerCase().includes(search) ||
+            entry.locationName?.toLowerCase().includes(search) ||
+            entry.spotTypeName?.toLowerCase().includes(search) ||
+            entry.ownerName?.toLowerCase().includes(search);
+          if (!matchesSearch) return false;
+        }
+        if (listingTypeFilter && entry.listingType !== listingTypeFilter) return false;
+        if (locationFilter && !entry.locationName?.toLowerCase().includes(locationFilter)) return false;
+        return true;
+      });
+    }
+
     const total = filteredEntries.length;
     const totalPages = limit >= 9999 ? 1 : Math.ceil(total / limit);
     const offset = (page - 1) * limit;
@@ -2996,18 +3017,32 @@ export class MemStorage implements IStorage {
     return { data, total, page, limit, totalPages };
   }
 
-  async getPendingPaymentBookings(isBciOnly?: boolean, page: number = 1, limit: number = 9999): Promise<{ data: PendingPaymentData[]; total: number; page: number; limit: number; totalPages: number }> {
+  async getPendingPaymentBookings(isBciOnly?: boolean, page: number = 1, limit: number = 9999, filters?: { search?: string; location?: string; daysOverdue?: string }): Promise<{ data: PendingPaymentData[]; total: number; page: number; limit: number; totalPages: number }> {
     // Use parameterized query with Drizzle sql template literals
     // Include spot_owner for the assigned-to field (parkingSpots.ownerId)
+
+    const searchTerm = filters?.search?.trim() || '';
+    const searchPattern = searchTerm ? `%${searchTerm}%` : '';
+    const locationTerm = filters?.location && filters.location !== 'all' ? filters.location : '';
+    const locationPattern = locationTerm ? `%${locationTerm}%` : '';
+    const daysOverdueRange = filters?.daysOverdue && filters.daysOverdue !== 'all' ? filters.daysOverdue : '';
 
     const countQuery = sqlOp`
       SELECT COUNT(*) as total
       FROM bookings b
       LEFT JOIN parking_spots ps ON b.spot_id = ps.id
+      LEFT JOIN locations l ON ps.location_id = l.id
+      LEFT JOIN users renter ON b.renter_id = renter.id
+      LEFT JOIN users spot_owner ON ps.owner_id = spot_owner.id
       WHERE 
         b.payment_status = 'paid'
         AND b.status != 'cancelled'
         ${isBciOnly ? sqlOp`AND ps.is_bci_managed = true AND ps.owner_id IS NULL` : sqlOp`AND (ps.owner_id IS NOT NULL OR ps.is_bci_managed = false)`}
+        ${searchPattern ? sqlOp`AND (ps.spot_number ILIKE ${searchPattern} OR COALESCE(renter.first_name || ' ' || renter.last_name, renter.email) ILIKE ${searchPattern} OR renter.email ILIKE ${searchPattern} OR COALESCE(spot_owner.first_name || ' ' || spot_owner.last_name, spot_owner.email, '') ILIKE ${searchPattern} OR COALESCE(spot_owner.email, '') ILIKE ${searchPattern})` : sqlOp``}
+        ${locationPattern ? sqlOp`AND (l.building || ' - ' || l.level) ILIKE ${locationPattern}` : sqlOp``}
+        ${daysOverdueRange === '0-7' ? sqlOp`AND GREATEST(0, EXTRACT(DAY FROM (CURRENT_DATE - b.booking_date::date))::integer) BETWEEN 0 AND 7` : sqlOp``}
+        ${daysOverdueRange === '8-30' ? sqlOp`AND GREATEST(0, EXTRACT(DAY FROM (CURRENT_DATE - b.booking_date::date))::integer) BETWEEN 8 AND 30` : sqlOp``}
+        ${daysOverdueRange === '30+' ? sqlOp`AND GREATEST(0, EXTRACT(DAY FROM (CURRENT_DATE - b.booking_date::date))::integer) > 30` : sqlOp``}
     `;
     const countResults = await db.execute(countQuery);
     const total = parseInt((countResults as any).rows?.[0]?.total || '0', 10);
@@ -3034,6 +3069,11 @@ export class MemStorage implements IStorage {
         b.payment_status = 'paid'
         AND b.status != 'cancelled'
         ${isBciOnly ? sqlOp`AND ps.is_bci_managed = true AND ps.owner_id IS NULL` : sqlOp`AND (ps.owner_id IS NOT NULL OR ps.is_bci_managed = false)`}
+        ${searchPattern ? sqlOp`AND (ps.spot_number ILIKE ${searchPattern} OR COALESCE(renter.first_name || ' ' || renter.last_name, renter.email) ILIKE ${searchPattern} OR renter.email ILIKE ${searchPattern} OR COALESCE(spot_owner.first_name || ' ' || spot_owner.last_name, spot_owner.email, '') ILIKE ${searchPattern} OR COALESCE(spot_owner.email, '') ILIKE ${searchPattern})` : sqlOp``}
+        ${locationPattern ? sqlOp`AND (l.building || ' - ' || l.level) ILIKE ${locationPattern}` : sqlOp``}
+        ${daysOverdueRange === '0-7' ? sqlOp`AND GREATEST(0, EXTRACT(DAY FROM (CURRENT_DATE - b.booking_date::date))::integer) BETWEEN 0 AND 7` : sqlOp``}
+        ${daysOverdueRange === '8-30' ? sqlOp`AND GREATEST(0, EXTRACT(DAY FROM (CURRENT_DATE - b.booking_date::date))::integer) BETWEEN 8 AND 30` : sqlOp``}
+        ${daysOverdueRange === '30+' ? sqlOp`AND GREATEST(0, EXTRACT(DAY FROM (CURRENT_DATE - b.booking_date::date))::integer) > 30` : sqlOp``}
       ORDER BY b.created_at DESC
       LIMIT ${limit} OFFSET ${offset}
     `;

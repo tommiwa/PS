@@ -516,11 +516,18 @@ export default function AdminSpotBookingManagement() {
     limit: number;
     totalPages: number;
   }>({
-    queryKey: ["/api/admin/booking-availability", scope, availabilityPageIndex + 1, availabilityPageSize],
-    queryFn: () => fetch(
-      `/api/admin/booking-availability?scope=${scope}&page=${availabilityPageIndex + 1}&limit=${availabilityPageSize}`,
-      { credentials: 'include' }
-    ).then(r => r.json()),
+    queryKey: ["/api/admin/booking-availability", scope, availabilityPageIndex + 1, availabilityPageSize, availabilitySearchTerm, availabilityFilterValues.listingType ?? '', availabilityFilterValues.location ?? ''],
+    queryFn: () => {
+      const params = new URLSearchParams({
+        scope,
+        page: String(availabilityPageIndex + 1),
+        limit: String(availabilityPageSize),
+      });
+      if (availabilitySearchTerm.trim()) params.set('search', availabilitySearchTerm.trim());
+      if (availabilityFilterValues.listingType && availabilityFilterValues.listingType !== 'all') params.set('listingType', availabilityFilterValues.listingType);
+      if (availabilityFilterValues.location && availabilityFilterValues.location !== 'all') params.set('location', availabilityFilterValues.location);
+      return fetch(`/api/admin/booking-availability?${params}`, { credentials: 'include' }).then(r => r.json());
+    },
     staleTime: STALE_TIME
   });
 
@@ -532,11 +539,18 @@ export default function AdminSpotBookingManagement() {
     limit: number;
     totalPages: number;
   }>({
-    queryKey: ["/api/admin/pending-payments", scope, pendingPaymentsPageIndex + 1, pendingPaymentsPageSize],
-    queryFn: () => fetch(
-      `/api/admin/pending-payments?scope=${scope}&page=${pendingPaymentsPageIndex + 1}&limit=${pendingPaymentsPageSize}`,
-      { credentials: 'include' }
-    ).then(r => r.json()),
+    queryKey: ["/api/admin/pending-payments", scope, pendingPaymentsPageIndex + 1, pendingPaymentsPageSize, pendingPaymentsSearchTerm, pendingPaymentsFilterValues.location ?? '', pendingPaymentsFilterValues.daysOverdue ?? ''],
+    queryFn: () => {
+      const params = new URLSearchParams({
+        scope,
+        page: String(pendingPaymentsPageIndex + 1),
+        limit: String(pendingPaymentsPageSize),
+      });
+      if (pendingPaymentsSearchTerm.trim()) params.set('search', pendingPaymentsSearchTerm.trim());
+      if (pendingPaymentsFilterValues.location && pendingPaymentsFilterValues.location !== 'all') params.set('location', pendingPaymentsFilterValues.location);
+      if (pendingPaymentsFilterValues.daysOverdue && pendingPaymentsFilterValues.daysOverdue !== 'all') params.set('daysOverdue', pendingPaymentsFilterValues.daysOverdue);
+      return fetch(`/api/admin/pending-payments?${params}`, { credentials: 'include' }).then(r => r.json());
+    },
     enabled: scope === 'all' && activeTab === 'pending-payments',
     staleTime: STALE_TIME
   });
@@ -709,75 +723,16 @@ export default function AdminSpotBookingManagement() {
     "desc" // Most recent first
   );
 
-  // Enhanced filtering for booking availability
-  const filteredAvailability = useMemo(() => bookingAvailability.filter(listing => {
-    // Search filter
-    if (availabilitySearchTerm.trim()) {
-      const searchLower = availabilitySearchTerm.toLowerCase()
-      const matchesSearch = listing.spotNumber?.toLowerCase().includes(searchLower) ||
-                           listing.locationName?.toLowerCase().includes(searchLower) ||
-                           listing.spotTypeName?.toLowerCase().includes(searchLower) ||
-                           listing.ownerName?.toLowerCase().includes(searchLower)
-      if (!matchesSearch) return false
-    }
-    
-    // Listing type filter
-    if (availabilityFilterValues.listingType && availabilityFilterValues.listingType !== "all") {
-      if (listing.listingType !== availabilityFilterValues.listingType) return false
-    }
-    
-    // Location filter
-    if (availabilityFilterValues.location && availabilityFilterValues.location !== "all") {
-      if (!listing.locationName?.toLowerCase().includes(availabilityFilterValues.location.toLowerCase())) {
-        return false
-      }
-    }
-    
-    return true
-  }), [bookingAvailability, availabilitySearchTerm, availabilityFilterValues]);
-
-  // Sorting functionality for booking availability
+  // Sorting functionality for booking availability — filtering is server-side
   const { sortState: availabilitySortState, sortedData: sortedAvailability, handleSort: handleAvailabilitySort } = useTableSort(
-    filteredAvailability,
+    bookingAvailability,
     "availableFrom",
     "asc"
   );
 
-  // Enhanced filtering for pending payments
-  const filteredPendingPayments = useMemo(() => pendingPayments.filter(payment => {
-    // Search filter
-    if (pendingPaymentsSearchTerm.trim()) {
-      const searchLower = pendingPaymentsSearchTerm.toLowerCase()
-      const matchesSearch = payment.spotNumber?.toLowerCase().includes(searchLower) ||
-                           payment.renterName?.toLowerCase().includes(searchLower) ||
-                           payment.renterEmail?.toLowerCase().includes(searchLower) ||
-                           payment.ownerName?.toLowerCase().includes(searchLower) ||
-                           payment.ownerEmail?.toLowerCase().includes(searchLower)
-      if (!matchesSearch) return false
-    }
-    
-    // Days overdue filter
-    if (pendingPaymentsFilterValues.daysOverdue && pendingPaymentsFilterValues.daysOverdue !== "all") {
-      const days = payment.daysOverdue || 0
-      const range = pendingPaymentsFilterValues.daysOverdue
-      if (range === "0-7" && (days < 0 || days > 7)) return false
-      if (range === "8-30" && (days < 8 || days > 30)) return false
-      if (range === "30+" && days < 30) return false
-    }
-    
-    // Location filter
-    if (pendingPaymentsFilterValues.location && pendingPaymentsFilterValues.location !== "all") {
-      if (!payment.spotLocation?.toLowerCase().includes(pendingPaymentsFilterValues.location.toLowerCase())) {
-        return false
-      }
-    }
-    
-    return true
-  }), [pendingPayments, pendingPaymentsSearchTerm, pendingPaymentsFilterValues]);
-
-  // Sorting functionality for pending payments
+  // Sorting functionality for pending payments — filtering is server-side
   const { sortState: pendingPaymentsSortState, sortedData: sortedPendingPayments, handleSort: handlePendingPaymentsSort } = useTableSort(
-    filteredPendingPayments,
+    pendingPayments,
     "daysOverdue",
     "desc"
   );
@@ -1029,18 +984,18 @@ export default function AdminSpotBookingManagement() {
   }, [sortedBookingActivity.length, bookingActivityPageSize, bookingActivityPageIndex])
 
   useEffect(() => {
-    const maxPage = Math.max(0, Math.ceil(sortedAvailability.length / availabilityPageSize) - 1)
+    const maxPage = Math.max(0, Math.ceil(bookingAvailabilityTotal / availabilityPageSize) - 1)
     if (availabilityPageIndex > maxPage) {
       setAvailabilityPageIndex(maxPage)
     }
-  }, [sortedAvailability.length, availabilityPageSize, availabilityPageIndex])
+  }, [bookingAvailabilityTotal, availabilityPageSize, availabilityPageIndex])
 
   useEffect(() => {
-    const maxPage = Math.max(0, Math.ceil(sortedPendingPayments.length / pendingPaymentsPageSize) - 1)
+    const maxPage = Math.max(0, Math.ceil(pendingPaymentsTotal / pendingPaymentsPageSize) - 1)
     if (pendingPaymentsPageIndex > maxPage) {
       setPendingPaymentsPageIndex(maxPage)
     }
-  }, [sortedPendingPayments.length, pendingPaymentsPageSize, pendingPaymentsPageIndex])
+  }, [pendingPaymentsTotal, pendingPaymentsPageSize, pendingPaymentsPageIndex])
 
   // Reset page when filters/search change
   useEffect(() => {

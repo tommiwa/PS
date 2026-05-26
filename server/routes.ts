@@ -5250,7 +5250,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const limit = parseInt(req.query.limit as string) || 20;
       const validPage = Math.max(1, page);
       const validLimit = Math.min(100, Math.max(1, limit));
-      const result = await storage.getBookingAvailability(isBciOnly, validPage, validLimit);
+      const filters = {
+        search: req.query.search as string | undefined,
+        listingType: req.query.listingType as string | undefined,
+        location: req.query.location as string | undefined,
+      };
+      const result = await storage.getBookingAvailability(isBciOnly, validPage, validLimit, filters);
       res.json(result);
     } catch (error) {
       console.error("Error fetching booking availability:", error);
@@ -5267,7 +5272,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const limit = parseInt(req.query.limit as string) || 20;
       const validPage = Math.max(1, page);
       const validLimit = Math.min(100, Math.max(1, limit));
-      const result = await storage.getPendingPaymentBookings(isBciOnly, validPage, validLimit);
+      const filters = {
+        search: req.query.search as string | undefined,
+        location: req.query.location as string | undefined,
+        daysOverdue: req.query.daysOverdue as string | undefined,
+      };
+      const result = await storage.getPendingPaymentBookings(isBciOnly, validPage, validLimit, filters);
       res.json(result);
     } catch (error) {
       console.error("Error fetching pending payments:", error);
