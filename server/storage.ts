@@ -327,7 +327,7 @@ export interface IStorage {
   // Spot Booking Management methods
   getBookingAvailability(isBciOnly?: boolean): Promise<BookingAvailabilityData[]>;
   getPendingPaymentBookings(isBciOnly?: boolean): Promise<PendingPaymentData[]>;
-  getActiveBookings(isBciOnly?: boolean): Promise<AdminBookingData[]>;
+  getActiveBookings(isBciOnly?: boolean, page?: number, limit?: number): Promise<{ data: AdminBookingData[]; total: number; page: number; limit: number; totalPages: number }>;
   getPastBookings(isBciOnly?: boolean, page?: number, limit?: number, payrollPeriod?: string): Promise<{ data: AdminBookingData[]; total: number; page: number; limit: number; totalPages: number }>;
   
   // Dispute operations
@@ -3054,9 +3054,22 @@ export class MemStorage implements IStorage {
     });
   }
 
-  async getActiveBookings(isBciOnly?: boolean): Promise<AdminBookingData[]> {
+  async getActiveBookings(isBciOnly?: boolean, page: number = 1, limit: number = 9999): Promise<{ data: AdminBookingData[]; total: number; page: number; limit: number; totalPages: number }> {
     const today = new Date().toISOString().split('T')[0];
-    
+    const offset = (page - 1) * limit;
+
+    const countQuery = sqlOp`
+      SELECT COUNT(*) as total
+      FROM bookings b
+      LEFT JOIN parking_spots ps ON b.spot_id = ps.id
+      WHERE
+        (b.status = 'confirmed' OR b.status = 'pending' OR b.status = 'completed')
+        AND b.booking_date >= ${today}
+        ${isBciOnly ? sqlOp`AND ps.is_bci_managed = true AND ps.owner_id IS NULL` : sqlOp`AND (ps.owner_id IS NOT NULL OR ps.is_bci_managed = false)`}
+    `;
+    const countResults = await db.execute(countQuery);
+    const total = parseInt((countResults as any).rows?.[0]?.total || '0', 10);
+
     // Use parameterized query with Drizzle sql template literals
     // Include spot_owner for the assigned-to field (parkingSpots.ownerId)
     const baseQuery = sqlOp`
@@ -3090,11 +3103,12 @@ export class MemStorage implements IStorage {
         AND b.booking_date >= ${today}
         ${isBciOnly ? sqlOp`AND ps.is_bci_managed = true AND ps.owner_id IS NULL` : sqlOp`AND (ps.owner_id IS NOT NULL OR ps.is_bci_managed = false)`}
       ORDER BY b.booking_date ASC
+      LIMIT ${limit} OFFSET ${offset}
     `;
     
     const results = await db.execute(baseQuery);
     
-    return ((results as any).rows || []).map((row: any) => {
+    const data = ((results as any).rows || []).map((row: any) => {
       const renterName = row.renter_first_name && row.renter_last_name 
         ? `${row.renter_first_name} ${row.renter_last_name}`
         : row.renter_email || 'Unknown';
@@ -3132,6 +3146,14 @@ export class MemStorage implements IStorage {
         ownerPaymentInstructions: row.owner_payment_instructions || '',
       };
     });
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    };
   }
 
   async getPastBookings(isBciOnly?: boolean, page: number = 1, limit: number = 20, payrollPeriod?: string): Promise<{ data: AdminBookingData[]; total: number; page: number; limit: number; totalPages: number }> {

@@ -5267,13 +5267,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get active bookings (confirmed/pending, future dates) (Admin only)
+  // Get active bookings (confirmed/pending, future dates) with server-side pagination (Admin only)
   app.get("/api/admin/active-bookings", requireAdmin, async (req, res) => {
     try {
       const scope = req.query.scope as string | undefined;
       const isBciOnly = scope === 'bci';
-      const activeBookings = await storage.getActiveBookings(isBciOnly);
-      res.json(activeBookings);
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+
+      const validPage = Math.max(1, page);
+      const validLimit = Math.min(100, Math.max(1, limit));
+
+      const result = await storage.getActiveBookings(isBciOnly, validPage, validLimit);
+      res.json(result);
     } catch (error) {
       console.error("Error fetching active bookings:", error);
       res.status(500).json({ error: "Failed to fetch active bookings" });
@@ -5532,7 +5538,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isBciOnly = scope === 'bci';
       
       // Fetch data with scope filtering
-      const activeBookings = await storage.getActiveBookings(isBciOnly);
+      const activeBookingsResult = await storage.getActiveBookings(isBciOnly);
+      const activeBookings = activeBookingsResult.data;
       const pendingPayments = await storage.getPendingPaymentBookings(isBciOnly);
       const allBookings = await storage.getAllBookings();
       

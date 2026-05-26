@@ -382,10 +382,19 @@ export default function AdminSpotBookingManagement() {
 
   const STALE_TIME = 2 * 60 * 1000; // 2 minutes
 
-  // Fetch active bookings — deferred until the "Active/Upcoming Bookings" tab is visited
-  const { data: activeBookings = [], isLoading: isLoadingActive } = useQuery<AdminBookingData[]>({
-    queryKey: ["/api/admin/active-bookings", scope],
-    queryFn: () => fetch(`/api/admin/active-bookings?scope=${scope}`, { credentials: 'include' }).then(r => r.json()),
+  // Fetch active bookings with server-side pagination — deferred until the "Active/Upcoming Bookings" tab is visited
+  const { data: activeBookingsResponse, isLoading: isLoadingActive } = useQuery<{
+    data: AdminBookingData[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }>({
+    queryKey: ["/api/admin/active-bookings", scope, activeBookingsPageIndex + 1, activeBookingsPageSize],
+    queryFn: () => fetch(
+      `/api/admin/active-bookings?scope=${scope}&page=${activeBookingsPageIndex + 1}&limit=${activeBookingsPageSize}`,
+      { credentials: 'include' }
+    ).then(r => r.json()),
     enabled: activeTab === 'active',
     staleTime: STALE_TIME
   });
@@ -531,7 +540,8 @@ export default function AdminSpotBookingManagement() {
 
 
   // Use API data directly - show real data or empty states
-  const displayActiveBookings = activeBookings || [];
+  const displayActiveBookings = activeBookingsResponse?.data ?? [];
+  const activeBookingsTotal = activeBookingsResponse?.total ?? 0;
   
   // Default empty analytics when no data is available
   const defaultAnalytics: BookingAnalytics = {
@@ -786,12 +796,8 @@ export default function AdminSpotBookingManagement() {
     "desc"
   );
 
-  // Create paginated data arrays
-  const paginatedActiveBookings = useMemo(() => {
-    const startIndex = activeBookingsPageIndex * activeBookingsPageSize
-    const endIndex = startIndex + activeBookingsPageSize
-    return sortedActiveBookings.slice(startIndex, endIndex)
-  }, [sortedActiveBookings, activeBookingsPageIndex, activeBookingsPageSize])
+  // Active bookings are already paginated server-side; apply client-side sort/filter on the page data
+  const paginatedActiveBookings = sortedActiveBookings;
 
 
   // paginatedPastBookings removed - now using server-side pagination via pastBookings directly
@@ -1031,17 +1037,9 @@ export default function AdminSpotBookingManagement() {
     setPendingPaymentsFilterValues({})
   }
 
-  // Page clamping useEffects - ensure page index doesn't exceed max pages
+  // Reset active bookings and past bookings pages when scope changes
   useEffect(() => {
-    const maxPage = Math.max(0, Math.ceil(sortedActiveBookings.length / activeBookingsPageSize) - 1)
-    if (activeBookingsPageIndex > maxPage) {
-      setActiveBookingsPageIndex(maxPage)
-    }
-  }, [sortedActiveBookings.length, activeBookingsPageSize, activeBookingsPageIndex])
-
-
-  // Reset past bookings page when scope changes
-  useEffect(() => {
+    setActiveBookingsPageIndex(0)
     setPastBookingsPageIndex(0)
   }, [scope])
 
@@ -1428,19 +1426,6 @@ export default function AdminSpotBookingManagement() {
     // For full timestamps, use toLocaleDateString
     return new Date(timestamp).toLocaleDateString();
   };
-
-  const isInitialLoading = isLoadingActive || isLoadingAnalytics;
-
-  if (isInitialLoading) {
-    return (
-      <div className="flex items-center justify-center h-full" data-testid="loading-admin-booking">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-          <p className="text-muted-foreground">Loading booking data...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="p-6 space-y-6" data-testid="page-admin-booking-management">
@@ -1893,12 +1878,12 @@ export default function AdminSpotBookingManagement() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Active Bookings ({sortedActiveBookings.length})</CardTitle>
+                <CardTitle>Active Bookings ({activeBookingsTotal})</CardTitle>
                 <div className="flex gap-2">
                   <Button 
                     size="sm"
                     variant="outline" 
-                    disabled={sortedActiveBookings.length === 0}
+                    disabled={activeBookingsTotal === 0}
                     onClick={() => {
                       const success = quickExportBookingsPDF(sortedActiveBookings, 'Active Bookings Report', (errorMessage) => {
                         toast({
@@ -1922,7 +1907,7 @@ export default function AdminSpotBookingManagement() {
                   <Button 
                     size="sm"
                     variant="outline" 
-                    disabled={sortedActiveBookings.length === 0}
+                    disabled={activeBookingsTotal === 0}
                     onClick={async () => {
                       const success = await quickExportBookingsExcel(sortedActiveBookings, 'Active Bookings Report', (errorMessage) => {
                         toast({
@@ -1948,12 +1933,21 @@ export default function AdminSpotBookingManagement() {
             </CardHeader>
             <CardContent>
               {isLoadingActive ? (
-                <div className="space-y-4">
-                  {[...Array(3)].map((_, i) => (
-                    <Skeleton key={i} className="h-16 w-full" />
+                <div className="space-y-2">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="flex gap-4 items-center py-2">
+                      <Skeleton className="h-10 w-20 flex-shrink-0" />
+                      <Skeleton className="h-10 flex-1" />
+                      <Skeleton className="h-10 flex-1" />
+                      <Skeleton className="h-10 w-24 flex-shrink-0" />
+                      <Skeleton className="h-10 w-20 flex-shrink-0" />
+                      <Skeleton className="h-6 w-20 flex-shrink-0 rounded-full" />
+                      <Skeleton className="h-6 w-16 flex-shrink-0 rounded-full" />
+                      <Skeleton className="h-8 w-20 flex-shrink-0" />
+                    </div>
                   ))}
                 </div>
-              ) : sortedActiveBookings.length === 0 ? (
+              ) : activeBookingsTotal === 0 ? (
                 <div className="text-center py-8 text-muted-foreground" data-testid="empty-active-bookings">
                   <CheckCircle2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>No active bookings found</p>
@@ -2128,7 +2122,7 @@ export default function AdminSpotBookingManagement() {
                   </TableBody>
                   </Table>
                   <TablePagination
-                    totalCount={sortedActiveBookings.length}
+                    totalCount={activeBookingsTotal}
                     pageSize={activeBookingsPageSize}
                     pageIndex={activeBookingsPageIndex}
                     onPageSizeChange={(size) => {
@@ -2683,9 +2677,17 @@ export default function AdminSpotBookingManagement() {
             </CardHeader>
             <CardContent>
               {isLoadingPastBookings ? (
-                <div className="space-y-4">
+                <div className="space-y-2">
                   {[...Array(5)].map((_, i) => (
-                    <Skeleton key={i} className="h-16 w-full" />
+                    <div key={i} className="flex gap-4 items-center py-2">
+                      <Skeleton className="h-10 w-20 flex-shrink-0" />
+                      <Skeleton className="h-10 flex-1" />
+                      <Skeleton className="h-10 flex-1" />
+                      <Skeleton className="h-10 w-24 flex-shrink-0" />
+                      <Skeleton className="h-6 w-20 flex-shrink-0 rounded-full" />
+                      <Skeleton className="h-10 w-20 flex-shrink-0" />
+                      <Skeleton className="h-8 w-16 flex-shrink-0" />
+                    </div>
                   ))}
                 </div>
               ) : pastBookingsTotal === 0 ? (
@@ -3716,7 +3718,7 @@ export default function AdminSpotBookingManagement() {
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          const booking = activeBookings.find(b => b.id === dispute.bookingId) 
+                          const booking = displayActiveBookings.find(b => b.id === dispute.bookingId) 
                             || pastBookings.find(b => b.id === dispute.bookingId);
                           if (booking) {
                             setSelectedBooking(booking);
