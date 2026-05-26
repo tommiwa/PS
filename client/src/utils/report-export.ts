@@ -233,7 +233,7 @@ export async function exportUtilizationReport(data: ReportUtilizationResponse, d
   
   if (data.dailyOccupancy.length > 0) {
     const dailySheet = workbook.addWorksheet('Daily Occupancy');
-    const headerRow = dailySheet.addRow(['Date', 'Occupied Spots', 'Total Spots', 'Occupancy Rate']);
+    const headerRow = dailySheet.addRow(['Date', 'Occupied Spots', 'Total Spots', 'Occupancy Rate', 'BCI Bookings', 'P2P Bookings']);
     headerRow.font = { bold: true };
     
     data.dailyOccupancy.forEach(day => {
@@ -242,7 +242,9 @@ export async function exportUtilizationReport(data: ReportUtilizationResponse, d
         day.date,
         day.occupiedSpots,
         day.totalSpots,
-        `${occupancyRate.toFixed(2)}%`
+        `${occupancyRate.toFixed(2)}%`,
+        day.bciBookings ?? 0,
+        day.p2pBookings ?? 0
       ]);
     });
     
@@ -250,6 +252,8 @@ export async function exportUtilizationReport(data: ReportUtilizationResponse, d
     dailySheet.getColumn(2).width = 18;
     dailySheet.getColumn(3).width = 15;
     dailySheet.getColumn(4).width = 18;
+    dailySheet.getColumn(5).width = 18;
+    dailySheet.getColumn(6).width = 18;
   }
   
   const buffer = await workbook.xlsx.writeBuffer();
