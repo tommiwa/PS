@@ -5246,8 +5246,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const scope = req.query.scope as string | undefined;
       const isBciOnly = scope === 'bci';
-      const availability = await storage.getBookingAvailability(isBciOnly);
-      res.json(availability);
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const validPage = Math.max(1, page);
+      const validLimit = Math.min(100, Math.max(1, limit));
+      const result = await storage.getBookingAvailability(isBciOnly, validPage, validLimit);
+      res.json(result);
     } catch (error) {
       console.error("Error fetching booking availability:", error);
       res.status(500).json({ error: "Failed to fetch booking availability" });
@@ -5259,8 +5263,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const scope = req.query.scope as string | undefined;
       const isBciOnly = scope === 'bci';
-      const pendingPayments = await storage.getPendingPaymentBookings(isBciOnly);
-      res.json(pendingPayments);
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const validPage = Math.max(1, page);
+      const validLimit = Math.min(100, Math.max(1, limit));
+      const result = await storage.getPendingPaymentBookings(isBciOnly, validPage, validLimit);
+      res.json(result);
     } catch (error) {
       console.error("Error fetching pending payments:", error);
       res.status(500).json({ error: "Failed to fetch pending payments" });
@@ -5549,7 +5557,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Fetch data with scope filtering
       const activeBookingsResult = await storage.getActiveBookings(isBciOnly);
       const activeBookings = activeBookingsResult.data;
-      const pendingPayments = await storage.getPendingPaymentBookings(isBciOnly);
+      const pendingPaymentsResult = await storage.getPendingPaymentBookings(isBciOnly);
       const allBookings = await storage.getAllBookings();
       
       // Filter all bookings by BCI if needed
@@ -5574,7 +5582,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Calculate analytics
       const totalActiveBookings = activeBookings.length;
-      const pendingRequests = pendingPayments.length;
+      const pendingRequests = pendingPaymentsResult.total;
       
       // Today's bookings
       const todayBookings = filteredBookings.filter(b => b.bookingDate === todayStr).length;

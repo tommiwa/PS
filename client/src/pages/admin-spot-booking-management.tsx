@@ -362,6 +362,7 @@ export default function AdminSpotBookingManagement() {
   }
 
   // When scope changes, switch to appropriate tab if current tab doesn't apply
+  // Also reset page indices for server-paginated tabs so stale pages are not shown
   useEffect(() => {
     // If switching to BCI scope and on pending-payments tab, switch to payroll-summary
     if (scope === 'bci' && activeTab === 'pending-payments') {
@@ -371,6 +372,9 @@ export default function AdminSpotBookingManagement() {
     if (scope === 'all' && activeTab === 'payroll-summary') {
       setActiveTab('pending-payments')
     }
+    // Reset pagination to page 1 for server-paginated tabs
+    setAvailabilityPageIndex(0)
+    setPendingPaymentsPageIndex(0)
   }, [scope])
 
   // Reset booking details tab to "details" when dialog opens
@@ -479,16 +483,34 @@ export default function AdminSpotBookingManagement() {
   const pastBookingsTotal = pastBookingsResponse?.total ?? 0;
 
   // Fetch booking availability — loads immediately as this is the default tab
-  const { data: bookingAvailability = [], isLoading: isLoadingAvailability } = useQuery<BookingAvailabilityData[]>({
-    queryKey: ["/api/admin/booking-availability", scope],
-    queryFn: () => fetch(`/api/admin/booking-availability?scope=${scope}`, { credentials: 'include' }).then(r => r.json()),
+  const { data: bookingAvailabilityResponse, isLoading: isLoadingAvailability } = useQuery<{
+    data: BookingAvailabilityData[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }>({
+    queryKey: ["/api/admin/booking-availability", scope, availabilityPageIndex + 1, availabilityPageSize],
+    queryFn: () => fetch(
+      `/api/admin/booking-availability?scope=${scope}&page=${availabilityPageIndex + 1}&limit=${availabilityPageSize}`,
+      { credentials: 'include' }
+    ).then(r => r.json()),
     staleTime: STALE_TIME
   });
 
   // Fetch pending payments — deferred until the "Pending Payments" tab is visited
-  const { data: pendingPayments = [], isLoading: isLoadingPendingPayments } = useQuery<PendingPaymentData[]>({
-    queryKey: ["/api/admin/pending-payments", scope],
-    queryFn: () => fetch(`/api/admin/pending-payments?scope=${scope}`, { credentials: 'include' }).then(r => r.json()),
+  const { data: pendingPaymentsResponse, isLoading: isLoadingPendingPayments } = useQuery<{
+    data: PendingPaymentData[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }>({
+    queryKey: ["/api/admin/pending-payments", scope, pendingPaymentsPageIndex + 1, pendingPaymentsPageSize],
+    queryFn: () => fetch(
+      `/api/admin/pending-payments?scope=${scope}&page=${pendingPaymentsPageIndex + 1}&limit=${pendingPaymentsPageSize}`,
+      { credentials: 'include' }
+    ).then(r => r.json()),
     enabled: scope === 'all' && activeTab === 'pending-payments',
     staleTime: STALE_TIME
   });
@@ -584,6 +606,12 @@ export default function AdminSpotBookingManagement() {
   // Use API data directly - show real data or empty states
   const displayActiveBookings = activeBookingsResponse?.data ?? [];
   const activeBookingsTotal = activeBookingsResponse?.total ?? 0;
+
+  // Extract server-paginated data for availability and pending payments
+  const bookingAvailability = bookingAvailabilityResponse?.data ?? [];
+  const bookingAvailabilityTotal = bookingAvailabilityResponse?.total ?? 0;
+  const pendingPayments = pendingPaymentsResponse?.data ?? [];
+  const pendingPaymentsTotal = pendingPaymentsResponse?.total ?? 0;
   
   // Default empty analytics when no data is available
   const defaultAnalytics: BookingAnalytics = {
@@ -785,17 +813,9 @@ export default function AdminSpotBookingManagement() {
     return sortedBookingActivity.slice(startIndex, endIndex)
   }, [sortedBookingActivity, bookingActivityPageIndex, bookingActivityPageSize])
 
-  const paginatedAvailability = useMemo(() => {
-    const startIndex = availabilityPageIndex * availabilityPageSize
-    const endIndex = startIndex + availabilityPageSize
-    return sortedAvailability.slice(startIndex, endIndex)
-  }, [sortedAvailability, availabilityPageIndex, availabilityPageSize])
-
-  const paginatedPendingPayments = useMemo(() => {
-    const startIndex = pendingPaymentsPageIndex * pendingPaymentsPageSize
-    const endIndex = startIndex + pendingPaymentsPageSize
-    return sortedPendingPayments.slice(startIndex, endIndex)
-  }, [sortedPendingPayments, pendingPaymentsPageIndex, pendingPaymentsPageSize])
+  // Availability and pending payments are now server-side paginated; use sorted data directly
+  // paginatedAvailability removed — server handles pagination, sortedAvailability is the current page
+  // paginatedPendingPayments removed — server handles pagination, sortedPendingPayments is the current page
 
   // Filter configuration for spot booking management
   const bookingFilterConfigs: FilterConfig[] = useMemo(() => [
@@ -1660,7 +1680,7 @@ export default function AdminSpotBookingManagement() {
           
           <Card>
             <CardHeader>
-              <CardTitle>Available Spots ({sortedAvailability.length})</CardTitle>
+              <CardTitle>Available Spots ({bookingAvailabilityTotal})</CardTitle>
             </CardHeader>
             <CardContent>
               {isLoadingAvailability ? (
@@ -1752,7 +1772,7 @@ export default function AdminSpotBookingManagement() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {paginatedAvailability.map((listing) => (
+                      {sortedAvailability.map((listing) => (
                         <TableRow key={listing.id} data-testid={`row-availability-${listing.id}`}>
                           <TableCell className="font-medium" data-testid={`text-spot-${listing.id}`}>
                             {listing.spotNumber}
@@ -1823,7 +1843,7 @@ export default function AdminSpotBookingManagement() {
                     </TableBody>
                   </Table>
                   <TablePagination
-                    totalCount={sortedAvailability.length}
+                    totalCount={bookingAvailabilityTotal}
                     pageSize={availabilityPageSize}
                     pageIndex={availabilityPageIndex}
                     onPageSizeChange={(size) => {
@@ -2129,7 +2149,7 @@ export default function AdminSpotBookingManagement() {
           
           <Card>
             <CardHeader>
-              <CardTitle>Pending Payments ({sortedPendingPayments.length})</CardTitle>
+              <CardTitle>Pending Payments ({pendingPaymentsTotal})</CardTitle>
             </CardHeader>
             <CardContent>
               {isLoadingPendingPayments ? (
@@ -2213,7 +2233,7 @@ export default function AdminSpotBookingManagement() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {paginatedPendingPayments.map((payment) => (
+                      {sortedPendingPayments.map((payment) => (
                         <TableRow key={payment.id} data-testid={`row-pending-payment-${payment.id}`}>
                           <TableCell className="font-medium" data-testid={`text-spot-${payment.id}`}>
                             <div>
@@ -2326,7 +2346,7 @@ export default function AdminSpotBookingManagement() {
                     </TableBody>
                   </Table>
                   <TablePagination
-                    totalCount={sortedPendingPayments.length}
+                    totalCount={pendingPaymentsTotal}
                     pageSize={pendingPaymentsPageSize}
                     pageIndex={pendingPaymentsPageIndex}
                     onPageSizeChange={(size) => {
