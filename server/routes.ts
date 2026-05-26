@@ -6025,6 +6025,83 @@ The BCI ParkShare Team`;
     }
   });
 
+  // GET /api/admin/bookings/:id - Fetch a single booking in AdminBookingData format (Admin only)
+  app.get("/api/admin/bookings/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = await db.execute(sql`
+        SELECT 
+          b.*,
+          ps.spot_number, ps.location_id, ps.is_bci_managed, ps.owner_id as spot_owner_id,
+          l.building, l.level,
+          renter.id as renter_id, renter.first_name as renter_first_name,
+          renter.last_name as renter_last_name, renter.email as renter_email,
+          owner.id as owner_id, owner.first_name as owner_first_name,
+          owner.last_name as owner_last_name, owner.email as owner_email,
+          renter_dept.name as renter_department,
+          owner_dept.name as owner_department,
+          spot_owner.first_name as spot_owner_first_name,
+          spot_owner.last_name as spot_owner_last_name, spot_owner.email as spot_owner_email,
+          spot_owner_dept.name as spot_owner_department,
+          pp.payment_type as owner_payment_type,
+          pp.payment_instructions as owner_payment_instructions
+        FROM bookings b
+        LEFT JOIN parking_spots ps ON b.spot_id = ps.id
+        LEFT JOIN locations l ON ps.location_id = l.id
+        LEFT JOIN users renter ON b.renter_id = renter.id
+        LEFT JOIN users owner ON b.owner_id = owner.id
+        LEFT JOIN departments renter_dept ON renter.department_id = renter_dept.id
+        LEFT JOIN departments owner_dept ON owner.department_id = owner_dept.id
+        LEFT JOIN users spot_owner ON ps.owner_id = spot_owner.id
+        LEFT JOIN departments spot_owner_dept ON spot_owner.department_id = spot_owner_dept.id
+        LEFT JOIN payment_preferences pp ON ps.owner_id = pp.user_id
+        WHERE b.id = ${id}
+      `);
+
+      const rows = (result as any).rows || [];
+      if (rows.length === 0) return res.status(404).json({ error: "Booking not found" });
+
+      const row = rows[0];
+      const renterName = row.renter_first_name && row.renter_last_name
+        ? `${row.renter_first_name} ${row.renter_last_name}`
+        : row.renter_email || 'Unknown';
+      const ownerName = row.spot_owner_id
+        ? (row.spot_owner_first_name && row.spot_owner_last_name
+            ? `${row.spot_owner_first_name} ${row.spot_owner_last_name}`
+            : row.spot_owner_email || 'Unknown')
+        : (row.is_bci_managed ? 'BCI Workplace Services' : 'Unknown');
+      const spotLocation = row.building && row.level
+        ? `${row.building} - ${row.level}`
+        : 'Unknown Location';
+
+      res.json({
+        id: row.id,
+        spotNumber: row.spot_number || 'N/A',
+        spotLocation,
+        renterName,
+        renterEmail: row.renter_email || '',
+        renterDepartment: row.renter_department || '',
+        ownerName,
+        ownerEmail: row.spot_owner_id ? (row.spot_owner_email || '') : '',
+        ownerDepartment: row.spot_owner_id ? (row.spot_owner_department || '') : '',
+        bookingDate: row.booking_date,
+        dailyRate: Number(row.daily_rate),
+        totalAmount: Number(row.total_amount),
+        status: row.status,
+        paymentReceived: row.payment_received,
+        paymentStatus: row.payment_status || 'pending',
+        notes: row.notes || '',
+        createdAt: new Date(row.created_at).toISOString(),
+        lastActivity: new Date(row.updated_at).toISOString(),
+        ownerPaymentType: row.owner_payment_type || '',
+        ownerPaymentInstructions: row.owner_payment_instructions || '',
+      });
+    } catch (error) {
+      console.error("Error fetching booking by id:", error);
+      res.status(500).json({ error: "Failed to fetch booking" });
+    }
+  });
+
   // PATCH /api/admin/bookings/:id - Update booking (Admin only)
   app.patch("/api/admin/bookings/:id", requireAdmin, async (req: any, res) => {
     try {

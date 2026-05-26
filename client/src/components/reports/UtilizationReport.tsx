@@ -7,7 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, ComposedChart, Line, ReferenceLine, ReferenceArea } from 'recharts';
 import type { TooltipProps } from 'recharts';
 import type { ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent';
-import { ArrowLeft, BarChart3, Layers, MapPin, ParkingSquare, TrendingUp } from 'lucide-react';
+import { ArrowLeft, BarChart3, ExternalLink, Layers, MapPin, ParkingSquare, TrendingUp } from 'lucide-react';
+import { Link } from 'wouter';
 import type { ReportUtilizationResponse } from '@shared/schema';
 
 interface UtilizationReportProps {
@@ -92,6 +93,7 @@ function DayBookingsList({ date, scope, onBack }: { date: string; scope?: string
                 <TableHead>Spot</TableHead>
                 <TableHead>Location</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="w-16"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -102,6 +104,13 @@ function DayBookingsList({ date, scope, onBack }: { date: string; scope?: string
                   <TableCell className="text-muted-foreground">{booking.locationName}</TableCell>
                   <TableCell>
                     <span className="capitalize">{booking.status}</span>
+                  </TableCell>
+                  <TableCell>
+                    <Link href={`/admin/bookings?bookingId=${booking.id}`}>
+                      <Button variant="ghost" size="icon" title="View full booking details">
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                    </Link>
                   </TableCell>
                 </TableRow>
               ))}

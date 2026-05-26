@@ -380,6 +380,30 @@ export default function AdminSpotBookingManagement() {
     }
   }, [showBookingDetails])
 
+  // Open booking detail dialog when ?bookingId=<id> is in the URL
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams)
+    const bookingId = params.get('bookingId')
+    if (!bookingId) return
+
+    fetch(`/api/admin/bookings/${encodeURIComponent(bookingId)}`, { credentials: 'include' })
+      .then(async (res) => {
+        if (!res.ok) throw new Error('Not found')
+        return res.json()
+      })
+      .then((booking) => {
+        setSelectedBooking(booking)
+        setShowBookingDetails(true)
+        // Remove bookingId from URL without causing a page reload
+        params.delete('bookingId')
+        const newSearch = params.toString()
+        setLocation('/admin/bookings' + (newSearch ? `?${newSearch}` : ''))
+      })
+      .catch(() => {
+        // Silently ignore — booking may not exist or admin lost access
+      })
+  }, [])
+
   const STALE_TIME = 2 * 60 * 1000; // 2 minutes
 
   // Fetch active bookings with server-side pagination and filtering — deferred until the "Active/Upcoming Bookings" tab is visited
