@@ -1,11 +1,13 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, ComposedChart, Line, ReferenceLine, ReferenceArea } from 'recharts';
 import type { TooltipProps } from 'recharts';
 import type { ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent';
-import { BarChart3, Layers, MapPin, ParkingSquare, TrendingUp } from 'lucide-react';
+import { ArrowLeft, BarChart3, Layers, MapPin, ParkingSquare, TrendingUp } from 'lucide-react';
 import type { ReportUtilizationResponse } from '@shared/schema';
 
 interface UtilizationReportProps {
@@ -14,6 +16,16 @@ interface UtilizationReportProps {
   hideStatCards?: boolean;
   /** When provided, a vertical reference line is drawn at this date to mark "today" */
   todayStr?: string;
+  /** When provided, drill-down calls are scoped to match the chart's scope filter */
+  scope?: 'all' | 'bci';
+}
+
+interface DayBooking {
+  id: string;
+  renterName: string;
+  spotNumber: string;
+  locationName: string;
+  status: string;
 }
 
 function getCssVar(name: string): string {
@@ -33,8 +45,77 @@ function useChartColors() {
   }), []);
 }
 
-export function UtilizationReport({ data, isLoading, hideStatCards = false, todayStr }: UtilizationReportProps) {
+function formatDisplayDate(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+function DayBookingsList({ date, scope, onBack }: { date: string; scope?: string; onBack: () => void }) {
+  const params = new URLSearchParams({ date });
+  if (scope && scope !== 'all') params.set('scope', scope);
+  const { data, isLoading, isError } = useQuery<DayBooking[]>({
+    queryKey: ['/api/admin/bookings/by-date', date, scope],
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/bookings/by-date?${params.toString()}`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch bookings');
+      return res.json();
+    },
+  });
+
+  return (
+    <Card data-testid="card-day-bookings">
+      <CardHeader className="flex flex-row items-center gap-3 flex-wrap pb-3">
+        <Button variant="ghost" size="icon" onClick={onBack} aria-label="Back to chart">
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <div>
+          <CardTitle className="text-base">{formatDisplayDate(date)}</CardTitle>
+          <p className="text-sm text-muted-foreground mt-0.5">Bookings for this day</p>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-10 w-full" />
+            ))}
+          </div>
+        ) : isError ? (
+          <p className="text-center text-destructive py-8">Failed to load bookings. Please try again.</p>
+        ) : !data || data.length === 0 ? (
+          <p className="text-center text-muted-foreground py-8">No bookings for this day.</p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Renter</TableHead>
+                <TableHead>Spot</TableHead>
+                <TableHead>Location</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {data.map((booking) => (
+                <TableRow key={booking.id}>
+                  <TableCell className="font-medium">{booking.renterName}</TableCell>
+                  <TableCell>{booking.spotNumber}</TableCell>
+                  <TableCell className="text-muted-foreground">{booking.locationName}</TableCell>
+                  <TableCell>
+                    <span className="capitalize">{booking.status}</span>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+export function UtilizationReport({ data, isLoading, hideStatCards = false, todayStr, scope }: UtilizationReportProps) {
   const colors = useChartColors();
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   const COLORS = [colors.chart1, colors.chart2, colors.chart3, colors.chart4, colors.chart5];
 
@@ -223,7 +304,6 @@ export function UtilizationReport({ data, isLoading, hideStatCards = false, toda
         });
 
         const dayCount = chartData.length;
-        // Up to 14 days: show every tick; up to 44 days: every 3rd; up to 60: every 6th; else every 14th
         const tickInterval = dayCount <= 14 ? 0 : dayCount <= 44 ? 3 : dayCount <= 60 ? 6 : 14;
 
         const formatDate = (dateStr: string) => {
@@ -231,7 +311,6 @@ export function UtilizationReport({ data, isLoading, hideStatCards = false, toda
           return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         };
 
-        // Show reference line only when todayStr is within the chart range and before the last point
         const lastDate = chartData[chartData.length - 1]?.date ?? '';
         const showTodayLine = todayStr && lastDate > todayStr;
 
@@ -279,9 +358,19 @@ export function UtilizationReport({ data, isLoading, hideStatCards = false, toda
               <p style={{ color: colors.chart1 }}>Booked Spots: {booked}</p>
               <p style={{ color: colors.chart3 }}>Available for Sharing: {available}</p>
               <p style={{ color: colors.chart5 }}>Occupancy Rate: {rate}%</p>
+              <p className="text-xs text-muted-foreground pt-1">Click bar to see bookings</p>
             </div>
           );
         };
+
+        const handleBarClick = (barData: any) => {
+          const date = barData?.payload?.date ?? barData?.date;
+          if (date) setSelectedDate(date);
+        };
+
+        if (selectedDate) {
+          return <DayBookingsList date={selectedDate} scope={scope} onBack={() => setSelectedDate(null)} />;
+        }
 
         return (
           <Card data-testid="card-daily-occupancy">
@@ -290,10 +379,14 @@ export function UtilizationReport({ data, isLoading, hideStatCards = false, toda
                 <BarChart3 className="h-5 w-5" />
                 Occupancy Timeline
               </CardTitle>
+              <p className="text-xs text-muted-foreground">Click any bar to see that day&apos;s bookings</p>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={320}>
-                <ComposedChart data={chartData} margin={{ top: 8, right: 40, left: 0, bottom: 8 }}>
+                <ComposedChart
+                  data={chartData}
+                  margin={{ top: 8, right: 40, left: 0, bottom: 8 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" stroke={colors.border} />
                   <XAxis
                     dataKey="date"
@@ -315,8 +408,8 @@ export function UtilizationReport({ data, isLoading, hideStatCards = false, toda
                       ifOverflow="visible"
                     />
                   )}
-                  <Bar yAxisId="left" dataKey="bookedSpots" stackId="occupancy" fill={colors.chart1} name="bookedSpots" />
-                  <Bar yAxisId="left" dataKey="availableForSharing" stackId="occupancy" fill={colors.chart3} name="availableForSharing" />
+                  <Bar yAxisId="left" dataKey="bookedSpots" stackId="occupancy" fill={colors.chart1} name="bookedSpots" onClick={handleBarClick} style={{ cursor: 'pointer' }} />
+                  <Bar yAxisId="left" dataKey="availableForSharing" stackId="occupancy" fill={colors.chart3} name="availableForSharing" onClick={handleBarClick} style={{ cursor: 'pointer' }} />
                   <Line yAxisId="right" type="monotone" dataKey="occupancyRate" stroke={colors.chart5} strokeWidth={2} dot={false} name="occupancyRate" />
                   {showTodayLine && (
                     <ReferenceLine

@@ -7,7 +7,7 @@ import { broadcastLockEvent } from "./websocket";
 import { setupAuth, isAuthenticated, requireAdmin, getAuthenticatedUserId, getAuthenticatedUserRole, getAuthenticatedUserBaseRole } from "./replitAuth";
 import { z } from "zod";
 import { db, pool } from "./db";
-import { parkingSpots, spotLocks, spotListings, bookings, issues, insertIssueSchema, updateIssueSchema, issueStatuses, termsVersions, users } from "@shared/schema";
+import { parkingSpots, spotLocks, spotListings, bookings, issues, insertIssueSchema, updateIssueSchema, issueStatuses, termsVersions, users, locations } from "@shared/schema";
 import type { Booking, ParkingSpot, OwnerStatisticsV2Response } from "@shared/schema";
 import { inArray, and, eq, lt, gt, not, or, sql, isNull } from "drizzle-orm";
 import { 
@@ -5945,6 +5945,63 @@ The BCI ParkShare Team`;
     } catch (error) {
       console.error("Error cancelling spot listing:", error);
       res.status(500).json({ error: "Failed to cancel spot listing" });
+    }
+  });
+
+  // GET /api/admin/bookings/by-date - Get all bookings for a specific date with joined details (Admin only)
+  app.get("/api/admin/bookings/by-date", requireAdmin, async (req, res) => {
+    try {
+      const { date, scope } = req.query;
+      if (!date || typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return res.status(400).json({ error: "date parameter is required in YYYY-MM-DD format" });
+      }
+
+      // Build where conditions — match the same statuses the occupancy chart counts
+      const conditions: any[] = [
+        eq(bookings.bookingDate, date),
+        inArray(bookings.status, ["confirmed", "pending", "completed"]),
+      ];
+      // When scope=bci, restrict to BCI-managed spots only (mirrors getReportUtilization scope logic)
+      if (scope === 'bci') {
+        conditions.push(eq(parkingSpots.isBciManaged, true));
+      }
+
+      const rows = await db
+        .select({
+          id: bookings.id,
+          renterFirstName: users.firstName,
+          renterLastName: users.lastName,
+          renterEmail: users.email,
+          spotNumber: parkingSpots.spotNumber,
+          locationOffice: locations.office,
+          locationBuilding: locations.building,
+          locationLevel: locations.level,
+          status: bookings.status,
+        })
+        .from(bookings)
+        .leftJoin(users, eq(bookings.renterId, users.id))
+        .leftJoin(parkingSpots, eq(bookings.spotId, parkingSpots.id))
+        .leftJoin(locations, eq(parkingSpots.locationId, locations.id))
+        .where(and(...conditions));
+
+      const result = rows.map((row) => ({
+        id: row.id,
+        renterName:
+          row.renterFirstName && row.renterLastName
+            ? `${row.renterFirstName} ${row.renterLastName}`
+            : row.renterFirstName || row.renterLastName || row.renterEmail || 'Unknown',
+        spotNumber: row.spotNumber || 'N/A',
+        locationName:
+          [row.locationOffice, row.locationBuilding, row.locationLevel]
+            .filter(Boolean)
+            .join(' — ') || 'N/A',
+        status: row.status,
+      }));
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching bookings by date:", error);
+      res.status(500).json({ error: "Failed to fetch bookings for date" });
     }
   });
 

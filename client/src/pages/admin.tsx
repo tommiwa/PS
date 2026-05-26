@@ -797,6 +797,7 @@ export default function Admin() {
             isLoading={utilizationQuery.isLoading}
             hideStatCards
             todayStr={futureOutlook > 0 ? todayPST : undefined}
+            scope={scope}
           />
         </div>
       </div>
