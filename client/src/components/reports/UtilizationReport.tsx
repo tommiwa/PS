@@ -124,7 +124,7 @@ function DayBookingsList({ date, scope, onBack }: { date: string; scope?: string
 
 export function UtilizationReport({ data, isLoading, hideStatCards = false, todayStr, scope }: UtilizationReportProps) {
   const colors = useChartColors();
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(todayStr ?? null);
 
   const COLORS = [colors.chart1, colors.chart2, colors.chart3, colors.chart4, colors.chart5];
 
