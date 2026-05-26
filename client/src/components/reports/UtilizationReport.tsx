@@ -313,6 +313,7 @@ export function UtilizationReport({ data, isLoading, hideStatCards = false, toda
 
         const lastDate = chartData[chartData.length - 1]?.date ?? '';
         const showTodayLine = todayStr && lastDate > todayStr;
+        const hasBookings = chartData.some((d) => d.bookedSpots > 0);
 
         const FORECAST_COLOR = 'hsl(38 92% 50%)';
 
@@ -379,7 +380,9 @@ export function UtilizationReport({ data, isLoading, hideStatCards = false, toda
                 <BarChart3 className="h-5 w-5" />
                 Occupancy Timeline
               </CardTitle>
-              <p className="text-xs text-muted-foreground">Click any bar to see that day&apos;s bookings</p>
+              {hasBookings && (
+                <p className="text-xs text-muted-foreground">Click any bar to see that day&apos;s bookings</p>
+              )}
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={320}>
