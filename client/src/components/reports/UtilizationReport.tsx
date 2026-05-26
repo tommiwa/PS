@@ -392,7 +392,7 @@ export function UtilizationReport({ data, isLoading, hideStatCards = false, toda
                 Occupancy Timeline
               </CardTitle>
               {hasBookings && (
-                <p className="text-xs text-muted-foreground">Click any bar to see that day&apos;s bookings</p>
+                <p className="text-xs text-muted-foreground">Click a bar with bookings to see that day&apos;s details</p>
               )}
             </CardHeader>
             <CardContent>
