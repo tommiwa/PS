@@ -309,7 +309,8 @@ export function UtilizationReport({ data, isLoading, hideStatCards = false, toda
         const chartData = data.dailyOccupancy.map((d) => {
           const total = d.bookedSpots + d.availableForSharing;
           const occupancyRate = total > 0 ? parseFloat(((d.bookedSpots / total) * 100).toFixed(1)) : 0;
-          return { ...d, occupancyRate };
+          const noData = d.bookedSpots === 0 && d.availableForSharing === 0 ? 1 : 0;
+          return { ...d, occupancyRate, noData };
         });
 
         const dayCount = chartData.length;
@@ -326,10 +327,13 @@ export function UtilizationReport({ data, isLoading, hideStatCards = false, toda
 
         const FORECAST_COLOR = 'hsl(38 92% 50%)';
 
+        const NO_DATA_COLOR = 'hsl(var(--muted-foreground) / 0.18)';
+
         const legendItems = [
           { color: colors.chart1, label: 'Booked Spots' },
           { color: colors.chart3, label: 'Available for Sharing' },
           { color: colors.chart5, label: 'Occupancy Rate %' },
+          { color: NO_DATA_COLOR, label: 'No Activity', isDashed: true },
           ...(showTodayLine ? [{ color: FORECAST_COLOR, label: 'Forecast', isArea: true }] : []),
         ];
 
@@ -341,6 +345,11 @@ export function UtilizationReport({ data, isLoading, hideStatCards = false, toda
                   <span
                     style={{ backgroundColor: item.color, opacity: 0.35, border: `2px solid ${item.color}` }}
                     className="inline-block h-3 w-5 rounded-sm"
+                  />
+                ) : item.isDashed ? (
+                  <span
+                    style={{ backgroundColor: item.color, border: '1.5px dashed var(--muted-foreground)', borderOpacity: 0.35 }}
+                    className="inline-block h-3 w-3 rounded-sm"
                   />
                 ) : (
                   <span
@@ -359,16 +368,24 @@ export function UtilizationReport({ data, isLoading, hideStatCards = false, toda
           const booked = payload.find((p) => p.dataKey === 'bookedSpots')?.value ?? 0;
           const available = payload.find((p) => p.dataKey === 'availableForSharing')?.value ?? 0;
           const rate = payload.find((p) => p.dataKey === 'occupancyRate')?.value ?? 0;
+          const noDataVal = payload.find((p) => p.dataKey === 'noData')?.value ?? 0;
           const isFuture = todayStr && label > todayStr;
+          const isNoData = Number(noDataVal) > 0;
           return (
             <div className="bg-card border border-border rounded-md shadow-sm p-3 text-sm space-y-1">
               <p className="font-semibold text-card-foreground">
                 {formatDate(label)}{isFuture ? ' (forecast)' : ''}
               </p>
-              <p style={{ color: colors.chart1 }}>Booked Spots: {booked}</p>
-              <p style={{ color: colors.chart3 }}>Available for Sharing: {available}</p>
-              <p style={{ color: colors.chart5 }}>Occupancy Rate: {rate}%</p>
-              {Number(booked) > 0 && <p className="text-xs text-muted-foreground pt-1">Click bar to see bookings</p>}
+              {isNoData ? (
+                <p className="text-muted-foreground italic">No activity recorded</p>
+              ) : (
+                <>
+                  <p style={{ color: colors.chart1 }}>Booked Spots: {booked}</p>
+                  <p style={{ color: colors.chart3 }}>Available for Sharing: {available}</p>
+                  <p style={{ color: colors.chart5 }}>Occupancy Rate: {rate}%</p>
+                  {Number(booked) > 0 && <p className="text-xs text-muted-foreground pt-1">Click bar to see bookings</p>}
+                </>
+              )}
             </div>
           );
         };
@@ -422,6 +439,18 @@ export function UtilizationReport({ data, isLoading, hideStatCards = false, toda
                       ifOverflow="visible"
                     />
                   )}
+                  <Bar yAxisId="left" dataKey="noData" stackId="occupancy" name="noData" isAnimationActive={false} legendType="none">
+                    {chartData.map((entry, index) => (
+                      <Cell
+                        key={`nodata-${index}`}
+                        fill={NO_DATA_COLOR}
+                        cursor="default"
+                        stroke="hsl(var(--muted-foreground) / 0.25)"
+                        strokeWidth={1}
+                        strokeDasharray="3 2"
+                      />
+                    ))}
+                  </Bar>
                   <Bar yAxisId="left" dataKey="bookedSpots" stackId="occupancy" fill={colors.chart1} name="bookedSpots" onClick={handleBarClick}>
                     {chartData.map((entry, index) => (
                       <Cell key={`booked-${index}`} fill={colors.chart1} cursor={entry.bookedSpots > 0 ? 'pointer' : 'default'} />
