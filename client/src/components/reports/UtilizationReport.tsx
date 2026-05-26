@@ -8,6 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import type { TooltipProps } from 'recharts';
 import type { ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent';
 import { ArrowLeft, BarChart3, ExternalLink, Layers, MapPin, ParkingSquare, TrendingUp } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Link } from 'wouter';
 import type { ReportUtilizationResponse } from '@shared/schema';
 
@@ -27,6 +28,8 @@ interface DayBooking {
   spotNumber: string;
   locationName: string;
   status: string;
+  isBciManaged: boolean;
+  ownerName: string | null;
 }
 
 function getCssVar(name: string): string {
@@ -92,6 +95,7 @@ function DayBookingsList({ date, scope, onBack }: { date: string; scope?: string
                 <TableHead>Renter</TableHead>
                 <TableHead>Spot</TableHead>
                 <TableHead>Location</TableHead>
+                <TableHead>Type</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-16"></TableHead>
               </TableRow>
@@ -100,8 +104,20 @@ function DayBookingsList({ date, scope, onBack }: { date: string; scope?: string
               {data.map((booking) => (
                 <TableRow key={booking.id}>
                   <TableCell className="font-medium">{booking.renterName}</TableCell>
-                  <TableCell>{booking.spotNumber}</TableCell>
+                  <TableCell>
+                    <div>{booking.spotNumber}</div>
+                    {!booking.isBciManaged && booking.ownerName && (
+                      <div className="text-xs text-muted-foreground mt-0.5">{booking.ownerName}</div>
+                    )}
+                  </TableCell>
                   <TableCell className="text-muted-foreground">{booking.locationName}</TableCell>
+                  <TableCell>
+                    {booking.isBciManaged ? (
+                      <Badge variant="secondary">BCI</Badge>
+                    ) : (
+                      <Badge variant="outline">Peer-to-Peer</Badge>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <span className="capitalize">{booking.status}</span>
                   </TableCell>

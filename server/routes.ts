@@ -10,6 +10,7 @@ import { db, pool } from "./db";
 import { parkingSpots, spotLocks, spotListings, bookings, issues, insertIssueSchema, updateIssueSchema, issueStatuses, termsVersions, users, locations } from "@shared/schema";
 import type { Booking, ParkingSpot, OwnerStatisticsV2Response } from "@shared/schema";
 import { inArray, and, eq, lt, gt, not, or, sql, isNull } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { 
   sendAssignmentNotification, 
   sendWelcomeNotification,
@@ -6001,6 +6002,8 @@ The BCI ParkShare Team`;
         conditions.push(eq(parkingSpots.isBciManaged, true));
       }
 
+      const ownerUsers = alias(users, 'owner');
+
       const rows = await db
         .select({
           id: bookings.id,
@@ -6012,11 +6015,15 @@ The BCI ParkShare Team`;
           locationBuilding: locations.building,
           locationLevel: locations.level,
           status: bookings.status,
+          isBciManaged: parkingSpots.isBciManaged,
+          ownerFirstName: ownerUsers.firstName,
+          ownerLastName: ownerUsers.lastName,
         })
         .from(bookings)
         .leftJoin(users, eq(bookings.renterId, users.id))
         .leftJoin(parkingSpots, eq(bookings.spotId, parkingSpots.id))
         .leftJoin(locations, eq(parkingSpots.locationId, locations.id))
+        .leftJoin(ownerUsers, eq(parkingSpots.ownerId, ownerUsers.id))
         .where(and(...conditions));
 
       const result = rows.map((row) => ({
@@ -6031,6 +6038,11 @@ The BCI ParkShare Team`;
             .filter(Boolean)
             .join(' — ') || 'N/A',
         status: row.status,
+        isBciManaged: row.isBciManaged ?? false,
+        ownerName:
+          row.ownerFirstName && row.ownerLastName
+            ? `${row.ownerFirstName} ${row.ownerLastName}`
+            : row.ownerFirstName || row.ownerLastName || null,
       }));
 
       res.json(result);
