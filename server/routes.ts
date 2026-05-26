@@ -6003,6 +6003,7 @@ The BCI ParkShare Team`;
       }
 
       const ownerUsers = alias(users, 'owner');
+      const listingAlias = alias(spotListings, 'listing');
 
       const rows = await db
         .select({
@@ -6015,7 +6016,8 @@ The BCI ParkShare Team`;
           locationBuilding: locations.building,
           locationLevel: locations.level,
           status: bookings.status,
-          isBciManaged: parkingSpots.isBciManaged,
+          joinedListingId: listingAlias.id,
+          listingCreatedByAdmin: listingAlias.createdByAdmin,
           ownerFirstName: ownerUsers.firstName,
           ownerLastName: ownerUsers.lastName,
         })
@@ -6024,6 +6026,7 @@ The BCI ParkShare Team`;
         .leftJoin(parkingSpots, eq(bookings.spotId, parkingSpots.id))
         .leftJoin(locations, eq(parkingSpots.locationId, locations.id))
         .leftJoin(ownerUsers, eq(parkingSpots.ownerId, ownerUsers.id))
+        .leftJoin(listingAlias, eq(bookings.listingId, listingAlias.id))
         .where(and(...conditions));
 
       const result = rows.map((row) => ({
@@ -6038,7 +6041,9 @@ The BCI ParkShare Team`;
             .filter(Boolean)
             .join(' — ') || 'N/A',
         status: row.status,
-        isBciManaged: row.isBciManaged ?? false,
+        // BCI if no listing record was found (direct assignment), or if the listing was created by admin.
+        // When a listing row exists but createdByAdmin is false/null, it is a peer-to-peer listing.
+        isBciManaged: row.joinedListingId === null ? true : row.listingCreatedByAdmin === true,
         ownerName:
           row.ownerFirstName && row.ownerLastName
             ? `${row.ownerFirstName} ${row.ownerLastName}`
