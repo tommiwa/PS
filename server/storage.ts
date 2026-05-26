@@ -328,7 +328,7 @@ export interface IStorage {
   getBookingAvailability(isBciOnly?: boolean, page?: number, limit?: number): Promise<{ data: BookingAvailabilityData[]; total: number; page: number; limit: number; totalPages: number }>;
   getPendingPaymentBookings(isBciOnly?: boolean, page?: number, limit?: number): Promise<{ data: PendingPaymentData[]; total: number; page: number; limit: number; totalPages: number }>;
   getActiveBookings(isBciOnly?: boolean, page?: number, limit?: number, filters?: { search?: string; status?: string; location?: string; dateFrom?: string; dateTo?: string; role?: string }): Promise<{ data: AdminBookingData[]; total: number; page: number; limit: number; totalPages: number }>;
-  getPastBookings(isBciOnly?: boolean, page?: number, limit?: number, payrollPeriod?: string): Promise<{ data: AdminBookingData[]; total: number; page: number; limit: number; totalPages: number }>;
+  getPastBookings(isBciOnly?: boolean, page?: number, limit?: number, payrollPeriod?: string, filters?: { search?: string; status?: string; location?: string; dateFrom?: string; dateTo?: string }): Promise<{ data: AdminBookingData[]; total: number; page: number; limit: number; totalPages: number }>;
   
   // Dispute operations
   createDispute(dispute: InsertDispute): Promise<Dispute>;
@@ -3207,8 +3207,15 @@ export class MemStorage implements IStorage {
     };
   }
 
-  async getPastBookings(isBciOnly?: boolean, page: number = 1, limit: number = 20, payrollPeriod?: string): Promise<{ data: AdminBookingData[]; total: number; page: number; limit: number; totalPages: number }> {
+  async getPastBookings(isBciOnly?: boolean, page: number = 1, limit: number = 20, payrollPeriod?: string, filters?: { search?: string; status?: string; location?: string; dateFrom?: string; dateTo?: string }): Promise<{ data: AdminBookingData[]; total: number; page: number; limit: number; totalPages: number }> {
     const today = new Date().toISOString().split('T')[0];
+
+    const search = filters?.search?.trim() || '';
+    const statusFilter = filters?.status && filters.status !== 'all' ? filters.status : '';
+    const locationFilter = filters?.location && filters.location !== 'all' ? filters.location : '';
+    const dateFrom = filters?.dateFrom || '';
+    const dateTo = filters?.dateTo || '';
+    const searchPattern = search ? `%${search}%` : '';
     
     // Helper function to calculate deduction period for a booking date
     const getDeductionPeriod = (bookingDateStr: string): string => {
@@ -3256,6 +3263,11 @@ export class MemStorage implements IStorage {
         WHERE 
           (b.booking_date < ${today} OR b.status = 'completed' OR b.status = 'cancelled')
           AND ps.is_bci_managed = true AND ps.owner_id IS NULL
+          ${statusFilter ? sqlOp`AND b.status = ${statusFilter}` : sqlOp``}
+          ${locationFilter ? sqlOp`AND (l.building || ' - ' || l.level) ILIKE ${`%${locationFilter}%`}` : sqlOp``}
+          ${dateFrom ? sqlOp`AND b.booking_date >= ${dateFrom}` : sqlOp``}
+          ${dateTo ? sqlOp`AND b.booking_date <= ${dateTo}` : sqlOp``}
+          ${searchPattern ? sqlOp`AND (renter.first_name || ' ' || renter.last_name ILIKE ${searchPattern} OR renter.email ILIKE ${searchPattern} OR spot_owner.first_name || ' ' || spot_owner.last_name ILIKE ${searchPattern} OR spot_owner.email ILIKE ${searchPattern} OR ps.spot_number ILIKE ${searchPattern} OR (l.building || ' - ' || l.level) ILIKE ${searchPattern})` : sqlOp``}
         ORDER BY b.booking_date DESC
       `;
       
@@ -3326,9 +3338,17 @@ export class MemStorage implements IStorage {
       SELECT COUNT(*) as total
       FROM bookings b
       LEFT JOIN parking_spots ps ON b.spot_id = ps.id
+      LEFT JOIN locations l ON ps.location_id = l.id
+      LEFT JOIN users renter ON b.renter_id = renter.id
+      LEFT JOIN users spot_owner ON ps.owner_id = spot_owner.id
       WHERE 
         (b.booking_date < ${today} OR b.status = 'completed' OR b.status = 'cancelled')
         ${isBciOnly ? sqlOp`AND ps.is_bci_managed = true AND ps.owner_id IS NULL` : sqlOp`AND (ps.owner_id IS NOT NULL OR ps.is_bci_managed = false)`}
+        ${statusFilter ? sqlOp`AND b.status = ${statusFilter}` : sqlOp``}
+        ${locationFilter ? sqlOp`AND (l.building || ' - ' || l.level) ILIKE ${`%${locationFilter}%`}` : sqlOp``}
+        ${dateFrom ? sqlOp`AND b.booking_date >= ${dateFrom}` : sqlOp``}
+        ${dateTo ? sqlOp`AND b.booking_date <= ${dateTo}` : sqlOp``}
+        ${searchPattern ? sqlOp`AND (renter.first_name || ' ' || renter.last_name ILIKE ${searchPattern} OR renter.email ILIKE ${searchPattern} OR spot_owner.first_name || ' ' || spot_owner.last_name ILIKE ${searchPattern} OR spot_owner.email ILIKE ${searchPattern} OR ps.spot_number ILIKE ${searchPattern} OR (l.building || ' - ' || l.level) ILIKE ${searchPattern})` : sqlOp``}
     `;
     
     const countResults = await db.execute(countQuery);
@@ -3365,6 +3385,11 @@ export class MemStorage implements IStorage {
       WHERE 
         (b.booking_date < ${today} OR b.status = 'completed' OR b.status = 'cancelled')
         ${isBciOnly ? sqlOp`AND ps.is_bci_managed = true AND ps.owner_id IS NULL` : sqlOp`AND (ps.owner_id IS NOT NULL OR ps.is_bci_managed = false)`}
+        ${statusFilter ? sqlOp`AND b.status = ${statusFilter}` : sqlOp``}
+        ${locationFilter ? sqlOp`AND (l.building || ' - ' || l.level) ILIKE ${`%${locationFilter}%`}` : sqlOp``}
+        ${dateFrom ? sqlOp`AND b.booking_date >= ${dateFrom}` : sqlOp``}
+        ${dateTo ? sqlOp`AND b.booking_date <= ${dateTo}` : sqlOp``}
+        ${searchPattern ? sqlOp`AND (renter.first_name || ' ' || renter.last_name ILIKE ${searchPattern} OR renter.email ILIKE ${searchPattern} OR spot_owner.first_name || ' ' || spot_owner.last_name ILIKE ${searchPattern} OR spot_owner.email ILIKE ${searchPattern} OR ps.spot_number ILIKE ${searchPattern} OR (l.building || ' - ' || l.level) ILIKE ${searchPattern})` : sqlOp``}
       ORDER BY b.booking_date DESC
       LIMIT ${limit} OFFSET ${offset}
     `;

@@ -5315,8 +5315,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate pagination params
       const validPage = Math.max(1, page);
       const validLimit = Math.min(100, Math.max(1, limit)); // Max 100 per page
+
+      const filters = {
+        search: req.query.search as string | undefined,
+        status: req.query.status as string | undefined,
+        location: req.query.location as string | undefined,
+        dateFrom: req.query.dateFrom as string | undefined,
+        dateTo: req.query.dateTo as string | undefined,
+      };
       
-      const result = await storage.getPastBookings(isBciOnly, validPage, validLimit, payrollPeriod);
+      const result = await storage.getPastBookings(isBciOnly, validPage, validLimit, payrollPeriod, filters);
       res.json(result);
     } catch (error) {
       console.error("Error fetching past bookings:", error);

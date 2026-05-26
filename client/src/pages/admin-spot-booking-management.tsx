@@ -453,9 +453,15 @@ export default function AdminSpotBookingManagement() {
     staleTime: STALE_TIME
   });
 
-  // Fetch past bookings with server-side pagination (only when tab is active)
-  // Include payroll period filter if set (only applies to BCI scope)
+  // Fetch past bookings with server-side pagination and filtering (only when tab is active)
   const selectedPayrollPeriod = pastBookingsFilterValues.payrollPeriod as string | undefined;
+  const pastBookingsFilters = {
+    search: pastBookingsSearchTerm,
+    status: pastBookingsFilterValues.status as string | undefined,
+    location: pastBookingsFilterValues.location as string | undefined,
+    dateFrom: pastBookingsFilterValues.dateRangeFrom as string | undefined,
+    dateTo: pastBookingsFilterValues.dateRangeTo as string | undefined,
+  };
   const { data: pastBookingsResponse, isLoading: isLoadingPastBookings } = useQuery<{
     data: AdminBookingData[];
     total: number;
@@ -463,7 +469,7 @@ export default function AdminSpotBookingManagement() {
     limit: number;
     totalPages: number;
   }>({
-    queryKey: ["/api/admin/past-bookings", scope, pastBookingsPageIndex + 1, pastBookingsPageSize, selectedPayrollPeriod],
+    queryKey: ["/api/admin/past-bookings", scope, pastBookingsPageIndex + 1, pastBookingsPageSize, selectedPayrollPeriod, pastBookingsFilters],
     queryFn: () => {
       const params = new URLSearchParams({
         scope,
@@ -473,6 +479,11 @@ export default function AdminSpotBookingManagement() {
       if (selectedPayrollPeriod && scope === 'bci') {
         params.set('payrollPeriod', selectedPayrollPeriod);
       }
+      if (pastBookingsFilters.search) params.set('search', pastBookingsFilters.search);
+      if (pastBookingsFilters.status && pastBookingsFilters.status !== 'all') params.set('status', pastBookingsFilters.status);
+      if (pastBookingsFilters.location && pastBookingsFilters.location !== 'all') params.set('location', pastBookingsFilters.location);
+      if (pastBookingsFilters.dateFrom) params.set('dateFrom', pastBookingsFilters.dateFrom);
+      if (pastBookingsFilters.dateTo) params.set('dateTo', pastBookingsFilters.dateTo);
       return fetch(`/api/admin/past-bookings?${params.toString()}`, { credentials: 'include' }).then(r => r.json());
     },
     enabled: activeTab === 'past',
@@ -676,54 +687,9 @@ export default function AdminSpotBookingManagement() {
     "desc" // Most recent first
   );
 
-  // Enhanced filtering for past bookings
-  const filteredPastBookings = useMemo(() => pastBookings.filter(booking => {
-    // Search filter
-    if (pastBookingsSearchTerm.trim()) {
-      const searchLower = pastBookingsSearchTerm.toLowerCase()
-      const matchesSearch = booking.renterName?.toLowerCase().includes(searchLower) ||
-                           booking.renterEmail?.toLowerCase().includes(searchLower) ||
-                           booking.ownerName?.toLowerCase().includes(searchLower) ||
-                           booking.ownerEmail?.toLowerCase().includes(searchLower) ||
-                           booking.spotNumber?.toLowerCase().includes(searchLower) ||
-                           booking.spotLocation?.toLowerCase().includes(searchLower)
-      if (!matchesSearch) return false
-    }
-    
-    // Status filter
-    if (pastBookingsFilterValues.status && pastBookingsFilterValues.status !== "all") {
-      if (booking.status !== pastBookingsFilterValues.status) return false
-    }
-    
-    // Role filter (based on user perspective)
-    if (pastBookingsFilterValues.role && pastBookingsFilterValues.role !== "all") {
-      // Note: This could be enhanced with actual user role data if available
-      // For now, all bookings are treated as containing both owner and renter roles
-    }
-    
-    // Location filter (case-insensitive substring match for consistency)
-    if (pastBookingsFilterValues.location && pastBookingsFilterValues.location !== "all") {
-      if (!booking.spotLocation?.toLowerCase().includes(pastBookingsFilterValues.location.toLowerCase())) return false
-    }
-    
-    // Date range filter (consistent with other tabs)
-    if (pastBookingsFilterValues.dateRangeFrom) {
-      const bookingDate = new Date(booking.bookingDate)
-      const fromDate = new Date(pastBookingsFilterValues.dateRangeFrom)
-      if (bookingDate < fromDate) return false
-    }
-    if (pastBookingsFilterValues.dateRangeTo) {
-      const bookingDate = new Date(booking.bookingDate)
-      const toDate = new Date(pastBookingsFilterValues.dateRangeTo)
-      if (bookingDate > toDate) return false
-    }
-    
-    return true
-  }), [pastBookings, pastBookingsSearchTerm, pastBookingsFilterValues]);
-
-  // Sorting functionality for past bookings
+  // Sorting functionality for past bookings (filtering is done server-side)
   const { sortState: pastBookingsSortState, sortedData: sortedPastBookings, handleSort: handlePastBookingsSort } = useTableSort(
-    filteredPastBookings,
+    pastBookings,
     "bookingDate", // Default sort by booking date
     "desc" // Most recent first
   );
