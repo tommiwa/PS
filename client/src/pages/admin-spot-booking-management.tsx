@@ -279,6 +279,9 @@ export default function AdminSpotBookingManagement() {
   const [selectedBooking, setSelectedBooking] = useState<AdminBookingData | null>(null)
   const [selectedAvailabilityListing, setSelectedAvailabilityListing] = useState<BookingAvailabilityData | null>(null)
   const [showBookingDetails, setShowBookingDetails] = useState(false)
+  const [isLoadingBookingFromUrl, setIsLoadingBookingFromUrl] = useState(() => {
+    return !!new URLSearchParams(window.location.search).get('bookingId')
+  })
   const [bookingDetailsTab, setBookingDetailsTab] = useState("details")
   const [showAvailabilityDetailsDialog, setShowAvailabilityDetailsDialog] = useState(false)
   const [showCancelListingDialog, setShowCancelListingDialog] = useState(false)
@@ -390,6 +393,9 @@ export default function AdminSpotBookingManagement() {
     const bookingId = params.get('bookingId')
     if (!bookingId) return
 
+    setIsLoadingBookingFromUrl(true)
+    setShowBookingDetails(true)
+
     fetch(`/api/admin/bookings/${encodeURIComponent(bookingId)}`, { credentials: 'include' })
       .then(async (res) => {
         if (!res.ok) throw new Error('Not found')
@@ -397,14 +403,23 @@ export default function AdminSpotBookingManagement() {
       })
       .then((booking) => {
         setSelectedBooking(booking)
-        setShowBookingDetails(true)
+        setIsLoadingBookingFromUrl(false)
         // Remove bookingId from URL without causing a page reload
         params.delete('bookingId')
         const newSearch = params.toString()
         setLocation('/admin/bookings' + (newSearch ? `?${newSearch}` : ''))
       })
       .catch(() => {
-        // Silently ignore — booking may not exist or admin lost access
+        setIsLoadingBookingFromUrl(false)
+        setShowBookingDetails(false)
+        params.delete('bookingId')
+        const newSearch = params.toString()
+        setLocation('/admin/bookings' + (newSearch ? `?${newSearch}` : ''))
+        toast({
+          title: "Booking not found",
+          description: "Unable to load the booking details. It may no longer exist or you may not have access.",
+          variant: "destructive",
+        })
       })
   }, [])
 
@@ -2826,7 +2841,7 @@ export default function AdminSpotBookingManagement() {
       </Tabs>
 
       {/* Booking Details Dialog */}
-      <Dialog open={showBookingDetails} onOpenChange={setShowBookingDetails}>
+      <Dialog open={showBookingDetails} onOpenChange={(open) => { setShowBookingDetails(open); if (!open) setIsLoadingBookingFromUrl(false); }}>
         <DialogContent className="max-w-3xl max-h-[90vh]" data-testid="dialog-booking-details">
           <DialogHeader>
             <DialogTitle>Booking Details</DialogTitle>
@@ -2834,7 +2849,42 @@ export default function AdminSpotBookingManagement() {
               View complete information about this booking
             </DialogDescription>
           </DialogHeader>
-          {selectedBooking && (
+          {isLoadingBookingFromUrl ? (
+            <div className="space-y-4 py-4" data-testid="skeleton-booking-loading">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-5 w-32" />
+                  <Skeleton className="h-4 w-28" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-5 w-36" />
+                  <Skeleton className="h-4 w-20" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-5 w-28" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-5 w-24" />
+                </div>
+              </div>
+              <Skeleton className="h-px w-full" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <Skeleton className="h-9 w-24" />
+                <Skeleton className="h-9 w-24" />
+              </div>
+            </div>
+          ) : selectedBooking && (
             <Tabs value={bookingDetailsTab} onValueChange={setBookingDetailsTab} className="w-full">
               <TabsList className="grid w-full grid-cols-2" data-testid="tabs-booking-details">
                 <TabsTrigger value="details" data-testid="tab-details">Details</TabsTrigger>
