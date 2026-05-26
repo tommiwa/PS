@@ -374,7 +374,9 @@ export function UtilizationReport({ data, isLoading, hideStatCards = false, toda
         };
 
         const handleBarClick = (barData: any) => {
-          const date = barData?.payload?.date ?? barData?.date;
+          const payload = barData?.payload ?? barData;
+          if (!payload?.bookedSpots) return;
+          const date = payload?.date;
           if (date) setSelectedDate(date);
         };
 
@@ -420,8 +422,16 @@ export function UtilizationReport({ data, isLoading, hideStatCards = false, toda
                       ifOverflow="visible"
                     />
                   )}
-                  <Bar yAxisId="left" dataKey="bookedSpots" stackId="occupancy" fill={colors.chart1} name="bookedSpots" onClick={handleBarClick} style={{ cursor: 'pointer' }} />
-                  <Bar yAxisId="left" dataKey="availableForSharing" stackId="occupancy" fill={colors.chart3} name="availableForSharing" onClick={handleBarClick} style={{ cursor: 'pointer' }} />
+                  <Bar yAxisId="left" dataKey="bookedSpots" stackId="occupancy" fill={colors.chart1} name="bookedSpots" onClick={handleBarClick}>
+                    {chartData.map((entry, index) => (
+                      <Cell key={`booked-${index}`} fill={colors.chart1} cursor={entry.bookedSpots > 0 ? 'pointer' : 'default'} />
+                    ))}
+                  </Bar>
+                  <Bar yAxisId="left" dataKey="availableForSharing" stackId="occupancy" fill={colors.chart3} name="availableForSharing" onClick={handleBarClick}>
+                    {chartData.map((entry, index) => (
+                      <Cell key={`avail-${index}`} fill={colors.chart3} cursor={entry.bookedSpots > 0 ? 'pointer' : 'default'} />
+                    ))}
+                  </Bar>
                   <Line yAxisId="right" type="monotone" dataKey="occupancyRate" stroke={colors.chart5} strokeWidth={2} dot={false} name="occupancyRate" />
                   {showTodayLine && (
                     <ReferenceLine
