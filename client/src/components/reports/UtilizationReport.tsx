@@ -481,12 +481,16 @@ export function UtilizationReport({ data, isLoading, hideStatCards = false, toda
 
         const CustomTooltip = ({ active, payload, label }: TooltipProps<ValueType, NameType>) => {
           if (!active || !payload || !payload.length) return null;
+          const entry = chartData.find((d) => d.date === label);
           const booked = payload.find((p) => p.dataKey === 'bookedSpots')?.value ?? 0;
           const available = payload.find((p) => p.dataKey === 'availableForSharing')?.value ?? 0;
           const rate = payload.find((p) => p.dataKey === 'occupancyRate')?.value ?? 0;
           const noDataVal = payload.find((p) => p.dataKey === 'noData')?.value ?? 0;
           const isFuture = todayStr && label > todayStr;
           const isNoData = Number(noDataVal) > 0;
+          const bciCount = entry?.bciBookings ?? 0;
+          const p2pCount = entry?.p2pBookings ?? 0;
+          const showBreakdown = Number(booked) > 0 && bciCount > 0 && p2pCount > 0;
           return (
             <div className="bg-card border border-border rounded-md shadow-sm p-3 text-sm space-y-1">
               <p className="font-semibold text-card-foreground">
@@ -496,7 +500,14 @@ export function UtilizationReport({ data, isLoading, hideStatCards = false, toda
                 <p className="text-muted-foreground italic">No activity recorded</p>
               ) : (
                 <>
-                  <p style={{ color: colors.chart1 }}>Booked Spots: {booked}</p>
+                  <p style={{ color: colors.chart1 }}>
+                    Booked Spots: {booked}
+                    {showBreakdown && (
+                      <span className="text-muted-foreground text-xs ml-1">
+                        ({bciCount} BCI · {p2pCount} P2P)
+                      </span>
+                    )}
+                  </p>
                   <p style={{ color: colors.chart3 }}>Available for Sharing: {available}</p>
                   <p style={{ color: colors.chart5 }}>Occupancy Rate: {rate}%</p>
                   {Number(booked) > 0 && <p className="text-xs text-muted-foreground pt-1">Click bar to see bookings</p>}

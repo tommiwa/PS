@@ -287,6 +287,11 @@ export async function getReportUtilization(req: Request, res: Response) {
         return bDateStr === dateStr && (b.status === 'confirmed' || b.status === 'pending' || b.status === 'completed');
       });
       const bookedSpots = dayBookings.length;
+      const bciBookings = dayBookings.filter((b: any) => {
+        const spot = allSpots.find((s: any) => s.id === b.spotId);
+        return spot?.isBciManaged === true;
+      }).length;
+      const p2pBookings = bookedSpots - bciBookings;
       const bookedSpotIds = new Set(dayBookings.map((b: any) => String(b.spotId)));
 
       // Available for sharing = spots with listings on this date that have NOT been booked
@@ -303,7 +308,9 @@ export async function getReportUtilization(req: Request, res: Response) {
         totalSpots: bookableSpots,
         occupiedSpots: allocatedSpots,
         availableForSharing,
-        bookedSpots
+        bookedSpots,
+        bciBookings,
+        p2pBookings
       });
     }
     

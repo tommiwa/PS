@@ -1297,6 +1297,8 @@ export interface ReportUtilizationResponse {
     occupiedSpots: number;
     availableForSharing: number;
     bookedSpots: number;
+    bciBookings: number;
+    p2pBookings: number;
   }[];
   generatedAt: string;
   dateRange: ReportDateRange;
