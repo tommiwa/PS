@@ -9,6 +9,7 @@ import { useTableSort } from "@/hooks/use-table-sort"
 import { useCardsVisibility } from "@/hooks/use-cards-visibility"
 import { useLanguage } from "@/hooks/use-language"
 import { BookingActivityList } from "@/components/booking-activity-list"
+import { BookingDetailsDialog } from "@/components/booking-details-dialog"
 import { TablePagination } from "@/components/shared/TablePagination"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -276,23 +277,15 @@ export default function AdminSpotBookingManagement() {
   const [availabilityFilterValues, setAvailabilityFilterValues] = useState<FilterValues>({})
   const [pendingPaymentsSearchTerm, setPendingPaymentsSearchTerm] = useState("")
   const [pendingPaymentsFilterValues, setPendingPaymentsFilterValues] = useState<FilterValues>({})
+  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(() => {
+    return new URLSearchParams(window.location.search).get('bookingId') || null
+  })
   const [selectedBooking, setSelectedBooking] = useState<AdminBookingData | null>(null)
   const [selectedAvailabilityListing, setSelectedAvailabilityListing] = useState<BookingAvailabilityData | null>(null)
-  const [showBookingDetails, setShowBookingDetails] = useState(false)
-  const [isLoadingBookingFromUrl, setIsLoadingBookingFromUrl] = useState(() => {
-    return !!new URLSearchParams(window.location.search).get('bookingId')
-  })
-  const [bookingDetailsTab, setBookingDetailsTab] = useState("details")
   const [showAvailabilityDetailsDialog, setShowAvailabilityDetailsDialog] = useState(false)
   const [showCancelListingDialog, setShowCancelListingDialog] = useState(false)
   const [cancelListingReason, setCancelListingReason] = useState("")
-  const [showCancelDialog, setShowCancelDialog] = useState(false)
-  const [showContactDialog, setShowContactDialog] = useState(false)
   const [showMarkPaidConfirmDialog, setShowMarkPaidConfirmDialog] = useState(false)
-  const [cancelReason, setCancelReason] = useState("")
-  const [contactMessage, setContactMessage] = useState("")
-  const [selectedRecipients, setSelectedRecipients] = useState<string[]>(["renter", "owner"])
-  const [isSendingContact, setIsSendingContact] = useState(false)
   const [activeTab, setActiveTab] = useState("availability")
   
   // Dispute-related state
@@ -380,47 +373,14 @@ export default function AdminSpotBookingManagement() {
     setPendingPaymentsPageIndex(0)
   }, [scope])
 
-  // Reset booking details tab to "details" when dialog opens
-  useEffect(() => {
-    if (showBookingDetails) {
-      setBookingDetailsTab("details")
-    }
-  }, [showBookingDetails])
-
-  // Open booking detail dialog when ?bookingId=<id> is in the URL
+  // Clear bookingId from URL when selectedBookingId is set on mount from URL
   useEffect(() => {
     const params = new URLSearchParams(searchParams)
-    const bookingId = params.get('bookingId')
-    if (!bookingId) return
-
-    setIsLoadingBookingFromUrl(true)
-    setShowBookingDetails(true)
-
-    fetch(`/api/admin/bookings/${encodeURIComponent(bookingId)}`, { credentials: 'include' })
-      .then(async (res) => {
-        if (!res.ok) throw new Error('Not found')
-        return res.json()
-      })
-      .then((booking) => {
-        setSelectedBooking(booking)
-        setIsLoadingBookingFromUrl(false)
-        // Remove bookingId from URL without causing a page reload
-        params.delete('bookingId')
-        const newSearch = params.toString()
-        setLocation('/admin/bookings' + (newSearch ? `?${newSearch}` : ''))
-      })
-      .catch(() => {
-        setIsLoadingBookingFromUrl(false)
-        setShowBookingDetails(false)
-        params.delete('bookingId')
-        const newSearch = params.toString()
-        setLocation('/admin/bookings' + (newSearch ? `?${newSearch}` : ''))
-        toast({
-          title: "Booking not found",
-          description: "Unable to load the booking details. It may no longer exist or you may not have access.",
-          variant: "destructive",
-        })
-      })
+    if (params.get('bookingId')) {
+      params.delete('bookingId')
+      const newSearch = params.toString()
+      setLocation('/admin/bookings' + (newSearch ? `?${newSearch}` : ''))
+    }
   }, [])
 
   const STALE_TIME = 2 * 60 * 1000; // 2 minutes
@@ -605,19 +565,6 @@ export default function AdminSpotBookingManagement() {
   // Filter for pending disputes (open or investigating)
   const pendingDisputes = allDisputes.filter(d => d.status === 'open' || d.status === 'investigating');
 
-  // Fetch audit logs for selected booking (lazy-loaded when dialog opens)
-  const { data: auditLogs = [], isLoading: isLoadingAuditLogs } = useQuery<AuditLogData[]>({
-    queryKey: ["/api/admin/audits", { entityType: 'booking', entityId: selectedBooking?.id }],
-    queryFn: async ({ queryKey }) => {
-      const params = queryKey[1] as Record<string, unknown>;
-      const searchParams = new URLSearchParams({ entityType: String(params.entityType), entityId: String(params.entityId) });
-      const response = await fetch(`/api/admin/audits?${searchParams}`, { credentials: 'include' });
-      if (!response.ok) throw new Error('Failed to fetch audit logs');
-      const data = await response.json();
-      return data.items ?? [];
-    },
-    enabled: showBookingDetails && !!selectedBooking?.id
-  });
 
   // Fetch locations for filter options
   const { data: locations = [] } = useQuery<Array<{
@@ -1018,37 +965,6 @@ export default function AdminSpotBookingManagement() {
     setPendingPaymentsPageIndex(0)
   }, [pendingPaymentsSearchTerm, pendingPaymentsFilterValues])
 
-  // Cancel booking mutation
-  const cancelBookingMutation = useMutation({
-    mutationFn: async ({ bookingId, reason }: { bookingId: string; reason: string }) => {
-      const response = await apiRequest(`/api/admin/bookings/${bookingId}/cancel`, { method: 'POST', body: {
-        reason
-      }});
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/active-bookings", scope] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-activity", scope] });
-      
-      toast({
-        title: "Booking Cancelled",
-        description: "The booking has been successfully cancelled and both users have been notified.",
-        variant: "default"
-      });
-      
-      setShowCancelDialog(false);
-      setCancelReason("");
-      setSelectedBooking(null);
-    },
-    onError: (error) => {
-      toast({
-        title: "Cancellation Failed",
-        description: error instanceof Error ? error.message : "Failed to cancel booking. Please try again.",
-        variant: "destructive"
-      });
-    }
-  });
-
   // Cancel listing mutation (for Booking Availability tab)
   const cancelListingMutation = useMutation({
     mutationFn: async ({ listingId, reason }: { listingId: string; reason: string }) => {
@@ -1253,45 +1169,6 @@ export default function AdminSpotBookingManagement() {
       });
     }
   });
-
-  const handleCancelBooking = () => {
-    if (!selectedBooking || !cancelReason.trim()) return;
-    
-    cancelBookingMutation.mutate({
-      bookingId: selectedBooking.id,
-      reason: cancelReason
-    });
-  };
-
-  const handleContactUser = async () => {
-    if (!selectedBooking || !contactMessage.trim() || selectedRecipients.length === 0) return;
-    
-    setIsSendingContact(true);
-    try {
-      const response = await apiRequest(`/api/admin/bookings/${selectedBooking.id}/contact`, {
-        method: 'POST',
-        body: JSON.stringify({ message: contactMessage, recipients: selectedRecipients }),
-        headers: { 'Content-Type': 'application/json' }
-      });
-      const data = await response.json();
-      toast({
-        title: "Message Sent",
-        description: `Your message has been sent to ${data.emailsSent} recipient(s).`,
-        variant: "default"
-      });
-      setShowContactDialog(false);
-      setContactMessage("");
-      setSelectedRecipients(["renter", "owner"]);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error?.message || "Failed to send contact email",
-        variant: "destructive"
-      });
-    } finally {
-      setIsSendingContact(false);
-    }
-  };
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
@@ -2005,10 +1882,7 @@ export default function AdminSpotBookingManagement() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => {
-                                    setSelectedBooking(booking);
-                                    setShowBookingDetails(true);
-                                  }}
+                                  onClick={() => setSelectedBookingId(booking.id)}
                                   data-testid={`button-view-booking-${booking.id}`}
                                 >
                                   <Eye className="h-4 w-4" />
@@ -2021,10 +1895,7 @@ export default function AdminSpotBookingManagement() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => {
-                                    setSelectedBooking(booking);
-                                    setShowCancelDialog(true);
-                                  }}
+                                  onClick={() => setSelectedBookingId(booking.id)}
                                   data-testid={`button-cancel-booking-${booking.id}`}
                                 >
                                   <Ban className="h-4 w-4" />
@@ -2037,10 +1908,7 @@ export default function AdminSpotBookingManagement() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => {
-                                    setSelectedBooking(booking);
-                                    setShowContactDialog(true);
-                                  }}
+                                  onClick={() => setSelectedBookingId(booking.id)}
                                   data-testid={`button-contact-users-${booking.id}`}
                                 >
                                   <MessageSquare className="h-4 w-4" />
@@ -2211,26 +2079,7 @@ export default function AdminSpotBookingManagement() {
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => {
-                                      setSelectedBooking({
-                                        id: payment.id,
-                                        spotNumber: payment.spotNumber,
-                                        spotLocation: payment.spotLocation,
-                                        renterName: payment.renterName,
-                                        renterEmail: payment.renterEmail,
-                                        renterDepartment: '',
-                                        ownerName: payment.ownerName,
-                                        ownerEmail: payment.ownerEmail,
-                                        ownerDepartment: '',
-                                        bookingDate: payment.bookingDate,
-                                        dailyRate: payment.totalAmount,
-                                        totalAmount: payment.totalAmount,
-                                        status: payment.status,
-                                        paymentStatus: payment.paymentStatus || 'pending',
-                                        notes: '',
-                                        createdAt: '',
-                                        lastActivity: ''
-                                      } as AdminBookingData);
-                                      setShowContactDialog(true);
+                                      setSelectedBookingId(payment.id);
                                     }}
                                     data-testid={`button-contact-renter-${payment.id}`}
                                   >
@@ -2732,10 +2581,7 @@ export default function AdminSpotBookingManagement() {
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => {
-                                      setSelectedBooking(booking);
-                                      setShowBookingDetails(true);
-                                    }}
+                                    onClick={() => setSelectedBookingId(booking.id)}
                                     data-testid={`button-view-details-${booking.id}`}
                                   >
                                     <Eye className="h-4 w-4" />
@@ -2795,480 +2641,12 @@ export default function AdminSpotBookingManagement() {
         </TabsContent>
       </Tabs>
 
-      {/* Booking Details Dialog */}
-      <Dialog open={showBookingDetails} onOpenChange={(open) => { setShowBookingDetails(open); if (!open) setIsLoadingBookingFromUrl(false); }}>
-        <DialogContent className="max-w-3xl max-h-[90vh]" data-testid="dialog-booking-details">
-          <DialogHeader>
-            <DialogTitle>Booking Details</DialogTitle>
-            <DialogDescription>
-              View complete information about this booking
-            </DialogDescription>
-          </DialogHeader>
-          {isLoadingBookingFromUrl ? (
-            <div className="space-y-4 py-4" data-testid="skeleton-booking-loading">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-5 w-32" />
-                  <Skeleton className="h-4 w-28" />
-                </div>
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-5 w-36" />
-                  <Skeleton className="h-4 w-20" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-5 w-28" />
-                </div>
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-5 w-24" />
-                </div>
-              </div>
-              <Skeleton className="h-px w-full" />
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-3/4" />
-              </div>
-              <div className="flex gap-2 pt-2">
-                <Skeleton className="h-9 w-24" />
-                <Skeleton className="h-9 w-24" />
-              </div>
-            </div>
-          ) : selectedBooking && (
-            <Tabs value={bookingDetailsTab} onValueChange={setBookingDetailsTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2" data-testid="tabs-booking-details">
-                <TabsTrigger value="details" data-testid="tab-details">Details</TabsTrigger>
-                <TabsTrigger value="audit-history" data-testid="tab-audit-history">
-                  Audit History
-                  {Array.isArray(auditLogs) && auditLogs.length > 0 && (
-                    <Badge variant="secondary" className="ml-2">{auditLogs.length}</Badge>
-                  )}
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="details" className="space-y-4 mt-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Spot Information</Label>
-                    <p className="font-medium" data-testid="text-spot-number">{selectedBooking.spotNumber}</p>
-                    <p className="text-sm text-muted-foreground" data-testid="text-spot-location">{selectedBooking.spotLocation}</p>
-                  </div>
-                  <div>
-                    <Label>Usage Date</Label>
-                    <p className="font-medium" data-testid="text-booking-date">{formatDate(selectedBooking.bookingDate)}</p>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Renter</Label>
-                    <p className="font-medium" data-testid="text-renter-name">{selectedBooking.renterName}</p>
-                    <p className="text-sm text-muted-foreground" data-testid="text-renter-email">{selectedBooking.renterEmail}</p>
-                    <p className="text-sm text-muted-foreground" data-testid="text-renter-department">{selectedBooking.renterDepartment}</p>
-                  </div>
-                  <div>
-                    <Label>Assigned To</Label>
-                    <p className="font-medium" data-testid="text-owner-name">{selectedBooking.ownerName}</p>
-                    <p className="text-sm text-muted-foreground" data-testid="text-owner-email">{selectedBooking.ownerEmail}</p>
-                    <p className="text-sm text-muted-foreground" data-testid="text-owner-department">{selectedBooking.ownerDepartment}</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <Label>Total Amount</Label>
-                    <p className="font-medium" data-testid="text-total-amount">${Number(selectedBooking.totalAmount).toFixed(2)}</p>
-                  </div>
-                  <div>
-                    <Label>Status</Label>
-                    <div data-testid="badge-booking-status">
-                      {getStatusBadge(selectedBooking.status)}
-                    </div>
-                  </div>
-                  <div>
-                    <Label>Payment</Label>
-                    {(() => {
-                      const status = (selectedBooking as any).paymentStatus || 'pending';
-                      const isPayrollBooking = selectedBooking.ownerName === 'BCI Workplace Services';
-                      return (
-                        <div className="flex items-center gap-2">
-                          <Badge 
-                            variant={status === 'received' ? 'default' : status === 'paid' ? 'secondary' : 'outline'} 
-                            data-testid="badge-payment-status"
-                          >
-                            {status === 'pending' ? 'Pending' : status === 'paid' ? 'Paid' : 'Received'}
-                          </Badge>
-                          {isPayrollBooking && status === 'received' && (
-                            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200" data-testid="badge-payroll-indicator">
-                              Payroll
-                            </Badge>
-                          )}
-                        </div>
-                      );
-                    })()}
-                  </div>
-                </div>
-
-                {selectedBooking.notes && (
-                  <div>
-                    <Label>Notes</Label>
-                    <p className="text-sm" data-testid="text-booking-notes">{selectedBooking.notes}</p>
-                  </div>
-                )}
-
-                {(selectedBooking.ownerPaymentType || selectedBooking.ownerPaymentInstructions) && (
-                  <div>
-                    <Label>Owner Payment Preference</Label>
-                    {selectedBooking.ownerPaymentType && (
-                      <p className="text-sm font-medium capitalize">
-                        {selectedBooking.ownerPaymentType === 'interac_transfer' ? 'Interac e-Transfer' : selectedBooking.ownerPaymentType}
-                      </p>
-                    )}
-                    {selectedBooking.ownerPaymentInstructions && (
-                      <p className="text-sm text-muted-foreground whitespace-pre-wrap mt-1">{selectedBooking.ownerPaymentInstructions}</p>
-                    )}
-                  </div>
-                )}
-
-                <div className="flex justify-end gap-2 pt-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setShowContactDialog(true);
-                      setShowBookingDetails(false);
-                    }}
-                    data-testid="button-contact-from-details"
-                  >
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    Contact Users
-                  </Button>
-                  {selectedBooking.status !== 'completed' && selectedBooking.status !== 'cancelled' && (
-                    <Button
-                      variant="destructive"
-                      onClick={() => {
-                        setShowCancelDialog(true);
-                        setShowBookingDetails(false);
-                      }}
-                      data-testid="button-cancel-from-details"
-                    >
-                      <Ban className="h-4 w-4 mr-2" />
-                      Cancel Booking
-                    </Button>
-                  )}
-                </div>
-              </TabsContent>
-
-              <TabsContent value="audit-history" className="mt-4">
-                <ScrollArea className="h-[400px] pr-4">
-                  {isLoadingAuditLogs ? (
-                    <div className="space-y-4" data-testid="audit-loading">
-                      {[1, 2, 3].map((i) => (
-                        <div key={i} className="flex gap-4">
-                          <Skeleton className="h-10 w-10 rounded-full" />
-                          <div className="flex-1 space-y-2">
-                            <Skeleton className="h-4 w-3/4" />
-                            <Skeleton className="h-3 w-1/2" />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : !Array.isArray(auditLogs) || auditLogs.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-12 text-center" data-testid="audit-empty-state">
-                      <Activity className="h-12 w-12 text-muted-foreground mb-4" />
-                      <p className="text-lg font-medium">No Audit History</p>
-                      <p className="text-sm text-muted-foreground">No audit logs found for this booking</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4" data-testid="audit-timeline">
-                      {Array.isArray(auditLogs) && auditLogs
-                        .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime())
-                        .map((log, index) => (
-                          <div 
-                            key={log.id} 
-                            className="flex gap-4 relative pb-4"
-                            data-testid={`audit-log-${log.id}`}
-                          >
-                            {index < auditLogs.length - 1 && (
-                              <div className="absolute left-5 top-10 bottom-0 w-px bg-border" />
-                            )}
-                            
-                            <div className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-background">
-                              {getAuditIcon(log.action)}
-                            </div>
-
-                            <div className="flex-1 space-y-1">
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex-1">
-                                  <p className="font-medium" data-testid={`audit-action-${log.id}`}>
-                                    {log.message || `${log.action} - ${log.entityType}`}
-                                  </p>
-                                  <div className="flex items-center gap-2 mt-1">
-                                    <User className="h-3 w-3 text-muted-foreground" />
-                                    <p className="text-sm text-muted-foreground" data-testid={`audit-actor-${log.id}`}>
-                                      {log.actorEmail || "System"}
-                                    </p>
-                                    {log.actorRole && (
-                                      <Badge variant="outline" className="text-xs" data-testid={`audit-role-${log.id}`}>
-                                        {log.actorRole}
-                                      </Badge>
-                                    )}
-                                  </div>
-                                </div>
-                                <div className="text-right">
-                                  <p className="text-sm font-medium" data-testid={`audit-time-${log.id}`}>
-                                    {new Date(log.occurredAt).toLocaleTimeString([], { 
-                                      hour: '2-digit', 
-                                      minute: '2-digit' 
-                                    })}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground" data-testid={`audit-date-${log.id}`}>
-                                    {new Date(log.occurredAt).toLocaleDateString()}
-                                  </p>
-                                </div>
-                              </div>
-
-                              <div className="flex items-center gap-2">
-                                <Badge 
-                                  variant={log.success ? "default" : "destructive"}
-                                  className="text-xs"
-                                  data-testid={`audit-status-${log.id}`}
-                                >
-                                  {log.success ? "SUCCESS" : "FAILED"}
-                                </Badge>
-                                <Badge variant="outline" className="text-xs" data-testid={`audit-action-type-${log.id}`}>
-                                  {log.action}
-                                </Badge>
-                              </div>
-
-                              {(log.before || log.after) && (
-                                <details className="mt-2">
-                                  <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
-                                    View details
-                                  </summary>
-                                  <div className="mt-2 space-y-2 text-xs">
-                                    {log.before && (
-                                      <div>
-                                        <p className="font-medium">Before:</p>
-                                        <pre className="bg-muted p-2 rounded overflow-auto">
-                                          {JSON.stringify(log.before, null, 2)}
-                                        </pre>
-                                      </div>
-                                    )}
-                                    {log.after && (
-                                      <div>
-                                        <p className="font-medium">After:</p>
-                                        <pre className="bg-muted p-2 rounded overflow-auto">
-                                          {JSON.stringify(log.after, null, 2)}
-                                        </pre>
-                                      </div>
-                                    )}
-                                  </div>
-                                </details>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  )}
-                </ScrollArea>
-              </TabsContent>
-            </Tabs>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Cancel Booking Dialog */}
-      <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-        <DialogContent data-testid="dialog-cancel-booking">
-          <DialogHeader>
-            <DialogTitle>Cancel Booking</DialogTitle>
-            <DialogDescription>
-              This action will cancel the booking and notify both users. Please provide a reason.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="cancel-reason">Cancellation Reason</Label>
-              <Textarea
-                id="cancel-reason"
-                placeholder="Explain why this booking is being cancelled..."
-                value={cancelReason}
-                onChange={(e) => setCancelReason(e.target.value)}
-                data-testid="textarea-cancel-reason"
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowCancelDialog(false)}
-                data-testid="button-cancel-cancel"
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleCancelBooking}
-                disabled={!cancelReason.trim() || cancelBookingMutation.isPending}
-                data-testid="button-confirm-cancel"
-              >
-                {cancelBookingMutation.isPending ? "Cancelling..." : "Cancel Booking"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Cancel Listing Dialog */}
-      <Dialog open={showCancelListingDialog} onOpenChange={setShowCancelListingDialog}>
-        <DialogContent data-testid="dialog-cancel-listing">
-          <DialogHeader>
-            <DialogTitle>Cancel Listing</DialogTitle>
-            <DialogDescription>
-              This will remove the spot availability listing. Please provide a reason.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            {selectedAvailabilityListing && (
-              <div className="p-3 bg-muted rounded-md space-y-1">
-                <p className="text-sm"><span className="font-medium">Spot:</span> {selectedAvailabilityListing.spotNumber}</p>
-                <p className="text-sm"><span className="font-medium">Location:</span> {selectedAvailabilityListing.locationName}</p>
-                <p className="text-sm"><span className="font-medium">Date:</span> {formatDate(selectedAvailabilityListing.availableFrom)}</p>
-              </div>
-            )}
-            <div>
-              <Label htmlFor="cancel-listing-reason">Cancellation Reason</Label>
-              <Textarea
-                id="cancel-listing-reason"
-                placeholder="Explain why this listing is being cancelled..."
-                value={cancelListingReason}
-                onChange={(e) => setCancelListingReason(e.target.value)}
-                data-testid="textarea-cancel-listing-reason"
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowCancelListingDialog(false);
-                  setCancelListingReason("");
-                }}
-                data-testid="button-cancel-listing-cancel"
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={() => {
-                  if (selectedAvailabilityListing && cancelListingReason.trim()) {
-                    cancelListingMutation.mutate({
-                      listingId: selectedAvailabilityListing.id,
-                      reason: cancelListingReason
-                    });
-                  }
-                }}
-                disabled={!cancelListingReason.trim() || cancelListingMutation.isPending}
-                data-testid="button-confirm-cancel-listing"
-              >
-                {cancelListingMutation.isPending ? "Cancelling..." : "Cancel Listing"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Contact Users Dialog */}
-      <Dialog open={showContactDialog} onOpenChange={(open) => {
-        setShowContactDialog(open);
-        if (!open) {
-          setContactMessage("");
-          setSelectedRecipients(["renter", "owner"]);
-        }
-      }}>
-        <DialogContent data-testid="dialog-contact-users">
-          <DialogHeader>
-            <DialogTitle>Contact Users</DialogTitle>
-            <DialogDescription>
-              Send a message to the users involved in this booking
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-3">
-              <Label>Recipients</Label>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="recipient-renter"
-                    checked={selectedRecipients.includes("renter")}
-                    onCheckedChange={(checked) => {
-                      setSelectedRecipients(prev =>
-                        checked ? [...prev, "renter"] : prev.filter(r => r !== "renter")
-                      );
-                    }}
-                  />
-                  <Label htmlFor="recipient-renter" className="text-sm font-normal cursor-pointer">
-                    Renter: {selectedBooking?.renterName} ({selectedBooking?.renterEmail})
-                  </Label>
-                </div>
-                {selectedBooking?.ownerEmail && (
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id="recipient-owner"
-                      checked={selectedRecipients.includes("owner")}
-                      onCheckedChange={(checked) => {
-                        setSelectedRecipients(prev =>
-                          checked ? [...prev, "owner"] : prev.filter(r => r !== "owner")
-                        );
-                      }}
-                    />
-                    <Label htmlFor="recipient-owner" className="text-sm font-normal cursor-pointer">
-                      Owner/Assigned User: {selectedBooking?.ownerName} ({selectedBooking?.ownerEmail})
-                    </Label>
-                  </div>
-                )}
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="contact-message">Message</Label>
-              <Textarea
-                id="contact-message"
-                placeholder="Type your message here..."
-                value={contactMessage}
-                onChange={(e) => setContactMessage(e.target.value)}
-                data-testid="textarea-contact-message"
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowContactDialog(false)}
-                disabled={isSendingContact}
-                data-testid="button-cancel-contact"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleContactUser}
-                disabled={!contactMessage.trim() || selectedRecipients.length === 0 || isSendingContact}
-                data-testid="button-send-message"
-              >
-                {isSendingContact ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Sending...
-                  </>
-                ) : (
-                  "Send Message"
-                )}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Booking Details Dialog (shared component) */}
+      <BookingDetailsDialog
+        bookingId={selectedBookingId}
+        onClose={() => setSelectedBookingId(null)}
+        scope={scope}
+      />
 
       {/* Availability Details Dialog */}
       <Dialog open={showAvailabilityDetailsDialog} onOpenChange={setShowAvailabilityDetailsDialog}>
@@ -3685,14 +3063,7 @@ export default function AdminSpotBookingManagement() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => {
-                          const booking = displayActiveBookings.find(b => b.id === dispute.bookingId) 
-                            || pastBookings.find(b => b.id === dispute.bookingId);
-                          if (booking) {
-                            setSelectedBooking(booking);
-                            setShowBookingDetails(true);
-                          }
-                        }}
+                        onClick={() => setSelectedBookingId(dispute.bookingId)}
                         data-testid={`button-view-booking-${dispute.id}`}
                       >
                         <Eye className="h-4 w-4 mr-1" />

@@ -7,10 +7,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, ComposedChart, Line, ReferenceLine, ReferenceArea } from 'recharts';
 import type { TooltipProps } from 'recharts';
 import type { ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent';
-import { ArrowLeft, BarChart3, ExternalLink, Layers, MapPin, ParkingSquare, TrendingUp } from 'lucide-react';
+import { ArrowLeft, BarChart3, FileText, Layers, MapPin, ParkingSquare, TrendingUp } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Link } from 'wouter';
 import type { ReportUtilizationResponse } from '@shared/schema';
+import { BookingDetailsDialog } from '@/components/booking-details-dialog';
 
 interface UtilizationReportProps {
   data: ReportUtilizationResponse | undefined;
@@ -77,92 +77,106 @@ function DayBookingsList({ date, scope, onBack }: { date: string; scope?: string
     return data;
   }, [data, typeFilter]);
 
+  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
+
   return (
-    <Card data-testid="card-day-bookings">
-      <CardHeader className="flex flex-row items-center gap-3 flex-wrap pb-3">
-        <Button variant="ghost" size="icon" onClick={onBack} aria-label="Back to chart">
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div className="flex-1">
-          <CardTitle className="text-base">{formatDisplayDate(date)}</CardTitle>
-          <p className="text-sm text-muted-foreground mt-0.5">Bookings for this day</p>
-        </div>
-        {!isLoading && !isError && data && data.length > 0 && (
-          <div className="flex items-center gap-1 rounded-md border p-1">
-            {(['all', 'bci', 'p2p'] as BookingTypeFilter[]).map((val) => (
-              <Button
-                key={val}
-                variant="ghost"
-                size="sm"
-                className={typeFilter === val ? 'toggle-elevate toggle-elevated' : 'toggle-elevate'}
-                onClick={() => setTypeFilter(val)}
-              >
-                {val === 'all' ? 'All' : val === 'bci' ? 'BCI' : 'Peer-to-Peer'}
-              </Button>
-            ))}
+    <>
+      <Card data-testid="card-day-bookings">
+        <CardHeader className="flex flex-row items-center gap-3 flex-wrap pb-3">
+          <Button variant="ghost" size="icon" onClick={onBack} aria-label="Back to chart">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div className="flex-1">
+            <CardTitle className="text-base">{formatDisplayDate(date)}</CardTitle>
+            <p className="text-sm text-muted-foreground mt-0.5">Bookings for this day</p>
           </div>
-        )}
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="space-y-2">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-10 w-full" />
-            ))}
-          </div>
-        ) : isError ? (
-          <p className="text-center text-destructive py-8">Failed to load bookings. Please try again.</p>
-        ) : !data || data.length === 0 ? (
-          <p className="text-center text-muted-foreground py-8">No bookings for this day.</p>
-        ) : filteredData.length === 0 ? (
-          <p className="text-center text-muted-foreground py-8">No {typeFilter === 'bci' ? 'BCI' : 'Peer-to-Peer'} bookings for this day.</p>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Renter</TableHead>
-                <TableHead>Spot</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-16"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredData.map((booking) => (
-                <TableRow key={booking.id}>
-                  <TableCell className="font-medium">{booking.renterName}</TableCell>
-                  <TableCell>
-                    <div>{booking.spotNumber}</div>
-                    {!booking.isBciManaged && booking.ownerName && (
-                      <div className="text-xs text-muted-foreground mt-0.5">{booking.ownerName}</div>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{booking.locationName}</TableCell>
-                  <TableCell>
-                    {booking.isBciManaged ? (
-                      <Badge variant="secondary">BCI</Badge>
-                    ) : (
-                      <Badge variant="outline">Peer-to-Peer</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <span className="capitalize">{booking.status}</span>
-                  </TableCell>
-                  <TableCell>
-                    <Link href={`/admin/bookings?bookingId=${booking.id}`}>
-                      <Button variant="ghost" size="icon" title="View full booking details">
-                        <ExternalLink className="h-4 w-4" />
-                      </Button>
-                    </Link>
-                  </TableCell>
-                </TableRow>
+          {!isLoading && !isError && data && data.length > 0 && (
+            <div className="flex items-center gap-1 rounded-md border p-1">
+              {(['all', 'bci', 'p2p'] as BookingTypeFilter[]).map((val) => (
+                <Button
+                  key={val}
+                  variant="ghost"
+                  size="sm"
+                  className={typeFilter === val ? 'toggle-elevate toggle-elevated' : 'toggle-elevate'}
+                  onClick={() => setTypeFilter(val)}
+                >
+                  {val === 'all' ? 'All' : val === 'bci' ? 'BCI' : 'Peer-to-Peer'}
+                </Button>
               ))}
-            </TableBody>
-          </Table>
-        )}
-      </CardContent>
-    </Card>
+            </div>
+          )}
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-10 w-full" />
+              ))}
+            </div>
+          ) : isError ? (
+            <p className="text-center text-destructive py-8">Failed to load bookings. Please try again.</p>
+          ) : !data || data.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">No bookings for this day.</p>
+          ) : filteredData.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">No {typeFilter === 'bci' ? 'BCI' : 'Peer-to-Peer'} bookings for this day.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Renter</TableHead>
+                  <TableHead>Spot</TableHead>
+                  <TableHead>Location</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-16"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredData.map((booking) => (
+                  <TableRow key={booking.id}>
+                    <TableCell className="font-medium">{booking.renterName}</TableCell>
+                    <TableCell>
+                      <div>{booking.spotNumber}</div>
+                      {!booking.isBciManaged && booking.ownerName && (
+                        <div className="text-xs text-muted-foreground mt-0.5">{booking.ownerName}</div>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{booking.locationName}</TableCell>
+                    <TableCell>
+                      {booking.isBciManaged ? (
+                        <Badge variant="secondary">BCI</Badge>
+                      ) : (
+                        <Badge variant="outline">Peer-to-Peer</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <span className="capitalize">{booking.status}</span>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="View booking details"
+                        onClick={() => setSelectedBookingId(booking.id)}
+                        data-testid={`button-view-booking-${booking.id}`}
+                      >
+                        <FileText className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <BookingDetailsDialog
+        bookingId={selectedBookingId}
+        onClose={() => setSelectedBookingId(null)}
+        scope={scope as 'all' | 'bci' | undefined}
+      />
+    </>
   );
 }
 
