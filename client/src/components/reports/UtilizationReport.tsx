@@ -368,7 +368,7 @@ export function UtilizationReport({ data, isLoading, hideStatCards = false, toda
               <p style={{ color: colors.chart1 }}>Booked Spots: {booked}</p>
               <p style={{ color: colors.chart3 }}>Available for Sharing: {available}</p>
               <p style={{ color: colors.chart5 }}>Occupancy Rate: {rate}%</p>
-              <p className="text-xs text-muted-foreground pt-1">Click bar to see bookings</p>
+              {Number(booked) > 0 && <p className="text-xs text-muted-foreground pt-1">Click bar to see bookings</p>}
             </div>
           );
         };
