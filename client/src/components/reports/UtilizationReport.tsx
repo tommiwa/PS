@@ -7,7 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, ComposedChart, Line, ReferenceLine, ReferenceArea } from 'recharts';
 import type { TooltipProps } from 'recharts';
 import type { ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent';
-import { ArrowLeft, BarChart3, FileText, Layers, MapPin, ParkingSquare, TrendingUp } from 'lucide-react';
+import { ArrowLeft, BarChart3, FileText, Layers, MapPin, ParkingSquare, Search, TrendingUp } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import type { ReportUtilizationResponse } from '@shared/schema';
 import { BookingDetailsDialog } from '@/components/booking-details-dialog';
@@ -60,6 +61,7 @@ const PAGE_SIZE = 10;
 
 function DayBookingsList({ date, scope, onBack }: { date: string; scope?: string; onBack: () => void }) {
   const [typeFilter, setTypeFilter] = useState<BookingTypeFilter>('all');
+  const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
 
   const params = new URLSearchParams({ date });
@@ -75,14 +77,23 @@ function DayBookingsList({ date, scope, onBack }: { date: string; scope?: string
 
   const filteredData = useMemo(() => {
     if (!data) return [];
-    if (typeFilter === 'bci') return data.filter((b) => b.isBciManaged);
-    if (typeFilter === 'p2p') return data.filter((b) => !b.isBciManaged);
-    return data;
-  }, [data, typeFilter]);
+    let result = data;
+    if (typeFilter === 'bci') result = result.filter((b) => b.isBciManaged);
+    if (typeFilter === 'p2p') result = result.filter((b) => !b.isBciManaged);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter((b) =>
+        b.renterName?.toLowerCase().includes(q) ||
+        b.spotNumber?.toLowerCase().includes(q) ||
+        b.locationName?.toLowerCase().includes(q) ||
+        b.ownerName?.toLowerCase().includes(q) ||
+        b.status?.toLowerCase().includes(q)
+      );
+    }
+    return result;
+  }, [data, typeFilter, search]);
 
-  useEffect(() => {
-    setPage(1);
-  }, [typeFilter]);
+  useEffect(() => { setPage(1); }, [typeFilter, search]);
 
   const totalPages = Math.ceil(filteredData.length / PAGE_SIZE);
   const pagedData = filteredData.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -130,7 +141,27 @@ function DayBookingsList({ date, scope, onBack }: { date: string; scope?: string
             </div>
           )}
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
+          {!isLoading && !isError && data && data.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="relative flex-1 min-w-48">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Input
+                  placeholder="Search renter, spot, location…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+              {totalPages > 1 && (
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button variant="outline" size="sm" onClick={() => setPage((p) => p - 1)} disabled={page === 1}>Prev</Button>
+                  <span className="text-sm text-muted-foreground whitespace-nowrap">Page {page} of {totalPages}</span>
+                  <Button variant="outline" size="sm" onClick={() => setPage((p) => p + 1)} disabled={page === totalPages}>Next</Button>
+                </div>
+              )}
+            </div>
+          )}
           {isLoading ? (
             <div className="space-y-2">
               {Array.from({ length: 4 }).map((_, i) => (
@@ -142,80 +173,59 @@ function DayBookingsList({ date, scope, onBack }: { date: string; scope?: string
           ) : !data || data.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">No bookings for this day.</p>
           ) : filteredData.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">No {typeFilter === 'bci' ? 'BCI' : 'Peer-to-Peer'} bookings for this day.</p>
+            <p className="text-center text-muted-foreground py-8">
+              {search.trim()
+                ? `No results for "${search}".`
+                : `No ${typeFilter === 'bci' ? 'BCI' : 'Peer-to-Peer'} bookings for this day.`}
+            </p>
           ) : (
-            <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Renter</TableHead>
-                    <TableHead>Spot</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="w-16"></TableHead>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Renter</TableHead>
+                  <TableHead>Spot</TableHead>
+                  <TableHead>Location</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-16"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pagedData.map((booking) => (
+                  <TableRow key={booking.id}>
+                    <TableCell className="font-medium">{booking.renterName}</TableCell>
+                    <TableCell>
+                      <div>{booking.spotNumber}</div>
+                      {!booking.isBciManaged && booking.ownerName && (
+                        <div className="text-xs text-muted-foreground mt-0.5">{booking.ownerName}</div>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{booking.locationName}</TableCell>
+                    <TableCell>
+                      {booking.isBciManaged ? (
+                        <Badge variant="secondary">BCI</Badge>
+                      ) : (
+                        <Badge variant="outline">Peer-to-Peer</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <span className="capitalize">{booking.status}</span>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="View booking details"
+                        onClick={() => setSelectedBookingId(booking.id)}
+                        data-testid={`button-view-booking-${booking.id}`}
+                      >
+                        <FileText className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {pagedData.map((booking) => (
-                    <TableRow key={booking.id}>
-                      <TableCell className="font-medium">{booking.renterName}</TableCell>
-                      <TableCell>
-                        <div>{booking.spotNumber}</div>
-                        {!booking.isBciManaged && booking.ownerName && (
-                          <div className="text-xs text-muted-foreground mt-0.5">{booking.ownerName}</div>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{booking.locationName}</TableCell>
-                      <TableCell>
-                        {booking.isBciManaged ? (
-                          <Badge variant="secondary">BCI</Badge>
-                        ) : (
-                          <Badge variant="outline">Peer-to-Peer</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <span className="capitalize">{booking.status}</span>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          title="View booking details"
-                          onClick={() => setSelectedBookingId(booking.id)}
-                          data-testid={`button-view-booking-${booking.id}`}
-                        >
-                          <FileText className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-3 pt-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage((p) => p - 1)}
-                    disabled={page === 1}
-                  >
-                    Prev
-                  </Button>
-                  <span className="text-sm text-muted-foreground">
-                    Page {page} of {totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage((p) => p + 1)}
-                    disabled={page === totalPages}
-                  >
-                    Next
-                  </Button>
-                </div>
-              )}
-            </>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
