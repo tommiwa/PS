@@ -5278,7 +5278,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validPage = Math.max(1, page);
       const validLimit = Math.min(100, Math.max(1, limit));
 
-      const result = await storage.getActiveBookings(isBciOnly, validPage, validLimit);
+      const filters = {
+        search: req.query.search as string | undefined,
+        status: req.query.status as string | undefined,
+        location: req.query.location as string | undefined,
+        dateFrom: req.query.dateFrom as string | undefined,
+        dateTo: req.query.dateTo as string | undefined,
+        role: req.query.role as string | undefined,
+      };
+
+      const result = await storage.getActiveBookings(isBciOnly, validPage, validLimit, filters);
       res.json(result);
     } catch (error) {
       console.error("Error fetching active bookings:", error);

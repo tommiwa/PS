@@ -382,7 +382,15 @@ export default function AdminSpotBookingManagement() {
 
   const STALE_TIME = 2 * 60 * 1000; // 2 minutes
 
-  // Fetch active bookings with server-side pagination — deferred until the "Active/Upcoming Bookings" tab is visited
+  // Fetch active bookings with server-side pagination and filtering — deferred until the "Active/Upcoming Bookings" tab is visited
+  const activeBookingsFilters = {
+    search: searchTerm,
+    status: filterValues.status as string | undefined,
+    location: filterValues.location as string | undefined,
+    dateFrom: filterValues.dateRangeFrom as string | undefined,
+    dateTo: filterValues.dateRangeTo as string | undefined,
+    role: filterValues.role as string | undefined,
+  };
   const { data: activeBookingsResponse, isLoading: isLoadingActive } = useQuery<{
     data: AdminBookingData[];
     total: number;
@@ -390,11 +398,21 @@ export default function AdminSpotBookingManagement() {
     limit: number;
     totalPages: number;
   }>({
-    queryKey: ["/api/admin/active-bookings", scope, activeBookingsPageIndex + 1, activeBookingsPageSize],
-    queryFn: () => fetch(
-      `/api/admin/active-bookings?scope=${scope}&page=${activeBookingsPageIndex + 1}&limit=${activeBookingsPageSize}`,
-      { credentials: 'include' }
-    ).then(r => r.json()),
+    queryKey: ["/api/admin/active-bookings", scope, activeBookingsPageIndex + 1, activeBookingsPageSize, activeBookingsFilters],
+    queryFn: () => {
+      const params = new URLSearchParams({
+        scope,
+        page: String(activeBookingsPageIndex + 1),
+        limit: String(activeBookingsPageSize),
+      });
+      if (activeBookingsFilters.search) params.set('search', activeBookingsFilters.search);
+      if (activeBookingsFilters.status && activeBookingsFilters.status !== 'all') params.set('status', activeBookingsFilters.status);
+      if (activeBookingsFilters.location && activeBookingsFilters.location !== 'all') params.set('location', activeBookingsFilters.location);
+      if (activeBookingsFilters.dateFrom) params.set('dateFrom', activeBookingsFilters.dateFrom);
+      if (activeBookingsFilters.dateTo) params.set('dateTo', activeBookingsFilters.dateTo);
+      if (activeBookingsFilters.role && activeBookingsFilters.role !== 'all') params.set('role', activeBookingsFilters.role);
+      return fetch(`/api/admin/active-bookings?${params.toString()}`, { credentials: 'include' }).then(r => r.json());
+    },
     enabled: activeTab === 'active',
     staleTime: STALE_TIME
   });
@@ -562,73 +580,8 @@ export default function AdminSpotBookingManagement() {
   };
   const displayAnalytics = bookingAnalytics || defaultAnalytics;
 
-  // Enhanced filtering for bookings with memoization for performance
-  const filteredActiveBookings = useMemo(() => displayActiveBookings.filter(booking => {
-    // Search filter - role-aware search
-    if (searchTerm.trim()) {
-      const searchLower = searchTerm.toLowerCase()
-      let matchesSearch = false
-
-      // If role filter is applied, search only in relevant fields
-      if (filterValues.role === "owner") {
-        // When role filter is set to "owner", search only in owner-related fields
-        matchesSearch = booking.ownerName?.toLowerCase().includes(searchLower) ||
-                       booking.ownerEmail?.toLowerCase().includes(searchLower) ||
-                       booking.ownerDepartment?.toLowerCase().includes(searchLower) ||
-                       booking.spotNumber?.toLowerCase().includes(searchLower) ||
-                       booking.spotLocation?.toLowerCase().includes(searchLower)
-      } else if (filterValues.role === "renter") {
-        // When role filter is set to "renter", search only in renter-related fields  
-        matchesSearch = booking.renterName?.toLowerCase().includes(searchLower) ||
-                       booking.renterEmail?.toLowerCase().includes(searchLower) ||
-                       booking.renterDepartment?.toLowerCase().includes(searchLower) ||
-                       booking.spotNumber?.toLowerCase().includes(searchLower) ||
-                       booking.spotLocation?.toLowerCase().includes(searchLower)
-      } else {
-        // No role filter applied - search in all fields (default behavior)
-        matchesSearch = booking.renterName?.toLowerCase().includes(searchLower) ||
-                       booking.ownerName?.toLowerCase().includes(searchLower) ||
-                       booking.spotNumber?.toLowerCase().includes(searchLower) ||
-                       booking.spotLocation?.toLowerCase().includes(searchLower) ||
-                       booking.renterEmail?.toLowerCase().includes(searchLower) ||
-                       booking.ownerEmail?.toLowerCase().includes(searchLower)
-      }
-      
-      if (!matchesSearch) return false
-    }
-    
-    // Status filter
-    if (filterValues.status && filterValues.status !== "all") {
-      if (booking.status !== filterValues.status) return false
-    }
-    
-    // Role filter - implemented above in search logic
-    // When role="owner", search filters focus on owner fields
-    // When role="renter", search filters focus on renter fields
-    // This provides meaningful role-based filtering without removing valid bookings
-    
-    // Location filter
-    if (filterValues.location && filterValues.location !== "all") {
-      if (!booking.spotLocation?.toLowerCase().includes(filterValues.location.toLowerCase())) {
-        return false
-      }
-    }
-    
-    // Date range filters
-    if (filterValues.dateRangeFrom) {
-      const bookingDate = new Date(booking.bookingDate)
-      const fromDate = new Date(filterValues.dateRangeFrom)
-      if (bookingDate < fromDate) return false
-    }
-    
-    if (filterValues.dateRangeTo) {
-      const bookingDate = new Date(booking.bookingDate)
-      const toDate = new Date(filterValues.dateRangeTo)
-      if (bookingDate > toDate) return false
-    }
-    
-    return true
-  }), [displayActiveBookings, searchTerm, filterValues]);
+  // Active bookings are filtered server-side; use the fetched page data directly
+  const filteredActiveBookings = displayActiveBookings;
 
   // Sorting functionality for active bookings
   const { sortState, sortedData: sortedActiveBookings, handleSort } = useTableSort(

@@ -327,7 +327,7 @@ export interface IStorage {
   // Spot Booking Management methods
   getBookingAvailability(isBciOnly?: boolean): Promise<BookingAvailabilityData[]>;
   getPendingPaymentBookings(isBciOnly?: boolean): Promise<PendingPaymentData[]>;
-  getActiveBookings(isBciOnly?: boolean, page?: number, limit?: number): Promise<{ data: AdminBookingData[]; total: number; page: number; limit: number; totalPages: number }>;
+  getActiveBookings(isBciOnly?: boolean, page?: number, limit?: number, filters?: { search?: string; status?: string; location?: string; dateFrom?: string; dateTo?: string; role?: string }): Promise<{ data: AdminBookingData[]; total: number; page: number; limit: number; totalPages: number }>;
   getPastBookings(isBciOnly?: boolean, page?: number, limit?: number, payrollPeriod?: string): Promise<{ data: AdminBookingData[]; total: number; page: number; limit: number; totalPages: number }>;
   
   // Dispute operations
@@ -3054,18 +3054,36 @@ export class MemStorage implements IStorage {
     });
   }
 
-  async getActiveBookings(isBciOnly?: boolean, page: number = 1, limit: number = 9999): Promise<{ data: AdminBookingData[]; total: number; page: number; limit: number; totalPages: number }> {
+  async getActiveBookings(isBciOnly?: boolean, page: number = 1, limit: number = 9999, filters?: { search?: string; status?: string; location?: string; dateFrom?: string; dateTo?: string; role?: string }): Promise<{ data: AdminBookingData[]; total: number; page: number; limit: number; totalPages: number }> {
     const today = new Date().toISOString().split('T')[0];
     const offset = (page - 1) * limit;
+
+    const search = filters?.search?.trim() || '';
+    const statusFilter = filters?.status && filters.status !== 'all' ? filters.status : '';
+    const locationFilter = filters?.location && filters.location !== 'all' ? filters.location : '';
+    const dateFrom = filters?.dateFrom || '';
+    const dateTo = filters?.dateTo || '';
+    const role = filters?.role && filters.role !== 'all' ? filters.role : '';
+    const searchPattern = search ? `%${search}%` : '';
 
     const countQuery = sqlOp`
       SELECT COUNT(*) as total
       FROM bookings b
       LEFT JOIN parking_spots ps ON b.spot_id = ps.id
+      LEFT JOIN locations l ON ps.location_id = l.id
+      LEFT JOIN users renter ON b.renter_id = renter.id
+      LEFT JOIN users spot_owner ON ps.owner_id = spot_owner.id
       WHERE
         (b.status = 'confirmed' OR b.status = 'pending' OR b.status = 'completed')
         AND b.booking_date >= ${today}
         ${isBciOnly ? sqlOp`AND ps.is_bci_managed = true AND ps.owner_id IS NULL` : sqlOp`AND (ps.owner_id IS NOT NULL OR ps.is_bci_managed = false)`}
+        ${statusFilter ? sqlOp`AND b.status = ${statusFilter}` : sqlOp``}
+        ${locationFilter ? sqlOp`AND (l.building || ' - ' || l.level) ILIKE ${`%${locationFilter}%`}` : sqlOp``}
+        ${dateFrom ? sqlOp`AND b.booking_date >= ${dateFrom}` : sqlOp``}
+        ${dateTo ? sqlOp`AND b.booking_date <= ${dateTo}` : sqlOp``}
+        ${searchPattern && role === 'owner' ? sqlOp`AND (spot_owner.first_name || ' ' || spot_owner.last_name ILIKE ${searchPattern} OR spot_owner.email ILIKE ${searchPattern} OR ps.spot_number ILIKE ${searchPattern} OR (l.building || ' - ' || l.level) ILIKE ${searchPattern})` : sqlOp``}
+        ${searchPattern && role === 'renter' ? sqlOp`AND (renter.first_name || ' ' || renter.last_name ILIKE ${searchPattern} OR renter.email ILIKE ${searchPattern} OR ps.spot_number ILIKE ${searchPattern} OR (l.building || ' - ' || l.level) ILIKE ${searchPattern})` : sqlOp``}
+        ${searchPattern && !role ? sqlOp`AND (renter.first_name || ' ' || renter.last_name ILIKE ${searchPattern} OR renter.email ILIKE ${searchPattern} OR spot_owner.first_name || ' ' || spot_owner.last_name ILIKE ${searchPattern} OR spot_owner.email ILIKE ${searchPattern} OR ps.spot_number ILIKE ${searchPattern} OR (l.building || ' - ' || l.level) ILIKE ${searchPattern})` : sqlOp``}
     `;
     const countResults = await db.execute(countQuery);
     const total = parseInt((countResults as any).rows?.[0]?.total || '0', 10);
@@ -3102,6 +3120,13 @@ export class MemStorage implements IStorage {
         (b.status = 'confirmed' OR b.status = 'pending' OR b.status = 'completed')
         AND b.booking_date >= ${today}
         ${isBciOnly ? sqlOp`AND ps.is_bci_managed = true AND ps.owner_id IS NULL` : sqlOp`AND (ps.owner_id IS NOT NULL OR ps.is_bci_managed = false)`}
+        ${statusFilter ? sqlOp`AND b.status = ${statusFilter}` : sqlOp``}
+        ${locationFilter ? sqlOp`AND (l.building || ' - ' || l.level) ILIKE ${`%${locationFilter}%`}` : sqlOp``}
+        ${dateFrom ? sqlOp`AND b.booking_date >= ${dateFrom}` : sqlOp``}
+        ${dateTo ? sqlOp`AND b.booking_date <= ${dateTo}` : sqlOp``}
+        ${searchPattern && role === 'owner' ? sqlOp`AND (spot_owner.first_name || ' ' || spot_owner.last_name ILIKE ${searchPattern} OR spot_owner.email ILIKE ${searchPattern} OR ps.spot_number ILIKE ${searchPattern} OR (l.building || ' - ' || l.level) ILIKE ${searchPattern})` : sqlOp``}
+        ${searchPattern && role === 'renter' ? sqlOp`AND (renter.first_name || ' ' || renter.last_name ILIKE ${searchPattern} OR renter.email ILIKE ${searchPattern} OR ps.spot_number ILIKE ${searchPattern} OR (l.building || ' - ' || l.level) ILIKE ${searchPattern})` : sqlOp``}
+        ${searchPattern && !role ? sqlOp`AND (renter.first_name || ' ' || renter.last_name ILIKE ${searchPattern} OR renter.email ILIKE ${searchPattern} OR spot_owner.first_name || ' ' || spot_owner.last_name ILIKE ${searchPattern} OR spot_owner.email ILIKE ${searchPattern} OR ps.spot_number ILIKE ${searchPattern} OR (l.building || ' - ' || l.level) ILIKE ${searchPattern})` : sqlOp``}
       ORDER BY b.booking_date ASC
       LIMIT ${limit} OFFSET ${offset}
     `;
