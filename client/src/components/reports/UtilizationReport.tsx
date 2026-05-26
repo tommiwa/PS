@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -56,8 +56,11 @@ function formatDisplayDate(dateStr: string): string {
 
 type BookingTypeFilter = 'all' | 'bci' | 'p2p';
 
+const PAGE_SIZE = 10;
+
 function DayBookingsList({ date, scope, onBack }: { date: string; scope?: string; onBack: () => void }) {
   const [typeFilter, setTypeFilter] = useState<BookingTypeFilter>('all');
+  const [page, setPage] = useState(1);
 
   const params = new URLSearchParams({ date });
   if (scope && scope !== 'all') params.set('scope', scope);
@@ -77,6 +80,23 @@ function DayBookingsList({ date, scope, onBack }: { date: string; scope?: string
     return data;
   }, [data, typeFilter]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [typeFilter]);
+
+  const totalPages = Math.ceil(filteredData.length / PAGE_SIZE);
+  const pagedData = filteredData.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const countLabel = useMemo(() => {
+    if (!data) return '';
+    const bciCount = data.filter((b) => b.isBciManaged).length;
+    const p2pCount = data.filter((b) => !b.isBciManaged).length;
+    if (typeFilter === 'bci') return `${bciCount} BCI booking${bciCount !== 1 ? 's' : ''}`;
+    if (typeFilter === 'p2p') return `${p2pCount} Peer-to-Peer booking${p2pCount !== 1 ? 's' : ''}`;
+    if (bciCount > 0 && p2pCount > 0) return `${data.length} bookings · ${bciCount} BCI · ${p2pCount} Peer-to-Peer`;
+    return `${data.length} booking${data.length !== 1 ? 's' : ''}`;
+  }, [data, typeFilter]);
+
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
 
   return (
@@ -88,7 +108,11 @@ function DayBookingsList({ date, scope, onBack }: { date: string; scope?: string
           </Button>
           <div className="flex-1">
             <CardTitle className="text-base">{formatDisplayDate(date)}</CardTitle>
-            <p className="text-sm text-muted-foreground mt-0.5">Bookings for this day</p>
+            {!isLoading && !isError && data && data.length > 0 ? (
+              <p className="text-sm text-muted-foreground mt-0.5">{countLabel}</p>
+            ) : (
+              <p className="text-sm text-muted-foreground mt-0.5">Bookings for this day</p>
+            )}
           </div>
           {!isLoading && !isError && data && data.length > 0 && (
             <div className="flex items-center gap-1 rounded-md border p-1">
@@ -120,53 +144,78 @@ function DayBookingsList({ date, scope, onBack }: { date: string; scope?: string
           ) : filteredData.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">No {typeFilter === 'bci' ? 'BCI' : 'Peer-to-Peer'} bookings for this day.</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Renter</TableHead>
-                  <TableHead>Spot</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-16"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredData.map((booking) => (
-                  <TableRow key={booking.id}>
-                    <TableCell className="font-medium">{booking.renterName}</TableCell>
-                    <TableCell>
-                      <div>{booking.spotNumber}</div>
-                      {!booking.isBciManaged && booking.ownerName && (
-                        <div className="text-xs text-muted-foreground mt-0.5">{booking.ownerName}</div>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{booking.locationName}</TableCell>
-                    <TableCell>
-                      {booking.isBciManaged ? (
-                        <Badge variant="secondary">BCI</Badge>
-                      ) : (
-                        <Badge variant="outline">Peer-to-Peer</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <span className="capitalize">{booking.status}</span>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        title="View booking details"
-                        onClick={() => setSelectedBookingId(booking.id)}
-                        data-testid={`button-view-booking-${booking.id}`}
-                      >
-                        <FileText className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Renter</TableHead>
+                    <TableHead>Spot</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="w-16"></TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {pagedData.map((booking) => (
+                    <TableRow key={booking.id}>
+                      <TableCell className="font-medium">{booking.renterName}</TableCell>
+                      <TableCell>
+                        <div>{booking.spotNumber}</div>
+                        {!booking.isBciManaged && booking.ownerName && (
+                          <div className="text-xs text-muted-foreground mt-0.5">{booking.ownerName}</div>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{booking.locationName}</TableCell>
+                      <TableCell>
+                        {booking.isBciManaged ? (
+                          <Badge variant="secondary">BCI</Badge>
+                        ) : (
+                          <Badge variant="outline">Peer-to-Peer</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <span className="capitalize">{booking.status}</span>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="View booking details"
+                          onClick={() => setSelectedBookingId(booking.id)}
+                          data-testid={`button-view-booking-${booking.id}`}
+                        >
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-3 pt-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage((p) => p - 1)}
+                    disabled={page === 1}
+                  >
+                    Prev
+                  </Button>
+                  <span className="text-sm text-muted-foreground">
+                    Page {page} of {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage((p) => p + 1)}
+                    disabled={page === totalPages}
+                  >
+                    Next
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
