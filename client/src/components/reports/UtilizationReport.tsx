@@ -54,7 +54,11 @@ function formatDisplayDate(dateStr: string): string {
   return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 }
 
+type BookingTypeFilter = 'all' | 'bci' | 'p2p';
+
 function DayBookingsList({ date, scope, onBack }: { date: string; scope?: string; onBack: () => void }) {
+  const [typeFilter, setTypeFilter] = useState<BookingTypeFilter>('all');
+
   const params = new URLSearchParams({ date });
   if (scope && scope !== 'all') params.set('scope', scope);
   const { data, isLoading, isError } = useQuery<DayBooking[]>({
@@ -66,16 +70,38 @@ function DayBookingsList({ date, scope, onBack }: { date: string; scope?: string
     },
   });
 
+  const filteredData = useMemo(() => {
+    if (!data) return [];
+    if (typeFilter === 'bci') return data.filter((b) => b.isBciManaged);
+    if (typeFilter === 'p2p') return data.filter((b) => !b.isBciManaged);
+    return data;
+  }, [data, typeFilter]);
+
   return (
     <Card data-testid="card-day-bookings">
       <CardHeader className="flex flex-row items-center gap-3 flex-wrap pb-3">
         <Button variant="ghost" size="icon" onClick={onBack} aria-label="Back to chart">
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <div>
+        <div className="flex-1">
           <CardTitle className="text-base">{formatDisplayDate(date)}</CardTitle>
           <p className="text-sm text-muted-foreground mt-0.5">Bookings for this day</p>
         </div>
+        {!isLoading && !isError && data && data.length > 0 && (
+          <div className="flex items-center gap-1 rounded-md border p-1">
+            {(['all', 'bci', 'p2p'] as BookingTypeFilter[]).map((val) => (
+              <Button
+                key={val}
+                variant="ghost"
+                size="sm"
+                className={typeFilter === val ? 'toggle-elevate toggle-elevated' : 'toggle-elevate'}
+                onClick={() => setTypeFilter(val)}
+              >
+                {val === 'all' ? 'All' : val === 'bci' ? 'BCI' : 'Peer-to-Peer'}
+              </Button>
+            ))}
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -88,6 +114,8 @@ function DayBookingsList({ date, scope, onBack }: { date: string; scope?: string
           <p className="text-center text-destructive py-8">Failed to load bookings. Please try again.</p>
         ) : !data || data.length === 0 ? (
           <p className="text-center text-muted-foreground py-8">No bookings for this day.</p>
+        ) : filteredData.length === 0 ? (
+          <p className="text-center text-muted-foreground py-8">No {typeFilter === 'bci' ? 'BCI' : 'Peer-to-Peer'} bookings for this day.</p>
         ) : (
           <Table>
             <TableHeader>
@@ -101,7 +129,7 @@ function DayBookingsList({ date, scope, onBack }: { date: string; scope?: string
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.map((booking) => (
+              {filteredData.map((booking) => (
                 <TableRow key={booking.id}>
                   <TableCell className="font-medium">{booking.renterName}</TableCell>
                   <TableCell>
