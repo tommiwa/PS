@@ -1345,9 +1345,15 @@ export default function AdminSpotBookingManagement() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">{t('admin.spotBookingManagement.title')}</h1>
-          <p className="text-muted-foreground">
-            {t('admin.spotBookingManagement.description')}
-          </p>
+          <div className="flex flex-wrap items-center gap-3 mt-0.5">
+            <p className="text-muted-foreground">
+              {t('admin.spotBookingManagement.description')}
+            </p>
+            <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <Calendar className="h-3.5 w-3.5" />
+              {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </span>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex rounded-lg border border-border overflow-hidden" data-testid="tabs-scope">
