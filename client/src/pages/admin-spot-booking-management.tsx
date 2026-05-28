@@ -1329,6 +1329,17 @@ export default function AdminSpotBookingManagement() {
     return new Date(timestamp).toLocaleDateString();
   };
 
+  if (isLoadingAnalytics && !bookingAnalytics) {
+    return (
+      <div className="flex items-center justify-center h-full min-h-[400px]" data-testid="page-admin-booking-management-loading">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Loading booking data...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6" data-testid="page-admin-booking-management">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
