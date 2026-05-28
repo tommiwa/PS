@@ -322,7 +322,17 @@ export default function AdminSpotBookingManagement() {
   // Pagination state for Pending Payments
   const [pendingPaymentsPageIndex, setPendingPaymentsPageIndex] = useState(0)
   const [pendingPaymentsPageSize, setPendingPaymentsPageSize] = useState(10)
-  
+
+  // Server-side sort state for the four server-paginated tabs
+  const [activeSortCol, setActiveSortCol] = useState<string | null>('bookingDate')
+  const [activeSortDir, setActiveSortDir] = useState<'asc' | 'desc' | null>('asc')
+  const [pastSortCol, setPastSortCol] = useState<string | null>('bookingDate')
+  const [pastSortDir, setPastSortDir] = useState<'asc' | 'desc' | null>('desc')
+  const [availSortCol, setAvailSortCol] = useState<string | null>('availableFrom')
+  const [availSortDir, setAvailSortDir] = useState<'asc' | 'desc' | null>('asc')
+  const [pendingSortCol, setPendingSortCol] = useState<string | null>('daysOverdue')
+  const [pendingSortDir, setPendingSortDir] = useState<'asc' | 'desc' | null>('desc')
+
   // Cards visibility toggle hook
   const { cardsVisible, toggleCards } = useCardsVisibility("spot-booking-management")
 
@@ -401,7 +411,7 @@ export default function AdminSpotBookingManagement() {
     limit: number;
     totalPages: number;
   }>({
-    queryKey: ["/api/admin/active-bookings", scope, activeBookingsPageIndex + 1, activeBookingsPageSize, activeBookingsFilters],
+    queryKey: ["/api/admin/active-bookings", scope, activeBookingsPageIndex + 1, activeBookingsPageSize, activeBookingsFilters, activeSortCol, activeSortDir],
     queryFn: () => {
       const params = new URLSearchParams({
         scope,
@@ -414,6 +424,7 @@ export default function AdminSpotBookingManagement() {
       if (activeBookingsFilters.dateFrom) params.set('dateFrom', activeBookingsFilters.dateFrom);
       if (activeBookingsFilters.dateTo) params.set('dateTo', activeBookingsFilters.dateTo);
       if (activeBookingsFilters.role && activeBookingsFilters.role !== 'all') params.set('role', activeBookingsFilters.role);
+      if (activeSortCol && activeSortDir) { params.set('sortBy', activeSortCol); params.set('sortDir', activeSortDir); }
       return fetch(`/api/admin/active-bookings?${params.toString()}`, { credentials: 'include' }).then(r => r.json());
     },
     enabled: activeTab === 'active',
@@ -444,7 +455,7 @@ export default function AdminSpotBookingManagement() {
     limit: number;
     totalPages: number;
   }>({
-    queryKey: ["/api/admin/past-bookings", scope, pastBookingsPageIndex + 1, pastBookingsPageSize, selectedPayrollPeriod, pastBookingsFilters],
+    queryKey: ["/api/admin/past-bookings", scope, pastBookingsPageIndex + 1, pastBookingsPageSize, selectedPayrollPeriod, pastBookingsFilters, pastSortCol, pastSortDir],
     queryFn: () => {
       const params = new URLSearchParams({
         scope,
@@ -459,6 +470,7 @@ export default function AdminSpotBookingManagement() {
       if (pastBookingsFilters.location && pastBookingsFilters.location !== 'all') params.set('location', pastBookingsFilters.location);
       if (pastBookingsFilters.dateFrom) params.set('dateFrom', pastBookingsFilters.dateFrom);
       if (pastBookingsFilters.dateTo) params.set('dateTo', pastBookingsFilters.dateTo);
+      if (pastSortCol && pastSortDir) { params.set('sortBy', pastSortCol); params.set('sortDir', pastSortDir); }
       return fetch(`/api/admin/past-bookings?${params.toString()}`, { credentials: 'include' }).then(r => r.json());
     },
     enabled: activeTab === 'past',
@@ -476,7 +488,7 @@ export default function AdminSpotBookingManagement() {
     limit: number;
     totalPages: number;
   }>({
-    queryKey: ["/api/admin/booking-availability", scope, availabilityPageIndex + 1, availabilityPageSize, availabilitySearchTerm, availabilityFilterValues.listingType ?? '', availabilityFilterValues.location ?? ''],
+    queryKey: ["/api/admin/booking-availability", scope, availabilityPageIndex + 1, availabilityPageSize, availabilitySearchTerm, availabilityFilterValues.listingType ?? '', availabilityFilterValues.location ?? '', availSortCol, availSortDir],
     queryFn: () => {
       const params = new URLSearchParams({
         scope,
@@ -486,6 +498,7 @@ export default function AdminSpotBookingManagement() {
       if (availabilitySearchTerm.trim()) params.set('search', availabilitySearchTerm.trim());
       if (availabilityFilterValues.listingType && availabilityFilterValues.listingType !== 'all') params.set('listingType', availabilityFilterValues.listingType);
       if (availabilityFilterValues.location && availabilityFilterValues.location !== 'all') params.set('location', availabilityFilterValues.location);
+      if (availSortCol && availSortDir) { params.set('sortBy', availSortCol); params.set('sortDir', availSortDir); }
       return fetch(`/api/admin/booking-availability?${params}`, { credentials: 'include' }).then(r => r.json());
     },
     staleTime: STALE_TIME
@@ -499,7 +512,7 @@ export default function AdminSpotBookingManagement() {
     limit: number;
     totalPages: number;
   }>({
-    queryKey: ["/api/admin/pending-payments", scope, pendingPaymentsPageIndex + 1, pendingPaymentsPageSize, pendingPaymentsSearchTerm, pendingPaymentsFilterValues.location ?? '', pendingPaymentsFilterValues.daysOverdue ?? ''],
+    queryKey: ["/api/admin/pending-payments", scope, pendingPaymentsPageIndex + 1, pendingPaymentsPageSize, pendingPaymentsSearchTerm, pendingPaymentsFilterValues.location ?? '', pendingPaymentsFilterValues.daysOverdue ?? '', pendingSortCol, pendingSortDir],
     queryFn: () => {
       const params = new URLSearchParams({
         scope,
@@ -509,6 +522,7 @@ export default function AdminSpotBookingManagement() {
       if (pendingPaymentsSearchTerm.trim()) params.set('search', pendingPaymentsSearchTerm.trim());
       if (pendingPaymentsFilterValues.location && pendingPaymentsFilterValues.location !== 'all') params.set('location', pendingPaymentsFilterValues.location);
       if (pendingPaymentsFilterValues.daysOverdue && pendingPaymentsFilterValues.daysOverdue !== 'all') params.set('daysOverdue', pendingPaymentsFilterValues.daysOverdue);
+      if (pendingSortCol && pendingSortDir) { params.set('sortBy', pendingSortCol); params.set('sortDir', pendingSortDir); }
       return fetch(`/api/admin/pending-payments?${params}`, { credentials: 'include' }).then(r => r.json());
     },
     enabled: scope === 'all' && activeTab === 'pending-payments',
@@ -619,15 +633,48 @@ export default function AdminSpotBookingManagement() {
   };
   const displayAnalytics = bookingAnalytics || defaultAnalytics;
 
-  // Active bookings are filtered server-side; use the fetched page data directly
+  // Active bookings are filtered and sorted server-side; use the fetched page data directly
   const filteredActiveBookings = displayActiveBookings;
 
-  // Sorting functionality for active bookings
-  const { sortState, sortedData: sortedActiveBookings, handleSort } = useTableSort(
-    filteredActiveBookings,
-    "bookingDate", // Default sort by booking date
-    "desc" // Most recent first
-  );
+  // Helper to cycle sort state: null → asc → desc → null
+  const cycleSortDir = (current: 'asc' | 'desc' | null, col: string, activeCol: string | null): 'asc' | 'desc' | null => {
+    if (activeCol !== col) return 'asc';
+    if (current === 'asc') return 'desc';
+    if (current === 'desc') return null;
+    return 'asc';
+  };
+
+  // Sort state objects for SortableTableHeader props
+  const sortState = { column: activeSortCol, direction: activeSortDir };
+  const pastBookingsSortState = { column: pastSortCol, direction: pastSortDir };
+  const availabilitySortState = { column: availSortCol, direction: availSortDir };
+  const pendingPaymentsSortState = { column: pendingSortCol, direction: pendingSortDir };
+
+  // Sort handlers for each server-paginated tab (reset to page 1 on sort change)
+  const handleSort = (col: string) => {
+    const newDir = cycleSortDir(activeSortDir, col, activeSortCol);
+    setActiveSortCol(newDir === null ? null : col);
+    setActiveSortDir(newDir);
+    setActiveBookingsPageIndex(0);
+  };
+  const handlePastBookingsSort = (col: string) => {
+    const newDir = cycleSortDir(pastSortDir, col, pastSortCol);
+    setPastSortCol(newDir === null ? null : col);
+    setPastSortDir(newDir);
+    setPastBookingsPageIndex(0);
+  };
+  const handleAvailabilitySort = (col: string) => {
+    const newDir = cycleSortDir(availSortDir, col, availSortCol);
+    setAvailSortCol(newDir === null ? null : col);
+    setAvailSortDir(newDir);
+    setAvailabilityPageIndex(0);
+  };
+  const handlePendingPaymentsSort = (col: string) => {
+    const newDir = cycleSortDir(pendingSortDir, col, pendingSortCol);
+    setPendingSortCol(newDir === null ? null : col);
+    setPendingSortDir(newDir);
+    setPendingPaymentsPageIndex(0);
+  };
 
   // Enhanced filtering for booking activity
   const displayBookingActivity = Array.isArray(bookingActivity) ? bookingActivity : (bookingActivity as { items?: BookingActivity[] })?.items || [];
@@ -663,29 +710,8 @@ export default function AdminSpotBookingManagement() {
     "desc" // Most recent first
   );
 
-  // Sorting functionality for past bookings (filtering is done server-side)
-  const { sortState: pastBookingsSortState, sortedData: sortedPastBookings, handleSort: handlePastBookingsSort } = useTableSort(
-    pastBookings,
-    "bookingDate", // Default sort by booking date
-    "desc" // Most recent first
-  );
-
-  // Sorting functionality for booking availability — filtering is server-side
-  const { sortState: availabilitySortState, sortedData: sortedAvailability, handleSort: handleAvailabilitySort } = useTableSort(
-    bookingAvailability,
-    "availableFrom",
-    "asc"
-  );
-
-  // Sorting functionality for pending payments — filtering is server-side
-  const { sortState: pendingPaymentsSortState, sortedData: sortedPendingPayments, handleSort: handlePendingPaymentsSort } = useTableSort(
-    pendingPayments,
-    "daysOverdue",
-    "desc"
-  );
-
-  // Active bookings are already paginated server-side; apply client-side sort/filter on the page data
-  const paginatedActiveBookings = sortedActiveBookings;
+  // Active bookings are sorted and paginated server-side; use raw data directly
+  const paginatedActiveBookings = displayActiveBookings;
 
 
   // paginatedPastBookings removed - now using server-side pagination via pastBookings directly
@@ -696,9 +722,7 @@ export default function AdminSpotBookingManagement() {
     return sortedBookingActivity.slice(startIndex, endIndex)
   }, [sortedBookingActivity, bookingActivityPageIndex, bookingActivityPageSize])
 
-  // Availability and pending payments are now server-side paginated; use sorted data directly
-  // paginatedAvailability removed — server handles pagination, sortedAvailability is the current page
-  // paginatedPendingPayments removed — server handles pagination, sortedPendingPayments is the current page
+  // Availability and pending payments are server-sorted and paginated; raw data from server is used directly
 
   // Filter configuration for spot booking management
   const bookingFilterConfigs: FilterConfig[] = useMemo(() => [
@@ -1502,7 +1526,7 @@ export default function AdminSpotBookingManagement() {
                     <Skeleton key={i} className="h-16 w-full" />
                   ))}
                 </div>
-              ) : sortedAvailability.length === 0 ? (
+              ) : bookingAvailability.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground" data-testid="empty-availability">
                   <Car className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>No available spots found</p>
@@ -1585,7 +1609,7 @@ export default function AdminSpotBookingManagement() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {sortedAvailability.map((listing) => (
+                      {bookingAvailability.map((listing) => (
                         <TableRow key={listing.id} data-testid={`row-availability-${listing.id}`}>
                           <TableCell className="font-medium" data-testid={`text-spot-${listing.id}`}>
                             {listing.spotNumber}
@@ -1695,7 +1719,7 @@ export default function AdminSpotBookingManagement() {
                     variant="outline" 
                     disabled={activeBookingsTotal === 0}
                     onClick={() => {
-                      const success = quickExportBookingsPDF(sortedActiveBookings, 'Active Bookings Report', (errorMessage) => {
+                      const success = quickExportBookingsPDF(paginatedActiveBookings, 'Active Bookings Report', (errorMessage) => {
                         toast({
                           variant: "destructive",
                           title: "Export Failed",
@@ -1719,7 +1743,7 @@ export default function AdminSpotBookingManagement() {
                     variant="outline" 
                     disabled={activeBookingsTotal === 0}
                     onClick={async () => {
-                      const success = await quickExportBookingsExcel(sortedActiveBookings, 'Active Bookings Report', (errorMessage) => {
+                      const success = await quickExportBookingsExcel(paginatedActiveBookings, 'Active Bookings Report', (errorMessage) => {
                         toast({
                           variant: "destructive",
                           title: "Export Failed",
@@ -1962,7 +1986,7 @@ export default function AdminSpotBookingManagement() {
                     <Skeleton key={i} className="h-16 w-full" />
                   ))}
                 </div>
-              ) : sortedPendingPayments.length === 0 ? (
+              ) : pendingPayments.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground" data-testid="empty-pending-payments">
                   <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>No pending payments found</p>
@@ -2037,7 +2061,7 @@ export default function AdminSpotBookingManagement() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {sortedPendingPayments.map((payment) => (
+                      {pendingPayments.map((payment) => (
                         <TableRow key={payment.id} data-testid={`row-pending-payment-${payment.id}`}>
                           <TableCell className="font-medium" data-testid={`text-spot-${payment.id}`}>
                             <div>
@@ -2539,7 +2563,7 @@ export default function AdminSpotBookingManagement() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {sortedPastBookings.map((booking) => (
+                      {pastBookings.map((booking) => (
                         <TableRow key={booking.id} data-testid={`row-past-booking-${booking.id}`}>
                           <TableCell className="font-medium" data-testid={`text-spot-${booking.id}`}>
                             <div>

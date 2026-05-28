@@ -325,10 +325,10 @@ export interface IStorage {
   }>;
   
   // Spot Booking Management methods
-  getBookingAvailability(isBciOnly?: boolean, page?: number, limit?: number, filters?: { search?: string; listingType?: string; location?: string }): Promise<{ data: BookingAvailabilityData[]; total: number; page: number; limit: number; totalPages: number }>;
-  getPendingPaymentBookings(isBciOnly?: boolean, page?: number, limit?: number, filters?: { search?: string; location?: string; daysOverdue?: string }): Promise<{ data: PendingPaymentData[]; total: number; page: number; limit: number; totalPages: number }>;
-  getActiveBookings(isBciOnly?: boolean, page?: number, limit?: number, filters?: { search?: string; status?: string; location?: string; dateFrom?: string; dateTo?: string; role?: string }): Promise<{ data: AdminBookingData[]; total: number; page: number; limit: number; totalPages: number }>;
-  getPastBookings(isBciOnly?: boolean, page?: number, limit?: number, payrollPeriod?: string, filters?: { search?: string; status?: string; location?: string; dateFrom?: string; dateTo?: string }): Promise<{ data: AdminBookingData[]; total: number; page: number; limit: number; totalPages: number }>;
+  getBookingAvailability(isBciOnly?: boolean, page?: number, limit?: number, filters?: { search?: string; listingType?: string; location?: string }, sort?: { column: string; direction: 'asc' | 'desc' }): Promise<{ data: BookingAvailabilityData[]; total: number; page: number; limit: number; totalPages: number }>;
+  getPendingPaymentBookings(isBciOnly?: boolean, page?: number, limit?: number, filters?: { search?: string; location?: string; daysOverdue?: string }, sort?: { column: string; direction: 'asc' | 'desc' }): Promise<{ data: PendingPaymentData[]; total: number; page: number; limit: number; totalPages: number }>;
+  getActiveBookings(isBciOnly?: boolean, page?: number, limit?: number, filters?: { search?: string; status?: string; location?: string; dateFrom?: string; dateTo?: string; role?: string }, sort?: { column: string; direction: 'asc' | 'desc' }): Promise<{ data: AdminBookingData[]; total: number; page: number; limit: number; totalPages: number }>;
+  getPastBookings(isBciOnly?: boolean, page?: number, limit?: number, payrollPeriod?: string, filters?: { search?: string; status?: string; location?: string; dateFrom?: string; dateTo?: string }, sort?: { column: string; direction: 'asc' | 'desc' }): Promise<{ data: AdminBookingData[]; total: number; page: number; limit: number; totalPages: number }>;
   
   // Dispute operations
   createDispute(dispute: InsertDispute): Promise<Dispute>;
@@ -2845,7 +2845,7 @@ export class MemStorage implements IStorage {
   }
 
   // Spot Booking Management methods
-  async getBookingAvailability(isBciOnly?: boolean, page: number = 1, limit: number = 9999, filters?: { search?: string; listingType?: string; location?: string }): Promise<{ data: BookingAvailabilityData[]; total: number; page: number; limit: number; totalPages: number }> {
+  async getBookingAvailability(isBciOnly?: boolean, page: number = 1, limit: number = 9999, filters?: { search?: string; listingType?: string; location?: string }, sort?: { column: string; direction: 'asc' | 'desc' }): Promise<{ data: BookingAvailabilityData[]; total: number; page: number; limit: number; totalPages: number }> {
     const today = new Date().toISOString().split('T')[0];
     
     const availableListings = await db
@@ -3009,6 +3009,30 @@ export class MemStorage implements IStorage {
       });
     }
 
+    // Apply sort before pagination
+    const AVAILABILITY_SORT_COLUMNS: Record<string, keyof BookingAvailabilityData> = {
+      spotNumber: 'spotNumber',
+      locationName: 'locationName',
+      spotTypeName: 'spotTypeName',
+      ownerName: 'ownerName',
+      dailyRate: 'dailyRate',
+      availableFrom: 'availableFrom',
+      availableTo: 'availableTo',
+      listingType: 'listingType',
+    };
+    const sortKey = sort?.column && AVAILABILITY_SORT_COLUMNS[sort.column] ? AVAILABILITY_SORT_COLUMNS[sort.column] : 'availableFrom';
+    const sortDir = sort?.direction === 'desc' ? -1 : 1;
+    filteredEntries.sort((a, b) => {
+      const av = a[sortKey];
+      const bv = b[sortKey];
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      if (av < bv) return -1 * sortDir;
+      if (av > bv) return 1 * sortDir;
+      return 0;
+    });
+
     const total = filteredEntries.length;
     const totalPages = limit >= 9999 ? 1 : Math.ceil(total / limit);
     const offset = (page - 1) * limit;
@@ -3017,7 +3041,7 @@ export class MemStorage implements IStorage {
     return { data, total, page, limit, totalPages };
   }
 
-  async getPendingPaymentBookings(isBciOnly?: boolean, page: number = 1, limit: number = 9999, filters?: { search?: string; location?: string; daysOverdue?: string }): Promise<{ data: PendingPaymentData[]; total: number; page: number; limit: number; totalPages: number }> {
+  async getPendingPaymentBookings(isBciOnly?: boolean, page: number = 1, limit: number = 9999, filters?: { search?: string; location?: string; daysOverdue?: string }, sort?: { column: string; direction: 'asc' | 'desc' }): Promise<{ data: PendingPaymentData[]; total: number; page: number; limit: number; totalPages: number }> {
     // Use parameterized query with Drizzle sql template literals
     // Include spot_owner for the assigned-to field (parkingSpots.ownerId)
 
@@ -3074,7 +3098,21 @@ export class MemStorage implements IStorage {
         ${daysOverdueRange === '0-7' ? sqlOp`AND GREATEST(0, EXTRACT(DAY FROM (CURRENT_DATE - b.booking_date::date))::integer) BETWEEN 0 AND 7` : sqlOp``}
         ${daysOverdueRange === '8-30' ? sqlOp`AND GREATEST(0, EXTRACT(DAY FROM (CURRENT_DATE - b.booking_date::date))::integer) BETWEEN 8 AND 30` : sqlOp``}
         ${daysOverdueRange === '30+' ? sqlOp`AND GREATEST(0, EXTRACT(DAY FROM (CURRENT_DATE - b.booking_date::date))::integer) > 30` : sqlOp``}
-      ORDER BY b.created_at DESC
+      ORDER BY ${sqlOp.raw((() => {
+        const PENDING_SORT_COLUMNS: Record<string, string> = {
+          spotNumber: 'ps.spot_number',
+          renterName: "renter.first_name || ' ' || renter.last_name",
+          ownerName: "COALESCE(spot_owner.first_name || ' ' || spot_owner.last_name, '')",
+          bookingDate: 'b.booking_date',
+          totalAmount: 'b.total_amount',
+          daysOverdue: 'GREATEST(0, EXTRACT(DAY FROM (CURRENT_DATE - b.booking_date::date))::integer)',
+          status: 'b.status',
+          createdAt: 'b.created_at',
+        };
+        const col = sort?.column && PENDING_SORT_COLUMNS[sort.column] ? PENDING_SORT_COLUMNS[sort.column] : 'b.created_at';
+        const dir = sort?.direction === 'asc' ? 'ASC' : 'DESC';
+        return `${col} ${dir}`;
+      })())}
       LIMIT ${limit} OFFSET ${offset}
     `;
     
@@ -3120,7 +3158,7 @@ export class MemStorage implements IStorage {
     return { data, total, page, limit, totalPages };
   }
 
-  async getActiveBookings(isBciOnly?: boolean, page: number = 1, limit: number = 9999, filters?: { search?: string; status?: string; location?: string; dateFrom?: string; dateTo?: string; role?: string }): Promise<{ data: AdminBookingData[]; total: number; page: number; limit: number; totalPages: number }> {
+  async getActiveBookings(isBciOnly?: boolean, page: number = 1, limit: number = 9999, filters?: { search?: string; status?: string; location?: string; dateFrom?: string; dateTo?: string; role?: string }, sort?: { column: string; direction: 'asc' | 'desc' }): Promise<{ data: AdminBookingData[]; total: number; page: number; limit: number; totalPages: number }> {
     const today = new Date().toISOString().split('T')[0];
     const offset = (page - 1) * limit;
 
@@ -3193,7 +3231,21 @@ export class MemStorage implements IStorage {
         ${searchPattern && role === 'owner' ? sqlOp`AND (spot_owner.first_name || ' ' || spot_owner.last_name ILIKE ${searchPattern} OR spot_owner.email ILIKE ${searchPattern} OR ps.spot_number ILIKE ${searchPattern} OR (l.building || ' - ' || l.level) ILIKE ${searchPattern})` : sqlOp``}
         ${searchPattern && role === 'renter' ? sqlOp`AND (renter.first_name || ' ' || renter.last_name ILIKE ${searchPattern} OR renter.email ILIKE ${searchPattern} OR ps.spot_number ILIKE ${searchPattern} OR (l.building || ' - ' || l.level) ILIKE ${searchPattern})` : sqlOp``}
         ${searchPattern && !role ? sqlOp`AND (renter.first_name || ' ' || renter.last_name ILIKE ${searchPattern} OR renter.email ILIKE ${searchPattern} OR spot_owner.first_name || ' ' || spot_owner.last_name ILIKE ${searchPattern} OR spot_owner.email ILIKE ${searchPattern} OR ps.spot_number ILIKE ${searchPattern} OR (l.building || ' - ' || l.level) ILIKE ${searchPattern})` : sqlOp``}
-      ORDER BY b.booking_date ASC
+      ORDER BY ${sqlOp.raw((() => {
+        const ACTIVE_SORT_COLUMNS: Record<string, string> = {
+          spotNumber: 'ps.spot_number',
+          renterName: "renter.first_name || ' ' || renter.last_name",
+          ownerName: "COALESCE(spot_owner.first_name || ' ' || spot_owner.last_name, '')",
+          bookingDate: 'b.booking_date',
+          totalAmount: 'b.total_amount',
+          status: 'b.status',
+          paymentStatus: 'b.payment_status',
+          createdAt: 'b.created_at',
+        };
+        const col = sort?.column && ACTIVE_SORT_COLUMNS[sort.column] ? ACTIVE_SORT_COLUMNS[sort.column] : 'b.booking_date';
+        const dir = sort?.direction === 'desc' ? 'DESC' : 'ASC';
+        return `${col} ${dir}`;
+      })())}
       LIMIT ${limit} OFFSET ${offset}
     `;
     
@@ -3247,7 +3299,7 @@ export class MemStorage implements IStorage {
     };
   }
 
-  async getPastBookings(isBciOnly?: boolean, page: number = 1, limit: number = 20, payrollPeriod?: string, filters?: { search?: string; status?: string; location?: string; dateFrom?: string; dateTo?: string }): Promise<{ data: AdminBookingData[]; total: number; page: number; limit: number; totalPages: number }> {
+  async getPastBookings(isBciOnly?: boolean, page: number = 1, limit: number = 20, payrollPeriod?: string, filters?: { search?: string; status?: string; location?: string; dateFrom?: string; dateTo?: string }, sort?: { column: string; direction: 'asc' | 'desc' }): Promise<{ data: AdminBookingData[]; total: number; page: number; limit: number; totalPages: number }> {
     const today = new Date().toISOString().split('T')[0];
 
     const search = filters?.search?.trim() || '';
@@ -3308,7 +3360,20 @@ export class MemStorage implements IStorage {
           ${dateFrom ? sqlOp`AND b.booking_date >= ${dateFrom}` : sqlOp``}
           ${dateTo ? sqlOp`AND b.booking_date <= ${dateTo}` : sqlOp``}
           ${searchPattern ? sqlOp`AND (renter.first_name || ' ' || renter.last_name ILIKE ${searchPattern} OR renter.email ILIKE ${searchPattern} OR spot_owner.first_name || ' ' || spot_owner.last_name ILIKE ${searchPattern} OR spot_owner.email ILIKE ${searchPattern} OR ps.spot_number ILIKE ${searchPattern} OR (l.building || ' - ' || l.level) ILIKE ${searchPattern})` : sqlOp``}
-        ORDER BY b.booking_date DESC
+        ORDER BY ${sqlOp.raw((() => {
+          const PAST_SORT_COLUMNS: Record<string, string> = {
+            spotNumber: 'ps.spot_number',
+            renterName: "renter.first_name || ' ' || renter.last_name",
+            ownerName: "COALESCE(spot_owner.first_name || ' ' || spot_owner.last_name, '')",
+            bookingDate: 'b.booking_date',
+            totalAmount: 'b.total_amount',
+            status: 'b.status',
+            createdAt: 'b.created_at',
+          };
+          const col = sort?.column && PAST_SORT_COLUMNS[sort.column] ? PAST_SORT_COLUMNS[sort.column] : 'b.booking_date';
+          const dir = sort?.direction === 'asc' ? 'ASC' : 'DESC';
+          return `${col} ${dir}`;
+        })())}
       `;
       
       const allResults = await db.execute(allQuery);
@@ -3430,7 +3495,20 @@ export class MemStorage implements IStorage {
         ${dateFrom ? sqlOp`AND b.booking_date >= ${dateFrom}` : sqlOp``}
         ${dateTo ? sqlOp`AND b.booking_date <= ${dateTo}` : sqlOp``}
         ${searchPattern ? sqlOp`AND (renter.first_name || ' ' || renter.last_name ILIKE ${searchPattern} OR renter.email ILIKE ${searchPattern} OR spot_owner.first_name || ' ' || spot_owner.last_name ILIKE ${searchPattern} OR spot_owner.email ILIKE ${searchPattern} OR ps.spot_number ILIKE ${searchPattern} OR (l.building || ' - ' || l.level) ILIKE ${searchPattern})` : sqlOp``}
-      ORDER BY b.booking_date DESC
+      ORDER BY ${sqlOp.raw((() => {
+        const PAST_SORT_COLUMNS: Record<string, string> = {
+          spotNumber: 'ps.spot_number',
+          renterName: "renter.first_name || ' ' || renter.last_name",
+          ownerName: "COALESCE(spot_owner.first_name || ' ' || spot_owner.last_name, '')",
+          bookingDate: 'b.booking_date',
+          totalAmount: 'b.total_amount',
+          status: 'b.status',
+          createdAt: 'b.created_at',
+        };
+        const col = sort?.column && PAST_SORT_COLUMNS[sort.column] ? PAST_SORT_COLUMNS[sort.column] : 'b.booking_date';
+        const dir = sort?.direction === 'asc' ? 'ASC' : 'DESC';
+        return `${col} ${dir}`;
+      })())}
       LIMIT ${limit} OFFSET ${offset}
     `;
     

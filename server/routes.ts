@@ -5256,7 +5256,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         listingType: req.query.listingType as string | undefined,
         location: req.query.location as string | undefined,
       };
-      const result = await storage.getBookingAvailability(isBciOnly, validPage, validLimit, filters);
+      const sortBy = req.query.sortBy as string | undefined;
+      const sortDirRaw = req.query.sortDir as string | undefined;
+      const sort = sortBy ? { column: sortBy, direction: (sortDirRaw === 'desc' ? 'desc' : 'asc') as 'asc' | 'desc' } : undefined;
+      const result = await storage.getBookingAvailability(isBciOnly, validPage, validLimit, filters, sort);
       res.json(result);
     } catch (error) {
       console.error("Error fetching booking availability:", error);
@@ -5278,7 +5281,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         location: req.query.location as string | undefined,
         daysOverdue: req.query.daysOverdue as string | undefined,
       };
-      const result = await storage.getPendingPaymentBookings(isBciOnly, validPage, validLimit, filters);
+      const sortBy = req.query.sortBy as string | undefined;
+      const sortDirRaw = req.query.sortDir as string | undefined;
+      const sort = sortBy ? { column: sortBy, direction: (sortDirRaw === 'desc' ? 'desc' : 'asc') as 'asc' | 'desc' } : undefined;
+      const result = await storage.getPendingPaymentBookings(isBciOnly, validPage, validLimit, filters, sort);
       res.json(result);
     } catch (error) {
       console.error("Error fetching pending payments:", error);
@@ -5305,8 +5311,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         dateTo: req.query.dateTo as string | undefined,
         role: req.query.role as string | undefined,
       };
+      const sortBy = req.query.sortBy as string | undefined;
+      const sortDirRaw = req.query.sortDir as string | undefined;
+      const sort = sortBy ? { column: sortBy, direction: (sortDirRaw === 'desc' ? 'desc' : 'asc') as 'asc' | 'desc' } : undefined;
 
-      const result = await storage.getActiveBookings(isBciOnly, validPage, validLimit, filters);
+      const result = await storage.getActiveBookings(isBciOnly, validPage, validLimit, filters, sort);
       res.json(result);
     } catch (error) {
       console.error("Error fetching active bookings:", error);
@@ -5334,8 +5343,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         dateFrom: req.query.dateFrom as string | undefined,
         dateTo: req.query.dateTo as string | undefined,
       };
+      const sortBy = req.query.sortBy as string | undefined;
+      const sortDirRaw = req.query.sortDir as string | undefined;
+      const sort = sortBy ? { column: sortBy, direction: (sortDirRaw === 'desc' ? 'desc' : 'asc') as 'asc' | 'desc' } : undefined;
       
-      const result = await storage.getPastBookings(isBciOnly, validPage, validLimit, payrollPeriod, filters);
+      const result = await storage.getPastBookings(isBciOnly, validPage, validLimit, payrollPeriod, filters, sort);
       res.json(result);
     } catch (error) {
       console.error("Error fetching past bookings:", error);
