@@ -331,8 +331,8 @@ export default function AdminSpotBookingManagement() {
   const [pastSortDir, setPastSortDir] = useState<'asc' | 'desc' | null>('desc')
   const [availSortCol, setAvailSortCol] = useState<string | null>('availableFrom')
   const [availSortDir, setAvailSortDir] = useState<'asc' | 'desc' | null>('asc')
-  const [pendingSortCol, setPendingSortCol] = useState<string | null>('daysOverdue')
-  const [pendingSortDir, setPendingSortDir] = useState<'asc' | 'desc' | null>('desc')
+  const [pendingSortCol, setPendingSortCol] = useState<string | null>('bookingDate')
+  const [pendingSortDir, setPendingSortDir] = useState<'asc' | 'desc' | null>('asc')
 
   // Cards visibility toggle hook
   const { cardsVisible, toggleCards } = useCardsVisibility("spot-booking-management")
