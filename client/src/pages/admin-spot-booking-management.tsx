@@ -1586,12 +1586,10 @@ export default function AdminSpotBookingManagement() {
 
         {/* Booking Availability Tab */}
         <TabsContent value="availability" className="space-y-4">
-          {scope === 'all' && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Calendar className="h-4 w-4" />
-              <span>Today: {format(new Date(), 'EEEE, MMMM d, yyyy')}</span>
-            </div>
-          )}
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Calendar className="h-4 w-4" />
+            <span>Today: {format(new Date(), 'EEEE, MMMM d, yyyy')}</span>
+          </div>
           <EnhancedFilters
             searchValue={availabilitySearchTerm}
             onSearchChange={setAvailabilitySearchTerm}
@@ -1785,12 +1783,10 @@ export default function AdminSpotBookingManagement() {
 
         {/* Active Bookings Tab */}
         <TabsContent value="active" className="space-y-4">
-          {scope === 'all' && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Calendar className="h-4 w-4" />
-              <span>Today: {format(new Date(), 'EEEE, MMMM d, yyyy')}</span>
-            </div>
-          )}
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Calendar className="h-4 w-4" />
+            <span>Today: {format(new Date(), 'EEEE, MMMM d, yyyy')}</span>
+          </div>
           {/* Enhanced Filters */}
           <EnhancedFilters
             searchValue={searchTerm}
@@ -2058,12 +2054,10 @@ export default function AdminSpotBookingManagement() {
 
         {/* Pending Payments Tab */}
         <TabsContent value="pending-payments" className="space-y-4">
-          {scope === 'all' && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Calendar className="h-4 w-4" />
-              <span>Today: {format(new Date(), 'EEEE, MMMM d, yyyy')}</span>
-            </div>
-          )}
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Calendar className="h-4 w-4" />
+            <span>Today: {format(new Date(), 'EEEE, MMMM d, yyyy')}</span>
+          </div>
           <EnhancedFilters
             searchValue={pendingPaymentsSearchTerm}
             onSearchChange={setPendingPaymentsSearchTerm}
@@ -2513,12 +2507,10 @@ export default function AdminSpotBookingManagement() {
 
         {/* Past Bookings Tab */}
         <TabsContent value="past" className="space-y-4">
-          {scope === 'all' && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Calendar className="h-4 w-4" />
-              <span>Today: {format(new Date(), 'EEEE, MMMM d, yyyy')}</span>
-            </div>
-          )}
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Calendar className="h-4 w-4" />
+            <span>Today: {format(new Date(), 'EEEE, MMMM d, yyyy')}</span>
+          </div>
           {/* Enhanced Filters for Past Bookings */}
           <EnhancedFilters
             searchValue={pastBookingsSearchTerm}
