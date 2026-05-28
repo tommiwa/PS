@@ -2779,6 +2779,78 @@ export default function AdminSpotBookingManagement() {
         </DialogContent>
       </Dialog>
 
+      {/* Cancel Listing Confirmation Dialog */}
+      <Dialog open={showCancelListingDialog} onOpenChange={(open) => {
+        setShowCancelListingDialog(open);
+        if (!open) {
+          setCancelListingReason("");
+        }
+      }}>
+        <DialogContent data-testid="dialog-cancel-listing">
+          <DialogHeader>
+            <DialogTitle>Cancel Spot Listing</DialogTitle>
+            <DialogDescription>
+              This will cancel the listing and make the spot unavailable for booking during this period. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedAvailabilityListing && (
+            <div className="space-y-4">
+              <div className="p-4 bg-muted rounded-lg space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Spot:</span>
+                  <span className="font-medium">{selectedAvailabilityListing.spotNumber}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Location:</span>
+                  <span className="font-medium">{selectedAvailabilityListing.locationName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Date Range:</span>
+                  <span className="font-medium">
+                    {selectedAvailabilityListing.listingType === 'single' && selectedAvailabilityListing.singleDate
+                      ? formatDate(selectedAvailabilityListing.singleDate)
+                      : selectedAvailabilityListing.listingType === 'period'
+                      ? `${formatDate(selectedAvailabilityListing.periodStartDate || selectedAvailabilityListing.availableFrom)} – ${formatDate(selectedAvailabilityListing.periodEndDate || selectedAvailabilityListing.availableTo)}`
+                      : `${formatDate(selectedAvailabilityListing.recurringStartDate || selectedAvailabilityListing.availableFrom)} – ${formatDate(selectedAvailabilityListing.recurringEndDate || selectedAvailabilityListing.availableTo)}`}
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cancel-listing-reason">Cancellation Reason <span className="text-destructive">*</span></Label>
+                <Textarea
+                  id="cancel-listing-reason"
+                  placeholder="Provide a reason for cancelling this listing..."
+                  value={cancelListingReason}
+                  onChange={(e) => setCancelListingReason(e.target.value)}
+                  rows={3}
+                  data-testid="textarea-cancel-listing-reason"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowCancelListingDialog(false);
+                    setCancelListingReason("");
+                  }}
+                  data-testid="button-dismiss-cancel-listing"
+                >
+                  Dismiss
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => selectedAvailabilityListing && cancelListingMutation.mutate({ listingId: selectedAvailabilityListing.id, reason: cancelListingReason })}
+                  disabled={!cancelListingReason.trim() || cancelListingMutation.isPending}
+                  data-testid="button-confirm-cancel-listing"
+                >
+                  {cancelListingMutation.isPending ? "Cancelling..." : "Cancel Listing"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Mark as Paid Confirmation Dialog */}
       <Dialog open={showMarkPaidConfirmDialog} onOpenChange={setShowMarkPaidConfirmDialog}>
         <DialogContent data-testid="dialog-mark-paid-confirm">
