@@ -2847,10 +2847,26 @@ export class MemStorage implements IStorage {
   // Spot Booking Management methods
   async getBookingAvailability(isBciOnly?: boolean, page: number = 1, limit: number = 9999, filters?: { search?: string; listingType?: string; location?: string }, sort?: { column: string; direction: 'asc' | 'desc' }): Promise<{ data: BookingAvailabilityData[]; total: number; page: number; limit: number; totalPages: number }> {
     const today = new Date().toISOString().split('T')[0];
-    
-    const availableListings = await db
-      .select()
+
+    // Single JOIN query — replaces the N+1 per-row lookups (spot, location, spotType, owner)
+    const rows = await db
+      .select({
+        listing: spotListings,
+        spotNumber: parkingSpots.spotNumber,
+        spotIsBciManaged: parkingSpots.isBciManaged,
+        spotOwnerId: parkingSpots.ownerId,
+        locationBuilding: locations.building,
+        locationLevel: locations.level,
+        spotTypeName: spotTypesTable.name,
+        ownerFirstName: users.firstName,
+        ownerLastName: users.lastName,
+        ownerEmail: users.email,
+      })
       .from(spotListings)
+      .innerJoin(parkingSpots, eq(spotListings.spotId, parkingSpots.id))
+      .innerJoin(locations, eq(parkingSpots.locationId, locations.id))
+      .innerJoin(spotTypesTable, eq(parkingSpots.spotTypeId, spotTypesTable.id))
+      .leftJoin(users, eq(parkingSpots.ownerId, users.id))
       .where(
         and(
           eq(spotListings.status, 'available'),
@@ -2864,128 +2880,84 @@ export class MemStorage implements IStorage {
       .orderBy(
         sqlOp`COALESCE(${spotListings.periodStartDate}, ${spotListings.recurringStartDate}, ${spotListings.singleDate})`
       );
-    
-    const enrichedListings = await Promise.all(
-      availableListings.map(async (listing) => {
-        // Fetch related data
-        const [spot] = await db.select().from(parkingSpots).where(eq(parkingSpots.id, listing.spotId)).limit(1);
-        
-        // Early null check for spot
-        if (!spot) {
-          return null;
-        }
-        
-        const [location] = await db.select().from(locations).where(eq(locations.id, spot.locationId)).limit(1);
-        const [spotType] = await db.select().from(spotTypesTable).where(eq(spotTypesTable.id, spot.spotTypeId)).limit(1);
-        const [owner] = await db.select().from(users).where(eq(users.id, listing.ownerId)).limit(1);
-        
-        // Construct location name from location data
-        const locationName = location ? `${location.building} - ${location.level}` : 'Unknown';
-        
-        // Get spot type name
-        const spotTypeName = spotType?.name || 'Unknown';
-        
-        // Construct owner name - show "BCI Workplace Services" only for unassigned BCI-managed spots
-        // If spot has an owner assigned (ownerId on parkingSpots), show their name
-        const spotOwner = spot.ownerId ? await db.select().from(users).where(eq(users.id, spot.ownerId)).limit(1).then(r => r[0]) : null;
-        const ownerName = spotOwner 
-          ? `${spotOwner.firstName || ''} ${spotOwner.lastName || ''}`.trim() || spotOwner.email || 'Unknown'
-          : (spot.isBciManaged ? 'BCI Workplace Services' : 'Unknown');
-        
-        // For period listings, expand into individual day entries
-        // For single listings, return as-is
-        // For recurring listings, return the range (not expanded)
-        const entries: Array<{
-          listing: typeof listing,
-          spot: typeof spot,
-          enrichedData: BookingAvailabilityData
-        }> = [];
-        
-        if (listing.listingType === 'single' && listing.singleDate) {
-          entries.push({
-            listing,
-            spot,
-            enrichedData: {
-              ...listing,
-              spotNumber: spot.spotNumber,
-              locationName,
-              spotTypeName,
-              ownerName,
-              availableFrom: listing.singleDate,
-              availableTo: listing.singleDate
-            } as BookingAvailabilityData
-          });
-        } else if (listing.listingType === 'period' && listing.periodStartDate && listing.periodEndDate) {
-          // Expand period listing into individual day entries
-          const startDate = new Date(listing.periodStartDate + 'T00:00:00Z');
-          const endDate = new Date(listing.periodEndDate + 'T00:00:00Z');
-          const today = new Date().toISOString().split('T')[0];
-          
-          for (let d = new Date(startDate); d <= endDate; d.setUTCDate(d.getUTCDate() + 1)) {
-            const dateStr = d.toISOString().split('T')[0];
-            // Only include dates from today onwards
-            if (dateStr >= today) {
-              entries.push({
-                listing,
-                spot,
-                enrichedData: {
-                  ...listing,
-                  id: `${listing.id}-${dateStr}`, // Unique ID for each day
-                  spotNumber: spot.spotNumber,
-                  locationName,
-                  spotTypeName,
-                  ownerName,
-                  listingType: 'single', // Show as single day in the UI
-                  singleDate: dateStr,
-                  availableFrom: dateStr,
-                  availableTo: dateStr
-                } as BookingAvailabilityData
-              });
-            }
+
+    // Build enriched entries in memory — no additional DB calls inside the loop
+    const allRawEntries: Array<{ enrichedData: BookingAvailabilityData; spotIsBciManaged: boolean; spotOwnerId: string | null }> = [];
+
+    for (const row of rows) {
+      const { listing, spotNumber, spotIsBciManaged, spotOwnerId, locationBuilding, locationLevel, spotTypeName, ownerFirstName, ownerLastName, ownerEmail } = row;
+
+      const locationName = `${locationBuilding} - ${locationLevel}`;
+      const ownerName = spotOwnerId
+        ? `${ownerFirstName || ''} ${ownerLastName || ''}`.trim() || ownerEmail || 'Unknown'
+        : (spotIsBciManaged ? 'BCI Workplace Services' : 'Unknown');
+
+      const baseData = {
+        ...listing,
+        spotNumber,
+        locationName,
+        spotTypeName: spotTypeName || 'Unknown',
+        ownerName,
+      };
+
+      if (listing.listingType === 'single' && listing.singleDate) {
+        allRawEntries.push({
+          enrichedData: {
+            ...baseData,
+            availableFrom: listing.singleDate,
+            availableTo: listing.singleDate,
+          } as BookingAvailabilityData,
+          spotIsBciManaged,
+          spotOwnerId,
+        });
+      } else if (listing.listingType === 'period' && listing.periodStartDate && listing.periodEndDate) {
+        // Expand period listing into individual day entries
+        const startDate = new Date(listing.periodStartDate + 'T00:00:00Z');
+        const endDate = new Date(listing.periodEndDate + 'T00:00:00Z');
+
+        for (let d = new Date(startDate); d <= endDate; d.setUTCDate(d.getUTCDate() + 1)) {
+          const dateStr = d.toISOString().split('T')[0];
+          // Only include dates from today onwards
+          if (dateStr >= today) {
+            allRawEntries.push({
+              enrichedData: {
+                ...baseData,
+                id: `${listing.id}-${dateStr}`, // Unique ID for each day
+                listingType: 'single', // Show as single day in the UI
+                singleDate: dateStr,
+                availableFrom: dateStr,
+                availableTo: dateStr,
+              } as BookingAvailabilityData,
+              spotIsBciManaged,
+              spotOwnerId,
+            });
           }
-        } else if (listing.listingType === 'recurring') {
-          entries.push({
-            listing,
-            spot,
-            enrichedData: {
-              ...listing,
-              spotNumber: spot.spotNumber,
-              locationName,
-              spotTypeName,
-              ownerName,
-              availableFrom: listing.recurringStartDate || '',
-              availableTo: listing.recurringEndDate || 'Ongoing'
-            } as BookingAvailabilityData
-          });
         }
-        
-        return {
-          listing,
-          spot,
-          entries
-        };
-      })
-    );
-    
-    // Filter out null entries (where spot was not found)
-    const validListings = enrichedListings.filter((item): item is NonNullable<typeof item> => item !== null);
-    
-    // Flatten all entries from all listings
-    const allEntries = validListings.flatMap(item => item.entries);
-    
+      } else if (listing.listingType === 'recurring') {
+        allRawEntries.push({
+          enrichedData: {
+            ...baseData,
+            availableFrom: listing.recurringStartDate || '',
+            availableTo: listing.recurringEndDate || 'Ongoing',
+          } as BookingAvailabilityData,
+          spotIsBciManaged,
+          spotOwnerId,
+        });
+      }
+    }
+
     // Filter by scope:
     // - Shared Pool (isBciOnly=true): BCI-managed AND no owner assigned
-    // - Assigned Spots (isBciOnly=false): everything NOT in shared pool (ensures no data loss)
+    // - Assigned Spots (isBciOnly=false): everything NOT in shared pool (has owner OR is not BCI-managed)
     let filteredEntries: BookingAvailabilityData[];
     if (isBciOnly) {
-      filteredEntries = allEntries
-        .filter(entry => entry.spot.isBciManaged && !entry.spot.ownerId)
-        .map(entry => entry.enrichedData);
+      filteredEntries = allRawEntries
+        .filter(e => e.spotIsBciManaged && !e.spotOwnerId)
+        .map(e => e.enrichedData);
     } else {
-      // Assigned Spots: everything NOT in shared pool (has owner OR is not BCI-managed)
-      filteredEntries = allEntries
-        .filter(entry => entry.spot.ownerId !== null || !entry.spot.isBciManaged)
-        .map(entry => entry.enrichedData);
+      filteredEntries = allRawEntries
+        .filter(e => e.spotOwnerId !== null || !e.spotIsBciManaged)
+        .map(e => e.enrichedData);
     }
 
     // Apply search and filter params before pagination
