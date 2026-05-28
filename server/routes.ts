@@ -5247,6 +5247,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const scope = req.query.scope as string | undefined;
       const isBciOnly = scope === 'bci';
+      // "all=true" mode: return full unfiltered/unsorted dataset for client-side processing
+      if (req.query.all === 'true') {
+        const result = await storage.getBookingAvailability(isBciOnly, 1, 99999);
+        return res.json(result);
+      }
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 20;
       const validPage = Math.max(1, page);
@@ -5297,6 +5302,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const scope = req.query.scope as string | undefined;
       const isBciOnly = scope === 'bci';
+      // "all=true" mode: return full unfiltered/unsorted dataset for client-side processing
+      if (req.query.all === 'true') {
+        const result = await storage.getActiveBookings(isBciOnly, 1, 99999);
+        return res.json(result);
+      }
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 20;
 

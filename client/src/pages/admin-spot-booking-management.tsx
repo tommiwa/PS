@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { formatCurrency } from "@/lib/utils"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { useLocation, useSearch, Link } from "wouter"
@@ -6,6 +6,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient"
 import { useToast } from "@/hooks/use-toast"
 import { useConfirm, confirmations } from "@/hooks/use-confirm"
 import { useTableSort } from "@/hooks/use-table-sort"
+import { useClientTableData, includesSearch, compareValues, type ClientSortState } from "@/hooks/use-client-table-data"
 import { useCardsVisibility } from "@/hooks/use-cards-visibility"
 import { useLanguage } from "@/hooks/use-language"
 import { BookingActivityList } from "@/components/booking-activity-list"
@@ -344,8 +345,8 @@ export default function AdminSpotBookingManagement() {
     setIsRefreshing(true)
     try {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-availability", scope] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/active-bookings", scope] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-availability", scope, "all"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/active-bookings", scope, "all"] }),
         queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-payments", scope] }),
         queryClient.invalidateQueries({ queryKey: ["/api/admin/payroll-summary"] }),
         queryClient.invalidateQueries({ queryKey: ["/api/admin/past-bookings"] }),
@@ -395,41 +396,18 @@ export default function AdminSpotBookingManagement() {
 
   const STALE_TIME = 2 * 60 * 1000; // 2 minutes
 
-  // Fetch active bookings with server-side pagination and filtering — deferred until the "Active/Upcoming Bookings" tab is visited
-  const activeBookingsFilters = {
-    search: searchTerm,
-    status: filterValues.status as string | undefined,
-    location: filterValues.location as string | undefined,
-    dateFrom: filterValues.dateRangeFrom as string | undefined,
-    dateTo: filterValues.dateRangeTo as string | undefined,
-    role: filterValues.role as string | undefined,
-  };
-  const { data: activeBookingsResponse, isLoading: isLoadingActive } = useQuery<{
+  // Fetch ALL active bookings once per scope — client-side filter/sort/paginate from here
+  const { data: activeBookingsAllResponse, isLoading: isLoadingActive } = useQuery<{
     data: AdminBookingData[];
     total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
   }>({
-    queryKey: ["/api/admin/active-bookings", scope, activeBookingsPageIndex + 1, activeBookingsPageSize, activeBookingsFilters, activeSortCol, activeSortDir],
-    queryFn: () => {
-      const params = new URLSearchParams({
-        scope,
-        page: String(activeBookingsPageIndex + 1),
-        limit: String(activeBookingsPageSize),
-      });
-      if (activeBookingsFilters.search) params.set('search', activeBookingsFilters.search);
-      if (activeBookingsFilters.status && activeBookingsFilters.status !== 'all') params.set('status', activeBookingsFilters.status);
-      if (activeBookingsFilters.location && activeBookingsFilters.location !== 'all') params.set('location', activeBookingsFilters.location);
-      if (activeBookingsFilters.dateFrom) params.set('dateFrom', activeBookingsFilters.dateFrom);
-      if (activeBookingsFilters.dateTo) params.set('dateTo', activeBookingsFilters.dateTo);
-      if (activeBookingsFilters.role && activeBookingsFilters.role !== 'all') params.set('role', activeBookingsFilters.role);
-      if (activeSortCol && activeSortDir) { params.set('sortBy', activeSortCol); params.set('sortDir', activeSortDir); }
-      return fetch(`/api/admin/active-bookings?${params.toString()}`, { credentials: 'include' }).then(r => r.json());
-    },
+    queryKey: ["/api/admin/active-bookings", scope, "all"],
+    queryFn: () =>
+      fetch(`/api/admin/active-bookings?scope=${scope}&all=true`, { credentials: 'include' }).then(r => r.json()),
     enabled: activeTab === 'active',
     staleTime: STALE_TIME
   });
+  const activeBookingsRawData = activeBookingsAllResponse?.data ?? [];
 
   // Fetch booking activity data — deferred until the "Active/Upcoming Bookings" tab is visited
   const { data: bookingActivity, isLoading: isLoadingActivity } = useQuery({
@@ -480,29 +458,17 @@ export default function AdminSpotBookingManagement() {
   const pastBookings = pastBookingsResponse?.data ?? [];
   const pastBookingsTotal = pastBookingsResponse?.total ?? 0;
 
-  // Fetch booking availability — loads immediately as this is the default tab
-  const { data: bookingAvailabilityResponse, isLoading: isLoadingAvailability } = useQuery<{
+  // Fetch ALL booking availability once per scope — client-side filter/sort/paginate from here
+  const { data: bookingAvailabilityAllResponse, isLoading: isLoadingAvailability } = useQuery<{
     data: BookingAvailabilityData[];
     total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
   }>({
-    queryKey: ["/api/admin/booking-availability", scope, availabilityPageIndex + 1, availabilityPageSize, availabilitySearchTerm, availabilityFilterValues.listingType ?? '', availabilityFilterValues.location ?? '', availSortCol, availSortDir],
-    queryFn: () => {
-      const params = new URLSearchParams({
-        scope,
-        page: String(availabilityPageIndex + 1),
-        limit: String(availabilityPageSize),
-      });
-      if (availabilitySearchTerm.trim()) params.set('search', availabilitySearchTerm.trim());
-      if (availabilityFilterValues.listingType && availabilityFilterValues.listingType !== 'all') params.set('listingType', availabilityFilterValues.listingType);
-      if (availabilityFilterValues.location && availabilityFilterValues.location !== 'all') params.set('location', availabilityFilterValues.location);
-      if (availSortCol && availSortDir) { params.set('sortBy', availSortCol); params.set('sortDir', availSortDir); }
-      return fetch(`/api/admin/booking-availability?${params}`, { credentials: 'include' }).then(r => r.json());
-    },
+    queryKey: ["/api/admin/booking-availability", scope, "all"],
+    queryFn: () =>
+      fetch(`/api/admin/booking-availability?scope=${scope}&all=true`, { credentials: 'include' }).then(r => r.json()),
     staleTime: STALE_TIME
   });
+  const bookingAvailabilityRawData = bookingAvailabilityAllResponse?.data ?? [];
 
   // Fetch pending payments — deferred until the "Pending Payments" tab is visited
   const { data: pendingPaymentsResponse, isLoading: isLoadingPendingPayments } = useQuery<{
@@ -604,13 +570,122 @@ export default function AdminSpotBookingManagement() {
   }, [locations]);
 
 
-  // Use API data directly - show real data or empty states
-  const displayActiveBookings = activeBookingsResponse?.data ?? [];
-  const activeBookingsTotal = activeBookingsResponse?.total ?? 0;
+  // ── Client-side data for Booking Availability ─────────────────────────────
+  const availClientSortState: ClientSortState = { column: availSortCol, direction: availSortDir };
 
-  // Extract server-paginated data for availability and pending payments
-  const bookingAvailability = bookingAvailabilityResponse?.data ?? [];
-  const bookingAvailabilityTotal = bookingAvailabilityResponse?.total ?? 0;
+  const availFilterFn = useCallback((item: BookingAvailabilityData): boolean => {
+    const search = availabilitySearchTerm.trim().toLowerCase();
+    if (search) {
+      const match =
+        includesSearch(item.spotNumber, search) ||
+        includesSearch(item.locationName, search) ||
+        includesSearch(item.ownerName, search) ||
+        includesSearch(item.spotTypeName, search);
+      if (!match) return false;
+    }
+    const lt = availabilityFilterValues.listingType as string | undefined;
+    if (lt && lt !== 'all' && item.listingType !== lt) return false;
+    const loc = availabilityFilterValues.location as string | undefined;
+    if (loc && loc !== 'all' && !includesSearch(item.locationName, loc)) return false;
+    return true;
+  }, [availabilitySearchTerm, availabilityFilterValues]);
+
+  const availSortFn = useCallback((a: BookingAvailabilityData, b: BookingAvailabilityData, ss: ClientSortState): number => {
+    const col = ss.column ?? 'availableFrom';
+    const dir = ss.direction ?? 'asc';
+    const map: Record<string, (x: BookingAvailabilityData) => string | number> = {
+      spotNumber: x => x.spotNumber,
+      locationName: x => x.locationName,
+      spotTypeName: x => x.spotTypeName,
+      ownerName: x => x.ownerName,
+      dailyRate: x => x.dailyRate,
+      availableFrom: x => x.availableFrom,
+      availableTo: x => x.availableTo,
+      listingType: x => x.listingType,
+    };
+    const getter = map[col] ?? map['availableFrom'];
+    return compareValues(getter(a), getter(b), dir);
+  }, []);
+
+  const { page: bookingAvailability, total: bookingAvailabilityTotal } = useClientTableData(
+    bookingAvailabilityRawData,
+    availFilterFn,
+    availSortFn,
+    availClientSortState,
+    availabilityPageIndex,
+    availabilityPageSize
+  );
+
+  // ── Client-side data for Active/Upcoming Bookings ─────────────────────────
+  const activeClientSortState: ClientSortState = { column: activeSortCol, direction: activeSortDir };
+
+  const activeFilterFn = useCallback((item: AdminBookingData): boolean => {
+    const search = searchTerm.trim().toLowerCase();
+    const role = filterValues.role as string | undefined;
+    if (search) {
+      let match = false;
+      if (!role || role === 'all') {
+        match =
+          includesSearch(item.renterName, search) ||
+          includesSearch(item.renterEmail, search) ||
+          includesSearch(item.ownerName, search) ||
+          includesSearch(item.ownerEmail, search) ||
+          includesSearch(item.spotNumber, search) ||
+          includesSearch(item.spotLocation, search);
+      } else if (role === 'renter') {
+        match =
+          includesSearch(item.renterName, search) ||
+          includesSearch(item.renterEmail, search) ||
+          includesSearch(item.spotNumber, search) ||
+          includesSearch(item.spotLocation, search);
+      } else if (role === 'owner') {
+        match =
+          includesSearch(item.ownerName, search) ||
+          includesSearch(item.ownerEmail, search) ||
+          includesSearch(item.spotNumber, search) ||
+          includesSearch(item.spotLocation, search);
+      }
+      if (!match) return false;
+    }
+    const status = filterValues.status as string | undefined;
+    if (status && status !== 'all' && item.status !== status) return false;
+    const loc = filterValues.location as string | undefined;
+    if (loc && loc !== 'all' && !includesSearch(item.spotLocation, loc)) return false;
+    const dateFrom = filterValues.dateRangeFrom as string | undefined;
+    if (dateFrom && item.bookingDate < dateFrom) return false;
+    const dateTo = filterValues.dateRangeTo as string | undefined;
+    if (dateTo && item.bookingDate > dateTo) return false;
+    return true;
+  }, [searchTerm, filterValues]);
+
+  const activeSortFn = useCallback((a: AdminBookingData, b: AdminBookingData, ss: ClientSortState): number => {
+    const col = ss.column ?? 'bookingDate';
+    const dir = ss.direction ?? 'asc';
+    const map: Record<string, (x: AdminBookingData) => string | number> = {
+      spotNumber: x => x.spotNumber,
+      renterName: x => x.renterName,
+      ownerName: x => x.ownerName,
+      bookingDate: x => x.bookingDate,
+      totalAmount: x => Number(x.totalAmount),
+      status: x => x.status,
+      paymentStatus: x => x.paymentStatus,
+      createdAt: x => x.createdAt,
+    };
+    const getter = map[col] ?? map['bookingDate'];
+    return compareValues(getter(a), getter(b), dir);
+  }, []);
+
+  const { page: paginatedActiveBookings, total: activeBookingsTotal } = useClientTableData(
+    activeBookingsRawData,
+    activeFilterFn,
+    activeSortFn,
+    activeClientSortState,
+    activeBookingsPageIndex,
+    activeBookingsPageSize
+  );
+  const displayActiveBookings = paginatedActiveBookings;
+
+  // Extract server-side data for pending payments
   const pendingPayments = pendingPaymentsResponse?.data ?? [];
   const pendingPaymentsTotal = pendingPaymentsResponse?.total ?? 0;
   
@@ -633,9 +708,6 @@ export default function AdminSpotBookingManagement() {
   };
   const displayAnalytics = bookingAnalytics || defaultAnalytics;
 
-  // Active bookings are filtered and sorted server-side; use the fetched page data directly
-  const filteredActiveBookings = displayActiveBookings;
-
   // Helper to cycle sort state: null → asc → desc → null
   const cycleSortDir = (current: 'asc' | 'desc' | null, col: string, activeCol: string | null): 'asc' | 'desc' | null => {
     if (activeCol !== col) return 'asc';
@@ -650,7 +722,7 @@ export default function AdminSpotBookingManagement() {
   const availabilitySortState = { column: availSortCol, direction: availSortDir };
   const pendingPaymentsSortState = { column: pendingSortCol, direction: pendingSortDir };
 
-  // Sort handlers for each server-paginated tab (reset to page 1 on sort change)
+  // Sort handlers — client-side tabs reset page index for UX consistency
   const handleSort = (col: string) => {
     const newDir = cycleSortDir(activeSortDir, col, activeSortCol);
     setActiveSortCol(newDir === null ? null : col);
@@ -709,10 +781,6 @@ export default function AdminSpotBookingManagement() {
     "timestamp", // Default sort by timestamp
     "desc" // Most recent first
   );
-
-  // Active bookings are sorted and paginated server-side; use raw data directly
-  const paginatedActiveBookings = displayActiveBookings;
-
 
   // paginatedPastBookings removed - now using server-side pagination via pastBookings directly
 
@@ -1003,7 +1071,7 @@ export default function AdminSpotBookingManagement() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-availability", scope] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-availability", scope, "all"] });
       
       toast({
         title: "Listing Cancelled",
@@ -1036,7 +1104,7 @@ export default function AdminSpotBookingManagement() {
     onSuccess: async (data, bookingId) => {
       // Invalidate queries
       queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-payments", scope] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/active-bookings", scope] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/active-bookings", scope, "all"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-activity", scope] });
       
       // Refetch the booking and update selectedBooking state
@@ -1084,7 +1152,7 @@ export default function AdminSpotBookingManagement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/disputes"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/active-bookings", scope] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/active-bookings", scope, "all"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-payments", scope] });
       toast({
         title: "Dispute Created",
@@ -1146,7 +1214,7 @@ export default function AdminSpotBookingManagement() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/active-bookings", scope] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/active-bookings", scope, "all"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-payments", scope] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/past-bookings", scope] });
       toast({
