@@ -3040,9 +3040,6 @@ export class MemStorage implements IStorage {
         ${daysOverdueRange === '8-30' ? sqlOp`AND GREATEST(0, EXTRACT(DAY FROM (CURRENT_DATE - b.booking_date::date))::integer) BETWEEN 8 AND 30` : sqlOp``}
         ${daysOverdueRange === '30+' ? sqlOp`AND GREATEST(0, EXTRACT(DAY FROM (CURRENT_DATE - b.booking_date::date))::integer) > 30` : sqlOp``}
     `;
-    const countResults = await db.execute(countQuery);
-    const total = parseInt((countResults as any).rows?.[0]?.total || '0', 10);
-
     const offset = (page - 1) * limit;
     const baseQuery = sqlOp`
       SELECT 
@@ -3088,7 +3085,11 @@ export class MemStorage implements IStorage {
       LIMIT ${limit} OFFSET ${offset}
     `;
     
-    const results = await db.execute(baseQuery);
+    const [countResults, results] = await Promise.all([
+      db.execute(countQuery),
+      db.execute(baseQuery),
+    ]);
+    const total = parseInt((countResults as any).rows?.[0]?.total || '0', 10);
     
     const data = ((results as any).rows || []).map((row: any) => {
       const renterName = row.renter_first_name && row.renter_last_name 
@@ -3161,9 +3162,6 @@ export class MemStorage implements IStorage {
         ${searchPattern && role === 'renter' ? sqlOp`AND (renter.first_name || ' ' || renter.last_name ILIKE ${searchPattern} OR renter.email ILIKE ${searchPattern} OR ps.spot_number ILIKE ${searchPattern} OR (l.building || ' - ' || l.level) ILIKE ${searchPattern})` : sqlOp``}
         ${searchPattern && !role ? sqlOp`AND (renter.first_name || ' ' || renter.last_name ILIKE ${searchPattern} OR renter.email ILIKE ${searchPattern} OR spot_owner.first_name || ' ' || spot_owner.last_name ILIKE ${searchPattern} OR spot_owner.email ILIKE ${searchPattern} OR ps.spot_number ILIKE ${searchPattern} OR (l.building || ' - ' || l.level) ILIKE ${searchPattern})` : sqlOp``}
     `;
-    const countResults = await db.execute(countQuery);
-    const total = parseInt((countResults as any).rows?.[0]?.total || '0', 10);
-
     // Use parameterized query with Drizzle sql template literals
     // Include spot_owner for the assigned-to field (parkingSpots.ownerId)
     const baseQuery = sqlOp`
@@ -3221,7 +3219,11 @@ export class MemStorage implements IStorage {
       LIMIT ${limit} OFFSET ${offset}
     `;
     
-    const results = await db.execute(baseQuery);
+    const [countResults, results] = await Promise.all([
+      db.execute(countQuery),
+      db.execute(baseQuery),
+    ]);
+    const total = parseInt((countResults as any).rows?.[0]?.total || '0', 10);
     
     const data = ((results as any).rows || []).map((row: any) => {
       const renterName = row.renter_first_name && row.renter_last_name 
@@ -3428,9 +3430,6 @@ export class MemStorage implements IStorage {
         ${searchPattern ? sqlOp`AND (renter.first_name || ' ' || renter.last_name ILIKE ${searchPattern} OR renter.email ILIKE ${searchPattern} OR spot_owner.first_name || ' ' || spot_owner.last_name ILIKE ${searchPattern} OR spot_owner.email ILIKE ${searchPattern} OR ps.spot_number ILIKE ${searchPattern} OR (l.building || ' - ' || l.level) ILIKE ${searchPattern})` : sqlOp``}
     `;
     
-    const countResults = await db.execute(countQuery);
-    const total = parseInt((countResults as any).rows?.[0]?.total || '0', 10);
-    
     // Use parameterized query with Drizzle sql template literals
     // Include spot_owner for the assigned-to field (parkingSpots.ownerId)
     const baseQuery = sqlOp`
@@ -3484,7 +3483,11 @@ export class MemStorage implements IStorage {
       LIMIT ${limit} OFFSET ${offset}
     `;
     
-    const results = await db.execute(baseQuery);
+    const [countResults, results] = await Promise.all([
+      db.execute(countQuery),
+      db.execute(baseQuery),
+    ]);
+    const total = parseInt((countResults as any).rows?.[0]?.total || '0', 10);
     
     const data = ((results as any).rows || []).map((row: any) => {
       const renterName = row.renter_first_name && row.renter_last_name 
