@@ -113,7 +113,7 @@ app.use((req, res, next) => {
 
 ## Terms and Conditions
 
-**Effective Date: May 29, 2025**
+**Effective Date: June 2, 2026**
 
 These Terms and Conditions ("Terms") govern your use of BCI's ParkShare application (the "App"). In these Terms, "we," "us," and "our" refer to BCI. "You" and "your" refer to the User accessing or using the App. By accessing or using the App, you agree to be bound by these Terms.
 
@@ -254,7 +254,7 @@ Questions regarding these Terms or the App should be directed to workplaceservic
 
 # ParkShare Privacy Notice
 
-**Last Updated: May 29, 2025**
+**Last Updated: June 2, 2026**
 
 This Privacy Notice explains how we collect, use, disclose and protect your personal information when you use BCI's ParkShare application (the "App"). In this Privacy Notice, "we," "us," and "our" refer to BCI. "You" and "your" refer to the individual using the App.
 
