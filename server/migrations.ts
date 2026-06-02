@@ -296,6 +296,20 @@ const migrations: MigrationCheck[] = [
     ],
   },
   {
+    name: "parking_spots_deleted_at",
+    checkQuery: `SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'parking_spots' AND column_name = 'deleted_at')`,
+    migrationStatements: [
+      `ALTER TABLE parking_spots ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP`,
+    ],
+  },
+  {
+    name: "spot_listings_deleted_at",
+    checkQuery: `SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'spot_listings' AND column_name = 'deleted_at')`,
+    migrationStatements: [
+      `ALTER TABLE spot_listings ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP`,
+    ],
+  },
+  {
     name: "soft_delete_orphaned_split_listings",
     checkQuery: `
       SELECT NOT EXISTS (
