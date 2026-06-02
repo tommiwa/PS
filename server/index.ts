@@ -113,7 +113,7 @@ app.use((req, res, next) => {
 
 ## Terms and Conditions
 
-**Effective Date: February 11, 2026**
+**Effective Date: May 29, 2025**
 
 These Terms and Conditions ("Terms") govern your use of BCI's ParkShare application (the "App"). In these Terms, "we," "us," and "our" refer to BCI. "You" and "your" refer to the User accessing or using the App. By accessing or using the App, you agree to be bound by these Terms.
 
@@ -184,6 +184,18 @@ Users are responsible for maintaining their own records of all bookings, cancell
 
 ---
 
+## Unauthorized Use of Parking Stalls and Wage Assignment
+
+For purposes of these Terms, a User's use, occupation of, parking in, or accessing of any service or amenity associated with any parking stall, including an electric vehicle charger, without an active booking through the App for that parking stall constitutes unauthorized use. Unauthorized use includes use, occupation, parking, or access to any service or amenity associated with a parking stall even if the User has a parking lease for a different parking stall, uses the parking stall or associated service or amenity only briefly, or was unaware that a booking through the App was required.
+
+By accessing or using the App and accepting these Terms, each User authorizes BCI to deduct from the User's wages an amount equal to one day's cost of leasing the applicable parking stall for each day on which the User engages in unauthorized use of that parking stall or any service or amenity associated with that parking stall, including an electric vehicle charger. This authorization constitutes an assignment of wages by the User to BCI in respect of such unauthorized use.
+
+The charge described in section 8.2 is a daily flat rate for the applicable parking stall and will not be prorated based on the duration or nature of the unauthorized use, including where the unauthorized use occurs for only part of a day or involves accessing an electric vehicle charger without otherwise parking in the stall. This amount is intended to reflect the daily leasing cost of the applicable parking stall and is not a disciplinary or administrative penalty.
+
+BCI is not required to provide a warning or notice of unauthorized use before applying the charge described in section 8.2. However, as an administrative practice, BCI may issue a warning in respect of unauthorized use. Any such warning is provided at BCI's discretion and does not limit BCI's right to apply the charge for the same or any subsequent instance of unauthorized use.
+
+---
+
 ## Liability and Indemnification
 
 BCI provides the App on an "as is" basis and makes no warranties, express or implied, regarding its availability, accuracy, or fitness for any particular purpose.
@@ -204,8 +216,11 @@ BCI may suspend or terminate a User's access to the App at any time, with or wit
 
 - violation of these Terms;
 - violation of the User's Sublease Agreement;
-- misuse of the App; or
+- misuse of the App;
+- unauthorized use; or
 - any conduct that BCI determines, in its sole discretion, is detrimental to other Users or BCI.
+
+Any conduct described in section 10.1 may result in disciplinary action by BCI and may be escalated internally, including to BCI's Chief Operating Officer or their designate. Any disciplinary action taken by BCI is separate from any charge or wage assignment described in section 8.
 
 Termination of a User's Sublease Agreement will terminate their access to the App as a Tenant.
 
@@ -239,7 +254,7 @@ Questions regarding these Terms or the App should be directed to workplaceservic
 
 # ParkShare Privacy Notice
 
-**Last Updated: February 11, 2026**
+**Last Updated: May 29, 2025**
 
 This Privacy Notice explains how we collect, use, disclose and protect your personal information when you use BCI's ParkShare application (the "App"). In this Privacy Notice, "we," "us," and "our" refer to BCI. "You" and "your" refer to the individual using the App.
 
