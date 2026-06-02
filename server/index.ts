@@ -294,18 +294,24 @@ If you have questions about the collection of your personal information through 
         const { createHash } = await import("crypto");
         const currentHash = createHash("sha256").update(activeTerms.content.trim()).digest("hex").substring(0, 16);
         const targetHash = createHash("sha256").update(initialTermsContent.trim()).digest("hex").substring(0, 16);
+        const { termsVersions } = await import("@shared/schema");
+        const { eq } = await import("drizzle-orm");
         if (currentHash !== targetHash) {
-          const { termsVersions } = await import("@shared/schema");
-          const { eq } = await import("drizzle-orm");
           const newVersion = activeTerms.version + 1;
           await db.update(termsVersions)
             .set({ 
               content: initialTermsContent,
               version: newVersion,
+              publishedAt: new Date(),
               updatedAt: new Date()
             })
             .where(eq(termsVersions.id, activeTerms.id));
           log(`Migrated Terms and Conditions to v${newVersion} (content hash ${currentHash} -> ${targetHash})`);
+        } else if (!activeTerms.publishedAt) {
+          await db.update(termsVersions)
+            .set({ publishedAt: new Date(), updatedAt: new Date() })
+            .where(eq(termsVersions.id, activeTerms.id));
+          log(`Backfilled missing publishedAt on Terms v${activeTerms.version}`);
         }
       }
     } catch (error) {
