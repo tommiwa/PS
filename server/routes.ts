@@ -3275,7 +3275,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // SECURITY: Get the parking spot to validate bookability
       const spot = await storage.getParkingSpot(validatedData.spotId);
-      if (!spot) {
+      if (!spot || spot.deletedAt) {
         return res.status(404).json({ error: "Parking spot not found" });
       }
 
@@ -3404,6 +3404,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(and(
           eq(spotListings.spotId, validatedData.spotId),
           eq(spotListings.status, 'available'),
+          isNull(spotListings.deletedAt),
           eq(spotListings.listingType, 'single'),
           eq(spotListings.singleDate, bookingDate)
         ))
@@ -3417,6 +3418,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .where(and(
             eq(spotListings.spotId, validatedData.spotId),
             eq(spotListings.status, 'available'),
+            isNull(spotListings.deletedAt),
             eq(spotListings.listingType, 'period'),
             sql`${spotListings.periodStartDate} <= ${bookingDate}`,
             sql`${spotListings.periodEndDate} >= ${bookingDate}`
@@ -3438,6 +3440,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .where(and(
             eq(spotListings.spotId, validatedData.spotId),
             eq(spotListings.status, 'available'),
+            isNull(spotListings.deletedAt),
             eq(spotListings.listingType, 'recurring'),
             sql`${spotListings.recurringStartDate} <= ${bookingDate}`,
             sql`(${spotListings.recurringEndDate} IS NULL OR ${spotListings.recurringEndDate} >= ${bookingDate})`
@@ -7453,7 +7456,7 @@ The BCI ParkShare Team`;
       const existingSpot = await storage.getParkingSpot(spotId);
       const user = await storage.getUser(userId);
       
-      if (!existingSpot) {
+      if (!existingSpot || existingSpot.deletedAt) {
         return res.status(404).json({ error: "Parking spot not found" });
       }
       
@@ -8446,14 +8449,15 @@ The BCI ParkShare Team`;
         });
       }
       
-      // Delete related records first to avoid foreign key violations
-      // 1. Delete spot assignment history
-      await storage.deleteSpotAssignmentHistoryBySpotId(id);
-      
-      // 2. Delete any spot locks
+      // Clean up active records before soft-deleting the spot
+      // 1. Delete any spot locks (in-progress booking attempts)
       await storage.deleteSpotLocksBySpotId(id);
       
+      // 2. Cancel pending scheduled assignments for this spot
+      await storage.cancelSpotPendingScheduledAssignments(id);
+      
       // 3. Soft-delete spot listings (set deleted_at) - this includes unbooked available listings
+      // NOTE: spot assignment history is intentionally NOT deleted so audit trail is preserved
       await storage.softDeleteListingsBySpotId(id);
       
       const deleted = await storage.deleteParkingSpot(id);
@@ -9805,13 +9809,14 @@ The BCI ParkShare Team`;
         return res.status(404).json({ error: "User not found" });
       }
       
-      // Check if user already has a BCI-managed spot
+      // Check if user already has an active (non-deleted) BCI-managed spot
       const userBciSpots = await db
         .select()
         .from(parkingSpots)
         .where(and(
           eq(parkingSpots.ownerId, userId),
-          eq(parkingSpots.isBciManaged, true)
+          eq(parkingSpots.isBciManaged, true),
+          isNull(parkingSpots.deletedAt)
         ))
         .limit(1);
       

@@ -882,12 +882,12 @@ export class MemStorage implements IStorage {
   }
 
   async getParkingSpotsByOwner(ownerId: string): Promise<ParkingSpot[]> {
-    return await db.select().from(parkingSpots).where(eq(parkingSpots.ownerId, ownerId));
+    return await db.select().from(parkingSpots).where(and(eq(parkingSpots.ownerId, ownerId), isNull(parkingSpots.deletedAt)));
   }
 
   // Enrich spot with location and spot type info (for user profile display)
   async getParkingSpotsByOwnerEnriched(ownerId: string): Promise<any[]> {
-    const spots = await db.select().from(parkingSpots).where(eq(parkingSpots.ownerId, ownerId));
+    const spots = await db.select().from(parkingSpots).where(and(eq(parkingSpots.ownerId, ownerId), isNull(parkingSpots.deletedAt)));
     
     return Promise.all(spots.map(async (spot) => {
       // Get location info
@@ -922,7 +922,7 @@ export class MemStorage implements IStorage {
   }
 
   async getAllParkingSpots(): Promise<ParkingSpot[]> {
-    return await db.select().from(parkingSpots);
+    return await db.select().from(parkingSpots).where(isNull(parkingSpots.deletedAt));
   }
 
   // Enriched parking spot methods with user information
@@ -935,13 +935,13 @@ export class MemStorage implements IStorage {
   }
 
   async getParkingSpotsByOwnerWithUser(ownerId: string): Promise<ParkingSpotWithUser[]> {
-    const spots = await db.select().from(parkingSpots).where(eq(parkingSpots.ownerId, ownerId));
+    const spots = await db.select().from(parkingSpots).where(and(eq(parkingSpots.ownerId, ownerId), isNull(parkingSpots.deletedAt)));
     
     return Promise.all(spots.map(spot => this.enrichSpotWithUserInfo(spot)));
   }
 
   async getAllParkingSpotsWithUser(): Promise<ParkingSpotWithUser[]> {
-    const spots = await db.select().from(parkingSpots);
+    const spots = await db.select().from(parkingSpots).where(isNull(parkingSpots.deletedAt));
     return Promise.all(spots.map(spot => this.enrichSpotWithUserInfo(spot)));
   }
 
@@ -1022,15 +1022,15 @@ export class MemStorage implements IStorage {
 
   // Safe enriched parking spot methods (without sensitive user data)
   async getParkingSpotWithSafeUserData(id: string): Promise<ParkingSpotWithSafeUserData | undefined> {
-    // Query database first
-    const result = await db.select().from(parkingSpots).where(eq(parkingSpots.id, id)).limit(1);
+    // Query database first — exclude soft-deleted spots from active booking lookups
+    const result = await db.select().from(parkingSpots).where(and(eq(parkingSpots.id, id), isNull(parkingSpots.deletedAt))).limit(1);
     if (result.length === 0) return undefined;
 
     return this.enrichSpotWithSafeUserInfo(result[0]);
   }
 
   async getAllParkingSpotsWithSafeUserData(): Promise<ParkingSpotWithSafeUserData[]> {
-    const spots = await db.select().from(parkingSpots);
+    const spots = await db.select().from(parkingSpots).where(isNull(parkingSpots.deletedAt));
     return Promise.all(spots.map(spot => this.enrichSpotWithSafeUserInfo(spot)));
   }
 
@@ -1147,10 +1147,11 @@ export class MemStorage implements IStorage {
   }
 
   async deleteParkingSpot(id: string): Promise<boolean> {
-    const deleted = await db.delete(parkingSpots)
-      .where(eq(parkingSpots.id, id))
+    const updated = await db.update(parkingSpots)
+      .set({ deletedAt: new Date() })
+      .where(and(eq(parkingSpots.id, id), isNull(parkingSpots.deletedAt)))
       .returning();
-    return deleted.length > 0;
+    return updated.length > 0;
   }
 
   // Cleanup methods for parking spot deletion
@@ -1513,7 +1514,8 @@ export class MemStorage implements IStorage {
             .from(parkingSpots)
             .where(and(
               eq(parkingSpots.ownerId, waitingList.userId),
-              eq(parkingSpots.isBciManaged, true)
+              eq(parkingSpots.isBciManaged, true),
+              isNull(parkingSpots.deletedAt)
             ))
         )
       ))
@@ -1997,7 +1999,7 @@ export class MemStorage implements IStorage {
 
   // Helper methods for scope filtering
   private async getFilteredSpots(scope?: 'bci' | 'all'): Promise<ParkingSpot[]> {
-    const allSpots = await db.select().from(parkingSpots);
+    const allSpots = await db.select().from(parkingSpots).where(isNull(parkingSpots.deletedAt));
     
     // Default to 'all' if scope is undefined
     if (!scope || scope === 'all') {
@@ -2016,7 +2018,9 @@ export class MemStorage implements IStorage {
       return allBookings;
     }
     
-    // Filter bookings for BCI managed spots only
+    // Filter bookings for BCI managed spots only.
+    // Include deleted spots here so historical bookings for since-deleted BCI spots
+    // are still counted in scoped analytics/reports.
     const allSpots = await db.select().from(parkingSpots);
     const bciSpotIds = new Set(
       allSpots.filter(spot => spot.isBciManaged === true).map(spot => spot.id)
@@ -2033,7 +2037,9 @@ export class MemStorage implements IStorage {
       return allListings;
     }
     
-    // Filter listings for BCI managed spots only
+    // Filter listings for BCI managed spots only.
+    // Include deleted spots so historical listing data for deleted BCI spots
+    // is still visible in scoped analytics/reports.
     const allSpots = await db.select().from(parkingSpots);
     const bciSpotIds = new Set(
       allSpots.filter(spot => spot.isBciManaged === true).map(spot => spot.id)
@@ -2672,8 +2678,8 @@ export class MemStorage implements IStorage {
     const uniqueSpotIds = new Set(todaysBookings.map(booking => booking.spotId));
     const occupiedSpots = uniqueSpotIds.size;
     
-    // 2. Get total bookable spots from database
-    const allSpots = await db.select().from(parkingSpots);
+    // 2. Get total bookable spots from database (exclude soft-deleted spots)
+    const allSpots = await db.select().from(parkingSpots).where(isNull(parkingSpots.deletedAt));
     const totalBookableSpots = allSpots.filter(spot => spot.isBookable === true).length;
     
     // Calculate utilization percentage (clamped 0-100)
@@ -2870,6 +2876,8 @@ export class MemStorage implements IStorage {
       .where(
         and(
           eq(spotListings.status, 'available'),
+          isNull(spotListings.deletedAt),
+          isNull(parkingSpots.deletedAt),
           or(
             sqlOp`${spotListings.periodEndDate} >= ${today}`,
             sqlOp`${spotListings.recurringEndDate} >= ${today}`,

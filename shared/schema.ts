@@ -151,11 +151,13 @@ export const parkingSpots = pgTable("parking_spots", {
   isBookable: boolean("is_bookable").notNull().default(true), // Whether spot can be booked by renters
   isBciManaged: boolean("is_bci_managed").notNull().default(false), // BCI-managed spots (true) vs personal spots (false)
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp - null means active
 });
 
 export const insertParkingSpotSchema = createInsertSchema(parkingSpots).omit({
   id: true,
   createdAt: true,
+  deletedAt: true,
 }).extend({
   locationId: z.number().int().positive(),
   spotTypeId: z.number().int().positive(),

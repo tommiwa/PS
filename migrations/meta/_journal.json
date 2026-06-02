@@ -8,6 +8,13 @@
       "when": 1775115444591,
       "tag": "0000_add_notify_flags_to_sale_events",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1780377628405,
+      "tag": "0001_low_tombstone",
+      "breakpoints": true
     }
   ]
 }
