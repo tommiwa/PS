@@ -2,6 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { randomUUID } from "crypto";
 import { storage } from "./storage";
+import { parseRetentionDays } from "./internal-config-cleanup";
 import { getListingDates, maybeNotifyFullOccupancy } from "./occupancy";
 import { broadcastLockEvent } from "./websocket";
 import { setupAuth, isAuthenticated, requireAdmin, getAuthenticatedUserId, getAuthenticatedUserRole, getAuthenticatedUserBaseRole } from "./replitAuth";
@@ -11622,6 +11623,31 @@ The BCI ParkShare Team`;
   });
 
   const httpServer = createServer(app);
+
+  // ===== SCHEDULED CLEANUP: _internal_* app_configs =====
+  // These one-time-use sentinel rows (e.g. _internal_full_occupancy_notified_YYYY-MM-DD)
+  // accumulate indefinitely. Clean them up on startup and then once per day.
+  const INTERNAL_CONFIG_RETENTION_DAYS_DEFAULT = 90;
+  const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+  async function cleanupInternalConfigs() {
+    try {
+      const retentionDaysRaw = await storage.getAppConfigValue('internal_config_retention_days');
+      const retentionDays = parseRetentionDays(retentionDaysRaw, INTERNAL_CONFIG_RETENTION_DAYS_DEFAULT);
+      const cutoff = new Date(Date.now() - retentionDays * MS_PER_DAY);
+      const deleted = await storage.deleteInternalConfigsBefore(cutoff);
+      if (deleted > 0) {
+        console.log(`[InternalConfigCleanup] Deleted ${deleted} _internal_* row(s) older than ${retentionDays} days.`);
+      }
+    } catch (err) {
+      console.error('[InternalConfigCleanup] Cleanup failed:', err);
+    }
+  }
+
+  // Run once at startup to prune any existing stale rows
+  cleanupInternalConfigs();
+  // Then run daily
+  setInterval(cleanupInternalConfigs, MS_PER_DAY);
 
   return httpServer;
 }

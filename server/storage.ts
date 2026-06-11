@@ -81,7 +81,7 @@ import { auditDecorator } from "./audit-service";
 import { type IAuditStorage } from "./audit-storage";
 import { db } from "./db";
 import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, bookingSubscriptions, locations, spotTypesTable, termsVersions, spotAssignmentHistory, spotLocks, lockers, lockerWaitlist, lockerAssignmentHistory, lockerTypesTable, appConfigs, apiKeys, scheduledSpotAssignments, featureAnnouncements, spotAlertSubscriptions, saleEvents, issues, spendMilestones } from "@shared/schema";
-import { eq, or, ilike, asc, and, notExists, sql as sqlOp, count, desc, inArray, isNull } from "drizzle-orm";
+import { eq, or, ilike, asc, and, notExists, sql as sqlOp, count, desc, inArray, isNull, lt, like } from "drizzle-orm";
 
 // Storage interface with comprehensive CRUD methods
 export interface IStorage {
@@ -384,6 +384,7 @@ export interface IStorage {
   updateAppConfig(key: string, value: string, updatedBy?: string): Promise<AppConfig | undefined>;
   createAppConfig(config: InsertAppConfig): Promise<AppConfig>;
   deleteAppConfig(key: string): Promise<boolean>;
+  deleteInternalConfigsBefore(cutoffDate: Date): Promise<number>;
   
   // API Key operations (system-wide keys)
   createApiKey(data: { keyHash: string; keyPrefix: string; name: string }): Promise<ApiKey>;
@@ -4119,6 +4120,13 @@ export class MemStorage implements IStorage {
   async deleteAppConfig(key: string): Promise<boolean> {
     const result = await db.delete(appConfigs).where(eq(appConfigs.key, key));
     return (result.rowCount ?? 0) > 0;
+  }
+
+  async deleteInternalConfigsBefore(cutoffDate: Date): Promise<number> {
+    const result = await db
+      .delete(appConfigs)
+      .where(and(sqlOp`starts_with(${appConfigs.key}, '_internal_')`, lt(appConfigs.createdAt, cutoffDate)));
+    return result.rowCount ?? 0;
   }
 
   // API Key operations (system-wide keys)
