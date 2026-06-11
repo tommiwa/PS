@@ -25,6 +25,8 @@ import { useToast } from "@/hooks/use-toast"
 import { useLanguage } from "@/hooks/use-language"
 import { useCardsVisibility } from "@/hooks/use-cards-visibility"
 import { apiRequest, queryClient } from "@/lib/queryClient"
+import { cn } from "@/lib/utils"
+import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible"
 import { 
   insertDepartmentSchema, 
   type InsertDepartment, 
@@ -62,7 +64,8 @@ import {
   ArrowDown,
   Key,
   Copy,
-  Sparkles
+  Sparkles,
+  ChevronDown
 } from "lucide-react"
 
 // Department form schema
@@ -183,7 +186,12 @@ export default function AdminDataManagement() {
   const [showEditConfigDialog, setShowEditConfigDialog] = useState(false)
   const [editingConfig, setEditingConfig] = useState<AppConfig | null>(null)
   const [configSearchFilter, setConfigSearchFilter] = useState("")
-  
+  const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({})
+
+  const toggleCategory = (category: string) => {
+    setCollapsedCategories(prev => ({ ...prev, [category]: !prev[category] }))
+  }
+
   // API Keys state
   const [newKeyName, setNewKeyName] = useState("")
   const [createdKeyValue, setCreatedKeyValue] = useState("")
@@ -2090,47 +2098,72 @@ export default function AdminDataManagement() {
                     ) : groupedConfigs ? (
                       Object.entries(groupedConfigs).map(([category, configs]) => (
                         <Fragment key={`group-${category}`}>
-                          <TableRow className="hover:bg-transparent">
+                          <TableRow
+                            className="cursor-pointer hover-elevate select-none"
+                            onClick={() => toggleCategory(category)}
+                            data-testid={`header-config-category-${category}`}
+                          >
                             <TableCell colSpan={4} className="py-2 pt-4 pb-1">
-                              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                              <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                <ChevronDown
+                                  className={cn(
+                                    "h-3.5 w-3.5 shrink-0 transition-transform duration-200",
+                                    collapsedCategories[category] && "rotate-180"
+                                  )}
+                                />
                                 {configCategoryLabel(category)}
+                                <span className="ml-1 normal-case font-normal tracking-normal text-muted-foreground/60">
+                                  ({configs.length})
+                                </span>
                               </span>
                             </TableCell>
                           </TableRow>
-                          {configs.map((config) => (
-                            <TableRow key={config.key} data-testid={`row-config-${config.key}`}>
-                              <TableCell className="font-medium" data-testid={`text-config-label-${config.key}`}>
-                                {config.label || config.key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-                              </TableCell>
-                              <TableCell data-testid={`text-config-value-${config.key}`}>
-                                {config.dataType === 'number' && config.key.includes('timeout')
-                                  ? `${Number(config.value) / 1000}s`
-                                  : config.key === 'cancellation_window_hours'
-                                    ? `${config.value} hours`
-                                    : config.key === 'city_parking_daily_rate'
-                                      ? `$${config.value}/day`
-                                      : config.key === 'expired_date_window_days'
-                                        ? `${config.value} days`
-                                        : config.dataType === 'boolean'
-                                          ? config.value === 'true' ? 'Enabled' : config.value === 'hide_all' ? 'Hide all' : 'Disabled'
-                                          : config.value}
-                              </TableCell>
-                              <TableCell data-testid={`text-config-description-${config.key}`}>
-                                {config.description || "-"}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => openEditConfigDialog(config)}
-                                  data-testid={`button-edit-config-${config.key}`}
-                                >
-                                  <Edit className="h-4 w-4 mr-1" />
-                                  Edit
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
+                          <tr className="border-0">
+                            <td colSpan={4} className="p-0">
+                              <Collapsible open={!collapsedCategories[category]}>
+                                <CollapsibleContent className="overflow-hidden data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
+                                  <table className="w-full text-sm">
+                                    <tbody>
+                                      {configs.map((config) => (
+                                        <tr key={config.key} data-testid={`row-config-${config.key}`} className="border-b transition-colors hover:bg-muted/50">
+                                          <td className="p-4 font-medium align-middle" data-testid={`text-config-label-${config.key}`}>
+                                            {config.label || config.key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                                          </td>
+                                          <td className="p-4 align-middle" data-testid={`text-config-value-${config.key}`}>
+                                            {config.dataType === 'number' && config.key.includes('timeout')
+                                              ? `${Number(config.value) / 1000}s`
+                                              : config.key === 'cancellation_window_hours'
+                                                ? `${config.value} hours`
+                                                : config.key === 'city_parking_daily_rate'
+                                                  ? `$${config.value}/day`
+                                                  : config.key === 'expired_date_window_days'
+                                                    ? `${config.value} days`
+                                                    : config.dataType === 'boolean'
+                                                      ? config.value === 'true' ? 'Enabled' : config.value === 'hide_all' ? 'Hide all' : 'Disabled'
+                                                      : config.value}
+                                          </td>
+                                          <td className="p-4 align-middle" data-testid={`text-config-description-${config.key}`}>
+                                            {config.description || "-"}
+                                          </td>
+                                          <td className="p-4 align-middle text-right">
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              onClick={() => openEditConfigDialog(config)}
+                                              data-testid={`button-edit-config-${config.key}`}
+                                            >
+                                              <Edit className="h-4 w-4 mr-1" />
+                                              Edit
+                                            </Button>
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </CollapsibleContent>
+                              </Collapsible>
+                            </td>
+                          </tr>
                         </Fragment>
                       ))
                     ) : (
