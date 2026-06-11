@@ -3046,79 +3046,150 @@ View the admin leaderboard: ${APP_URL}/admin
 —
 BCI ParkShare | A BCI Workplace Services Initiative`;
 
-  const tdStyle = `width: 50%; padding: 6px;`;
-  const cardStyle = `background: #f8fafc; border-radius: 10px; padding: 20px 12px; text-align: center; border: 1px solid #e2e8f0;`;
+  const statCardTd = `width: 50%; padding: 6px;`;
+  const statCard = `background: #F3F5F7; border-radius: 10px; padding: 20px 14px; text-align: center;`;
 
-  const content = `
-    <p style="margin: 0 0 6px 0; font-size: 17px; font-weight: 600; color: #1e293b;">
-      The BCI Parking Spot Sharing Program has achieved a new spending milestone.
-    </p>
-    <p style="margin: 0 0 24px 0; font-size: 14px; color: #64748b;">
-      Cumulative totals from <strong>${startFormatted}</strong> to today, <strong>${todayFormatted}</strong>.
-    </p>
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>${formattedMilestone} Milestone Reached!</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
+  <style>
+    body, table, td, p, a, li { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+    body { height: 100% !important; margin: 0 !important; padding: 0 !important; width: 100% !important; background-color: #DDE3E8; }
+    @media screen and (max-width: 600px) {
+      .email-container { width: 100% !important; border-radius: 0 !important; }
+      .hero-amount { font-size: 42px !important; }
+      .body-pad { padding: 28px 24px !important; }
+      .stat-td { display: block !important; width: 100% !important; }
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #DDE3E8;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #DDE3E8;">
+    <tr>
+      <td style="padding: 40px 20px;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" class="email-container" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);">
 
-    <!-- Stat cards 2×2 table grid -->
-    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 8px 0;">
-      <tr>
-        <td style="${tdStyle}">
-          <div style="${cardStyle}">
-            <div style="margin-bottom: 8px;">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${BCI_BLUE}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><polyline points="9 16 11 18 15 14"/>
-              </svg>
-            </div>
-            <div style="font-size: 26px; font-weight: 700; color: #1e293b; line-height: 1.1;">${metrics.totalBookings.toLocaleString()}</div>
-            <div style="font-size: 12px; font-weight: 600; color: #475569; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Total Bookings</div>
-            <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">confirmed &amp; completed</div>
-          </div>
-        </td>
-        <td style="${tdStyle}">
-          <div style="${cardStyle}">
-            <div style="margin-bottom: 8px;">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${BCI_BLUE}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;">
-                <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-              </svg>
-            </div>
-            <div style="font-size: 26px; font-weight: 700; color: #1e293b; line-height: 1.1;">${formattedSpend}</div>
-            <div style="font-size: 12px; font-weight: 600; color: #475569; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Total Spend</div>
-            <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">cumulative</div>
-          </div>
-        </td>
-      </tr>
-      <tr>
-        <td style="${tdStyle}">
-          <div style="${cardStyle}">
-            <div style="margin-bottom: 8px;">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${BCI_BLUE}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;">
-                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
-              </svg>
-            </div>
-            <div style="font-size: 26px; font-weight: 700; color: #1e293b; line-height: 1.1;">${formattedP2P}</div>
-            <div style="font-size: 12px; font-weight: 600; color: #475569; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px;">P2P Revenue</div>
-            <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">peer-to-peer earnings</div>
-          </div>
-        </td>
-        <td style="${tdStyle}">
-          <div style="${cardStyle}">
-            <div style="margin-bottom: 8px;">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${BCI_BLUE}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-              </svg>
-            </div>
-            <div style="font-size: 26px; font-weight: 700; color: #1e293b; line-height: 1.1;">${metrics.participants.toLocaleString()}</div>
-            <div style="font-size: 12px; font-weight: 600; color: #475569; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Participants</div>
-            <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">unique users active</div>
-          </div>
-        </td>
-      </tr>
-    </table>
-  `;
+          <!-- Header: Logo + Wordmark -->
+          <tr>
+            <td style="padding: 32px 40px 20px 40px; border-bottom: 1px solid #E2E8F0;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td style="vertical-align: middle; padding-right: 14px;">
+                    <img src="cid:logo" alt="BCI ParkShare" width="44" height="44" style="width: 44px; height: 44px; border-radius: 10px; display: block;" />
+                  </td>
+                  <td style="vertical-align: middle;">
+                    <span style="color: #00365B; font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 22px; font-weight: 700;">BCI ParkShare</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-  const html = wrapEmailTemplate({
-    title: `${formattedMilestone} Milestone Reached!`,
-    content,
-    theme: 'primary',
-  });
+          <!-- Hero Band: Dark navy with milestone amount -->
+          <tr>
+            <td style="background-color: #00365B; padding: 44px 40px 40px 40px; text-align: center;">
+              <div style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 13px; font-weight: 600; color: #00ABBD; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 14px;">Milestone Reached</div>
+              <div class="hero-amount" style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 56px; font-weight: 700; color: #ffffff; line-height: 1; margin-bottom: 16px;">${formattedMilestone}</div>
+              <div style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 14px; color: #B9C6D2; line-height: 1.5;">
+                The BCI Parking Spot Sharing Program has achieved<br>a new cumulative spending milestone.
+              </div>
+            </td>
+          </tr>
+
+          <!-- Date range intro -->
+          <tr>
+            <td class="body-pad" style="padding: 32px 40px 8px 40px;">
+              <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 14px; color: #5A5A64; margin: 0; text-align: center;">
+                Cumulative totals from <strong style="color: #00365B;">${startFormatted}</strong> to today, <strong style="color: #00365B;">${todayFormatted}</strong>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Stat Cards 2×2 grid -->
+          <tr>
+            <td class="body-pad" style="padding: 16px 34px 24px 34px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td class="stat-td" style="${statCardTd}">
+                    <div style="${statCard}">
+                      <div style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 30px; font-weight: 700; color: #00365B; line-height: 1.1;">${metrics.totalBookings.toLocaleString()}</div>
+                      <div style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 11px; font-weight: 700; color: #467B96; margin-top: 6px; text-transform: uppercase; letter-spacing: 0.8px;">Total Bookings</div>
+                      <div style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 12px; color: #5A5A64; margin-top: 3px;">confirmed &amp; completed</div>
+                    </div>
+                  </td>
+                  <td class="stat-td" style="${statCardTd}">
+                    <div style="${statCard}">
+                      <div style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 30px; font-weight: 700; color: #00365B; line-height: 1.1;">${formattedSpend}</div>
+                      <div style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 11px; font-weight: 700; color: #467B96; margin-top: 6px; text-transform: uppercase; letter-spacing: 0.8px;">Total Spend</div>
+                      <div style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 12px; color: #5A5A64; margin-top: 3px;">cumulative</div>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="stat-td" style="${statCardTd}">
+                    <div style="${statCard}">
+                      <div style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 30px; font-weight: 700; color: #00365B; line-height: 1.1;">${formattedP2P}</div>
+                      <div style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 11px; font-weight: 700; color: #467B96; margin-top: 6px; text-transform: uppercase; letter-spacing: 0.8px;">P2P Revenue</div>
+                      <div style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 12px; color: #5A5A64; margin-top: 3px;">peer-to-peer earnings</div>
+                    </div>
+                  </td>
+                  <td class="stat-td" style="${statCardTd}">
+                    <div style="${statCard}">
+                      <div style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 30px; font-weight: 700; color: #00365B; line-height: 1.1;">${metrics.participants.toLocaleString()}</div>
+                      <div style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 11px; font-weight: 700; color: #467B96; margin-top: 6px; text-transform: uppercase; letter-spacing: 0.8px;">Participants</div>
+                      <div style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 12px; color: #5A5A64; margin-top: 3px;">unique users active</div>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Sign-off -->
+          <tr>
+            <td class="body-pad" style="padding: 8px 40px 28px 40px;">
+              <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 15px; color: #64748b; margin: 0;">
+                Warm regards,<br>
+                <strong style="color: #475569;">The BCI ParkShare Team</strong>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer text -->
+          <tr>
+            <td style="padding: 0 40px 20px 40px; text-align: center;">
+              <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 11px; color: #94a3b8; margin: 0;">
+                A BCI Workplace Services Initiative &bull; In partnership with Technology &amp; Innovation &bull; &copy; ${new Date().getFullYear()} BCI
+              </p>
+            </td>
+          </tr>
+
+          <!-- Cyan accent bar flush at bottom -->
+          <tr>
+            <td style="height: 4px; background-color: #00ABBD; font-size: 0; line-height: 0;">&nbsp;</td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 
   return { subject, text, html };
 }
