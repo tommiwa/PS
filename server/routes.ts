@@ -9309,7 +9309,8 @@ The BCI ParkShare Team`;
         console.log(`[AppConfigs] After initialization: ${configs.length} configs`);
       }
       
-      res.json(configs);
+      const visibleConfigs = configs.filter((c: any) => !c.key.startsWith('_internal_'));
+      res.json(visibleConfigs);
     } catch (error) {
       console.error("Error fetching app configs:", error);
       res.status(500).json({ error: "Failed to fetch app configurations" });
