@@ -13,16 +13,23 @@ import { sendSpendMilestoneEmail } from './notification-service';
  */
 export async function checkSpendMilestones(): Promise<void> {
   try {
-    const [startDateConfig, intervalConfig] = await Promise.all([
+    const [startDateConfig, intervalConfig, notificationsEnabledConfig] = await Promise.all([
       storage.getAppConfigValue('milestone_start_date'),
-      storage.getAppConfigValue('milestone_interval')
+      storage.getAppConfigValue('milestone_interval'),
+      storage.getAppConfigValue('milestone_notifications_enabled')
     ]);
 
     const startDate = startDateConfig || '2026-03-16';
     const interval = Number(intervalConfig) || 10000;
+    const notificationsEnabled = notificationsEnabledConfig === 'true';
 
     if (interval <= 0) {
       console.log('[Milestone Checker] milestone_interval is 0 or negative — milestone emails disabled.');
+      return;
+    }
+
+    if (!notificationsEnabled) {
+      console.log('[Milestone Checker] milestone_notifications_enabled is false — skipping email sends (dev/QA environment guard).');
       return;
     }
 

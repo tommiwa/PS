@@ -414,6 +414,14 @@ If you have questions about the collection of your personal information through 
           dataType: 'number',
           category: 'notifications',
           description: 'Dollar amount interval between milestone email notifications (e.g., 10000 sends emails at $10,000, $20,000, $30,000, ...). Set to 0 to disable milestone emails.'
+        },
+        {
+          key: 'milestone_notifications_enabled',
+          value: process.env.NODE_ENV === 'production' ? 'true' : 'false',
+          label: 'Milestone Notifications Enabled',
+          dataType: 'boolean',
+          category: 'notifications',
+          description: 'When enabled, spend milestone emails are sent to Workplace Services and admins. Defaults to disabled in non-production environments to prevent accidental emails during development or QA.'
         }
       ];
 
