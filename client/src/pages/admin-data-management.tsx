@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, Fragment } from "react"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -183,10 +183,6 @@ export default function AdminDataManagement() {
   const [showEditConfigDialog, setShowEditConfigDialog] = useState(false)
   const [editingConfig, setEditingConfig] = useState<AppConfig | null>(null)
   const [configSearchFilter, setConfigSearchFilter] = useState("")
-  
-  // Pagination state - App Configs
-  const [configPageIndex, setConfigPageIndex] = useState(0)
-  const [configPageSize, setConfigPageSize] = useState(10)
   
   // API Keys state
   const [newKeyName, setNewKeyName] = useState("")
@@ -448,11 +444,27 @@ export default function AdminDataManagement() {
     });
   }, [appConfigs, configSearchFilter]);
 
-  const paginatedConfigs = useMemo(() => {
-    const startIndex = configPageIndex * configPageSize;
-    const endIndex = startIndex + configPageSize;
-    return filteredAndSortedConfigs.slice(startIndex, endIndex);
-  }, [filteredAndSortedConfigs, configPageIndex, configPageSize]);
+  const configCategoryLabel = (category: string): string => {
+    const map: Record<string, string> = {
+      booking: 'Booking',
+      system: 'System',
+      pricing: 'Pricing',
+    };
+    return map[category?.toLowerCase()] ?? category.replace(/\b\w/g, c => c.toUpperCase());
+  };
+
+  const groupedConfigs = useMemo(() => {
+    if (configSearchFilter.trim()) {
+      return null;
+    }
+    const groups: Record<string, typeof filteredAndSortedConfigs> = {};
+    for (const config of filteredAndSortedConfigs) {
+      const cat = config.category ?? 'other';
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(config);
+    }
+    return groups;
+  }, [filteredAndSortedConfigs, configSearchFilter]);
 
   // Reset pagination when filters/sorting changes
   useEffect(() => {
@@ -489,16 +501,6 @@ export default function AdminDataManagement() {
     }
   }, [filteredAndSortedSpotTypes.length, spotTypePageSize, spotTypePageIndex]);
 
-  useEffect(() => {
-    setConfigPageIndex(0);
-  }, [configSearchFilter]);
-
-  useEffect(() => {
-    const maxPage = Math.max(0, Math.ceil(filteredAndSortedConfigs.length / configPageSize) - 1);
-    if (configPageIndex > maxPage) {
-      setConfigPageIndex(maxPage);
-    }
-  }, [filteredAndSortedConfigs.length, configPageSize, configPageIndex]);
 
   // Department mutations
   const createDepartmentMutation = useMutation({
@@ -2085,14 +2087,60 @@ export default function AdminDataManagement() {
                           No settings found. {configSearchFilter ? "Try adjusting your search." : "No settings available."}
                         </TableCell>
                       </TableRow>
+                    ) : groupedConfigs ? (
+                      Object.entries(groupedConfigs).map(([category, configs]) => (
+                        <Fragment key={`group-${category}`}>
+                          <TableRow className="hover:bg-transparent">
+                            <TableCell colSpan={4} className="py-2 pt-4 pb-1">
+                              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                {configCategoryLabel(category)}
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                          {configs.map((config) => (
+                            <TableRow key={config.key} data-testid={`row-config-${config.key}`}>
+                              <TableCell className="font-medium" data-testid={`text-config-label-${config.key}`}>
+                                {config.label || config.key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                              </TableCell>
+                              <TableCell data-testid={`text-config-value-${config.key}`}>
+                                {config.dataType === 'number' && config.key.includes('timeout')
+                                  ? `${Number(config.value) / 1000}s`
+                                  : config.key === 'cancellation_window_hours'
+                                    ? `${config.value} hours`
+                                    : config.key === 'city_parking_daily_rate'
+                                      ? `$${config.value}/day`
+                                      : config.key === 'expired_date_window_days'
+                                        ? `${config.value} days`
+                                        : config.dataType === 'boolean'
+                                          ? config.value === 'true' ? 'Enabled' : config.value === 'hide_all' ? 'Hide all' : 'Disabled'
+                                          : config.value}
+                              </TableCell>
+                              <TableCell data-testid={`text-config-description-${config.key}`}>
+                                {config.description || "-"}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => openEditConfigDialog(config)}
+                                  data-testid={`button-edit-config-${config.key}`}
+                                >
+                                  <Edit className="h-4 w-4 mr-1" />
+                                  Edit
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </Fragment>
+                      ))
                     ) : (
-                      paginatedConfigs.map((config) => (
+                      filteredAndSortedConfigs.map((config) => (
                         <TableRow key={config.key} data-testid={`row-config-${config.key}`}>
                           <TableCell className="font-medium" data-testid={`text-config-label-${config.key}`}>
                             {config.label || config.key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
                           </TableCell>
                           <TableCell data-testid={`text-config-value-${config.key}`}>
-                            {config.dataType === 'number' && config.key.includes('timeout') 
+                            {config.dataType === 'number' && config.key.includes('timeout')
                               ? `${Number(config.value) / 1000}s`
                               : config.key === 'cancellation_window_hours'
                                 ? `${config.value} hours`
@@ -2123,19 +2171,6 @@ export default function AdminDataManagement() {
                     )}
                   </TableBody>
                 </Table>
-              )}
-              
-              {filteredAndSortedConfigs.length > 0 && (
-                <TablePagination
-                  totalCount={filteredAndSortedConfigs.length}
-                  pageSize={configPageSize}
-                  pageIndex={configPageIndex}
-                  onPageSizeChange={(size) => {
-                    setConfigPageSize(size);
-                    setConfigPageIndex(0);
-                  }}
-                  onPageIndexChange={setConfigPageIndex}
-                />
               )}
             </CardContent>
           </Card>

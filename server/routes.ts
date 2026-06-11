@@ -9270,7 +9270,7 @@ The BCI ParkShare Team`;
           value: '15',
           label: 'City Parking Daily Rate',
           dataType: 'number',
-          category: 'Pricing',
+          category: 'pricing',
           description: 'Daily rate (CAD) for city/municipal parking used to compare renter spending against equivalent city parking cost. Renters can toggle this comparison on their Statistics page.'
         },
         {
