@@ -55,6 +55,9 @@ vi.mock('./storage', () => ({
     getActiveTermsVersion: vi.fn(async () => ({ version: 1, active: true })),
     getLatestTermsVersion: vi.fn(async () => ({ version: 1 })),
     createTermsVersion: vi.fn(async () => null),
+    getLatestFiredMilestone: vi.fn(async () => null),
+    recordMilestone: vi.fn(async () => undefined),
+    getAllAdminEmails: vi.fn(async () => []),
   },
 }));
 
@@ -131,6 +134,7 @@ vi.mock('./reports-controller', () => ({
   getActiveUsersReport: vi.fn(async () => ({})),
   getRenterRankings: vi.fn(async () => ({})),
   getOwnerRankings: vi.fn(async () => ({})),
+  computeMilestoneMetrics: vi.fn(async () => ({ totalBookings: 0, totalSpend: 0, p2pRevenue: 0, participants: 0 })),
 }));
 
 vi.mock('./report-service', () => ({

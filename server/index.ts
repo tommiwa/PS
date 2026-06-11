@@ -398,6 +398,22 @@ If you have questions about the collection of your personal information through 
           dataType: 'number',
           category: 'system',
           description: 'Number of past days to show as expired/unbooked on the calendar. Only applies when Expired Date Window is enabled. Minimum: 1.'
+        },
+        {
+          key: 'milestone_start_date',
+          value: '2026-03-16',
+          label: 'Milestone Start Date',
+          dataType: 'string',
+          category: 'notifications',
+          description: 'The date from which cumulative spend is counted for milestone email notifications (YYYY-MM-DD format). Emails fire when spend since this date crosses each interval threshold.'
+        },
+        {
+          key: 'milestone_interval',
+          value: '10000',
+          label: 'Milestone Interval ($)',
+          dataType: 'number',
+          category: 'notifications',
+          description: 'Dollar amount interval between milestone email notifications (e.g., 10000 sends emails at $10,000, $20,000, $30,000, ...). Set to 0 to disable milestone emails.'
         }
       ];
 

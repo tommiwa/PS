@@ -1819,6 +1819,25 @@ export type InsertFeatureAnnouncement = z.infer<typeof insertFeatureAnnouncement
 export type UpdateFeatureAnnouncement = z.infer<typeof updateFeatureAnnouncementSchema>;
 export type FeatureAnnouncement = typeof featureAnnouncements.$inferSelect;
 
+// Spend Milestones Table - tracks which cumulative-spend milestone emails have been sent
+export const spendMilestones = pgTable("spend_milestones", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  milestoneAmount: decimal("milestone_amount", { precision: 12, scale: 2 }).notNull(),
+  totalSpendAtTrigger: decimal("total_spend_at_trigger", { precision: 12, scale: 2 }).notNull(),
+  totalBookings: integer("total_bookings").notNull(),
+  p2pRevenue: decimal("p2p_revenue", { precision: 12, scale: 2 }).notNull(),
+  participants: integer("participants").notNull(),
+  sentAt: timestamp("sent_at").notNull().defaultNow(),
+  emailedTo: text("emailed_to").notNull(),
+});
+
+export const insertSpendMilestoneSchema = createInsertSchema(spendMilestones).omit({
+  id: true,
+  sentAt: true,
+});
+export type InsertSpendMilestone = z.infer<typeof insertSpendMilestoneSchema>;
+export type SpendMilestone = typeof spendMilestones.$inferSelect;
+
 // Spot Alert Subscriptions Table
 // Renters can subscribe to be notified when spots matching their preferences become available.
 // When a matching listing is created, they receive an email with a "Book This Spot" CTA.

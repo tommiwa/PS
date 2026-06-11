@@ -72,13 +72,15 @@ import {
   type UpdateSpotAlertSubscription,
   type SaleEvent,
   type InsertSaleEvent,
-  type SaleEventStatus
+  type SaleEventStatus,
+  type SpendMilestone,
+  type InsertSpendMilestone
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { auditDecorator } from "./audit-service";
 import { type IAuditStorage } from "./audit-storage";
 import { db } from "./db";
-import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, bookingSubscriptions, locations, spotTypesTable, termsVersions, spotAssignmentHistory, spotLocks, lockers, lockerWaitlist, lockerAssignmentHistory, lockerTypesTable, appConfigs, apiKeys, scheduledSpotAssignments, featureAnnouncements, spotAlertSubscriptions, saleEvents, issues } from "@shared/schema";
+import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, bookingSubscriptions, locations, spotTypesTable, termsVersions, spotAssignmentHistory, spotLocks, lockers, lockerWaitlist, lockerAssignmentHistory, lockerTypesTable, appConfigs, apiKeys, scheduledSpotAssignments, featureAnnouncements, spotAlertSubscriptions, saleEvents, issues, spendMilestones } from "@shared/schema";
 import { eq, or, ilike, asc, and, notExists, sql as sqlOp, count, desc, inArray, isNull } from "drizzle-orm";
 
 // Storage interface with comprehensive CRUD methods
@@ -423,6 +425,11 @@ export interface IStorage {
   activateSaleEvent(id: string): Promise<{ updatedListings: Array<{ id: string; spotId: string; dailyRate: string; originalDailyRate: string | null }> }>;
   // Deactivate sale: restore original prices for affected listings
   deactivateSaleEvent(id: string): Promise<{ restoredCount: number }>;
+
+  // Spend Milestone operations
+  getLatestFiredMilestone(): Promise<number>;
+  recordMilestone(data: InsertSpendMilestone): Promise<SpendMilestone | null>;
+  getAllAdminEmails(): Promise<string[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -4481,6 +4488,40 @@ export class MemStorage implements IStorage {
     }).where(eq(saleEvents.id, id));
 
     return { restoredCount };
+  }
+
+  // Spend Milestone operations
+  async getLatestFiredMilestone(): Promise<number> {
+    const results = await db
+      .select({ milestoneAmount: spendMilestones.milestoneAmount })
+      .from(spendMilestones)
+      .orderBy(desc(spendMilestones.milestoneAmount))
+      .limit(1);
+    if (results.length === 0) return 0;
+    return Number(results[0].milestoneAmount);
+  }
+
+  async recordMilestone(data: InsertSpendMilestone): Promise<SpendMilestone | null> {
+    const results = await db
+      .insert(spendMilestones)
+      .values(data)
+      .onConflictDoNothing()
+      .returning();
+    return results[0] ?? null;
+  }
+
+  async getAllAdminEmails(): Promise<string[]> {
+    const adminUsers = await db
+      .select({ email: users.email })
+      .from(users)
+      .where(and(
+        eq(users.status, 'active'),
+        sqlOp`${users.roles} @> ARRAY['admin']::text[]`,
+        sqlOp`${users.email} IS NOT NULL`
+      ));
+    return adminUsers
+      .map(u => u.email)
+      .filter((e): e is string => !!e);
   }
 
   // Audit decorators will be applied via server initialization

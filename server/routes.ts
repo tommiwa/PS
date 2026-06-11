@@ -81,6 +81,7 @@ import {
 } from "./reports-controller";
 import { sendReportEmail, isEmailServiceAvailable } from "./report-service";
 import { getTodayInTimezone, formatDateInTimezone, isDateInPast, isDateTodayOrFuture } from "./timezone";
+import { checkSpendMilestones } from "./milestone-checker";
 
 // Workplace Services email - uses env var set per environment (dev vs prod)
 const WORKPLACE_SERVICES_EMAIL = process.env.WORKPLACE_SERVICES_EMAIL || 'workplaceservices@bci.ca';
@@ -3866,6 +3867,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
+      // Spend milestone check — fire-and-forget after booking confirmed
+      setImmediate(() => { checkSpendMilestones().catch(() => {}); });
+
       res.json(newBooking);
     } catch (error: any) {
       if (error instanceof z.ZodError) {
@@ -6800,6 +6804,9 @@ The BCI ParkShare Team`;
       } catch (notifError) {
         console.error('Error preparing payment confirmed notification:', notifError);
       }
+
+      // Spend milestone check — fire-and-forget after booking completed
+      setImmediate(() => { checkSpendMilestones().catch(() => {}); });
 
       res.json(updatedBooking);
     } catch (error) {

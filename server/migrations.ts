@@ -347,6 +347,23 @@ const migrations: MigrationCheck[] = [
       `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS last_owner_reminder_sent_at TIMESTAMP`,
     ],
   },
+  {
+    name: "spend_milestones_table",
+    checkQuery: `SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'spend_milestones')`,
+    migrationStatements: [
+      `CREATE TABLE IF NOT EXISTS spend_milestones (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        milestone_amount DECIMAL(12,2) NOT NULL,
+        total_spend_at_trigger DECIMAL(12,2) NOT NULL,
+        total_bookings INTEGER NOT NULL,
+        p2p_revenue DECIMAL(12,2) NOT NULL,
+        participants INTEGER NOT NULL,
+        sent_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        emailed_to TEXT NOT NULL
+      )`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS "UDX_spend_milestones_amount" ON spend_milestones (milestone_amount)`,
+    ],
+  },
 ];
 
 export async function runMigrations(): Promise<void> {

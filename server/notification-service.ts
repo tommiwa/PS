@@ -3012,3 +3012,140 @@ The BCI ParkShare Team`;
     }
   }
 }
+
+/**
+ * Build the HTML content for a spend milestone email.
+ */
+export function createSpendMilestoneEmail(
+  milestoneAmount: number,
+  metrics: { totalBookings: number; totalSpend: number; p2pRevenue: number; participants: number },
+  startDate: string
+): { subject: string; text: string; html: string } {
+  const formattedMilestone = milestoneAmount.toLocaleString('en-CA', { style: 'currency', currency: 'CAD', minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  const formattedSpend = metrics.totalSpend.toLocaleString('en-CA', { style: 'currency', currency: 'CAD', minimumFractionDigits: 2 });
+  const formattedP2P = metrics.p2pRevenue.toLocaleString('en-CA', { style: 'currency', currency: 'CAD', minimumFractionDigits: 2 });
+
+  const startFormatted = new Date(startDate + 'T12:00:00').toLocaleDateString('en-CA', { month: 'long', day: 'numeric', year: 'numeric' });
+  const todayFormatted = new Date().toLocaleDateString('en-CA', { month: 'long', day: 'numeric', year: 'numeric' });
+
+  const subject = `BCI ParkShare has reached the ${formattedMilestone} milestone!`;
+
+  const text = `BCI ParkShare — ${formattedMilestone} Milestone Reached!
+
+The BCI Parking Spot Sharing Program has achieved a new cumulative spending milestone.
+
+Cumulative totals from ${startFormatted} to today (${todayFormatted}):
+
+Total Bookings:  ${metrics.totalBookings.toLocaleString()}
+Total Spend:     ${formattedSpend}
+P2P Revenue:     ${formattedP2P}
+Participants:    ${metrics.participants.toLocaleString()} unique users
+
+View the admin leaderboard: ${APP_URL}/admin
+
+—
+BCI ParkShare | A BCI Workplace Services Initiative`;
+
+  const tdStyle = `width: 50%; padding: 6px;`;
+  const cardStyle = `background: #f8fafc; border-radius: 10px; padding: 20px 12px; text-align: center; border: 1px solid #e2e8f0;`;
+
+  const content = `
+    <p style="margin: 0 0 6px 0; font-size: 17px; font-weight: 600; color: #1e293b;">
+      The BCI Parking Spot Sharing Program has achieved a new spending milestone.
+    </p>
+    <p style="margin: 0 0 24px 0; font-size: 14px; color: #64748b;">
+      Cumulative totals from <strong>${startFormatted}</strong> to today, <strong>${todayFormatted}</strong>.
+    </p>
+
+    <!-- Stat cards 2×2 table grid -->
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 8px 0;">
+      <tr>
+        <td style="${tdStyle}">
+          <div style="${cardStyle}">
+            <div style="margin-bottom: 8px;">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${BCI_BLUE}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><polyline points="9 16 11 18 15 14"/>
+              </svg>
+            </div>
+            <div style="font-size: 26px; font-weight: 700; color: #1e293b; line-height: 1.1;">${metrics.totalBookings.toLocaleString()}</div>
+            <div style="font-size: 12px; font-weight: 600; color: #475569; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Total Bookings</div>
+            <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">confirmed &amp; completed</div>
+          </div>
+        </td>
+        <td style="${tdStyle}">
+          <div style="${cardStyle}">
+            <div style="margin-bottom: 8px;">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${BCI_BLUE}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;">
+                <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+              </svg>
+            </div>
+            <div style="font-size: 26px; font-weight: 700; color: #1e293b; line-height: 1.1;">${formattedSpend}</div>
+            <div style="font-size: 12px; font-weight: 600; color: #475569; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Total Spend</div>
+            <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">cumulative</div>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td style="${tdStyle}">
+          <div style="${cardStyle}">
+            <div style="margin-bottom: 8px;">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${BCI_BLUE}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+              </svg>
+            </div>
+            <div style="font-size: 26px; font-weight: 700; color: #1e293b; line-height: 1.1;">${formattedP2P}</div>
+            <div style="font-size: 12px; font-weight: 600; color: #475569; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px;">P2P Revenue</div>
+            <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">peer-to-peer earnings</div>
+          </div>
+        </td>
+        <td style="${tdStyle}">
+          <div style="${cardStyle}">
+            <div style="margin-bottom: 8px;">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${BCI_BLUE}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+            </div>
+            <div style="font-size: 26px; font-weight: 700; color: #1e293b; line-height: 1.1;">${metrics.participants.toLocaleString()}</div>
+            <div style="font-size: 12px; font-weight: 600; color: #475569; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Participants</div>
+            <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">unique users active</div>
+          </div>
+        </td>
+      </tr>
+    </table>
+  `;
+
+  const html = wrapEmailTemplate({
+    title: `${formattedMilestone} Milestone Reached!`,
+    content,
+    theme: 'primary',
+  });
+
+  return { subject, text, html };
+}
+
+/**
+ * Send a spend milestone notification to Workplace Services (TO) and all admin emails (CC).
+ */
+export async function sendSpendMilestoneEmail(
+  milestoneAmount: number,
+  metrics: { totalBookings: number; totalSpend: number; p2pRevenue: number; participants: number },
+  startDate: string,
+  adminEmails: string[]
+): Promise<void> {
+  const { subject, text, html } = createSpendMilestoneEmail(milestoneAmount, metrics, startDate);
+
+  const wpsEmail = process.env.WORKPLACE_SERVICES_EMAIL || 'workplaceservices@bci.ca';
+
+  const ccEmails = adminEmails.filter(e => e && e !== wpsEmail);
+
+  await sendEmailNotification({
+    to: wpsEmail,
+    cc: ccEmails.length > 0 ? ccEmails : undefined,
+    subject,
+    text,
+    html,
+    type: 'general'
+  });
+
+  console.log(`✓ Spend milestone email sent: $${milestoneAmount.toLocaleString()} to ${wpsEmail}${ccEmails.length > 0 ? ` (cc: ${ccEmails.join(', ')})` : ''}`);
+}

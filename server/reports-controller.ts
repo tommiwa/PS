@@ -2,6 +2,42 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 import { storage } from "./storage";
 import { getTodayInTimezone } from "./timezone";
+
+// Compute milestone metrics: total confirmed/completed bookings + spend since a start date
+export async function computeMilestoneMetrics(startDate: string): Promise<{
+  totalBookings: number;
+  totalSpend: number;
+  p2pRevenue: number;
+  participants: number;
+}> {
+  const [allBookings, allSpots] = await Promise.all([
+    storage.getAllBookings(),
+    storage.getAllParkingSpots()
+  ]);
+
+  const filteredBookings = allBookings.filter(b => {
+    const dateStr = String(b.bookingDate).split('T')[0];
+    return (b.status === 'confirmed' || b.status === 'completed') && dateStr >= startDate;
+  });
+
+  const spotMap = new Map(allSpots.map(s => [s.id, s]));
+
+  const totalBookings = filteredBookings.length;
+  const totalSpend = filteredBookings.reduce((sum, b) => sum + Number(b.totalAmount || b.dailyRate || 0), 0);
+
+  const p2pRevenue = filteredBookings.reduce((sum, b) => {
+    const spot = spotMap.get(b.spotId);
+    return sum + (spot && !spot.isBciManaged ? Number(b.totalAmount || b.dailyRate || 0) : 0);
+  }, 0);
+
+  const participantSet = new Set<string>();
+  filteredBookings.forEach(b => {
+    participantSet.add(b.renterId);
+    if (b.ownerId && b.ownerId !== 'unassigned') participantSet.add(b.ownerId);
+  });
+
+  return { totalBookings, totalSpend, p2pRevenue, participants: participantSet.size };
+}
 import type {
   ReportOverviewResponse,
   ReportUtilizationResponse,
