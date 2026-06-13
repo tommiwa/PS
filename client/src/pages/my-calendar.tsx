@@ -315,6 +315,7 @@ function DayCell({
   const overflow = entries.length - maxVisible
   const isCurrentDay = isToday(date)
   const single = entries.length === 1
+  const isWeekend = getDay(date) === 0 || getDay(date) === 6
 
   const dateNumber = (
     <span
@@ -334,7 +335,13 @@ function DayCell({
     return (
       <div
         className={`min-h-[80px] sm:min-h-[100px] lg:min-h-[120px] p-1 border-r border-b border-border flex flex-col ${
-          !isCurrentMonth ? "bg-muted/20" : ""
+          !isCurrentMonth && isWeekend
+            ? "bg-muted/50 dark:bg-muted/40"
+            : !isCurrentMonth
+            ? "bg-muted/20"
+            : isWeekend
+            ? "bg-muted/40 dark:bg-muted/30"
+            : ""
         }`}
       >
         {dateNumber}
@@ -346,7 +353,13 @@ function DayCell({
   const trigger = (
     <div
       className={`min-h-[80px] sm:min-h-[100px] lg:min-h-[120px] p-1 border-r border-b border-border flex flex-col cursor-pointer hover-elevate ${
-        !isCurrentMonth ? "bg-muted/20" : ""
+        !isCurrentMonth && isWeekend
+          ? "bg-muted/50 dark:bg-muted/40"
+          : !isCurrentMonth
+          ? "bg-muted/20"
+          : isWeekend
+          ? "bg-muted/40 dark:bg-muted/30"
+          : ""
       }`}
     >
       {dateNumber}
@@ -515,6 +528,11 @@ export default function MyCalendar() {
           <div className="flex items-center justify-between gap-2">
             <CardTitle className="text-base">{format(currentMonth, "MMMM yyyy")}</CardTitle>
             <div className="flex items-center gap-1">
+              {!isSameMonth(currentMonth, new Date()) && (
+                <Button variant="outline" size="sm" onClick={() => setCurrentMonth(new Date())}>
+                  Today
+                </Button>
+              )}
               <Button variant="outline" size="icon" onClick={prevMonth} aria-label="Previous month">
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -546,7 +564,9 @@ export default function MyCalendar() {
                   {dayHeadersFull.map((d, i) => (
                     <div
                       key={d}
-                      className="text-xs font-medium text-muted-foreground text-center py-1.5 border-r border-b border-border bg-muted/30"
+                      className={`text-xs font-medium text-muted-foreground text-center py-1.5 border-r border-b border-border ${
+                        i === 0 || i === 6 ? "bg-muted/50 dark:bg-muted/40" : "bg-muted/30"
+                      }`}
                     >
                       <span className="hidden sm:inline">{d}</span>
                       <span className="sm:hidden">{dayHeadersShort[i]}</span>
