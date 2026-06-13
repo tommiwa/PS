@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -13,6 +13,7 @@ import {
   DollarSign,
   Tag,
   User,
+  Flag,
 } from "lucide-react"
 import {
   format,
@@ -190,6 +191,78 @@ function getStatusLabel(status: string, entryType?: "booking" | "listing", entry
   return labels[status] ?? status.charAt(0).toUpperCase() + status.slice(1)
 }
 
+// ── BC Statutory Holiday Calculator ──────────────────────────────────────────
+
+/** Easter Sunday date for a given year (Meeus/Jones/Butcher algorithm). */
+function getEasterDate(year: number): Date {
+  const a = year % 19
+  const b = Math.floor(year / 100)
+  const c = year % 100
+  const d = Math.floor(b / 4)
+  const e = b % 4
+  const f = Math.floor((b + 8) / 25)
+  const g = Math.floor((b - f + 1) / 3)
+  const h = (19 * a + b - d - g + 15) % 30
+  const i = Math.floor(c / 4)
+  const k = c % 4
+  const l = (32 + 2 * e + 2 * i - h - k) % 7
+  const m = Math.floor((a + 11 * h + 22 * l) / 451)
+  const month = Math.floor((h + l - 7 * m + 114) / 31) - 1 // 0-based
+  const day = ((h + l - 7 * m + 114) % 31) + 1
+  return new Date(year, month, day)
+}
+
+/** Nth occurrence of a weekday (0=Sun … 6=Sat) in a month (0-based). */
+function nthWeekday(year: number, month: number, weekday: number, n: number): Date {
+  const first = new Date(year, month, 1)
+  const offset = (weekday - first.getDay() + 7) % 7
+  return new Date(year, month, 1 + offset + (n - 1) * 7)
+}
+
+/** Last Monday on or before May 24 (Victoria Day rule). */
+function victoriaDay(year: number): Date {
+  const may24 = new Date(year, 4, 24)
+  const dow = may24.getDay()
+  const sub = dow === 1 ? 0 : dow === 0 ? 6 : dow - 1
+  return new Date(year, 4, 24 - sub)
+}
+
+/**
+ * Returns a map of { "YYYY-MM-DD": "Holiday Name" } for BC/Victoria
+ * statutory holidays in the given year.
+ */
+function getBCStatHolidays(year: number): Record<string, string> {
+  const fmt = (d: Date) => format(d, "yyyy-MM-dd")
+  const easter = getEasterDate(year)
+  const easterMs = easter.getTime()
+  return {
+    [fmt(new Date(year, 0, 1))]:   "New Year's Day",
+    [fmt(nthWeekday(year, 1, 1, 3))]: "Family Day",          // 3rd Mon of Feb
+    [fmt(new Date(easterMs - 2 * 86_400_000))]: "Good Friday",
+    [fmt(new Date(easterMs + 86_400_000))]:     "Easter Monday",
+    [fmt(victoriaDay(year))]:      "Victoria Day",
+    [fmt(new Date(year, 6, 1))]:   "Canada Day",
+    [fmt(nthWeekday(year, 7, 1, 1))]: "BC Day",              // 1st Mon of Aug
+    [fmt(nthWeekday(year, 8, 1, 1))]: "Labour Day",          // 1st Mon of Sep
+    [fmt(new Date(year, 8, 30))]:  "Truth & Reconciliation Day",
+    [fmt(nthWeekday(year, 9, 1, 2))]: "Thanksgiving Day",    // 2nd Mon of Oct
+    [fmt(new Date(year, 10, 11))]: "Remembrance Day",
+    [fmt(new Date(year, 11, 25))]: "Christmas Day",
+    [fmt(new Date(year, 11, 26))]: "Boxing Day",
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+function HolidayPill({ name }: { name: string }) {
+  return (
+    <div className="flex items-center gap-0.5 mt-0.5 text-[9px] font-semibold leading-tight text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 rounded px-1 py-0.5 truncate">
+      <Flag className="h-2.5 w-2.5 flex-shrink-0" />
+      <span className="truncate">{name}</span>
+    </div>
+  )
+}
+
 function EntryChip({ entry }: { entry: CalendarEntry }) {
   const colorClass = getEntryColor(entry)
   return (
@@ -228,11 +301,13 @@ function DayCell({
   entries,
   isCurrentMonth,
   isOwnerView,
+  holidayName,
 }: {
   date: Date
   entries: CalendarEntry[]
   isCurrentMonth: boolean
   isOwnerView: boolean
+  holidayName?: string
 }) {
   const [open, setOpen] = useState(false)
   const maxVisible = 2
@@ -263,6 +338,7 @@ function DayCell({
         }`}
       >
         {dateNumber}
+        {holidayName && <HolidayPill name={holidayName} />}
       </div>
     )
   }
@@ -274,7 +350,8 @@ function DayCell({
       }`}
     >
       {dateNumber}
-      <div className="flex flex-col gap-0.5 flex-1 min-h-0">
+      {holidayName && <HolidayPill name={holidayName} />}
+      <div className="flex flex-col gap-0.5 flex-1 min-h-0 mt-0.5">
         {single ? (
           <EntryCard entry={entries[0]} isOwnerView={isOwnerView} />
         ) : (
@@ -296,6 +373,13 @@ function DayCell({
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent className="w-72 p-3" align="center">
         <p className="text-sm font-semibold mb-2">{format(date, "EEEE, MMMM d, yyyy")}</p>
+        {holidayName && (
+          <div className="flex items-center gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 rounded px-2 py-1 mb-2">
+            <Flag className="h-3 w-3 flex-shrink-0" />
+            <span>{holidayName}</span>
+            <span className="text-amber-500 dark:text-amber-500 font-normal">— Stat Holiday</span>
+          </div>
+        )}
         <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
           {entries.map((entry, i) => {
             const entryDateLabel = entry.date
@@ -395,6 +479,15 @@ export default function MyCalendar() {
   const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 0 })
   const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd })
 
+  // Compute BC stat holidays for all years visible in the current calendar grid
+  const statHolidays = useMemo(() => {
+    const startYear = calendarStart.getFullYear()
+    const endYear = calendarEnd.getFullYear()
+    const map: Record<string, string> = { ...getBCStatHolidays(startYear) }
+    if (endYear !== startYear) Object.assign(map, getBCStatHolidays(endYear))
+    return map
+  }, [calendarStart.getFullYear(), calendarEnd.getFullYear()])
+
   const prevMonth = () => setCurrentMonth((d) => subMonths(d, 1))
   const nextMonth = () => setCurrentMonth((d) => addMonths(d, 1))
 
@@ -471,6 +564,7 @@ export default function MyCalendar() {
                         entries={dayEntries}
                         isCurrentMonth={isSameMonth(date, currentMonth)}
                         isOwnerView={isOwnerView}
+                        holidayName={statHolidays[dateStr]}
                       />
                     )
                   })}
@@ -481,10 +575,10 @@ export default function MyCalendar() {
         </CardContent>
       </Card>
 
-      {!isLoading && totalEntries > 0 && (
+      {!isLoading && (
         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground items-center flex-shrink-0">
           <span className="font-medium text-foreground">Legend:</span>
-          {isOwnerView ? (
+          {totalEntries > 0 && (isOwnerView ? (
             <>
               <span className="flex items-center gap-1">
                 <span className="inline-block h-2.5 w-2.5 rounded bg-emerald-100 border border-emerald-300 flex-shrink-0" />
@@ -514,7 +608,11 @@ export default function MyCalendar() {
                 Completed
               </span>
             </>
-          )}
+          ))}
+          <span className="flex items-center gap-1 text-amber-700 dark:text-amber-400">
+            <Flag className="h-2.5 w-2.5 flex-shrink-0" />
+            BC Stat Holiday
+          </span>
         </div>
       )}
     </div>
