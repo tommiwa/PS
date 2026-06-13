@@ -24,6 +24,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Calendar } from "@/components/ui/calendar"
 import { format } from "date-fns"
+import { getBCStatHolidaysForRange } from "@/lib/bc-stat-holidays"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { SortableTableHeader } from "@/components/ui/sortable-table-header"
 import { EnhancedFilters, type FilterConfig, type FilterValues } from "@/components/ui/enhanced-filters"
@@ -41,6 +42,9 @@ import {
 } from "lucide-react"
 import type { ParkingSpot, ParkingSpotWithUser, SpotType, Location, SpotTypeTable } from "@shared/schema"
 import { quickExportParkingSpotsPDF, quickExportParkingSpotsExcel } from "@/utils/export-utils"
+
+const _year = new Date().getFullYear()
+const statHolidays = getBCStatHolidaysForRange(_year, _year + 1)
 
 export default function AdminParkingManagement() {
   const { t } = useLanguage()
@@ -3565,6 +3569,7 @@ export default function AdminParkingManagement() {
                       today.setHours(0, 0, 0, 0);
                       return date < today;
                     }}
+                    holidays={statHolidays}
                     initialFocus
                   />
                 </PopoverContent>
@@ -3881,6 +3886,7 @@ export default function AdminParkingManagement() {
                           today.setHours(0, 0, 0, 0);
                           return date < today;
                         }}
+                        holidays={statHolidays}
                         initialFocus
                       />
                     </PopoverContent>
@@ -4058,6 +4064,7 @@ export default function AdminParkingManagement() {
                           maxDate.setMonth(maxDate.getMonth() + 6);
                           return date < today || date > maxDate;
                         }}
+                        holidays={statHolidays}
                         initialFocus
                       />
                     )}
@@ -4103,6 +4110,7 @@ export default function AdminParkingManagement() {
                             maxDate.setMonth(maxDate.getMonth() + 6);
                             return date < today || date > maxDate;
                           }}
+                          holidays={statHolidays}
                           initialFocus
                         />
                       )}
@@ -4148,6 +4156,7 @@ export default function AdminParkingManagement() {
                             if (date < today || date > maxDate) return true;
                             return false;
                           }}
+                          holidays={statHolidays}
                           initialFocus
                         />
                       )}

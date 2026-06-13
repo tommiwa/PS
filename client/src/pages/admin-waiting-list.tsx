@@ -27,8 +27,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Switch } from "@/components/ui/switch"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { format } from "date-fns"
+import { getBCStatHolidaysForRange } from "@/lib/bc-stat-holidays"
 import type { WaitingList, ParkingSpotWithUser, SpotType, SpotTypeTable, Location } from "@shared/schema"
 import { quickExportWaitingListPDF, quickExportWaitingListExcel } from "@/utils/export-utils"
+
+const _year = new Date().getFullYear()
+const statHolidays = getBCStatHolidaysForRange(_year, _year + 1)
 
 export default function AdminWaitingList() {
   const { toast } = useToast()
@@ -989,6 +993,7 @@ export default function AdminWaitingList() {
                       today.setHours(0, 0, 0, 0);
                       return date < today;
                     }}
+                    holidays={statHolidays}
                     initialFocus
                   />
                 </PopoverContent>

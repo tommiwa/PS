@@ -1,18 +1,45 @@
 import * as React from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { DayPicker } from "react-day-picker"
+import { format } from "date-fns"
 
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 
-export type CalendarProps = React.ComponentProps<typeof DayPicker>
+export type CalendarProps = React.ComponentProps<typeof DayPicker> & {
+  /** Map of "YYYY-MM-DD" → holiday name. Dates in this map get an amber indicator dot. */
+  holidays?: Record<string, string>
+}
 
 function Calendar({
   className,
   classNames,
   showOutsideDays = true,
+  holidays,
   ...props
 }: CalendarProps) {
+  const HolidayDayContent = React.useCallback(
+    ({ date }: { date: Date; activeModifiers: Record<string, boolean>; displayMonth: Date }) => {
+      const dateStr = format(date, "yyyy-MM-dd")
+      const holidayName = holidays?.[dateStr]
+      return (
+        <span
+          title={holidayName}
+          className="relative flex flex-col items-center justify-center w-full h-full"
+        >
+          <span>{date.getDate()}</span>
+          {holidayName && (
+            <span
+              aria-hidden="true"
+              className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-amber-500 dark:bg-amber-400"
+            />
+          )}
+        </span>
+      )
+    },
+    [holidays]
+  )
+
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
@@ -52,12 +79,13 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        IconLeft: ({ className, ...props }) => (
-          <ChevronLeft className={cn("h-4 w-4", className)} {...props} />
+        IconLeft: ({ className, ...iconProps }) => (
+          <ChevronLeft className={cn("h-4 w-4", className)} {...iconProps} />
         ),
-        IconRight: ({ className, ...props }) => (
-          <ChevronRight className={cn("h-4 w-4", className)} {...props} />
+        IconRight: ({ className, ...iconProps }) => (
+          <ChevronRight className={cn("h-4 w-4", className)} {...iconProps} />
         ),
+        ...(holidays ? { DayContent: HolidayDayContent } : {}),
       }}
       {...props}
     />

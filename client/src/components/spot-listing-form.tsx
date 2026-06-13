@@ -14,6 +14,7 @@ import { Calendar, Clock, DollarSign, MapPin, Car, AlertTriangle, CalendarDays, 
 import { getTodayString } from "@/utils/date-utils"
 import { format } from "date-fns"
 import { useQuery } from "@tanstack/react-query"
+import { getBCStatHolidaysForRange } from "@/lib/bc-stat-holidays"
 import { queryClient } from "@/lib/queryClient"
 import type { ParkingSpotWithUser } from "@shared/schema"
 
@@ -44,6 +45,8 @@ interface SpotListingFormProps {
 export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListingFormProps) {
   // When editing, always treat as single day since each listing day is independent
   const isEditMode = !!initialData
+  const currentYear = new Date().getFullYear()
+  const holidays = getBCStatHolidaysForRange(currentYear, currentYear + 1)
   const [listingType, setListingType] = useState<"single" | "period" | "recurring">("single")
   const [formData, setFormData] = useState({
     spotId: "",
@@ -486,6 +489,7 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                           today.setHours(0, 0, 0, 0)
                           return date < today || date > maxFutureDate
                         }}
+                        holidays={holidays}
                         initialFocus
                       />
                     )}
@@ -493,6 +497,12 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                 </Popover>
                 {validationErrors.date && (
                   <p className="text-sm text-red-600">{validationErrors.date}</p>
+                )}
+                {formData.date && holidays[formData.date] && (
+                  <p className="text-xs text-amber-700 dark:text-amber-400 flex items-center gap-1">
+                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-500 dark:bg-amber-400" />
+                    BC Stat Holiday: {holidays[formData.date]}
+                  </p>
                 )}
               </div>
             </CardContent>
@@ -538,6 +548,7 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                             today.setHours(0, 0, 0, 0)
                             return date < today || date > maxFutureDate
                           }}
+                          holidays={holidays}
                           initialFocus
                         />
                       )}
@@ -545,6 +556,12 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                   </Popover>
                   {validationErrors.startDate && (
                     <p className="text-sm text-red-600">{validationErrors.startDate}</p>
+                  )}
+                  {formData.startDate && holidays[formData.startDate] && (
+                    <p className="text-xs text-amber-700 dark:text-amber-400 flex items-center gap-1">
+                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-500 dark:bg-amber-400" />
+                      BC Stat Holiday: {holidays[formData.startDate]}
+                    </p>
                   )}
                 </div>
                 <div className="space-y-2">
@@ -581,6 +598,7 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                             if (startDate && date < startDate) return true
                             return false
                           }}
+                          holidays={holidays}
                           initialFocus
                         />
                       )}
@@ -591,6 +609,12 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                   )}
                   {validationErrors.endDate && (
                     <p className="text-sm text-red-600">{validationErrors.endDate}</p>
+                  )}
+                  {formData.endDate && holidays[formData.endDate] && (
+                    <p className="text-xs text-amber-700 dark:text-amber-400 flex items-center gap-1">
+                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-500 dark:bg-amber-400" />
+                      BC Stat Holiday: {holidays[formData.endDate]}
+                    </p>
                   )}
                 </div>
               </div>
@@ -671,6 +695,7 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                             today.setHours(0, 0, 0, 0)
                             return date < today || date > maxFutureDate
                           }}
+                          holidays={holidays}
                           initialFocus
                         />
                       )}
@@ -678,6 +703,12 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                   </Popover>
                   {validationErrors.recurringStartDate && (
                     <p className="text-sm text-red-600">{validationErrors.recurringStartDate}</p>
+                  )}
+                  {formData.recurringStartDate && holidays[formData.recurringStartDate] && (
+                    <p className="text-xs text-amber-700 dark:text-amber-400 flex items-center gap-1">
+                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-500 dark:bg-amber-400" />
+                      BC Stat Holiday: {holidays[formData.recurringStartDate]}
+                    </p>
                   )}
                 </div>
                 <div className="space-y-2">
@@ -711,6 +742,7 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                             if (startDate && date < startDate) return true
                             return false
                           }}
+                          holidays={holidays}
                           initialFocus
                         />
                       )}
@@ -718,6 +750,12 @@ export function SpotListingForm({ onSubmit, onCancel, initialData }: SpotListing
                   </Popover>
                   {validationErrors.recurringEndDate && (
                     <p className="text-sm text-red-600">{validationErrors.recurringEndDate}</p>
+                  )}
+                  {formData.recurringEndDate && holidays[formData.recurringEndDate] && (
+                    <p className="text-xs text-amber-700 dark:text-amber-400 flex items-center gap-1">
+                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-500 dark:bg-amber-400" />
+                      BC Stat Holiday: {holidays[formData.recurringEndDate]}
+                    </p>
                   )}
                 </div>
               </div>

@@ -17,6 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label"
 import { Calendar } from "@/components/ui/calendar"
 import { format } from "date-fns"
+import { getBCStatHolidaysForRange } from "@/lib/bc-stat-holidays"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { SortableTableHeader } from "@/components/ui/sortable-table-header"
 import { Textarea } from "@/components/ui/textarea"
@@ -43,6 +44,9 @@ import type {
   LockerType,
   Location 
 } from "@shared/schema"
+
+const _year = new Date().getFullYear()
+const statHolidays = getBCStatHolidaysForRange(_year, _year + 1)
 
 // Extended locker type with user details
 interface LockerWithUser extends Locker {
@@ -1897,6 +1901,7 @@ export default function AdminLockerManagement() {
                         setAssignDatePickerOpen(false)
                       }
                     }}
+                    holidays={statHolidays}
                     initialFocus
                   />
                 </PopoverContent>
@@ -1964,6 +1969,7 @@ export default function AdminLockerManagement() {
                         setUnassignDatePickerOpen(false)
                       }
                     }}
+                    holidays={statHolidays}
                     initialFocus
                   />
                 </PopoverContent>
