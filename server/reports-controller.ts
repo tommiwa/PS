@@ -10,9 +10,9 @@ export async function computeMilestoneMetrics(startDate: string): Promise<{
   p2pRevenue: number;
   participants: number;
 }> {
-  const [allBookings, allSpots] = await Promise.all([
+  const [allBookings, allListings] = await Promise.all([
     storage.getAllBookings(),
-    storage.getAllParkingSpots()
+    storage.getAllSpotListings?.() || []
   ]);
 
   const filteredBookings = allBookings.filter(b => {
@@ -20,14 +20,14 @@ export async function computeMilestoneMetrics(startDate: string): Promise<{
     return (b.status === 'confirmed' || b.status === 'completed') && dateStr >= startDate;
   });
 
-  const spotMap = new Map(allSpots.map(s => [s.id, s]));
+  const listingMap = new Map((allListings as any[]).map(l => [l.id, l]));
 
   const totalBookings = filteredBookings.length;
   const totalSpend = filteredBookings.reduce((sum, b) => sum + Number(b.totalAmount || b.dailyRate || 0), 0);
 
   const p2pRevenue = filteredBookings.reduce((sum, b) => {
-    const spot = spotMap.get(b.spotId);
-    return sum + (spot && !spot.isBciManaged ? Number(b.totalAmount || b.dailyRate || 0) : 0);
+    const listing = listingMap.get((b as any).listingId);
+    return sum + (listing?.createdByAdmin !== true ? Number(b.totalAmount || b.dailyRate || 0) : 0);
   }, 0);
 
   const participantSet = new Set<string>();
