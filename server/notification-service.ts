@@ -7,6 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import type { WaitingList, ParkingSpot, AuthUser } from '@shared/schema';
 import { storage } from './storage';
+import { toZonedTime } from 'date-fns-tz';
 
 const LOGO_BASE64 = fs.readFileSync(path.join(process.cwd(), 'client/public/favicon.png')).toString('base64');
 
@@ -3025,8 +3026,33 @@ export function createSpendMilestoneEmail(
   const formattedSpend = metrics.totalSpend.toLocaleString('en-CA', { style: 'currency', currency: 'CAD', minimumFractionDigits: 2 });
   const formattedP2P = metrics.p2pRevenue.toLocaleString('en-CA', { style: 'currency', currency: 'CAD', minimumFractionDigits: 2 });
 
+  const PST_TZ = 'America/Los_Angeles';
+  const nowInPST = toZonedTime(new Date(), PST_TZ);
+
   const startFormatted = new Date(startDate + 'T12:00:00').toLocaleDateString('en-CA', { month: 'long', day: 'numeric', year: 'numeric' });
-  const todayFormatted = new Date().toLocaleDateString('en-CA', { month: 'long', day: 'numeric', year: 'numeric' });
+  const todayFormatted = nowInPST.toLocaleDateString('en-CA', { month: 'long', day: 'numeric', year: 'numeric' });
+
+  const durationSpan = (() => {
+    const start = new Date(startDate + 'T12:00:00');
+    const end = nowInPST;
+    let years = end.getFullYear() - start.getFullYear();
+    let months = end.getMonth() - start.getMonth();
+    let days = end.getDate() - start.getDate();
+    if (days < 0) {
+      months -= 1;
+      const prevMonth = new Date(end.getFullYear(), end.getMonth(), 0);
+      days += prevMonth.getDate();
+    }
+    if (months < 0) {
+      years -= 1;
+      months += 12;
+    }
+    const parts: string[] = [];
+    if (years > 0) parts.push(`${years} ${years === 1 ? 'year' : 'years'}`);
+    if (months > 0) parts.push(`${months} ${months === 1 ? 'month' : 'months'}`);
+    if (days > 0) parts.push(`${days} ${days === 1 ? 'day' : 'days'}`);
+    return parts.length > 0 ? parts.join(' ') : '0 days';
+  })();
 
   const subject = `BCI ParkShare has reached the ${formattedMilestone} milestone!`;
 
@@ -3034,7 +3060,7 @@ export function createSpendMilestoneEmail(
 
 The BCI Parking Spot Sharing Program has achieved a new cumulative spending milestone.
 
-Cumulative totals from ${startFormatted} to today (${todayFormatted}):
+Cumulative totals from ${startFormatted} to today (${todayFormatted}) — a span of ${durationSpan}:
 
 Total Bookings:  ${metrics.totalBookings.toLocaleString()}
 Total Spend:     ${formattedSpend}
@@ -3115,7 +3141,7 @@ BCI ParkShare | A BCI Workplace Services Initiative`;
           <tr>
             <td class="body-pad" style="padding: 32px 40px 8px 40px;">
               <p style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 14px; color: #5A5A64; margin: 0; text-align: center;">
-                Cumulative totals from <strong style="color: #00365B;">${startFormatted}</strong> to today, <strong style="color: #00365B;">${todayFormatted}</strong>
+                Cumulative totals from <strong style="color: #00365B;">${startFormatted}</strong> to today, <strong style="color: #00365B;">${todayFormatted}</strong> — a span of ${durationSpan}
               </p>
             </td>
           </tr>
