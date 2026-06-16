@@ -27,11 +27,10 @@ const MONTHS = [
 
 function getDefaultDates() {
   const now = new Date();
-  const first = new Date(now.getFullYear(), now.getMonth(), 1);
-  const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const sixMonthsLater = new Date(now.getFullYear(), now.getMonth() + 6, now.getDate());
   return {
-    from: first.toISOString().split('T')[0],
-    to: last.toISOString().split('T')[0]
+    from: '2026-03-16',
+    to: sixMonthsLater.toISOString().split('T')[0]
   };
 }
 
