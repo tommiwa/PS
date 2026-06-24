@@ -7909,6 +7909,31 @@ The BCI ParkShare Team`;
     }
   });
 
+  // ONE-OFF: Soft-delete unbooked listings for specific spots from a given date onwards.
+  // Used to manually trigger listing cleanup for scheduled assignments that were created
+  // before the automated cleanup code was deployed. Remove after use.
+  app.post("/api/admin/run-listing-cleanup", requireAdmin, async (req, res) => {
+    try {
+      const schema = z.object({
+        spotIds:  z.array(z.string().uuid()).min(1),
+        fromDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "fromDate must be YYYY-MM-DD"),
+      });
+      const { spotIds, fromDate } = schema.parse(req.body);
+      const cutoff = new Date(fromDate + "T00:00:00");
+      const results: Record<string, number> = {};
+      for (const spotId of spotIds) {
+        const deleted = await storage.softDeleteListingsBySpotIdFromDate(spotId, cutoff);
+        results[spotId] = deleted;
+      }
+      const total = Object.values(results).reduce((s, n) => s + n, 0);
+      console.log(`[run-listing-cleanup] Soft-deleted ${total} listing(s) from ${fromDate} for spots:`, results);
+      res.json({ success: true, fromDate, results, total });
+    } catch (error) {
+      console.error("Error in run-listing-cleanup:", error);
+      res.status(500).json({ error: "Cleanup failed", detail: String(error) });
+    }
+  });
+
   // Bulk assign parking spots to a user (Admin only)
   app.post("/api/admin/bulk-assign-spots", requireAdmin, async (req, res) => {
     try {
