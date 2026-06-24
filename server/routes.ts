@@ -7953,22 +7953,22 @@ The BCI ParkShare Team`;
   // ONE-OFF: Soft-delete unbooked listings for specific spots from a given date onwards.
   // Used to manually trigger listing cleanup for scheduled assignments that were created
   // before the automated cleanup code was deployed. Remove after use.
-  app.post("/api/admin/run-listing-cleanup", requireAdmin, async (req, res) => {
+  app.get("/api/admin/run-listing-cleanup", requireAdmin, async (req, res) => {
     try {
-      const schema = z.object({
-        spotIds:  z.array(z.string().uuid()).min(1),
-        fromDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "fromDate must be YYYY-MM-DD"),
-      });
-      const { spotIds, fromDate } = schema.parse(req.body);
-      const cutoff = new Date(fromDate + "T00:00:00");
+      const SPOT_IDS = [
+        "f1738a52-6d1e-4200-bd2a-13fa1bd8b6b5", // P34
+        "57c4bf16-00b8-4e20-83d0-b7fc0ca951aa", // P100
+      ];
+      const FROM_DATE = "2026-07-01";
+      const cutoff = new Date(FROM_DATE + "T00:00:00");
       const results: Record<string, number> = {};
-      for (const spotId of spotIds) {
+      for (const spotId of SPOT_IDS) {
         const deleted = await storage.softDeleteListingsBySpotIdFromDate(spotId, cutoff);
         results[spotId] = deleted;
       }
       const total = Object.values(results).reduce((s, n) => s + n, 0);
-      console.log(`[run-listing-cleanup] Soft-deleted ${total} listing(s) from ${fromDate} for spots:`, results);
-      res.json({ success: true, fromDate, results, total });
+      console.log(`[run-listing-cleanup] Soft-deleted ${total} listing(s) from ${FROM_DATE} for spots:`, results);
+      res.json({ success: true, fromDate: FROM_DATE, results, total });
     } catch (error) {
       console.error("Error in run-listing-cleanup:", error);
       res.status(500).json({ error: "Cleanup failed", detail: String(error) });

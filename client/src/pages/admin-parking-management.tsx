@@ -918,16 +918,9 @@ export default function AdminParkingManagement() {
   // TEMPORARY: one-off cleanup for P34 + P100 listings from July 1 onwards
   const runListingCleanupMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest(`/api/admin/run-listing-cleanup`, {
-        method: "POST",
-        body: {
-          spotIds: [
-            "f1738a52-6d1e-4200-bd2a-13fa1bd8b6b5",
-            "57c4bf16-00b8-4e20-83d0-b7fc0ca951aa",
-          ],
-          fromDate: "2026-07-01",
-        },
-      });
+      const res = await fetch("/api/admin/run-listing-cleanup", { credentials: "include" });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
     },
     onSuccess: (data: any) => {
       toast({
