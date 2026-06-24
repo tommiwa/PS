@@ -7574,6 +7574,18 @@ The BCI ParkShare Team`;
             }
           }
 
+          // Always soft-delete unbooked listings from scheduledDate onwards
+          try {
+            const cutoffDate = new Date(scheduledDate + 'T00:00:00');
+            cutoffDate.setHours(0, 0, 0, 0);
+            const deletedListings = await storage.softDeleteListingsBySpotIdFromDate(spotId, cutoffDate);
+            if (deletedListings > 0) {
+              console.log(`[Scheduled Assignment] Soft-deleted ${deletedListings} unbooked listing(s) from ${scheduledDate} onwards for spot ${spotId}`);
+            }
+          } catch (listingError) {
+            console.error('[Scheduled Assignment] Error soft-deleting listings:', listingError);
+          }
+
           // Audit the scheduled assignment
           await auditService.logAction("SCHEDULE_ASSIGN", "parking_spot", {
             entityId: spotId,
@@ -7693,6 +7705,18 @@ The BCI ParkShare Team`;
       } catch (cancelError) {
         console.error('[Spot Assignment] Error cancelling future bookings:', cancelError);
         // Continue with assignment even if cancellation fails
+      }
+
+      // Always soft-delete unbooked listings from today onwards for immediate assignments
+      try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const deletedListings = await storage.softDeleteListingsBySpotIdFromDate(spotId, today);
+        if (deletedListings > 0) {
+          console.log(`[Spot Assignment] Soft-deleted ${deletedListings} unbooked listing(s) from today onwards for spot ${spotId}`);
+        }
+      } catch (listingError) {
+        console.error('[Spot Assignment] Error soft-deleting listings:', listingError);
       }
       
       // Build update data with proper isBciManaged logic
@@ -8248,6 +8272,34 @@ The BCI ParkShare Team`;
     } catch (error) {
       console.error("Error fetching future bookings:", error);
       res.status(500).json({ error: "Failed to fetch future bookings" });
+    }
+  });
+
+  // Get count of unbooked listings for a spot from a given date onwards (used in assign dialog)
+  app.get("/api/admin/spots/:spotId/future-listings", requireAdmin, async (req, res) => {
+    try {
+      const { spotId } = req.params;
+      const { fromDate } = req.query;
+
+      const spot = await storage.getParkingSpot(spotId);
+      if (!spot) {
+        return res.status(404).json({ error: "Parking spot not found" });
+      }
+
+      let cutoff: Date;
+      if (fromDate && typeof fromDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(fromDate)) {
+        cutoff = new Date(fromDate + 'T00:00:00');
+      } else {
+        cutoff = new Date();
+      }
+      cutoff.setHours(0, 0, 0, 0);
+
+      const count = await storage.countUnbookedListingsBySpotIdFromDate(spotId, cutoff);
+
+      res.json({ spotId, count });
+    } catch (error) {
+      console.error("Error fetching future listings count:", error);
+      res.status(500).json({ error: "Failed to fetch future listings count" });
     }
   });
 

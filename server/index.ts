@@ -796,7 +796,19 @@ If you have questions about the collection of your personal information through 
               console.error(`[Scheduled Assignments] Error cancelling bookings for assignment ${assignment.id}:`, cancelError);
             }
           }
-          
+
+          // Always soft-delete unbooked listings from the scheduled effective date onwards
+          try {
+            const listingCutoff = new Date(assignment.scheduledDate + 'T00:00:00');
+            listingCutoff.setHours(0, 0, 0, 0);
+            const deletedListings = await storage.softDeleteListingsBySpotIdFromDate(assignment.spotId, listingCutoff);
+            if (deletedListings > 0) {
+              console.log(`[Scheduled Assignments] Soft-deleted ${deletedListings} unbooked listing(s) from ${assignment.scheduledDate} onwards for spot ${spot.spotNumber}`);
+            }
+          } catch (listingError) {
+            console.error(`[Scheduled Assignments] Error soft-deleting listings for assignment ${assignment.id}:`, listingError);
+          }
+
           // Update spot ownership (preserve existing isBciManaged like immediate assign does)
           const updateData = {
             ownerId: assignment.userId,

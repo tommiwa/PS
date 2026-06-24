@@ -117,6 +117,8 @@ export interface IStorage {
   deleteSpotAssignmentHistoryBySpotId(spotId: string): Promise<number>;
   deleteSpotLocksBySpotId(spotId: string): Promise<number>;
   softDeleteListingsBySpotId(spotId: string): Promise<number>;
+  softDeleteListingsBySpotIdFromDate(spotId: string, fromDate: Date): Promise<number>;
+  countUnbookedListingsBySpotIdFromDate(spotId: string, fromDate: Date): Promise<number>;
   
   // Enriched parking spot operations (with user information)
   getParkingSpotWithUser(id: string): Promise<ParkingSpotWithUser | undefined>;
@@ -1186,6 +1188,98 @@ export class MemStorage implements IStorage {
       ))
       .returning();
     return updated.length;
+  }
+
+  async softDeleteListingsBySpotIdFromDate(spotId: string, fromDate: Date): Promise<number> {
+    const fromDateStr = fromDate.toISOString().slice(0, 10);
+
+    // Compute the day before fromDate for use as a truncation end date
+    const dayBefore = new Date(fromDate);
+    dayBefore.setDate(dayBefore.getDate() - 1);
+    const dayBeforeStr = dayBefore.toISOString().slice(0, 10);
+
+    const baseWhere = and(
+      eq(spotListings.spotId, spotId),
+      isNull(spotListings.deletedAt),
+      eq(spotListings.status, 'available')
+    );
+
+    let totalAffected = 0;
+
+    // 1. Fully soft-delete listings entirely on/after fromDate:
+    //    - Single listings where singleDate >= fromDate
+    //    - Period listings where periodStartDate >= fromDate
+    //    - Recurring listings where recurringStartDate >= fromDate
+    const fullyDeleted = await db.update(spotListings)
+      .set({ deletedAt: new Date() })
+      .where(and(
+        baseWhere,
+        or(
+          and(eq(spotListings.listingType, 'single'), sqlOp`${spotListings.singleDate} >= ${fromDateStr}`),
+          and(eq(spotListings.listingType, 'period'), sqlOp`${spotListings.periodStartDate} >= ${fromDateStr}`),
+          and(eq(spotListings.listingType, 'recurring'), sqlOp`${spotListings.recurringStartDate} >= ${fromDateStr}`)
+        )
+      ))
+      .returning();
+    totalAffected += fullyDeleted.length;
+
+    // 2. Truncate period listings that start before fromDate but end on/after fromDate:
+    //    Set periodEndDate = fromDate - 1 day so availability stops just before the assignment
+    const truncatedPeriod = await db.update(spotListings)
+      .set({ periodEndDate: dayBeforeStr })
+      .where(and(
+        baseWhere,
+        eq(spotListings.listingType, 'period'),
+        sqlOp`${spotListings.periodStartDate} < ${fromDateStr}`,
+        sqlOp`${spotListings.periodEndDate} >= ${fromDateStr}`
+      ))
+      .returning();
+    totalAffected += truncatedPeriod.length;
+
+    // 3. Truncate recurring listings that start before fromDate but extend into/beyond it:
+    //    Set recurringEndDate = fromDate - 1 day so recurrence stops just before the assignment
+    const truncatedRecurring = await db.update(spotListings)
+      .set({ recurringEndDate: dayBeforeStr })
+      .where(and(
+        baseWhere,
+        eq(spotListings.listingType, 'recurring'),
+        sqlOp`${spotListings.recurringStartDate} < ${fromDateStr}`,
+        or(
+          isNull(spotListings.recurringEndDate),
+          sqlOp`${spotListings.recurringEndDate} >= ${fromDateStr}`
+        )
+      ))
+      .returning();
+    totalAffected += truncatedRecurring.length;
+
+    return totalAffected;
+  }
+
+  async countUnbookedListingsBySpotIdFromDate(spotId: string, fromDate: Date): Promise<number> {
+    const fromDateStr = fromDate.toISOString().slice(0, 10);
+    // Count all unbooked listings that have any availability on or after fromDate:
+    // - Single: singleDate >= fromDate (fully removed)
+    // - Period: periodEndDate >= fromDate (fully removed if start >= fromDate, truncated otherwise)
+    // - Recurring: recurringEndDate is null or >= fromDate (fully removed if start >= fromDate, truncated otherwise)
+    const result = await db.select({ count: sqlOp<number>`count(*)` })
+      .from(spotListings)
+      .where(and(
+        eq(spotListings.spotId, spotId),
+        isNull(spotListings.deletedAt),
+        eq(spotListings.status, 'available'),
+        or(
+          and(eq(spotListings.listingType, 'single'), sqlOp`${spotListings.singleDate} >= ${fromDateStr}`),
+          and(eq(spotListings.listingType, 'period'), sqlOp`${spotListings.periodEndDate} >= ${fromDateStr}`),
+          and(
+            eq(spotListings.listingType, 'recurring'),
+            or(
+              isNull(spotListings.recurringEndDate),
+              sqlOp`${spotListings.recurringEndDate} >= ${fromDateStr}`
+            )
+          )
+        )
+      ));
+    return Number(result[0]?.count ?? 0);
   }
 
   // Spot Listing operations

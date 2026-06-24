@@ -744,6 +744,24 @@ export default function AdminParkingManagement() {
     enabled: !!selectedAvailableSpot?.id && showAssignAvailableSpotDialog,
   });
 
+  // Query to fetch count of unbooked listings from the effective date onwards
+  const effectiveDateStr = format(
+    assignAvailableSpotFormData.scheduledDate || new Date(),
+    'yyyy-MM-dd'
+  );
+  const { data: futureListingsData } = useQuery<{ spotId: string; count: number }>({
+    queryKey: ["/api/admin/spots", selectedAvailableSpot?.id, "future-listings", effectiveDateStr],
+    queryFn: async () => {
+      const response = await fetch(
+        `/api/admin/spots/${selectedAvailableSpot?.id}/future-listings?fromDate=${effectiveDateStr}`,
+        { credentials: 'include' }
+      );
+      if (!response.ok) throw new Error('Failed to fetch future listings count');
+      return response.json();
+    },
+    enabled: !!selectedAvailableSpot?.id && showAssignAvailableSpotDialog,
+  });
+
   // Mutation to release spot (make available)
   const releaseSpotMutation = useMutation({
     mutationFn: async (spotId: string) => {
@@ -3924,6 +3942,16 @@ export default function AdminParkingManagement() {
                   </div>
                 )}
                 
+                {/* Show unbooked listings that will be removed */}
+                {futureListingsData && futureListingsData.count > 0 && (
+                  <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
+                    <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    <AlertDescription className="text-amber-700 dark:text-amber-300">
+                      <strong>{futureListingsData.count} existing listing{futureListingsData.count > 1 ? 's' : ''}</strong> will also be removed from <strong>{format(assignAvailableSpotFormData.scheduledDate || new Date(), "MMM d")}</strong> onwards.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
                 {/* Show future bookings warning for available spot assignment */}
                 {isLoadingAvailableSpotBookings ? (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
