@@ -915,6 +915,36 @@ export default function AdminParkingManagement() {
     },
   });
 
+  // TEMPORARY: one-off cleanup for P34 + P100 listings from July 1 onwards
+  const runListingCleanupMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest(`/api/admin/run-listing-cleanup`, {
+        method: "POST",
+        body: JSON.stringify({
+          spotIds: [
+            "f1738a52-6d1e-4200-bd2a-13fa1bd8b6b5",
+            "57c4bf16-00b8-4e20-83d0-b7fc0ca951aa",
+          ],
+          fromDate: "2026-07-01",
+        }),
+      });
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Cleanup complete",
+        description: `${data.total} unbooked listing(s) removed for P34 and P100 from July 1 onwards.`,
+        variant: "success",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Cleanup failed",
+        description: error.message || "Failed to run listing cleanup.",
+        variant: "error",
+      });
+    },
+  });
+
   const scheduledAssignmentsBySpotId = useMemo(() => {
     const map = new Map<string, ScheduledAssignment>();
     for (const sa of scheduledAssignments) {
@@ -2951,6 +2981,22 @@ export default function AdminParkingManagement() {
                 <Clock className="h-5 w-5 text-amber-600" />
                 Pending Scheduled Assignments ({scheduledAssignments.length})
               </CardTitle>
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={runListingCleanupMutation.isPending || runListingCleanupMutation.isSuccess}
+                onClick={() => {
+                  if (confirm("Remove all unbooked listings for P34 and P100 from July 1 onwards? Existing bookings will not be affected.")) {
+                    runListingCleanupMutation.mutate();
+                  }
+                }}
+              >
+                {runListingCleanupMutation.isPending
+                  ? "Running…"
+                  : runListingCleanupMutation.isSuccess
+                  ? "Cleanup Done"
+                  : "Run P34/P100 Listing Cleanup"}
+              </Button>
             </div>
           </CardHeader>
           <CardContent>

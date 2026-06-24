@@ -63,6 +63,7 @@ vi.mock('./storage', () => ({
 
 vi.mock('./notification-service', () => ({
   sendListingsRemovedDueToReassignmentNotification: vi.fn(async () => ({ emailSent: true, inAppSent: true })),
+  sendAdminListingsRemovedSummaryNotification: vi.fn(async () => undefined),
   sendBookingsCancelledDueToUnassignmentNotification: vi.fn(async () => undefined),
   sendPaymentReminderNotification: vi.fn(async () => ({ emailSent: true, inAppSent: true })),
   sendPaymentMarkedPaidNotification: vi.fn(async () => undefined),
