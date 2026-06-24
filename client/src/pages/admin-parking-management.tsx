@@ -920,13 +920,13 @@ export default function AdminParkingManagement() {
     mutationFn: async () => {
       return await apiRequest(`/api/admin/run-listing-cleanup`, {
         method: "POST",
-        body: JSON.stringify({
+        body: {
           spotIds: [
             "f1738a52-6d1e-4200-bd2a-13fa1bd8b6b5",
             "57c4bf16-00b8-4e20-83d0-b7fc0ca951aa",
           ],
           fromDate: "2026-07-01",
-        }),
+        },
       });
     },
     onSuccess: (data: any) => {
