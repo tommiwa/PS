@@ -484,9 +484,11 @@ If you have questions about the collection of your personal information through 
   log("Running initial lock cleanup...");
   await cleanupExpiredLocks();
   
-  // Set up interval to run cleanup every 30 seconds
-  setInterval(cleanupExpiredLocks, 30000);
-  log("Lock cleanup job scheduled (runs every 30 seconds)");
+  // Set up interval to run cleanup every hour
+  // Note: lock expiry is enforced by checking expiresAt timestamp directly in all queries,
+  // so this cleanup is purely cosmetic (updates status column) and does not affect booking correctness.
+  setInterval(cleanupExpiredLocks, 60 * 60 * 1000);
+  log("Lock cleanup job scheduled (runs hourly)");
 
   // Background cleanup job for old audit logs (1 year retention policy)
   async function cleanupOldAuditLogs() {
