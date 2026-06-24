@@ -2545,6 +2545,112 @@ BCI ParkShare Team`;
   return results;
 }
 
+/**
+ * Send notification to outgoing owner when their listings are removed due to spot reassignment
+ */
+export async function sendListingsRemovedDueToReassignmentNotification(
+  outgoingOwner: { name: string; email: string | null; id: string },
+  spotDetails: { spotNumber: string; location: string; building: string },
+  removedCount: number,
+  fromDate: string,
+  userPreferences: { spotAssignment?: boolean; emailNotifications?: boolean } = {}
+): Promise<{ emailSent: boolean; inAppSent: boolean }> {
+  const results = { emailSent: false, inAppSent: false };
+
+  if (removedCount <= 0) return results;
+
+  try {
+    if (userPreferences.emailNotifications === false || userPreferences.spotAssignment === false) {
+      // Skip email but still send in-app notification below
+    } else if (outgoingOwner.email) {
+      const subject = `Your Listings Removed: Spot ${spotDetails.spotNumber} Reassigned`;
+
+      const listingWord = removedCount === 1 ? 'listing' : 'listings';
+
+      const text = `Dear ${outgoingOwner.name},
+
+This is to inform you that ${removedCount} future ${listingWord} for parking spot ${spotDetails.spotNumber} have been automatically removed because the spot has been scheduled for reassignment.
+
+SPOT DETAILS:
+• Spot Number: ${spotDetails.spotNumber}
+• Location: ${spotDetails.location}
+• Building: ${spotDetails.building}
+
+LISTINGS REMOVED:
+• ${removedCount} unbooked ${listingWord} from ${fromDate} onwards were removed.
+
+No further action is required on your part. If you have any questions, please email ${WORKPLACE_SERVICES_EMAIL}.
+
+Best regards,
+BCI ParkShare Team`;
+
+      const content = `
+    <p>Dear ${outgoingOwner.name},</p>
+    <p>This is to inform you that <strong>${removedCount} future ${listingWord}</strong> for your parking spot have been automatically removed because the spot has been scheduled for reassignment.</p>
+
+    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #f97316;">
+      <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Spot Details</h3>
+      <ul style="margin: 0; padding: 0; list-style: none;">
+        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Spot Number:</strong> ${spotDetails.spotNumber}</li>
+        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Location:</strong> ${spotDetails.location}</li>
+        <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Building:</strong> ${spotDetails.building}</li>
+      </ul>
+    </div>
+
+    <div style="background-color: #fef3c7; border-radius: 8px; padding: 16px; margin: 20px 0;">
+      <strong style="color: #92400e;">Listings Removed:</strong><br>
+      <span style="color: #92400e;">${removedCount} unbooked ${listingWord} from ${fromDate} onwards have been removed.</span>
+    </div>
+
+    <p>No further action is required on your part. If you have any questions, please email <a href="mailto:${WORKPLACE_SERVICES_EMAIL}" style="color: #1e9df1; text-decoration: none;">${WORKPLACE_SERVICES_EMAIL}</a>.</p>
+  `;
+
+      const html = wrapEmailTemplate({
+        title: 'Listings Removed Due to Spot Reassignment',
+        content,
+        theme: 'neutral',
+        titleColor: '#f97316',
+        ctaButton: { text: 'Go to BCI ParkShare', url: `${APP_URL}` }
+      });
+
+      const emailResult = await sendEmailNotification({
+        to: outgoingOwner.email,
+        subject,
+        text,
+        html,
+        type: 'general'
+      });
+      results.emailSent = emailResult.success;
+    }
+
+    // Send in-app notification (always sent regardless of email preferences)
+    await storage.createInAppNotification({
+      userId: outgoingOwner.id,
+      type: 'general',
+      title: `Listings Removed: Spot ${spotDetails.spotNumber}`,
+      message: `${removedCount} unbooked ${removedCount === 1 ? 'listing' : 'listings'} from ${fromDate} onwards were removed because spot ${spotDetails.spotNumber} has been scheduled for reassignment.`,
+      data: {
+        spotNumber: spotDetails.spotNumber,
+        location: spotDetails.location,
+        building: spotDetails.building,
+        removedCount,
+        fromDate,
+        reason: 'spot_reassignment'
+      },
+      read: false
+    });
+
+    results.inAppSent = true;
+
+    console.log(`✓ Listings removed notification sent to ${outgoingOwner.name} for ${removedCount} listing(s) on spot ${spotDetails.spotNumber} (email: ${results.emailSent}, in-app: ${results.inAppSent})`);
+
+  } catch (error) {
+    console.error('❌ Error sending listings removed notification:', error);
+  }
+
+  return results;
+}
+
 const DEVSECOPS_EMAIL = 'Technology_DevSecOps_Services@bci.ca';
 
 /**

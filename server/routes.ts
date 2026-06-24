@@ -7581,6 +7581,30 @@ The BCI ParkShare Team`;
             const deletedListings = await storage.softDeleteListingsBySpotIdFromDate(spotId, cutoffDate);
             if (deletedListings > 0) {
               console.log(`[Scheduled Assignment] Soft-deleted ${deletedListings} unbooked listing(s) from ${scheduledDate} onwards for spot ${spotId}`);
+
+              // Notify outgoing owner that their listings were removed
+              if (existingSpot.ownerId) {
+                try {
+                  const outgoingOwner = await storage.getUser(existingSpot.ownerId);
+                  if (outgoingOwner) {
+                    const { sendListingsRemovedDueToReassignmentNotification } = await import('./notification-service');
+                    const location = await storage.getLocation(existingSpot.locationId);
+                    const locationName = location ? `${location.office} - ${location.level}` : 'Unknown';
+                    const buildingName = location?.building || 'Unknown';
+                    const outgoingOwnerPrefs = await storage.getNotificationPreferences(outgoingOwner.id);
+                    const outgoingOwnerName = `${outgoingOwner.firstName || ''} ${outgoingOwner.lastName || ''}`.trim() || outgoingOwner.email || 'User';
+                    await sendListingsRemovedDueToReassignmentNotification(
+                      { name: outgoingOwnerName, email: outgoingOwner.email || null, id: outgoingOwner.id },
+                      { spotNumber: existingSpot.spotNumber, location: locationName, building: buildingName },
+                      deletedListings,
+                      scheduledDate,
+                      outgoingOwnerPrefs || {}
+                    );
+                  }
+                } catch (notifyError) {
+                  console.error('[Scheduled Assignment] Error notifying outgoing owner of listing removal:', notifyError);
+                }
+              }
             }
           } catch (listingError) {
             console.error('[Scheduled Assignment] Error soft-deleting listings:', listingError);

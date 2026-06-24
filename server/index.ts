@@ -804,6 +804,30 @@ If you have questions about the collection of your personal information through 
             const deletedListings = await storage.softDeleteListingsBySpotIdFromDate(assignment.spotId, listingCutoff);
             if (deletedListings > 0) {
               console.log(`[Scheduled Assignments] Soft-deleted ${deletedListings} unbooked listing(s) from ${assignment.scheduledDate} onwards for spot ${spot.spotNumber}`);
+
+              // Notify outgoing owner that their listings were removed
+              if (spot.ownerId) {
+                try {
+                  const outgoingOwner = await storage.getUser(spot.ownerId);
+                  if (outgoingOwner) {
+                    const { sendListingsRemovedDueToReassignmentNotification } = await import('./notification-service');
+                    const location = await storage.getLocation(spot.locationId);
+                    const locationName = location ? `${location.office} - ${location.level}` : 'Unknown';
+                    const buildingName = location?.building || 'Unknown';
+                    const outgoingOwnerPrefs = await storage.getNotificationPreferences(outgoingOwner.id);
+                    const outgoingOwnerName = `${outgoingOwner.firstName || ''} ${outgoingOwner.lastName || ''}`.trim() || outgoingOwner.email || 'User';
+                    await sendListingsRemovedDueToReassignmentNotification(
+                      { name: outgoingOwnerName, email: outgoingOwner.email || null, id: outgoingOwner.id },
+                      { spotNumber: spot.spotNumber, location: locationName, building: buildingName },
+                      deletedListings,
+                      assignment.scheduledDate,
+                      outgoingOwnerPrefs || {}
+                    );
+                  }
+                } catch (notifyError) {
+                  console.error(`[Scheduled Assignments] Error notifying outgoing owner of listing removal for assignment ${assignment.id}:`, notifyError);
+                }
+              }
             }
           } catch (listingError) {
             console.error(`[Scheduled Assignments] Error soft-deleting listings for assignment ${assignment.id}:`, listingError);
