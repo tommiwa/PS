@@ -915,29 +915,6 @@ export default function AdminParkingManagement() {
     },
   });
 
-  // TEMPORARY: one-off cleanup for P34 + P100 listings from July 1 onwards
-  const runListingCleanupMutation = useMutation({
-    mutationFn: async () => {
-      const res = await fetch("/api/admin/run-listing-cleanup", { credentials: "include" });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
-    },
-    onSuccess: (data: any) => {
-      toast({
-        title: "Cleanup complete",
-        description: `${data.total} unbooked listing(s) removed for P34 and P100 from July 1 onwards.`,
-        variant: "success",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Cleanup failed",
-        description: error.message || "Failed to run listing cleanup.",
-        variant: "error",
-      });
-    },
-  });
-
   const scheduledAssignmentsBySpotId = useMemo(() => {
     const map = new Map<string, ScheduledAssignment>();
     for (const sa of scheduledAssignments) {
@@ -2969,28 +2946,10 @@ export default function AdminParkingManagement() {
       {scheduledAssignments.length > 0 && (
         <Card className="mt-6" data-testid="card-scheduled-assignments">
           <CardHeader>
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-amber-600" />
-                Pending Scheduled Assignments ({scheduledAssignments.length})
-              </CardTitle>
-              <Button
-                variant="destructive"
-                size="sm"
-                disabled={runListingCleanupMutation.isPending || runListingCleanupMutation.isSuccess}
-                onClick={() => {
-                  if (confirm("Remove all unbooked listings for P34 and P100 from July 1 onwards? Existing bookings will not be affected.")) {
-                    runListingCleanupMutation.mutate();
-                  }
-                }}
-              >
-                {runListingCleanupMutation.isPending
-                  ? "Running…"
-                  : runListingCleanupMutation.isSuccess
-                  ? "Cleanup Done"
-                  : "Run P34/P100 Listing Cleanup"}
-              </Button>
-            </div>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-amber-600" />
+              Pending Scheduled Assignments ({scheduledAssignments.length})
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {isLoadingScheduledAssignments ? (
