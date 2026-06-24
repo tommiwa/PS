@@ -2651,6 +2651,104 @@ BCI ParkShare Team`;
   return results;
 }
 
+export async function sendAdminListingsRemovedSummaryNotification(
+  admin: { name: string; email: string | null; id: string },
+  spotDetails: { spotNumber: string; location: string; building: string },
+  removedCount: number,
+  effectiveDate: string,
+  adminPreferences: { emailNotifications?: boolean } = {}
+): Promise<{ emailSent: boolean; inAppSent: boolean }> {
+  const results = { emailSent: false, inAppSent: false };
+
+  if (removedCount <= 0) return results;
+
+  try {
+    if (adminPreferences.emailNotifications !== false && admin.email) {
+      const subject = `${removedCount} Listing(s) Removed — Spot ${spotDetails.spotNumber} Assignment`;
+      const listingWord = removedCount === 1 ? 'listing' : 'listings';
+
+      const text = `Dear ${admin.name},
+
+This is a summary of the spot assignment action you just performed.
+
+SUMMARY:
+• Spot: ${spotDetails.spotNumber}
+• Location: ${spotDetails.location}
+• Building: ${spotDetails.building}
+• ${removedCount} unbooked ${listingWord} from ${effectiveDate} onwards were removed due to the spot assignment.
+
+No further action is required. This notification is for your records.
+
+Best regards,
+BCI ParkShare Team`;
+
+      const content = `
+    <p>Dear ${admin.name},</p>
+    <p>This is a summary of the spot assignment action you just performed.</p>
+
+    <div class="info-card" style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #3b82f6;">
+      <h3 style="font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0;">Assignment Summary</h3>
+      <ul style="margin: 0; padding: 0; list-style: none;">
+        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Spot Number:</strong> ${spotDetails.spotNumber}</li>
+        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px;"><strong style="color: #475569;">Location:</strong> ${spotDetails.location}</li>
+        <li style="padding: 8px 0; font-size: 15px;"><strong style="color: #475569;">Building:</strong> ${spotDetails.building}</li>
+      </ul>
+    </div>
+
+    <div style="background-color: #fef3c7; border-radius: 8px; padding: 16px; margin: 20px 0;">
+      <strong style="color: #92400e;">Listings Removed:</strong><br>
+      <span style="color: #92400e;">${removedCount} unbooked ${listingWord} from ${effectiveDate} onwards were removed due to the spot assignment.</span>
+    </div>
+
+    <p>No further action is required. This notification is for your records.</p>
+  `;
+
+      const html = wrapEmailTemplate({
+        title: `${removedCount} Listing(s) Removed — Spot ${spotDetails.spotNumber}`,
+        content,
+        theme: 'neutral',
+        titleColor: '#3b82f6',
+        ctaButton: { text: 'Go to BCI ParkShare', url: `${APP_URL}` }
+      });
+
+      const emailResult = await sendEmailNotification({
+        to: admin.email,
+        subject,
+        text,
+        html,
+        type: 'general'
+      });
+      results.emailSent = emailResult.success;
+    }
+
+    // Send in-app notification
+    await storage.createInAppNotification({
+      userId: admin.id,
+      type: 'general',
+      title: `${removedCount} Listing(s) Removed — Spot ${spotDetails.spotNumber}`,
+      message: `Spot ${spotDetails.spotNumber} (${spotDetails.location} / ${spotDetails.building}): ${removedCount} unbooked ${removedCount === 1 ? 'listing' : 'listings'} from ${effectiveDate} onwards were removed due to spot assignment.`,
+      data: {
+        spotNumber: spotDetails.spotNumber,
+        location: spotDetails.location,
+        building: spotDetails.building,
+        removedCount,
+        effectiveDate,
+        reason: 'admin_spot_assignment_summary'
+      },
+      read: false
+    });
+
+    results.inAppSent = true;
+
+    console.log(`✓ Admin listings-removed summary sent to ${admin.name} for ${removedCount} listing(s) on spot ${spotDetails.spotNumber} (email: ${results.emailSent}, in-app: ${results.inAppSent})`);
+
+  } catch (error) {
+    console.error('❌ Error sending admin listings removed summary notification:', error);
+  }
+
+  return results;
+}
+
 const DEVSECOPS_EMAIL = 'Technology_DevSecOps_Services@bci.ca';
 
 /**

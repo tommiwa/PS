@@ -7605,6 +7605,26 @@ The BCI ParkShare Team`;
                   console.error('[Scheduled Assignment] Error notifying outgoing owner of listing removal:', notifyError);
                 }
               }
+
+              // Notify the admin who performed the assignment
+              try {
+                const { sendAdminListingsRemovedSummaryNotification } = await import('./notification-service');
+                const adminUser = req.user as any;
+                const adminName = `${adminUser.firstName || ''} ${adminUser.lastName || ''}`.trim() || adminUser.email || 'Admin';
+                const adminPrefs = await storage.getNotificationPreferences(adminUser.id);
+                const adminLocation = await storage.getLocation(existingSpot.locationId);
+                const adminLocationName = adminLocation ? `${adminLocation.office} - ${adminLocation.level}` : 'Unknown';
+                const adminBuildingName = adminLocation?.building || 'Unknown';
+                await sendAdminListingsRemovedSummaryNotification(
+                  { name: adminName, email: adminUser.email || null, id: adminUser.id },
+                  { spotNumber: existingSpot.spotNumber, location: adminLocationName, building: adminBuildingName },
+                  deletedListings,
+                  scheduledDate,
+                  adminPrefs || {}
+                );
+              } catch (notifyError) {
+                console.error('[Scheduled Assignment] Error sending admin listing removal summary:', notifyError);
+              }
             }
           } catch (listingError) {
             console.error('[Scheduled Assignment] Error soft-deleting listings:', listingError);
@@ -7762,6 +7782,27 @@ The BCI ParkShare Team`;
             } catch (notifyError) {
               console.error('[Spot Assignment] Error notifying outgoing owner of listing removal:', notifyError);
             }
+          }
+
+          // Notify the admin who performed the assignment
+          try {
+            const { sendAdminListingsRemovedSummaryNotification } = await import('./notification-service');
+            const adminUser = req.user as any;
+            const adminName = `${adminUser.firstName || ''} ${adminUser.lastName || ''}`.trim() || adminUser.email || 'Admin';
+            const adminPrefs = await storage.getNotificationPreferences(adminUser.id);
+            const adminLocation = await storage.getLocation(existingSpot.locationId);
+            const adminLocationName = adminLocation ? `${adminLocation.office} - ${adminLocation.level}` : 'Unknown';
+            const adminBuildingName = adminLocation?.building || 'Unknown';
+            const todayStr = today.toISOString().split('T')[0];
+            await sendAdminListingsRemovedSummaryNotification(
+              { name: adminName, email: adminUser.email || null, id: adminUser.id },
+              { spotNumber: existingSpot.spotNumber, location: adminLocationName, building: adminBuildingName },
+              deletedListings,
+              todayStr,
+              adminPrefs || {}
+            );
+          } catch (notifyError) {
+            console.error('[Spot Assignment] Error sending admin listing removal summary:', notifyError);
           }
         }
       } catch (listingError) {

@@ -828,6 +828,30 @@ If you have questions about the collection of your personal information through 
                   console.error(`[Scheduled Assignments] Error notifying outgoing owner of listing removal for assignment ${assignment.id}:`, notifyError);
                 }
               }
+
+              // Notify the admin who originally scheduled the assignment
+              if (assignment.actorId) {
+                try {
+                  const adminUser = await storage.getUser(assignment.actorId);
+                  if (adminUser) {
+                    const { sendAdminListingsRemovedSummaryNotification } = await import('./notification-service');
+                    const adminPrefs = await storage.getNotificationPreferences(adminUser.id);
+                    const adminLocation = await storage.getLocation(spot.locationId);
+                    const adminLocationName = adminLocation ? `${adminLocation.office} - ${adminLocation.level}` : 'Unknown';
+                    const adminBuildingName = adminLocation?.building || 'Unknown';
+                    const adminName = `${adminUser.firstName || ''} ${adminUser.lastName || ''}`.trim() || adminUser.email || 'Admin';
+                    await sendAdminListingsRemovedSummaryNotification(
+                      { name: adminName, email: adminUser.email || null, id: adminUser.id },
+                      { spotNumber: spot.spotNumber, location: adminLocationName, building: adminBuildingName },
+                      deletedListings,
+                      assignment.scheduledDate,
+                      adminPrefs || {}
+                    );
+                  }
+                } catch (notifyError) {
+                  console.error(`[Scheduled Assignments] Error sending admin listing removal summary for assignment ${assignment.id}:`, notifyError);
+                }
+              }
             }
           } catch (listingError) {
             console.error(`[Scheduled Assignments] Error soft-deleting listings for assignment ${assignment.id}:`, listingError);
