@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -7,9 +7,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, ComposedChart, Line, ReferenceLine, ReferenceArea } from 'recharts';
 import type { TooltipProps } from 'recharts';
 import type { ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent';
-import { ArrowLeft, BarChart3, FileText, Layers, MapPin, ParkingSquare, Search, TrendingUp } from 'lucide-react';
+import { ArrowLeft, BarChart3, FileText, Layers, MapPin, ParkingSquare, Repeat, Search, TrendingUp, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
+import { queryClient, apiRequest } from '@/lib/queryClient';
 import type { ReportUtilizationResponse } from '@shared/schema';
 import { BookingDetailsDialog } from '@/components/booking-details-dialog';
 
@@ -109,6 +113,10 @@ function DayBookingsList({ date, scope, onBack }: { date: string; scope?: string
   }, [data, typeFilter]);
 
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
+  const [swapBooking, setSwapBooking] = useState<DayBooking | null>(null);
+
+  const todayStr = useMemo(() => new Date().toLocaleDateString('en-CA'), []);
+  const isTodayOrFuture = date >= todayStr;
 
   return (
     <>
@@ -212,15 +220,28 @@ function DayBookingsList({ date, scope, onBack }: { date: string; scope?: string
                       <span className="capitalize">{booking.status}</span>
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        title="View booking details"
-                        onClick={() => setSelectedBookingId(booking.id)}
-                        data-testid={`button-view-booking-${booking.id}`}
-                      >
-                        <FileText className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        {booking.isBciManaged && isTodayOrFuture && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Change spot"
+                            onClick={() => setSwapBooking(booking)}
+                            data-testid={`button-change-spot-${booking.id}`}
+                          >
+                            <Repeat className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="View booking details"
+                          onClick={() => setSelectedBookingId(booking.id)}
+                          data-testid={`button-view-booking-${booking.id}`}
+                        >
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -235,7 +256,135 @@ function DayBookingsList({ date, scope, onBack }: { date: string; scope?: string
         onClose={() => setSelectedBookingId(null)}
         scope={scope as 'all' | 'bci' | undefined}
       />
+
+      <ChangeSpotDialog
+        booking={swapBooking}
+        date={date}
+        scope={scope}
+        onClose={() => setSwapBooking(null)}
+      />
     </>
+  );
+}
+
+interface SwapCandidate {
+  id: string;
+  spotNumber: string;
+}
+
+function ChangeSpotDialog({
+  booking,
+  date,
+  scope,
+  onClose,
+}: {
+  booking: DayBooking | null;
+  date: string;
+  scope?: string;
+  onClose: () => void;
+}) {
+  const { toast } = useToast();
+  const isOpen = booking !== null;
+  const [selectedSpotId, setSelectedSpotId] = useState<string>('');
+
+  useEffect(() => {
+    if (isOpen) setSelectedSpotId('');
+  }, [isOpen, booking?.id]);
+
+  const { data: candidates, isLoading, isError } = useQuery<SwapCandidate[]>({
+    queryKey: ['/api/admin/bookings', booking?.id, 'swap-candidates'],
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/bookings/${encodeURIComponent(booking!.id)}/swap-candidates`, { credentials: 'include' });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to load available spots');
+      }
+      return res.json();
+    },
+    enabled: isOpen && !!booking?.id,
+  });
+
+  const swapMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest(`/api/admin/bookings/${booking!.id}/swap-spot`, {
+        method: 'POST',
+        body: { newSpotId: selectedSpotId },
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/bookings/by-date', date, scope] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/bookings', booking?.id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/active-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/booking-activity'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/my-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/spots'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/parking-spots'] });
+      toast({
+        title: 'Spot Changed',
+        description: `Booking moved to spot ${candidates?.find((c) => c.id === selectedSpotId)?.spotNumber ?? 'the new spot'}.`,
+      });
+      onClose();
+    },
+    onError: (error) => {
+      toast({
+        title: 'Failed to Change Spot',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent data-testid="dialog-change-spot">
+        <DialogHeader>
+          <DialogTitle>Change Spot</DialogTitle>
+          <DialogDescription>
+            Move {booking?.renterName}'s booking on {booking ? formatDisplayDate(date) : ''} to a different BCI-managed spot.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <p className="text-sm text-muted-foreground mb-1">Current spot</p>
+            <p className="font-medium">{booking?.spotNumber}</p>
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground mb-1">New spot</p>
+            {isLoading ? (
+              <Skeleton className="h-9 w-full" />
+            ) : isError ? (
+              <p className="text-sm text-destructive">Failed to load available spots.</p>
+            ) : !candidates || candidates.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No other open BCI-managed spots at this location for this date.</p>
+            ) : (
+              <Select value={selectedSpotId} onValueChange={setSelectedSpotId}>
+                <SelectTrigger data-testid="select-new-spot">
+                  <SelectValue placeholder="Select a spot" />
+                </SelectTrigger>
+                <SelectContent>
+                  {candidates.map((spot) => (
+                    <SelectItem key={spot.id} value={spot.id}>{spot.spotNumber}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} data-testid="button-cancel-change-spot">Cancel</Button>
+          <Button
+            onClick={() => swapMutation.mutate()}
+            disabled={!selectedSpotId || swapMutation.isPending}
+            data-testid="button-confirm-change-spot"
+          >
+            {swapMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Confirm Swap
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

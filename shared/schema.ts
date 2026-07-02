@@ -643,7 +643,8 @@ export const auditActions = z.enum([
   "TOGGLE_BOOKABILITY",
   "BULK_UPDATE",
   "CANCEL",
-  "COMPLETE"
+  "COMPLETE",
+  "SWAP_SPOT"
 ]);
 
 export type AuditAction = z.infer<typeof auditActions>;

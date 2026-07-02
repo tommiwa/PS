@@ -1,0 +1,1 @@
+- [Recharts drill-down testing](recharts-drilldown-testing.md) — automated e2e agents can't reliably click individual Recharts bars/points to trigger onClick drill-downs; verify via API + unit tests + code review instead.

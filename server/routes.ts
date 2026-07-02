@@ -6202,6 +6202,168 @@ The BCI ParkShare Team`;
     }
   });
 
+  // Helper: determine whether a booking is BCI-managed (mirrors /api/admin/bookings/by-date logic)
+  async function isBookingBciManaged(booking: Booking): Promise<boolean> {
+    const listing = await storage.getSpotListing(booking.listingId);
+    if (!listing) return true; // Direct assignment (no listing) = BCI managed
+    return listing.createdByAdmin === true;
+  }
+
+  // GET /api/admin/bookings/:id/swap-candidates - List BCI-managed spots at the booking's
+  // location that are open on the booking's date (Admin only). Used by the "Change Spot" dialog.
+  app.get("/api/admin/bookings/:id/swap-candidates", requireAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const booking = await storage.getBooking(id);
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      const currentSpot = await storage.getParkingSpot(booking.spotId);
+      if (!currentSpot) {
+        return res.status(404).json({ error: "Current parking spot not found" });
+      }
+
+      const bciManaged = await isBookingBciManaged(booking);
+      if (!bciManaged) {
+        return res.status(403).json({ error: "Only BCI-managed bookings can have their spot changed" });
+      }
+
+      const isTodayOrFuture = await isDateTodayOrFuture(booking.bookingDate);
+      if (!isTodayOrFuture) {
+        return res.status(403).json({ error: "Cannot change the spot for a past booking" });
+      }
+
+      // Candidate spots: same location, BCI-managed, active, bookable, not the current spot
+      const candidateSpots = await db
+        .select()
+        .from(parkingSpots)
+        .where(and(
+          eq(parkingSpots.locationId, currentSpot.locationId),
+          eq(parkingSpots.isBciManaged, true),
+          isNull(parkingSpots.deletedAt),
+          not(eq(parkingSpots.id, currentSpot.id))
+        ));
+
+      // Determine which candidate spots already have a non-cancelled booking on this date
+      const bookedSpotIds = new Set(
+        (await db
+          .select({ spotId: bookings.spotId })
+          .from(bookings)
+          .where(and(
+            eq(bookings.bookingDate, booking.bookingDate),
+            not(eq(bookings.status, 'cancelled'))
+          ))
+        ).map((row) => row.spotId)
+      );
+
+      const availableSpots = candidateSpots
+        .filter((spot) => spot.isActive !== false && spot.isBookable !== false && !bookedSpotIds.has(spot.id))
+        .map((spot) => ({ id: spot.id, spotNumber: spot.spotNumber }))
+        .sort((a, b) => a.spotNumber.localeCompare(b.spotNumber, undefined, { numeric: true }));
+
+      res.json(availableSpots);
+    } catch (error) {
+      console.error("Error fetching swap candidates:", error);
+      res.status(500).json({ error: "Failed to fetch available spots" });
+    }
+  });
+
+  // POST /api/admin/bookings/:id/swap-spot - Swap a BCI-managed booking to a different spot
+  // on the same date/location (Admin only). Only allowed for current/future dated bookings.
+  app.post("/api/admin/bookings/:id/swap-spot", requireAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { newSpotId } = req.body;
+
+      if (!newSpotId || typeof newSpotId !== 'string') {
+        return res.status(400).json({ error: "newSpotId is required" });
+      }
+
+      const booking = await storage.getBooking(id);
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      if (booking.status === 'cancelled') {
+        return res.status(400).json({ error: "Cannot change the spot for a cancelled booking" });
+      }
+
+      if (newSpotId === booking.spotId) {
+        return res.status(400).json({ error: "New spot must be different from the current spot" });
+      }
+
+      const currentSpot = await storage.getParkingSpot(booking.spotId);
+      if (!currentSpot) {
+        return res.status(404).json({ error: "Current parking spot not found" });
+      }
+
+      const bciManaged = await isBookingBciManaged(booking);
+      if (!bciManaged) {
+        return res.status(403).json({ error: "Only BCI-managed bookings can have their spot changed" });
+      }
+
+      const isTodayOrFuture = await isDateTodayOrFuture(booking.bookingDate);
+      if (!isTodayOrFuture) {
+        return res.status(403).json({ error: "Cannot change the spot for a past booking" });
+      }
+
+      const newSpot = await storage.getParkingSpot(newSpotId);
+      if (!newSpot || newSpot.deletedAt) {
+        return res.status(404).json({ error: "New parking spot not found" });
+      }
+      if (newSpot.locationId !== currentSpot.locationId) {
+        return res.status(400).json({ error: "New spot must be at the same location" });
+      }
+      if (!newSpot.isBciManaged) {
+        return res.status(400).json({ error: "New spot must be a BCI-managed spot" });
+      }
+      if (newSpot.isActive === false || newSpot.isBookable === false) {
+        return res.status(400).json({ error: "New spot is not available for booking" });
+      }
+
+      // Perform the swap atomically, re-checking availability inside the transaction to prevent races
+      const updatedBooking = await db.transaction(async (tx) => {
+        const conflicting = await tx
+          .select()
+          .from(bookings)
+          .where(and(
+            eq(bookings.spotId, newSpotId),
+            eq(bookings.bookingDate, booking.bookingDate),
+            not(eq(bookings.status, 'cancelled'))
+          ))
+          .for('update');
+
+        if (conflicting.length > 0) {
+          throw new Error('SPOT_ALREADY_BOOKED');
+        }
+
+        const [result] = await tx
+          .update(bookings)
+          .set({ spotId: newSpotId, updatedAt: new Date() })
+          .where(eq(bookings.id, id))
+          .returning();
+
+        return result;
+      });
+
+      await auditService.logAction("SWAP_SPOT", "booking", {
+        entityId: id,
+        message: `Admin swapped booking ${id} from spot ${currentSpot.spotNumber} to ${newSpot.spotNumber} on ${booking.bookingDate}`,
+        before: booking,
+        after: updatedBooking
+      });
+
+      res.json(updatedBooking);
+    } catch (error: any) {
+      if (error.message === 'SPOT_ALREADY_BOOKED') {
+        return res.status(409).json({ error: "The selected spot was just booked by someone else. Please choose another spot." });
+      }
+      console.error("Error swapping booking spot:", error);
+      res.status(500).json({ error: "Failed to swap booking spot" });
+    }
+  });
+
   // POST /api/bookings/:id/cancel - Cancel booking (Renter only)
   app.post("/api/bookings/:id/cancel", isAuthenticated, async (req: any, res) => {
     try {
