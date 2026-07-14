@@ -3019,7 +3019,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Execute lock acquisition in atomic transaction
       const result = await db.transaction(async (tx) => {
-        // Step 1: Check for existing active non-expired locks on this listing+date combination (with row-level lock)
+        // Step 0: Lock the listing row first to serialize concurrent lock acquisition attempts.
+        // This is critical for restored split slots (and any listing) where no active spot_lock
+        // row exists yet — a plain SELECT FOR UPDATE on an empty spot_locks result set would
+        // lock nothing, allowing two simultaneous requests to both pass the check and both
+        // insert a lock. By locking the listing row here, we ensure that only one transaction
+        // can proceed through the remaining steps at a time.
+        const [lockedListing] = await tx
+          .select({ id: spotListings.id, status: spotListings.status })
+          .from(spotListings)
+          .where(eq(spotListings.id, listingId))
+          .for('update');
+
+        if (!lockedListing) {
+          throw new Error('LISTING_NOT_FOUND');
+        }
+        if (lockedListing.status !== 'available') {
+          throw new Error('LISTING_NOT_AVAILABLE');
+        }
+
+        // Step 1: Check for existing active non-expired locks on this listing+date combination
         const existingLock = await tx
           .select()
           .from(spotLocks)
@@ -3106,6 +3125,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(409).json({ 
           error: "You already have an active lock on another spot",
           code: "USER_HAS_ACTIVE_LOCK"
+        });
+      }
+      if (error.message === 'LISTING_NOT_FOUND') {
+        return res.status(404).json({
+          error: "Listing not found",
+          code: "LISTING_NOT_FOUND"
+        });
+      }
+      if (error.message === 'LISTING_NOT_AVAILABLE') {
+        return res.status(409).json({
+          error: "Spot listing is no longer available",
+          code: "LISTING_NOT_AVAILABLE"
         });
       }
       
