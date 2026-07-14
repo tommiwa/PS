@@ -412,3 +412,355 @@ test.describe('Renter-cancel happy-path re-book — second renter locks and book
     ).toBeGreaterThanOrEqual(1);
   });
 });
+
+// ============================================================================
+// Helper: find the first date in a range that falls on one of the target week
+// days (0 = Sunday … 6 = Saturday).  Returns an ISO date string or null.
+// ============================================================================
+function firstRecurringDate(startDate: Date, daysAhead: number, targetDays: number[]): string | null {
+  for (let i = 0; i < daysAhead; i++) {
+    const d = new Date(startDate);
+    d.setUTCDate(d.getUTCDate() + i);
+    if (targetDays.includes(d.getUTCDay())) {
+      return d.toISOString().slice(0, 10);
+    }
+  }
+  return null;
+}
+
+// ============================================================================
+// Suite 2: After renter self-cancels a RECURRING-split booking, second renter
+// successfully re-books.
+//
+// Mirrors Suite 1 (period variant) but uses original_listing_type = 'recurring'.
+// Confirms renter-cancel restores the recurring-split slot so a second renter
+// can lock and book it end-to-end.
+// ============================================================================
+test.describe('Renter-cancel happy-path re-book — second renter locks and books the restored recurring-split slot', () => {
+  const tag = `renter-cancel-recur-${Date.now()}`;
+  const ownerId = `test-owner-${tag}`;
+  const ownerEmail = `${ownerId}@example.com`;
+
+  const renterAId = `test-renter-a-${tag}`;
+  const renterAEmail = `${renterAId}@example.com`;
+
+  const renterBId = `test-renter-b-${tag}`;
+  const renterBEmail = `${renterBId}@example.com`;
+
+  const today = new Date();
+  const recurringStart = addDays(today, 14);
+  const recurringEnd = addDays(today, 49);
+
+  // Tuesday=2, Thursday=4 — pick whichever comes first in the window
+  const RECURRING_DAYS = [2, 4];
+  const RECURRING_DAY_NAMES = ['tuesday', 'thursday'];
+
+  // Resolved in beforeAll once we know the start date
+  let bookingDate = '';
+
+  let testSpotId = '';
+  let originalOwnerIdOnSpot: string | null = null;
+  let splitListingId = '';
+  let renterBBookingId = '';
+  let renterBLockStatus = -1;
+  let renterBLockBody: Record<string, unknown> = {};
+  let renterBBookingStatus = -1;
+  let renterBBookingBody: Record<string, unknown> = {};
+  let setupSucceeded = false;
+
+  test.beforeAll(async () => {
+    // Find the first matching recurring day in the window
+    const found = firstRecurringDate(new Date(recurringStart), 36, RECURRING_DAYS);
+    if (!found) throw new Error('No matching recurring day found in the configured range');
+    bookingDate = found;
+
+    const termsRow = await query(
+      `SELECT COALESCE(MAX(version), 1) AS v FROM terms_versions WHERE is_active = true`,
+    );
+    const termsVersion = Number(termsRow.rows[0]?.v ?? 1);
+
+    const spot = await acquireTestSpot(ownerId);
+    testSpotId = spot.spotId;
+    originalOwnerIdOnSpot = spot.originalOwnerId;
+
+    await ensureUser(ownerId, ownerEmail, 'RCHR', 'Owner', 'owner', termsVersion);
+    await ensureUser(renterAId, renterAEmail, 'RCHR', 'RenterA', 'renter', termsVersion);
+    await ensureUser(renterBId, renterBEmail, 'RCHR', 'RenterB', 'renter', termsVersion);
+
+    const ownerHeaders = makeDemoAuthHeader(ownerId, ownerEmail, 'RCHR', 'Owner');
+    const renterAHeaders = makeDemoAuthHeader(renterAId, renterAEmail, 'RCHR', 'RenterA');
+
+    // Step 1: Owner creates a recurring listing
+    const listingResult = await apiPost('/api/spot-listings', {
+      spotId: testSpotId,
+      listingType: 'recurring',
+      recurringStartDate: recurringStart,
+      recurringEndDate: recurringEnd,
+      daysOfWeek: RECURRING_DAY_NAMES,
+      dailyRate: '5.00',
+    }, ownerHeaders);
+
+    if (listingResult.status >= 300) {
+      throw new Error(`Recurring listing creation failed (${listingResult.status}): ${JSON.stringify(listingResult.body)}`);
+    }
+    const parentListingId = listingResult.body.id as string;
+
+    // Step 2a: Renter A acquires a lock on the recurring listing for bookingDate
+    const lockAResult = await apiPost(`/api/spots/${testSpotId}/locks`, {
+      listingId: parentListingId,
+      bookingDate,
+    }, renterAHeaders);
+
+    if (lockAResult.status >= 300) {
+      throw new Error(`Renter A lock failed (${lockAResult.status}): ${JSON.stringify(lockAResult.body)}`);
+    }
+
+    // Step 2b: Renter A books one day — triggers the recurring→single split
+    const bookingAResult = await apiPost('/api/bookings', {
+      spotId: testSpotId,
+      listingId: parentListingId,
+      bookingDate,
+      dailyRate: '5.00',
+      totalAmount: '5.00',
+    }, renterAHeaders);
+
+    if (bookingAResult.status >= 300) {
+      throw new Error(`Renter A booking failed (${bookingAResult.status}): ${JSON.stringify(bookingAResult.body)}`);
+    }
+    const bookingAId = bookingAResult.body.id as string;
+
+    // Locate the split listing created for the booked recurring date
+    const splitRow = await query(
+      `SELECT id FROM spot_listings
+       WHERE spot_id = $1
+         AND listing_type = 'single'
+         AND original_listing_type = 'recurring'
+         AND single_date = $2
+         AND deleted_at IS NULL`,
+      [testSpotId, bookingDate],
+    );
+    if (splitRow.rows.length === 0) {
+      throw new Error('Split single-day listing for the booked recurring date was not found after Renter A booking');
+    }
+    splitListingId = splitRow.rows[0].id as string;
+
+    // Step 3: Renter A self-cancels via POST /api/bookings/:id/cancel
+    // This is the renter-cancel code path (different from owner-cancel).
+    const cancelResult = await apiPost(`/api/bookings/${bookingAId}/cancel`, {}, renterAHeaders);
+    if (cancelResult.status >= 300) {
+      throw new Error(`Renter A self-cancel failed (${cancelResult.status}): ${JSON.stringify(cancelResult.body)}`);
+    }
+
+    // Confirm the recurring split listing is now 'available'
+    const listingStatusRow = await query(
+      `SELECT status FROM spot_listings WHERE id = $1`,
+      [splitListingId],
+    );
+    if (listingStatusRow.rows[0]?.status !== 'available') {
+      throw new Error(
+        `Recurring split listing is not available after renter-cancel: ${JSON.stringify(listingStatusRow.rows[0])}`,
+      );
+    }
+
+    // Purge any stale active locks left from Renter A before Renter B attempts
+    await query(
+      `UPDATE spot_locks SET status = 'released'
+       WHERE listing_id = $1 AND booking_date = $2 AND status = 'active'`,
+      [splitListingId, bookingDate],
+    );
+
+    // Step 4: Renter B acquires a lock on the now-restored recurring split listing
+    const renterBHeaders = makeDemoAuthHeader(renterBId, renterBEmail, 'RCHR', 'RenterB');
+
+    const lockBResult = await apiPost(`/api/spots/${testSpotId}/locks`, {
+      listingId: splitListingId,
+      bookingDate,
+    }, renterBHeaders);
+
+    renterBLockStatus = lockBResult.status;
+    renterBLockBody = lockBResult.body;
+
+    if (lockBResult.status >= 300) {
+      // Record but don't throw — the individual tests will surface the failure with clear messages
+      setupSucceeded = true;
+      return;
+    }
+
+    // Step 5: Renter B completes the booking on the restored recurring split listing
+    const bookingBResult = await apiPost('/api/bookings', {
+      spotId: testSpotId,
+      listingId: splitListingId,
+      bookingDate,
+      dailyRate: '5.00',
+      totalAmount: '5.00',
+    }, renterBHeaders);
+
+    renterBBookingStatus = bookingBResult.status;
+    renterBBookingBody = bookingBResult.body;
+
+    if (bookingBResult.status < 300) {
+      renterBBookingId = bookingBResult.body.id as string;
+    }
+
+    setupSucceeded = true;
+  });
+
+  test.afterAll(async () => {
+    try {
+      await query(
+        'DELETE FROM bookings WHERE spot_id = $1',
+        [testSpotId],
+      );
+      await query(
+        'DELETE FROM spot_locks WHERE user_id = ANY($1)',
+        [[ownerId, renterAId, renterBId]],
+      );
+      if (testSpotId) {
+        await query(
+          `UPDATE spot_listings SET deleted_at = NOW(), status = 'cancelled'
+           WHERE spot_id = $1 AND deleted_at IS NULL`,
+          [testSpotId],
+        );
+        await query(
+          'UPDATE parking_spots SET owner_id = $1 WHERE id = $2',
+          [originalOwnerIdOnSpot, testSpotId],
+        );
+      }
+      await query(
+        'DELETE FROM users WHERE id = ANY($1)',
+        [[ownerId, renterAId, renterBId]],
+      );
+    } finally {
+      await closeTestPool();
+    }
+  });
+
+  // --------------------------------------------------------------------------
+  // Test 1: Renter B's lock request on the restored recurring listing must succeed
+  // --------------------------------------------------------------------------
+  test('Renter B acquires a lock on the renter-cancel-restored recurring split listing without LISTING_NOT_AVAILABLE or LISTING_NOT_FOUND', async () => {
+    expect(setupSucceeded, 'Setup must succeed before running lock test').toBe(true);
+
+    expect(
+      renterBLockStatus,
+      `Lock request for Renter B must succeed (200/201). Got ${renterBLockStatus}. ` +
+      `Body: ${JSON.stringify(renterBLockBody)}. ` +
+      `If the error code is LISTING_NOT_AVAILABLE the locking fix incorrectly rejected a legitimately available recurring listing after renter self-cancel.`,
+    ).toBeGreaterThanOrEqual(200);
+
+    expect(
+      renterBLockStatus,
+      `Lock request for Renter B must succeed (200/201). Got ${renterBLockStatus}. ` +
+      `Body: ${JSON.stringify(renterBLockBody)}`,
+    ).toBeLessThan(300);
+
+    // Explicitly assert neither new error code fires on the happy path
+    const errorCode = renterBLockBody.code as string | undefined;
+    expect(
+      errorCode,
+      'LISTING_NOT_AVAILABLE must NOT be returned for an available renter-cancel-restored recurring listing',
+    ).not.toBe('LISTING_NOT_AVAILABLE');
+    expect(
+      errorCode,
+      'LISTING_NOT_FOUND must NOT be returned for an existing available renter-cancel-restored recurring listing',
+    ).not.toBe('LISTING_NOT_FOUND');
+  });
+
+  // --------------------------------------------------------------------------
+  // Test 2: Renter B's booking must succeed end-to-end
+  // --------------------------------------------------------------------------
+  test('Renter B completes a booking on the renter-cancel-restored recurring split listing successfully', async () => {
+    expect(setupSucceeded, 'Setup must succeed before running booking test').toBe(true);
+
+    // If the lock itself failed, surface the failure with an explanatory message
+    expect(
+      renterBLockStatus,
+      `Cannot test booking because the preceding lock request failed (${renterBLockStatus}). ` +
+      `Lock body: ${JSON.stringify(renterBLockBody)}`,
+    ).toBeLessThan(300);
+
+    expect(
+      renterBBookingStatus,
+      `Booking by Renter B must succeed (200/201). Got ${renterBBookingStatus}. ` +
+      `Body: ${JSON.stringify(renterBBookingBody)}`,
+    ).toBeGreaterThanOrEqual(200);
+
+    expect(
+      renterBBookingStatus,
+      `Booking by Renter B must succeed (200/201). Got ${renterBBookingStatus}. ` +
+      `Body: ${JSON.stringify(renterBBookingBody)}`,
+    ).toBeLessThan(300);
+  });
+
+  // --------------------------------------------------------------------------
+  // Test 3: DB confirms one active booking exists for Renter B on that date
+  // --------------------------------------------------------------------------
+  test('DB contains exactly one active booking for Renter B on the renter-cancel-restored recurring split listing date', async () => {
+    expect(setupSucceeded, 'Setup must succeed before verifying DB state').toBe(true);
+
+    expect(renterBLockStatus).toBeLessThan(300);
+    expect(renterBBookingStatus).toBeLessThan(300);
+
+    const { rows } = await query(
+      `SELECT id, status FROM bookings
+       WHERE renter_id = $1
+         AND spot_id = $2
+         AND booking_date = $3
+         AND status NOT IN ('cancelled', 'renter_cancelled')`,
+      [renterBId, testSpotId, bookingDate],
+    );
+
+    expect(
+      rows.length,
+      `Expected exactly one active booking for Renter B on ${bookingDate}. Found: ${JSON.stringify(rows)}`,
+    ).toBe(1);
+  });
+
+  // --------------------------------------------------------------------------
+  // Test 4: The restored recurring listing transitions to 'booked' after Renter B books
+  // --------------------------------------------------------------------------
+  test('Renter-cancel-restored recurring split listing is marked as booked after Renter B completes the booking', async () => {
+    expect(setupSucceeded, 'Setup must succeed before verifying listing status').toBe(true);
+
+    expect(renterBLockStatus).toBeLessThan(300);
+    expect(renterBBookingStatus).toBeLessThan(300);
+
+    const { rows } = await query(
+      `SELECT status FROM spot_listings WHERE id = $1`,
+      [splitListingId],
+    );
+
+    expect(rows.length, 'The recurring split listing must still exist in the DB').toBe(1);
+    expect(
+      rows[0].status,
+      'Renter-cancel-restored recurring split listing must be "booked" after Renter B completes the booking',
+    ).toBe('booked');
+  });
+
+  // --------------------------------------------------------------------------
+  // Test 5: A lock record for Renter B was created in the DB
+  //
+  // After a successful booking the lock is released/consumed by the server,
+  // so we check for the lock record's existence (any status) rather than
+  // requiring it to still be 'active'.
+  // --------------------------------------------------------------------------
+  test('A lock record for Renter B was created in the DB for the renter-cancel-restored recurring split listing', async () => {
+    expect(setupSucceeded, 'Setup must succeed before verifying lock state').toBe(true);
+
+    expect(renterBLockStatus).toBeLessThan(300);
+
+    const { rows } = await query(
+      `SELECT id, user_id, status FROM spot_locks
+       WHERE listing_id = $1
+         AND booking_date = $2
+         AND user_id = $3`,
+      [splitListingId, bookingDate, renterBId],
+    );
+
+    expect(
+      rows.length,
+      `Expected at least one lock record for Renter B on listing ${splitListingId} on ${bookingDate}. ` +
+      `A lock record must have been created even if it was later released after booking. Found: ${JSON.stringify(rows)}`,
+    ).toBeGreaterThanOrEqual(1);
+  });
+});
