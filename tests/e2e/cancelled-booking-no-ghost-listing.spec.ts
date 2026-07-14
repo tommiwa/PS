@@ -1,20 +1,18 @@
 /**
- * E2E Test: Cancelled Booking Does Not Leave Ghost Listings
+ * E2E Test: Cancelled Booking Restores Split Listing to Available
  *
  * Verifies that when a spot owner cancels a booking that originated from a
  * period or recurring listing split, the corresponding single-day listing is
- * soft-deleted (deletedAt set) and is NOT returned by normal listing queries.
+ * restored to 'available' (not deleted), so other renters can book it again.
  *
  * Flow:
  * 1. Owner creates a period (or recurring) listing.
  * 2. Renter books one day, triggering a split into single-day listings.
  * 3. Owner cancels that booking via POST /api/bookings/:id/owner-cancel.
  * 4. Assertions:
- *    a. The split listing referenced by the booking has deletedAt set.
- *    b. The split listing status is 'cancelled'.
- *    c. /api/my-listings does NOT include that listing.
- *    d. No active (deletedAt IS NULL) single-day listings remain for the
- *       booked date on this spot (no ghost listing left behind).
+ *    a. The split listing referenced by the booking has status='available' and deletedAt=null.
+ *    b. An active single-day listing exists for the booked date (available for re-booking).
+ *    c. /api/my-listings DOES include that listing (it's available).
  *
  * Authentication: Uses the x-demo-auth header bypass (development mode only).
  *
@@ -108,9 +106,9 @@ async function ensureUser(
 }
 
 // ============================================================================
-// Suite 1: Period listing — owner-cancel ghost listing check
+// Suite 1: Period listing — owner-cancel restores split listing to available
 // ============================================================================
-test.describe('Owner-cancel on period-split listing — no ghost listing left behind', () => {
+test.describe('Owner-cancel on period-split listing — restores listing to available', () => {
   const tag = `period-cancel-${Date.now()}`;
   const ownerId = `test-owner-${tag}`;
   const ownerEmail = `${ownerId}@example.com`;
@@ -228,25 +226,25 @@ test.describe('Owner-cancel on period-split listing — no ghost listing left be
     }
   });
 
-  test('split listing has deletedAt set and status=cancelled after owner-cancel', async () => {
+  test('split listing is restored to available (not deleted) after owner-cancel', async () => {
     expect(setupSucceeded, 'Test setup must succeed before verifying DB state').toBe(true);
 
     const { rows } = await query(
       'SELECT status, deleted_at FROM spot_listings WHERE id = $1',
       [splitListingId],
     );
-    expect(rows.length, 'The split listing must still exist in the DB (soft-delete, not hard-delete)').toBe(1);
+    expect(rows.length, 'The split listing must still exist in the DB').toBe(1);
     expect(
       rows[0].deleted_at,
-      'Split listing must have deletedAt set after owner-cancel (soft-deleted)',
-    ).not.toBeNull();
+      'Split listing must NOT be soft-deleted after owner-cancel',
+    ).toBeNull();
     expect(
       rows[0].status,
-      'Split listing status must be "cancelled" after owner-cancel',
-    ).toBe('cancelled');
+      'Split listing status must be "available" after owner-cancel so others can rebook',
+    ).toBe('available');
   });
 
-  test('no active (non-deleted) listing exists for the booked date after owner-cancel (no ghost listing)', async () => {
+  test('an active listing exists for the booked date after owner-cancel (available for re-booking)', async () => {
     expect(setupSucceeded).toBe(true);
 
     const { rows } = await query(
@@ -255,17 +253,18 @@ test.describe('Owner-cancel on period-split listing — no ghost listing left be
        WHERE spot_id = $1
          AND listing_type = 'single'
          AND single_date = $2
-         AND deleted_at IS NULL`,
+         AND deleted_at IS NULL
+         AND status = 'available'`,
       [testSpotId, bookingDate],
     );
 
     expect(
       rows.length,
-      'No active single-day listing should remain for the booked date after owner-cancel (ghost listing check)',
-    ).toBe(0);
+      'An active available single-day listing should exist for the booked date after owner-cancel',
+    ).toBeGreaterThan(0);
   });
 
-  test('/api/my-listings does not return the cancelled split listing', async () => {
+  test('/api/my-listings includes the restored split listing', async () => {
     expect(setupSucceeded).toBe(true);
 
     const resp = await apiGet('/api/my-listings', makeDemoAuthHeader(ownerId, ownerEmail, 'Ghost', 'OwnerP'));
@@ -273,16 +272,16 @@ test.describe('Owner-cancel on period-split listing — no ghost listing left be
     const listings = resp.body as Array<Record<string, unknown>>;
     expect(Array.isArray(listings)).toBe(true);
 
-    const ghost = listings.find(l => l.id === splitListingId);
+    const restoredListing = listings.find(l => l.id === splitListingId);
     expect(
-      ghost,
-      'The cancelled+soft-deleted split listing must NOT appear in /api/my-listings',
-    ).toBeUndefined();
+      restoredListing,
+      'The restored available split listing SHOULD appear in /api/my-listings',
+    ).toBeDefined();
   });
 });
 
 // ============================================================================
-// Suite 2: Recurring listing — owner-cancel ghost listing check
+// Suite 2: Recurring listing — owner-cancel restores split listing to available
 // ============================================================================
 
 function recurringDatesInRange(startStr: string, endStr: string, targetDays: number[]): string[] {
@@ -301,7 +300,7 @@ function recurringDatesInRange(startStr: string, endStr: string, targetDays: num
 const RECURRING_DAYS = [2, 4]; // Tuesday=2, Thursday=4
 const RECURRING_DAY_NAMES = ['tuesday', 'thursday'];
 
-test.describe('Owner-cancel on recurring-split listing — no ghost listing left behind', () => {
+test.describe('Owner-cancel on recurring-split listing — restores listing to available', () => {
   const tag = `recurring-cancel-${Date.now()}`;
   const ownerId = `test-owner-${tag}`;
   const ownerEmail = `${ownerId}@example.com`;
@@ -424,25 +423,25 @@ test.describe('Owner-cancel on recurring-split listing — no ghost listing left
     }
   });
 
-  test('recurring split listing has deletedAt set and status=cancelled after owner-cancel', async () => {
+  test('recurring split listing is restored to available (not deleted) after owner-cancel', async () => {
     expect(setupSucceeded, 'Test setup must succeed before verifying DB state').toBe(true);
 
     const { rows } = await query(
       'SELECT status, deleted_at FROM spot_listings WHERE id = $1',
       [splitListingId],
     );
-    expect(rows.length, 'The split listing must still exist in the DB (soft-delete, not hard-delete)').toBe(1);
+    expect(rows.length, 'The split listing must still exist in the DB').toBe(1);
     expect(
       rows[0].deleted_at,
-      'Split recurring listing must have deletedAt set after owner-cancel (soft-deleted)',
-    ).not.toBeNull();
+      'Split recurring listing must NOT be soft-deleted after owner-cancel',
+    ).toBeNull();
     expect(
       rows[0].status,
-      'Split recurring listing status must be "cancelled" after owner-cancel',
-    ).toBe('cancelled');
+      'Split recurring listing status must be "available" after owner-cancel so others can rebook',
+    ).toBe('available');
   });
 
-  test('no active (non-deleted) listing exists for the booked recurring date after owner-cancel (no ghost listing)', async () => {
+  test('an active listing exists for the booked recurring date after owner-cancel (available for re-booking)', async () => {
     expect(setupSucceeded).toBe(true);
 
     const { rows } = await query(
@@ -451,17 +450,18 @@ test.describe('Owner-cancel on recurring-split listing — no ghost listing left
        WHERE spot_id = $1
          AND listing_type = 'single'
          AND single_date = $2
-         AND deleted_at IS NULL`,
+         AND deleted_at IS NULL
+         AND status = 'available'`,
       [testSpotId, bookingDate],
     );
 
     expect(
       rows.length,
-      'No active single-day listing should remain for the booked recurring date after owner-cancel (ghost listing check)',
-    ).toBe(0);
+      'An active available single-day listing should exist for the booked recurring date after owner-cancel',
+    ).toBeGreaterThan(0);
   });
 
-  test('/api/my-listings does not return the cancelled recurring split listing', async () => {
+  test('/api/my-listings includes the restored recurring split listing', async () => {
     expect(setupSucceeded).toBe(true);
 
     const resp = await apiGet('/api/my-listings', makeDemoAuthHeader(ownerId, ownerEmail, 'Ghost', 'OwnerR'));
@@ -469,10 +469,10 @@ test.describe('Owner-cancel on recurring-split listing — no ghost listing left
     const listings = resp.body as Array<Record<string, unknown>>;
     expect(Array.isArray(listings)).toBe(true);
 
-    const ghost = listings.find(l => l.id === splitListingId);
+    const restoredListing = listings.find(l => l.id === splitListingId);
     expect(
-      ghost,
-      'The cancelled+soft-deleted recurring split listing must NOT appear in /api/my-listings',
-    ).toBeUndefined();
+      restoredListing,
+      'The restored available recurring split listing SHOULD appear in /api/my-listings',
+    ).toBeDefined();
   });
 });

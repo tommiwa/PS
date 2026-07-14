@@ -6404,17 +6404,8 @@ The BCI ParkShare Team`;
       const cancelledBooking = await storage.cancelBookingWithReason(id, "Cancelled by renter");
       
       if (booking.listingId) {
-        const listingToRelease = await storage.getSpotListing(booking.listingId);
-        // If this is a split listing (originalListingType is set), the parent period/recurring
-        // listing is already gone, so soft-delete this orphaned split listing to prevent ghost entries.
-        if (listingToRelease?.originalListingType) {
-          await storage.cancelSpotListing(booking.listingId, "Cancelled by renter");
-          await storage.deleteSpotListing(booking.listingId);
-          console.log(`[Cancel Booking] Soft-deleted orphaned split listing ${booking.listingId} (originalListingType=${listingToRelease.originalListingType})`);
-        } else {
-          await storage.updateSpotListingStatus(booking.listingId, 'available');
-          console.log(`[Cancel Booking] Updated listing ${booking.listingId} status back to 'available'`);
-        }
+        await storage.updateSpotListingStatus(booking.listingId, 'available');
+        console.log(`[Cancel Booking] Updated listing ${booking.listingId} status back to 'available'`);
       }
       
       await auditService.logAction("CANCEL", "booking", {
@@ -6528,13 +6519,11 @@ The BCI ParkShare Team`;
       
       if (booking.listingId) {
         const listingToCancel = await storage.getSpotListing(booking.listingId);
-        await storage.cancelSpotListing(booking.listingId, `Booking cancelled by spot owner (${ownerName})`);
-        // If this is a split listing (originalListingType is set), the parent period/recurring
-        // listing is already gone, so soft-delete this orphaned split listing too.
         if (listingToCancel?.originalListingType) {
-          await storage.deleteSpotListing(booking.listingId);
-          console.log(`[Owner Cancel] Soft-deleted orphaned split listing ${booking.listingId} (originalListingType=${listingToCancel.originalListingType})`);
+          await storage.updateSpotListingStatus(booking.listingId, 'available');
+          console.log(`[Owner Cancel] Restored split listing ${booking.listingId} to 'available' (originalListingType=${listingToCancel.originalListingType})`);
         } else {
+          await storage.cancelSpotListing(booking.listingId, `Booking cancelled by spot owner (${ownerName})`);
           console.log(`[Owner Cancel] Cancelled listing ${booking.listingId} along with booking`);
         }
       }
