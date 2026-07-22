@@ -6427,7 +6427,9 @@ The BCI ParkShare Team`;
 
       res.json(finalBooking);
     } catch (error: any) {
-      if (error.message === 'SPOT_ALREADY_BOOKED') {
+      // '23505' = Postgres unique violation from UDX_bookings_active_spot_date —
+      // another booking claimed this spot/date between our check and the update.
+      if (error.message === 'SPOT_ALREADY_BOOKED' || error.code === '23505' || error.cause?.code === '23505') {
         return res.status(409).json({ error: "The selected spot was just booked by someone else. Please choose another spot." });
       }
       console.error("Error swapping booking spot:", error);
