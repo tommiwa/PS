@@ -64,6 +64,8 @@ vi.mock('./storage', () => ({
     getLatestFiredMilestone: vi.fn(async () => null),
     recordMilestone: vi.fn(async () => undefined),
     getAllAdminEmails: vi.fn(async () => []),
+    updateSpotListingStatus: vi.fn(async () => undefined),
+    updateBooking: vi.fn(async (id: string, updates: any) => ({ ...mockBookingStore.current, ...updates })),
   },
 }));
 
@@ -234,12 +236,21 @@ describe('Admin swap spot for BCI bookings', () => {
   });
 
   describe('POST /api/admin/bookings/:id/swap-spot', () => {
-    it('swaps the booking to the new spot and logs a SWAP_SPOT audit entry', async () => {
-      const updatedBooking = makeBooking({ spotId: 'spot-2' });
+    it('swaps the booking, releases the old listing, and nulls listingId when no single-day listing exists on the new spot', async () => {
+      // Booking has a listingId pointing at the old spot's listing
+      mockBookingStore.current = makeBooking({ listingId: 'listing-old' });
+      const updatedBooking = makeBooking({ spotId: 'spot-2', listingId: 'listing-old' });
       mockDbQueue.values = [
         [], // tx: no conflicting booking on new spot
         [updatedBooking], // tx: update booking returning
+        [], // listing lookup: no single-day listing on new spot
       ];
+
+      const { storage } = await import('./storage');
+      const updateListingStatus = vi.mocked(storage.updateSpotListingStatus);
+      const updateBooking = vi.mocked(storage.updateBooking);
+      updateListingStatus.mockClear();
+      updateBooking.mockClear();
 
       const res = await request(app)
         .post('/api/admin/bookings/booking-1/swap-spot')
@@ -247,6 +258,11 @@ describe('Admin swap spot for BCI bookings', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.spotId).toBe('spot-2');
+      // Old listing must be reverted to available
+      expect(updateListingStatus).toHaveBeenCalledWith('listing-old', 'available');
+      // No new listing found — listingId must be cleared
+      expect(updateBooking).toHaveBeenCalledWith('booking-1', { listingId: null });
+      expect(res.body.listingId).toBeNull();
 
       expect(mockLogAction).toHaveBeenCalledTimes(1);
       const [action, entityType, details] = mockLogAction.mock.calls[0];
@@ -255,6 +271,59 @@ describe('Admin swap spot for BCI bookings', () => {
       expect(details.entityId).toBe('booking-1');
       expect(details.before.spotId).toBe('spot-1');
       expect(details.after.spotId).toBe('spot-2');
+    });
+
+    it('claims the new spot single-day listing and re-links listingId after swap', async () => {
+      mockBookingStore.current = makeBooking({ listingId: 'listing-old' });
+      const updatedBooking = makeBooking({ spotId: 'spot-2', listingId: 'listing-old' });
+      const newListing = { id: 'listing-new', spotId: 'spot-2', listingType: 'single', status: 'available', singleDate: '2026-06-15' };
+      mockDbQueue.values = [
+        [], // tx: no conflicting booking
+        [updatedBooking], // tx: update returning
+        [newListing], // listing lookup: single-day listing found on new spot
+      ];
+
+      const { storage } = await import('./storage');
+      const updateListingStatus = vi.mocked(storage.updateSpotListingStatus);
+      const updateBooking = vi.mocked(storage.updateBooking);
+      updateListingStatus.mockClear();
+      updateBooking.mockClear();
+
+      const res = await request(app)
+        .post('/api/admin/bookings/booking-1/swap-spot')
+        .send({ newSpotId: 'spot-2' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.spotId).toBe('spot-2');
+      // Old listing released, new listing claimed
+      expect(updateListingStatus).toHaveBeenCalledWith('listing-old', 'available');
+      expect(updateListingStatus).toHaveBeenCalledWith('listing-new', 'booked');
+      // Booking re-linked to new listing
+      expect(updateBooking).toHaveBeenCalledWith('booking-1', { listingId: 'listing-new' });
+      expect(res.body.listingId).toBe('listing-new');
+    });
+
+    it('does not touch the old listing when booking had no listingId', async () => {
+      // booking.listingId is null (e.g. BCI booking created without a listing)
+      mockBookingStore.current = makeBooking({ listingId: null });
+      const updatedBooking = makeBooking({ spotId: 'spot-2', listingId: null });
+      mockDbQueue.values = [
+        [], // tx: no conflicting booking
+        [updatedBooking], // tx: update returning
+        [], // listing lookup: no single-day listing on new spot
+      ];
+
+      const { storage } = await import('./storage');
+      const updateListingStatus = vi.mocked(storage.updateSpotListingStatus);
+      updateListingStatus.mockClear();
+
+      const res = await request(app)
+        .post('/api/admin/bookings/booking-1/swap-spot')
+        .send({ newSpotId: 'spot-2' });
+
+      expect(res.status).toBe(200);
+      // updateSpotListingStatus must not be called for the old (null) listing
+      expect(updateListingStatus).not.toHaveBeenCalledWith(null, expect.anything());
     });
 
     it('returns 409 without swapping when the target spot was just booked by someone else', async () => {

@@ -6378,14 +6378,54 @@ The BCI ParkShare Team`;
         return result;
       });
 
+      // Step 1: Revert old spot's listing back to 'available'
+      if (booking.listingId) {
+        await storage.updateSpotListingStatus(booking.listingId, 'available');
+        console.log(`[Swap Spot] Reverted listing ${booking.listingId} for old spot ${currentSpot.spotNumber} back to 'available'`);
+      }
+
+      // Step 2: Find and claim a single-day listing on the new spot for the booking date.
+      // Only single-day listings are matched — period listings must not be touched here
+      // because marking a whole period as 'booked' would hide all its days from the
+      // availability calendar, not just the swapped day.
+      let newListingId: string | null = null;
+
+      const newSingleListing = await db
+        .select()
+        .from(spotListings)
+        .where(and(
+          eq(spotListings.spotId, newSpotId),
+          eq(spotListings.status, 'available'),
+          isNull(spotListings.deletedAt),
+          eq(spotListings.listingType, 'single'),
+          eq(spotListings.singleDate, booking.bookingDate)
+        ))
+        .limit(1);
+
+      if (newSingleListing.length > 0) {
+        newListingId = newSingleListing[0].id;
+      }
+
+      if (newListingId) {
+        await storage.updateSpotListingStatus(newListingId, 'booked');
+        console.log(`[Swap Spot] Marked listing ${newListingId} for new spot ${newSpot.spotNumber} as 'booked'`);
+      } else {
+        console.log(`[Swap Spot] No available listing found for new spot ${newSpot.spotNumber} on ${booking.bookingDate}`);
+      }
+
+      // Update booking's listingId to the new listing (or null if none found)
+      await storage.updateBooking(id, { listingId: newListingId });
+      // Compose final response from the transaction result (correct spotId) + new listingId
+      const finalBooking = { ...updatedBooking, listingId: newListingId };
+
       await auditService.logAction("SWAP_SPOT", "booking", {
         entityId: id,
         message: `Admin swapped booking ${id} from spot ${currentSpot.spotNumber} to ${newSpot.spotNumber} on ${booking.bookingDate}`,
         before: booking,
-        after: updatedBooking
+        after: finalBooking
       });
 
-      res.json(updatedBooking);
+      res.json(finalBooking);
     } catch (error: any) {
       if (error.message === 'SPOT_ALREADY_BOOKED') {
         return res.status(409).json({ error: "The selected spot was just booked by someone else. Please choose another spot." });
