@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ParkingSquare, X } from "lucide-react";
-import { useAuth } from "@/contexts/auth-context";
 import { useLocation } from "wouter";
 import { format } from "date-fns";
 
@@ -16,11 +15,7 @@ interface EnrichedBooking {
 }
 
 export function TodayBookingBadge() {
-  const { getCurrentViewRole } = useAuth();
   const [, setLocation] = useLocation();
-
-  const effectiveRole = getCurrentViewRole();
-  const isRenter = effectiveRole === "renter";
 
   const [dismissed, setDismissed] = useState(() => {
     try {
@@ -46,7 +41,7 @@ export function TodayBookingBadge() {
 
   const { data: bookings } = useQuery<EnrichedBooking[]>({
     queryKey: ["/api/my-bookings"],
-    enabled: isRenter && !dismissed,
+    enabled: !dismissed,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -118,7 +113,7 @@ export function TodayBookingBadge() {
     dragState.current = null;
   };
 
-  if (!isRenter || dismissed || todayBookings.length === 0) return null;
+  if (dismissed || todayBookings.length === 0) return null;
 
   const firstBooking = todayBookings[0];
   const extraCount = todayBookings.length - 1;
