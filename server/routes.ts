@@ -8755,14 +8755,20 @@ The BCI ParkShare Team`;
       // Get all bookings for this spot
       const allBookings = await storage.getBookingsBySpot(spotId);
       
-      // Filter for future bookings (today and onwards) that are not already cancelled
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      // Use "from" query param if provided (e.g. for scheduled release pre-flight check),
+      // otherwise default to today
+      let cutoffDate: Date;
+      if (req.query.from && typeof req.query.from === 'string') {
+        cutoffDate = new Date(req.query.from + 'T00:00:00');
+      } else {
+        cutoffDate = new Date();
+        cutoffDate.setHours(0, 0, 0, 0);
+      }
       
       const futureBookings = allBookings.filter(booking => {
         const bookingDate = new Date(booking.bookingDate);
         bookingDate.setHours(0, 0, 0, 0);
-        return bookingDate >= today && booking.status !== 'cancelled';
+        return bookingDate >= cutoffDate && booking.status !== 'cancelled';
       });
       
       // Get renter details for each booking

@@ -749,6 +749,21 @@ export default function AdminParkingManagement() {
     enabled: !!selectedAvailableSpot?.id && showAssignAvailableSpotDialog,
   });
 
+  // Query to fetch future bookings from the scheduled release date onwards (pre-flight check)
+  const scheduleReleaseDateStr = scheduleReleaseDate ? format(scheduleReleaseDate, 'yyyy-MM-dd') : null;
+  const { data: scheduleReleaseFutureBookings, isLoading: isLoadingScheduleReleaseFutureBookings } = useQuery<FutureBookingsResponse>({
+    queryKey: ["/api/admin/spots", selectedSpotForScheduleRelease?.id, "future-bookings", scheduleReleaseDateStr],
+    queryFn: async () => {
+      const response = await fetch(
+        `/api/admin/spots/${selectedSpotForScheduleRelease?.id}/future-bookings?from=${scheduleReleaseDateStr}`,
+        { credentials: 'include' }
+      );
+      if (!response.ok) throw new Error('Failed to fetch future bookings');
+      return response.json();
+    },
+    enabled: !!selectedSpotForScheduleRelease?.id && showScheduleReleaseDialog && !!scheduleReleaseDateStr,
+  });
+
   // Query to fetch count of unbooked listings from the effective date onwards
   const effectiveDateStr = format(
     assignAvailableSpotFormData.scheduledDate || new Date(),
@@ -4039,6 +4054,49 @@ export default function AdminParkingManagement() {
                     </PopoverContent>
                   </Popover>
                 </div>
+
+                {/* Future bookings pre-flight check */}
+                {scheduleReleaseDate && (
+                  isLoadingScheduleReleaseFutureBookings ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Checking for affected bookings...
+                    </div>
+                  ) : scheduleReleaseFutureBookings && scheduleReleaseFutureBookings.count > 0 ? (
+                    <Alert variant="destructive">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        <div className="space-y-2">
+                          <p className="font-medium">
+                            {scheduleReleaseFutureBookings.count} upcoming booking{scheduleReleaseFutureBookings.count > 1 ? 's' : ''} will be cancelled on this date
+                          </p>
+                          <p className="text-sm">
+                            The following renters will be notified when the release takes effect:
+                          </p>
+                          <div className="max-h-32 overflow-y-auto mt-2 space-y-1">
+                            {scheduleReleaseFutureBookings.bookings.map((booking) => (
+                              <div key={booking.id} className="text-xs bg-destructive/10 rounded px-2 py-1 flex justify-between items-center">
+                                <span className="font-medium">{booking.renterName}</span>
+                                <span className="text-muted-foreground">
+                                  {new Date(booking.bookingDate + 'T12:00:00').toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric'
+                                  })}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </AlertDescription>
+                    </Alert>
+                  ) : scheduleReleaseFutureBookings && scheduleReleaseFutureBookings.count === 0 ? (
+                    <div className="flex items-center gap-2 text-sm text-green-600">
+                      <CheckCircle2 className="h-4 w-4" />
+                      No upcoming bookings will be affected on this date.
+                    </div>
+                  ) : null
+                )}
+
                 <div className="space-y-2">
                   <Label>Notes (optional)</Label>
                   <Input
@@ -4059,11 +4117,15 @@ export default function AdminParkingManagement() {
                         notes: scheduleReleaseNotes || undefined,
                       });
                     }}
-                    disabled={!scheduleReleaseDate || scheduleReleaseMutation.isPending}
+                    disabled={!scheduleReleaseDate || scheduleReleaseMutation.isPending || isLoadingScheduleReleaseFutureBookings}
                     className="flex-1"
                     data-testid="button-confirm-schedule-release"
                   >
-                    {scheduleReleaseMutation.isPending ? "Scheduling..." : "Schedule Release"}
+                    {scheduleReleaseMutation.isPending
+                      ? "Scheduling..."
+                      : scheduleReleaseFutureBookings && scheduleReleaseFutureBookings.count > 0
+                        ? `Schedule Release & Cancel ${scheduleReleaseFutureBookings.count} Booking${scheduleReleaseFutureBookings.count > 1 ? 's' : ''}`
+                        : "Schedule Release"}
                   </Button>
                   <Button
                     variant="outline"
