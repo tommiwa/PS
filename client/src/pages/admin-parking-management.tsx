@@ -38,7 +38,7 @@ import {
   Timer, Target, CheckCircle2, Search, Filter, Check, ChevronsUpDown,
   Zap, Accessibility, Building, MoreHorizontal, Info, RefreshCw,
   Trash2, Edit, UserMinus, UserCheck, Download, FileText,
-  Eye, EyeOff, Layers, Sparkles, Loader2, MapPin, AlertCircle, Heart
+  Eye, EyeOff, Layers, Sparkles, Loader2, MapPin, AlertCircle, Heart, CalendarX2
 } from "lucide-react"
 import type { ParkingSpot, ParkingSpotWithUser, SpotType, Location, SpotTypeTable } from "@shared/schema"
 import { quickExportParkingSpotsPDF, quickExportParkingSpotsExcel } from "@/utils/export-utils"
@@ -62,6 +62,11 @@ export default function AdminParkingManagement() {
   const [showEditSpotDialog, setShowEditSpotDialog] = useState(false)
   const [showDirectAssignDialog, setShowDirectAssignDialog] = useState(false)
   const [showReleaseSpotDialog, setShowReleaseSpotDialog] = useState(false)
+  const [showScheduleReleaseDialog, setShowScheduleReleaseDialog] = useState(false)
+  const [selectedSpotForScheduleRelease, setSelectedSpotForScheduleRelease] = useState<ParkingSpotWithUser | null>(null)
+  const [scheduleReleaseDate, setScheduleReleaseDate] = useState<Date | null>(null)
+  const [scheduleReleaseDatePickerOpen, setScheduleReleaseDatePickerOpen] = useState(false)
+  const [scheduleReleaseNotes, setScheduleReleaseNotes] = useState("")
   const [showAssignAvailableSpotDialog, setShowAssignAvailableSpotDialog] = useState(false)
   const [showCreateAvailabilityDialog, setShowCreateAvailabilityDialog] = useState(false)
   const [showBulkSeatNumberDialog, setShowBulkSeatNumberDialog] = useState(false)
@@ -922,6 +927,101 @@ export default function AdminParkingManagement() {
     }
     return map;
   }, [scheduledAssignments]);
+
+  type ScheduledRelease = {
+    id: string;
+    spotId: string;
+    scheduledDate: string;
+    status: string;
+    createdBy: string | null;
+    notes: string | null;
+    createdAt: string;
+    appliedAt: string | null;
+    cancelledAt: string | null;
+    spotNumber: string;
+    locationName: string;
+    currentOwnerName: string;
+    currentOwnerEmail: string;
+  };
+
+  const { data: scheduledReleases = [], isLoading: isLoadingScheduledReleases } = useQuery<ScheduledRelease[]>({
+    queryKey: ["/api/admin/scheduled-releases"],
+    queryFn: async () => {
+      const response = await fetch("/api/admin/scheduled-releases", { credentials: 'include' });
+      if (!response.ok) return [];
+      return response.json();
+    },
+  });
+
+  const cancelScheduledReleaseMutation = useMutation({
+    mutationFn: async (releaseId: string) => {
+      return await apiRequest(`/api/admin/scheduled-releases/${releaseId}`, {
+        method: "DELETE",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/scheduled-releases"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/all-spots"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/assigned-spots"] });
+      toast({
+        title: "Success",
+        description: "Scheduled release cancelled successfully.",
+        variant: "success",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to cancel scheduled release.",
+        variant: "error",
+      });
+    },
+  });
+
+  const scheduleReleaseMutation = useMutation({
+    mutationFn: async (data: { spotId: string; scheduledDate: string; notes?: string }) => {
+      return await apiRequest("/api/admin/schedule-release", {
+        method: "POST",
+        body: data,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/scheduled-releases"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/all-spots"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/assigned-spots"] });
+      setShowScheduleReleaseDialog(false);
+      setSelectedSpotForScheduleRelease(null);
+      setScheduleReleaseDate(null);
+      setScheduleReleaseNotes("");
+      toast({
+        title: "Release Scheduled",
+        description: "The spot release has been scheduled successfully.",
+        variant: "success",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to schedule spot release.",
+        variant: "error",
+      });
+    },
+  });
+
+  const scheduledReleasesBySpotId = useMemo(() => {
+    const map = new Map<string, ScheduledRelease>();
+    for (const sr of scheduledReleases) {
+      map.set(sr.spotId, sr);
+    }
+    return map;
+  }, [scheduledReleases]);
+
+  const handleScheduleRelease = (spot: ParkingSpotWithUser) => {
+    setSelectedSpotForScheduleRelease(spot);
+    setScheduleReleaseDate(null);
+    setScheduleReleaseNotes("");
+    setShowScheduleReleaseDialog(true);
+  };
 
   // Helper functions
   const handleEditSpot = (spot: ParkingSpot) => {
@@ -2124,11 +2224,19 @@ export default function AdminParkingManagement() {
                                   <div className="flex flex-col gap-0.5">
                                     <Badge variant="secondary" className="bg-amber-50 text-amber-700 border-amber-200 text-xs w-fit">
                                       <Clock className="h-3 w-3 mr-1" />
-                                      Scheduled {new Date(scheduledAssignmentsBySpotId.get(spot.id)!.scheduledDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                      Assign Scheduled {new Date(scheduledAssignmentsBySpotId.get(spot.id)!.scheduledDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                     </Badge>
                                     <span className="text-xs text-muted-foreground">
                                       &#8594; {scheduledAssignmentsBySpotId.get(spot.id)!.userName}
                                     </span>
+                                  </div>
+                                )}
+                                {scheduledReleasesBySpotId.has(spot.id) && (
+                                  <div className="flex flex-col gap-0.5">
+                                    <Badge variant="secondary" className="bg-orange-50 text-orange-700 border-orange-200 text-xs w-fit">
+                                      <CalendarX2 className="h-3 w-3 mr-1" />
+                                      Release Scheduled {new Date(scheduledReleasesBySpotId.get(spot.id)!.scheduledDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                    </Badge>
                                   </div>
                                 )}
                               </div>
@@ -2218,15 +2326,53 @@ export default function AdminParkingManagement() {
                                     <Target className="h-4 w-4" />
                                   </Button>
                                 ) : (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleReleaseSpot(spot)}
-                                    data-testid={`button-release-spot-${spot.id}`}
-                                    title="Release Spot"
-                                  >
-                                    <UserMinus className="h-4 w-4" />
-                                  </Button>
+                                  <>
+                                    {scheduledReleasesBySpotId.has(spot.id) ? (
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={async () => {
+                                              const sr = scheduledReleasesBySpotId.get(spot.id)!;
+                                              const confirmed = await confirm({
+                                                title: "Cancel Scheduled Release",
+                                                description: `Cancel the scheduled release of spot ${spot.spotNumber} on ${new Date(sr.scheduledDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}?`,
+                                                confirmText: "Cancel Release",
+                                                cancelText: "Keep",
+                                                variant: "destructive"
+                                              });
+                                              if (confirmed) cancelScheduledReleaseMutation.mutate(sr.id);
+                                            }}
+                                            data-testid={`button-cancel-scheduled-release-spot-${spot.id}`}
+                                            title="Cancel Scheduled Release"
+                                          >
+                                            <CalendarX2 className="h-4 w-4 text-orange-600" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Cancel Scheduled Release ({new Date(scheduledReleasesBySpotId.get(spot.id)!.scheduledDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})</TooltipContent>
+                                      </Tooltip>
+                                    ) : (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleScheduleRelease(spot)}
+                                        data-testid={`button-schedule-release-spot-${spot.id}`}
+                                        title="Schedule Release"
+                                      >
+                                        <CalendarX2 className="h-4 w-4" />
+                                      </Button>
+                                    )}
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleReleaseSpot(spot)}
+                                      data-testid={`button-release-spot-${spot.id}`}
+                                      title="Release Spot"
+                                    >
+                                      <UserMinus className="h-4 w-4" />
+                                    </Button>
+                                  </>
                                 )}
                                 <Button
                                   variant="ghost"
@@ -2484,7 +2630,7 @@ export default function AdminParkingManagement() {
                                 <div className="flex flex-col gap-0.5">
                                   <Badge variant="secondary" className="bg-amber-50 text-amber-700 border-amber-200 text-xs w-fit">
                                     <Clock className="h-3 w-3 mr-1" />
-                                    Scheduled {new Date(scheduledAssignmentsBySpotId.get(spot.id)!.scheduledDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                    Assign Scheduled {new Date(scheduledAssignmentsBySpotId.get(spot.id)!.scheduledDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                   </Badge>
                                   <span className="text-xs text-muted-foreground">
                                     &#8594; {scheduledAssignmentsBySpotId.get(spot.id)!.userName}
@@ -2701,7 +2847,17 @@ export default function AdminParkingManagement() {
                     <TableBody>
                       {paginatedAssignedSpots.map((spot) => (
                         <TableRow key={spot.id} data-testid={`row-assigned-spot-${spot.id}`}>
-                          <TableCell className="font-medium">{spot.spotNumber}</TableCell>
+                          <TableCell className="font-medium">
+                            <div className="flex flex-col gap-0.5">
+                              {spot.spotNumber}
+                              {scheduledReleasesBySpotId.has(spot.id) && (
+                                <Badge variant="secondary" className="bg-orange-50 text-orange-700 border-orange-200 text-xs w-fit">
+                                  <CalendarX2 className="h-3 w-3 mr-1" />
+                                  Release Scheduled {new Date(scheduledReleasesBySpotId.get(spot.id)!.scheduledDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
                           <TableCell>
                             {spot.locationName}
                             {spot.isIndoor && <Badge variant="outline" className="ml-2">Indoor</Badge>}
@@ -2757,6 +2913,36 @@ export default function AdminParkingManagement() {
                               <Button variant="ghost" size="sm" onClick={() => handleEditSpot(spot)} title="Edit Spot">
                                 <Edit className="h-4 w-4" />
                               </Button>
+                              {scheduledReleasesBySpotId.has(spot.id) ? (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={async () => {
+                                        const sr = scheduledReleasesBySpotId.get(spot.id)!;
+                                        const confirmed = await confirm({
+                                          title: "Cancel Scheduled Release",
+                                          description: `Cancel the scheduled release of spot ${spot.spotNumber} on ${new Date(sr.scheduledDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}?`,
+                                          confirmText: "Cancel Release",
+                                          cancelText: "Keep",
+                                          variant: "destructive"
+                                        });
+                                        if (confirmed) cancelScheduledReleaseMutation.mutate(sr.id);
+                                      }}
+                                      data-testid={`button-cancel-scheduled-release-assigned-${spot.id}`}
+                                      title="Cancel Scheduled Release"
+                                    >
+                                      <CalendarX2 className="h-4 w-4 text-orange-600" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Cancel Scheduled Release ({new Date(scheduledReleasesBySpotId.get(spot.id)!.scheduledDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})</TooltipContent>
+                                </Tooltip>
+                              ) : (
+                                <Button variant="ghost" size="sm" onClick={() => handleScheduleRelease(spot)} title="Schedule Release" data-testid={`button-schedule-release-assigned-${spot.id}`}>
+                                  <CalendarX2 className="h-4 w-4" />
+                                </Button>
+                              )}
                               <Button variant="ghost" size="sm" onClick={() => handleReleaseSpot(spot)} title="Release Spot">
                                 <UserMinus className="h-4 w-4" />
                               </Button>
@@ -3011,6 +3197,84 @@ export default function AdminParkingManagement() {
                             }}
                             disabled={cancelScheduledAssignmentMutation.isPending}
                             data-testid={`button-cancel-scheduled-${sa.id}`}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {scheduledReleases.length > 0 && (
+        <Card className="mt-6" data-testid="card-scheduled-releases">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarX2 className="h-5 w-5 text-orange-600" />
+              Pending Scheduled Releases ({scheduledReleases.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoadingScheduledReleases ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading scheduled releases...
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table data-testid="table-scheduled-releases">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Spot</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Current Owner</TableHead>
+                      <TableHead>Release Date</TableHead>
+                      <TableHead>Notes</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {scheduledReleases.map((sr) => (
+                      <TableRow key={sr.id} data-testid={`row-scheduled-release-${sr.id}`}>
+                        <TableCell className="font-medium">{sr.spotNumber}</TableCell>
+                        <TableCell>{sr.locationName}</TableCell>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{sr.currentOwnerName}</p>
+                            <p className="text-xs text-muted-foreground">{sr.currentOwnerEmail}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="bg-orange-50 text-orange-700 border-orange-200">
+                            {new Date(sr.scheduledDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm text-muted-foreground">{sr.notes || '—'}</span>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={async () => {
+                              const confirmed = await confirm({
+                                title: "Cancel Scheduled Release",
+                                description: `Cancel the scheduled release of spot ${sr.spotNumber} on ${new Date(sr.scheduledDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}? The spot will remain assigned to its current owner.`,
+                                confirmText: "Cancel Release",
+                                cancelText: "Keep",
+                                variant: "destructive"
+                              });
+                              if (confirmed) {
+                                cancelScheduledReleaseMutation.mutate(sr.id);
+                              }
+                            }}
+                            disabled={cancelScheduledReleaseMutation.isPending}
+                            data-testid={`button-cancel-release-${sr.id}`}
                           >
                             <Trash2 className="h-4 w-4 text-red-500" />
                           </Button>
@@ -3712,6 +3976,106 @@ export default function AdminParkingManagement() {
                 Cancel
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Schedule Release Dialog */}
+      <Dialog open={showScheduleReleaseDialog} onOpenChange={(open) => {
+        setShowScheduleReleaseDialog(open);
+        if (!open) {
+          setSelectedSpotForScheduleRelease(null);
+          setScheduleReleaseDate(null);
+          setScheduleReleaseNotes("");
+        }
+      }}>
+        <DialogContent className="max-w-lg" data-testid="dialog-schedule-release">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarX2 className="h-5 w-5 text-orange-600" />
+              Schedule Spot Release
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {selectedSpotForScheduleRelease && (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Schedule a future date when spot <strong>{selectedSpotForScheduleRelease.spotNumber}</strong> will automatically be released back to the BCI parking pool.
+                </p>
+                <Alert className="bg-orange-50 border-orange-200">
+                  <AlertTriangle className="h-4 w-4 text-orange-600" />
+                  <AlertDescription className="text-orange-700 text-sm">
+                    Any bookings and unbooked listings from the release date onwards will be cancelled immediately. The former owner will be notified on the effective date.
+                  </AlertDescription>
+                </Alert>
+                <div className="space-y-2">
+                  <Label>Release Date</Label>
+                  <Popover open={scheduleReleaseDatePickerOpen} onOpenChange={setScheduleReleaseDatePickerOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal"
+                        data-testid="button-schedule-release-date-picker"
+                      >
+                        <CalendarDays className="mr-2 h-4 w-4" />
+                        {scheduleReleaseDate ? format(scheduleReleaseDate, "MMMM d, yyyy") : "Select release date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={scheduleReleaseDate || undefined}
+                        onSelect={(date) => {
+                          setScheduleReleaseDate(date || null);
+                          setScheduleReleaseDatePickerOpen(false);
+                        }}
+                        disabled={(date) => {
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          return date <= today;
+                        }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div className="space-y-2">
+                  <Label>Notes (optional)</Label>
+                  <Input
+                    placeholder="e.g. Employee departing, restructuring..."
+                    value={scheduleReleaseNotes}
+                    onChange={(e) => setScheduleReleaseNotes(e.target.value)}
+                    data-testid="input-schedule-release-notes"
+                  />
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    onClick={() => {
+                      if (!scheduleReleaseDate || !selectedSpotForScheduleRelease) return;
+                      const dateStr = format(scheduleReleaseDate, "yyyy-MM-dd");
+                      scheduleReleaseMutation.mutate({
+                        spotId: selectedSpotForScheduleRelease.id,
+                        scheduledDate: dateStr,
+                        notes: scheduleReleaseNotes || undefined,
+                      });
+                    }}
+                    disabled={!scheduleReleaseDate || scheduleReleaseMutation.isPending}
+                    className="flex-1"
+                    data-testid="button-confirm-schedule-release"
+                  >
+                    {scheduleReleaseMutation.isPending ? "Scheduling..." : "Schedule Release"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowScheduleReleaseDialog(false)}
+                    className="flex-1"
+                    data-testid="button-cancel-schedule-release"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>

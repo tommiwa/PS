@@ -1469,6 +1469,37 @@ export const insertScheduledSpotAssignmentSchema = createInsertSchema(scheduledS
 export type InsertScheduledSpotAssignment = z.infer<typeof insertScheduledSpotAssignmentSchema>;
 export type ScheduledSpotAssignment = typeof scheduledSpotAssignments.$inferSelect;
 
+// Scheduled Spot Release statuses
+export const scheduledReleaseStatuses = z.enum(["pending", "applied", "cancelled"]);
+export type ScheduledReleaseStatus = z.infer<typeof scheduledReleaseStatuses>;
+
+// Scheduled Spot Releases Table
+export const scheduledSpotReleases = pgTable("scheduled_spot_releases", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  spotId: varchar("spot_id").notNull().references(() => parkingSpots.id, { onDelete: "cascade" }),
+  scheduledDate: date("scheduled_date").notNull(),
+  status: text("status").notNull().$type<ScheduledReleaseStatus>().default("pending"),
+  createdBy: varchar("created_by"), // admin user id
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  appliedAt: timestamp("applied_at"),
+  cancelledAt: timestamp("cancelled_at"),
+}, (table) => [
+  index("IDX_scheduled_spot_releases_spot_id").on(table.spotId),
+  index("IDX_scheduled_spot_releases_status").on(table.status),
+  index("IDX_scheduled_spot_releases_scheduled_date").on(table.scheduledDate),
+]);
+
+export const insertScheduledSpotReleaseSchema = createInsertSchema(scheduledSpotReleases).omit({
+  id: true,
+  createdAt: true,
+  appliedAt: true,
+  cancelledAt: true,
+});
+
+export type InsertScheduledSpotRelease = z.infer<typeof insertScheduledSpotReleaseSchema>;
+export type ScheduledSpotRelease = typeof scheduledSpotReleases.$inferSelect;
+
 // Locker Types Table
 export const lockerTypesTable = pgTable("locker_types", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),

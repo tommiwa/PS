@@ -364,6 +364,26 @@ const migrations: MigrationCheck[] = [
       `CREATE UNIQUE INDEX IF NOT EXISTS "UDX_spend_milestones_amount" ON spend_milestones (milestone_amount)`,
     ],
   },
+  {
+    name: "scheduled_spot_releases_table",
+    checkQuery: `SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'scheduled_spot_releases')`,
+    migrationStatements: [
+      `CREATE TABLE IF NOT EXISTS scheduled_spot_releases (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        spot_id VARCHAR NOT NULL REFERENCES parking_spots(id) ON DELETE CASCADE,
+        scheduled_date DATE NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        created_by VARCHAR,
+        notes TEXT,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        applied_at TIMESTAMP,
+        cancelled_at TIMESTAMP
+      )`,
+      `CREATE INDEX IF NOT EXISTS "IDX_scheduled_spot_releases_spot_id" ON scheduled_spot_releases (spot_id)`,
+      `CREATE INDEX IF NOT EXISTS "IDX_scheduled_spot_releases_status" ON scheduled_spot_releases (status)`,
+      `CREATE INDEX IF NOT EXISTS "IDX_scheduled_spot_releases_scheduled_date" ON scheduled_spot_releases (scheduled_date)`,
+    ],
+  },
 ];
 
 export async function runMigrations(): Promise<void> {

@@ -65,6 +65,9 @@ import {
   type ScheduledSpotAssignment,
   type InsertScheduledSpotAssignment,
   type ScheduledAssignmentStatus,
+  type ScheduledSpotRelease,
+  type InsertScheduledSpotRelease,
+  type ScheduledReleaseStatus,
   type FeatureAnnouncement,
   type InsertFeatureAnnouncement,
   type UpdateFeatureAnnouncement,
@@ -80,7 +83,7 @@ import { randomUUID } from "crypto";
 import { auditDecorator } from "./audit-service";
 import { type IAuditStorage } from "./audit-storage";
 import { db } from "./db";
-import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, bookingSubscriptions, locations, spotTypesTable, termsVersions, spotAssignmentHistory, spotLocks, lockers, lockerWaitlist, lockerAssignmentHistory, lockerTypesTable, appConfigs, apiKeys, scheduledSpotAssignments, featureAnnouncements, spotAlertSubscriptions, saleEvents, issues, spendMilestones } from "@shared/schema";
+import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, bookingSubscriptions, locations, spotTypesTable, termsVersions, spotAssignmentHistory, spotLocks, lockers, lockerWaitlist, lockerAssignmentHistory, lockerTypesTable, appConfigs, apiKeys, scheduledSpotAssignments, scheduledSpotReleases, featureAnnouncements, spotAlertSubscriptions, saleEvents, issues, spendMilestones } from "@shared/schema";
 import { eq, or, ilike, asc, and, notExists, sql as sqlOp, count, desc, inArray, isNull, lt, like } from "drizzle-orm";
 
 // Storage interface with comprehensive CRUD methods
@@ -402,6 +405,15 @@ export interface IStorage {
   updateScheduledAssignment(id: string, updates: Partial<InsertScheduledSpotAssignment> & { status?: ScheduledAssignmentStatus }): Promise<ScheduledSpotAssignment | undefined>;
   getPendingScheduledAssignmentsDue(): Promise<ScheduledSpotAssignment[]>;
   cancelSpotPendingScheduledAssignments(spotId: string): Promise<number>;
+
+  // Scheduled Spot Release operations
+  createScheduledRelease(data: InsertScheduledSpotRelease): Promise<ScheduledSpotRelease>;
+  getScheduledReleases(spotId?: string): Promise<ScheduledSpotRelease[]>;
+  getScheduledRelease(id: string): Promise<ScheduledSpotRelease | undefined>;
+  updateScheduledRelease(id: string, updates: Partial<InsertScheduledSpotRelease> & { status?: ScheduledReleaseStatus; appliedAt?: Date | null; cancelledAt?: Date | null }): Promise<ScheduledSpotRelease | undefined>;
+  getPendingScheduledReleasesDue(): Promise<ScheduledSpotRelease[]>;
+  getScheduledReleasesForSpot(spotId: string): Promise<ScheduledSpotRelease[]>;
+  cancelSpotPendingScheduledReleases(spotId: string): Promise<number>;
 
   // Feature Announcements operations
   getAllAnnouncements(): Promise<FeatureAnnouncement[]>;
@@ -4292,6 +4304,62 @@ export class MemStorage implements IStorage {
       .where(and(
         eq(scheduledSpotAssignments.spotId, spotId),
         eq(scheduledSpotAssignments.status, 'pending')
+      ))
+      .returning();
+    return result.length;
+  }
+
+  // Scheduled Spot Release operations
+  async createScheduledRelease(data: InsertScheduledSpotRelease): Promise<ScheduledSpotRelease> {
+    const [result] = await db.insert(scheduledSpotReleases).values(data).returning();
+    return result;
+  }
+
+  async getScheduledReleases(spotId?: string): Promise<ScheduledSpotRelease[]> {
+    if (spotId) {
+      return db.select().from(scheduledSpotReleases)
+        .where(and(eq(scheduledSpotReleases.spotId, spotId), eq(scheduledSpotReleases.status, 'pending')))
+        .orderBy(desc(scheduledSpotReleases.createdAt));
+    }
+    return db.select().from(scheduledSpotReleases)
+      .where(eq(scheduledSpotReleases.status, 'pending'))
+      .orderBy(desc(scheduledSpotReleases.createdAt));
+  }
+
+  async getScheduledRelease(id: string): Promise<ScheduledSpotRelease | undefined> {
+    const [result] = await db.select().from(scheduledSpotReleases).where(eq(scheduledSpotReleases.id, id)).limit(1);
+    return result;
+  }
+
+  async updateScheduledRelease(id: string, updates: Partial<InsertScheduledSpotRelease> & { status?: ScheduledReleaseStatus; appliedAt?: Date | null; cancelledAt?: Date | null }): Promise<ScheduledSpotRelease | undefined> {
+    const [result] = await db.update(scheduledSpotReleases).set(updates).where(eq(scheduledSpotReleases.id, id)).returning();
+    return result;
+  }
+
+  async getPendingScheduledReleasesDue(): Promise<ScheduledSpotRelease[]> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split('T')[0];
+    return db.select().from(scheduledSpotReleases)
+      .where(and(
+        eq(scheduledSpotReleases.status, 'pending'),
+        sqlOp`${scheduledSpotReleases.scheduledDate} <= ${todayStr}`
+      ))
+      .orderBy(asc(scheduledSpotReleases.scheduledDate));
+  }
+
+  async getScheduledReleasesForSpot(spotId: string): Promise<ScheduledSpotRelease[]> {
+    return db.select().from(scheduledSpotReleases)
+      .where(and(eq(scheduledSpotReleases.spotId, spotId), eq(scheduledSpotReleases.status, 'pending')))
+      .orderBy(asc(scheduledSpotReleases.scheduledDate));
+  }
+
+  async cancelSpotPendingScheduledReleases(spotId: string): Promise<number> {
+    const result = await db.update(scheduledSpotReleases)
+      .set({ status: 'cancelled' as ScheduledReleaseStatus, cancelledAt: new Date() })
+      .where(and(
+        eq(scheduledSpotReleases.spotId, spotId),
+        eq(scheduledSpotReleases.status, 'pending')
       ))
       .returning();
     return result.length;

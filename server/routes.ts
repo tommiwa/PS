@@ -8132,6 +8132,254 @@ The BCI ParkShare Team`;
     }
   });
 
+  // Create a scheduled spot release (Admin only)
+  app.post("/api/admin/schedule-release", requireAdmin, async (req, res) => {
+    try {
+      const scheduleReleaseSchema = z.object({
+        spotId: z.string().min(1, "spotId is required"),
+        scheduledDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "scheduledDate must be in YYYY-MM-DD format"),
+        notes: z.string().optional(),
+      });
+
+      const { spotId, scheduledDate, notes } = scheduleReleaseSchema.parse(req.body);
+
+      // Validate spot exists and is assigned
+      const spot = await storage.getParkingSpot(spotId);
+      if (!spot || spot.deletedAt) {
+        return res.status(404).json({ error: "Parking spot not found" });
+      }
+      if (!spot.ownerId) {
+        return res.status(400).json({ error: "Only assigned spots can have a scheduled release" });
+      }
+
+      // Validate the date is in the future
+      const scheduledDateObj = new Date(scheduledDate + 'T00:00:00');
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (scheduledDateObj <= today) {
+        return res.status(400).json({ error: "Scheduled date must be in the future" });
+      }
+
+      // Reject if a pending release already exists for this spot (cancel it first before scheduling a new one)
+      const existingPendingReleases = await storage.getScheduledReleasesForSpot(spotId);
+      if (existingPendingReleases.length > 0) {
+        return res.status(400).json({
+          error: "A pending scheduled release already exists for this spot. Cancel it first before scheduling a new one.",
+          existingReleaseId: existingPendingReleases[0].id,
+          existingScheduledDate: existingPendingReleases[0].scheduledDate,
+        });
+      }
+
+      const actorId = getAuthenticatedUserId(req);
+
+      // Create the scheduled release record
+      const scheduledRelease = await storage.createScheduledRelease({
+        spotId,
+        scheduledDate,
+        status: 'pending',
+        createdBy: actorId || undefined,
+        notes: notes || `Scheduled release for ${scheduledDate}`,
+      });
+
+      // Soft-delete unbooked listings from scheduledDate onwards and notify owner
+      try {
+        const cutoffDate = new Date(scheduledDate + 'T00:00:00');
+        cutoffDate.setHours(0, 0, 0, 0);
+        const deletedListings = await storage.softDeleteListingsBySpotIdFromDate(spotId, cutoffDate);
+        if (deletedListings > 0) {
+          console.log(`[Scheduled Release] Soft-deleted ${deletedListings} unbooked listing(s) from ${scheduledDate} onwards for spot ${spot.spotNumber}`);
+
+          // Notify the spot owner that their listings were removed due to the scheduled release
+          if (spot.ownerId) {
+            try {
+              const spotOwner = await storage.getUser(spot.ownerId);
+              if (spotOwner) {
+                const { sendListingsRemovedDueToReassignmentNotification } = await import('./notification-service');
+                const location = await storage.getLocation(spot.locationId);
+                const locationName = location ? `${location.office} - ${location.level}` : 'Unknown';
+                const buildingName = location?.building || 'Unknown';
+                const ownerPrefs = await storage.getNotificationPreferences(spotOwner.id);
+                const ownerName = `${spotOwner.firstName || ''} ${spotOwner.lastName || ''}`.trim() || spotOwner.email || 'User';
+                await sendListingsRemovedDueToReassignmentNotification(
+                  { name: ownerName, email: spotOwner.email || null, id: spotOwner.id },
+                  { spotNumber: spot.spotNumber, location: locationName, building: buildingName },
+                  deletedListings,
+                  scheduledDate,
+                  ownerPrefs || {}
+                );
+              }
+            } catch (ownerNotifyError) {
+              console.error('[Scheduled Release] Error notifying owner of listing removal:', ownerNotifyError);
+            }
+          }
+        }
+      } catch (listingError) {
+        console.error('[Scheduled Release] Error soft-deleting listings:', listingError);
+      }
+
+      // Cancel all active bookings from scheduledDate onwards and notify renters
+      try {
+        const allBookings = await storage.getBookingsBySpot(spotId);
+        const cutoffDate = new Date(scheduledDate + 'T00:00:00');
+        cutoffDate.setHours(0, 0, 0, 0);
+
+        const futureBookings = allBookings.filter(booking => {
+          const bookingDate = new Date(booking.bookingDate);
+          bookingDate.setHours(0, 0, 0, 0);
+          return bookingDate >= cutoffDate && booking.status !== 'cancelled';
+        });
+
+        if (futureBookings.length > 0) {
+          const location = await storage.getLocation(spot.locationId);
+          const locationName = location ? `${location.office} - ${location.level}` : 'Unknown Location';
+          const buildingName = location?.building || 'Unknown Building';
+
+          const bookingsByRenter = new Map<string, typeof futureBookings>();
+
+          for (const booking of futureBookings) {
+            await storage.updateBooking(booking.id, {
+              status: 'cancelled',
+              adminNotes: `Automatically cancelled due to scheduled spot release effective ${scheduledDate}`,
+            });
+            const renterBookings = bookingsByRenter.get(booking.renterId) || [];
+            renterBookings.push(booking);
+            bookingsByRenter.set(booking.renterId, renterBookings);
+          }
+
+          const { sendBookingsCancelledDueToUnassignmentNotification } = await import('./notification-service');
+
+          for (const [renterId, renterBookings] of Array.from(bookingsByRenter.entries())) {
+            const renter = await storage.getUser(renterId);
+            if (renter) {
+              const renterName = `${renter.firstName || ''} ${renter.lastName || ''}`.trim() || 'User';
+              const cancelledBookingDetails = renterBookings.map((b: typeof renterBookings[0]) => ({
+                bookingDate: b.bookingDate,
+                spotNumber: spot.spotNumber,
+                location: locationName,
+                building: buildingName,
+              }));
+              const renterPrefs = await storage.getNotificationPreferences(renter.id);
+              await sendBookingsCancelledDueToUnassignmentNotification(
+                { name: renterName, email: renter.email || null, id: renter.id },
+                cancelledBookingDetails,
+                'Spot has been scheduled for release',
+                renterPrefs || {}
+              );
+            }
+          }
+
+          // Notify the spot owner about cancelled bookings (independent of listing deletion)
+          if (spot.ownerId) {
+            try {
+              const spotOwner = await storage.getUser(spot.ownerId);
+              if (spotOwner) {
+                const { sendSpotUnassignmentNotification } = await import('./notification-service');
+                const ownerPrefs = await storage.getNotificationPreferences(spotOwner.id);
+                const ownerName = `${spotOwner.firstName || ''} ${spotOwner.lastName || ''}`.trim() || spotOwner.email || 'User';
+                await sendSpotUnassignmentNotification(
+                  { name: ownerName, email: spotOwner.email || null, id: spotOwner.id },
+                  { spotNumber: spot.spotNumber, location: locationName, building: buildingName },
+                  futureBookings.length,
+                  ownerPrefs || {}
+                );
+              }
+            } catch (ownerBookingNotifyError) {
+              console.error('[Scheduled Release] Error notifying owner of cancelled bookings:', ownerBookingNotifyError);
+            }
+          }
+
+          console.log(`[Scheduled Release] Cancelled ${futureBookings.length} bookings from ${scheduledDate} onwards for spot ${spotId}`);
+        }
+      } catch (cancelError) {
+        console.error('[Scheduled Release] Error cancelling future bookings:', cancelError);
+      }
+
+      await auditService.logAction("SCHEDULE_RELEASE", "parking_spot", {
+        entityId: spotId,
+        message: `Scheduled release of parking spot ${spot.spotNumber} for ${scheduledDate}`,
+        before: spot,
+        after: { scheduledRelease },
+      });
+
+      return res.json({
+        scheduled: true,
+        scheduledRelease,
+        message: `Release scheduled for ${scheduledDate}`,
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input data", details: error.errors });
+      }
+      console.error("Error scheduling spot release:", error);
+      res.status(500).json({ error: "Failed to schedule spot release" });
+    }
+  });
+
+  // Get all pending scheduled releases (Admin only)
+  app.get("/api/admin/scheduled-releases", requireAdmin, async (req, res) => {
+    try {
+      const spotId = req.query.spotId as string | undefined;
+      const releases = await storage.getScheduledReleases(spotId);
+
+      const enrichedReleases = await Promise.all(releases.map(async (release) => {
+        const spot = await storage.getParkingSpot(release.spotId);
+        const location = spot ? await storage.getLocation(spot.locationId) : null;
+        const owner = spot?.ownerId ? await storage.getUser(spot.ownerId) : null;
+        return {
+          ...release,
+          spotNumber: spot?.spotNumber || 'Unknown',
+          locationName: location ? `${location.office} - ${location.level}` : 'Unknown',
+          currentOwnerName: owner ? `${owner.firstName || ''} ${owner.lastName || ''}`.trim() || 'Unknown' : 'Unknown',
+          currentOwnerEmail: owner?.email || 'Unknown',
+          spot: spot ? {
+            id: spot.id,
+            spotNumber: spot.spotNumber,
+            locationId: spot.locationId,
+            location: location ? `${location.office} - ${location.level}` : 'Unknown',
+            building: location?.building || 'Unknown',
+          } : null,
+        };
+      }));
+
+      res.json(enrichedReleases);
+    } catch (error) {
+      console.error("Error fetching scheduled releases:", error);
+      res.status(500).json({ error: "Failed to fetch scheduled releases" });
+    }
+  });
+
+  // Cancel a pending scheduled release (Admin only)
+  app.delete("/api/admin/scheduled-releases/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const release = await storage.getScheduledRelease(id);
+
+      if (!release) {
+        return res.status(404).json({ error: "Scheduled release not found" });
+      }
+      if (release.status !== 'pending') {
+        return res.status(400).json({ error: "Only pending scheduled releases can be cancelled" });
+      }
+
+      const updated = await storage.updateScheduledRelease(id, {
+        status: 'cancelled',
+        cancelledAt: new Date(),
+      });
+
+      await auditService.logAction("CANCEL_SCHEDULE", "parking_spot", {
+        entityId: release.spotId,
+        message: `Cancelled scheduled release for spot ${release.spotId} (was scheduled for ${release.scheduledDate})`,
+        before: release,
+        after: updated,
+      });
+
+      res.json({ success: true, release: updated });
+    } catch (error) {
+      console.error("Error cancelling scheduled release:", error);
+      res.status(500).json({ error: "Failed to cancel scheduled release" });
+    }
+  });
+
   // Bulk assign parking spots to a user (Admin only)
   app.post("/api/admin/bulk-assign-spots", requireAdmin, async (req, res) => {
     try {
