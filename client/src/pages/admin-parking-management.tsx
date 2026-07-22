@@ -993,6 +993,36 @@ export default function AdminParkingManagement() {
     },
   });
 
+  type ScheduledReleaseHistoryItem = {
+    id: string;
+    spotId: string;
+    scheduledDate: string;
+    status: 'applied' | 'cancelled';
+    createdBy: string | null;
+    notes: string | null;
+    createdAt: string;
+    appliedAt: string | null;
+    cancelledAt: string | null;
+    spotNumber: string;
+    locationName: string;
+    building: string;
+    scheduledByName: string;
+    scheduledByEmail: string;
+    formerOwnerName: string;
+    formerOwnerEmail: string;
+  };
+
+  const { data: releaseHistory = [], isLoading: isLoadingReleaseHistory } = useQuery<ScheduledReleaseHistoryItem[]>({
+    queryKey: ["/api/admin/scheduled-releases/history"],
+    queryFn: async () => {
+      const response = await fetch("/api/admin/scheduled-releases/history", { credentials: 'include' });
+      if (!response.ok) return [];
+      return response.json();
+    },
+  });
+
+  const [showReleaseHistory, setShowReleaseHistory] = useState(false);
+
   const scheduleReleaseMutation = useMutation({
     mutationFn: async (data: { spotId: string; scheduledDate: string; notes?: string }) => {
       return await apiRequest("/api/admin/schedule-release", {
@@ -3303,6 +3333,119 @@ export default function AdminParkingManagement() {
           </CardContent>
         </Card>
       )}
+
+      {/* Release History */}
+      <Card className="mt-6" data-testid="card-release-history">
+        <CardHeader>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <CardTitle className="flex items-center gap-2">
+              <CalendarX2 className="h-5 w-5 text-muted-foreground" />
+              Release History
+              {releaseHistory.length > 0 && (
+                <Badge variant="secondary">{releaseHistory.length}</Badge>
+              )}
+            </CardTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowReleaseHistory(!showReleaseHistory)}
+              data-testid="button-toggle-release-history"
+            >
+              {showReleaseHistory ? (
+                <><EyeOff className="h-4 w-4 mr-1" />Hide</>
+              ) : (
+                <><Eye className="h-4 w-4 mr-1" />Show</>
+              )}
+            </Button>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Audit trail of applied and cancelled scheduled releases.
+          </p>
+        </CardHeader>
+        {showReleaseHistory && (
+          <CardContent>
+            {isLoadingReleaseHistory ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading release history...
+              </div>
+            ) : releaseHistory.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4">No past releases found.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table data-testid="table-release-history">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Spot</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Scheduled Date</TableHead>
+                      <TableHead>Former Owner</TableHead>
+                      <TableHead>Scheduled By</TableHead>
+                      <TableHead>Resolved On</TableHead>
+                      <TableHead>Notes</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {releaseHistory.map((item) => (
+                      <TableRow key={item.id} data-testid={`row-release-history-${item.id}`}>
+                        <TableCell className="font-medium">{item.spotNumber}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{item.locationName}</TableCell>
+                        <TableCell>
+                          {item.status === 'applied' ? (
+                            <Badge variant="secondary" className="bg-green-50 text-green-700 border-green-200">
+                              Applied
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="bg-red-50 text-red-700 border-red-200">
+                              Cancelled
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm">
+                            {new Date(item.scheduledDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {item.formerOwnerName !== '—' ? (
+                            <div>
+                              <p className="text-sm font-medium">{item.formerOwnerName}</p>
+                              <p className="text-xs text-muted-foreground">{item.formerOwnerEmail}</p>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {item.scheduledByName !== '—' ? (
+                            <div>
+                              <p className="text-sm font-medium">{item.scheduledByName}</p>
+                              <p className="text-xs text-muted-foreground">{item.scheduledByEmail}</p>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {item.status === 'applied' && item.appliedAt
+                            ? new Date(item.appliedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                            : item.status === 'cancelled' && item.cancelledAt
+                            ? new Date(item.cancelledAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                            : '—'}
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm text-muted-foreground">{item.notes || '—'}</span>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        )}
+      </Card>
 
       {/* Add Spot Dialog */}
       <Dialog open={showAddSpotDialog} onOpenChange={setShowAddSpotDialog}>

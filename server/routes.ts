@@ -8,9 +8,9 @@ import { broadcastLockEvent } from "./websocket";
 import { setupAuth, isAuthenticated, requireAdmin, getAuthenticatedUserId, getAuthenticatedUserRole, getAuthenticatedUserBaseRole } from "./replitAuth";
 import { z } from "zod";
 import { db, pool } from "./db";
-import { parkingSpots, spotLocks, spotListings, bookings, issues, insertIssueSchema, updateIssueSchema, issueStatuses, termsVersions, users, locations } from "@shared/schema";
+import { parkingSpots, spotLocks, spotListings, bookings, issues, insertIssueSchema, updateIssueSchema, issueStatuses, termsVersions, users, locations, spotAssignmentHistory } from "@shared/schema";
 import type { Booking, ParkingSpot, OwnerStatisticsV2Response } from "@shared/schema";
-import { inArray, and, eq, lt, gt, not, or, sql, isNull } from "drizzle-orm";
+import { inArray, and, eq, lt, gt, not, or, sql, isNull, desc, like } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { 
   sendAssignmentNotification, 
@@ -8377,6 +8377,68 @@ The BCI ParkShare Team`;
     } catch (error) {
       console.error("Error cancelling scheduled release:", error);
       res.status(500).json({ error: "Failed to cancel scheduled release" });
+    }
+  });
+
+  // Get release history (applied + cancelled) for admin audit purposes
+  app.get("/api/admin/scheduled-releases/history", requireAdmin, async (req, res) => {
+    try {
+      const spotId = req.query.spotId as string | undefined;
+      const releases = await storage.getScheduledReleasesHistory(spotId);
+
+      const enrichedReleases = await Promise.all(releases.map(async (release) => {
+        const spot = await storage.getParkingSpot(release.spotId);
+        const location = spot ? await storage.getLocation(spot.locationId) : null;
+        const scheduledByUser = release.createdBy ? await storage.getUser(release.createdBy) : null;
+
+        // For applied releases, look up the former owner from spot assignment history
+        let formerOwnerName = '—';
+        let formerOwnerEmail = '—';
+        if (release.status === 'applied') {
+          const historyRecords = await db.select().from(spotAssignmentHistory)
+            .where(
+              and(
+                eq(spotAssignmentHistory.spotId, release.spotId),
+                eq(spotAssignmentHistory.action, 'unassigned'),
+                like(spotAssignmentHistory.notes, `Applied scheduled release (scheduled for ${release.scheduledDate}%`)
+              )
+            )
+            .orderBy(desc(spotAssignmentHistory.effectiveAt))
+            .limit(1);
+          if (historyRecords.length > 0) {
+            const formerOwner = await storage.getUser(historyRecords[0].userId);
+            if (formerOwner) {
+              formerOwnerName = `${formerOwner.firstName || ''} ${formerOwner.lastName || ''}`.trim() || formerOwner.email;
+              formerOwnerEmail = formerOwner.email;
+            }
+          }
+        } else if (release.status === 'cancelled' && spot?.ownerId) {
+          // For cancelled releases, the spot may still have the same owner
+          const owner = await storage.getUser(spot.ownerId);
+          if (owner) {
+            formerOwnerName = `${owner.firstName || ''} ${owner.lastName || ''}`.trim() || owner.email;
+            formerOwnerEmail = owner.email;
+          }
+        }
+
+        return {
+          ...release,
+          spotNumber: spot?.spotNumber || 'Unknown',
+          locationName: location ? `${location.office} - ${location.level}` : 'Unknown',
+          building: location?.building || 'Unknown',
+          scheduledByName: scheduledByUser
+            ? `${scheduledByUser.firstName || ''} ${scheduledByUser.lastName || ''}`.trim() || scheduledByUser.email
+            : '—',
+          scheduledByEmail: scheduledByUser?.email || '—',
+          formerOwnerName,
+          formerOwnerEmail,
+        };
+      }));
+
+      res.json(enrichedReleases);
+    } catch (error) {
+      console.error("Error fetching scheduled release history:", error);
+      res.status(500).json({ error: "Failed to fetch scheduled release history" });
     }
   });
 

@@ -414,6 +414,7 @@ export interface IStorage {
   getPendingScheduledReleasesDue(): Promise<ScheduledSpotRelease[]>;
   getScheduledReleasesForSpot(spotId: string): Promise<ScheduledSpotRelease[]>;
   cancelSpotPendingScheduledReleases(spotId: string): Promise<number>;
+  getScheduledReleasesHistory(spotId?: string): Promise<ScheduledSpotRelease[]>;
 
   // Feature Announcements operations
   getAllAnnouncements(): Promise<FeatureAnnouncement[]>;
@@ -4363,6 +4364,18 @@ export class MemStorage implements IStorage {
       ))
       .returning();
     return result.length;
+  }
+
+  async getScheduledReleasesHistory(spotId?: string): Promise<ScheduledSpotRelease[]> {
+    const conditions: ReturnType<typeof eq>[] = [
+      inArray(scheduledSpotReleases.status, ['applied', 'cancelled'] as ScheduledReleaseStatus[]),
+    ];
+    if (spotId) {
+      conditions.push(eq(scheduledSpotReleases.spotId, spotId));
+    }
+    return db.select().from(scheduledSpotReleases)
+      .where(and(...conditions))
+      .orderBy(desc(scheduledSpotReleases.createdAt));
   }
 
   // Feature Announcements operations
