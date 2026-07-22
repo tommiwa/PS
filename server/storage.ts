@@ -3881,7 +3881,7 @@ export class MemStorage implements IStorage {
     }
     
     if (action && action !== 'all') {
-      conditions.push(eq(spotAssignmentHistory.action, action as "assigned" | "unassigned"));
+      conditions.push(eq(spotAssignmentHistory.action, action as "assigned" | "unassigned" | "released"));
     }
     
     if (departmentId) {

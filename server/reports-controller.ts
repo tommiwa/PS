@@ -850,7 +850,7 @@ export async function getSpotAssignmentReport(req: Request, res: Response) {
     const spotAssignmentQuerySchema = z.object({
       from: z.string().optional().refine(val => !val || !isNaN(Date.parse(val)), "Invalid from date"),
       to: z.string().optional().refine(val => !val || !isNaN(Date.parse(val)), "Invalid to date"),
-      action: z.enum(['assigned', 'unassigned', 'all']).optional().default('all'),
+      action: z.enum(['assigned', 'unassigned', 'released', 'all']).optional().default('all'),
       departmentId: z.string().optional().transform(val => val ? parseInt(val) : undefined),
       scope: z.enum(['all', 'bci']).optional().default('all')
     });

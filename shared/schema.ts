@@ -1420,7 +1420,7 @@ export interface ReportWaitlistPerformanceResponse {
 }
 
 // Spot Assignment History Table
-export const spotAssignmentActions = z.enum(["assigned", "unassigned"]);
+export const spotAssignmentActions = z.enum(["assigned", "unassigned", "released"]);
 export type SpotAssignmentAction = z.infer<typeof spotAssignmentActions>;
 
 export const spotAssignmentHistory = pgTable("spot_assignment_history", {
@@ -1644,7 +1644,7 @@ export interface SpotAssignmentHistoryWithDetails extends SpotAssignmentHistory 
 export interface SpotAssignmentReportResponse {
   assignments: Array<{
     id: string;
-    action: 'assigned' | 'unassigned';
+    action: 'assigned' | 'unassigned' | 'released';
     effectiveAt: string;
     user: {
       id: string;
