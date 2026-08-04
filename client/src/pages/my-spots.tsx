@@ -135,6 +135,14 @@ export default function MySpots() {
     }
   }, [isCreatingCustomLocation, geoapifyConfig?.apiKey, toast])
 
+  const [editSpotData, setEditSpotData] = useState({
+    spotNumber: "",
+    locationId: "",
+    spotTypeId: "",
+    isIndoor: false,
+    description: ""
+  })
+
   const [listingFormData, setListingFormData] = useState({
     listingType: "single" as "single" | "period" | "recurring",
     singleDate: "",
@@ -286,7 +294,17 @@ export default function MySpots() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/my-spots'] })
+      queryClient.invalidateQueries({ queryKey: ['/api/available-spots'] })
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/all-spots'] })
       setShowEditSpot(false)
+      toast({ title: "Spot updated", description: "Your parking spot changes have been saved." })
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update spot.",
+        variant: "destructive"
+      })
     }
   })
 
@@ -486,7 +504,32 @@ export default function MySpots() {
 
   const handleEditSpot = (spot: DBParkingSpot) => {
     setSelectedSpot(spot)
+    setEditSpotData({
+      spotNumber: spot.spotNumber || "",
+      locationId: spot.locationId != null ? String(spot.locationId) : "",
+      spotTypeId: spot.spotTypeId ? String(spot.spotTypeId) : "",
+      isIndoor: !!spot.isIndoor,
+      description: spot.description || ""
+    })
     setShowEditSpot(true)
+  }
+
+  const handleSaveEditSpot = () => {
+    if (!selectedSpot) return
+    if (!editSpotData.spotNumber.trim()) {
+      toast({ title: "Spot number required", variant: "destructive" })
+      return
+    }
+    updateSpotMutation.mutate({
+      id: selectedSpot.id,
+      data: {
+        spotNumber: editSpotData.spotNumber.trim(),
+        locationId: editSpotData.locationId ? Number(editSpotData.locationId) : undefined,
+        spotTypeId: editSpotData.spotTypeId ? Number(editSpotData.spotTypeId) : undefined,
+        isIndoor: editSpotData.isIndoor,
+        description: editSpotData.description.trim() || null
+      }
+    })
   }
 
   const handleDeleteSpot = async (spot: any) => {
@@ -957,24 +1000,48 @@ export default function MySpots() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="edit-spot-number">Spot Number</Label>
-                  <Input id="edit-spot-number" defaultValue={selectedSpot.spotNumber} className="min-h-11" />
+                  <Input
+                    id="edit-spot-number"
+                    value={editSpotData.spotNumber}
+                    onChange={(e) => setEditSpotData(prev => ({ ...prev, spotNumber: e.target.value }))}
+                    className="min-h-11"
+                  />
                 </div>
                 <div>
                   <Label htmlFor="edit-location">Location</Label>
-                  <Input id="edit-location" defaultValue={getLocationById(selectedSpot.locationId)} className="min-h-11" />
+                  <Select
+                    value={editSpotData.locationId}
+                    onValueChange={(value) => setEditSpotData(prev => ({ ...prev, locationId: value }))}
+                  >
+                    <SelectTrigger className="min-h-11" id="edit-location">
+                      <SelectValue placeholder="Select location" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {locations.map((loc) => (
+                        <SelectItem key={loc.id} value={String(loc.id)}>
+                          {[loc.office, loc.building, loc.level].filter(Boolean).join(" - ") || loc.address || loc.id}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="edit-spot-type">Spot Type</Label>
-                  <Select defaultValue={String(selectedSpot.spotTypeId)}>
-                    <SelectTrigger className="min-h-11">
-                      <SelectValue />
+                  <Select
+                    value={editSpotData.spotTypeId}
+                    onValueChange={(value) => setEditSpotData(prev => ({ ...prev, spotTypeId: value }))}
+                  >
+                    <SelectTrigger className="min-h-11" id="edit-spot-type">
+                      <SelectValue placeholder="Select spot type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="regular">Regular</SelectItem>
-                      <SelectItem value="electric">Electric Vehicle</SelectItem>
-                      <SelectItem value="accessible">Accessible</SelectItem>
+                      {spotTypes.map((type) => (
+                        <SelectItem key={type.id} value={String(type.id)}>
+                          {type.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -988,18 +1055,33 @@ export default function MySpots() {
               </div>
               <div>
                 <Label htmlFor="edit-description">Description</Label>
-                <Textarea id="edit-description" defaultValue={selectedSpot.description || ""} className="min-h-11" />
+                <Textarea
+                  id="edit-description"
+                  value={editSpotData.description}
+                  onChange={(e) => setEditSpotData(prev => ({ ...prev, description: e.target.value }))}
+                  className="min-h-11"
+                />
               </div>
               <div className="flex items-center space-x-2">
-                <Switch id="edit-is-indoor" defaultChecked={selectedSpot.isIndoor} className="min-h-11" />
+                <Switch
+                  id="edit-is-indoor"
+                  checked={editSpotData.isIndoor}
+                  onCheckedChange={(checked) => setEditSpotData(prev => ({ ...prev, isIndoor: checked }))}
+                  className="min-h-11"
+                />
                 <Label htmlFor="edit-is-indoor">Indoor parking</Label>
               </div>
               <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4">
                 <Button variant="outline" onClick={() => setShowEditSpot(false)} className="w-full sm:w-auto min-h-11">
                   Cancel
                 </Button>
-                <Button onClick={() => setShowEditSpot(false)} className="w-full sm:w-auto min-h-11">
-                  Save Changes
+                <Button
+                  onClick={handleSaveEditSpot}
+                  disabled={updateSpotMutation.isPending}
+                  className="w-full sm:w-auto min-h-11"
+                  data-testid="button-save-edit-spot"
+                >
+                  {updateSpotMutation.isPending ? "Saving..." : "Save Changes"}
                 </Button>
               </div>
             </div>
