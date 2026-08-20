@@ -88,20 +88,20 @@ export function UserProfileCard({
               {getInitials(user.name)}
             </AvatarFallback>
           </Avatar>
-          <div className="flex-1">
-            <h3 className="text-xl font-semibold" data-testid="text-user-name">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-xl font-semibold truncate" data-testid="text-user-name">
               {user.name}
             </h3>
-            <p className="text-muted-foreground">{user.department}</p>
+            <p className="text-muted-foreground truncate">{user.department}</p>
             {user.spotCount && (
               <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                <MapPin className="h-4 w-4" />
+                <MapPin className="h-4 w-4 shrink-0" />
                 {t("profile.spotsOwned", { count: user.spotCount?.toString() || '0' })}
               </div>
             )}
           </div>
           {showEditButton && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 shrink-0">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button 
@@ -112,7 +112,7 @@ export function UserProfileCard({
                     data-testid="button-refresh-profile"
                   >
                     <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                    {t("common.refresh")}
+                    <span className="hidden sm:inline">{t("common.refresh")}</span>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -128,7 +128,7 @@ export function UserProfileCard({
                     data-testid="button-edit-profile"
                   >
                     <Settings className="h-4 w-4" />
-                    {t("common.edit")}
+                    <span className="hidden sm:inline">{t("common.edit")}</span>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
