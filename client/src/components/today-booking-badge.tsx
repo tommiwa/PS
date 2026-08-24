@@ -3,8 +3,12 @@ import { useQuery } from "@tanstack/react-query";
 import { ParkingSquare, X } from "lucide-react";
 import { useLocation } from "wouter";
 import { format } from "date-fns";
-
-const SESSION_KEY = "today-booking-badge-dismissed";
+import {
+  LEGACY_SESSION_KEY,
+  getTodayStr,
+  isDismissedForDate,
+  recordDismissal,
+} from "@/lib/pill-dismissal";
 
 interface EnrichedBooking {
   id: string;
@@ -17,12 +21,16 @@ interface EnrichedBooking {
 export function TodayBookingBadge() {
   const [, setLocation] = useLocation();
 
+  const [todayStr, setTodayStr] = useState(getTodayStr);
+
   const [dismissed, setDismissed] = useState(() => {
     try {
-      return sessionStorage.getItem(SESSION_KEY) === "1";
+      // Clean up the old session-based key from previous versions
+      sessionStorage.removeItem(LEGACY_SESSION_KEY);
     } catch {
-      return false;
+      // ignore
     }
+    return isDismissedForDate(getTodayStr());
   });
 
   const [visible, setVisible] = useState(false);
@@ -37,7 +45,27 @@ export function TodayBookingBadge() {
   } | null>(null);
   const badgeRef = useRef<HTMLDivElement>(null);
 
-  const todayStr = format(new Date(), "yyyy-MM-dd");
+  // Re-evaluate "today" when the date rolls over while the app stays open
+  useEffect(() => {
+    const check = () => {
+      const now = getTodayStr();
+      setTodayStr((prev) => {
+        if (prev !== now) {
+          setDismissed(isDismissedForDate(now));
+          return now;
+        }
+        return prev;
+      });
+    };
+    const interval = setInterval(check, 60 * 1000);
+    document.addEventListener("visibilitychange", check);
+    window.addEventListener("focus", check);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", check);
+      window.removeEventListener("focus", check);
+    };
+  }, []);
 
   const { data: bookings } = useQuery<EnrichedBooking[]>({
     queryKey: ["/api/my-bookings"],
@@ -60,13 +88,15 @@ export function TodayBookingBadge() {
 
   const handleDismiss = (e: React.MouseEvent) => {
     e.stopPropagation();
+    // Capture the date at click time so a dismissal just before midnight
+    // only applies to the day the user actually clicked.
+    const clickDateStr = getTodayStr();
     setVisible(false);
     setTimeout(() => {
-      setDismissed(true);
-      try {
-        sessionStorage.setItem(SESSION_KEY, "1");
-      } catch {
-        // ignore
+      // Only mark as dismissed if it's still the same day; if midnight
+      // passed during the animation, the pill stays eligible for today.
+      if (recordDismissal(clickDateStr)) {
+        setDismissed(true);
       }
     }, 200);
   };
