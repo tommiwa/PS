@@ -82,6 +82,7 @@ import {
 import { randomUUID } from "crypto";
 import { auditDecorator } from "./audit-service";
 import { type IAuditStorage } from "./audit-storage";
+import { resolveAdminListingAttribution } from "./booking-classification";
 import { db } from "./db";
 import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, bookingSubscriptions, locations, spotTypesTable, termsVersions, spotAssignmentHistory, spotLocks, lockers, lockerWaitlist, lockerAssignmentHistory, lockerTypesTable, appConfigs, apiKeys, scheduledSpotAssignments, scheduledSpotReleases, featureAnnouncements, spotAlertSubscriptions, saleEvents, issues, spendMilestones } from "@shared/schema";
 import { eq, or, ilike, asc, and, notExists, sql as sqlOp, count, desc, inArray, isNull, lt, like } from "drizzle-orm";
@@ -1303,8 +1304,17 @@ export class MemStorage implements IStorage {
   }
 
   async getSpotListingsByOwner(ownerId: string): Promise<SpotListing[]> {
+    // Include soft-deleted listings that have bookings so that a swap
+    // (which soft-deletes and recreates listings) doesn't make historical
+    // bookings disappear from the owner's view.
     return await db.select().from(spotListings)
-      .where(and(eq(spotListings.ownerId, ownerId), isNull(spotListings.deletedAt)));
+      .where(and(
+        eq(spotListings.ownerId, ownerId),
+        or(
+          isNull(spotListings.deletedAt),
+          sqlOp`EXISTS (SELECT 1 FROM ${bookings} WHERE ${bookings.listingId} = ${spotListings.id} AND ${bookings.status} != 'cancelled')`
+        )
+      ));
   }
 
   async getSpotListingsBySpot(spotId: string): Promise<SpotListing[]> {
@@ -1366,11 +1376,15 @@ export class MemStorage implements IStorage {
 
     const createdListings: SpotListing[] = [];
     
-    // Create listings for each spot using the provided ownerId (typically admin for BCI-managed spots)
+    // Create listings for each spot. For spots with an individual owner, preserve the
+    // owner's attribution and do NOT mark the listing admin-created (peer-to-peer);
+    // otherwise attribute to the provided ownerId (typically admin for BCI-managed spots).
     for (const spotId of spotIds) {
+      const spotRows = await db.select().from(parkingSpots).where(eq(parkingSpots.id, spotId)).limit(1);
+      const attribution = resolveAdminListingAttribution(spotRows[0], ownerId);
       const listing = await db.insert(spotListings).values({
         spotId: spotId,
-        ownerId: ownerId,
+        ownerId: attribution.ownerId,
         listingType: listingData.listingType as ListingType,
         singleDate: listingData.singleDate ?? null,
         periodStartDate: listingData.periodStartDate ?? null,
@@ -1382,7 +1396,7 @@ export class MemStorage implements IStorage {
         status: status,
         notes: listingData.notes ?? null,
         donateToCharity: listingData.donateToCharity ?? false,
-        createdByAdmin: true,
+        createdByAdmin: attribution.createdByAdmin,
       }).returning();
 
       if (listing[0]) {

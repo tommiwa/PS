@@ -508,6 +508,8 @@ describe('Booking email notifications', () => {
       mockAuthUserId.current = 'renter-1';
       mockBookingStore.current = makeBooking({ bookingDate: '2027-06-15' });
       mockListingStore.current = makeListing({ createdByAdmin: true, ownerId: null });
+      // WPS classification requires an ownerless spot: individually-owned spots are always P2P
+      mockSpotStore.current = makeSpot({ ownerId: null });
       mockUserStore.current = {
         'renter-1': makeUser('renter-1'),
       };

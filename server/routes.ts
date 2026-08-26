@@ -82,6 +82,7 @@ import {
 } from "./reports-controller";
 import { sendReportEmail, isEmailServiceAvailable } from "./report-service";
 import { getTodayInTimezone, formatDateInTimezone, isDateInPast, isDateTodayOrFuture } from "./timezone";
+import { isWorkplaceServicesListing, resolveAdminListingAttribution } from "./booking-classification";
 import { checkSpendMilestones } from "./milestone-checker";
 
 // Workplace Services email - uses env var set per environment (dev vs prod)
@@ -2099,7 +2100,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const location = spot?.locationId ? await storage.getLocation(spot.locationId) : null;
             const locationName = location ? `${location.office} - ${location.level}` : 'Unknown';
             const buildingName = location?.building || 'Unknown';
-            const isWsListing = existingListing.createdByAdmin === true;
+            const isWsListing = isWorkplaceServicesListing(existingListing, spot);
             const ownerUser = await storage.getUser(userId);
             const ownerName = isWsListing
               ? 'Workplace Services'
@@ -2294,11 +2295,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const listing = booking.listingId ? await storage.getSpotListing(booking.listingId) : null;
-      const isWsListing = listing?.createdByAdmin === true;
+      const spot = await storage.getParkingSpot(booking.spotId);
+      const isWsListing = isWorkplaceServicesListing(listing, spot);
 
       const ownerUser = !isWsListing ? await storage.getUser(booking.ownerId) : null;
       const renterUser = await storage.getUser(booking.renterId);
-      const spot = await storage.getParkingSpot(booking.spotId);
       const spotLocation = spot?.locationId ? await storage.getLocation(spot.locationId) : null;
 
       if ((ownerUser || isWsListing) && renterUser && spot) {
@@ -2541,9 +2542,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           spotNumber: spot?.spotNumber || 'Unknown',
           location: locationName,
           spotType: spotTypeName,
-          ownerName: listing?.createdByAdmin ? 'BCI Workplace Services' : (owner ? `${owner.firstName} ${owner.lastName}` : 'Unknown'),
+          ownerName: isWorkplaceServicesListing(listing, spot) ? 'BCI Workplace Services' : (owner ? `${owner.firstName} ${owner.lastName}` : 'Unknown'),
           paymentStatus: booking.paymentStatus || 'pending',
-          isBciManaged: spot?.isBciManaged || false,
+          // Effective classification: individually-owned spots are never payroll/BCI
+          isBciManaged: spot?.ownerId ? false : (spot?.isBciManaged || false),
           mapLink: spot?.mapLink || null,
           seatNumber: spot?.seatNumber || null,
           floorPlanBaseUrl: floorPlanBaseUrl,
@@ -2556,7 +2558,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ownerPaymentInstructions: ownerPaymentPrefs?.paymentInstructions || null,
           renterVehicle: renterVehicleDisplay,
           donateToCharity: listing?.donateToCharity || false,
-          createdByAdmin: listing?.createdByAdmin || false
+          createdByAdmin: isWorkplaceServicesListing(listing, spot)
         };
       }));
       
@@ -2901,7 +2903,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // - If listing was created by the owner from My Spots page (createdByAdmin=false) → show owner's name
           // - If no listing context, fall back to spot ownership
           const primaryListingObj = listings.find(l => l.id === primaryListingId);
-          const isAdminCreatedListing = primaryListingObj?.createdByAdmin === true;
+          const isAdminCreatedListing = isWorkplaceServicesListing(primaryListingObj, spot);
           const displayOwnerName = isAdminCreatedListing 
             ? 'BCI Workplace Services' 
             : ((spot as any).assignedUserName || null);
@@ -2924,7 +2926,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             saleCalendarLabel: primarySaleCalendarLabel, // Primary sale label for first available date
             saleCalendarColor: firstDate ? (dateToSaleColorObj[firstDate] || null) : null, // Primary color for first available date
             donateToCharity: primaryDonateToCharity, // Primary charity status for first available date
-            createdByAdmin: primaryListingObj?.createdByAdmin || false,
+            createdByAdmin: isAdminCreatedListing,
             isAvailable: availabilityDates.length > 0, // True if spot has future availability
             ownerPaymentInstructions: ownerPaymentInstructions,
             ownerPaymentType: ownerPaymentType,
@@ -3855,12 +3857,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               visualDirectoryUrl
             };
 
-            const isWorkplaceServicesListing = listing.createdByAdmin === true;
+            const isWsBookingListing = isWorkplaceServicesListing(listing, spot);
             let ownerInfo: { name: string; email: string; id: string } | null = null;
-            if (isWorkplaceServicesListing) {
+            if (isWsBookingListing) {
               ownerInfo = { name: 'BCI Workplace Services', email: WORKPLACE_SERVICES_EMAIL, id: 'workplace-services' };
-            } else if (listing.ownerId) {
-              const owner = await storage.getUser(listing.ownerId);
+            } else if (spot.ownerId || listing.ownerId) {
+              const owner = await storage.getUser(spot.ownerId || listing.ownerId);
               if (owner && owner.email) {
                 const ownerDisplayName = owner.firstName && owner.lastName 
                   ? `${owner.firstName} ${owner.lastName}`
@@ -3875,7 +3877,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               bookingDetails,
               notificationPreferences || {},
               ownerInfo,
-              isWorkplaceServicesListing
+              isWsBookingListing
             );
           }
         } catch (emailError) {
@@ -5996,7 +5998,7 @@ The BCI ParkShare Team`;
                     ? `${renter.firstName} ${renter.lastName}`
                     : renter.firstName || renter.lastName || renter.email || 'User';
                   
-                  const isWsListing = listing.createdByAdmin === true;
+                  const isWsListing = isWorkplaceServicesListing(listing, spot);
                   let ownerInfo: { name: string; email: string; id: string } | null = null;
                   if (isWsListing) {
                     ownerInfo = { name: 'BCI Workplace Services', email: WORKPLACE_SERVICES_EMAIL, id: 'workplace-services' };
@@ -6079,6 +6081,7 @@ The BCI ParkShare Team`;
           status: bookings.status,
           joinedListingId: listingAlias.id,
           listingCreatedByAdmin: listingAlias.createdByAdmin,
+          spotOwnerId: parkingSpots.ownerId,
           ownerFirstName: ownerUsers.firstName,
           ownerLastName: ownerUsers.lastName,
         })
@@ -6102,9 +6105,11 @@ The BCI ParkShare Team`;
             .filter(Boolean)
             .join(' — ') || 'N/A',
         status: row.status,
-        // BCI if no listing record was found (direct assignment), or if the listing was created by admin.
-        // When a listing row exists but createdByAdmin is false/null, it is a peer-to-peer listing.
-        isBciManaged: row.joinedListingId === null ? true : row.listingCreatedByAdmin === true,
+        // Current spot ownership is authoritative: a spot with an individual owner is always peer-to-peer.
+        // Otherwise, BCI if no listing record was found (direct assignment), or if the listing was created by admin.
+        isBciManaged: row.spotOwnerId
+          ? false
+          : (row.joinedListingId === null ? true : row.listingCreatedByAdmin === true),
         ownerName:
           row.ownerFirstName && row.ownerLastName
             ? `${row.ownerFirstName} ${row.ownerLastName}`
@@ -6235,6 +6240,8 @@ The BCI ParkShare Team`;
 
   // Helper: determine whether a booking is BCI-managed (mirrors /api/admin/bookings/by-date logic)
   async function isBookingBciManaged(booking: Booking): Promise<boolean> {
+    const spot = await storage.getParkingSpot(booking.spotId);
+    if (spot?.ownerId) return false; // Individually-owned spot = always peer-to-peer
     const listing = await storage.getSpotListing(booking.listingId);
     if (!listing) return true; // Direct assignment (no listing) = BCI managed
     return listing.createdByAdmin === true;
@@ -6502,7 +6509,7 @@ The BCI ParkShare Team`;
             
             const spotLocation = spot.locationId ? await storage.getLocation(spot.locationId) : null;
             const renterDisplayName = renterName;
-            const isWorkplaceServicesListing = listing?.createdByAdmin === true;
+            const isWsCancelListing = isWorkplaceServicesListing(listing, spot);
             const bookingDetails = {
               id: booking.id,
               spotNumber: spot.spotNumber,
@@ -6511,13 +6518,13 @@ The BCI ParkShare Team`;
               bookingDate: booking.bookingDate,
               cancelledBy: renterDisplayName,
               cancelledByRole: 'renter' as const,
-              isWorkplaceServicesListing,
+              isWorkplaceServicesListing: isWsCancelListing,
               reason: 'Cancelled by renter'
             };
             
             // Get owner info - route to WPS for admin-created listings
             let ownerInfo: { name: string; email: string; id: string } | null = null;
-            if (isWorkplaceServicesListing) {
+            if (isWsCancelListing) {
               ownerInfo = { name: 'BCI Workplace Services', email: WORKPLACE_SERVICES_EMAIL, id: 'workplace-services' };
             } else if (listing?.ownerId) {
               const owner = await storage.getUser(listing.ownerId);
@@ -6621,7 +6628,7 @@ The BCI ParkShare Team`;
             
             const spotLocation = spot.locationId ? await storage.getLocation(spot.locationId) : null;
             const listing = booking.listingId ? await storage.getSpotListing(booking.listingId) : null;
-            const isWorkplaceServicesListing = listing?.createdByAdmin === true;
+            const isWsCancelListing = isWorkplaceServicesListing(listing, spot);
             const bookingDetails = {
               id: booking.id,
               spotNumber: spot.spotNumber,
@@ -6630,13 +6637,13 @@ The BCI ParkShare Team`;
               bookingDate: booking.bookingDate,
               cancelledBy: ownerName,
               cancelledByRole: 'owner' as const,
-              isWorkplaceServicesListing,
+              isWorkplaceServicesListing: isWsCancelListing,
               reason: `Cancelled by spot owner (${ownerName})`
             };
             
             // Send notification to both renter and owner - route to WPS for admin-created listings
             let ownerInfoForNotification: { name: string; email: string; id: string } | null = null;
-            if (isWorkplaceServicesListing) {
+            if (isWsCancelListing) {
               ownerInfoForNotification = { name: 'BCI Workplace Services', email: WORKPLACE_SERVICES_EMAIL, id: 'workplace-services' };
             } else if (ownerUser && ownerUser.email) {
               ownerInfoForNotification = { name: ownerName, email: ownerUser.email, id: ownerUser.id };
@@ -6705,7 +6712,7 @@ The BCI ParkShare Team`;
               : renter.firstName || renter.lastName || renter.email || 'User';
             
             const spotLocation = spot.locationId ? await storage.getLocation(spot.locationId) : null;
-            const isWorkplaceServicesListing = listing?.createdByAdmin === true;
+            const isWsCancelListing = isWorkplaceServicesListing(listing, spot);
             const bookingDetails = {
               id: booking.id,
               spotNumber: spot.spotNumber,
@@ -6714,13 +6721,13 @@ The BCI ParkShare Team`;
               bookingDate: booking.bookingDate,
               cancelledBy: 'Admin',
               cancelledByRole: 'admin' as const,
-              isWorkplaceServicesListing,
+              isWorkplaceServicesListing: isWsCancelListing,
               reason: reason
             };
             
             // Get owner info - route to WPS for admin-created listings
             let ownerInfo: { name: string; email: string; id: string } | null = null;
-            if (isWorkplaceServicesListing) {
+            if (isWsCancelListing) {
               ownerInfo = { name: 'BCI Workplace Services', email: WORKPLACE_SERVICES_EMAIL, id: 'workplace-services' };
             } else if (listing?.ownerId) {
               const owner = await storage.getUser(listing.ownerId);
@@ -6785,7 +6792,7 @@ The BCI ParkShare Team`;
               ? `${renter.firstName} ${renter.lastName}`
               : renter.firstName || renter.lastName || renter.email || 'User';
             const spotLocation = spot.locationId ? await storage.getLocation(spot.locationId) : null;
-            const isWorkplaceServicesListing = listing?.createdByAdmin === true;
+            const isWsCancelListing = isWorkplaceServicesListing(listing, spot);
             const bookingDetails = {
               id: booking.id,
               spotNumber: spot.spotNumber,
@@ -6794,11 +6801,11 @@ The BCI ParkShare Team`;
               bookingDate: booking.bookingDate,
               cancelledBy: 'Admin',
               cancelledByRole: 'admin' as const,
-              isWorkplaceServicesListing,
+              isWorkplaceServicesListing: isWsCancelListing,
               reason
             };
             let ownerInfo: { name: string; email: string; id: string } | null = null;
-            if (isWorkplaceServicesListing) {
+            if (isWsCancelListing) {
               ownerInfo = { name: 'BCI Workplace Services', email: WORKPLACE_SERVICES_EMAIL, id: 'workplace-services' };
             } else if (listing?.ownerId) {
               const owner = await storage.getUser(listing.ownerId);
@@ -6906,8 +6913,8 @@ The BCI ParkShare Team`;
       // Send email notification to owner that renter marked payment as sent
       try {
         const listing = booking.listingId ? await storage.getSpotListing(booking.listingId) : null;
-        const isWsListing = listing?.createdByAdmin === true;
         const spot = await storage.getParkingSpot(booking.spotId);
+        const isWsListing = isWorkplaceServicesListing(listing, spot);
 
         const ownerUser = !isWsListing ? await storage.getUser(booking.ownerId) : null;
         const renterUser = await storage.getUser(booking.renterId);
@@ -7001,8 +7008,8 @@ The BCI ParkShare Team`;
       // Send email notification to renter that owner confirmed payment
       try {
         const listing = booking.listingId ? await storage.getSpotListing(booking.listingId) : null;
-        const isWsListing = listing?.createdByAdmin === true;
         const spot = await storage.getParkingSpot(booking.spotId);
+        const isWsListing = isWorkplaceServicesListing(listing, spot);
 
         const ownerUser = !isWsListing ? await storage.getUser(booking.ownerId) : null;
         const renterUser = await storage.getUser(booking.renterId);
@@ -7083,7 +7090,7 @@ The BCI ParkShare Team`;
 
       // Get listing to check if it's a Workplace Services (admin-created) listing
       const listing = booking.listingId ? await storage.getSpotListing(booking.listingId) : null;
-      const isWsListing = listing?.createdByAdmin === true;
+      const isWsListing = isWorkplaceServicesListing(listing, spot);
 
       // Get spot owner info for the reminder (skip for Workplace Services listings)
       const owner = (!isWsListing && booking.ownerId) ? await storage.getUser(booking.ownerId) : null;
@@ -7171,7 +7178,8 @@ The BCI ParkShare Team`;
 
       // Check if this is a Workplace Services (admin-created) listing
       const listing = booking.listingId ? await storage.getSpotListing(booking.listingId) : null;
-      const isWsListing = listing?.createdByAdmin === true;
+      const spotForClassification = await storage.getParkingSpot(booking.spotId);
+      const isWsListing = isWorkplaceServicesListing(listing, spotForClassification);
 
       // Get owner info for notification
       const owner = !isWsListing ? await storage.getUser(booking.ownerId!) : null;
@@ -8033,18 +8041,13 @@ The BCI ParkShare Team`;
         console.error('[Spot Assignment] Error soft-deleting listings:', listingError);
       }
       
-      // Build update data with proper isBciManaged logic
-      // Since isBciManaged has .notNull().default(false), it ALWAYS has a value
-      // 1. If isBciManaged is explicitly provided → use that value
-      // 2. Otherwise → preserve the existing spot's isBciManaged value
+      // A spot assigned to an individual employee is peer-to-peer, never BCI-managed.
+      // Force the flag off regardless of what the client sent or what the spot had before,
+      // so a swap (unassign + reassign) can't leave the spot misclassified as payroll.
       const updateData = {
         ownerId: userId,
         isBookable: false,
-        ...(isBciManaged !== undefined 
-          ? { isBciManaged } 
-          : existingSpot?.isBciManaged !== undefined 
-            ? { isBciManaged: existingSpot.isBciManaged }
-            : {})
+        isBciManaged: false
       };
       
       const updatedSpot = await storage.updateParkingSpot(spotId, updateData);
@@ -8530,18 +8533,11 @@ The BCI ParkShare Team`;
         // Fetch existing spot to preserve its isBciManaged value
         const existingSpot = await storage.getParkingSpot(spotId);
         
-        // Build update data with proper isBciManaged logic
-        // Since isBciManaged has .notNull().default(false), it ALWAYS has a value
-        // 1. If isBciManaged is explicitly provided → use that value
-        // 2. Otherwise → preserve the existing spot's isBciManaged value
+        // A spot assigned to an individual employee is peer-to-peer, never BCI-managed.
         const updateData = {
           ownerId: userId,
           isBookable: false,
-          ...(isBciManaged !== undefined 
-            ? { isBciManaged } 
-            : existingSpot?.isBciManaged !== undefined 
-              ? { isBciManaged: existingSpot.isBciManaged }
-              : {})
+          isBciManaged: false
         };
         
         const updatedSpot = await storage.updateParkingSpot(spotId, updateData);
@@ -9461,7 +9457,7 @@ The BCI ParkShare Team`;
         dailyRate: dailyRateString,
         status: "available",
         donateToCharity: donateToCharity || false,
-        createdByAdmin: true  // Admin-created listings always use payroll deduction
+        createdByAdmin: true  // Overridden per-spot in storage: spots with an individual owner get createdByAdmin=false + the owner's attribution
       };
 
       if (listingType === "single" && singleDate) {
@@ -11087,7 +11083,7 @@ The BCI ParkShare Team`;
                 
                 // Get listing to check if it's a Workplace Services listing
                 const bulkListing = booking.listingId ? await storage.getSpotListing(booking.listingId) : null;
-                const isWsListing = bulkListing?.createdByAdmin === true;
+                const isWsListing = isWorkplaceServicesListing(bulkListing, spot);
 
                 // Get spot owner info (skip for Workplace Services listings)
                 const owner = (!isWsListing && booking.ownerId) ? await storage.getUser(booking.ownerId) : null;

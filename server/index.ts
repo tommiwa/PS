@@ -860,11 +860,12 @@ If you have questions about the collection of your personal information through 
             console.error(`[Scheduled Assignments] Error soft-deleting listings for assignment ${assignment.id}:`, listingError);
           }
 
-          // Update spot ownership (preserve existing isBciManaged like immediate assign does)
+          // A spot assigned to an individual employee is peer-to-peer, never BCI-managed
+          // (mirrors immediate assign — prevents swap payment misclassification)
           const updateData = {
             ownerId: assignment.userId,
             isBookable: false,
-            isBciManaged: spot.isBciManaged ?? false
+            isBciManaged: false
           };
           
           const updatedSpot = await storage.updateParkingSpot(assignment.spotId, updateData);
@@ -1005,6 +1006,10 @@ If you have questions about the collection of your personal information through 
             AND sl.single_date >= COALESCE(parent.period_start_date, parent.recurring_start_date)
             AND sl.single_date <= COALESCE(parent.period_end_date, parent.recurring_end_date)
         )
+        AND NOT EXISTS (
+          SELECT 1 FROM parking_spots ps
+          WHERE ps.id = sl.spot_id AND ps.owner_id IS NOT NULL
+        )
     `);
     const fixCount = (fixResult as any)?.rowCount || 0;
     if (fixCount > 0) {
@@ -1012,6 +1017,69 @@ If you have questions about the collection of your personal information through 
     }
   } catch (fixErr) {
     console.error('Error fixing created_by_admin flag:', fixErr);
+  }
+
+  // Data fix (spot-swap payment misclassification): a spot personally assigned to an
+  // employee is ALWAYS peer-to-peer. When an admin swap soft-deleted and re-created an
+  // owner's listings, they were wrongly stamped created_by_admin=true (routing payment
+  // to "BCI Workplace Services / Payroll" instead of the individual owner).
+  // Repair: listings on individually-owned spots get the owner's attribution and
+  // created_by_admin=false; bookings on those listings get the owner as owner_id.
+  // IMPORTANT: scoped strictly to the swap-damage signature (see isSwapDamagedListing in
+  // server/booking-classification.ts): ACTIVE (deleted_at IS NULL) listings flagged
+  // created_by_admin = true on a spot that currently has an individual owner — a state the
+  // assignment flow can no longer produce. Soft-deleted/historical listings (a prior
+  // owner's booked listings, pool-era WPS listings) are NEVER touched, so a later
+  // legitimate reassignment does not transfer history to the new owner.
+  try {
+    // Repair bookings FIRST (the listing update below clears the damage signature we join on)
+    const bookingRepair = await db.execute(sql`
+      UPDATE bookings b
+      SET owner_id = ps.owner_id
+      FROM parking_spots ps, spot_listings sl
+      WHERE ps.id = b.spot_id
+        AND sl.id = b.listing_id
+        AND ps.owner_id IS NOT NULL
+        AND sl.created_by_admin = true
+        AND sl.deleted_at IS NULL
+        AND b.owner_id IS DISTINCT FROM ps.owner_id
+        AND b.status NOT IN ('cancelled')
+    `);
+    const bookingRepairCount = (bookingRepair as any)?.rowCount || 0;
+    if (bookingRepairCount > 0) {
+      log(`Swap repair: fixed ${bookingRepairCount} bookings on swap-damaged listings (owner attribution)`);
+    }
+
+    const listingRepair = await db.execute(sql`
+      UPDATE spot_listings sl
+      SET created_by_admin = false,
+          owner_id = ps.owner_id
+      FROM parking_spots ps
+      WHERE ps.id = sl.spot_id
+        AND ps.owner_id IS NOT NULL
+        AND sl.created_by_admin = true
+        AND sl.deleted_at IS NULL
+    `);
+    const listingRepairCount = (listingRepair as any)?.rowCount || 0;
+    if (listingRepairCount > 0) {
+      log(`Swap repair: fixed ${listingRepairCount} admin-flagged listings on individually-owned spots (owner attribution, created_by_admin=false)`);
+    }
+    // Targeted repair for the P100 incident (Aug 2026 swap): the spot is personally
+    // assigned but was left flagged BCI-managed by the swap. Other individually-owned
+    // spots keep their is_bci_managed value (it also drives admin inventory grouping,
+    // and classification now treats individually-owned spots as P2P regardless).
+    const p100Repair = await db.execute(sql`
+      UPDATE parking_spots
+      SET is_bci_managed = false
+      WHERE id = '57c4bf16-00b8-4e20-83d0-b7fc0ca951aa'
+        AND owner_id IS NOT NULL
+        AND is_bci_managed = true
+    `);
+    if (((p100Repair as any)?.rowCount || 0) > 0) {
+      log('Swap repair: cleared is_bci_managed on spot P100');
+    }
+  } catch (swapFixErr) {
+    console.error('Error repairing swap-misclassified listings/bookings:', swapFixErr);
   }
 
   // Register MCP routes on the main Express app (same port)

@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 import { storage } from "./storage";
 import { getTodayInTimezone } from "./timezone";
+import { isWorkplaceServicesListing } from "./booking-classification";
 
 // Compute milestone metrics: total confirmed/completed bookings + spend since a start date
 export async function computeMilestoneMetrics(startDate: string): Promise<{
@@ -10,9 +11,10 @@ export async function computeMilestoneMetrics(startDate: string): Promise<{
   p2pRevenue: number;
   participants: number;
 }> {
-  const [allBookings, allListings] = await Promise.all([
+  const [allBookings, allListings, allSpots] = await Promise.all([
     storage.getAllBookings(),
-    storage.getAllSpotListings?.() || []
+    storage.getAllSpotListings?.() || [],
+    storage.getAllParkingSpots()
   ]);
 
   const filteredBookings = allBookings.filter(b => {
@@ -21,13 +23,15 @@ export async function computeMilestoneMetrics(startDate: string): Promise<{
   });
 
   const listingMap = new Map((allListings as any[]).map(l => [l.id, l]));
+  const spotMap = new Map(allSpots.map(s => [s.id, s]));
 
   const totalBookings = filteredBookings.length;
   const totalSpend = filteredBookings.reduce((sum, b) => sum + Number(b.totalAmount || b.dailyRate || 0), 0);
 
   const p2pRevenue = filteredBookings.reduce((sum, b) => {
     const listing = listingMap.get((b as any).listingId);
-    return sum + (listing?.createdByAdmin !== true ? Number(b.totalAmount || b.dailyRate || 0) : 0);
+    const spot = spotMap.get(b.spotId);
+    return sum + (!isWorkplaceServicesListing(listing, spot) ? Number(b.totalAmount || b.dailyRate || 0) : 0);
   }, 0);
 
   const participantSet = new Set<string>();
@@ -1252,12 +1256,14 @@ export async function getOwnerRankings(req: Request, res: Response) {
     const fromDate = new Date(dateRange.from + 'T00:00:00');
     const toDate = new Date(dateRange.to + 'T23:59:59');
 
-    const [allUsers, allBookings, allListings, allDepartments] = await Promise.all([
+    const [allUsers, allBookings, allListings, allDepartments, allSpotsForRankings] = await Promise.all([
       storage.getAllUsers(),
       storage.getAllBookings(),
       storage.getAllSpotListings(),
-      storage.getDepartments?.() || []
+      storage.getDepartments?.() || [],
+      storage.getAllParkingSpots()
     ]);
+    const rankingSpotMap = new Map(allSpotsForRankings.map(s => [s.id, s]));
 
     const deptMap = new Map<number, string>();
     (allDepartments as any[]).forEach((d: any) => deptMap.set(d.id, d.name));
@@ -1276,9 +1282,9 @@ export async function getOwnerRankings(req: Request, res: Response) {
       if (b.status !== 'confirmed' && b.status !== 'completed') return false;
       const bDate = new Date(b.bookingDate + 'T12:00:00');
       if (bDate < fromDate || bDate > toDate) return false;
-      // Exclude admin-created listings (P2P only)
+      // Exclude BCI Workplace Services bookings (P2P only) — spot ownership is authoritative
       const listing = listingMap.get(b.listingId);
-      if (listing?.createdByAdmin === true) return false;
+      if (isWorkplaceServicesListing(listing, rankingSpotMap.get(b.spotId))) return false;
       return true;
     });
 

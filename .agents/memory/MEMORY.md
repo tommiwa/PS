@@ -1,1 +1,2 @@
 - [Recharts drill-down testing](recharts-drilldown-testing.md) — automated e2e agents can't reliably click individual Recharts bars/points to trigger onClick drill-downs; verify via API + unit tests + code review instead.
+- [Booking classification rule](booking-classification.md) — spots with an individual owner are ALWAYS peer-to-peer; never key payroll routing on created_by_admin alone; don't mass-flip is_bci_managed.

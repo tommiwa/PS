@@ -144,12 +144,15 @@ export function BookingForm({ spot, onSubmit, onCancel, selectedDate, isDateLock
   }
 
   // Determine if this is a Workplace Services spot (payroll eligible).
-  // Three ways to identify: admin created the listing, owner name is WPS, or the spot
-  // is BCI-managed with no personal owner assigned (pure WPS pool spot).
+  // A spot with an individual owner is ALWAYS peer-to-peer, even if the listing was
+  // created via an admin flow (e.g. re-created during a spot swap). Only ownerless
+  // spots can be payroll: admin-created listing, WPS owner name, or BCI-managed pool spot.
   const isPayrollSpot =
-    (spot as any).createdByAdmin === true ||
-    (spot as any).assignedUserName === 'BCI Workplace Services' ||
-    (spot.isBciManaged === true && !spot.ownerId);
+    !spot.ownerId && (
+      (spot as any).createdByAdmin === true ||
+      (spot as any).assignedUserName === 'BCI Workplace Services' ||
+      spot.isBciManaged === true
+    );
 
   // Countdown timer effect
   useEffect(() => {

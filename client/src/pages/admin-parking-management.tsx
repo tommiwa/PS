@@ -85,7 +85,7 @@ export default function AdminParkingManagement() {
   const [selectedUserForAvailableSpot, setSelectedUserForAvailableSpot] = useState("")
   const [userPickerOpen, setUserPickerOpen] = useState(false)
   const [assignAvailableSpotFormData, setAssignAvailableSpotFormData] = useState({
-    isBciManaged: true,
+    isBciManaged: false,
     scheduledDate: null as Date | null,
     cancelFutureBookings: true
   })
@@ -100,7 +100,7 @@ export default function AdminParkingManagement() {
   const [directAssignFormData, setDirectAssignFormData] = useState({
     userId: "",
     duration: "permanent",
-    isBciManaged: true,
+    isBciManaged: false,
     notes: "",
     scheduledDate: null as Date | null,
     cancelFutureBookings: true
@@ -678,7 +678,7 @@ export default function AdminParkingManagement() {
       setDirectAssignFormData({
         userId: "",
         duration: "permanent",
-        isBciManaged: true,
+        isBciManaged: false,
         notes: "",
         scheduledDate: null,
         cancelFutureBookings: true

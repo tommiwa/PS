@@ -36,6 +36,9 @@ const getPayrollDeductionMonth = (bookingDate: string): string => {
 
 // Helper to check if booking is truly a payroll spot (BCI-managed without individual owner)
 const isPayrollBooking = (booking: any): boolean => {
+  // Server-computed effective classification is authoritative: a spot personally
+  // assigned to an employee is never payroll, regardless of any stale payment label
+  if (booking.isBciManaged === false) return false;
   // Check if payment method is Payroll, OR if it's BCI-managed without an individual owner
   if (booking.paymentMethod === "Payroll") return true;
   if (booking.isBciManaged && !booking.ownerName) return true;
