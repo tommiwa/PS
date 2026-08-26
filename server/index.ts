@@ -6,6 +6,7 @@ import { auditService } from "./audit-service";
 import { dbAuditStorage as auditStorage } from "./audit-storage";
 import { initTimezone } from "./timezone";
 import { db } from "./db";
+import { runSwapRepair } from "./swap-repair";
 import { applyScheduledSpotReleases } from "./scheduled-releases";
 import { spotLocks, spotListings, bookings, parkingSpots, refreshTokens } from "@shared/schema";
 import { and, eq, lt, lte, inArray, notInArray, sql, isNull, or } from "drizzle-orm";
@@ -974,11 +975,16 @@ If you have questions about the collection of your personal information through 
   // Step 1: Reset any incorrectly set flags (from previous broad migration)
   // Step 2: Set created_by_admin=true only for singles matching admin parent by spot_id + date range
   try {
+    // Scope guards (Aug 2026): never touch soft-deleted (historical) listings,
+    // and never touch pool-era listings on owned spots (created before the
+    // current owner's tenure per spot_assignment_history) — those legitimately
+    // carry created_by_admin=true and drive booking-time report classification.
     const resetResult = await db.execute(sql`
       UPDATE spot_listings
       SET created_by_admin = false
       WHERE listing_type = 'single'
         AND created_by_admin = true
+        AND deleted_at IS NULL
         AND NOT EXISTS (
           SELECT 1 FROM spot_listings parent
           WHERE parent.spot_id = spot_listings.spot_id
@@ -986,6 +992,25 @@ If you have questions about the collection of your personal information through 
             AND parent.created_by_admin = true
             AND spot_listings.single_date >= COALESCE(parent.period_start_date, parent.recurring_start_date)
             AND spot_listings.single_date <= COALESCE(parent.period_end_date, parent.recurring_end_date)
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM parking_spots ps
+          WHERE ps.id = spot_listings.spot_id
+            AND ps.owner_id IS NOT NULL
+            AND spot_listings.created_at < (
+              SELECT min(h.effective_at) FROM spot_assignment_history h
+              WHERE h.spot_id = ps.id
+                AND h.user_id = ps.owner_id
+                AND h.action = 'assigned'
+                -- Same-time transfer rule: at equal effective_at, the new
+                -- owner's 'assigned' counts as the later event (>=), matching
+                -- server/swap-repair.ts.
+                AND h.effective_at >= COALESCE(
+                  (SELECT max(h2.effective_at) FROM spot_assignment_history h2
+                    WHERE h2.spot_id = ps.id
+                      AND NOT (h2.user_id = ps.owner_id AND h2.action = 'assigned')),
+                  '-infinity'::timestamp)
+            )
         )
     `);
     const resetCount = (resetResult as any)?.rowCount || 0;
@@ -1019,51 +1044,11 @@ If you have questions about the collection of your personal information through 
     console.error('Error fixing created_by_admin flag:', fixErr);
   }
 
-  // Data fix (spot-swap payment misclassification): a spot personally assigned to an
-  // employee is ALWAYS peer-to-peer. When an admin swap soft-deleted and re-created an
-  // owner's listings, they were wrongly stamped created_by_admin=true (routing payment
-  // to "BCI Workplace Services / Payroll" instead of the individual owner).
-  // Repair: listings on individually-owned spots get the owner's attribution and
-  // created_by_admin=false; bookings on those listings get the owner as owner_id.
-  // IMPORTANT: scoped strictly to the swap-damage signature (see isSwapDamagedListing in
-  // server/booking-classification.ts): ACTIVE (deleted_at IS NULL) listings flagged
-  // created_by_admin = true on a spot that currently has an individual owner — a state the
-  // assignment flow can no longer produce. Soft-deleted/historical listings (a prior
-  // owner's booked listings, pool-era WPS listings) are NEVER touched, so a later
-  // legitimate reassignment does not transfer history to the new owner.
+  // Data fix (spot-swap / spot-transfer attribution): see server/swap-repair.ts
+  // for the full semantics (tenure-scoped forward repair, pool-proven reverse
+  // repair; all statements idempotent).
   try {
-    // Repair bookings FIRST (the listing update below clears the damage signature we join on)
-    const bookingRepair = await db.execute(sql`
-      UPDATE bookings b
-      SET owner_id = ps.owner_id
-      FROM parking_spots ps, spot_listings sl
-      WHERE ps.id = b.spot_id
-        AND sl.id = b.listing_id
-        AND ps.owner_id IS NOT NULL
-        AND sl.created_by_admin = true
-        AND sl.deleted_at IS NULL
-        AND b.owner_id IS DISTINCT FROM ps.owner_id
-        AND b.status NOT IN ('cancelled')
-    `);
-    const bookingRepairCount = (bookingRepair as any)?.rowCount || 0;
-    if (bookingRepairCount > 0) {
-      log(`Swap repair: fixed ${bookingRepairCount} bookings on swap-damaged listings (owner attribution)`);
-    }
-
-    const listingRepair = await db.execute(sql`
-      UPDATE spot_listings sl
-      SET created_by_admin = false,
-          owner_id = ps.owner_id
-      FROM parking_spots ps
-      WHERE ps.id = sl.spot_id
-        AND ps.owner_id IS NOT NULL
-        AND sl.created_by_admin = true
-        AND sl.deleted_at IS NULL
-    `);
-    const listingRepairCount = (listingRepair as any)?.rowCount || 0;
-    if (listingRepairCount > 0) {
-      log(`Swap repair: fixed ${listingRepairCount} admin-flagged listings on individually-owned spots (owner attribution, created_by_admin=false)`);
-    }
+    await runSwapRepair(log);
     // Targeted repair for the P100 incident (Aug 2026 swap): the spot is personally
     // assigned but was left flagged BCI-managed by the swap. Other individually-owned
     // spots keep their is_bci_managed value (it also drives admin inventory grouping,

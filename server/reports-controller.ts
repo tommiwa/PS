@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 import { storage } from "./storage";
 import { getTodayInTimezone } from "./timezone";
-import { isWorkplaceServicesListing } from "./booking-classification";
+import { isWorkplaceServicesBookingContext } from "./booking-classification";
 
 // Compute milestone metrics: total confirmed/completed bookings + spend since a start date
 export async function computeMilestoneMetrics(startDate: string): Promise<{
@@ -13,7 +13,9 @@ export async function computeMilestoneMetrics(startDate: string): Promise<{
 }> {
   const [allBookings, allListings, allSpots] = await Promise.all([
     storage.getAllBookings(),
-    storage.getAllSpotListings?.() || [],
+    // Include soft-deleted listings: bookings keep their listing reference after
+    // deletion, and booking-time classification needs that context
+    storage.getAllSpotListingsIncludingDeleted?.() || storage.getAllSpotListings?.() || [],
     storage.getAllParkingSpots()
   ]);
 
@@ -31,7 +33,8 @@ export async function computeMilestoneMetrics(startDate: string): Promise<{
   const p2pRevenue = filteredBookings.reduce((sum, b) => {
     const listing = listingMap.get((b as any).listingId);
     const spot = spotMap.get(b.spotId);
-    return sum + (!isWorkplaceServicesListing(listing, spot) ? Number(b.totalAmount || b.dailyRate || 0) : 0);
+    // Booking-time classification: pool-era bookings stay WPS even if the spot is now owned
+    return sum + (!isWorkplaceServicesBookingContext(listing, spot) ? Number(b.totalAmount || b.dailyRate || 0) : 0);
   }, 0);
 
   const participantSet = new Set<string>();
@@ -387,13 +390,16 @@ export async function getReportRevenue(req: Request, res: Response) {
     const dateRange = await calculateDateRange(from, to);
     
     // Fetch required data
-    const [allSpots, allBookings, locations, spotTypes, allUsers] = await Promise.all([
+    const [allSpots, allBookings, locations, spotTypes, allUsers, allListingsForRevenue] = await Promise.all([
       storage.getAllParkingSpots(),
       storage.getAllBookings(),
       storage.getAllLocations?.() || [],
       storage.getAllSpotTypes?.() || [],
-      storage.getAllUsers()
+      storage.getAllUsers(),
+      // Include soft-deleted listings for booking-time classification
+      storage.getAllSpotListingsIncludingDeleted?.() || storage.getAllSpotListings?.() || []
     ]);
+    const revenueListingMap = new Map((allListingsForRevenue as any[]).map((l: any) => [l.id, l]));
     
     // Filter bookings by date range and scope (string comparison avoids UTC timezone shift)
     const bookings = allBookings.filter((b: any) => {
@@ -478,19 +484,22 @@ export async function getReportRevenue(req: Request, res: Response) {
       };
     }).filter(r => r.bookings > 0);
     
-    // Top earners
+    // Top earners: peer-to-peer bookings only, credited to the owner who
+    // actually fulfilled the booking (booking.ownerId), classified by
+    // booking-time context — not the spot's current owner.
     const ownerEarningsMap = new Map<string, { name: string; earnings: number; count: number }>();
     bookings.forEach((b: any) => {
       const spot = allSpots.find(s => s.id === b.spotId);
-      if (spot?.ownerId) {
-        const owner = allUsers.find(u => u.id === spot.ownerId);
+      if (isWorkplaceServicesBookingContext(revenueListingMap.get(b.listingId), spot)) return;
+      if (b.ownerId && b.ownerId !== 'unassigned') {
+        const owner = allUsers.find(u => u.id === b.ownerId);
         const ownerName = owner ? `${owner.firstName} ${owner.lastName}` : 'Unknown';
         
-        if (!ownerEarningsMap.has(spot.ownerId)) {
-          ownerEarningsMap.set(spot.ownerId, { name: ownerName, earnings: 0, count: 0 });
+        if (!ownerEarningsMap.has(b.ownerId)) {
+          ownerEarningsMap.set(b.ownerId, { name: ownerName, earnings: 0, count: 0 });
         }
         
-        const data = ownerEarningsMap.get(spot.ownerId)!;
+        const data = ownerEarningsMap.get(b.ownerId)!;
         data.earnings += (Number(b.dailyRate) || 0) * 0.85; // Owner gets 85%
         data.count += 1;
       }
@@ -920,30 +929,28 @@ export async function getSharedPoolUsageReport(req: Request, res: Response) {
       storage.getAllUsers(),
       storage.getLocations(),
       storage.getDepartments(),
-      storage.getAllSpotListings()
+      // Include soft-deleted listings for booking-time classification
+      storage.getAllSpotListingsIncludingDeleted?.() || storage.getAllSpotListings()
     ]);
     
-    // True Workplace Services spots: BCI-managed AND no owner (ownerId is null)
-    const workplaceServicesSpotIds = new Set(
-      allSpots.filter(s => s.isBciManaged === true && s.ownerId === null).map(s => s.id)
-    );
-    
-    // Get listing IDs for Workplace Services spots only
-    const workplaceServicesListingIds = new Set(
-      allListings.filter(l => workplaceServicesSpotIds.has(l.spotId)).map(l => l.id)
-    );
-    
     const listingsMap = new Map(allListings.map(l => [l.id, l]));
-    
-    // Filter bookings for Workplace Services spots only (BCI-managed with no owner)
+    const spotsMap = new Map(allSpots.map(s => [s.id, s]));
+
+    // Filter bookings to Workplace Services ones, classified by booking-time
+    // context (the listing's attribution) rather than the spot's CURRENT
+    // ownership — pool-era bookings on spots that have since been assigned to
+    // an individual owner still belong in this report.
     const filteredBookings = allBookings.filter((b: any) => {
       const bookingDate = b.bookingDate;
       const isInDateRange = bookingDate >= dateRange.from && bookingDate <= dateRange.to;
       const isPastOrToday = bookingDate <= today; // Include today's completed bookings
-      const isWorkplaceServicesListing = workplaceServicesListingIds.has(b.listingId);
+      const isWorkplaceServices = isWorkplaceServicesBookingContext(
+        listingsMap.get(b.listingId),
+        spotsMap.get(b.spotId)
+      );
       const isValidStatus = b.status === 'confirmed' || b.status === 'completed';
       
-      return isInDateRange && isPastOrToday && isWorkplaceServicesListing && isValidStatus;
+      return isInDateRange && isPastOrToday && isWorkplaceServices && isValidStatus;
     });
     
     const userBookingsMap = new Map<string, {
@@ -1259,7 +1266,8 @@ export async function getOwnerRankings(req: Request, res: Response) {
     const [allUsers, allBookings, allListings, allDepartments, allSpotsForRankings] = await Promise.all([
       storage.getAllUsers(),
       storage.getAllBookings(),
-      storage.getAllSpotListings(),
+      // Include soft-deleted listings for booking-time classification
+      storage.getAllSpotListingsIncludingDeleted?.() || storage.getAllSpotListings(),
       storage.getDepartments?.() || [],
       storage.getAllParkingSpots()
     ]);
@@ -1282,9 +1290,11 @@ export async function getOwnerRankings(req: Request, res: Response) {
       if (b.status !== 'confirmed' && b.status !== 'completed') return false;
       const bDate = new Date(b.bookingDate + 'T12:00:00');
       if (bDate < fromDate || bDate > toDate) return false;
-      // Exclude BCI Workplace Services bookings (P2P only) — spot ownership is authoritative
+      // Exclude BCI Workplace Services bookings (P2P only) — classified by
+      // booking-time context (listing attribution), not current spot ownership,
+      // so pool-era bookings on since-transferred spots don't count.
       const listing = listingMap.get(b.listingId);
-      if (isWorkplaceServicesListing(listing, rankingSpotMap.get(b.spotId))) return false;
+      if (isWorkplaceServicesBookingContext(listing, rankingSpotMap.get(b.spotId))) return false;
       return true;
     });
 

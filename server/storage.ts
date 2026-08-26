@@ -138,6 +138,7 @@ export interface IStorage {
   getSpotListingsByOwner(ownerId: string): Promise<SpotListing[]>;
   getSpotListingsBySpot(spotId: string): Promise<SpotListing[]>;
   getAllSpotListings(): Promise<SpotListing[]>;
+  getAllSpotListingsIncludingDeleted?(): Promise<SpotListing[]>;
   getActiveSpotListings(): Promise<SpotListing[]>;
   createSpotListing(listing: InsertSpotListing): Promise<SpotListing>;
   bulkCreateSpotListings(spotIds: string[], listingData: Omit<InsertSpotListing, 'spotId' | 'ownerId'>, ownerId: string): Promise<SpotListing[]>;
@@ -1324,6 +1325,13 @@ export class MemStorage implements IStorage {
 
   async getAllSpotListings(): Promise<SpotListing[]> {
     return await db.select().from(spotListings).where(isNull(spotListings.deletedAt));
+  }
+
+  // For HISTORICAL report classification: bookings keep referencing their
+  // listing after it is soft-deleted (e.g. when a spot returns to the pool),
+  // and booking-time classification needs that listing's attribution.
+  async getAllSpotListingsIncludingDeleted(): Promise<SpotListing[]> {
+    return await db.select().from(spotListings);
   }
 
   async getActiveSpotListings(): Promise<SpotListing[]> {

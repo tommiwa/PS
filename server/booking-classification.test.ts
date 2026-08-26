@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isWorkplaceServicesListing, resolveAdminListingAttribution, isSwapDamagedListing } from "./booking-classification";
+import { isWorkplaceServicesListing, isWorkplaceServicesBookingContext, resolveAdminListingAttribution, isSwapDamagedListing } from "./booking-classification";
 
 const OWNER_ID = "user-devin";
 const ADMIN_ID = "user-admin";
@@ -62,6 +62,53 @@ describe("isWorkplaceServicesListing", () => {
   it("missing spot context falls back to listing flag", () => {
     expect(isWorkplaceServicesListing({ createdByAdmin: true }, null)).toBe(true);
     expect(isWorkplaceServicesListing({ createdByAdmin: false }, null)).toBe(false);
+  });
+});
+
+describe("isWorkplaceServicesBookingContext (historical reports)", () => {
+  it("pool-era booking (admin-created listing) stays WPS even after the spot was assigned to an individual owner (transfer scenario)", () => {
+    // Exact prod incident: P100 pool-era bookings; spot now owned by Devin.
+    expect(
+      isWorkplaceServicesBookingContext(
+        { createdByAdmin: true },
+        { ownerId: OWNER_ID, isBciManaged: false }
+      )
+    ).toBe(true);
+  });
+
+  it("owner-era booking (owner listing) is P2P even if the spot later returned to the pool", () => {
+    // Reverse transfer: Devin's P154 bookings; spot now ownerless/BCI-managed.
+    expect(
+      isWorkplaceServicesBookingContext(
+        { createdByAdmin: false },
+        { ownerId: null, isBciManaged: true }
+      )
+    ).toBe(false);
+  });
+
+  it("owner-created listing on owned spot is P2P", () => {
+    expect(
+      isWorkplaceServicesBookingContext(
+        { createdByAdmin: false },
+        { ownerId: OWNER_ID, isBciManaged: false }
+      )
+    ).toBe(false);
+  });
+
+  it("admin-created listing on pool spot is WPS", () => {
+    expect(
+      isWorkplaceServicesBookingContext(
+        { createdByAdmin: true },
+        { ownerId: null, isBciManaged: true }
+      )
+    ).toBe(true);
+  });
+
+  it("no listing falls back to spot context: owned spot P2P, BCI pool spot WPS", () => {
+    expect(isWorkplaceServicesBookingContext(null, { ownerId: OWNER_ID, isBciManaged: true })).toBe(false);
+    expect(isWorkplaceServicesBookingContext(null, { ownerId: null, isBciManaged: true })).toBe(true);
+    expect(isWorkplaceServicesBookingContext(null, { ownerId: null, isBciManaged: false })).toBe(false);
+    expect(isWorkplaceServicesBookingContext(null, null)).toBe(false);
   });
 });
 
