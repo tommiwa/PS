@@ -46,6 +46,12 @@ import { quickExportParkingSpotsPDF, quickExportParkingSpotsExcel } from "@/util
 const _year = new Date().getFullYear()
 const statHolidays = getBCStatHolidaysForRange(_year, _year + 1)
 
+// A spot assigned to an individual owner is ALWAYS personal (peer-to-peer), regardless of a
+// stale is_bci_managed flag in the database. Only unowned spots flagged as BCI managed count
+// as company inventory. Keep this in sync with the server-side classification (task #347).
+const isSpotBciManaged = (spot: { isBciManaged?: boolean | null; ownerId?: string | null }): boolean =>
+  !!spot.isBciManaged && !spot.ownerId
+
 export default function AdminParkingManagement() {
   const { t } = useLanguage()
   const { toast } = useToast()
@@ -846,7 +852,7 @@ export default function AdminParkingManagement() {
       setSelectedAvailableSpot(null);
       setSelectedUserForAvailableSpot("");
       setAssignAvailableSpotFormData({
-        isBciManaged: true,
+        isBciManaged: false,
         scheduledDate: null,
         cancelFutureBookings: true
       });
@@ -1101,7 +1107,8 @@ export default function AdminParkingManagement() {
     setDirectAssignFormData({
       userId: "",
       duration: "permanent",
-      isBciManaged: spot?.isBciManaged ?? true,
+      // Assigning a spot to an individual makes it personal (peer-to-peer), never BCI managed
+      isBciManaged: false,
       notes: "",
       scheduledDate: null,
       cancelFutureBookings: true
@@ -1117,7 +1124,8 @@ export default function AdminParkingManagement() {
   const handleAssignAvailableSpot = (spot: ParkingSpot) => {
     setSelectedAvailableSpot(spot);
     setAssignAvailableSpotFormData({
-      isBciManaged: spot?.isBciManaged ?? true,
+      // Assigning a spot to an individual makes it personal (peer-to-peer), never BCI managed
+      isBciManaged: false,
       scheduledDate: null,
       cancelFutureBookings: true
     });
@@ -1168,15 +1176,13 @@ export default function AdminParkingManagement() {
   };
 
   // Enhanced filtering for parking spots
+  // Note: the "bci-managed" tab is the "All Parking Spots" tab and intentionally shows
+  // every spot. Management type (BCI Managed vs Personal) is derived from ownership via
+  // isSpotBciManaged() — a spot assigned to an individual owner is always Personal,
+  // regardless of a stale is_bci_managed flag in the database.
   const filteredSpots = allSpots.filter(spot => {
-    const matchesTab = activeSpotTab === "bci-managed" ? spot.isBciManaged :
-                     activeSpotTab === "personal" ? !spot.isBciManaged :
-                     false; // Don't use this filter for bci-available or waiting tabs
-    
-    // If the tab doesn't use this filter, skip this spot
-    if (activeSpotTab === "bci-managed" || activeSpotTab === "personal") {
-      if (!matchesTab) return false;
-    }
+    // Legacy "personal" tab (no longer rendered): derive grouping from ownership, not the raw flag
+    if (activeSpotTab === "personal" && isSpotBciManaged(spot)) return false;
     
     // Search filter - searches across all visible columns
     if (searchTerm.trim()) {
@@ -1241,8 +1247,8 @@ export default function AdminParkingManagement() {
 
   // Enhanced filtering for available BCI managed spots
   const filteredAvailableSpots = unallocatedSpots.filter(spot => {
-    // Filter for BCI managed spots only
-    if (!spot.isBciManaged) return false;
+    // Filter for BCI managed spots only (ownership-derived: owned spots are never BCI managed)
+    if (!isSpotBciManaged(spot)) return false;
     
     // Search filter - searches across all visible columns
     if (availableSpotsSearchTerm.trim()) {
@@ -1901,7 +1907,7 @@ export default function AdminParkingManagement() {
             </Card>
           </TooltipTrigger>
           <TooltipContent>
-            Click to view all BCI managed parking spots
+            Click to view all parking spots
           </TooltipContent>
         </Tooltip>
 
@@ -2248,6 +2254,7 @@ export default function AdminParkingManagement() {
                           >
                             {t("admin.parkingManagement.assignmentStatus")}
                           </SortableTableHeader>
+                          <TableHead>Management</TableHead>
                           <TableHead>Map</TableHead>
                           <TableHead>{t("admin.parkingManagement.actions")}</TableHead>
                         </TableRow>
@@ -2324,6 +2331,28 @@ export default function AdminParkingManagement() {
                               ) : (
                                 <Badge variant="outline">{t("admin.parkingManagement.available")}</Badge>
                               )}
+                            </TableCell>
+                            <TableCell data-testid={`text-spot-management-type-${spot.id}`}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  {isSpotBciManaged(spot) ? (
+                                    <Badge variant="secondary" className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100">
+                                      BCI Managed
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100">
+                                      Personal
+                                    </Badge>
+                                  )}
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {isSpotBciManaged(spot)
+                                    ? "BCI Managed: company inventory, only admins can reassign."
+                                    : spot.ownerId
+                                      ? "Personal: assigned to an individual owner (peer-to-peer)."
+                                      : "Personal: not part of BCI managed inventory."}
+                                </TooltipContent>
+                              </Tooltip>
                             </TableCell>
                             <TableCell>
                               {(() => {
@@ -2714,7 +2743,7 @@ export default function AdminParkingManagement() {
                           <TableCell data-testid={`text-unallocated-spot-management-type-${spot.id}`}>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                {spot.isBciManaged ? (
+                                {isSpotBciManaged(spot) ? (
                                   <Badge variant="secondary" className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100">
                                     BCI Managed
                                   </Badge>
@@ -2725,7 +2754,7 @@ export default function AdminParkingManagement() {
                                 )}
                               </TooltipTrigger>
                               <TooltipContent>
-                                {spot.isBciManaged 
+                                {isSpotBciManaged(spot) 
                                   ? "BCI Managed: Only admins can reassign. Personal: Owner can create listings."
                                   : "Personal: Owner can create listings and manage availability."}
                               </TooltipContent>
