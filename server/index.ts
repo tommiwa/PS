@@ -12,6 +12,26 @@ import { spotLocks, spotListings, bookings, parkingSpots, refreshTokens } from "
 import { and, eq, lt, lte, inArray, notInArray, sql, isNull, or } from "drizzle-orm";
 import { setupWebSocket, broadcastLockEvent } from "./websocket";
 import { runMigrations } from "./migrations";
+import { logServerError, withReference } from "./error-reporting";
+
+// Process-level safety nets.
+// A stray promise rejection or an uncaught exception (e.g. from a background job
+// or a dropped database socket) would otherwise terminate the process and abort
+// every in-flight request with a bare "Internal Server Error". Log them loudly
+// and keep serving instead.
+process.on("unhandledRejection", (reason: any) => {
+  console.error("[process] Unhandled promise rejection:", reason?.message || reason);
+  if (reason?.stack) {
+    console.error(`[process] stack:\n${reason.stack}`);
+  }
+});
+
+process.on("uncaughtException", (err: any) => {
+  console.error("[process] Uncaught exception:", err?.message || err);
+  if (err?.stack) {
+    console.error(`[process] stack:\n${err.stack}`);
+  }
+});
 
 const app = express();
 app.use(cookieParser());
@@ -1076,12 +1096,29 @@ If you have questions about the collection of your personal information through 
   // Setup WebSocket server
   setupWebSocket(server);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+  // Top-level error handler.
+  // Always logs a full, correlatable entry (method, path, stack, correlation id,
+  // reference) and always answers with a specific message plus a reference code the
+  // user can quote - never a bare "Internal Server Error". It must not re-throw:
+  // the response has already been sent at that point.
+  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
+    const status = err?.status || err?.statusCode || 500;
+    const reference = logServerError("express:unhandled", err, req);
 
-    res.status(status).json({ message });
-    throw err;
+    if (res.headersSent) {
+      // Nothing more we can do with the response; the log above is the record.
+      return;
+    }
+
+    const rawMessage = typeof err?.message === "string" ? err.message.trim() : "";
+    const reason =
+      rawMessage ||
+      (status >= 500
+        ? `The server failed while handling ${req.method} ${req.path}`
+        : `The request ${req.method} ${req.path} could not be completed`);
+
+    const message = withReference(reason, reference);
+    res.status(status).json({ error: message, message, reference });
   });
 
   // importantly only setup vite in development and after

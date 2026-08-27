@@ -644,7 +644,11 @@ export const auditActions = z.enum([
   "BULK_UPDATE",
   "CANCEL",
   "COMPLETE",
-  "SWAP_SPOT"
+  "SWAP_SPOT",
+  "SCHEDULE_ASSIGN",
+  "SCHEDULE_RELEASE",
+  "CANCEL_SCHEDULE",
+  "RELEASE"
 ]);
 
 export type AuditAction = z.infer<typeof auditActions>;

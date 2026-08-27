@@ -9,6 +9,7 @@ import connectPg from "connect-pg-simple";
 import crypto from "crypto";
 import { storage } from "./storage";
 import { auditService } from "./audit-service";
+import { logServerError, withReference } from "./error-reporting";
 import { db } from "./db";
 import { 
   users, 
@@ -892,8 +893,12 @@ export const requireAdmin: RequestHandler = async (req, res, next) => {
     
     next();
   } catch (error) {
-    console.error("Error in requireAdmin middleware:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    const reference = logServerError("auth:requireAdmin", error, req);
+    const message = withReference(
+      "Your admin permissions could not be verified for this request.",
+      reference,
+    );
+    return res.status(500).json({ error: message, message, reference });
   }
 };
 

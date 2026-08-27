@@ -1,19 +1,40 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+/**
+ * Extract the most specific human-readable message from a failed response.
+ * Falls back to `fallback` plus the HTTP status so the user never sees a bare
+ * generic string with no context.
+ */
+export async function readApiError(res: Response, fallback: string): Promise<string> {
+  let text = "";
+  try {
+    text = await res.text();
+  } catch {
+    // body already consumed or unreadable
+  }
+
+  if (text) {
+    try {
+      const parsed = JSON.parse(text);
+      const message = parsed?.error || parsed?.message || parsed?.details;
+      if (typeof message === "string" && message.trim()) {
+        return message;
+      }
+    } catch {
+      // Not JSON (e.g. a proxy-generated plain-text error) - use the raw body
+      return text;
+    }
+  }
+
+  return `${fallback} (HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ""})`;
+}
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    
-    // Try to extract error message from JSON response
-    try {
-      const jsonError = JSON.parse(text);
-      // Handle common error response formats
-      const errorMessage = jsonError.error || jsonError.message || jsonError.details || text;
-      throw new Error(errorMessage);
-    } catch (parseError) {
-      // If JSON parsing fails, use the raw text but remove status code prefix if present
-      throw new Error(text);
-    }
+    // NOTE: the parsed message must be thrown *outside* the try/catch used for
+    // JSON.parse, otherwise the throw is caught by that catch and the raw body
+    // is surfaced instead of the specific server message.
+    throw new Error(await readApiError(res, "The request failed"));
   }
 }
 

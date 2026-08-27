@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { Link } from "wouter"
-import { queryClient, apiRequest } from "@/lib/queryClient"
+import { queryClient, apiRequest, readApiError } from "@/lib/queryClient"
 import { useToast } from "@/hooks/use-toast"
 import { useConfirm, confirmations } from "@/hooks/use-confirm"
 import { useTableSort } from "@/hooks/use-table-sort"
@@ -965,11 +965,19 @@ export default function AdminParkingManagement() {
     currentOwnerEmail: string;
   };
 
-  const { data: scheduledReleases = [], isLoading: isLoadingScheduledReleases } = useQuery<ScheduledRelease[]>({
+  const {
+    data: scheduledReleases = [],
+    isLoading: isLoadingScheduledReleases,
+    error: scheduledReleasesError,
+  } = useQuery<ScheduledRelease[]>({
     queryKey: ["/api/admin/scheduled-releases"],
     queryFn: async () => {
       const response = await fetch("/api/admin/scheduled-releases", { credentials: 'include' });
-      if (!response.ok) return [];
+      if (!response.ok) {
+        // Never silently substitute an empty list: that hides server errors and
+        // makes an existing pending release look like it does not exist.
+        throw new Error(await readApiError(response, "Failed to load pending scheduled releases."));
+      }
       return response.json();
     },
   });
@@ -1018,11 +1026,17 @@ export default function AdminParkingManagement() {
     formerOwnerEmail: string;
   };
 
-  const { data: releaseHistory = [], isLoading: isLoadingReleaseHistory } = useQuery<ScheduledReleaseHistoryItem[]>({
+  const {
+    data: releaseHistory = [],
+    isLoading: isLoadingReleaseHistory,
+    error: releaseHistoryError,
+  } = useQuery<ScheduledReleaseHistoryItem[]>({
     queryKey: ["/api/admin/scheduled-releases/history"],
     queryFn: async () => {
       const response = await fetch("/api/admin/scheduled-releases/history", { credentials: 'include' });
-      if (!response.ok) return [];
+      if (!response.ok) {
+        throw new Error(await readApiError(response, "Failed to load scheduled release history."));
+      }
       return response.json();
     },
   });
@@ -1036,7 +1050,7 @@ export default function AdminParkingManagement() {
         body: data,
       });
     },
-    onSuccess: () => {
+    onSuccess: async (response: Response) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/scheduled-releases"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/all-spots"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/assigned-spots"] });
@@ -1044,10 +1058,23 @@ export default function AdminParkingManagement() {
       setSelectedSpotForScheduleRelease(null);
       setScheduleReleaseDate(null);
       setScheduleReleaseNotes("");
+
+      // A failed notification email must never make a successful scheduling look
+      // like an error - report it as a warning alongside the success.
+      let warnings: string[] = [];
+      try {
+        const body = await response.json();
+        warnings = Array.isArray(body?.notificationWarnings) ? body.notificationWarnings : [];
+      } catch {
+        // Non-JSON body: nothing extra to report
+      }
+
       toast({
         title: "Release Scheduled",
-        description: "The spot release has been scheduled successfully.",
-        variant: "success",
+        description: warnings.length > 0
+          ? `The spot release has been scheduled. Some notifications could not be sent: ${warnings.join(" ")}`
+          : "The spot release has been scheduled successfully.",
+        variant: warnings.length > 0 ? "warning" : "success",
       });
     },
     onError: (error: any) => {
@@ -3285,6 +3312,16 @@ export default function AdminParkingManagement() {
         </Card>
       )}
 
+      {scheduledReleasesError && (
+        <Alert variant="destructive" className="mt-6" data-testid="alert-scheduled-releases-error">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Pending scheduled releases could not be loaded, so this page may be hiding an existing
+            release. {(scheduledReleasesError as Error).message}
+          </AlertDescription>
+        </Alert>
+      )}
+
       {scheduledReleases.length > 0 && (
         <Card className="mt-6" data-testid="card-scheduled-releases">
           <CardHeader>
@@ -3398,6 +3435,13 @@ export default function AdminParkingManagement() {
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Loading release history...
               </div>
+            ) : releaseHistoryError ? (
+              <Alert variant="destructive" data-testid="alert-release-history-error">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  Release history could not be loaded. {(releaseHistoryError as Error).message}
+                </AlertDescription>
+              </Alert>
             ) : releaseHistory.length === 0 ? (
               <p className="text-sm text-muted-foreground py-4">No past releases found.</p>
             ) : (

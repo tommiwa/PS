@@ -43,8 +43,23 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 const AUDIT_ACTIONS: AuditAction[] = [
   "LOGIN", "LOGOUT", "CREATE", "UPDATE", "DELETE", "VIEW", "SEARCH", 
   "ASSIGN", "UNASSIGN", "APPROVE", "REJECT", "ACTIVATE", "DEACTIVATE",
-  "EXPORT", "IMPORT", "TOGGLE_BOOKABILITY", "BULK_UPDATE", "CANCEL", "COMPLETE"
+  "EXPORT", "IMPORT", "TOGGLE_BOOKABILITY", "BULK_UPDATE", "CANCEL", "COMPLETE",
+  "SWAP_SPOT", "SCHEDULE_ASSIGN", "SCHEDULE_RELEASE", "CANCEL_SCHEDULE", "RELEASE"
 ];
+
+// Human-readable labels for actions whose raw enum value reads poorly in the UI
+const AUDIT_ACTION_LABELS: Partial<Record<AuditAction, string>> = {
+  TOGGLE_BOOKABILITY: "Toggle Bookability",
+  BULK_UPDATE: "Bulk Update",
+  SWAP_SPOT: "Swap Spot",
+  SCHEDULE_ASSIGN: "Schedule Assignment",
+  SCHEDULE_RELEASE: "Schedule Release",
+  CANCEL_SCHEDULE: "Cancel Schedule",
+  RELEASE: "Release",
+};
+
+const getActionLabel = (action: AuditAction): string =>
+  AUDIT_ACTION_LABELS[action] || action;
 
 const ENTITY_TYPES: EntityType[] = [
   "user", "parking_spot", "spot_listing", "booking", "waiting_list", "notification", "system"
@@ -198,6 +213,11 @@ export default function AdminAudits() {
       "BULK_UPDATE": "bg-blue-50 text-blue-700 border-blue-200",
       "CANCEL": "bg-red-50 text-red-700 border-red-200",
       "COMPLETE": "bg-green-50 text-green-700 border-green-200",
+      "SWAP_SPOT": "bg-indigo-50 text-indigo-700 border-indigo-200",
+      "SCHEDULE_ASSIGN": "bg-amber-50 text-amber-700 border-amber-200",
+      "SCHEDULE_RELEASE": "bg-amber-50 text-amber-700 border-amber-200",
+      "CANCEL_SCHEDULE": "bg-red-50 text-red-700 border-red-200",
+      "RELEASE": "bg-orange-50 text-orange-700 border-orange-200",
     };
     return actionColors[action] || "bg-gray-50 text-gray-700 border-gray-200";
   };
@@ -346,7 +366,7 @@ export default function AdminAudits() {
                   <SelectItem value="all">{t('admin.auditLogs.allActions')}</SelectItem>
                   {AUDIT_ACTIONS.map(action => (
                     <SelectItem key={action} value={action}>
-                      {action}
+                      {getActionLabel(action)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -506,7 +526,7 @@ export default function AdminAudits() {
                               variant="outline" 
                               className={getActionBadgeColor(log.action)}
                             >
-                              {log.action}
+                              {getActionLabel(log.action)}
                             </Badge>
                           </TableCell>
                           <TableCell>
