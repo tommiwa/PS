@@ -88,6 +88,48 @@ import { spotListings, parkingSpots, users, waitingList, departments, bookings, 
 import { eq, or, ilike, asc, and, notExists, sql as sqlOp, count, desc, inArray, isNull, lt, like } from "drizzle-orm";
 
 // Storage interface with comprehensive CRUD methods
+// ── Period listing day-removal helpers ─────────────────────────────────────
+// All date math is done on YYYY-MM-DD strings via UTC so it never shifts across
+// timezones (the same convention the booking-time period split uses).
+export function shiftDateString(dateStr: string, days: number): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return dt.toISOString().slice(0, 10);
+}
+
+export function enumerateDateRange(startDate: string, endDate: string): string[] {
+  const dates: string[] = [];
+  let cursor = startDate;
+  while (cursor <= endDate) {
+    dates.push(cursor);
+    cursor = shiftDateString(cursor, 1);
+  }
+  return dates;
+}
+
+/** Thrown when a per-day removal cannot be applied to the target listing. */
+export class PeriodRemovalError extends Error {
+  constructor(public code: 'not_found' | 'inactive' | 'not_period' | 'invalid_range' | 'out_of_period', message: string) {
+    super(message);
+    this.name = 'PeriodRemovalError';
+  }
+}
+
+export interface PeriodDayRemovalResult {
+  /** 'split' when part of the period survives, 'full_cancel' when the removal covers the whole period. */
+  outcome: 'split' | 'full_cancel';
+  /** The period record as it was before the removal. */
+  original: SpotListing;
+  /** The original record after being cancelled (and soft-deleted when split). */
+  cancelledListing: SpotListing;
+  /** Replacement records covering the surviving segments (empty on full_cancel). */
+  replacements: SpotListing[];
+  removedDates: string[];
+  /** Active bookings on surviving dates that were re-pointed at a replacement record. */
+  repointedBookings: Array<{ bookingId: string; bookingDate: string; listingId: string }>;
+}
+
 export interface IStorage {
   // User operations
   // (IMPORTANT) these user operations are mandatory for Replit Auth.
@@ -144,6 +186,7 @@ export interface IStorage {
   bulkCreateSpotListings(spotIds: string[], listingData: Omit<InsertSpotListing, 'spotId' | 'ownerId'>, ownerId: string): Promise<SpotListing[]>;
   updateSpotListing(id: string, updates: Partial<InsertSpotListing>): Promise<SpotListing | undefined>;
   deleteSpotListing(id: string): Promise<boolean>;
+  removeDatesFromPeriodListing(listingId: string, startDate: string, endDate: string, reason: string): Promise<PeriodDayRemovalResult>;
   // Alias methods for API endpoints
   updateListing(id: string, updates: Partial<InsertSpotListing>): Promise<SpotListing | undefined>;
   deleteListing(id: string): Promise<boolean>;
@@ -1444,6 +1487,156 @@ export class MemStorage implements IStorage {
       .where(eq(spotListings.id, id))
       .returning();
     return updated.length > 0;
+  }
+
+  /**
+   * Remove a consecutive range of days from a period listing without destroying
+   * the rest of the period.
+   *
+   * The period record is replaced, inside one transaction, by records covering
+   * the surviving segments before and after the removed range (a one-day
+   * segment collapses into a single-day record, mirroring the booking-time
+   * split), any active booking on a surviving date is re-pointed at the
+   * replacement covering it, and the original is then cancelled and
+   * soft-deleted. When the removed range covers the whole period there is
+   * nothing to survive, so the listing is simply cancelled — the same outcome
+   * as cancelling it outright.
+   *
+   * Bookings inside the removed range are deliberately left alone here; the
+   * caller cancels and notifies them through the existing cancel-and-notify path.
+   */
+  async removeDatesFromPeriodListing(
+    listingId: string,
+    startDate: string,
+    endDate: string,
+    reason: string
+  ): Promise<PeriodDayRemovalResult> {
+    if (startDate > endDate) {
+      throw new PeriodRemovalError('invalid_range', 'The end of the removal range must be on or after its start');
+    }
+
+    return await db.transaction(async (tx) => {
+      const [listing] = await tx.select().from(spotListings).where(eq(spotListings.id, listingId)).limit(1);
+      if (!listing) {
+        throw new PeriodRemovalError('not_found', 'Spot listing not found');
+      }
+      if (listing.deletedAt || listing.status === 'cancelled') {
+        throw new PeriodRemovalError('inactive', 'This listing is no longer active');
+      }
+      if (listing.listingType !== 'period' || !listing.periodStartDate || !listing.periodEndDate) {
+        throw new PeriodRemovalError('not_period', 'Only period listings support removing individual days');
+      }
+
+      const periodStart = String(listing.periodStartDate);
+      const periodEnd = String(listing.periodEndDate);
+      if (startDate < periodStart || endDate > periodEnd) {
+        throw new PeriodRemovalError('out_of_period', `The dates to remove must fall inside the listing period (${periodStart} to ${periodEnd})`);
+      }
+
+      const removedDates = enumerateDateRange(startDate, endDate);
+      const now = new Date();
+
+      // Surviving segments either side of the removed range
+      const segments: Array<{ start: string; end: string }> = [];
+      const beforeEnd = shiftDateString(startDate, -1);
+      if (periodStart <= beforeEnd) segments.push({ start: periodStart, end: beforeEnd });
+      const afterStart = shiftDateString(endDate, 1);
+      if (afterStart <= periodEnd) segments.push({ start: afterStart, end: periodEnd });
+
+      // Nothing survives — this is an outright cancellation of the listing.
+      if (segments.length === 0) {
+        const [cancelled] = await tx.update(spotListings)
+          .set({ status: 'cancelled' as ListingStatus, adminNotes: reason, updatedAt: now })
+          .where(eq(spotListings.id, listingId))
+          .returning();
+        return {
+          outcome: 'full_cancel' as const,
+          original: listing,
+          cancelledListing: cancelled,
+          replacements: [],
+          removedDates,
+          repointedBookings: [],
+        };
+      }
+
+      const replacements: SpotListing[] = [];
+      const segmentListings: Array<{ start: string; end: string; listing: SpotListing }> = [];
+
+      for (const segment of segments) {
+        const isSingleDay = segment.start === segment.end;
+        const [created] = await tx.insert(spotListings).values({
+          spotId: listing.spotId,
+          ownerId: listing.ownerId,
+          listingType: (isSingleDay ? 'single' : 'period') as ListingType,
+          singleDate: isSingleDay ? segment.start : null,
+          // A collapsed single day keeps the original period bounds for provenance
+          // (same convention as the booking-time split); a multi-day segment carries
+          // its own bounds, which is what actually makes it available.
+          periodStartDate: isSingleDay ? periodStart : segment.start,
+          periodEndDate: isSingleDay ? periodEnd : segment.end,
+          recurringStartDate: null,
+          recurringEndDate: null,
+          daysOfWeek: null,
+          dailyRate: listing.dailyRate,
+          status: 'available' as ListingStatus,
+          notes: listing.notes,
+          donateToCharity: listing.donateToCharity,
+          createdBy: listing.createdBy,
+          createdByAdmin: listing.createdByAdmin,
+          originalListingType: (listing.originalListingType ?? 'period') as ListingType,
+          // Carry sale pricing across so discounted days keep their pricing
+          saleEventId: listing.saleEventId,
+          originalDailyRate: listing.originalDailyRate,
+          saleCalendarLabel: listing.saleCalendarLabel,
+          saleCalendarColor: listing.saleCalendarColor,
+          saleStartDate: listing.saleStartDate,
+          saleEndDate: listing.saleEndDate,
+          createdAt: now,
+          updatedAt: now,
+        }).returning();
+        replacements.push(created);
+        segmentListings.push({ ...segment, listing: created });
+      }
+
+      // Re-point active bookings that fall on a surviving date so they keep
+      // resolving to a live listing. Bookings inside the removed range keep
+      // referencing the original record — the caller cancels those.
+      const listingBookings = await tx.select().from(bookings).where(eq(bookings.listingId, listingId));
+      const repointedBookings: Array<{ bookingId: string; bookingDate: string; listingId: string }> = [];
+      for (const booking of listingBookings) {
+        if (booking.status === 'cancelled' || booking.status === 'completed') continue;
+        const bookingDate = String(booking.bookingDate);
+        if (bookingDate >= startDate && bookingDate <= endDate) continue;
+        const target = segmentListings.find(s => bookingDate >= s.start && bookingDate <= s.end);
+        if (!target) continue;
+        await tx.update(bookings)
+          .set({ listingId: target.listing.id, updatedAt: now })
+          .where(eq(bookings.id, booking.id));
+        repointedBookings.push({ bookingId: booking.id, bookingDate, listingId: target.listing.id });
+      }
+
+      // Retire the original period record: cancelled for status, soft-deleted so
+      // it drops out of every normal query (which all filter on deletedAt).
+      const removedLabel = startDate === endDate ? startDate : `${startDate} to ${endDate}`;
+      const [cancelled] = await tx.update(spotListings)
+        .set({
+          status: 'cancelled' as ListingStatus,
+          adminNotes: `Removed ${removedLabel} from period ${periodStart} to ${periodEnd}: ${reason}`,
+          deletedAt: now,
+          updatedAt: now,
+        })
+        .where(eq(spotListings.id, listingId))
+        .returning();
+
+      return {
+        outcome: 'split' as const,
+        original: listing,
+        cancelledListing: cancelled,
+        replacements,
+        removedDates,
+        repointedBookings,
+      };
+    });
   }
 
   // Booking operations
@@ -3072,6 +3265,10 @@ export class MemStorage implements IStorage {
                 singleDate: dateStr,
                 availableFrom: dateStr,
                 availableTo: dateStr,
+                // Identify this row as one day of an underlying period record so
+                // the admin UI can remove just this day instead of the whole period.
+                parentListingId: listing.id,
+                periodDayDate: dateStr,
               } as BookingAvailabilityData,
               spotIsBciManaged,
               spotOwnerId,

@@ -306,6 +306,11 @@ export interface BookingAvailabilityData extends SpotListing {
   ownerName: string;
   availableFrom: string;
   availableTo: string;
+  // Set only on rows that are a display expansion of a single day of a period
+  // listing. `id` on those rows is synthetic ("<listingId>-<YYYY-MM-DD>"), so
+  // callers must use parentListingId when acting on the underlying record.
+  parentListingId?: string;
+  periodDayDate?: string;
 }
 
 // Spot Locks Table - Concurrent Booking Prevention System

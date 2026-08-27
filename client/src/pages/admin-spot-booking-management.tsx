@@ -29,6 +29,7 @@ import { EnhancedFilters, type FilterConfig, type FilterValues } from "@/compone
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { 
@@ -153,6 +154,10 @@ interface BookingAvailabilityData {
   saleEventId?: number | null;
   saleCalendarLabel?: string | null;
   originalDailyRate?: string | null;
+  // Present only on rows that are one expanded day of an underlying period listing.
+  // `id` is synthetic on those rows ("<listingId>-<YYYY-MM-DD>").
+  parentListingId?: string;
+  periodDayDate?: string;
 }
 
 interface PendingPaymentData {
@@ -287,6 +292,10 @@ export default function AdminSpotBookingManagement() {
   const [showAvailabilityDetailsDialog, setShowAvailabilityDetailsDialog] = useState(false)
   const [showCancelListingDialog, setShowCancelListingDialog] = useState(false)
   const [cancelListingReason, setCancelListingReason] = useState("")
+  // Per-day removal from a period listing: "day" removes the selected day (or a
+  // consecutive range starting at it), "entire" cancels the whole remaining period.
+  const [cancelListingScope, setCancelListingScope] = useState<'day' | 'entire'>('day')
+  const [cancelListingRangeEnd, setCancelListingRangeEnd] = useState("")
   const [showMarkPaidConfirmDialog, setShowMarkPaidConfirmDialog] = useState(false)
   const [activeTab, setActiveTab] = useState("availability")
   
@@ -570,6 +579,23 @@ export default function AdminSpotBookingManagement() {
       .sort((a, b) => a.label.localeCompare(b.label));
   }, [locations]);
 
+
+  // ── Cancel-listing dialog context ─────────────────────────────────────────
+  // Availability rows for a period listing are one row per day, each backed by the
+  // same underlying record. `periodDayDate`/`parentListingId` identify those rows
+  // (the synthetic "<listingId>-YYYY-MM-DD" id is the fallback for cached rows), so
+  // the dialog can offer removing just that day instead of the whole period.
+  const cancelPeriodDay: string | undefined = (() => {
+    const row = selectedAvailabilityListing;
+    if (!row || !row.periodStartDate || !row.periodEndDate) return undefined;
+    if (row.periodDayDate) return row.periodDayDate;
+    if (row.parentListingId && row.singleDate) return row.singleDate;
+    const suffixMatch = row.id.match(/-(\d{4}-\d{2}-\d{2})$/);
+    return suffixMatch ? suffixMatch[1] : undefined;
+  })();
+  const cancelRemovalEnd: string = cancelPeriodDay
+    ? (cancelListingRangeEnd && cancelListingRangeEnd > cancelPeriodDay ? cancelListingRangeEnd : cancelPeriodDay)
+    : '';
 
   // ── Client-side data for Booking Availability ─────────────────────────────
   const availClientSortState: ClientSortState = { column: availSortCol, direction: availSortDir };
@@ -1060,28 +1086,42 @@ export default function AdminSpotBookingManagement() {
 
   // Cancel listing mutation (for Booking Availability tab)
   const cancelListingMutation = useMutation({
-    mutationFn: async ({ listingId, reason }: { listingId: string; reason: string }) => {
+    mutationFn: async ({ listingId, reason, removeDate, removeEndDate }: { listingId: string; reason: string; removeDate?: string; removeEndDate?: string }) => {
       // Extract original listing ID if this is an expanded day entry (format: "listingId-YYYY-MM-DD")
       const originalListingId = listingId.includes('-') && listingId.match(/-\d{4}-\d{2}-\d{2}$/) 
         ? listingId.replace(/-\d{4}-\d{2}-\d{2}$/, '') 
         : listingId;
       const response = await apiRequest(`/api/admin/spot-listings/${originalListingId}/cancel`, { 
         method: 'POST', 
-        body: { reason }
+        body: removeDate ? { reason, removeDate, removeEndDate: removeEndDate || removeDate } : { reason }
       });
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-availability", scope, "all"] });
-      
-      toast({
-        title: "Listing Cancelled",
-        description: "The spot listing has been successfully cancelled.",
-        variant: "default"
-      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-analytics", scope] });
+
+      const removedDates: string[] = Array.isArray(data?.removedDates) ? data.removedDates : [];
+      if (data?.partialRemoval && removedDates.length > 0) {
+        toast({
+          title: removedDates.length === 1 ? "Day Removed" : "Days Removed",
+          description: removedDates.length === 1
+            ? `${formatDate(removedDates[0])} is no longer available. The rest of the period stays listed.`
+            : `${formatDate(removedDates[0])} – ${formatDate(removedDates[removedDates.length - 1])} are no longer available. The rest of the period stays listed.`,
+          variant: "default"
+        });
+      } else {
+        toast({
+          title: "Listing Cancelled",
+          description: "The spot listing has been successfully cancelled.",
+          variant: "default"
+        });
+      }
       
       setShowCancelListingDialog(false);
       setCancelListingReason("");
+      setCancelListingScope('day');
+      setCancelListingRangeEnd("");
       setSelectedAvailabilityListing(null);
     },
     onError: (error) => {
@@ -1750,6 +1790,8 @@ export default function AdminSpotBookingManagement() {
                                     className="text-destructive hover:text-destructive"
                                     onClick={() => {
                                       setSelectedAvailabilityListing(listing);
+                                      setCancelListingScope('day');
+                                      setCancelListingRangeEnd("");
                                       setShowCancelListingDialog(true);
                                     }}
                                     data-testid={`button-cancel-listing-${listing.id}`}
@@ -2882,13 +2924,21 @@ export default function AdminSpotBookingManagement() {
         setShowCancelListingDialog(open);
         if (!open) {
           setCancelListingReason("");
+          setCancelListingScope('day');
+          setCancelListingRangeEnd("");
         }
       }}>
         <DialogContent data-testid="dialog-cancel-listing">
           <DialogHeader>
-            <DialogTitle>Cancel Spot Listing</DialogTitle>
+            <DialogTitle>
+              {cancelPeriodDay && cancelListingScope === 'day' ? 'Remove Availability' : 'Cancel Spot Listing'}
+            </DialogTitle>
             <DialogDescription>
-              This will cancel the listing and make the spot unavailable for booking during this period. This action cannot be undone.
+              {cancelPeriodDay
+                ? "Remove only the selected day (or a consecutive range starting on it) and the rest of the period stays available — or cancel the entire remaining period. This action cannot be undone."
+                : selectedAvailabilityListing?.listingType === 'recurring'
+                ? "This will cancel the ENTIRE recurring listing — every remaining day it covers, not just one day. This action cannot be undone."
+                : "This will cancel the listing and make the spot unavailable for booking during this period. This action cannot be undone."}
             </DialogDescription>
           </DialogHeader>
           {selectedAvailabilityListing && (
@@ -2902,17 +2952,79 @@ export default function AdminSpotBookingManagement() {
                   <span className="text-sm text-muted-foreground">Location:</span>
                   <span className="font-medium">{selectedAvailabilityListing.locationName}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Date Range:</span>
-                  <span className="font-medium">
-                    {selectedAvailabilityListing.listingType === 'single' && selectedAvailabilityListing.singleDate
-                      ? formatDate(selectedAvailabilityListing.singleDate)
-                      : selectedAvailabilityListing.listingType === 'period'
-                      ? `${formatDate(selectedAvailabilityListing.periodStartDate || selectedAvailabilityListing.availableFrom)} – ${formatDate(selectedAvailabilityListing.periodEndDate || selectedAvailabilityListing.availableTo)}`
-                      : `${formatDate(selectedAvailabilityListing.recurringStartDate || selectedAvailabilityListing.availableFrom)} – ${formatDate(selectedAvailabilityListing.recurringEndDate || selectedAvailabilityListing.availableTo)}`}
-                  </span>
-                </div>
+                {cancelPeriodDay ? (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Day selected:</span>
+                      <span className="font-medium" data-testid="text-cancel-listing-day">{formatDate(cancelPeriodDay)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Part of period:</span>
+                      <span className="font-medium">
+                        {formatDate(selectedAvailabilityListing.periodStartDate || selectedAvailabilityListing.availableFrom)} – {formatDate(selectedAvailabilityListing.periodEndDate || selectedAvailabilityListing.availableTo)}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Date Range:</span>
+                    <span className="font-medium">
+                      {selectedAvailabilityListing.listingType === 'single' && selectedAvailabilityListing.singleDate
+                        ? formatDate(selectedAvailabilityListing.singleDate)
+                        : selectedAvailabilityListing.listingType === 'period'
+                        ? `${formatDate(selectedAvailabilityListing.periodStartDate || selectedAvailabilityListing.availableFrom)} – ${formatDate(selectedAvailabilityListing.periodEndDate || selectedAvailabilityListing.availableTo)}`
+                        : `${formatDate(selectedAvailabilityListing.recurringStartDate || selectedAvailabilityListing.availableFrom)} – ${formatDate(selectedAvailabilityListing.recurringEndDate || selectedAvailabilityListing.availableTo)}`}
+                    </span>
+                  </div>
+                )}
               </div>
+
+              {cancelPeriodDay && (
+                <div className="space-y-3">
+                  <Label>What should be removed?</Label>
+                  <RadioGroup
+                    value={cancelListingScope}
+                    onValueChange={(value) => {
+                      setCancelListingScope(value as 'day' | 'entire');
+                      if (value === 'entire') setCancelListingRangeEnd("");
+                    }}
+                    className="gap-3"
+                  >
+                    <div className="flex items-start gap-2">
+                      <RadioGroupItem value="day" id="cancel-scope-day" className="mt-1" data-testid="radio-cancel-scope-day" />
+                      <div className="space-y-2">
+                        <Label htmlFor="cancel-scope-day" className="font-normal cursor-pointer">
+                          Remove only {formatDate(cancelPeriodDay)}{cancelRemovalEnd > cancelPeriodDay ? ` – ${formatDate(cancelRemovalEnd)}` : ''}
+                        </Label>
+                        {cancelListingScope === 'day' && (
+                          <div className="space-y-1">
+                            <Label htmlFor="cancel-range-end" className="text-xs text-muted-foreground">
+                              Extend through (optional) — removes every day from {formatDate(cancelPeriodDay)} to the date chosen
+                            </Label>
+                            <Input
+                              id="cancel-range-end"
+                              type="date"
+                              className="w-48"
+                              min={cancelPeriodDay}
+                              max={selectedAvailabilityListing.periodEndDate || undefined}
+                              value={cancelListingRangeEnd}
+                              onChange={(e) => setCancelListingRangeEnd(e.target.value)}
+                              data-testid="input-cancel-listing-range-end"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <RadioGroupItem value="entire" id="cancel-scope-entire" className="mt-1" data-testid="radio-cancel-scope-entire" />
+                      <Label htmlFor="cancel-scope-entire" className="font-normal cursor-pointer">
+                        Cancel the entire remaining period ({formatDate(selectedAvailabilityListing.periodStartDate || selectedAvailabilityListing.availableFrom)} – {formatDate(selectedAvailabilityListing.periodEndDate || selectedAvailabilityListing.availableTo)})
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="cancel-listing-reason">Cancellation Reason <span className="text-destructive">*</span></Label>
                 <Textarea
@@ -2930,6 +3042,8 @@ export default function AdminSpotBookingManagement() {
                   onClick={() => {
                     setShowCancelListingDialog(false);
                     setCancelListingReason("");
+                    setCancelListingScope('day');
+                    setCancelListingRangeEnd("");
                   }}
                   data-testid="button-dismiss-cancel-listing"
                 >
@@ -2937,11 +3051,24 @@ export default function AdminSpotBookingManagement() {
                 </Button>
                 <Button
                   variant="destructive"
-                  onClick={() => selectedAvailabilityListing && cancelListingMutation.mutate({ listingId: selectedAvailabilityListing.id, reason: cancelListingReason })}
+                  onClick={() => {
+                    if (!selectedAvailabilityListing) return;
+                    const removeDay = cancelPeriodDay && cancelListingScope === 'day';
+                    cancelListingMutation.mutate({
+                      listingId: selectedAvailabilityListing.parentListingId || selectedAvailabilityListing.id,
+                      reason: cancelListingReason,
+                      removeDate: removeDay ? cancelPeriodDay : undefined,
+                      removeEndDate: removeDay ? cancelRemovalEnd : undefined,
+                    });
+                  }}
                   disabled={!cancelListingReason.trim() || cancelListingMutation.isPending}
                   data-testid="button-confirm-cancel-listing"
                 >
-                  {cancelListingMutation.isPending ? "Cancelling..." : "Cancel Listing"}
+                  {cancelListingMutation.isPending
+                    ? (cancelPeriodDay && cancelListingScope === 'day' ? "Removing..." : "Cancelling...")
+                    : cancelPeriodDay && cancelListingScope === 'day'
+                    ? (cancelRemovalEnd > cancelPeriodDay ? "Remove Days" : "Remove Day")
+                    : "Cancel Listing"}
                 </Button>
               </div>
             </div>

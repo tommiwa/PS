@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { randomUUID } from "crypto";
-import { storage } from "./storage";
+import { storage, PeriodRemovalError, type PeriodDayRemovalResult } from "./storage";
 import { parseRetentionDays } from "./internal-config-cleanup";
 import { getListingDates, maybeNotifyFullOccupancy } from "./occupancy";
 import { broadcastLockEvent } from "./websocket";
@@ -5956,7 +5956,7 @@ The BCI ParkShare Team`;
   app.post("/api/admin/spot-listings/:id/cancel", requireAdmin, async (req: any, res) => {
     try {
       const { id } = req.params;
-      const { reason } = req.body;
+      const { reason, removeDate, removeEndDate } = req.body;
       
       if (!reason) {
         return res.status(400).json({ error: "Cancellation reason is required" });
@@ -5967,19 +5967,90 @@ The BCI ParkShare Team`;
         return res.status(404).json({ error: "Spot listing not found" });
       }
 
-      const cancelledListing = await storage.cancelSpotListing(id, reason);
-      
-      await auditService.logAction("CANCEL", "spot_listing", {
-        entityId: id,
-        message: `Spot listing ${id} cancelled by admin: ${reason}`,
-        before: listing,
-        after: cancelledListing
-      });
+      // Optional per-day removal: when a date (or consecutive range) is supplied the
+      // listing is split so the rest of the period stays available. Without dates the
+      // whole listing is cancelled, exactly as before.
+      const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+      const hasRemovalDate = typeof removeDate === 'string' && removeDate.trim() !== '';
+      let removalStart: string | null = null;
+      let removalEnd: string | null = null;
 
-      // Cancel associated bookings and notify renters
+      if (hasRemovalDate) {
+        removalStart = removeDate.trim();
+        removalEnd = (typeof removeEndDate === 'string' && removeEndDate.trim() !== '' ? removeEndDate.trim() : removalStart) as string;
+
+        if (!DATE_PATTERN.test(removalStart!) || !DATE_PATTERN.test(removalEnd!)) {
+          return res.status(400).json({ error: "Dates to remove must be in YYYY-MM-DD format" });
+        }
+        if (removalEnd! < removalStart!) {
+          return res.status(400).json({ error: "The end of the removal range must be on or after its start" });
+        }
+        if (listing.listingType !== 'period' || !listing.periodStartDate || !listing.periodEndDate) {
+          return res.status(400).json({ error: "Removing individual days is only supported for period listings" });
+        }
+        const periodStart = String(listing.periodStartDate);
+        const periodEnd = String(listing.periodEndDate);
+        if (removalStart! < periodStart || removalEnd! > periodEnd) {
+          return res.status(400).json({ error: `The dates to remove must fall inside this listing's period (${periodStart} to ${periodEnd})` });
+        }
+        const today = await getTodayInTimezone();
+        if (removalStart! < today) {
+          return res.status(400).json({ error: "Dates in the past cannot be removed from a listing" });
+        }
+      }
+
+      let cancelledListing;
+      let removalResult: PeriodDayRemovalResult | null = null;
+
+      if (hasRemovalDate) {
+        try {
+          removalResult = await storage.removeDatesFromPeriodListing(id, removalStart!, removalEnd!, reason);
+        } catch (removalError) {
+          if (removalError instanceof PeriodRemovalError) {
+            return res.status(removalError.code === 'not_found' ? 404 : 400).json({ error: removalError.message });
+          }
+          throw removalError;
+        }
+        cancelledListing = removalResult.cancelledListing;
+      } else {
+        cancelledListing = await storage.cancelSpotListing(id, reason);
+      }
+
+      if (removalResult && removalResult.outcome === 'split') {
+        const removedLabel = removalStart === removalEnd ? removalStart : `${removalStart} to ${removalEnd}`;
+        await auditService.logAction("UPDATE", "spot_listing", {
+          entityId: id,
+          message: `Removed ${removedLabel} from period listing ${id} by admin: ${reason}. Remaining availability moved to listing(s) ${removalResult.replacements.map(r => r.id).join(', ')}`,
+          before: removalResult.original,
+          after: {
+            removedDates: removalResult.removedDates,
+            replacementListings: removalResult.replacements,
+            repointedBookings: removalResult.repointedBookings,
+          }
+        });
+      } else {
+        await auditService.logAction("CANCEL", "spot_listing", {
+          entityId: id,
+          message: removalResult
+            ? `Spot listing ${id} cancelled by admin (last remaining day ${removalStart} removed): ${reason}`
+            : `Spot listing ${id} cancelled by admin: ${reason}`,
+          before: listing,
+          after: cancelledListing
+        });
+      }
+
+      // Cancel associated bookings and notify renters. On a partial removal only the
+      // bookings that fall inside the removed range are cancelled — bookings on
+      // surviving days were re-pointed at the replacement listings.
       try {
         const listingBookings = await storage.getBookingsByListing(id);
-        const activeBookings = listingBookings.filter(b => b.status !== 'cancelled' && b.status !== 'completed');
+        let activeBookings = listingBookings.filter(b => b.status !== 'cancelled' && b.status !== 'completed');
+        if (hasRemovalDate) {
+          activeBookings = activeBookings.filter(b => {
+            const bookingDate = String(b.bookingDate);
+            return bookingDate >= removalStart! && bookingDate <= removalEnd!;
+          });
+        }
         
         if (activeBookings.length > 0) {
           const spot = await storage.getParkingSpot(listing.spotId);
@@ -6039,6 +6110,15 @@ The BCI ParkShare Team`;
         }
       } catch (bookingCancelError) {
         console.error('[Cancel Listing] Error cancelling associated bookings:', bookingCancelError);
+      }
+
+      if (removalResult) {
+        return res.json({
+          ...cancelledListing,
+          partialRemoval: removalResult.outcome === 'split',
+          removedDates: removalResult.removedDates,
+          replacementListings: removalResult.replacements,
+        });
       }
 
       res.json(cancelledListing);
