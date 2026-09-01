@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { format } from "date-fns"
 import { formatCurrency } from "@/lib/utils"
+import { isCancelImpactCurrent, canConfirmCancelListing, type CancelImpactSelection } from "@/lib/cancel-listing-impact"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { useLocation, useSearch, Link } from "wouter"
 import { queryClient, apiRequest } from "@/lib/queryClient"
@@ -158,6 +159,25 @@ interface BookingAvailabilityData {
   // `id` is synthetic on those rows ("<listingId>-<YYYY-MM-DD>").
   parentListingId?: string;
   periodDayDate?: string;
+}
+
+// A booking that a pending listing cancellation / day removal would destroy,
+// as returned by GET /api/admin/spot-listings/:id/affected-bookings.
+interface AffectedBookingData {
+  id: string;
+  bookingDate: string;
+  status: string;
+  renterId: string;
+  renterName: string;
+  renterEmail: string | null;
+}
+
+interface AffectedBookingsResponse {
+  listingId: string;
+  startDate: string | null;
+  endDate: string | null;
+  count: number;
+  bookings: AffectedBookingData[];
 }
 
 interface PendingPaymentData {
@@ -596,6 +616,45 @@ export default function AdminSpotBookingManagement() {
   const cancelRemovalEnd: string = cancelPeriodDay
     ? (cancelListingRangeEnd && cancelListingRangeEnd > cancelPeriodDay ? cancelListingRangeEnd : cancelPeriodDay)
     : '';
+
+  // Cancelling a listing (or removing days from it) also cancels every active
+  // booking it covers and emails those renters. That is the costliest mistake in
+  // this flow, so the dialog asks the server who would be affected *before* the
+  // admin confirms. The query mirrors exactly the day/range the confirm button
+  // will submit, so widening the range re-checks the whole range.
+  const cancelTargetListingId: string | undefined = selectedAvailabilityListing
+    ? (selectedAvailabilityListing.parentListingId || selectedAvailabilityListing.id.replace(/-\d{4}-\d{2}-\d{2}$/, ''))
+    : undefined;
+  const cancelRemovesDays = Boolean(cancelPeriodDay) && cancelListingScope === 'day';
+  const cancelImpactSelection: CancelImpactSelection = {
+    listingId: cancelTargetListingId,
+    startDate: cancelRemovesDays ? (cancelPeriodDay as string) : null,
+    endDate: cancelRemovesDays ? cancelRemovalEnd : null,
+  };
+  const {
+    data: cancelImpact,
+    isFetching: isFetchingCancelImpact,
+    isError: isCancelImpactError,
+    refetch: refetchCancelImpact,
+  } = useQuery<AffectedBookingsResponse>({
+    queryKey: [
+      "/api/admin/spot-listings",
+      cancelTargetListingId,
+      "affected-bookings",
+      { startDate: cancelImpactSelection.startDate ?? undefined, endDate: cancelImpactSelection.endDate ?? undefined },
+    ],
+    enabled: showCancelListingDialog && Boolean(cancelTargetListingId),
+    staleTime: 0,
+  });
+  // The warning only counts if it describes the day/range the confirm button will
+  // submit — a stale answer for the previous range would be worse than none.
+  const cancelImpactIsCurrent = isCancelImpactCurrent(cancelImpactSelection, {
+    data: cancelImpact,
+    isFetching: isFetchingCancelImpact,
+    isError: isCancelImpactError,
+  });
+  const affectedBookings: AffectedBookingData[] = cancelImpactIsCurrent ? (cancelImpact?.bookings ?? []) : [];
+  const affectedBookingCount = affectedBookings.length;
 
   // ── Client-side data for Booking Availability ─────────────────────────────
   const availClientSortState: ClientSortState = { column: availSortCol, direction: availSortDir };
@@ -1100,6 +1159,8 @@ export default function AdminSpotBookingManagement() {
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-availability", scope, "all"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-analytics", scope] });
+      // The cached renter-impact preview for this listing is now wrong.
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/spot-listings"] });
 
       const removedDates: string[] = Array.isArray(data?.removedDates) ? data.removedDates : [];
       if (data?.partialRemoval && removedDates.length > 0) {
@@ -3025,6 +3086,70 @@ export default function AdminSpotBookingManagement() {
                 </div>
               )}
 
+              {/* Renter impact — who loses a booking if this is confirmed. */}
+              <div data-testid="section-cancel-listing-impact">
+                {isCancelImpactError ? (
+                  <Alert variant="destructive" data-testid="alert-cancel-impact-error">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription className="space-y-2">
+                      <p>
+                        Couldn't check which renters have booked {cancelRemovesDays ? 'these days' : 'this listing'}.
+                        Removing them would cancel any booking they hold, so this can't be confirmed until the check succeeds.
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => { void refetchCancelImpact(); }}
+                        data-testid="button-retry-cancel-impact"
+                      >
+                        <RefreshCw className="h-3.5 w-3.5 mr-2" />
+                        Try again
+                      </Button>
+                    </AlertDescription>
+                  </Alert>
+                ) : !cancelImpactIsCurrent ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground" data-testid="text-cancel-impact-loading">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Checking whether {cancelRemovesDays ? 'these days are' : 'this listing is'} booked...
+                  </div>
+                ) : affectedBookingCount > 0 ? (
+                  <Alert variant="destructive" data-testid="alert-cancel-impact-bookings">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription className="space-y-2">
+                      <p className="font-medium" data-testid="text-cancel-impact-summary">
+                        {affectedBookingCount === 1
+                          ? '1 renter already has a booking here.'
+                          : `${affectedBookingCount} renter bookings already exist here.`}
+                        {' '}
+                        {affectedBookingCount === 1 ? 'It' : 'They'} will be cancelled and the {affectedBookingCount === 1 ? 'renter' : 'renters'} emailed.
+                      </p>
+                      <ul className="space-y-1" data-testid="list-cancel-impact-bookings">
+                        {affectedBookings.slice(0, 8).map((booking) => (
+                          <li key={booking.id} className="flex flex-wrap items-center gap-x-2 text-sm" data-testid={`row-cancel-impact-${booking.id}`}>
+                            <span className="font-medium">{formatDate(booking.bookingDate)}</span>
+                            <span>—</span>
+                            <span data-testid={`text-cancel-impact-renter-${booking.id}`}>{booking.renterName}</span>
+                            <span className="opacity-80">({booking.status})</span>
+                          </li>
+                        ))}
+                      </ul>
+                      {affectedBookingCount > 8 && (
+                        <p className="text-sm" data-testid="text-cancel-impact-more">
+                          …and {affectedBookingCount - 8} more.
+                        </p>
+                      )}
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground" data-testid="text-cancel-impact-none">
+                    <CheckCircle2 className="h-4 w-4" />
+                    No renter has booked {cancelRemovesDays
+                      ? (cancelRemovalEnd > (cancelPeriodDay || '') ? 'these days' : 'this day')
+                      : 'this listing'} — nobody will be cancelled.
+                  </div>
+                )}
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="cancel-listing-reason">Cancellation Reason <span className="text-destructive">*</span></Label>
                 <Textarea
@@ -3061,14 +3186,31 @@ export default function AdminSpotBookingManagement() {
                       removeEndDate: removeDay ? cancelRemovalEnd : undefined,
                     });
                   }}
-                  disabled={!cancelListingReason.trim() || cancelListingMutation.isPending}
+                  disabled={!canConfirmCancelListing({
+                    hasReason: Boolean(cancelListingReason.trim()),
+                    isSubmitting: cancelListingMutation.isPending,
+                    impactIsCurrent: cancelImpactIsCurrent,
+                  })}
                   data-testid="button-confirm-cancel-listing"
                 >
                   {cancelListingMutation.isPending
-                    ? (cancelPeriodDay && cancelListingScope === 'day' ? "Removing..." : "Cancelling...")
-                    : cancelPeriodDay && cancelListingScope === 'day'
-                    ? (cancelRemovalEnd > cancelPeriodDay ? "Remove Days" : "Remove Day")
-                    : "Cancel Listing"}
+                    ? (cancelRemovesDays ? "Removing..." : "Cancelling...")
+                    : isCancelImpactError
+                    ? "Booking Check Failed"
+                    : !cancelImpactIsCurrent
+                    ? "Checking Bookings..."
+                    : (() => {
+                        const baseLabel = cancelRemovesDays
+                          ? (cancelRemovalEnd > (cancelPeriodDay || '') ? "Remove Days" : "Remove Day")
+                          : "Cancel Listing";
+                        if (affectedBookingCount === 0) return baseLabel;
+                        // Name the renter consequence on the button itself, so it is
+                        // impossible to confirm without having seen it.
+                        const bookings = `${affectedBookingCount} Booking${affectedBookingCount === 1 ? '' : 's'}`;
+                        return cancelRemovesDays
+                          ? `${baseLabel} & Cancel ${bookings}`
+                          : `${baseLabel} & ${bookings}`;
+                      })()}
                 </Button>
               </div>
             </div>

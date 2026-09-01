@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { randomUUID } from "crypto";
 import { storage, PeriodRemovalError, type PeriodDayRemovalResult } from "./storage";
 import { parseRetentionDays } from "./internal-config-cleanup";
+import { selectBookingsAffectedByRemoval } from "./listing-removal-impact";
 import { getListingDates, maybeNotifyFullOccupancy } from "./occupancy";
 import { broadcastLockEvent } from "./websocket";
 import { setupAuth, isAuthenticated, requireAdmin, getAuthenticatedUserId, getAuthenticatedUserRole, getAuthenticatedUserBaseRole } from "./replitAuth";
@@ -6044,13 +6045,11 @@ The BCI ParkShare Team`;
       // surviving days were re-pointed at the replacement listings.
       try {
         const listingBookings = await storage.getBookingsByListing(id);
-        let activeBookings = listingBookings.filter(b => b.status !== 'cancelled' && b.status !== 'completed');
-        if (hasRemovalDate) {
-          activeBookings = activeBookings.filter(b => {
-            const bookingDate = String(b.bookingDate);
-            return bookingDate >= removalStart! && bookingDate <= removalEnd!;
-          });
-        }
+        const activeBookings = selectBookingsAffectedByRemoval(
+          listingBookings,
+          hasRemovalDate ? removalStart : null,
+          hasRemovalDate ? removalEnd : null,
+        );
         
         if (activeBookings.length > 0) {
           const spot = await storage.getParkingSpot(listing.spotId);
@@ -6125,6 +6124,79 @@ The BCI ParkShare Team`;
     } catch (error) {
       console.error("Error cancelling spot listing:", error);
       res.status(500).json({ error: "Failed to cancel spot listing" });
+    }
+  });
+
+  // GET /api/admin/spot-listings/:id/affected-bookings - Preview which renters lose a
+  // booking if this listing is cancelled, or if the given day/range is removed from it.
+  // Read-only counterpart to POST .../cancel: it uses the same selection rule so the
+  // warning shown in the confirm dialog matches what the cancellation actually does.
+  app.get("/api/admin/spot-listings/:id/affected-bookings", requireAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { startDate, endDate } = req.query;
+
+      const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+      const hasRange = typeof startDate === 'string' && startDate.trim() !== '';
+      let rangeStart: string | null = null;
+      let rangeEnd: string | null = null;
+
+      if (hasRange) {
+        rangeStart = startDate.trim();
+        rangeEnd = (typeof endDate === 'string' && endDate.trim() !== '' ? endDate.trim() : rangeStart) as string;
+        if (!DATE_PATTERN.test(rangeStart!) || !DATE_PATTERN.test(rangeEnd!)) {
+          return res.status(400).json({ error: "Dates must be in YYYY-MM-DD format" });
+        }
+        if (rangeEnd! < rangeStart!) {
+          rangeEnd = rangeStart;
+        }
+      }
+
+      const listing = await storage.getSpotListing(id);
+      if (!listing) {
+        return res.status(404).json({ error: "Spot listing not found" });
+      }
+
+      const listingBookings = await storage.getBookingsByListing(id);
+      const affected = selectBookingsAffectedByRemoval(listingBookings, rangeStart, rangeEnd)
+        .sort((a, b) => String(a.bookingDate).localeCompare(String(b.bookingDate)));
+
+      // Resolve renter identity once per renter — a range can hold many bookings
+      // from the same person.
+      const renterCache = new Map<string, { name: string; email: string | null }>();
+      const bookingsWithRenter = [];
+      for (const booking of affected) {
+        let renter = renterCache.get(booking.renterId);
+        if (!renter) {
+          const user = await storage.getUser(booking.renterId);
+          const name = user
+            ? (user.firstName && user.lastName
+              ? `${user.firstName} ${user.lastName}`
+              : user.firstName || user.lastName || user.email || 'Unknown renter')
+            : 'Unknown renter';
+          renter = { name, email: user?.email ?? null };
+          renterCache.set(booking.renterId, renter);
+        }
+        bookingsWithRenter.push({
+          id: booking.id,
+          bookingDate: String(booking.bookingDate),
+          status: booking.status,
+          renterId: booking.renterId,
+          renterName: renter.name,
+          renterEmail: renter.email,
+        });
+      }
+
+      res.json({
+        listingId: id,
+        startDate: rangeStart,
+        endDate: rangeEnd,
+        count: bookingsWithRenter.length,
+        bookings: bookingsWithRenter,
+      });
+    } catch (error) {
+      console.error("Error loading bookings affected by listing removal:", error);
+      res.status(500).json({ error: "Failed to load affected bookings" });
     }
   });
 
