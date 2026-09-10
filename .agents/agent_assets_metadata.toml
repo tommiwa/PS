@@ -1,0 +1,128 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "6K_fFXi5bhMkVXtQF2meV"
+uri = "file://deliverables/BCI_ParkShare_COO_Success_Report_2026-09-10.docx"
+type = "word_document"
+title = "Editable COO ParkShare Success Report"
+description = "Two-page editable Word report based on the September 10, 2026 read-only production snapshot."
+logical_id = "148b21b4-4397-401e-ac39-40cc7335a1e2"
+content_hash = "sha256:6c71a9543250c75ae6247a2afe6a6c0fdc8be19d59eb0fed6da91188b96087b9"
+size = 85405
+mtime_ms = 1789063406138
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:5af2ed34-e1ec-4a06-8291-9a0071755b92/148b21b4-4397-401e-ac39-40cc7335a1e2/2cccd849-4813-4c64-988c-302f279bdbd1"
+storage_version_token = "1789063467588918"
+content_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
+[[outputs]]
+id = "9W4zILBn12IOdstHtoHHV"
+uri = "file://deliverables/BCI_ParkShare_COO_Success_Report_2026-09-10.pdf"
+type = "pdf"
+title = "Shareable COO ParkShare Success Report"
+description = "Polished two-page PDF for executive sharing."
+logical_id = "d2090af2-4c6d-49b3-8095-d904dd9809f1"
+content_hash = "sha256:916221457ce8d2e9840d052f0356df64ff7995567469d36ff2457f486d699eb0"
+size = 749867
+mtime_ms = 1789063406222
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:5af2ed34-e1ec-4a06-8291-9a0071755b92/d2090af2-4c6d-49b3-8095-d904dd9809f1/7ca45314-0787-4506-94e6-c7888788425d"
+storage_version_token = "1789063468580296"
+content_type = "application/pdf"
+
+[[outputs]]
+id = "ONEQXaKgeXFFrlIzicJHB"
+uri = "file://deliverables/BCI_ParkShare_COO_Report_Metric_Sources_2026-09-10.xlsx"
+type = "table"
+title = "ParkShare Report Metric Sources"
+description = "Editable supporting workbook with metric definitions, exact date ranges, filters, calculations, extraction timestamp, and milestone reconciliation."
+logical_id = "6b162412-95ba-4fc7-82e5-f956cd83151e"
+content_hash = "sha256:de151d2655fdfd17c3f3c93d05adf4598f3eb48db4f589cee543a9946a1f9133"
+size = 13596
+mtime_ms = 1789063406266
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:5af2ed34-e1ec-4a06-8291-9a0071755b92/6b162412-95ba-4fc7-82e5-f956cd83151e/b7928c4b-42a9-43d9-a448-6919dbdd45db"
+storage_version_token = "1789063469221565"
+content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+[[outputs]]
+id = "zTevm-KerkYgiDm-eyyN8"
+uri = "file://deliverables/BCI_ParkShare_Program_Report_2026-09-10.docx"
+type = "word_document"
+title = "Download ParkShare Program Report — Word"
+description = "Editable one-page COO report (.docx)."
+logical_id = "246cc948-25b3-40d3-aa1b-f3c7053acc45"
+content_hash = "sha256:067ffdcb599e8fec7dce5a22c24ad2f80e24d95f42f5fbe90f1d37e3cb294551"
+size = 60887
+mtime_ms = 1789065311864
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:5af2ed34-e1ec-4a06-8291-9a0071755b92/246cc948-25b3-40d3-aa1b-f3c7053acc45/19d16b1f-01c7-4b54-88f8-2b99f5fa457d"
+storage_version_token = "1789065445979835"
+content_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
+[[outputs]]
+id = "Tu24ci6ip7phW2EPmseP7"
+uri = "file://deliverables/BCI_ParkShare_Program_Report_2026-09-10.pdf"
+type = "pdf"
+title = "Download ParkShare Program Report — PDF"
+description = "Shareable one-page COO report (.pdf)."
+logical_id = "93493c17-74fc-489c-beb6-abbf895b578f"
+content_hash = "sha256:7b679e9b4b34042cdfee6127205a3284e61a483ab3b3b03360bb52a3f233fa3c"
+size = 1755125
+mtime_ms = 1789065312012
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:5af2ed34-e1ec-4a06-8291-9a0071755b92/93493c17-74fc-489c-beb6-abbf895b578f/5807a555-4c58-4fb9-8818-bcb60e829b1c"
+storage_version_token = "1789065447181596"
+content_type = "application/pdf"
+
+[[outputs]]
+id = "KNtxnBMlm_IsxP5zlozU-"
+uri = "file://deliverables/BCI_ParkShare_Program_Report_Metric_Sources_2026-09-10.xlsx"
+type = "table"
+title = "Download ParkShare Metric Sources — Excel"
+description = "Supporting metric definitions and source qualifications (.xlsx)."
+logical_id = "c3ee4203-4e5b-4ee7-9a2d-20278049ee59"
+content_hash = "sha256:3b17e3092e12fa448e45b6cbf5cd5dc4dc672769925a0a050488797fd66be056"
+size = 10701
+mtime_ms = 1789065312052
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:5af2ed34-e1ec-4a06-8291-9a0071755b92/c3ee4203-4e5b-4ee7-9a2d-20278049ee59/de846f6d-bc7c-47e7-93e8-0e3df5a1a2f4"
+storage_version_token = "1789065448068440"
+content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+[[outputs]]
+id = "GDtSBZPbL2CLPU09IZEo5"
+uri = "file://deliverables/BCI_ParkShare_Report.pdf"
+type = "pdf"
+title = "BCI ParkShare Report — Updated PDF"
+description = "Compact one-page PDF with Victoria Head Office scope, less-than-six-month framing, and qualified security/access advantages."
+logical_id = "d8ca72b4-7293-4751-b7a5-abd2ca105e33"
+content_hash = "sha256:f5c417d95e7a010710db0f90e6e57cc28bf44307d5f66d73fabc928a6866466c"
+size = 180782
+mtime_ms = 1789066136396
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:5af2ed34-e1ec-4a06-8291-9a0071755b92/d8ca72b4-7293-4751-b7a5-abd2ca105e33/c0772fc9-6e45-401e-82e9-d7d75a66cd9d"
+storage_version_token = "1789066223362271"
+content_type = "application/pdf"
+
+[[outputs]]
+id = "dZQYYrGpgJgMcD2drhQ_p"
+uri = "file://deliverables/BCI_ParkShare_Report.docx"
+type = "word_document"
+title = "BCI ParkShare Report — Updated Word"
+description = "Editable report with the revised BCI ParkShare opening and Victoria-specific security/access context."
+logical_id = "91c535e1-cf31-4ac4-94cd-7dfafe783057"
+content_hash = "sha256:2bc439548999267a983247e4992d6c3092965d70f6390b2673042d1f46fe1bca"
+size = 27096
+mtime_ms = 1789066136508
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:5af2ed34-e1ec-4a06-8291-9a0071755b92/91c535e1-cf31-4ac4-94cd-7dfafe783057/1b92d9eb-a604-45d6-b000-9e1eb42df38c"
+storage_version_token = "1789066224096632"
+content_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
+[[outputs]]
+id = "iWsMHVj2lmcivP3qw0_Np"
+uri = "file://deliverables/BCI_ParkShare_Metric_Sources.xlsx"
+type = "table"
+title = "BCI ParkShare Metric Sources — Updated"
+description = "Supporting workbook now documenting Victoria Head Office scope and the qualified personal-safety planning interpretation."
+logical_id = "eef8e69f-8cfb-4d4a-afb9-3764f0bf91ce"
+content_hash = "sha256:a92fa2d760a4db6f73f99ab5106f452caaab4a0401b0e3314636d1dc1f0b9c03"
+size = 11042
+mtime_ms = 1789066136472
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:5af2ed34-e1ec-4a06-8291-9a0071755b92/eef8e69f-8cfb-4d4a-afb9-3764f0bf91ce/6c5fa017-9295-4fff-9e10-b33cc8fa391b"
+storage_version_token = "1789066225025261"
+content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
