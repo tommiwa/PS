@@ -32,6 +32,7 @@ import {
   type User 
 } from "@shared/schema";
 import { eq, sql, and, gt, lt } from "drizzle-orm";
+import { transferOwnerRentalMilestoneOwnership } from "./owner-milestone-user-transfer";
 
 // Extend Express Session to include viewAsRole
 declare module 'express-session' {
@@ -285,6 +286,10 @@ async function upsertUser(
           .set({ ownerId: userId })
           .where(eq(bookings.ownerId, oldUserId));
         console.log(`[UPSERT] Transferred bookings`);
+
+        // Preserve lifetime owner count and one-time milestone claim history.
+        await transferOwnerRentalMilestoneOwnership(tx, oldUserId, userId);
+        console.log(`[UPSERT] Transferred owner rental milestone state and claims`);
         
         // Update spot assignment history (both userId and actorId)
         await tx.update(spotAssignmentHistory)

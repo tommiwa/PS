@@ -140,6 +140,12 @@ vi.mock('./occupancy', () => ({
   maybeNotifyFullOccupancy: vi.fn(async () => undefined),
 }));
 
+vi.mock('./milestone-checker', () => ({
+  checkSpendMilestones: vi.fn(async () => undefined),
+  advanceOwnerRentalMilestone: vi.fn(async () => null),
+  deliverOwnerRentalMilestone: vi.fn(async () => undefined),
+}));
+
 vi.mock('./audit-service', () => ({
   auditService: {
     logAction: vi.fn(async () => undefined),
@@ -196,6 +202,7 @@ import {
   sendBookingConfirmationNotification,
   sendBookingCancellationNotification,
 } from './notification-service';
+import { advanceOwnerRentalMilestone } from './milestone-checker';
 
 // ---------------------------------------------------------------------------
 // Test helpers
@@ -356,6 +363,7 @@ describe('Booking email notifications', () => {
   beforeEach(() => {
     vi.mocked(sendBookingConfirmationNotification).mockClear();
     vi.mocked(sendBookingCancellationNotification).mockClear();
+    vi.mocked(advanceOwnerRentalMilestone).mockClear();
 
     mockDbQueue.values = [];
     mockSpotStore.current = makeSpot();
@@ -394,6 +402,10 @@ describe('Booking email notifications', () => {
 
       // Wait for the setImmediate callback to flush
       await vi.waitFor(() => expect(sendBookingConfirmationNotification).toHaveBeenCalledTimes(1));
+      expect(advanceOwnerRentalMilestone).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ id: 'booking-1' })
+      );
 
       expect(sendBookingCancellationNotification).not.toHaveBeenCalled();
 

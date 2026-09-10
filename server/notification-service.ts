@@ -3,6 +3,7 @@
 
 import { ConfidentialClientApplication, Configuration } from '@azure/msal-node';
 import axios from 'axios';
+import FormData from 'form-data';
 import fs from 'fs';
 import path from 'path';
 import type { WaitingList, ParkingSpot, AuthUser } from '@shared/schema';
@@ -25,7 +26,7 @@ function formatDateRange(startDate: Date, endDate: Date): string {
 }
 
 // Email provider configuration
-type EmailProvider = 'ms365' | 'mandrill' | 'mock';
+type EmailProvider = 'ms365' | 'mandrill' | 'mailgun' | 'mock';
 
 // Check which email providers are configured
 const MS365_CONFIGURED = !!(
@@ -35,9 +36,16 @@ const MS365_CONFIGURED = !!(
   process.env.MS365_SENDER_EMAIL
 );
 const MANDRILL_CONFIGURED = !!(process.env.MANDRILL_API_KEY);
+const MAILGUN_CONFIGURED = !!(process.env.MAILGUN_API_KEY && process.env.MAILGUN_DOMAIN);
 
-// Determine which provider to use (MS365 takes priority if both are configured)
-const activeProvider: EmailProvider = MS365_CONFIGURED ? 'ms365' : (MANDRILL_CONFIGURED ? 'mandrill' : 'mock');
+// Determine which provider to use (preserve the established provider priority)
+const activeProvider: EmailProvider = MS365_CONFIGURED
+  ? 'ms365'
+  : MANDRILL_CONFIGURED
+    ? 'mandrill'
+    : MAILGUN_CONFIGURED
+      ? 'mailgun'
+      : 'mock';
 
 let msalClient: ConfidentialClientApplication | null = null;
 
@@ -62,12 +70,17 @@ if (MS365_CONFIGURED) {
 if (MANDRILL_CONFIGURED) {
   console.log('✓ Mandrill configured successfully');
 }
+if (MAILGUN_CONFIGURED) {
+  console.log('✓ Mailgun configured successfully');
+}
 
 // Log the active email provider
 if (activeProvider === 'ms365') {
   console.log('📧 Email provider: Microsoft 365 Graph API');
 } else if (activeProvider === 'mandrill') {
   console.log('📧 Email provider: Mandrill');
+} else if (activeProvider === 'mailgun') {
+  console.log('📧 Email provider: Mailgun');
 } else {
   console.log('⚠️  No email provider configured - using mock notifications for development');
 }
@@ -78,7 +91,8 @@ async function sendEmailViaMandrill(
   subject: string,
   text: string,
   html: string,
-  cc?: string[]
+  cc?: string[],
+  deliveryKey?: string
 ): Promise<void> {
   const apiKey = process.env.MANDRILL_API_KEY!;
   const fromEmail = process.env.MANDRILL_FROM_EMAIL || 'noreply@bci.ca';
@@ -103,7 +117,8 @@ async function sendEmailViaMandrill(
       from_name: fromName,
       to: recipients,
       headers: {
-        'Reply-To': fromEmail
+        'Reply-To': fromEmail,
+        ...(deliveryKey ? { 'X-BCI-ParkShare-Delivery-Key': deliveryKey } : {})
       },
       track_opens: true,
       track_clicks: true,
@@ -123,9 +138,43 @@ async function sendEmailViaMandrill(
     {
       headers: {
         'Content-Type': 'application/json'
-      }
+      },
+      timeout: 30_000,
     }
   );
+}
+
+async function sendEmailViaMailgun(
+  to: string,
+  subject: string,
+  text: string,
+  html: string,
+  cc?: string[],
+  deliveryKey?: string
+): Promise<void> {
+  const domain = process.env.MAILGUN_DOMAIN!;
+  const from = process.env.MAILGUN_FROM_EMAIL || `BCI ParkShare <postmaster@${domain}>`;
+  const form = new FormData();
+  form.append('from', from);
+  form.append('to', to);
+  for (const ccEmail of cc || []) form.append('cc', ccEmail);
+  form.append('subject', subject);
+  form.append('text', text);
+  form.append('html', html);
+  if (deliveryKey) form.append('h:X-BCI-ParkShare-Delivery-Key', deliveryKey);
+  form.append('inline', Buffer.from(LOGO_BASE64, 'base64'), {
+    filename: 'logo.png',
+    contentType: 'image/png',
+  });
+
+  await axios.post(`https://api.mailgun.net/v3/${domain}/messages`, form, {
+    auth: {
+      username: 'api',
+      password: process.env.MAILGUN_API_KEY!,
+    },
+    headers: form.getHeaders(),
+    timeout: 30_000,
+  });
 }
 
 // Helper function to get MS365 access token
@@ -152,7 +201,8 @@ async function sendEmailViaMS365(
   subject: string,
   text: string,
   html: string,
-  cc?: string[]
+  cc?: string[],
+  deliveryKey?: string
 ): Promise<void> {
   const accessToken = await getMS365AccessToken();
   const senderEmail = process.env.MS365_SENDER_EMAIL!;
@@ -184,6 +234,12 @@ async function sendEmailViaMS365(
     },
     saveToSentItems: true
   };
+
+  if (deliveryKey) {
+    emailPayload.message.internetMessageHeaders = [
+      { name: 'x-bci-parkshare-delivery-key', value: deliveryKey }
+    ];
+  }
   
   if (cc && cc.length > 0) {
     emailPayload.message.ccRecipients = cc.map(email => ({
@@ -198,7 +254,8 @@ async function sendEmailViaMS365(
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json'
-      }
+      },
+      timeout: 30_000,
     }
   );
 }
@@ -208,11 +265,13 @@ export function getEmailProviderStatus(): {
   provider: EmailProvider; 
   ms365Available: boolean; 
   mandrillAvailable: boolean;
+  mailgunAvailable: boolean;
 } {
   return {
     provider: activeProvider,
     ms365Available: MS365_CONFIGURED,
-    mandrillAvailable: MANDRILL_CONFIGURED
+    mandrillAvailable: MANDRILL_CONFIGURED,
+    mailgunAvailable: MAILGUN_CONFIGURED,
   };
 }
 
@@ -222,7 +281,19 @@ export interface EmailNotification {
   subject: string;
   text: string;
   html: string;
+  deliveryKey?: string;
   type: 'assignment' | 'welcome' | 'booking_confirmation' | 'booking_cancelled' | 'payment_reminder' | 'spot_availability' | 'weekly_report' | 'system_maintenance' | 'general' | 'waiting_list_enrollment' | 'waiting_list_admin' | 'issue_report' | 'spot_alert';
+}
+
+export interface EmailSendOptions {
+  allowProviderFallback?: boolean;
+}
+
+export interface EmailSendResult {
+  success: boolean;
+  error?: string;
+  provider?: EmailProvider;
+  ambiguous?: boolean;
 }
 
 export interface InAppNotification {
@@ -1792,7 +1863,10 @@ The BCI ParkShare Team`;
 /**
  * Send Email Notification
  */
-export async function sendEmailNotification(notification: EmailNotification): Promise<{ success: boolean; error?: string; provider?: EmailProvider }> {
+export async function sendEmailNotification(
+  notification: EmailNotification,
+  options: EmailSendOptions = {}
+): Promise<EmailSendResult> {
   try {
     // Mock notification if no provider is configured
     if (activeProvider === 'mock') {
@@ -1816,20 +1890,28 @@ export async function sendEmailNotification(notification: EmailNotification): Pr
           notification.subject,
           notification.text,
           notification.html,
-          notification.cc
+          notification.cc,
+          notification.deliveryKey
         );
         console.log(`✓ Email sent via MS365 to ${notification.to}${notification.cc?.length ? ` (cc: ${notification.cc.join(', ')})` : ''}: ${notification.subject}`);
         return { success: true, provider: 'ms365' };
       } catch (ms365Error) {
-        console.error('❌ MS365 email failed, attempting Mandrill fallback:', ms365Error);
-        // Fall through to Mandrill if available
-        if (MANDRILL_CONFIGURED) {
+        const providerAttempted = axios.isAxiosError(ms365Error);
+        const mayFallback = options.allowProviderFallback !== false || !providerAttempted;
+        console.error(
+          mayFallback
+            ? '❌ MS365 email failed, attempting Mandrill fallback:'
+            : '❌ MS365 email attempt failed; fallback disabled for at-most-once delivery:',
+          ms365Error
+        );
+        if (MANDRILL_CONFIGURED && mayFallback) {
           await sendEmailViaMandrill(
             notification.to,
             notification.subject,
             notification.text,
             notification.html,
-            notification.cc
+            notification.cc,
+            notification.deliveryKey
           );
           console.log(`✓ Email sent via Mandrill (fallback) to ${notification.to}${notification.cc?.length ? ` (cc: ${notification.cc.join(', ')})` : ''}: ${notification.subject}`);
           return { success: true, provider: 'mandrill' };
@@ -1845,18 +1927,33 @@ export async function sendEmailNotification(notification: EmailNotification): Pr
         notification.subject,
         notification.text,
         notification.html,
-        notification.cc
+        notification.cc,
+        notification.deliveryKey
       );
       console.log(`✓ Email sent via Mandrill to ${notification.to}${notification.cc?.length ? ` (cc: ${notification.cc.join(', ')})` : ''}: ${notification.subject}`);
       return { success: true, provider: 'mandrill' };
+    }
+
+    if (activeProvider === 'mailgun' && MAILGUN_CONFIGURED) {
+      await sendEmailViaMailgun(
+        notification.to,
+        notification.subject,
+        notification.text,
+        notification.html,
+        notification.cc,
+        notification.deliveryKey
+      );
+      console.log(`✓ Email sent via Mailgun to ${notification.to}${notification.cc?.length ? ` (cc: ${notification.cc.join(', ')})` : ''}: ${notification.subject}`);
+      return { success: true, provider: 'mailgun' };
     }
 
     throw new Error('No email provider available');
     
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const ambiguous = axios.isAxiosError(error) && !error.response;
     console.error(`❌ Failed to send email to ${notification.to}:`, errorMessage);
-    return { success: false, error: errorMessage };
+    return { success: false, error: errorMessage, provider: activeProvider, ambiguous };
   }
 }
 
@@ -3449,4 +3546,105 @@ export async function sendSpendMilestoneEmail(
   });
 
   console.log(`✓ Spend milestone email sent: $${milestoneAmount.toLocaleString()} to ${wpsEmail}${ccEmails.length > 0 ? ` (cc: ${ccEmails.join(', ')})` : ''}`);
+}
+
+export function createOwnerRentalMilestoneEmail(
+  owner: { name: string; email: string },
+  milestoneCount: number,
+  options: { isTest?: boolean } = {}
+): EmailNotification {
+  const testPrefix = options.isTest ? '[TEST] ' : '';
+  const formattedCount = milestoneCount.toLocaleString();
+  const subject = `${testPrefix}Thank you for helping ParkShare reach ${formattedCount} bookings`;
+  const text = `${options.isTest ? 'TEST MILESTONE EMAIL\n\n' : ''}Dear ${owner.name},
+
+Your shared parking spot has now helped colleagues complete ${formattedCount} peer bookings through BCI ParkShare.
+
+Thank you for consistently listing and sharing your spot. Your participation makes flexible parking work better for everyone at BCI.
+
+Warm regards,
+The BCI ParkShare Team`;
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${subject}</title>
+</head>
+<body style="margin:0; padding:0; background:#dbe3ed;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#dbe3ed;">
+    <tr>
+      <td style="padding:32px 16px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:600px; margin:0 auto; background:#ffffff; border-radius:18px; overflow:hidden; box-shadow:0 6px 24px rgba(0,54,91,0.10);">
+          <tr>
+            <td style="padding:30px 40px; font-family:'Segoe UI',Arial,sans-serif;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td style="padding-right:14px; vertical-align:middle;">
+                    <img src="cid:logo" alt="BCI ParkShare" width="42" height="42" style="display:block; width:42px; height:42px; border-radius:50%;">
+                  </td>
+                  <td style="vertical-align:middle; color:#00365b; font-size:20px; font-weight:700;">BCI ParkShare</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          ${options.isTest ? `
+          <tr>
+            <td style="padding:10px 40px; background:#e8f7f8; color:#006b75; font-family:'Segoe UI',Arial,sans-serif; font-size:13px; font-weight:700; text-align:center; letter-spacing:0.3px;">
+              TEST EMAIL &nbsp;|&nbsp; No milestone count or claim was changed
+            </td>
+          </tr>` : ''}
+          <tr>
+            <td style="padding:40px 40px 42px; background:#003f67; text-align:center; font-family:'Segoe UI',Arial,sans-serif;">
+              <div style="width:54px; height:54px; margin:0 auto 18px; border:2px solid #31c4cf; border-radius:50%; color:#31c4cf; font-size:28px; line-height:54px; font-weight:700;">&#10084;</div>
+              <div style="color:#31c4cf; font-size:13px; font-weight:700; letter-spacing:2px; text-transform:uppercase;">Thank You</div>
+              <div style="margin-top:10px; color:#ffffff; font-size:46px; line-height:1.1; font-weight:750;">${formattedCount}</div>
+              <div style="margin-top:12px; color:#d9edf5; font-size:17px; font-weight:600;">Peer bookings made possible</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:42px 46px 26px; font-family:'Segoe UI',Arial,sans-serif; color:#334155; font-size:16px; line-height:1.7;">
+              <p style="margin:0 0 18px;">Dear ${owner.name},</p>
+              <p style="margin:0 0 18px;">Your shared parking spot has helped colleagues complete <strong style="color:#00365b;">${formattedCount} peer bookings</strong> through BCI ParkShare.</p>
+              <p style="margin:0;">Thank you for consistently listing and sharing your spot. Your participation makes flexible parking work better for everyone at BCI.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:10px 46px 34px; font-family:'Segoe UI',Arial,sans-serif; color:#64748b; font-size:15px; line-height:1.6;">
+              Warm regards,<br>
+              <strong style="color:#00365b;">The BCI ParkShare Team</strong>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 40px 24px; text-align:center; font-family:'Segoe UI',Arial,sans-serif; color:#94a3b8; font-size:11px;">
+              A BCI Workplace Services Initiative &bull; In partnership with Technology &amp; Innovation &bull; &copy; ${new Date().getFullYear()} BCI
+            </td>
+          </tr>
+          <tr>
+            <td style="height:6px; background:#18b9c5; font-size:0; line-height:0;">&nbsp;</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  return {
+    to: owner.email,
+    subject,
+    text,
+    html,
+    type: 'general',
+  };
+}
+
+export async function sendOwnerRentalMilestoneEmail(
+  owner: { name: string; email: string },
+  milestoneCount: number,
+  options: { isTest?: boolean; deliveryKey?: string } = {}
+): Promise<EmailSendResult> {
+  const notification = createOwnerRentalMilestoneEmail(owner, milestoneCount, options);
+  notification.deliveryKey = options.deliveryKey;
+  return sendEmailNotification(notification, { allowProviderFallback: false });
 }

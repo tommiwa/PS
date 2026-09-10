@@ -85,7 +85,7 @@ import { sendReportEmail, isEmailServiceAvailable } from "./report-service";
 import { getTodayInTimezone, formatDateInTimezone, isDateInPast, isDateTodayOrFuture } from "./timezone";
 import { isWorkplaceServicesListing, resolveAdminListingAttribution } from "./booking-classification";
 import { logServerError, respondWithServerError, withReference } from "./error-reporting";
-import { checkSpendMilestones } from "./milestone-checker";
+import { advanceOwnerRentalMilestone, deliverOwnerRentalMilestone, checkSpendMilestones } from "./milestone-checker";
 
 // Workplace Services email - uses env var set per environment (dev vs prod)
 const WORKPLACE_SERVICES_EMAIL = process.env.WORKPLACE_SERVICES_EMAIL || 'workplaceservices@bci.ca';
@@ -3528,8 +3528,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // check and both succeed — only one will acquire the row lock; the other will
       // block until the first commits, then see the listing is no longer 'available'.
       let newBooking: any;
+      let ownerMilestoneClaim: any = null;
       try {
-        newBooking = await db.transaction(async (tx) => {
+        const bookingResult = await db.transaction(async (tx) => {
           // Lock the listing row for this transaction to prevent concurrent inserts
           const lockedListings = await tx
             .select({ id: spotListings.id, status: spotListings.status })
@@ -3571,8 +3572,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             } as any)
             .returning();
 
-          return created;
+          const claim = spot.ownerId && spot.ownerId !== userId
+            ? await advanceOwnerRentalMilestone(tx, created)
+            : null;
+
+          return { created, claim };
         });
+        newBooking = bookingResult.created;
+        ownerMilestoneClaim = bookingResult.claim;
       } catch (txErr: any) {
         if (txErr.statusCode === 409) {
           console.warn(`[Booking] Duplicate booking prevented for spot ${validatedData.spotId} on ${bookingDate}: ${txErr.message}`);
@@ -3905,6 +3912,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Spend milestone check — fire-and-forget after booking confirmed
       setImmediate(() => { checkSpendMilestones().catch(() => {}); });
+
+      // Deliver the durable owner milestone claim after the booking transaction commits
+      if (ownerMilestoneClaim) {
+        setImmediate(() => { deliverOwnerRentalMilestone(ownerMilestoneClaim).catch(() => {}); });
+      }
 
       res.json(newBooking);
     } catch (error: any) {

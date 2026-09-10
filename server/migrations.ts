@@ -365,6 +365,63 @@ const migrations: MigrationCheck[] = [
     ],
   },
   {
+    name: "owner_rental_milestones_table",
+    checkQuery: `SELECT
+      EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'owner_rental_milestone_state')
+      AND EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'owner_rental_milestones')
+      AND EXISTS (
+        SELECT FROM pg_indexes
+        WHERE schemaname = 'public'
+          AND tablename = 'owner_rental_milestones'
+          AND indexname = 'UDX_owner_rental_milestones_owner_count'
+      )
+      AND EXISTS (
+        SELECT FROM pg_indexes
+        WHERE schemaname = 'public'
+          AND tablename = 'owner_rental_milestone_state'
+          AND indexname = 'IDX_owner_rental_milestone_baseline_v1'
+      ) AS exists`,
+    migrationStatements: [
+      `CREATE TABLE IF NOT EXISTS owner_rental_milestone_state (
+        owner_id VARCHAR PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        lifetime_booking_count INTEGER NOT NULL DEFAULT 0,
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )`,
+      `CREATE TABLE IF NOT EXISTS owner_rental_milestones (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        owner_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        milestone_count INTEGER NOT NULL,
+        triggering_booking_id VARCHAR NOT NULL REFERENCES bookings(id) ON DELETE RESTRICT,
+        lifetime_booking_count INTEGER NOT NULL,
+        delivery_status TEXT NOT NULL DEFAULT 'pending',
+        delivery_provider TEXT,
+        delivery_error TEXT,
+        delivery_attempt_count INTEGER NOT NULL DEFAULT 0,
+        sending_started_at TIMESTAMP,
+        claimed_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        delivered_at TIMESTAMP
+      )`,
+      `ALTER TABLE owner_rental_milestones
+       ADD COLUMN IF NOT EXISTS delivery_attempt_count INTEGER NOT NULL DEFAULT 0`,
+      `ALTER TABLE owner_rental_milestones
+       ADD COLUMN IF NOT EXISTS sending_started_at TIMESTAMP`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS "UDX_owner_rental_milestones_owner_count"
+       ON owner_rental_milestones (owner_id, milestone_count)`,
+      `CREATE INDEX IF NOT EXISTS "IDX_owner_rental_milestones_triggering_booking"
+       ON owner_rental_milestones (triggering_booking_id)`,
+      `INSERT INTO owner_rental_milestone_state (owner_id, lifetime_booking_count, updated_at)
+       SELECT b.owner_id, COUNT(*)::integer, NOW()
+       FROM bookings b
+       INNER JOIN users u ON u.id = b.owner_id
+       WHERE b.owner_id <> 'unassigned'
+         AND b.renter_id <> b.owner_id
+       GROUP BY b.owner_id
+       ON CONFLICT (owner_id) DO NOTHING`,
+      `CREATE INDEX IF NOT EXISTS "IDX_owner_rental_milestone_baseline_v1"
+       ON owner_rental_milestone_state (owner_id)`,
+    ],
+  },
+  {
     name: "scheduled_spot_releases_table",
     checkQuery: `SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'scheduled_spot_releases')`,
     migrationStatements: [

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, decimal, boolean, date, integer, index, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, decimal, boolean, date, integer, index, uniqueIndex, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -1878,6 +1878,42 @@ export const insertSpendMilestoneSchema = createInsertSchema(spendMilestones).om
 });
 export type InsertSpendMilestone = z.infer<typeof insertSpendMilestoneSchema>;
 export type SpendMilestone = typeof spendMilestones.$inferSelect;
+
+// Owner Rental Milestone State - initialized from history, then advanced inside booking transactions
+export const ownerRentalMilestoneState = pgTable("owner_rental_milestone_state", {
+  ownerId: varchar("owner_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  lifetimeBookingCount: integer("lifetime_booking_count").notNull().default(0),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Owner Rental Milestones - one durable delivery claim per owner and threshold
+export const ownerRentalMilestones = pgTable("owner_rental_milestones", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ownerId: varchar("owner_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  milestoneCount: integer("milestone_count").notNull(),
+  triggeringBookingId: varchar("triggering_booking_id").notNull().references(() => bookings.id, { onDelete: "restrict" }),
+  lifetimeBookingCount: integer("lifetime_booking_count").notNull(),
+  deliveryStatus: text("delivery_status").notNull().$type<"pending" | "sending" | "sent" | "failed">().default("pending"),
+  deliveryProvider: text("delivery_provider"),
+  deliveryError: text("delivery_error"),
+  deliveryAttemptCount: integer("delivery_attempt_count").notNull().default(0),
+  sendingStartedAt: timestamp("sending_started_at"),
+  claimedAt: timestamp("claimed_at").notNull().defaultNow(),
+  deliveredAt: timestamp("delivered_at"),
+}, (table) => [
+  uniqueIndex("UDX_owner_rental_milestones_owner_count").on(table.ownerId, table.milestoneCount),
+]);
+
+export const insertOwnerRentalMilestoneSchema = createInsertSchema(ownerRentalMilestones).omit({
+  id: true,
+  claimedAt: true,
+  deliveredAt: true,
+});
+export type InsertOwnerRentalMilestone = Omit<
+  typeof ownerRentalMilestones.$inferInsert,
+  "id" | "claimedAt" | "deliveredAt"
+>;
+export type OwnerRentalMilestone = typeof ownerRentalMilestones.$inferSelect;
 
 // Spot Alert Subscriptions Table
 // Renters can subscribe to be notified when spots matching their preferences become available.

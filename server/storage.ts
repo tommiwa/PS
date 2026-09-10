@@ -77,14 +77,15 @@ import {
   type InsertSaleEvent,
   type SaleEventStatus,
   type SpendMilestone,
-  type InsertSpendMilestone
+  type InsertSpendMilestone,
+  type OwnerRentalMilestone
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { auditDecorator } from "./audit-service";
 import { type IAuditStorage } from "./audit-storage";
 import { resolveAdminListingAttribution } from "./booking-classification";
 import { db } from "./db";
-import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, bookingSubscriptions, locations, spotTypesTable, termsVersions, spotAssignmentHistory, spotLocks, lockers, lockerWaitlist, lockerAssignmentHistory, lockerTypesTable, appConfigs, apiKeys, scheduledSpotAssignments, scheduledSpotReleases, featureAnnouncements, spotAlertSubscriptions, saleEvents, issues, spendMilestones } from "@shared/schema";
+import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, bookingSubscriptions, locations, spotTypesTable, termsVersions, spotAssignmentHistory, spotLocks, lockers, lockerWaitlist, lockerAssignmentHistory, lockerTypesTable, appConfigs, apiKeys, scheduledSpotAssignments, scheduledSpotReleases, featureAnnouncements, spotAlertSubscriptions, saleEvents, issues, spendMilestones, ownerRentalMilestones } from "@shared/schema";
 import { eq, or, ilike, asc, and, notExists, sql as sqlOp, count, desc, inArray, isNull, lt, like } from "drizzle-orm";
 
 // Storage interface with comprehensive CRUD methods
@@ -491,6 +492,11 @@ export interface IStorage {
   getLatestFiredMilestone(): Promise<number>;
   recordMilestone(data: InsertSpendMilestone): Promise<SpendMilestone | null>;
   getAllAdminEmails(): Promise<string[]>;
+
+  // Owner rental milestone operations
+  getPendingOwnerRentalMilestones(): Promise<OwnerRentalMilestone[]>;
+  claimOwnerRentalMilestoneDelivery(id: string): Promise<boolean>;
+  updateOwnerRentalMilestoneDelivery(id: string, result: { status: 'sent' | 'failed'; provider?: string; error?: string }): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -4910,6 +4916,43 @@ export class MemStorage implements IStorage {
       .onConflictDoNothing()
       .returning();
     return results[0] ?? null;
+  }
+
+  async updateOwnerRentalMilestoneDelivery(
+    id: string,
+    result: { status: 'sent' | 'failed'; provider?: string; error?: string }
+  ): Promise<void> {
+    await db.update(ownerRentalMilestones).set({
+      deliveryStatus: result.status,
+      deliveryProvider: result.provider ?? null,
+      deliveryError: result.error ?? null,
+      sendingStartedAt: null,
+      deliveredAt: result.status === 'sent' ? new Date() : null,
+    }).where(eq(ownerRentalMilestones.id, id));
+  }
+
+  async getPendingOwnerRentalMilestones(): Promise<OwnerRentalMilestone[]> {
+    return db
+      .select()
+      .from(ownerRentalMilestones)
+      .where(eq(ownerRentalMilestones.deliveryStatus, 'pending'))
+      .orderBy(asc(ownerRentalMilestones.claimedAt));
+  }
+
+  async claimOwnerRentalMilestoneDelivery(id: string): Promise<boolean> {
+    const claimed = await db
+      .update(ownerRentalMilestones)
+      .set({
+        deliveryStatus: 'sending',
+        sendingStartedAt: new Date(),
+        deliveryAttemptCount: sqlOp`${ownerRentalMilestones.deliveryAttemptCount} + 1`,
+      })
+      .where(and(
+        eq(ownerRentalMilestones.id, id),
+        eq(ownerRentalMilestones.deliveryStatus, 'pending')
+      ))
+      .returning({ id: ownerRentalMilestones.id });
+    return claimed.length === 1;
   }
 
   async getAllAdminEmails(): Promise<string[]> {
