@@ -126,3 +126,58 @@ mtime_ms = 1789066136472
 storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:5af2ed34-e1ec-4a06-8291-9a0071755b92/eef8e69f-8cfb-4d4a-afb9-3764f0bf91ce/6c5fa017-9295-4fff-9e10-b33cc8fa391b"
 storage_version_token = "1789066225025261"
 content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+[[outputs]]
+id = "POvjiJgFVW8Z1_uue0hxj"
+uri = "file://deliverables/parkshare-milestone/parkshare-milestone-news-post.zip"
+type = "unspecified"
+title = "ParkShare milestone news post — refreshed package"
+description = "Complete package updated with the text-free title image."
+logical_id = "516f62a1-48fa-4e7e-bb0a-b6442ffab927"
+content_hash = "sha256:f3623a6d8a3c5d40c9c16f0b5455ad4d4bfd60acfd25b1eeeac9c866d66e1bd3"
+size = 167856
+mtime_ms = 1788304868893
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:5af2ed34-e1ec-4a06-8291-9a0071755b92/516f62a1-48fa-4e7e-bb0a-b6442ffab927/6edbc2ea-457d-40ed-85ab-2584728bdc97"
+storage_version_token = "1788304881314486"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "MNN0V03hCZtDebdJaW0I4"
+uri = "file://deliverables/parkshare-milestone/parkshare-news-post.html"
+type = "text"
+title = "ParkShare milestone post — updated editable draft"
+description = "Revised SharePoint-ready article with generic access language and a clearer explanation of otherwise-unused parking capacity."
+logical_id = "d8518787-b986-400c-b34e-1b188fa275bf"
+content_hash = "sha256:05de6b23d2cc4c6316f94228edd074ae6320c83ff9e2a6e376af714402ef7a18"
+size = 4696
+mtime_ms = 1788303568845
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:5af2ed34-e1ec-4a06-8291-9a0071755b92/d8518787-b986-400c-b34e-1b188fa275bf/a8bb1ab3-b7ac-42e4-a945-53938604f064"
+storage_version_token = "1788303604713996"
+content_type = "text/html"
+
+[[outputs]]
+id = "WEk8jCY0nSsRiSkwOdxDf"
+uri = "file://deliverables/parkshare-milestone/parkshare-hero.png"
+type = "image"
+title = "ParkShare title image — text-free"
+description = "1600 × 600 text-free hero illustrating BCI-provided and colleague-shared parking connected through ParkShare."
+logical_id = "bf0870be-0c36-4438-a5fd-5efe46982aba"
+content_hash = "sha256:0d42044f1dd64b0fc9ca21a8628b9a4360ec050834887eef029823b2fab6a5af"
+size = 85150
+mtime_ms = 1788304868637
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:5af2ed34-e1ec-4a06-8291-9a0071755b92/bf0870be-0c36-4438-a5fd-5efe46982aba/a38d3558-134f-4a95-80af-9c741dd654bb"
+storage_version_token = "1788304880464255"
+content_type = "image/png"
+
+[[outputs]]
+id = "LxZyhhE6kvq-p0KIB1EQb"
+uri = "file://deliverables/parkshare-milestone/parkshare-kpi-banner.png"
+type = "image"
+title = "ParkShare KPI banner"
+description = "1600 × 500 accessible milestone graphic with the four verified metrics."
+logical_id = "9bb8769b-f681-420d-bd70-64ec47889935"
+content_hash = "sha256:b62250042031c59d1ceb6b0f73f0482c7f43038bdf1f443fd431f70dcf87d8c7"
+size = 91606
+mtime_ms = 1788302646192
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:5af2ed34-e1ec-4a06-8291-9a0071755b92/9bb8769b-f681-420d-bd70-64ec47889935/48767d0b-bd42-489b-8655-85549813831b"
+storage_version_token = "1788302687142065"
+content_type = "image/png"

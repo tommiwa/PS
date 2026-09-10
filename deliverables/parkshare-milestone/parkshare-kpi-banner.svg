@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="500" viewBox="0 0 1600 500" role="img" aria-labelledby="title desc">
+  <title id="title">ParkShare milestone by the numbers</title>
+  <desc id="desc">Four verified metrics as of August 31, 2026: 1,427 confirmed and completed bookings; 20,012 dollars and 61 cents total spend; 7,244 dollars and 61 cents peer-to-peer revenue; and 148 unique participants.</desc>
+  <rect width="1600" height="500" rx="24" fill="#F3F5F7"/>
+  <text x="80" y="82" font-family="Segoe UI,Arial,sans-serif" font-size="34" font-weight="700" fill="#00365B">ParkShare by the numbers</text>
+  <text x="1520" y="82" text-anchor="end" font-family="Segoe UI,Arial,sans-serif" font-size="22" fill="#515254">As of August 31, 2026</text>
+  <g font-family="Segoe UI,Arial,sans-serif">
+    <g transform="translate(80 130)">
+      <rect width="335" height="285" rx="16" fill="#FFFFFF"/>
+      <rect width="12" height="285" rx="6" fill="#00ABBD"/>
+      <text x="42" y="100" font-size="54" font-weight="700" fill="#00365B">1,427</text>
+      <text x="42" y="150" font-size="22" font-weight="700" letter-spacing="1" fill="#467B96">TOTAL BOOKINGS</text>
+      <text x="42" y="195" font-size="22" fill="#515254">Confirmed and completed</text>
+    </g>
+    <g transform="translate(450 130)">
+      <rect width="335" height="285" rx="16" fill="#FFFFFF"/>
+      <rect width="12" height="285" rx="6" fill="#00ABBD"/>
+      <text x="42" y="100" font-size="49" font-weight="700" fill="#00365B">$20,012.61</text>
+      <text x="42" y="150" font-size="22" font-weight="700" letter-spacing="1" fill="#467B96">TOTAL SPEND</text>
+      <text x="42" y="195" font-size="22" fill="#515254">Cumulative</text>
+    </g>
+    <g transform="translate(820 130)">
+      <rect width="335" height="285" rx="16" fill="#FFFFFF"/>
+      <rect width="12" height="285" rx="6" fill="#00ABBD"/>
+      <text x="42" y="100" font-size="49" font-weight="700" fill="#00365B">$7,244.61</text>
+      <text x="42" y="150" font-size="22" font-weight="700" letter-spacing="1" fill="#467B96">P2P REVENUE</text>
+      <text x="42" y="195" font-size="22" fill="#515254">Peer-to-peer earnings</text>
+    </g>
+    <g transform="translate(1190 130)">
+      <rect width="330" height="285" rx="16" fill="#FFFFFF"/>
+      <rect width="12" height="285" rx="6" fill="#00ABBD"/>
+      <text x="42" y="100" font-size="54" font-weight="700" fill="#00365B">148</text>
+      <text x="42" y="150" font-size="22" font-weight="700" letter-spacing="1" fill="#467B96">PARTICIPANTS</text>
+      <text x="42" y="195" font-size="22" fill="#515254">Unique participants</text>
+    </g>
+  </g>
+</svg>
