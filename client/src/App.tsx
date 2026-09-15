@@ -28,6 +28,7 @@ import parkShareLogo from "@assets/logo.png";
 // Pages — lazy-loaded so each route lands in its own chunk. This keeps
 // admin-only code out of a renter's first bundle (and vice versa), which is
 // the bulk of the win for cold-load time on mobile.
+import { getRequiredRoleForRoute } from "@/lib/route-map";
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const Search = lazy(() => import("@/pages/search"));
 const Admin = lazy(() => import("@/pages/admin"));
@@ -360,19 +361,6 @@ function useNavigationDataRefresh() {
     }
   }, [location]);
 }
-
-const RENTER_ROUTES = ['/my-bookings'];
-const OWNER_ROUTES = ['/my-spots', '/my-listings', '/my-rentals'];
-const SHARED_ROUTES = ['/search'];
-
-function getRequiredRoleForRoute(path: string): 'admin' | 'owner' | 'renter' | null {
-  if (path === '/admin' || path.startsWith('/admin/')) return 'admin';
-  if (OWNER_ROUTES.some(r => path === r)) return 'owner';
-  if (RENTER_ROUTES.some(r => path === r)) return 'renter';
-  if (SHARED_ROUTES.some(r => path === r)) return null;
-  return null;
-}
-
 function useAutoRoleSync() {
   const [location] = useLocation();
   const { user, getCurrentViewRole, switchViewRole, resetViewRole, isAdmin } = useAuth();
