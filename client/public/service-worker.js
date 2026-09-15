@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v5';
+const CACHE_VERSION = 'v6';
 const CACHE_NAME = `bci-parkshare-${CACHE_VERSION}`;
 const OFFLINE_URL = '/offline.html';
 
@@ -34,47 +34,71 @@ self.addEventListener('fetch', (event) => {
 
   if (request.method !== 'GET') return;
 
-  // API and MCP routes: always network, fall back to error response
+  // API and MCP routes: always network, fall back to error response.
+  // Data must always be fresh.
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/mcp/') || url.pathname.startsWith('/ws/')) {
     event.respondWith(networkFirst(request));
     return;
   }
 
-  // JavaScript, CSS, and other code assets: ALWAYS network-first
-  // This ensures code fixes are always picked up and stale JS is never served
-  const isCodeAsset =
-    url.pathname.endsWith('.js') ||
-    url.pathname.endsWith('.ts') ||
-    url.pathname.endsWith('.tsx') ||
-    url.pathname.endsWith('.jsx') ||
-    url.pathname.endsWith('.css') ||
+  // Dev-only module requests (Vite's unbundled /src/ modules, HMR client
+  // deps, and query-stringed requests) are NOT content-hashed, so they must
+  // always be re-validated against the network.
+  const isUnhashedDevAsset =
     url.pathname.includes('/src/') ||
     url.pathname.includes('/@') ||
     url.pathname.includes('/node_modules/') ||
-    url.pathname.includes('?') || // Vite adds query strings to modules
-    url.searchParams.has('v') ||
-    url.searchParams.has('t');
+    (url.search && !url.pathname.startsWith('/assets/'));
 
-  if (isCodeAsset) {
+  if (isUnhashedDevAsset) {
     event.respondWith(networkFirst(request));
     return;
   }
 
-  // Images: stale-while-revalidate (ok to serve cached while fetching fresh)
+  // Production build output: JS/CSS/images under /assets/ are content-hashed
+  // by Vite (the filename changes whenever the content does), so they are
+  // safe to serve cache-first forever. This is what avoids re-downloading
+  // the whole bundle on every cold open.
+  const isHashedBuildAsset = url.pathname.startsWith('/assets/');
+
+  if (isHashedBuildAsset) {
+    event.respondWith(cacheFirst(request));
+    return;
+  }
+
+  // Images outside /assets/ (e.g. static icons in /public): stale-while-revalidate
   if (request.destination === 'image') {
     event.respondWith(staleWhileRevalidate(request));
     return;
   }
 
-  // Page navigation: network with offline fallback
+  // Page navigation: network with offline fallback, so the HTML shell (and
+  // therefore deploys) always stay fresh.
   if (request.mode === 'navigate') {
     event.respondWith(networkWithOfflineFallback(request));
     return;
   }
 
-  // Everything else: network-first to avoid serving stale assets
+  // Everything else (manifest.json, favicon, etc.): network-first to avoid
+  // serving stale unhashed assets.
   event.respondWith(networkFirst(request));
 });
+
+async function cacheFirst(request) {
+  const cached = await caches.match(request);
+  if (cached) return cached;
+
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      const cache = await caches.open(CACHE_NAME);
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch (error) {
+    return new Response('', { status: 503 });
+  }
+}
 
 async function networkFirst(request) {
   try {

@@ -22,37 +22,48 @@ import { NotificationCenter } from "@/components/notification-center";
 import { WhatsNewController } from "@/components/whats-new-modal";
 import { TodayBookingBadge } from "@/components/today-booking-badge";
 import { LogOut, Loader2, FileText, CheckCircle2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import parkShareLogo from "@assets/logo.png";
 
-// Pages
-import Dashboard from "@/pages/dashboard";
-import Search from "@/pages/search";
-import Admin from "@/pages/admin";
-import Profile from "@/pages/profile-working";
-import MyBookings from "@/pages/my-bookings";
-import MyCalendar from "@/pages/my-calendar";
-import MySpots from "@/pages/my-spots";
-import AdminUserManagement from "@/pages/admin-user-management";
-import AdminAnalytics from "@/pages/admin-analytics";
-import AdminSpotBookingManagement from "@/pages/admin-spot-booking-management";
-import AdminAudits from "@/pages/admin-audits";
-import AdminParkingManagement from "@/pages/admin-parking-management";
-import AdminDataManagement from "@/pages/admin-data-management";
-import AdminReportsPage from "@/pages/admin-reports";
-import AdminLockerManagement from "@/pages/admin-locker-management";
-import AdminWaitingList from "@/pages/admin-waiting-list";
-import AdminIssuesPage from "@/pages/admin/issues";
-import AdminActiveUsersPage from "@/pages/admin-active-users";
-import AdminLeaderboardPage from "@/pages/admin-leaderboard";
-import AdminSalesPage from "@/pages/admin-sales";
-import NotificationsPage from "@/pages/notifications";
-import MapDemo from "@/pages/map-demo";
-import FAQPage from "@/pages/faq";
-import Login from "@/pages/login";
-import Terms from "@/pages/terms";
-import TermsConsent from "@/pages/terms-consent";
-import NotFound from "@/pages/not-found";
+// Pages — lazy-loaded so each route lands in its own chunk. This keeps
+// admin-only code out of a renter's first bundle (and vice versa), which is
+// the bulk of the win for cold-load time on mobile.
+const Dashboard = lazy(() => import("@/pages/dashboard"));
+const Search = lazy(() => import("@/pages/search"));
+const Admin = lazy(() => import("@/pages/admin"));
+const Profile = lazy(() => import("@/pages/profile-working"));
+const MyBookings = lazy(() => import("@/pages/my-bookings"));
+const MyCalendar = lazy(() => import("@/pages/my-calendar"));
+const MySpots = lazy(() => import("@/pages/my-spots"));
+const AdminUserManagement = lazy(() => import("@/pages/admin-user-management"));
+const AdminAnalytics = lazy(() => import("@/pages/admin-analytics"));
+const AdminSpotBookingManagement = lazy(() => import("@/pages/admin-spot-booking-management"));
+const AdminAudits = lazy(() => import("@/pages/admin-audits"));
+const AdminParkingManagement = lazy(() => import("@/pages/admin-parking-management"));
+const AdminDataManagement = lazy(() => import("@/pages/admin-data-management"));
+const AdminReportsPage = lazy(() => import("@/pages/admin-reports"));
+const AdminLockerManagement = lazy(() => import("@/pages/admin-locker-management"));
+const AdminWaitingList = lazy(() => import("@/pages/admin-waiting-list"));
+const AdminIssuesPage = lazy(() => import("@/pages/admin/issues"));
+const AdminActiveUsersPage = lazy(() => import("@/pages/admin-active-users"));
+const AdminLeaderboardPage = lazy(() => import("@/pages/admin-leaderboard"));
+const AdminSalesPage = lazy(() => import("@/pages/admin-sales"));
+const NotificationsPage = lazy(() => import("@/pages/notifications"));
+const MapDemo = lazy(() => import("@/pages/map-demo"));
+const FAQPage = lazy(() => import("@/pages/faq"));
+const Login = lazy(() => import("@/pages/login"));
+const Terms = lazy(() => import("@/pages/terms"));
+const TermsConsent = lazy(() => import("@/pages/terms-consent"));
+const NotFound = lazy(() => import("@/pages/not-found"));
+
+// Shared fallback shown while a lazily-loaded route chunk is fetched/parsed.
+function PageFallback() {
+  return (
+    <div className="flex items-center justify-center h-full min-h-[50vh]">
+      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+    </div>
+  );
+}
 
 // Terms version interface
 interface TermsVersion {
@@ -232,15 +243,27 @@ function ProtectedRouter() {
   }
 
   if (location === "/terms") {
-    return <Terms />;
+    return (
+      <Suspense fallback={<PageFallback />}>
+        <Terms />
+      </Suspense>
+    );
   }
 
   if (!isAuthenticated) {
-    return <Login />;
+    return (
+      <Suspense fallback={<PageFallback />}>
+        <Login />
+      </Suspense>
+    );
   }
 
   if (needsTermsAcceptance) {
-    return <TermsConsent />;
+    return (
+      <Suspense fallback={<PageFallback />}>
+        <TermsConsent />
+      </Suspense>
+    );
   }
 
   return <AuthenticatedApp />;
@@ -488,6 +511,7 @@ function AuthenticatedApp() {
             </div>
           </header>
           <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden bg-muted/30">
+            <Suspense fallback={<PageFallback />}>
             <Switch>
               {/* Default landing page - redirects based on user role */}
               <Route path="/">
@@ -544,6 +568,7 @@ function AuthenticatedApp() {
               {/* Fallback to 404 */}
               <Route path="(.*)" component={NotFound} />
             </Switch>
+            </Suspense>
           </main>
           <footer className="border-t bg-background py-3 px-4">
             <div className="flex flex-col md:flex-row items-center justify-center gap-1 md:gap-3 text-xs text-muted-foreground/60">

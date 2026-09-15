@@ -350,6 +350,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Seed default terms and conditions if none exist
   await seedTermsIfMissing();
 
+  // Cold-load timing beacon (client/src/lib/perf-metrics.ts). Registered
+  // before auth so it works from the login screen too, and logs straight to
+  // the server console — a lightweight sink for real before/after numbers
+  // instead of a subjective "feels faster". No storage, no PII.
+  app.post("/api/client-metrics", (req, res) => {
+    const m = req.body || {};
+    const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
+    console.log(
+      `[client-metrics] path=${typeof m.path === "string" ? m.path.slice(0, 100) : "?"} ` +
+        `standalone=${m.standalone === true} connection=${typeof m.connection === "string" ? m.connection : "?"} ` +
+        `ttfb=${num(m.ttfbMs)}ms dcl=${num(m.domContentLoadedMs)}ms fp=${num(m.firstPaintMs)}ms ` +
+        `fcp=${num(m.firstContentfulPaintMs)}ms load=${num(m.loadEventMs)}ms transferKb=${num(m.transferKb)}`,
+    );
+    res.status(204).end();
+  });
+
   // Setup authentication middleware
   await setupAuth(app);
 

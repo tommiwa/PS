@@ -4,3 +4,4 @@
 - [Spot-transfer attribution](spot-transfer-attribution.md) — data repairs must be tenure-scoped via spot_assignment_history; historical reports classify by booking-time listing attribution, never current spot owner.
 - [Destructive-action previews](destructive-action-previews.md) — a "what will this destroy" warning must import the destructive endpoint's own selection rule, never re-implement it.
 - [Milestone email delivery semantics](milestone-email-delivery-semantics.md) — owner milestone emails use strict at-most-once attempts; ambiguous sending records require manual reconciliation, not retry.
+- [Mobile PWA cold-load performance](mobile-pwa-loadtime.md) — service worker/cache-header hashed-vs-unhashed split, lazy-loaded routes, client-metrics beacon, and Inter-only font loading conventions.
