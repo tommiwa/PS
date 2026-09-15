@@ -74,4 +74,22 @@ describe('at-most-once email provider selection', () => {
     expect(email.html).toContain('Peer bookings made possible');
     expect(email.html).not.toContain('info-card');
   });
+
+  it('uses renter-facing copy for the renter booking milestone email', async () => {
+    const { createRenterBookingMilestoneEmail } = await import('./notification-service');
+    const email = createRenterBookingMilestoneEmail(
+      { name: 'Acceptance Tester', email: 'renter@example.com' },
+      100,
+      { isTest: true },
+    );
+
+    expect(email.subject).toBe('[TEST] Thank you for parking with ParkShare 100 times');
+    expect(email.subject).not.toContain('—');
+    expect(email.html).toContain('background:#003f67');
+    expect(email.html).toContain('color:#31c4cf');
+    expect(email.html).toContain('Bookings made with ParkShare');
+    expect(email.html).not.toContain('info-card');
+    expect(email.text).not.toMatch(/helping colleagues|sharing your spot/i);
+    expect(email.html).not.toMatch(/helping colleagues|sharing your spot/i);
+  });
 });

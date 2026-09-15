@@ -78,14 +78,15 @@ import {
   type SaleEventStatus,
   type SpendMilestone,
   type InsertSpendMilestone,
-  type OwnerRentalMilestone
+  type OwnerRentalMilestone,
+  type RenterBookingMilestone
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { auditDecorator } from "./audit-service";
 import { type IAuditStorage } from "./audit-storage";
 import { resolveAdminListingAttribution } from "./booking-classification";
 import { db } from "./db";
-import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, bookingSubscriptions, locations, spotTypesTable, termsVersions, spotAssignmentHistory, spotLocks, lockers, lockerWaitlist, lockerAssignmentHistory, lockerTypesTable, appConfigs, apiKeys, scheduledSpotAssignments, scheduledSpotReleases, featureAnnouncements, spotAlertSubscriptions, saleEvents, issues, spendMilestones, ownerRentalMilestones } from "@shared/schema";
+import { spotListings, parkingSpots, users, waitingList, departments, bookings, disputes, vehicles, inAppNotifications, notificationPreferences, paymentPreferences, bookingSubscriptions, locations, spotTypesTable, termsVersions, spotAssignmentHistory, spotLocks, lockers, lockerWaitlist, lockerAssignmentHistory, lockerTypesTable, appConfigs, apiKeys, scheduledSpotAssignments, scheduledSpotReleases, featureAnnouncements, spotAlertSubscriptions, saleEvents, issues, spendMilestones, ownerRentalMilestones, renterBookingMilestones } from "@shared/schema";
 import { eq, or, ilike, asc, and, notExists, sql as sqlOp, count, desc, inArray, isNull, lt, like } from "drizzle-orm";
 
 // Storage interface with comprehensive CRUD methods
@@ -497,6 +498,11 @@ export interface IStorage {
   getPendingOwnerRentalMilestones(): Promise<OwnerRentalMilestone[]>;
   claimOwnerRentalMilestoneDelivery(id: string): Promise<boolean>;
   updateOwnerRentalMilestoneDelivery(id: string, result: { status: 'sent' | 'failed'; provider?: string; error?: string }): Promise<void>;
+
+  // Renter booking milestone operations
+  getPendingRenterBookingMilestones(): Promise<RenterBookingMilestone[]>;
+  claimRenterBookingMilestoneDelivery(id: string): Promise<boolean>;
+  updateRenterBookingMilestoneDelivery(id: string, result: { status: 'sent' | 'failed'; provider?: string; error?: string }): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -4952,6 +4958,43 @@ export class MemStorage implements IStorage {
         eq(ownerRentalMilestones.deliveryStatus, 'pending')
       ))
       .returning({ id: ownerRentalMilestones.id });
+    return claimed.length === 1;
+  }
+
+  async updateRenterBookingMilestoneDelivery(
+    id: string,
+    result: { status: 'sent' | 'failed'; provider?: string; error?: string }
+  ): Promise<void> {
+    await db.update(renterBookingMilestones).set({
+      deliveryStatus: result.status,
+      deliveryProvider: result.provider ?? null,
+      deliveryError: result.error ?? null,
+      sendingStartedAt: null,
+      deliveredAt: result.status === 'sent' ? new Date() : null,
+    }).where(eq(renterBookingMilestones.id, id));
+  }
+
+  async getPendingRenterBookingMilestones(): Promise<RenterBookingMilestone[]> {
+    return db
+      .select()
+      .from(renterBookingMilestones)
+      .where(eq(renterBookingMilestones.deliveryStatus, 'pending'))
+      .orderBy(asc(renterBookingMilestones.claimedAt));
+  }
+
+  async claimRenterBookingMilestoneDelivery(id: string): Promise<boolean> {
+    const claimed = await db
+      .update(renterBookingMilestones)
+      .set({
+        deliveryStatus: 'sending',
+        sendingStartedAt: new Date(),
+        deliveryAttemptCount: sqlOp`${renterBookingMilestones.deliveryAttemptCount} + 1`,
+      })
+      .where(and(
+        eq(renterBookingMilestones.id, id),
+        eq(renterBookingMilestones.deliveryStatus, 'pending')
+      ))
+      .returning({ id: renterBookingMilestones.id });
     return claimed.length === 1;
   }
 

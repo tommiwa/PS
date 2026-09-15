@@ -144,6 +144,8 @@ vi.mock('./milestone-checker', () => ({
   checkSpendMilestones: vi.fn(async () => undefined),
   advanceOwnerRentalMilestone: vi.fn(async () => null),
   deliverOwnerRentalMilestone: vi.fn(async () => undefined),
+  advanceRenterBookingMilestone: vi.fn(async () => null),
+  deliverRenterBookingMilestone: vi.fn(async () => undefined),
 }));
 
 vi.mock('./audit-service', () => ({

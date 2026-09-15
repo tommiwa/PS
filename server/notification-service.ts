@@ -3648,3 +3648,104 @@ export async function sendOwnerRentalMilestoneEmail(
   notification.deliveryKey = options.deliveryKey;
   return sendEmailNotification(notification, { allowProviderFallback: false });
 }
+
+export function createRenterBookingMilestoneEmail(
+  renter: { name: string; email: string },
+  milestoneCount: number,
+  options: { isTest?: boolean } = {}
+): EmailNotification {
+  const testPrefix = options.isTest ? '[TEST] ' : '';
+  const formattedCount = milestoneCount.toLocaleString();
+  const subject = `${testPrefix}Thank you for parking with ParkShare ${formattedCount} times`;
+  const text = `${options.isTest ? 'TEST MILESTONE EMAIL\n\n' : ''}Dear ${renter.name},
+
+You have now completed ${formattedCount} bookings through BCI ParkShare.
+
+Thank you for choosing BCI ParkShare to park. Your continued use helps make flexible parking work better for everyone at BCI.
+
+Warm regards,
+The BCI ParkShare Team`;
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${subject}</title>
+</head>
+<body style="margin:0; padding:0; background:#dbe3ed;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#dbe3ed;">
+    <tr>
+      <td style="padding:32px 16px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:600px; margin:0 auto; background:#ffffff; border-radius:18px; overflow:hidden; box-shadow:0 6px 24px rgba(0,54,91,0.10);">
+          <tr>
+            <td style="padding:30px 40px; font-family:'Segoe UI',Arial,sans-serif;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td style="padding-right:14px; vertical-align:middle;">
+                    <img src="cid:logo" alt="BCI ParkShare" width="42" height="42" style="display:block; width:42px; height:42px; border-radius:50%;">
+                  </td>
+                  <td style="vertical-align:middle; color:#00365b; font-size:20px; font-weight:700;">BCI ParkShare</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          ${options.isTest ? `
+          <tr>
+            <td style="padding:10px 40px; background:#e8f7f8; color:#006b75; font-family:'Segoe UI',Arial,sans-serif; font-size:13px; font-weight:700; text-align:center; letter-spacing:0.3px;">
+              TEST EMAIL &nbsp;|&nbsp; No milestone count or claim was changed
+            </td>
+          </tr>` : ''}
+          <tr>
+            <td style="padding:40px 40px 42px; background:#003f67; text-align:center; font-family:'Segoe UI',Arial,sans-serif;">
+              <div style="width:54px; height:54px; margin:0 auto 18px; border:2px solid #31c4cf; border-radius:50%; color:#31c4cf; font-size:28px; line-height:54px; font-weight:700;">&#10084;</div>
+              <div style="color:#31c4cf; font-size:13px; font-weight:700; letter-spacing:2px; text-transform:uppercase;">Thank You</div>
+              <div style="margin-top:10px; color:#ffffff; font-size:46px; line-height:1.1; font-weight:750;">${formattedCount}</div>
+              <div style="margin-top:12px; color:#d9edf5; font-size:17px; font-weight:600;">Bookings made with ParkShare</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:42px 46px 26px; font-family:'Segoe UI',Arial,sans-serif; color:#334155; font-size:16px; line-height:1.7;">
+              <p style="margin:0 0 18px;">Dear ${renter.name},</p>
+              <p style="margin:0 0 18px;">You have now completed <strong style="color:#00365b;">${formattedCount} bookings</strong> through BCI ParkShare.</p>
+              <p style="margin:0;">Thank you for choosing BCI ParkShare to park. Your continued use helps make flexible parking work better for everyone at BCI.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:10px 46px 34px; font-family:'Segoe UI',Arial,sans-serif; color:#64748b; font-size:15px; line-height:1.6;">
+              Warm regards,<br>
+              <strong style="color:#00365b;">The BCI ParkShare Team</strong>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 40px 24px; text-align:center; font-family:'Segoe UI',Arial,sans-serif; color:#94a3b8; font-size:11px;">
+              A BCI Workplace Services Initiative &bull; In partnership with Technology &amp; Innovation &bull; &copy; ${new Date().getFullYear()} BCI
+            </td>
+          </tr>
+          <tr>
+            <td style="height:6px; background:#18b9c5; font-size:0; line-height:0;">&nbsp;</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  return {
+    to: renter.email,
+    subject,
+    text,
+    html,
+    type: 'general',
+  };
+}
+
+export async function sendRenterBookingMilestoneEmail(
+  renter: { name: string; email: string },
+  milestoneCount: number,
+  options: { isTest?: boolean; deliveryKey?: string } = {}
+): Promise<EmailSendResult> {
+  const notification = createRenterBookingMilestoneEmail(renter, milestoneCount, options);
+  notification.deliveryKey = options.deliveryKey;
+  return sendEmailNotification(notification, { allowProviderFallback: false });
+}

@@ -91,9 +91,13 @@ app.use((req, res, next) => {
   initTimezone(storage);
 
   // Recover durable owner milestone claims committed before a prior process exit.
-  const { deliverPendingOwnerRentalMilestones } = await import("./milestone-checker");
+  const { deliverPendingOwnerRentalMilestones, deliverPendingRenterBookingMilestones } = await import("./milestone-checker");
   setImmediate(() => { deliverPendingOwnerRentalMilestones().catch(() => {}); });
   setInterval(() => { deliverPendingOwnerRentalMilestones().catch(() => {}); }, 5 * 60 * 1000);
+
+  // Recover durable renter milestone claims committed before a prior process exit.
+  setImmediate(() => { deliverPendingRenterBookingMilestones().catch(() => {}); });
+  setInterval(() => { deliverPendingRenterBookingMilestones().catch(() => {}); }, 5 * 60 * 1000);
   
   // Seed departments if table is empty
   const seedDepartments = async () => {

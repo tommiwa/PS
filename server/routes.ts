@@ -85,7 +85,7 @@ import { sendReportEmail, isEmailServiceAvailable } from "./report-service";
 import { getTodayInTimezone, formatDateInTimezone, isDateInPast, isDateTodayOrFuture } from "./timezone";
 import { isWorkplaceServicesListing, resolveAdminListingAttribution } from "./booking-classification";
 import { logServerError, respondWithServerError, withReference } from "./error-reporting";
-import { advanceOwnerRentalMilestone, deliverOwnerRentalMilestone, checkSpendMilestones } from "./milestone-checker";
+import { advanceOwnerRentalMilestone, deliverOwnerRentalMilestone, advanceRenterBookingMilestone, deliverRenterBookingMilestone, checkSpendMilestones } from "./milestone-checker";
 
 // Workplace Services email - uses env var set per environment (dev vs prod)
 const WORKPLACE_SERVICES_EMAIL = process.env.WORKPLACE_SERVICES_EMAIL || 'workplaceservices@bci.ca';
@@ -3545,6 +3545,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // block until the first commits, then see the listing is no longer 'available'.
       let newBooking: any;
       let ownerMilestoneClaim: any = null;
+      let renterMilestoneClaim: any = null;
       try {
         const bookingResult = await db.transaction(async (tx) => {
           // Lock the listing row for this transaction to prevent concurrent inserts
@@ -3592,10 +3593,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ? await advanceOwnerRentalMilestone(tx, created)
             : null;
 
-          return { created, claim };
+          const renterClaim = await advanceRenterBookingMilestone(tx, created);
+
+          return { created, claim, renterClaim };
         });
         newBooking = bookingResult.created;
         ownerMilestoneClaim = bookingResult.claim;
+        renterMilestoneClaim = bookingResult.renterClaim;
       } catch (txErr: any) {
         if (txErr.statusCode === 409) {
           console.warn(`[Booking] Duplicate booking prevented for spot ${validatedData.spotId} on ${bookingDate}: ${txErr.message}`);
@@ -3932,6 +3936,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Deliver the durable owner milestone claim after the booking transaction commits
       if (ownerMilestoneClaim) {
         setImmediate(() => { deliverOwnerRentalMilestone(ownerMilestoneClaim).catch(() => {}); });
+      }
+
+      // Deliver the durable renter milestone claim after the booking transaction commits
+      if (renterMilestoneClaim) {
+        setImmediate(() => { deliverRenterBookingMilestone(renterMilestoneClaim).catch(() => {}); });
       }
 
       res.json(newBooking);

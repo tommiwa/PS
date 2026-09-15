@@ -6,3 +6,5 @@
 - [Milestone email delivery semantics](milestone-email-delivery-semantics.md) — owner milestone emails use strict at-most-once attempts; ambiguous sending records require manual reconciliation, not retry.
 - [Mobile PWA cold-load performance](mobile-pwa-loadtime.md) — service worker/cache-header hashed-vs-unhashed split, lazy-loaded routes, client-metrics beacon, and Inter-only font loading conventions.
 - [Testing routing/PWA logic without jsdom](route-sw-testing-without-jsdom.md) — vitest here has no jsdom/RTL; test route-role logic via a pure extracted module and service-worker.js via Node vm sandbox, not by adding jsdom.
+- [Migration idempotency is existence-based](migration-checkquery-idempotency.md) — editing an already-applied migration's SQL in migrations.ts has no effect once its checkQuery passes; fix already-migrated environments with a manual data correction too.
+- [Program start date 2026-03-16](program-start-date-2026-03-16.md) — booking/lifetime-count metrics that should reflect "since program launch" must use this cutoff, not all-time history; duplicated across leaderboard and milestone code.

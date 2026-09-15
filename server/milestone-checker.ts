@@ -2,7 +2,8 @@ import { storage } from './storage';
 import { computeMilestoneMetrics } from './reports-controller';
 import { sendSpendMilestoneEmail } from './notification-service';
 import { sendOwnerRentalMilestoneEmail } from './notification-service';
-import { ownerRentalMilestones, ownerRentalMilestoneState, type Booking, type OwnerRentalMilestone } from '@shared/schema';
+import { sendRenterBookingMilestoneEmail } from './notification-service';
+import { ownerRentalMilestones, ownerRentalMilestoneState, renterBookingMilestones, renterBookingMilestoneState, type Booking, type OwnerRentalMilestone, type RenterBookingMilestone } from '@shared/schema';
 import { sql } from 'drizzle-orm';
 
 /**
@@ -191,5 +192,131 @@ export async function deliverPendingOwnerRentalMilestones(): Promise<void> {
     }
   } catch (error) {
     console.error('[Owner Milestone] Failed to recover pending milestone deliveries:', error);
+  }
+}
+
+/**
+ * Renter lifetime booking counts only include bookings dated on or after the
+ * program's launch date, matching the window used by the admin renter/owner
+ * leaderboards. Bookings dated before this are excluded from the count.
+ */
+export const RENTER_MILESTONE_COUNT_START_DATE = '2026-03-16';
+
+/**
+ * Advances the renter's lifetime booking count and creates the durable claim
+ * in the same transaction as the booking. The state table is initialized from
+ * historical bookings (on or after RENTER_MILESTONE_COUNT_START_DATE) during
+ * migration, so only new, in-window bookings advance it further.
+ */
+export async function advanceRenterBookingMilestone(
+  tx: any,
+  booking: Booking
+): Promise<RenterBookingMilestone | null> {
+  if (!booking.renterId) {
+    return null;
+  }
+
+  if (booking.bookingDate < RENTER_MILESTONE_COUNT_START_DATE) {
+    return null;
+  }
+
+  const [state] = await tx
+    .insert(renterBookingMilestoneState)
+    .values({
+      renterId: booking.renterId,
+      lifetimeBookingCount: 1,
+      updatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: renterBookingMilestoneState.renterId,
+      set: {
+        lifetimeBookingCount: sql`${renterBookingMilestoneState.lifetimeBookingCount} + 1`,
+        updatedAt: new Date(),
+      },
+    })
+    .returning();
+
+  const lifetimeBookingCount = Number(state.lifetimeBookingCount);
+  if (lifetimeBookingCount <= 0 || lifetimeBookingCount % 100 !== 0) {
+    return null;
+  }
+
+  const [claim] = await tx
+    .insert(renterBookingMilestones)
+    .values({
+      renterId: booking.renterId,
+      milestoneCount: lifetimeBookingCount,
+      triggeringBookingId: booking.id,
+      lifetimeBookingCount,
+      deliveryStatus: 'pending',
+      deliveryAttemptCount: 0,
+    })
+    .onConflictDoNothing()
+    .returning();
+  return claim ?? null;
+}
+
+/**
+ * Delivers a previously committed claim. Every exit path records a final
+ * delivery status, while errors remain isolated from booking creation.
+ */
+export async function deliverRenterBookingMilestone(claim: RenterBookingMilestone): Promise<void> {
+  try {
+    const deliveryClaimed = await storage.claimRenterBookingMilestoneDelivery(claim.id);
+    if (!deliveryClaimed) return;
+
+    const renter = await storage.getUser(claim.renterId);
+    if (!renter?.email) {
+      const error = 'Renter has no email address';
+      await storage.updateRenterBookingMilestoneDelivery(claim.id, { status: 'failed', error });
+      console.error(`[Renter Milestone] Delivery failed for renter ${claim.renterId}, milestone ${claim.milestoneCount}: ${error}`);
+      return;
+    }
+
+    const renterName = [renter.firstName, renter.lastName].filter(Boolean).join(' ') || 'ParkShare renter';
+    const delivery = await sendRenterBookingMilestoneEmail(
+      { name: renterName, email: renter.email },
+      claim.milestoneCount,
+      { deliveryKey: `renter-booking-milestone-${claim.id}` }
+    );
+
+    if (delivery.success) {
+      try {
+        await storage.updateRenterBookingMilestoneDelivery(claim.id, {
+          status: 'sent',
+          provider: delivery.provider,
+        });
+        console.log(`[Renter Milestone] Sent ${claim.milestoneCount}-booking thank-you to renter ${claim.renterId}.`);
+      } catch (statusError) {
+        console.error(
+          `[Renter Milestone] Provider accepted claim ${claim.id}, but sent status could not be recorded; leaving delivery as sending for reconciliation:`,
+          statusError
+        );
+      }
+    } else if (delivery.ambiguous) {
+      console.error(
+        `[Renter Milestone] Delivery outcome is ambiguous for claim ${claim.id}; leaving status as sending to prevent a duplicate attempt: ${delivery.error || 'unknown transport error'}`
+      );
+    } else {
+      await storage.updateRenterBookingMilestoneDelivery(claim.id, {
+        status: 'failed',
+        provider: delivery.provider,
+        error: delivery.error || 'Unknown email delivery failure',
+      });
+      console.error(`[Renter Milestone] Delivery failed for renter ${claim.renterId}, milestone ${claim.milestoneCount}: ${delivery.error || 'unknown error'}`);
+    }
+  } catch (error) {
+    console.error(`[Renter Milestone] Failed to deliver claim ${claim.id}:`, error);
+  }
+}
+
+export async function deliverPendingRenterBookingMilestones(): Promise<void> {
+  try {
+    const pendingClaims = await storage.getPendingRenterBookingMilestones();
+    for (const claim of pendingClaims) {
+      await deliverRenterBookingMilestone(claim);
+    }
+  } catch (error) {
+    console.error('[Renter Milestone] Failed to recover pending milestone deliveries:', error);
   }
 }

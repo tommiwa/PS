@@ -1915,6 +1915,42 @@ export type InsertOwnerRentalMilestone = Omit<
 >;
 export type OwnerRentalMilestone = typeof ownerRentalMilestones.$inferSelect;
 
+// Renter Booking Milestone State - initialized from history, then advanced inside booking transactions
+export const renterBookingMilestoneState = pgTable("renter_booking_milestone_state", {
+  renterId: varchar("renter_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  lifetimeBookingCount: integer("lifetime_booking_count").notNull().default(0),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Renter Booking Milestones - one durable delivery claim per renter and threshold
+export const renterBookingMilestones = pgTable("renter_booking_milestones", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  renterId: varchar("renter_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  milestoneCount: integer("milestone_count").notNull(),
+  triggeringBookingId: varchar("triggering_booking_id").notNull().references(() => bookings.id, { onDelete: "restrict" }),
+  lifetimeBookingCount: integer("lifetime_booking_count").notNull(),
+  deliveryStatus: text("delivery_status").notNull().$type<"pending" | "sending" | "sent" | "failed">().default("pending"),
+  deliveryProvider: text("delivery_provider"),
+  deliveryError: text("delivery_error"),
+  deliveryAttemptCount: integer("delivery_attempt_count").notNull().default(0),
+  sendingStartedAt: timestamp("sending_started_at"),
+  claimedAt: timestamp("claimed_at").notNull().defaultNow(),
+  deliveredAt: timestamp("delivered_at"),
+}, (table) => [
+  uniqueIndex("UDX_renter_booking_milestones_renter_count").on(table.renterId, table.milestoneCount),
+]);
+
+export const insertRenterBookingMilestoneSchema = createInsertSchema(renterBookingMilestones).omit({
+  id: true,
+  claimedAt: true,
+  deliveredAt: true,
+});
+export type InsertRenterBookingMilestone = Omit<
+  typeof renterBookingMilestones.$inferInsert,
+  "id" | "claimedAt" | "deliveredAt"
+>;
+export type RenterBookingMilestone = typeof renterBookingMilestones.$inferSelect;
+
 // Spot Alert Subscriptions Table
 // Renters can subscribe to be notified when spots matching their preferences become available.
 // When a matching listing is created, they receive an email with a "Book This Spot" CTA.
