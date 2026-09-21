@@ -22,9 +22,13 @@ export async function applyScheduledSpotReleases(): Promise<number> {
 
         const prevOwner = spot.ownerId ? await storage.getUser(spot.ownerId) : null;
 
+        // Clearing the owner via a scheduled release must also reclassify the spot as BCI-managed
+        // pool inventory, so it re-enters the Available tab and classifies correctly for payment
+        // routing instead of getting stuck unowned-but-not-pool-classified (task #378).
         const updatedSpot = await storage.updateParkingSpot(release.spotId, {
           ownerId: null,
           isBookable: false,
+          isBciManaged: true,
         });
 
         if (!updatedSpot) {

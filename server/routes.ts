@@ -9250,8 +9250,10 @@ The BCI ParkShare Team`;
         formerOwner = await storage.getUser(existingSpot.ownerId);
       }
       
-      // Unassign by setting ownerId to null
-      const updatedSpot = await storage.updateParkingSpot(spotId, { ownerId: null });
+      // Unassign by setting ownerId to null. Also reclassify as BCI-managed pool inventory so the
+      // spot immediately reappears in the Available tab and classifies as Workplace Services for
+      // payment routing, instead of getting stuck unowned-but-not-pool-classified (task #378).
+      const updatedSpot = await storage.updateParkingSpot(spotId, { ownerId: null, isBciManaged: true });
       if (!updatedSpot) {
         return res.status(404).json({ error: "Failed to unassign parking spot" });
       }
@@ -9328,7 +9330,18 @@ The BCI ParkShare Team`;
         formerOwner = await storage.getUser(existingSpot.ownerId);
       }
       
-      const updatedSpot = await storage.updateParkingSpot(id, validatedData);
+      // When an owner is being cleared (release/unassign via this generic update path), the spot
+      // re-enters the shared BCI-managed pool so it stays visible/reassignable in the Available tab
+      // and classifies correctly for payment routing. Reassignment to a different owner is untouched -
+      // an individually-owned spot is always personal regardless of this flag (task #347).
+      const isOwnerBeingCleared = 'ownerId' in validatedData &&
+        validatedData.ownerId === null &&
+        existingSpot.ownerId !== null;
+      const spotUpdate = isOwnerBeingCleared
+        ? { ...validatedData, isBciManaged: true }
+        : validatedData;
+      
+      const updatedSpot = await storage.updateParkingSpot(id, spotUpdate);
       if (!updatedSpot) {
         return res.status(404).json({ error: "Parking spot not found" });
       }

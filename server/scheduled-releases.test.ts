@@ -146,6 +146,7 @@ describe('applyScheduledSpotReleases', () => {
       expect(mockStorage.updateParkingSpot).toHaveBeenCalledWith('spot-1', {
         ownerId: null,
         isBookable: false,
+        isBciManaged: true,
       });
     });
 
@@ -362,6 +363,24 @@ describe('applyScheduledSpotReleases', () => {
       const ownerCall = mockSendEmail.mock.calls.find((c: any[]) => c[0].to === 'owner@bci.ca');
       expect(ownerCall).toBeDefined();
       expect(mockSendEmail).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('BCI-managed reclassification (task #378)', () => {
+    it('sets isBciManaged: true alongside clearing the owner, so the spot re-enters the pool', async () => {
+      const spot = makeSpot();
+      const owner = makeUser();
+      mockStorage.getPendingScheduledReleasesDue.mockResolvedValue([makeRelease()]);
+      mockStorage.getParkingSpot.mockResolvedValue(spot);
+      mockStorage.getUser.mockResolvedValue(owner);
+
+      await applyScheduledSpotReleases();
+
+      expect(mockStorage.updateParkingSpot).toHaveBeenCalledWith('spot-1', {
+        ownerId: null,
+        isBookable: false,
+        isBciManaged: true,
+      });
     });
   });
 

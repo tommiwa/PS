@@ -7,7 +7,9 @@ interface MigrationCheck {
   migrationStatements: string[];
 }
 
-const migrations: MigrationCheck[] = [
+// Exported so migration-specific tests can exercise a single migration's checkQuery/
+// migrationStatements against a real database connection without running the whole list.
+export const migrations: MigrationCheck[] = [
   {
     name: "spot_alert_subscriptions_table",
     checkQuery: `SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'spot_alert_subscriptions')`,
@@ -471,6 +473,45 @@ const migrations: MigrationCheck[] = [
        ON CONFLICT (renter_id) DO NOTHING`,
       `CREATE INDEX IF NOT EXISTS "IDX_renter_booking_milestone_baseline_v1"
        ON renter_booking_milestone_state (renter_id)`,
+    ],
+  },
+  {
+    name: "reclassify_orphaned_unowned_spots_as_bci_managed",
+    // A spot with no owner that is not flagged BCI-managed and has a spot_assignment_history
+    // row recording it being unassigned/released is orphaned pool inventory: it was released
+    // before the code paths that clear ownerId also started setting is_bci_managed = true
+    // (task #378), so it is invisible in the Available tab and misclassified for
+    // direct-assignment payment routing.
+    //
+    // Only spots with that release history are touched. A spot can also be legitimately
+    // created as Personal (isBciManaged: false) with no owner assigned yet (the admin "Add
+    // Spot" flow allows this for Personal spots) - such a spot has no assignment history and
+    // must NOT be swept into the BCI-managed pool.
+    checkQuery: `
+      SELECT NOT EXISTS (
+        SELECT 1
+        FROM parking_spots ps
+        WHERE ps.owner_id IS NULL
+          AND ps.is_bci_managed = false
+          AND ps.deleted_at IS NULL
+          AND EXISTS (
+            SELECT 1 FROM spot_assignment_history sah
+            WHERE sah.spot_id = ps.id AND sah.action IN ('unassigned', 'released')
+          )
+      ) AS exists
+    `,
+    migrationStatements: [
+      `
+        UPDATE parking_spots
+        SET is_bci_managed = true
+        WHERE owner_id IS NULL
+          AND is_bci_managed = false
+          AND deleted_at IS NULL
+          AND EXISTS (
+            SELECT 1 FROM spot_assignment_history sah
+            WHERE sah.spot_id = parking_spots.id AND sah.action IN ('unassigned', 'released')
+          )
+      `,
     ],
   },
   {
