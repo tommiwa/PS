@@ -78,6 +78,7 @@ import {
   getSpotAssignmentReport,
   getSharedPoolUsageReport,
   getActiveUsersReport,
+  getSpotAlertSubscribersReport,
   getRenterRankings,
   getOwnerRankings
 } from "./reports-controller";
@@ -11847,6 +11848,7 @@ The BCI ParkShare Team`;
   app.get("/api/admin/reports/spot-assignments", requireAdmin, getSpotAssignmentReport);
   app.get("/api/admin/reports/shared-pool-usage", requireAdmin, getSharedPoolUsageReport);
   app.get("/api/admin/reports/active-users", requireAdmin, getActiveUsersReport);
+  app.get("/api/admin/reports/spot-alert-subscribers", requireAdmin, getSpotAlertSubscribersReport);
   app.get("/api/admin/rankings/renters", requireAdmin, getRenterRankings);
   app.get("/api/admin/rankings/owners", requireAdmin, getOwnerRankings);
   

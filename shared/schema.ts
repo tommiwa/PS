@@ -1986,3 +1986,16 @@ export const updateSpotAlertSubscriptionSchema = createInsertSchema(spotAlertSub
 export type InsertSpotAlertSubscription = z.infer<typeof insertSpotAlertSubscriptionSchema>;
 export type UpdateSpotAlertSubscription = z.infer<typeof updateSpotAlertSubscriptionSchema>;
 export type SpotAlertSubscription = typeof spotAlertSubscriptions.$inferSelect;
+
+// Admin-facing view of a spot alert subscription joined with the subscribing user's name/email
+export interface SpotAlertSubscriptionWithUser {
+  id: string;
+  userId: string;
+  name: string;
+  email: string;
+  isActive: boolean;
+  daysOfWeek: number[];
+  maxDailyPrice: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}

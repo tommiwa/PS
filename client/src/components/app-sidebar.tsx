@@ -210,11 +210,11 @@ const adminAnalyticsItems = [
     tooltip: "Payroll Reports"
   },
   {
-    title: "Active Users",
+    title: "User Engagement",
     url: "/admin/active-users",
     icon: Users,
     roles: ["admin"],
-    tooltip: "Active Users Report"
+    tooltip: "Logins, listings, bookings, and spot alert subscribers"
   },
   {
     title: "Parking Leaderboard",

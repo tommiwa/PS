@@ -1176,6 +1176,24 @@ export async function getActiveUsersReport(req: Request, res: Response) {
   }
 }
 
+// GET /api/admin/reports/spot-alert-subscribers - All users subscribed to spot-listing alerts
+export async function getSpotAlertSubscribersReport(req: Request, res: Response) {
+  try {
+    const subscribers = await storage.getAllSpotAlertSubscriptionsWithUsers();
+    res.json({
+      subscribers,
+      summary: {
+        total: subscribers.length,
+        active: subscribers.filter(s => s.isActive).length
+      },
+      generatedAt: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error("Error generating spot alert subscribers report:", error);
+    res.status(500).json({ error: "Failed to generate spot alert subscribers report" });
+  }
+}
+
 // GET /api/admin/rankings/renters - Renter leaderboard ranked by booking count and spend
 export async function getRenterRankings(req: Request, res: Response) {
   try {

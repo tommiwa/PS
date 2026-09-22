@@ -73,6 +73,7 @@ import {
   type UpdateFeatureAnnouncement,
   type SpotAlertSubscription,
   type UpdateSpotAlertSubscription,
+  type SpotAlertSubscriptionWithUser,
   type SaleEvent,
   type InsertSaleEvent,
   type SaleEventStatus,
@@ -475,6 +476,7 @@ export interface IStorage {
   getSpotAlertSubscription(userId: string): Promise<SpotAlertSubscription | undefined>;
   upsertSpotAlertSubscription(userId: string, data: UpdateSpotAlertSubscription): Promise<SpotAlertSubscription>;
   getActiveSpotAlertSubscribers(): Promise<SpotAlertSubscription[]>;
+  getAllSpotAlertSubscriptionsWithUsers(): Promise<SpotAlertSubscriptionWithUser[]>;
 
   // Sale Event operations
   getAllSaleEvents(): Promise<SaleEvent[]>;
@@ -4675,6 +4677,37 @@ export class MemStorage implements IStorage {
 
   async getActiveSpotAlertSubscribers(): Promise<SpotAlertSubscription[]> {
     return db.select().from(spotAlertSubscriptions).where(eq(spotAlertSubscriptions.isActive, true));
+  }
+
+  async getAllSpotAlertSubscriptionsWithUsers(): Promise<SpotAlertSubscriptionWithUser[]> {
+    const rows = await db
+      .select({
+        id: spotAlertSubscriptions.id,
+        userId: spotAlertSubscriptions.userId,
+        isActive: spotAlertSubscriptions.isActive,
+        daysOfWeek: spotAlertSubscriptions.daysOfWeek,
+        maxDailyPrice: spotAlertSubscriptions.maxDailyPrice,
+        createdAt: spotAlertSubscriptions.createdAt,
+        updatedAt: spotAlertSubscriptions.updatedAt,
+        userFirstName: users.firstName,
+        userLastName: users.lastName,
+        userEmail: users.email,
+      })
+      .from(spotAlertSubscriptions)
+      .leftJoin(users, eq(spotAlertSubscriptions.userId, users.id))
+      .orderBy(desc(spotAlertSubscriptions.isActive), desc(spotAlertSubscriptions.updatedAt));
+
+    return rows.map(row => ({
+      id: row.id,
+      userId: row.userId,
+      name: `${row.userFirstName || ''} ${row.userLastName || ''}`.trim() || row.userEmail || 'Unknown',
+      email: row.userEmail || '',
+      isActive: row.isActive,
+      daysOfWeek: row.daysOfWeek,
+      maxDailyPrice: row.maxDailyPrice,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    }));
   }
 
   // ===== Sale Event Operations =====

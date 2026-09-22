@@ -99,6 +99,7 @@ vi.mock('./reports-controller', () => ({
   getSpotAssignmentReport: vi.fn(async () => ({})),
   getSharedPoolUsageReport: vi.fn(async () => ({})),
   getActiveUsersReport: vi.fn(async () => ({})),
+  getSpotAlertSubscribersReport: vi.fn(async () => ({})),
   getRenterRankings: vi.fn(async () => ({})),
   getOwnerRankings: vi.fn(async () => ({})),
   computeMilestoneMetrics: vi.fn(async () => ({ totalBookings: 0, totalSpend: 0, p2pRevenue: 0, participants: 0 })),
