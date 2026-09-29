@@ -4059,7 +4059,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const rateInput = requestedDailyRate != null ? Number(requestedDailyRate) : (spot.defaultPrice != null ? Number(spot.defaultPrice) : NaN);
         if (!rateInput || isNaN(rateInput) || rateInput <= 0) {
           return res.status(400).json({
-            error: "No listing found for this date",
+            error: "No listing found for this date — enter a daily rate to create one",
+            code: "NO_LISTING_FOR_DATE",
             message: "No active listing covers this spot on the selected date, and no dailyRate was provided to set one up. Provide a dailyRate or choose a date with an existing listing."
           });
         }

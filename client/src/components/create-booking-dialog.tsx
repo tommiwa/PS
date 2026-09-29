@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Check, ChevronsUpDown, CalendarIcon } from "lucide-react";
@@ -39,6 +39,7 @@ interface AdminSpotOption {
   isBciManaged: boolean;
   isBookable: boolean;
   locationName?: string;
+  defaultPrice?: string | number | null;
 }
 
 interface CreateBookingDialogProps {
@@ -67,8 +68,15 @@ export function CreateBookingDialog({ open, onOpenChange, onCreated }: CreateBoo
   const [bookingDate, setBookingDate] = useState<Date>(new Date());
 
   const [dailyRate, setDailyRate] = useState("");
+  const [dailyRateTouched, setDailyRateTouched] = useState(false);
   const [notes, setNotes] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+  // Set when the backend reports there's no active listing for the chosen spot/date (common for
+  // backdated bookings on a spot whose listing has since expired). Once this fires, the daily
+  // rate field becomes effectively required — we prompt for it instead of leaving the admin to
+  // guess why the generic error appeared.
+  const [noListingForDate, setNoListingForDate] = useState(false);
+  const dailyRateInputRef = useRef<HTMLInputElement>(null);
 
   // Reset form state whenever the dialog is closed so re-opening starts fresh.
   useEffect(() => {
@@ -79,10 +87,26 @@ export function CreateBookingDialog({ open, onOpenChange, onCreated }: CreateBoo
       setSelectedSpot(null);
       setBookingDate(new Date());
       setDailyRate("");
+      setDailyRateTouched(false);
       setNotes("");
       setFormError(null);
+      setNoListingForDate(false);
     }
   }, [open]);
+
+  // Changing the spot or date invalidates any prior "no listing" finding — re-prefill from the
+  // newly selected spot's own default rate (if the admin hasn't typed a rate themselves) so most
+  // backdated bookings on a spot with a set default price never hit the error at all.
+  useEffect(() => {
+    setNoListingForDate(false);
+    if (!dailyRateTouched && selectedSpot?.defaultPrice != null) {
+      const price = Number(selectedSpot.defaultPrice);
+      if (!isNaN(price) && price > 0) {
+        setDailyRate(String(price));
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSpot?.id, bookingDate]);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedRenterQuery(renterQuery), 300);
@@ -135,7 +159,12 @@ export function CreateBookingDialog({ open, onOpenChange, onCreated }: CreateBoo
       onCreated?.();
     },
     onError: (error: any) => {
-      setFormError(error?.message || "Failed to create booking.");
+      const message = error?.message || "Failed to create booking.";
+      setFormError(message);
+      if (message.includes("No listing found for this date")) {
+        setNoListingForDate(true);
+        dailyRateInputRef.current?.focus();
+      }
     },
   });
 
@@ -152,7 +181,7 @@ export function CreateBookingDialog({ open, onOpenChange, onCreated }: CreateBoo
         </DialogHeader>
 
         <div className="space-y-4">
-          {formError && (
+          {formError && !noListingForDate && (
             <div className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md p-2" data-testid="text-create-booking-error">
               {formError}
             </div>
@@ -288,19 +317,32 @@ export function CreateBookingDialog({ open, onOpenChange, onCreated }: CreateBoo
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="create-booking-daily-rate">Daily rate override (optional)</Label>
+            <Label htmlFor="create-booking-daily-rate" className={noListingForDate ? "text-destructive" : undefined}>
+              {noListingForDate ? "Daily rate (required — no listing for this date)" : "Daily rate override (optional)"}
+            </Label>
             <Input
+              ref={dailyRateInputRef}
               id="create-booking-daily-rate"
               type="number"
               min="0"
               step="0.01"
               placeholder="Leave blank to use the existing listing's rate"
               value={dailyRate}
-              onChange={(e) => setDailyRate(e.target.value)}
+              onChange={(e) => {
+                setDailyRate(e.target.value);
+                setDailyRateTouched(true);
+                if (noListingForDate && e.target.value.trim()) {
+                  setNoListingForDate(false);
+                  setFormError(null);
+                }
+              }}
+              className={noListingForDate ? "border-destructive focus-visible:ring-destructive" : undefined}
               data-testid="input-daily-rate"
             />
-            <p className="text-xs text-muted-foreground">
-              Only used if there's no active listing for this spot on the selected date.
+            <p className={noListingForDate ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
+              {noListingForDate
+                ? "This spot has no active listing on the selected date, so a rate is needed to create one."
+                : "Only used if there's no active listing for this spot on the selected date."}
             </p>
           </div>
 

@@ -159,7 +159,10 @@ export function TodayBookingBadge() {
       data-testid="today-booking-badge"
       style={style}
       className={[
-        "z-[9999] select-none cursor-grab active:cursor-grabbing",
+        // Deliberately below dialogs/dropdowns/tooltips (z-50) and toasts (z-[100]) so any open
+        // modal's overlay correctly dims and covers this floating widget instead of it poking
+        // out on top — it should only float over plain page content, never over a dialog.
+        "z-30 select-none cursor-grab active:cursor-grabbing",
         "transition-opacity duration-200",
         visible ? "opacity-100" : "opacity-0 pointer-events-none",
       ].join(" ")}
