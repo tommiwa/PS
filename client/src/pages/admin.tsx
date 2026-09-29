@@ -9,23 +9,17 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
 import { exportToExcel, type ExportData } from "@/utils/export-utils"
 import { getDateRangeLabel } from "@/lib/date-utils"
 import { 
-  Users, Car, CalendarCheck, BarChart3, FileText, Shield,
+  Users, Car, BarChart3,
   TrendingUp, Clock, MapPin, AlertTriangle,
   Building, CheckCircle2, UserPlus, Settings, Bell, RefreshCw,
   DollarSign, Download, AlertCircle, Loader2, Eye, EyeOff, Calendar,
-  PlusCircle, LayoutGrid
+  PlusCircle
 } from "lucide-react"
 import {
   LineChart,
@@ -438,71 +432,6 @@ export default function Admin() {
     pendingRequests: activeWaitingList.length // Total active waiting list entries
   }
 
-  // Quick action items for admin navigation. Each has either a `url` (navigates) or an
-  // `onClick` (performs an in-place action, e.g. opening a dialog without loading another page).
-  const quickActions: Array<{
-    title: string;
-    description: string;
-    url?: string;
-    onClick?: () => void;
-    icon: typeof Users;
-    iconColor: string;
-    bgColor: string;
-    stats: string;
-    testId: string;
-  }> = [
-    {
-      title: "Create Booking",
-      description: "Record a booking for a renter on a shared-pool spot",
-      onClick: () => setCreateBookingOpen(true),
-      icon: PlusCircle,
-      iconColor: "text-emerald-600",
-      bgColor: "bg-emerald-50 dark:bg-emerald-950/30",
-      stats: "Opens instantly — no page load",
-      testId: "quick-action-create-booking"
-    },
-    {
-      title: "User Management",
-      description: "Manage users, roles, and permissions",
-      url: "/admin/users",
-      icon: Users,
-      iconColor: "text-blue-600",
-      bgColor: "bg-blue-50 dark:bg-blue-950/30",
-      stats: `${systemMetrics.totalUsers} users`,
-      testId: "quick-action-user-management"
-    },
-    {
-      title: "Parking Management", 
-      description: "Manage spots, assignments, and waiting list",
-      url: "/admin/parking",
-      icon: Shield,
-      iconColor: "text-purple-600",
-      bgColor: "bg-purple-50 dark:bg-purple-950/30",
-      stats: `${systemMetrics.totalSpots} spots, ${systemMetrics.activeWaitingList} waiting`,
-      testId: "quick-action-parking-management"
-    },
-    {
-      title: "Spot Booking Management",
-      description: "Monitor bookings and availability",
-      url: "/admin/bookings", 
-      icon: CalendarCheck,
-      iconColor: "text-green-600",
-      bgColor: "bg-green-50 dark:bg-green-950/30",
-      stats: `${systemMetrics.recentBookingsCount} recent bookings`,
-      testId: "quick-action-spot-booking-management"
-    },
-    {
-      title: "Audit Logs",
-      description: "View system activity and audit trails",
-      url: "/admin/audits",
-      icon: FileText,
-      iconColor: "text-slate-600",
-      bgColor: "bg-slate-50 dark:bg-slate-950/30",
-      stats: "Activity monitoring",
-      testId: "quick-action-audit-logs"
-    }
-  ]
-
   const getInitials = (firstName?: string, lastName?: string) => {
     if (firstName && lastName) {
       return `${firstName[0]}${lastName[0]}`.toUpperCase();
@@ -675,58 +604,20 @@ export default function Admin() {
                 {t('tooltip.analytics.exportReport')}
               </TooltipContent>
             </Tooltip>
-            <DropdownMenu>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      data-testid="button-quick-actions-menu"
-                      aria-label="Quick actions"
-                    >
-                      <LayoutGrid className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                </TooltipTrigger>
-                <TooltipContent>Quick actions</TooltipContent>
-              </Tooltip>
-              <DropdownMenuContent align="end" className="w-64">
-                {quickActions.map((action) => {
-                  const Icon = action.icon;
-                  const content = (
-                    <>
-                      <div className={`p-1.5 rounded-md ${action.bgColor}`}>
-                        <Icon className={`h-4 w-4 ${action.iconColor}`} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium leading-none">{action.title}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{action.description}</p>
-                      </div>
-                    </>
-                  );
-                  if (action.onClick) {
-                    return (
-                      <DropdownMenuItem
-                        key={action.title}
-                        onClick={action.onClick}
-                        className="gap-2 items-start py-2"
-                        data-testid={action.testId}
-                      >
-                        {content}
-                      </DropdownMenuItem>
-                    );
-                  }
-                  return (
-                    <DropdownMenuItem key={action.title} asChild className="gap-2 items-start py-2">
-                      <Link href={action.url!} data-testid={action.testId}>
-                        {content}
-                      </Link>
-                    </DropdownMenuItem>
-                  );
-                })}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setCreateBookingOpen(true)}
+                  data-testid="quick-action-create-booking"
+                  aria-label="Create Booking"
+                >
+                  <PlusCircle className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Create Booking — record a booking for a renter on a shared-pool spot</TooltipContent>
+            </Tooltip>
             <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
               <Avatar className="h-10 w-10">
                 <AvatarFallback className="text-sm bg-primary text-primary-foreground">
