@@ -71,8 +71,10 @@ import {
   X,
   Heart,
   RotateCcw,
-  Sparkles
+  Sparkles,
+  PlusCircle
 } from "lucide-react"
+import { CreateBookingDialog } from "@/components/create-booking-dialog"
 import type { Booking, BookingStatus, ParkingSpot } from "@shared/schema"
 import { quickExportBookingsPDF, quickExportBookingsExcel, generateParkingReceiptPDF, type ParkingReceiptData } from "@/utils/export-utils"
 import { exportPayrollSummaryReport } from "@/utils/report-export"
@@ -333,6 +335,7 @@ export default function AdminSpotBookingManagement() {
   const [adminNotes, setAdminNotes] = useState("")
   const [selectedAdminNotesBookingId, setSelectedAdminNotesBookingId] = useState<string | null>(null)
   const [pendingDisputesDialogOpen, setPendingDisputesDialogOpen] = useState(false)
+  const [createBookingOpen, setCreateBookingOpen] = useState(false)
   
   // Pagination state for Active Bookings
   const [activeBookingsPageIndex, setActiveBookingsPageIndex] = useState(0)
@@ -1513,8 +1516,29 @@ export default function AdminSpotBookingManagement() {
               Refresh all booking data and payment status
             </TooltipContent>
           </Tooltip>
+          <Button
+            onClick={() => setCreateBookingOpen(true)}
+            data-testid="button-create-booking"
+            aria-label="Create booking on behalf of a renter"
+          >
+            <PlusCircle className="h-4 w-4 mr-2" />
+            Create Booking
+          </Button>
         </div>
       </div>
+
+      <CreateBookingDialog
+        open={createBookingOpen}
+        onOpenChange={setCreateBookingOpen}
+        onCreated={() => {
+          queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-availability", scope, "all"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/admin/active-bookings", scope, "all"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/admin/past-bookings"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-activity", scope] });
+          queryClient.invalidateQueries({ queryKey: ["/api/admin/booking-analytics", scope] });
+          queryClient.invalidateQueries({ queryKey: ["/api/admin/payroll-summary"] });
+        }}
+      />
 
       {/* Quick Analytics Cards */}
       {cardsVisible && (

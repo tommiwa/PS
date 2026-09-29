@@ -18,7 +18,8 @@ import {
   Users, Car, CalendarCheck, BarChart3, FileText, Shield,
   TrendingUp, Clock, MapPin, AlertTriangle, ArrowRight,
   Building, CheckCircle2, UserPlus, Settings, Bell, RefreshCw,
-  DollarSign, Download, AlertCircle, Loader2, Eye, EyeOff, Calendar
+  DollarSign, Download, AlertCircle, Loader2, Eye, EyeOff, Calendar,
+  PlusCircle
 } from "lucide-react"
 import {
   LineChart,
@@ -51,6 +52,7 @@ import type {
 import { UtilizationReport } from '@/components/reports/UtilizationReport'
 import { useCardsVisibility } from "@/hooks/use-cards-visibility"
 import { useLanguage } from "@/hooks/use-language"
+import { CreateBookingDialog } from "@/components/create-booking-dialog"
 
 // Define DashboardScope type
 type DashboardScope = 'all' | 'bci';
@@ -68,6 +70,7 @@ export default function Admin() {
   const [dateRange, setDateRange] = useState("last-30-days")
   const [scope, setScope] = useState<DashboardScope>('all')
   const [futureOutlook, setFutureOutlook] = useState<0 | 7 | 14>(0)
+  const [createBookingOpen, setCreateBookingOpen] = useState(false)
   const { cardsVisible, toggleCards, setCardsVisible } = useCardsVisibility('analytics')
   const { t } = useLanguage()
 
@@ -429,8 +432,29 @@ export default function Admin() {
     pendingRequests: activeWaitingList.length // Total active waiting list entries
   }
 
-  // Quick action items for admin navigation
-  const quickActions = [
+  // Quick action items for admin navigation. Each has either a `url` (navigates) or an
+  // `onClick` (performs an in-place action, e.g. opening a dialog without loading another page).
+  const quickActions: Array<{
+    title: string;
+    description: string;
+    url?: string;
+    onClick?: () => void;
+    icon: typeof Users;
+    iconColor: string;
+    bgColor: string;
+    stats: string;
+    testId: string;
+  }> = [
+    {
+      title: "Create Booking",
+      description: "Record a booking for a renter on a shared-pool spot",
+      onClick: () => setCreateBookingOpen(true),
+      icon: PlusCircle,
+      iconColor: "text-emerald-600",
+      bgColor: "bg-emerald-50 dark:bg-emerald-950/30",
+      stats: "Opens instantly — no page load",
+      testId: "quick-action-create-booking"
+    },
     {
       title: "User Management",
       description: "Manage users, roles, and permissions",
@@ -438,7 +462,8 @@ export default function Admin() {
       icon: Users,
       iconColor: "text-blue-600",
       bgColor: "bg-blue-50 dark:bg-blue-950/30",
-      stats: `${systemMetrics.totalUsers} users`
+      stats: `${systemMetrics.totalUsers} users`,
+      testId: "quick-action-user-management"
     },
     {
       title: "Parking Management", 
@@ -447,7 +472,8 @@ export default function Admin() {
       icon: Shield,
       iconColor: "text-purple-600",
       bgColor: "bg-purple-50 dark:bg-purple-950/30",
-      stats: `${systemMetrics.totalSpots} spots, ${systemMetrics.activeWaitingList} waiting`
+      stats: `${systemMetrics.totalSpots} spots, ${systemMetrics.activeWaitingList} waiting`,
+      testId: "quick-action-parking-management"
     },
     {
       title: "Spot Booking Management",
@@ -456,7 +482,8 @@ export default function Admin() {
       icon: CalendarCheck,
       iconColor: "text-green-600",
       bgColor: "bg-green-50 dark:bg-green-950/30",
-      stats: `${systemMetrics.recentBookingsCount} recent bookings`
+      stats: `${systemMetrics.recentBookingsCount} recent bookings`,
+      testId: "quick-action-spot-booking-management"
     },
     {
       title: "Audit Logs",
@@ -465,7 +492,8 @@ export default function Admin() {
       icon: FileText,
       iconColor: "text-slate-600",
       bgColor: "bg-slate-50 dark:bg-slate-950/30",
-      stats: "Activity monitoring"
+      stats: "Activity monitoring",
+      testId: "quick-action-audit-logs"
     }
   ]
 
@@ -659,6 +687,48 @@ export default function Admin() {
         </div>
       </div>
 
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4" data-testid="admin-quick-actions">
+        {quickActions.map((action) => {
+          const Icon = action.icon;
+          const cardBody = (
+            <Card className="hover-elevate active-elevate-2 cursor-pointer h-full">
+              <CardContent className="p-4 flex items-start gap-3">
+                <div className={`p-2 rounded-lg ${action.bgColor}`}>
+                  <Icon className={`h-5 w-5 ${action.iconColor}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm">{action.title}</p>
+                  <p className="text-xs text-muted-foreground">{action.description}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{action.stats}</p>
+                </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+              </CardContent>
+            </Card>
+          );
+
+          if (action.onClick) {
+            return (
+              <button
+                key={action.title}
+                type="button"
+                className="text-left"
+                onClick={action.onClick}
+                data-testid={action.testId}
+              >
+                {cardBody}
+              </button>
+            );
+          }
+
+          return (
+            <Link key={action.title} href={action.url!} data-testid={action.testId}>
+              {cardBody}
+            </Link>
+          );
+        })}
+      </div>
+
       {/* Key Metrics Overview */}
       <div className="space-y-6">
         {cardsVisible && (
@@ -802,6 +872,15 @@ export default function Admin() {
           />
         </div>
       </div>
+
+      <CreateBookingDialog
+        open={createBookingOpen}
+        onOpenChange={setCreateBookingOpen}
+        onCreated={() => {
+          queryClient.invalidateQueries({ queryKey: ['/api/admin/recent-bookings'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics-overview'] });
+        }}
+      />
     </div>
   )
 }

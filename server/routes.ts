@@ -10,7 +10,7 @@ import { setupAuth, isAuthenticated, requireAdmin, getAuthenticatedUserId, getAu
 import { z } from "zod";
 import { db, pool } from "./db";
 import { parkingSpots, spotLocks, spotListings, bookings, issues, insertIssueSchema, updateIssueSchema, issueStatuses, termsVersions, users, locations, spotAssignmentHistory } from "@shared/schema";
-import type { Booking, ParkingSpot, OwnerStatisticsV2Response } from "@shared/schema";
+import type { Booking, ParkingSpot, OwnerStatisticsV2Response, SpotListing } from "@shared/schema";
 import { inArray, and, eq, lt, gt, not, or, sql, isNull, desc, like } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { 
@@ -3316,6 +3316,317 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Find the listing that covers a given spot+date, checking single-day, period, and
+  // recurring listings in that order of specificity. Shared by the renter-facing and
+  // admin-facing booking creation endpoints so their availability logic never diverges.
+  async function findListingForBookingDate(spotId: string, bookingDate: string): Promise<SpotListing | null> {
+    // First, try to find a single-day listing (most specific)
+    let correctListing = await db
+      .select()
+      .from(spotListings)
+      .where(and(
+        eq(spotListings.spotId, spotId),
+        eq(spotListings.status, 'available'),
+        isNull(spotListings.deletedAt),
+        eq(spotListings.listingType, 'single'),
+        eq(spotListings.singleDate, bookingDate)
+      ))
+      .limit(1);
+
+    // If no single-day listing, try period listing
+    if (!correctListing || correctListing.length === 0) {
+      correctListing = await db
+        .select()
+        .from(spotListings)
+        .where(and(
+          eq(spotListings.spotId, spotId),
+          eq(spotListings.status, 'available'),
+          isNull(spotListings.deletedAt),
+          eq(spotListings.listingType, 'period'),
+          sql`${spotListings.periodStartDate} <= ${bookingDate}`,
+          sql`${spotListings.periodEndDate} >= ${bookingDate}`
+        ))
+        .limit(1);
+    }
+
+    // If no period listing, try recurring listing
+    if (!correctListing || correctListing.length === 0) {
+      // Get day of week for the booking date (lowercase to match database format)
+      const bookingDateObj = new Date(bookingDate + 'T12:00:00');
+      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const bookingDayOfWeek = dayNames[bookingDateObj.getDay()];
+
+      // Find recurring listings that cover this date
+      const recurringListings = await db
+        .select()
+        .from(spotListings)
+        .where(and(
+          eq(spotListings.spotId, spotId),
+          eq(spotListings.status, 'available'),
+          isNull(spotListings.deletedAt),
+          eq(spotListings.listingType, 'recurring'),
+          sql`${spotListings.recurringStartDate} <= ${bookingDate}`,
+          sql`(${spotListings.recurringEndDate} IS NULL OR ${spotListings.recurringEndDate} >= ${bookingDate})`
+        ));
+
+      // Check if any recurring listing includes this day of week
+      for (const listing of recurringListings) {
+        if (listing.daysOfWeek && listing.daysOfWeek.includes(bookingDayOfWeek)) {
+          correctListing = [listing];
+          break;
+        }
+      }
+    }
+
+    return correctListing && correctListing.length > 0 ? correctListing[0] : null;
+  }
+
+  // Calculate the price to charge for a booking on a given date from the listing record,
+  // never trusting a client-supplied price. Falls back to the original (pre-sale) rate when
+  // the listing has a sale window that doesn't cover the requested date.
+  function calculateEffectiveDailyRate(listing: SpotListing, bookingDate: string): number {
+    let effectiveDailyRate = Number(listing.dailyRate);
+    if (listing.saleEventId && listing.saleStartDate && listing.saleEndDate && listing.originalDailyRate) {
+      const bookingDateStr = String(bookingDate).slice(0, 10);
+      if (bookingDateStr < listing.saleStartDate || bookingDateStr > listing.saleEndDate) {
+        effectiveDailyRate = Number(listing.originalDailyRate);
+        console.log(`[Booking] Date ${bookingDateStr} is outside sale window [${listing.saleStartDate}, ${listing.saleEndDate}], using original rate ${effectiveDailyRate}`);
+      }
+    }
+    return effectiveDailyRate;
+  }
+
+  // After a booking is inserted against a period/recurring listing, split that listing into
+  // individual single-day listings so the other days in the range stay independently bookable.
+  // Single-day listings just flip straight to 'booked'. Shared by the renter-facing and
+  // admin-facing booking creation endpoints.
+  async function splitListingForBooking(listing: SpotListing, bookingDate: string, bookingId: string): Promise<void> {
+    if (listing.listingType === 'period' && listing.periodStartDate && listing.periodEndDate) {
+      console.log(`[Booking] Period listing detected (${listing.periodStartDate} to ${listing.periodEndDate}), splitting into individual days...`);
+
+      // Generate all dates in the period using simple string-based date math
+      // This avoids timezone issues by keeping everything as YYYY-MM-DD strings
+      const allDates: string[] = [];
+      const [startYear, startMonth, startDay] = listing.periodStartDate.split('-').map(Number);
+      const [endYear, endMonth, endDay] = listing.periodEndDate.split('-').map(Number);
+
+      // Use UTC dates to avoid timezone shifts
+      const startDate = new Date(Date.UTC(startYear, startMonth - 1, startDay));
+      const endDate = new Date(Date.UTC(endYear, endMonth - 1, endDay));
+
+      for (let d = new Date(startDate); d <= endDate; d.setUTCDate(d.getUTCDate() + 1)) {
+        const year = d.getUTCFullYear();
+        const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(d.getUTCDate()).padStart(2, '0');
+        allDates.push(`${year}-${month}-${day}`);
+      }
+
+      // Get existing single-day listings for this spot to avoid duplicates
+      // Only check 'available' and 'booked' statuses - completed/cancelled listings should not block new listings
+      const existingListings = await storage.getSpotListingsBySpot(listing.spotId);
+      const existingSingleDates = new Set(
+        existingListings
+          .filter(l => l.listingType === 'single' && !l.deletedAt && (l.status === 'available' || l.status === 'booked'))
+          .map(l => l.singleDate)
+          .filter(Boolean)
+      );
+
+      // Also check for existing active bookings on this spot to avoid creating listings for already-booked dates
+      // Only 'confirmed' and 'pending' bookings should block new listings - completed/cancelled bookings should not
+      const existingBookings = await storage.getBookingsBySpot(listing.spotId);
+      const bookedDates = new Set(
+        existingBookings
+          .filter(b => b.status === 'confirmed' || b.status === 'pending')
+          .map(b => b.bookingDate)
+      );
+
+      // Filter out the booked date, dates with existing listings, and dates with existing bookings
+      const remainingDates = allDates.filter(date =>
+        date !== bookingDate &&
+        !existingSingleDates.has(date) &&
+        !bookedDates.has(date)
+      );
+
+      console.log(`[Booking] Creating ${remainingDates.length} individual single-day listings for remaining dates`);
+
+      // Create a single-day listing for the BOOKED date (status: 'booked')
+      // This properly represents the booking without using the period listing
+      const bookedListing = await storage.createSpotListing({
+        spotId: listing.spotId,
+        ownerId: listing.ownerId,
+        listingType: 'single',
+        singleDate: bookingDate,
+        periodStartDate: listing.periodStartDate,
+        periodEndDate: listing.periodEndDate,
+        recurringStartDate: null,
+        recurringEndDate: null,
+        daysOfWeek: null,
+        dailyRate: listing.dailyRate,
+        notes: listing.notes,
+        status: 'booked',
+        createdByAdmin: listing.createdByAdmin,
+        donateToCharity: listing.donateToCharity,
+        originalListingType: 'period'
+      });
+      console.log(`[Booking] Created booked single-day listing for ${bookingDate}: ${bookedListing.id}`);
+
+      // Update the booking to reference the new single-day listing instead of the period listing
+      await storage.updateBooking(bookingId, { listingId: bookedListing.id });
+      console.log(`[Booking] Updated booking ${bookingId} to reference listing ${bookedListing.id}`);
+
+      // Create individual single-day listings for each remaining date (status: 'available')
+      for (const date of remainingDates) {
+        try {
+          await storage.createSpotListing({
+            spotId: listing.spotId,
+            ownerId: listing.ownerId,
+            listingType: 'single',
+            singleDate: date,
+            periodStartDate: listing.periodStartDate,
+            periodEndDate: listing.periodEndDate,
+            recurringStartDate: null,
+            recurringEndDate: null,
+            daysOfWeek: null,
+            dailyRate: listing.dailyRate,
+            notes: listing.notes,
+            status: 'available',
+            createdByAdmin: listing.createdByAdmin,
+            donateToCharity: listing.donateToCharity,
+            originalListingType: 'period'
+          });
+          console.log(`[Booking] Created single-day listing for ${date}`);
+        } catch (err) {
+          console.error(`[Booking] Failed to create listing for ${date}:`, err);
+        }
+      }
+
+      // Archive the original period listing since it's been split into individual days.
+      // cancelSpotListing sets status + audit note; deleteSpotListing sets deletedAt so it
+      // is excluded from all normal queries (which filter by isNull(deletedAt)).
+      await storage.cancelSpotListing(listing.id, 'Split into individual day listings due to partial booking');
+      await storage.deleteSpotListing(listing.id);
+      console.log(`[Booking] Archived original period listing ${listing.id}`);
+    } else if (listing.listingType === 'recurring' && listing.recurringStartDate && listing.daysOfWeek?.length) {
+      // Handle recurring listings: split into individual day listings (same approach as period)
+      // This ensures each day remains independently bookable
+      const recurringEndDate = listing.recurringEndDate || getMaxFutureDate().toISOString().split('T')[0];
+      console.log(`[Booking] Recurring listing detected (${listing.recurringStartDate} to ${recurringEndDate}, days: ${listing.daysOfWeek}), splitting into individual days...`);
+
+      // Generate all matching dates from the recurring pattern
+      const allDates: string[] = [];
+      const [startYear, startMonth, startDay] = listing.recurringStartDate.split('-').map(Number);
+      const [endYear, endMonth, endDay] = recurringEndDate.split('-').map(Number);
+
+      const startDate = new Date(Date.UTC(startYear, startMonth - 1, startDay));
+      const endDate = new Date(Date.UTC(endYear, endMonth - 1, endDay));
+
+      // Map day names to JS day numbers (0=Sunday, 1=Monday, etc.)
+      const dayNameToNumber: Record<string, number> = {
+        'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3,
+        'thursday': 4, 'friday': 5, 'saturday': 6
+      };
+      const activeDays = new Set(
+        (listing.daysOfWeek as string[]).map((d: string) => dayNameToNumber[d.toLowerCase()]).filter((n: number | undefined) => n !== undefined)
+      );
+
+      for (let d = new Date(startDate); d <= endDate; d.setUTCDate(d.getUTCDate() + 1)) {
+        if (activeDays.has(d.getUTCDay())) {
+          const year = d.getUTCFullYear();
+          const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+          const day = String(d.getUTCDate()).padStart(2, '0');
+          allDates.push(`${year}-${month}-${day}`);
+        }
+      }
+
+      // Get existing single-day listings for this spot to avoid duplicates
+      const existingListings = await storage.getSpotListingsBySpot(listing.spotId);
+      const existingSingleDates = new Set(
+        existingListings
+          .filter(l => l.listingType === 'single' && !l.deletedAt && (l.status === 'available' || l.status === 'booked'))
+          .map(l => l.singleDate)
+          .filter(Boolean)
+      );
+
+      // Check for existing active bookings to avoid creating listings for already-booked dates
+      const existingBookings = await storage.getBookingsBySpot(listing.spotId);
+      const bookedDates = new Set(
+        existingBookings
+          .filter(b => b.status === 'confirmed' || b.status === 'pending')
+          .map(b => b.bookingDate)
+      );
+
+      // Filter out the booked date, dates with existing listings, and dates with existing bookings
+      const remainingDates = allDates.filter(date =>
+        date !== bookingDate &&
+        !existingSingleDates.has(date) &&
+        !bookedDates.has(date)
+      );
+
+      console.log(`[Booking] Creating ${remainingDates.length} individual single-day listings for remaining recurring dates (out of ${allDates.length} total)`);
+
+      // Create a single-day listing for the BOOKED date (status: 'booked')
+      const bookedListing = await storage.createSpotListing({
+        spotId: listing.spotId,
+        ownerId: listing.ownerId,
+        listingType: 'single',
+        singleDate: bookingDate,
+        periodStartDate: null,
+        periodEndDate: null,
+        recurringStartDate: listing.recurringStartDate,
+        recurringEndDate: listing.recurringEndDate,
+        daysOfWeek: null,
+        dailyRate: listing.dailyRate,
+        notes: listing.notes,
+        status: 'booked',
+        createdByAdmin: listing.createdByAdmin,
+        donateToCharity: listing.donateToCharity,
+        originalListingType: 'recurring'
+      });
+      console.log(`[Booking] Created booked single-day listing for ${bookingDate}: ${bookedListing.id}`);
+
+      // Update the booking to reference the new single-day listing
+      await storage.updateBooking(bookingId, { listingId: bookedListing.id });
+      console.log(`[Booking] Updated booking ${bookingId} to reference listing ${bookedListing.id}`);
+
+      // Create individual single-day listings for each remaining date (status: 'available')
+      for (const date of remainingDates) {
+        try {
+          await storage.createSpotListing({
+            spotId: listing.spotId,
+            ownerId: listing.ownerId,
+            listingType: 'single',
+            singleDate: date,
+            periodStartDate: null,
+            periodEndDate: null,
+            recurringStartDate: listing.recurringStartDate,
+            recurringEndDate: listing.recurringEndDate,
+            daysOfWeek: null,
+            dailyRate: listing.dailyRate,
+            notes: listing.notes,
+            status: 'available',
+            createdByAdmin: listing.createdByAdmin,
+            donateToCharity: listing.donateToCharity,
+            originalListingType: 'recurring'
+          });
+          console.log(`[Booking] Created single-day listing for ${date}`);
+        } catch (err) {
+          console.error(`[Booking] Failed to create listing for ${date}:`, err);
+        }
+      }
+
+      // Archive the original recurring listing since it's been split into individual days.
+      // cancelSpotListing sets status + audit note; deleteSpotListing sets deletedAt so it
+      // is excluded from all normal queries (which filter by isNull(deletedAt)).
+      await storage.cancelSpotListing(listing.id, 'Split into individual day listings due to partial booking');
+      await storage.deleteSpotListing(listing.id);
+      console.log(`[Booking] Archived original recurring listing ${listing.id}`);
+    } else {
+      // For single-day listings, just mark as booked
+      await storage.updateSpotListingStatus(listing.id, 'booked');
+      console.log(`[Booking] Updated listing ${listing.id} status to 'booked'`);
+    }
+  }
+
   // CRITICAL: Create booking with security validation (Authenticated users only)
   app.post("/api/bookings", isAuthenticated, async (req: any, res) => {
     try {
@@ -3450,66 +3761,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // SECURITY: Find the CORRECT listing that covers this booking date
       // Don't trust the frontend listingId - validate it matches the date
       const bookingDate = validatedData.bookingDate;
-      
-      // First, try to find a single-day listing (most specific)
-      let correctListing = await db
-        .select()
-        .from(spotListings)
-        .where(and(
-          eq(spotListings.spotId, validatedData.spotId),
-          eq(spotListings.status, 'available'),
-          isNull(spotListings.deletedAt),
-          eq(spotListings.listingType, 'single'),
-          eq(spotListings.singleDate, bookingDate)
-        ))
-        .limit(1);
 
-      // If no single-day listing, try period listing
-      if (!correctListing || correctListing.length === 0) {
-        correctListing = await db
-          .select()
-          .from(spotListings)
-          .where(and(
-            eq(spotListings.spotId, validatedData.spotId),
-            eq(spotListings.status, 'available'),
-            isNull(spotListings.deletedAt),
-            eq(spotListings.listingType, 'period'),
-            sql`${spotListings.periodStartDate} <= ${bookingDate}`,
-            sql`${spotListings.periodEndDate} >= ${bookingDate}`
-          ))
-          .limit(1);
-      }
+      const foundListing = await findListingForBookingDate(validatedData.spotId, bookingDate);
 
-      // If no period listing, try recurring listing
-      if (!correctListing || correctListing.length === 0) {
-        // Get day of week for the booking date (lowercase to match database format)
-        const bookingDateObj = new Date(bookingDate + 'T12:00:00');
-        const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-        const bookingDayOfWeek = dayNames[bookingDateObj.getDay()];
-        
-        // Find recurring listings that cover this date
-        const recurringListings = await db
-          .select()
-          .from(spotListings)
-          .where(and(
-            eq(spotListings.spotId, validatedData.spotId),
-            eq(spotListings.status, 'available'),
-            isNull(spotListings.deletedAt),
-            eq(spotListings.listingType, 'recurring'),
-            sql`${spotListings.recurringStartDate} <= ${bookingDate}`,
-            sql`(${spotListings.recurringEndDate} IS NULL OR ${spotListings.recurringEndDate} >= ${bookingDate})`
-          ));
-        
-        // Check if any recurring listing includes this day of week
-        for (const listing of recurringListings) {
-          if (listing.daysOfWeek && listing.daysOfWeek.includes(bookingDayOfWeek)) {
-            correctListing = [listing];
-            break;
-          }
-        }
-      }
-
-      if (!correctListing || correctListing.length === 0) {
+      if (!foundListing) {
         console.log(`[Booking] No listing found for spot ${validatedData.spotId} on date ${bookingDate}`);
         return res.status(404).json({ 
           error: "No active listing found for this date",
@@ -3517,7 +3772,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const listing = correctListing[0];
+      const listing = foundListing;
 
       // SECURITY: Validate that frontend sent the correct listingId
       if (listing.id !== validatedData.listingId) {
@@ -3525,16 +3780,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // SECURITY: Calculate price from database listing, NOT from frontend
-      // If the listing is on sale but the booking date falls outside the sale window, use original rate
-      let effectiveDailyRate = Number(listing.dailyRate);
-      if (listing.saleEventId && listing.saleStartDate && listing.saleEndDate && listing.originalDailyRate) {
-        const bookingDateStr = String(bookingDate).slice(0, 10);
-        if (bookingDateStr < listing.saleStartDate || bookingDateStr > listing.saleEndDate) {
-          effectiveDailyRate = Number(listing.originalDailyRate);
-          console.log(`[Booking] Date ${bookingDateStr} is outside sale window [${listing.saleStartDate}, ${listing.saleEndDate}], using original rate ${effectiveDailyRate}`);
-        }
-      }
-      const actualDailyRate = effectiveDailyRate;
+      const actualDailyRate = calculateEffectiveDailyRate(listing, bookingDate);
       const actualTotalAmount = actualDailyRate; // Single day booking
 
       console.log(`[Booking] Using CORRECT listing ${listing.id} with price: dailyRate=${actualDailyRate}, totalAmount=${actualTotalAmount}`);
@@ -3613,232 +3859,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw txErr;
       }
 
-      // Handle period listings: split into individual day listings
-      // This ensures each day remains independently bookable in the share pool
-      if (listing.listingType === 'period' && listing.periodStartDate && listing.periodEndDate) {
-        console.log(`[Booking] Period listing detected (${listing.periodStartDate} to ${listing.periodEndDate}), splitting into individual days...`);
-        
-        // Generate all dates in the period using simple string-based date math
-        // This avoids timezone issues by keeping everything as YYYY-MM-DD strings
-        const allDates: string[] = [];
-        const [startYear, startMonth, startDay] = listing.periodStartDate.split('-').map(Number);
-        const [endYear, endMonth, endDay] = listing.periodEndDate.split('-').map(Number);
-        
-        // Use UTC dates to avoid timezone shifts
-        const startDate = new Date(Date.UTC(startYear, startMonth - 1, startDay));
-        const endDate = new Date(Date.UTC(endYear, endMonth - 1, endDay));
-        
-        for (let d = new Date(startDate); d <= endDate; d.setUTCDate(d.getUTCDate() + 1)) {
-          const year = d.getUTCFullYear();
-          const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-          const day = String(d.getUTCDate()).padStart(2, '0');
-          allDates.push(`${year}-${month}-${day}`);
-        }
-        
-        // Get existing single-day listings for this spot to avoid duplicates
-        // Only check 'available' and 'booked' statuses - completed/cancelled listings should not block new listings
-        const existingListings = await storage.getSpotListingsBySpot(listing.spotId);
-        const existingSingleDates = new Set(
-          existingListings
-            .filter(l => l.listingType === 'single' && !l.deletedAt && (l.status === 'available' || l.status === 'booked'))
-            .map(l => l.singleDate)
-            .filter(Boolean)
-        );
-        
-        // Also check for existing active bookings on this spot to avoid creating listings for already-booked dates
-        // Only 'confirmed' and 'pending' bookings should block new listings - completed/cancelled bookings should not
-        const existingBookings = await storage.getBookingsBySpot(listing.spotId);
-        const bookedDates = new Set(
-          existingBookings
-            .filter(b => b.status === 'confirmed' || b.status === 'pending')
-            .map(b => b.bookingDate)
-        );
-        
-        // Filter out the booked date, dates with existing listings, and dates with existing bookings
-        const remainingDates = allDates.filter(date => 
-          date !== bookingDate && 
-          !existingSingleDates.has(date) && 
-          !bookedDates.has(date)
-        );
-        
-        console.log(`[Booking] Creating ${remainingDates.length} individual single-day listings for remaining dates`);
-        
-        // Create a single-day listing for the BOOKED date (status: 'booked')
-        // This properly represents the booking without using the period listing
-        const bookedListing = await storage.createSpotListing({
-          spotId: listing.spotId,
-          ownerId: listing.ownerId,
-          listingType: 'single',
-          singleDate: bookingDate,
-          periodStartDate: listing.periodStartDate,
-          periodEndDate: listing.periodEndDate,
-          recurringStartDate: null,
-          recurringEndDate: null,
-          daysOfWeek: null,
-          dailyRate: listing.dailyRate,
-          notes: listing.notes,
-          status: 'booked',
-          createdByAdmin: listing.createdByAdmin,
-          donateToCharity: listing.donateToCharity,
-          originalListingType: 'period'
-        });
-        console.log(`[Booking] Created booked single-day listing for ${bookingDate}: ${bookedListing.id}`);
-        
-        // Update the booking to reference the new single-day listing instead of the period listing
-        await storage.updateBooking(newBooking.id, { listingId: bookedListing.id });
-        console.log(`[Booking] Updated booking ${newBooking.id} to reference listing ${bookedListing.id}`);
-        
-        // Create individual single-day listings for each remaining date (status: 'available')
-        for (const date of remainingDates) {
-          try {
-            await storage.createSpotListing({
-              spotId: listing.spotId,
-              ownerId: listing.ownerId,
-              listingType: 'single',
-              singleDate: date,
-              periodStartDate: listing.periodStartDate,
-              periodEndDate: listing.periodEndDate,
-              recurringStartDate: null,
-              recurringEndDate: null,
-              daysOfWeek: null,
-              dailyRate: listing.dailyRate,
-              notes: listing.notes,
-              status: 'available',
-              createdByAdmin: listing.createdByAdmin,
-              donateToCharity: listing.donateToCharity,
-              originalListingType: 'period'
-            });
-            console.log(`[Booking] Created single-day listing for ${date}`);
-          } catch (err) {
-            console.error(`[Booking] Failed to create listing for ${date}:`, err);
-          }
-        }
-        
-        // Archive the original period listing since it's been split into individual days.
-        // cancelSpotListing sets status + audit note; deleteSpotListing sets deletedAt so it
-        // is excluded from all normal queries (which filter by isNull(deletedAt)).
-        await storage.cancelSpotListing(listing.id, 'Split into individual day listings due to partial booking');
-        await storage.deleteSpotListing(listing.id);
-        console.log(`[Booking] Archived original period listing ${listing.id}`);
-      } else if (listing.listingType === 'recurring' && listing.recurringStartDate && listing.daysOfWeek?.length) {
-        // Handle recurring listings: split into individual day listings (same approach as period)
-        // This ensures each day remains independently bookable
-        const recurringEndDate = listing.recurringEndDate || getMaxFutureDate().toISOString().split('T')[0];
-        console.log(`[Booking] Recurring listing detected (${listing.recurringStartDate} to ${recurringEndDate}, days: ${listing.daysOfWeek}), splitting into individual days...`);
-        
-        // Generate all matching dates from the recurring pattern
-        const allDates: string[] = [];
-        const [startYear, startMonth, startDay] = listing.recurringStartDate.split('-').map(Number);
-        const [endYear, endMonth, endDay] = recurringEndDate.split('-').map(Number);
-        
-        const startDate = new Date(Date.UTC(startYear, startMonth - 1, startDay));
-        const endDate = new Date(Date.UTC(endYear, endMonth - 1, endDay));
-        
-        // Map day names to JS day numbers (0=Sunday, 1=Monday, etc.)
-        const dayNameToNumber: Record<string, number> = {
-          'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3,
-          'thursday': 4, 'friday': 5, 'saturday': 6
-        };
-        const activeDays = new Set(
-          (listing.daysOfWeek as string[]).map((d: string) => dayNameToNumber[d.toLowerCase()]).filter((n: number | undefined) => n !== undefined)
-        );
-        
-        for (let d = new Date(startDate); d <= endDate; d.setUTCDate(d.getUTCDate() + 1)) {
-          if (activeDays.has(d.getUTCDay())) {
-            const year = d.getUTCFullYear();
-            const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-            const day = String(d.getUTCDate()).padStart(2, '0');
-            allDates.push(`${year}-${month}-${day}`);
-          }
-        }
-        
-        // Get existing single-day listings for this spot to avoid duplicates
-        const existingListings = await storage.getSpotListingsBySpot(listing.spotId);
-        const existingSingleDates = new Set(
-          existingListings
-            .filter(l => l.listingType === 'single' && !l.deletedAt && (l.status === 'available' || l.status === 'booked'))
-            .map(l => l.singleDate)
-            .filter(Boolean)
-        );
-        
-        // Check for existing active bookings to avoid creating listings for already-booked dates
-        const existingBookings = await storage.getBookingsBySpot(listing.spotId);
-        const bookedDates = new Set(
-          existingBookings
-            .filter(b => b.status === 'confirmed' || b.status === 'pending')
-            .map(b => b.bookingDate)
-        );
-        
-        // Filter out the booked date, dates with existing listings, and dates with existing bookings
-        const remainingDates = allDates.filter(date => 
-          date !== bookingDate && 
-          !existingSingleDates.has(date) && 
-          !bookedDates.has(date)
-        );
-        
-        console.log(`[Booking] Creating ${remainingDates.length} individual single-day listings for remaining recurring dates (out of ${allDates.length} total)`);
-        
-        // Create a single-day listing for the BOOKED date (status: 'booked')
-        const bookedListing = await storage.createSpotListing({
-          spotId: listing.spotId,
-          ownerId: listing.ownerId,
-          listingType: 'single',
-          singleDate: bookingDate,
-          periodStartDate: null,
-          periodEndDate: null,
-          recurringStartDate: listing.recurringStartDate,
-          recurringEndDate: listing.recurringEndDate,
-          daysOfWeek: null,
-          dailyRate: listing.dailyRate,
-          notes: listing.notes,
-          status: 'booked',
-          createdByAdmin: listing.createdByAdmin,
-          donateToCharity: listing.donateToCharity,
-          originalListingType: 'recurring'
-        });
-        console.log(`[Booking] Created booked single-day listing for ${bookingDate}: ${bookedListing.id}`);
-        
-        // Update the booking to reference the new single-day listing
-        await storage.updateBooking(newBooking.id, { listingId: bookedListing.id });
-        console.log(`[Booking] Updated booking ${newBooking.id} to reference listing ${bookedListing.id}`);
-        
-        // Create individual single-day listings for each remaining date (status: 'available')
-        for (const date of remainingDates) {
-          try {
-            await storage.createSpotListing({
-              spotId: listing.spotId,
-              ownerId: listing.ownerId,
-              listingType: 'single',
-              singleDate: date,
-              periodStartDate: null,
-              periodEndDate: null,
-              recurringStartDate: listing.recurringStartDate,
-              recurringEndDate: listing.recurringEndDate,
-              daysOfWeek: null,
-              dailyRate: listing.dailyRate,
-              notes: listing.notes,
-              status: 'available',
-              createdByAdmin: listing.createdByAdmin,
-              donateToCharity: listing.donateToCharity,
-              originalListingType: 'recurring'
-            });
-            console.log(`[Booking] Created single-day listing for ${date}`);
-          } catch (err) {
-            console.error(`[Booking] Failed to create listing for ${date}:`, err);
-          }
-        }
-        
-        // Archive the original recurring listing since it's been split into individual days.
-        // cancelSpotListing sets status + audit note; deleteSpotListing sets deletedAt so it
-        // is excluded from all normal queries (which filter by isNull(deletedAt)).
-        await storage.cancelSpotListing(listing.id, 'Split into individual day listings due to partial booking');
-        await storage.deleteSpotListing(listing.id);
-        console.log(`[Booking] Archived original recurring listing ${listing.id}`);
-      } else {
-        // For single-day listings, just mark as booked
-        await storage.updateSpotListingStatus(listing.id, 'booked');
-        console.log(`[Booking] Updated listing ${listing.id} status to 'booked'`);
-      }
+      // Handle period/recurring listings: split into individual day listings so each
+      // remaining day stays independently bookable; single-day listings just flip to 'booked'.
+      await splitListingForBooking(listing, bookingDate, newBooking.id);
 
       // Confirm the lock with the new booking
       await confirmLock(activeLock.id, newBooking.id);
@@ -3958,6 +3981,241 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       console.error("Error creating booking:", error);
+      res.status(500).json({ error: "Failed to create booking" });
+    }
+  });
+
+  // ADMIN: Create a booking on behalf of a renter (e.g. the renter used a spot but couldn't
+  // complete the booking themselves). Restricted to BCI-managed (shared pool) spots only —
+  // an admin must never create a booking on an individually-owned peer-to-peer spot without
+  // that owner's knowledge. Reuses the same listing-lookup, price-calculation, and
+  // duplicate-check logic as the renter-facing endpoint above. Unlike the renter flow, past
+  // dates are explicitly allowed here.
+  app.post("/api/admin/bookings", requireAdmin, async (req: any, res) => {
+    try {
+      const adminUserId = getAuthenticatedUserId(req);
+      if (!adminUserId) {
+        return res.status(401).json({ error: "Admin not authenticated" });
+      }
+
+      const adminCreateBookingSchema = z.object({
+        renterId: z.string().min(1, "renterId is required"),
+        spotId: z.string().min(1, "spotId is required"),
+        bookingDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "bookingDate must be in YYYY-MM-DD format"),
+        dailyRate: z.union([z.string(), z.number()]).optional(),
+        notes: z.string().optional(),
+      });
+
+      const { renterId, spotId, bookingDate, dailyRate: requestedDailyRate, notes } = adminCreateBookingSchema.parse(req.body);
+
+      // Validate it's a real calendar date (regex above only checks the shape)
+      const parsedDate = new Date(bookingDate + 'T00:00:00');
+      if (isNaN(parsedDate.getTime())) {
+        return res.status(400).json({ error: "Invalid bookingDate: not a valid calendar date" });
+      }
+
+      const renter = await storage.getUser(renterId);
+      if (!renter) {
+        return res.status(404).json({ error: "Renter not found" });
+      }
+
+      const spot = await storage.getParkingSpot(spotId);
+      if (!spot || spot.deletedAt) {
+        return res.status(404).json({ error: "Parking spot not found" });
+      }
+
+      // SECURITY: This flow is restricted to BCI-managed (shared pool) spots only. An
+      // individually-owned spot's owner has not consented to and isn't aware of this booking.
+      if (spot.ownerId) {
+        return res.status(403).json({
+          error: "Spot is individually owned",
+          message: "Admin booking creation is only available for BCI-managed (shared pool) spots. This spot has an individual owner who has not consented to this booking."
+        });
+      }
+      if (!spot.isBciManaged) {
+        return res.status(403).json({
+          error: "Spot is not BCI-managed",
+          message: "Admin booking creation is only available for BCI-managed (shared pool) spots."
+        });
+      }
+
+      if (!spot.isBookable) {
+        return res.status(403).json({
+          error: "This parking spot is not available for booking",
+          reason: "Spot is marked as non-bookable"
+        });
+      }
+
+      // Reuse the same listing lookup as the renter-facing endpoint (single/period/recurring)
+      const existingListing = await findListingForBookingDate(spotId, bookingDate);
+
+      // If no active listing covers this date (common for backdated entries), validate we
+      // have a rate to set one up with — but DON'T create it yet. Creating it here, before the
+      // duplicate-booking check, would leave a phantom 'available' listing behind whenever the
+      // booking itself turns out to conflict. The actual creation happens inside the same
+      // transaction as the booking insert, below, so any failure rolls both back together.
+      let rateForNewListing: number | null = null;
+      if (!existingListing) {
+        const rateInput = requestedDailyRate != null ? Number(requestedDailyRate) : (spot.defaultPrice != null ? Number(spot.defaultPrice) : NaN);
+        if (!rateInput || isNaN(rateInput) || rateInput <= 0) {
+          return res.status(400).json({
+            error: "No listing found for this date",
+            message: "No active listing covers this spot on the selected date, and no dailyRate was provided to set one up. Provide a dailyRate or choose a date with an existing listing."
+          });
+        }
+        rateForNewListing = rateInput;
+      }
+
+      // RACE CONDITION PREVENTION: same transactional lock + duplicate check as the renter flow.
+      // `listing` is populated inside the transaction (either the locked existing row, or the
+      // newly-created one) so the code after the transaction can reference whichever applies.
+      let listing: any = existingListing;
+      let newBooking: any;
+      try {
+        newBooking = await db.transaction(async (tx) => {
+          if (existingListing) {
+            const lockedListings = await tx
+              .select({ id: spotListings.id, status: spotListings.status })
+              .from(spotListings)
+              .where(eq(spotListings.id, existingListing.id))
+              .for('update');
+
+            const lockedListing = lockedListings[0];
+            if (!lockedListing || lockedListing.status !== 'available') {
+              throw Object.assign(new Error("Spot no longer available"), { statusCode: 409, userMessage: "This spot has just been booked for that date. Please choose a different date." });
+            }
+          }
+
+          // Duplicate-booking check runs regardless of whether a listing already existed —
+          // this must happen BEFORE creating a fallback listing so a conflicting booking never
+          // leaves an orphaned 'available' listing behind.
+          const dupBookings = await tx
+            .select({ id: bookings.id })
+            .from(bookings)
+            .where(and(
+              eq(bookings.spotId, spotId),
+              eq(bookings.bookingDate, bookingDate),
+              not(eq(bookings.status, 'cancelled'))
+            ))
+            .limit(1);
+
+          if (dupBookings.length > 0) {
+            throw Object.assign(new Error("Duplicate booking"), { statusCode: 409, userMessage: "This spot has already been booked for that date." });
+          }
+
+          if (!existingListing) {
+            const attribution = resolveAdminListingAttribution(spot, adminUserId);
+            const [createdListing] = await tx
+              .insert(spotListings)
+              .values({
+                spotId,
+                ownerId: attribution.ownerId,
+                listingType: 'single',
+                singleDate: bookingDate,
+                dailyRate: rateForNewListing!.toString(),
+                status: 'available',
+                createdByAdmin: attribution.createdByAdmin,
+              } as any)
+              .returning();
+            listing = createdListing;
+          }
+
+          const actualDailyRate = calculateEffectiveDailyRate(listing, bookingDate);
+          const actualTotalAmount = actualDailyRate; // Single day booking
+
+          const [created] = await tx
+            .insert(bookings)
+            .values({
+              spotId,
+              listingId: listing.id,
+              bookingDate,
+              renterId,
+              ownerId: spot.ownerId || "unassigned",
+              dailyRate: actualDailyRate.toString(),
+              totalAmount: actualTotalAmount.toString(),
+              status: 'confirmed',
+              paymentStatus: 'pending',
+              notes: notes || null,
+            } as any)
+            .returning();
+
+          return created;
+        });
+      } catch (txErr: any) {
+        if (txErr.statusCode === 409) {
+          console.warn(`[Admin Booking] Duplicate booking prevented for spot ${spotId} on ${bookingDate}: ${txErr.message}`);
+          return res.status(409).json({
+            error: "Spot no longer available",
+            message: txErr.userMessage || "This spot has already been booked. Please try a different date."
+          });
+        }
+        throw txErr;
+      }
+
+      // Split period/recurring listings the same way the renter flow does; single-day
+      // listings just flip to 'booked'.
+      await splitListingForBooking(listing, bookingDate, newBooking.id);
+
+      await auditService.logAction("CREATE", "booking", {
+        entityId: newBooking.id,
+        message: `Admin ${adminUserId} created booking for renter ${renter.email || renterId} on spot ${spot.spotNumber} (${bookingDate})`,
+        after: newBooking
+      });
+
+      // Send the same booking confirmation notification the normal flow sends (fire-and-forget)
+      setImmediate(async () => {
+        try {
+          const notificationPreferences = await storage.getNotificationPreferences(renterId);
+          const displayName = renter.firstName && renter.lastName
+            ? `${renter.firstName} ${renter.lastName}`
+            : renter.firstName || renter.lastName || renter.email || 'User';
+
+          const spotLocation = await storage.getLocation(spot.locationId);
+          const locationName = spotLocation?.office || 'BCI Campus';
+          const buildingName = spotLocation?.building || locationName;
+          const floorPlanBaseUrl = spotLocation?.floorPlanBaseUrl || null;
+          const seatNumber = spot.seatNumber || null;
+          const visualDirectoryUrl = (floorPlanBaseUrl && seatNumber) ? `${floorPlanBaseUrl}${seatNumber}` : null;
+
+          const bookingDetails = {
+            id: newBooking.id,
+            spotNumber: spot.spotNumber,
+            location: locationName,
+            building: buildingName,
+            startDate: new Date(newBooking.bookingDate),
+            endDate: new Date(newBooking.bookingDate),
+            rate: Number(newBooking.dailyRate),
+            totalAmount: Number(newBooking.totalAmount),
+            visualDirectoryUrl
+          };
+
+          // Spot has no individual owner (validated above), so this is always a Workplace
+          // Services booking — no spot owner to notify.
+          await sendBookingConfirmationNotification(
+            { name: displayName, email: renter.email || '', id: renter.id },
+            bookingDetails,
+            notificationPreferences || {},
+            { name: 'BCI Workplace Services', email: WORKPLACE_SERVICES_EMAIL, id: 'workplace-services' },
+            true
+          );
+        } catch (emailError) {
+          console.error('[Admin Booking] Failed to send booking confirmation email:', emailError);
+        }
+      });
+
+      res.status(201).json(newBooking);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid booking data", details: error.errors });
+      }
+      if (error?.code === '23505' && error?.constraint?.includes('UDX_bookings_active_spot_date')) {
+        console.warn("[Admin Booking] Unique constraint violation prevented duplicate booking:", error.detail);
+        return res.status(409).json({
+          error: "Spot no longer available",
+          message: "This spot has already been booked for that date. Please try a different date."
+        });
+      }
+      console.error("Error creating admin booking:", error);
       res.status(500).json({ error: "Failed to create booking" });
     }
   });
