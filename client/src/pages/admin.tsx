@@ -9,6 +9,12 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
@@ -16,10 +22,10 @@ import { exportToExcel, type ExportData } from "@/utils/export-utils"
 import { getDateRangeLabel } from "@/lib/date-utils"
 import { 
   Users, Car, CalendarCheck, BarChart3, FileText, Shield,
-  TrendingUp, Clock, MapPin, AlertTriangle, ArrowRight,
+  TrendingUp, Clock, MapPin, AlertTriangle,
   Building, CheckCircle2, UserPlus, Settings, Bell, RefreshCw,
   DollarSign, Download, AlertCircle, Loader2, Eye, EyeOff, Calendar,
-  PlusCircle
+  PlusCircle, LayoutGrid
 } from "lucide-react"
 import {
   LineChart,
@@ -654,20 +660,73 @@ export default function Admin() {
             </Select>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  disabled={isLoadingAnalytics} 
+                <Button
+                  variant="outline"
+                  size="icon"
+                  disabled={isLoadingAnalytics}
                   onClick={handleExportReport}
                   data-testid="button-export-report"
+                  aria-label={t('common.exportReport')}
                 >
-                  <Download className="h-4 w-4 mr-2" />
-                  {t('common.exportReport')}
+                  <Download className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
                 {t('tooltip.analytics.exportReport')}
               </TooltipContent>
             </Tooltip>
+            <DropdownMenu>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      data-testid="button-quick-actions-menu"
+                      aria-label="Quick actions"
+                    >
+                      <LayoutGrid className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Quick actions</TooltipContent>
+              </Tooltip>
+              <DropdownMenuContent align="end" className="w-64">
+                {quickActions.map((action) => {
+                  const Icon = action.icon;
+                  const content = (
+                    <>
+                      <div className={`p-1.5 rounded-md ${action.bgColor}`}>
+                        <Icon className={`h-4 w-4 ${action.iconColor}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium leading-none">{action.title}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{action.description}</p>
+                      </div>
+                    </>
+                  );
+                  if (action.onClick) {
+                    return (
+                      <DropdownMenuItem
+                        key={action.title}
+                        onClick={action.onClick}
+                        className="gap-2 items-start py-2"
+                        data-testid={action.testId}
+                      >
+                        {content}
+                      </DropdownMenuItem>
+                    );
+                  }
+                  return (
+                    <DropdownMenuItem key={action.title} asChild className="gap-2 items-start py-2">
+                      <Link href={action.url!} data-testid={action.testId}>
+                        {content}
+                      </Link>
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
               <Avatar className="h-10 w-10">
                 <AvatarFallback className="text-sm bg-primary text-primary-foreground">
@@ -685,48 +744,6 @@ export default function Admin() {
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4" data-testid="admin-quick-actions">
-        {quickActions.map((action) => {
-          const Icon = action.icon;
-          const cardBody = (
-            <Card className="hover-elevate active-elevate-2 cursor-pointer h-full">
-              <CardContent className="p-4 flex items-start gap-3">
-                <div className={`p-2 rounded-lg ${action.bgColor}`}>
-                  <Icon className={`h-5 w-5 ${action.iconColor}`} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm">{action.title}</p>
-                  <p className="text-xs text-muted-foreground">{action.description}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{action.stats}</p>
-                </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
-              </CardContent>
-            </Card>
-          );
-
-          if (action.onClick) {
-            return (
-              <button
-                key={action.title}
-                type="button"
-                className="text-left"
-                onClick={action.onClick}
-                data-testid={action.testId}
-              >
-                {cardBody}
-              </button>
-            );
-          }
-
-          return (
-            <Link key={action.title} href={action.url!} data-testid={action.testId}>
-              {cardBody}
-            </Link>
-          );
-        })}
       </div>
 
       {/* Key Metrics Overview */}
