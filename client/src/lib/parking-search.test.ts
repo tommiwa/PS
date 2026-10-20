@@ -5,12 +5,13 @@ import {
   isSearchTileAvailable, matchesSearchDate, matchesSearchText, parseSearchInput, toggleSearchFilter, withoutDateKeywords,
   type ParsedSearch, type SearchInput,
 } from "./parking-search"
-import { getTodayInTimezoneSync, getTomorrowInTimezoneSync } from "./timezone"
+import { getTodayInTimezoneSync, getTomorrowInTimezoneSync, setConfiguredTimezone } from "./timezone"
 
 beforeEach(() => {
   vi.useFakeTimers()
   // UTC has already crossed midnight, while the parking timezone is still Oct 20.
   vi.setSystemTime(new Date("2026-10-21T02:00:00Z"))
+  setConfiguredTimezone("America/Los_Angeles")
 })
 afterEach(() => vi.useRealTimers())
 

@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, Fragment } from "react"
 import { useQuery, useMutation } from "@tanstack/react-query"
+import { setConfiguredTimezone } from "@/lib/timezone"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -759,6 +760,10 @@ export default function AdminDataManagement() {
       return await response.json();
     },
     onSuccess: (updatedConfig: AppConfig) => {
+      if (updatedConfig.key === "timezone") {
+        setConfiguredTimezone(updatedConfig.value);
+        queryClient.invalidateQueries({ queryKey: ["/api/app-configs/timezone"] });
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/admin/app-configs"] });
       setShowEditConfigDialog(false);
       setEditingConfig(null);

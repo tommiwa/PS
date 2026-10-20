@@ -21,6 +21,7 @@ import { ConfirmProvider } from "@/hooks/use-confirm";
 import { NotificationCenter } from "@/components/notification-center";
 import { WhatsNewController } from "@/components/whats-new-modal";
 import { TodayBookingBadge } from "@/components/today-booking-badge";
+import { TimezoneGate } from "@/components/timezone-gate";
 import { LogOut, Loader2, FileText, CheckCircle2 } from "lucide-react";
 import { useEffect, useState, lazy, Suspense } from "react";
 import parkShareLogo from "@assets/logo.png";
@@ -267,7 +268,7 @@ function ProtectedRouter() {
     );
   }
 
-  return <AuthenticatedApp />;
+  return <TimezoneGate><AuthenticatedApp /></TimezoneGate>;
 }
 
 // Component to handle landing page redirects

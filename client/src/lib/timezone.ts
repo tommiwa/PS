@@ -4,87 +4,103 @@ import { format, parseISO } from 'date-fns';
 // Default timezone (PST/PDT) - matches backend default
 const DEFAULT_TIMEZONE = 'America/Los_Angeles';
 
-// Cache for timezone config
+// One source for synchronous UI and asynchronous formatting. Never clear a known
+// timezone during refresh: date-dependent UI must not temporarily fall back to LA.
 let cachedTimezone: string | null = null;
+let fetchedAt = 0;
+let pendingTimezone: Promise<string> | null = null;
+let revision = 0;
+const listeners = new Set<() => void>();
+export const TIMEZONE_REFRESH_MS = 5 * 60 * 1000;
 
-/**
- * Fetch the configured timezone from the backend
- */
-export async function getConfiguredTimezone(): Promise<string> {
-  // Return cached value if available
-  if (cachedTimezone) {
+export function subscribeToTimezone(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => { listeners.delete(listener); };
+}
+
+/** Publish only a validated setting (also used after an admin saves it). */
+export function setConfiguredTimezone(timezone: string): void {
+  if (!timezone.trim()) throw new Error('Application timezone cannot be empty');
+  new Intl.DateTimeFormat('en-US', { timeZone: timezone }).format();
+  revision++;
+  fetchedAt = Date.now();
+  if (cachedTimezone === timezone) return;
+  cachedTimezone = timezone;
+  listeners.forEach(listener => listener());
+}
+
+/** Must be initialized behind the authenticated UI gate, not a guessed first date. */
+export function getConfiguredTimezoneSync(): string {
+  if (cachedTimezone === null) throw new Error('Application timezone has not loaded');
+  return cachedTimezone;
+}
+
+/** Fetch the existing authenticated config endpoint, sharing concurrent requests. */
+export async function getConfiguredTimezone(forceRefresh = false): Promise<string> {
+  if (!forceRefresh && cachedTimezone && Date.now() - fetchedAt < TIMEZONE_REFRESH_MS) {
     return cachedTimezone;
   }
-
-  try {
-    const response = await fetch('/api/app-configs');
-    if (!response.ok) {
-      console.warn('Failed to fetch app configs, using default timezone');
-      return DEFAULT_TIMEZONE;
+  if (pendingTimezone) return pendingTimezone;
+  const requestRevision = revision;
+  pendingTimezone = (async () => {
+    const response = await fetch('/api/app-configs/timezone', {
+      credentials: 'include',
+      cache: 'no-store',
+      signal: AbortSignal.timeout(15000),
+    });
+    // Missing setting uses the same default as the backend. Network/auth/server
+    // errors are not evidence that the app uses LA: let the UI offer a retry.
+    let timezone = DEFAULT_TIMEZONE;
+    if (response.status !== 404) {
+      if (!response.ok) throw new Error('Unable to load the application timezone');
+      const config = await response.json();
+      if (config.key !== 'timezone' || typeof config.value !== 'string') {
+        throw new Error('Invalid application timezone configuration');
+      }
+      timezone = config.value || DEFAULT_TIMEZONE;
     }
-
-    const configs = await response.json();
-    const timezoneConfig = configs.find((c: any) => c.key === 'timezone');
-    
-    const timezone = timezoneConfig?.value || DEFAULT_TIMEZONE;
-    cachedTimezone = timezone;
-    
-    // Clear cache after 5 minutes
-    setTimeout(() => {
-      cachedTimezone = null;
-    }, 5 * 60 * 1000);
-    
-    return timezone;
-  } catch (error) {
-    console.error('Error fetching timezone config:', error);
-    return DEFAULT_TIMEZONE;
+    // An admin save that finished during this request takes precedence.
+    if (revision === requestRevision) setConfiguredTimezone(timezone);
+    return getConfiguredTimezoneSync();
+  })();
+  try {
+    return await pendingTimezone;
+  } finally {
+    pendingTimezone = null;
   }
 }
 
 /**
- * Get today's date string in YYYY-MM-DD format using the default timezone (synchronous).
- * Uses DEFAULT_TIMEZONE directly — suitable for UI filters that cannot await.
+ * Get today's calendar date in the initialized application timezone.
  */
 export function getTodayInTimezoneSync(): string {
-  return formatInTimeZone(new Date(), DEFAULT_TIMEZONE, 'yyyy-MM-dd');
+  return formatInTimeZone(new Date(), getConfiguredTimezoneSync(), 'yyyy-MM-dd');
 }
 
-/**
- * Get tomorrow's date string in YYYY-MM-DD format using the default timezone (synchronous).
- *
- * DST-safe: derives today's date components from the target timezone, then anchors
- * a UTC instant at noon on that calendar day before adding exactly 24 hours.
- * Noon UTC is never a DST transition point in any American timezone, so the
- * resulting instant always lands unambiguously on the next calendar day.
- */
+// UTC here is only a calendar-arithmetic container, not an instant to convert
+// back to the parking zone (that would shift the day in UTC+13/+14 zones).
+function calendarDay(date: string): Date {
+  return new Date(`${date}T12:00:00Z`);
+}
+
+/** Advance the configured calendar day, not the current instant by 24 hours. */
 export function getTomorrowInTimezoneSync(): string {
-  const todayStr = getTodayInTimezoneSync(); // "YYYY-MM-DD" in the target timezone
-  const [year, month, day] = todayStr.split('-').map(Number);
-  // Build a UTC instant at noon on today's timezone-local calendar date.
-  // Month in Date.UTC is 0-indexed.
-  const todayNoonUtcMs = Date.UTC(year, month - 1, day, 12, 0, 0);
-  // Add 24 hours to land at noon UTC on the next calendar day.
-  const tomorrowNoonUtc = new Date(todayNoonUtcMs + 24 * 60 * 60 * 1000);
-  return formatInTimeZone(tomorrowNoonUtc, DEFAULT_TIMEZONE, 'yyyy-MM-dd');
+  const day = calendarDay(getTodayInTimezoneSync());
+  day.setUTCDate(day.getUTCDate() + 1);
+  return day.toISOString().slice(0, 10);
 }
 
 /**
- * Get the end-of-week date string in YYYY-MM-DD format using the default timezone (synchronous).
+ * Get the end-of-week date string in the initialized application timezone.
  *
  * @param weekStartDay - 'sunday' (default) means the week starts on Sunday and ends on Saturday (Canadian/BCI convention).
  *                       'monday' means the week starts on Monday and ends on Sunday.
  *
- * DST-safe: derives today's date components from the target timezone, anchors a UTC
- * instant at noon on that calendar day, then advances by the number of days until the
- * end of the week.  Noon UTC is never a DST transition point in any American timezone.
+ * Calendar arithmetic avoids DST-length days and extreme-offset date shifts.
  */
 export function getEndOfWeekInTimezoneSync(weekStartDay: string = 'sunday'): string {
-  const todayStr = getTodayInTimezoneSync(); // "YYYY-MM-DD" in the target timezone
-  const [year, month, day] = todayStr.split('-').map(Number);
-  // Build a UTC instant at noon on today's timezone-local calendar date.
-  const todayNoonUtcMs = Date.UTC(year, month - 1, day, 12, 0, 0);
-  // Determine the UTC day-of-week (0=Sunday … 6=Saturday) from the noon instant.
-  const dayOfWeek = new Date(todayNoonUtcMs).getUTCDay();
+  const day = calendarDay(getTodayInTimezoneSync());
+  const dayOfWeek = day.getUTCDay();
 
   let daysUntilEnd: number;
   if (weekStartDay === 'sunday') {
@@ -95,8 +111,8 @@ export function getEndOfWeekInTimezoneSync(weekStartDay: string = 'sunday'): str
     daysUntilEnd = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
   }
 
-  const endOfWeekNoonUtc = new Date(todayNoonUtcMs + daysUntilEnd * 24 * 60 * 60 * 1000);
-  return formatInTimeZone(endOfWeekNoonUtc, DEFAULT_TIMEZONE, 'yyyy-MM-dd');
+  day.setUTCDate(day.getUTCDate() + daysUntilEnd);
+  return day.toISOString().slice(0, 10);
 }
 
 /**

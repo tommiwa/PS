@@ -1,13 +1,16 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 
 vi.mock('date-fns-tz', async (importOriginal) => {
   const actual = await importOriginal<typeof import('date-fns-tz')>();
   return actual;
 });
 
-import { getTodayInTimezoneSync, getTomorrowInTimezoneSync } from '../client/src/lib/timezone';
+import { getTodayInTimezoneSync, getTomorrowInTimezoneSync, setConfiguredTimezone } from '../client/src/lib/timezone';
 
 const TIMEZONE = 'America/Los_Angeles';
+
+// Production mounts date-dependent screens only after loading this setting.
+beforeEach(() => setConfiguredTimezone(TIMEZONE));
 
 function mockNow(isoUtc: string) {
   const ms = new Date(isoUtc).getTime();
