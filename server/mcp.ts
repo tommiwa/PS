@@ -223,6 +223,12 @@ export function registerMcpRoutes(app: Express) {
   });
 
   app.delete("/mcp", async (req, res) => {
+    const isValid = await requireAuth(req);
+    if (!isValid) {
+      res.status(401).json({ error: "Invalid or revoked API key" });
+      return;
+    }
+
     const sessionId = req.headers['mcp-session-id'] as string | undefined;
     if (sessionId && streamableSessions.has(sessionId)) {
       const entry = streamableSessions.get(sessionId)!;
@@ -256,6 +262,12 @@ export function registerMcpRoutes(app: Express) {
   });
 
   app.post("/mcp/messages", async (req, res) => {
+    const isValid = await requireAuth(req);
+    if (!isValid) {
+      res.status(401).json({ error: "Invalid or revoked API key" });
+      return;
+    }
+
     const sessionId = req.query.sessionId as string;
     const entry = sseTransports.get(sessionId);
     if (!entry) {
