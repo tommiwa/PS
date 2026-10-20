@@ -1,7 +1,11 @@
 import { useState, useEffect } from "react"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { queryClient } from "@/lib/queryClient"
-import { EnhancedSearch, ParsedSearch } from "@/components/enhanced-search"
+import { EnhancedSearch } from "@/components/enhanced-search"
+import { emptySearchHeading, isSearchTileAvailable, matchesSearchDate, withoutDateKeywords } from "@/lib/parking-search"
+import { useParkingSearch } from "@/hooks/use-parking-search"
+import { useIsMobile } from "@/hooks/use-mobile"
+import { getTodayInTimezoneSync, getTomorrowInTimezoneSync } from "@/lib/timezone"
 import { ParkingSpotCard } from "@/components/parking-spot-card"
 import { ParkingCalendar } from "@/components/parking-calendar"
 import { BookingForm } from "@/components/booking-form"
@@ -99,10 +103,19 @@ interface DisplaySpot extends DBParkingSpot {
 }
 
 export default function Search() {
-  const [searchCriteria, setSearchCriteria] = useState<ParsedSearch>({
-    query: "",
-    quickFilters: []
+  const isMobile = useIsMobile()
+  // Same week configuration used by the existing This Week quick filter.
+  const { data: weekStartDayConfig } = useQuery<{ key: string; value: string } | null>({
+    queryKey: ['/api/app-configs/week_start_day'],
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const res = await fetch('/api/app-configs/week_start_day', { credentials: 'include' })
+      if (!res.ok) return null
+      return res.json()
+    },
   })
+  const weekStartDay = weekStartDayConfig?.value ?? "sunday"
+  const { input: searchInput, criteria: searchCriteria, update: updateSearch, clear: clearSearch } = useParkingSearch(isMobile, weekStartDay)
   
   const [selectedSpot, setSelectedSpot] = useState<DisplaySpot | null>(null)
   const [showBookingForm, setShowBookingForm] = useState(false)
@@ -586,20 +599,9 @@ export default function Search() {
   const baseFilteredSpots = spots.filter(spot => {
     const { location, spotType, priceMin, priceMax, isInside, isBciManaged, query } = searchCriteria
     
-    // Filter out spots with past availability dates
-    if (spot.availability?.date && isPastDate(spot.availability.date)) {
-      return false; // Don't show past spots to renters
-    }
-    
-    // Basic availability filtering - only show generally available spots for calendar
-    if (!spot.isAvailable) {
-      return false // Don't show unavailable spots in calendar view
-    }
-    
-    // Filter out non-bookable spots (taxable benefit) from search results
-    if (spot.isBookable === false) {
-      return false // Don't show non-bookable spots to renters
-    }
+    // Mobile uses the parking-zone day throughout, including this early base filter.
+    // Desktop retains its existing device-local past-date behavior.
+    if (!isSearchTileAvailable(spot, isMobile)) return false
     
     // BCI Managed filtering - only show BCI-managed spots
     if (isBciManaged !== undefined && isBciManaged) {
@@ -611,7 +613,8 @@ export default function Search() {
     
     // Full text search across all relevant fields shown in UI
     if (query && query.trim()) {
-      const queryLower = query.toLowerCase().trim()
+      // Mobile date keywords are already applied as date constraints, not literal spot text.
+      const queryLower = (isMobile ? withoutDateKeywords(query) : query).toLowerCase().trim()
       
       // Format dates for search (e.g., "January 29 Jan 2026")
       const formatDateForSearch = (dateStr: string): string => {
@@ -740,6 +743,7 @@ export default function Search() {
 
   // Date-specific filtering for tiles view
   const filteredSpots = baseFilteredSpots.filter(spot => {
+    if (isMobile) return matchesSearchDate(spot.availability?.date, searchCriteria)
     const { date, dateRange } = searchCriteria
     
     // If no date or dateRange specified, show all base filtered spots
@@ -866,12 +870,6 @@ export default function Search() {
     handleBookingFormSubmit(selectedSpot, bookingData)
   }
 
-  const handleSearch = (parsed: ParsedSearch) => {
-    console.log('Search triggered with criteria:', parsed)
-    setSearchCriteria(parsed)
-    // In real app, this would trigger API call
-  }
-
   const getActiveFilterCount = () => {
     const { location, spotType, priceMin, priceMax, isInside, isBciManaged, date, query, quickFilters } = searchCriteria
     let count = 0
@@ -897,8 +895,8 @@ export default function Search() {
     let label = `Search Results (${sortedSpots.length})`
     
     if (date) {
-      const today = new Date().toISOString().split('T')[0]
-      const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      const today = isMobile ? getTodayInTimezoneSync() : new Date().toISOString().split('T')[0]
+      const tomorrow = isMobile ? getTomorrowInTimezoneSync() : new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
       
       if (date === today) {
         label = `Spots Available Today (${sortedSpots.length})`
@@ -929,9 +927,9 @@ export default function Search() {
         </div>
       </div>
 
-      <EnhancedSearch onSearch={handleSearch} />
+      <EnhancedSearch value={searchInput} criteria={searchCriteria} onChange={updateSearch} isMobile={isMobile} weekStartDay={weekStartDay} />
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value={isMobile ? "tiles" : activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4 mb-4">
           <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
             <TabsList className="hidden md:grid w-full md:w-[200px] grid-cols-2">
@@ -1011,7 +1009,7 @@ export default function Search() {
             </div>
           </div>
           
-          {activeTab === "tiles" && (
+          {(isMobile || activeTab === "tiles") && (
             <div className="flex items-center gap-2 w-full md:w-auto">
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -1065,16 +1063,15 @@ export default function Search() {
             <Card>
               <CardContent className="p-8 text-center">
                 <MapPin className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-semibold mb-2">No spots found</h3>
+                <h3 className="text-lg font-semibold mb-2">{emptySearchHeading(searchCriteria, isMobile, weekStartDay)}</h3>
                 <p className="text-muted-foreground mb-4">
-                  Try adjusting your search filters to find more available parking spots.
+                  {isMobile
+                    ? "No available parking spots match your search. Try changing or clearing your search and filters."
+                    : "Try adjusting your search filters to find more available parking spots."}
                 </p>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button onClick={() => setSearchCriteria({
-                      query: "",
-                      quickFilters: []
-                    })} data-testid="button-clear-search-results">
+                    <Button onClick={clearSearch} data-testid="button-clear-search-results">
                       Clear Search
                     </Button>
                   </TooltipTrigger>

@@ -10,3 +10,4 @@
 - [Program start date 2026-03-16](program-start-date-2026-03-16.md) — booking/lifetime-count metrics that should reflect "since program launch" must use this cutoff, not all-time history; duplicated across leaderboard and milestone code.
 - [Admin auth in dev testing](admin-dev-auth-header.md) — requireAdmin accepts an `x-demo-auth` header in non-production; use curl with it to verify new admin API endpoints since OIDC login blocks Screenshot-tool verification of admin pages.
 - [Reports-controller full-module mocks](reports-controller-mock-fanout.md) — several unrelated server test files `vi.mock('./reports-controller', () => ({...}))` with an explicit export list; adding a new export there requires updating every one of those mocks or route registration throws at import time.
+- [Search date-reference consistency](search-date-reference.md) — test early tile rejection and parsed date matching together when the phone's calendar is ahead of the parking timezone.

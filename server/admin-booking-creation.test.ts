@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 import type { Server } from 'http';
@@ -479,6 +479,14 @@ describe('Admin manual booking creation', () => {
   });
 
   describe('Admin-created booking appears correctly in payroll summary', () => {
+    beforeEach(() => {
+      // This test asserts the current payroll month using a September fixture.
+      // Freeze only Date so it remains valid as real calendar months advance.
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date('2026-09-28T19:00:00Z'));
+    });
+    afterEach(() => vi.useRealTimers());
+
     it('includes an admin-created BCI booking in the current month payroll summary, correctly classified', async () => {
       const spot = makeBciSpot();
       const listing = makeListing();

@@ -1,28 +1,18 @@
-import { useState, useRef, useEffect } from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useState, useRef } from "react"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { Search, X, Zap, Accessibility, Calendar, Filter, SlidersHorizontal } from "lucide-react"
-import { getTodayInTimezoneSync, getTomorrowInTimezoneSync, getEndOfWeekInTimezoneSync } from "@/lib/timezone"
-
-export interface ParsedSearch {
-  query: string
-  location?: string
-  spotType?: "regular" | "accessible" | "electric" | "tesla_ev" | "reserved" | "all"
-  priceMin?: number
-  priceMax?: number
-  date?: string
-  dateRange?: { start: string; end: string }
-  isInside?: boolean
-  isBciManaged?: boolean
-  quickFilters: string[]
-}
+import { effectiveDateFilter, toggleSearchFilter, type SearchInput, type ParsedSearch } from "@/lib/parking-search"
 
 interface EnhancedSearchProps {
-  onSearch: (parsed: ParsedSearch) => void
+  value: SearchInput
+  criteria: ParsedSearch
+  onChange: (value: SearchInput, debounce?: boolean) => void
+  isMobile: boolean
+  weekStartDay: string
   className?: string
 }
 
@@ -37,183 +27,21 @@ const QUICK_FILTERS = [
 
 const MOBILE_VISIBLE_FILTERS = 5
 
-export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
-  const [query, setQuery] = useState("")
-  const [activeFilters, setActiveFilters] = useState<string[]>([])
+export function EnhancedSearch({ value, criteria, onChange, isMobile, weekStartDay, className }: EnhancedSearchProps) {
+  const { query, quickFilters: activeFilters } = value
   const [showMoreFilters, setShowMoreFilters] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
-
-  // Fetch the configured week start day (sunday = week ends Saturday, monday = week ends Sunday)
-  const { data: weekStartDayConfig } = useQuery<{ key: string; value: string } | null>({
-    queryKey: ['/api/app-configs/week_start_day'],
-    staleTime: 5 * 60 * 1000,
-    queryFn: async () => {
-      const res = await fetch('/api/app-configs/week_start_day', { credentials: 'include' });
-      if (res.status === 404) return null;
-      if (!res.ok) return null;
-      return res.json();
-    },
-  })
-  const weekStartDay = weekStartDayConfig?.value ?? 'sunday'
-
-  // Parse the search query intelligently
-  const parseSearchQuery = (searchQuery: string, filters: string[] = activeFilters): ParsedSearch => {
-    const parsed: ParsedSearch = {
-      query: searchQuery,
-      quickFilters: [...filters]
-    }
-
-    const terms = searchQuery.toLowerCase().split(/\s+/)
-
-    // Handle active filters first
-    filters.forEach(filterValue => {
-      if (filterValue === "today") {
-        parsed.date = getTodayInTimezoneSync()
-      } else if (filterValue === "tomorrow") {
-        parsed.date = getTomorrowInTimezoneSync()
-      } else if (filterValue === "this_week") {
-        parsed.dateRange = {
-          start: getTodayInTimezoneSync(),
-          end: getEndOfWeekInTimezoneSync(weekStartDay)
-        }
-      } else if (filterValue === "electric") {
-        parsed.spotType = "electric"
-      } else if (filterValue === "tesla_ev") {
-        parsed.spotType = "tesla_ev"
-      } else if (filterValue === "accessible") {
-        parsed.spotType = "accessible"
-      } else if (filterValue === "750 pandora ave") {
-        parsed.location = "750 pandora ave"
-      }
-    })
-
-    // Location parsing from query text
-    if (terms.some(t => ["main", "building"].every(w => searchQuery.toLowerCase().includes(w)))) {
-      parsed.location = "750 pandora ave"
-    } else if (terms.includes("north")) {
-      parsed.location = "north lot"
-    } else if (terms.includes("south")) {
-      parsed.location = "south lot"
-    } else if (terms.includes("west")) {
-      parsed.location = "west garage"
-    }
-
-    // Spot type parsing from query text
-    if (terms.includes("tesla") && (terms.includes("ev") || terms.includes("electric") || terms.includes("charging"))) {
-      parsed.spotType = "tesla_ev"
-    } else if (terms.includes("electric") || terms.includes("ev") || terms.includes("charging")) {
-      parsed.spotType = "electric"
-    } else if (terms.includes("accessible") || terms.includes("handicap") || terms.includes("disabled")) {
-      parsed.spotType = "accessible"
-    } else if (terms.includes("reserved") || terms.includes("executive")) {
-      parsed.spotType = "reserved"
-    } else if (terms.includes("regular") || terms.includes("normal")) {
-      parsed.spotType = "regular"
-    }
-
-    // Location type parsing (inside/outside) from query text
-    if (terms.includes("inside") || terms.includes("indoor") || terms.includes("covered")) {
-      parsed.isInside = true
-    } else if (terms.includes("outside") || terms.includes("outdoor") || terms.includes("open")) {
-      parsed.isInside = false
-    }
-
-    // Price parsing from query text
-    // Range match: "$10-20", "$10 to $20", "10-20"
-    const rangeMatch = searchQuery.match(/\$?(\d+)\s*(?:to|-)\s*\$?(\d+)/)
-    if (rangeMatch) {
-      parsed.priceMin = parseInt(rangeMatch[1])
-      parsed.priceMax = parseInt(rangeMatch[2])
-    } else if (searchQuery.includes("under") || searchQuery.includes("less than") || searchQuery.includes("below")) {
-      const underMatch = searchQuery.match(/(?:under|less than|below)\s*\$?(\d+)/)
-      if (underMatch) {
-        parsed.priceMax = parseInt(underMatch[1])
-      }
-    } else if (searchQuery.includes("over") || searchQuery.includes("more than") || searchQuery.includes("above")) {
-      const overMatch = searchQuery.match(/(?:over|more than|above)\s*\$?(\d+)/)
-      if (overMatch) {
-        parsed.priceMin = parseInt(overMatch[1])
-      }
-    } else if (terms.includes("cheap") || terms.includes("affordable")) {
-      parsed.priceMax = 25
-    } else if (terms.includes("expensive") || terms.includes("premium")) {
-      parsed.priceMin = 30
-    }
-
-    // Date parsing from query text
-    if (terms.includes("today")) {
-      parsed.date = getTodayInTimezoneSync()
-    } else if (terms.includes("tomorrow")) {
-      parsed.date = getTomorrowInTimezoneSync()
-    }
-
-    return parsed
-  }
-
-  // Auto-search as user types (debounced 300ms)
-  useEffect(() => {
-    // Clear any existing timer
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current)
-    }
-    
-    // Set new timer to search after 300ms of no typing
-    debounceTimerRef.current = setTimeout(() => {
-      const parsed = parseSearchQuery(query, activeFilters)
-      onSearch(parsed)
-    }, 300)
-    
-    // Cleanup on unmount or when dependencies change
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current)
-      }
-    }
-  }, [query, activeFilters, weekStartDay])
 
   const handleSearch = () => {
-    const parsed = parseSearchQuery(query)
-    onSearch(parsed)
+    onChange(value)
   }
 
   const handleQuickFilter = (filter: typeof QUICK_FILTERS[0]) => {
-    let newQuery = query
-
-    // Add or remove filter
-    const filterExists = activeFilters.includes(filter.value)
-    let newActiveFilters = [...activeFilters]
-
-    if (filterExists) {
-      newActiveFilters = newActiveFilters.filter(f => f !== filter.value)
-      // Remove from query if it exists
-      newQuery = newQuery.replace(new RegExp(`\\b${filter.value}\\b`, 'gi'), '').replace(/\s+/g, ' ').trim()
-    } else {
-      // Date-type filters are mutually exclusive — remove any other date filter first
-      if (filter.type === "date") {
-        const otherDateFilters = QUICK_FILTERS
-          .filter(f => f.type === "date" && f.value !== filter.value)
-          .map(f => f.value)
-        newActiveFilters = newActiveFilters.filter(f => !otherDateFilters.includes(f))
-      }
-      newActiveFilters.push(filter.value)
-      // Only add to query text if it's not a date filter
-      if (filter.type !== "date" && !newQuery.toLowerCase().includes(filter.value.toLowerCase())) {
-        newQuery = newQuery ? `${newQuery} ${filter.value}` : filter.value
-      }
-    }
-
-    setActiveFilters(newActiveFilters)
-    setQuery(newQuery)
-    
-    const parsed = parseSearchQuery(newQuery, newActiveFilters)
-    onSearch(parsed)
+    onChange(toggleSearchFilter(value, filter.value, isMobile, weekStartDay))
   }
 
   const clearSearch = () => {
-    setQuery("")
-    setActiveFilters([])
-    onSearch({ query: "", quickFilters: [] })
+    onChange({ query: "", quickFilters: [] })
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -246,7 +74,9 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
 
   const renderFilterButton = (filter: typeof QUICK_FILTERS[0]) => {
     const Icon = filter.icon
-    const isActive = activeFilters.includes(filter.value)
+    const isActive = isMobile && filter.type === "date"
+      ? effectiveDateFilter(criteria, weekStartDay) === filter.value
+      : activeFilters.includes(filter.value)
     return (
       <Tooltip key={filter.value}>
         <TooltipTrigger asChild>
@@ -354,13 +184,13 @@ export function EnhancedSearch({ onSearch, className }: EnhancedSearchProps) {
             type="text"
             placeholder="Search by owner name, price, type, label (e.g., 'charity', 'top deal', 'free', 'monday')"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => onChange({ ...value, query: e.target.value }, true)}
             onKeyDown={handleKeyDown}
-            className={`pl-10 min-h-[44px] md:h-12 text-base ${query ? 'pr-10' : 'pr-4'}`}
+            className={`pl-10 min-h-[44px] md:h-12 text-base ${query || (isMobile && activeFilters.length > 0) ? 'pr-10' : 'pr-4'}`}
             data-testid="input-enhanced-search"
             title="Search using natural language"
           />
-          {query && (
+           {(query || (isMobile && activeFilters.length > 0)) && (
             <button
               type="button"
               onClick={(e) => {
