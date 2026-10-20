@@ -126,6 +126,7 @@ mtime_ms = 1789066136472
 storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:5af2ed34-e1ec-4a06-8291-9a0071755b92/eef8e69f-8cfb-4d4a-afb9-3764f0bf91ce/6c5fa017-9295-4fff-9e10-b33cc8fa391b"
 storage_version_token = "1789066225025261"
 content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
 [[outputs]]
 id = "POvjiJgFVW8Z1_uue0hxj"
 uri = "file://deliverables/parkshare-milestone/parkshare-milestone-news-post.zip"
@@ -143,7 +144,7 @@ content_type = "application/octet-stream"
 [[outputs]]
 id = "MNN0V03hCZtDebdJaW0I4"
 uri = "file://deliverables/parkshare-milestone/parkshare-news-post.html"
-type = "text"
+type = "html"
 title = "ParkShare milestone post — updated editable draft"
 description = "Revised SharePoint-ready article with generic access language and a clearer explanation of otherwise-unused parking capacity."
 logical_id = "d8518787-b986-400c-b34e-1b188fa275bf"
@@ -181,3 +182,17 @@ mtime_ms = 1788302646192
 storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:5af2ed34-e1ec-4a06-8291-9a0071755b92/9bb8769b-f681-420d-bd70-64ec47889935/48767d0b-bd42-489b-8655-85549813831b"
 storage_version_token = "1788302687142065"
 content_type = "image/png"
+
+[[outputs]]
+id = "tA8S80PBFQdDSKyYGpJ8z"
+uri = "file://docs/bc-timezone/ASSESSMENT.md"
+type = "text"
+title = "BC Timezone Impact Assessment"
+description = "Read-only readiness report: confirmed boundary failures, affected workflows, production/device unknowns, safe verification steps, and prioritized recommendations."
+logical_id = "c6b9f746-64bc-475b-812f-d70d0cb3d052"
+content_hash = "sha256:b9bec5843af2e1b4e8ca0e574f3c0e8cae6f69ea02621be9c1c9032e70dfe6d4"
+size = 23796
+mtime_ms = 1792514096240
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:5af2ed34-e1ec-4a06-8291-9a0071755b92/c6b9f746-64bc-475b-812f-d70d0cb3d052/499cae85-56c1-4933-a212-c06ffb2647b1"
+storage_version_token = "1792514127403539"
+content_type = "text/markdown"
