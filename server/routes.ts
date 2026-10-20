@@ -10621,6 +10621,19 @@ The BCI ParkShare Team`;
         return res.status(404).json({ error: "Configuration not found" });
       }
       
+      // Validate the exact string that will be stored; do not coerce or replace
+      // invalid timezone settings with a default.
+      if (key === 'timezone') {
+        if (typeof value !== 'string' || !value.trim()) {
+          return res.status(400).json({ error: "Timezone must be a non-empty valid timezone string" });
+        }
+        try {
+          new Intl.DateTimeFormat('en-US', { timeZone: value }).format();
+        } catch {
+          return res.status(400).json({ error: "Timezone must be a valid timezone supported by Intl" });
+        }
+      }
+
       // Validate based on data type
       if (config.dataType === 'number') {
         const numValue = Number(value);
