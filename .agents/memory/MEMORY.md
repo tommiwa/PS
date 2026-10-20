@@ -13,3 +13,4 @@
 - [Search date-reference consistency](search-date-reference.md) — test early tile rejection and parsed date matching together when the phone's calendar is ahead of the parking timezone.
 - [BC Pacific time policy](bc-time-policy.md) — preserve historical DST and stored booking days; runtime, browser, and database readiness require independent checks.
 - [Client timezone initialization](client-timezone-initialization.md) — wait for verified settings before date UI; refresh must retain the last known zone, not guess Pacific.
+- [Dependency compatibility constraints](dependency-compatibility.md) — keep Vite 6's esbuild family compatible; retain a verified braces depth guard until upstream ships a fix.
