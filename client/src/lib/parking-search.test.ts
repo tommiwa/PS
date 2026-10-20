@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { readFileSync } from "node:fs"
 import {
   createSearchDebouncer, effectiveDateFilter, emptySearchHeading, initialSearchInput,
-  isSearchTileAvailable, matchesSearchDate, parseSearchInput, toggleSearchFilter, withoutDateKeywords,
+  isSearchTileAvailable, matchesSearchDate, matchesSearchText, parseSearchInput, toggleSearchFilter, withoutDateKeywords,
   type ParsedSearch, type SearchInput,
 } from "./parking-search"
 import { getTodayInTimezoneSync, getTomorrowInTimezoneSync } from "./timezone"
@@ -111,6 +111,83 @@ describe("effective mobile date filters", () => {
       spotType: "tesla_ev", isInside: false, priceMin: 10, priceMax: 20,
     })
     expect(parse("north under $15", [])).toMatchObject({ location: "north lot", priceMax: 15 })
+  })
+})
+
+describe("price search parsing and literal matching", () => {
+  it.each([
+    ["covered cheap", { isInside: true, priceMax: 25 }],
+    ["COVERED CHEAP", { isInside: true, priceMax: 25 }],
+    ["underground affordable", { isInside: true, priceMax: 25 }],
+    ["UNDERGROUND AFFORDABLE", { isInside: true, priceMax: 25 }],
+    ["covered electric under $15", { isInside: true, spotType: "electric", priceMax: 15 }],
+    ["underground accessible OVER $30", { isInside: true, spotType: "accessible", priceMin: 30 }],
+    ["covered tesla electric $10 TO $20", { isInside: true, spotType: "tesla_ev", priceMin: 10, priceMax: 20 }],
+    ["outdoor regular 10-20", { isInside: false, spotType: "regular", priceMin: 10, priceMax: 20 }],
+    ["covered premium", { isInside: true, priceMin: 30 }],
+    ["underground expensive", { isInside: true, priceMin: 30 }],
+    ["covered LeSs   ThAn $15", { isInside: true, priceMax: 15 }],
+    ["underground MoRe   ThAn $30", { isInside: true, priceMin: 30 }],
+    ["covered BELOW $15", { isInside: true, priceMax: 15 }],
+    ["covered ABOVE $30", { isInside: true, priceMin: 30 }],
+  ])("parses complete price phrases in %s on mobile and desktop", (query, expected) => {
+    for (const mobile of [true, false]) {
+      const criteria = parseSearchInput({ query, quickFilters: [] }, mobile)
+      expect(criteria).toMatchObject(expected)
+      expect(criteria.priceMin).toBe("priceMin" in expected ? expected.priceMin : undefined)
+      expect(criteria.priceMax).toBe("priceMax" in expected ? expected.priceMax : undefined)
+    }
+  })
+
+  it.each(["covered", "underground", "leftover30", "thunder15", "cheapest", "unaffordable", "premiumize"])(
+    "does not interpret substrings in %s as price keywords", query => {
+      const criteria = parse(query, [])
+      expect(criteria.priceMin).toBeUndefined()
+      expect(criteria.priceMax).toBeUndefined()
+      expect(matchesSearchText(query, "unrelated spot text")).toBe(false)
+      expect(matchesSearchText(query, query)).toBe(true)
+    },
+  )
+
+  it.each([
+    ["covered cheap", "covered indoor", 25, undefined],
+    ["underground affordable", "underground indoor", 25, undefined],
+    ["under $15", "regular spot", 15, undefined],
+    ["over $30", "regular spot", undefined, 30],
+    ["covered electric under $15", "covered indoor electric ev", 15, undefined],
+    ["underground accessible OVER $30", "underground indoor accessible", undefined, 30],
+    ["covered tesla electric $10 TO $20", "covered indoor tesla electric", 20, 10],
+    ["outdoor regular 10-20", "outdoor regular", 20, 10],
+  ])("retains matching tiles through literal and numeric filtering for %s", (query, text, max, min) => {
+    for (const mobile of [true, false]) {
+      const criteria = parseSearchInput({ query, quickFilters: [] }, mobile)
+      // Include a $20 tile: cheap/affordable must honor the parser's $25 cap,
+      // not depend on the page's separate <= $12 deal/budget badge keywords.
+      const prices = [0, 10, 15, 20, 25, 29, 30, 31, 40]
+      const results = prices.filter(price =>
+        matchesSearchText(query, `${text} $${price}`, mobile) &&
+        (criteria.priceMin === undefined || price >= criteria.priceMin) &&
+        (criteria.priceMax === undefined || price <= criteria.priceMax),
+      )
+      expect(results).toEqual(prices.filter(price =>
+        (max === undefined || price <= max) && (min === undefined || price >= min),
+      ))
+      expect(matchesSearchText(`${query} charity`, text, mobile)).toBe(false)
+    }
+  })
+
+  it("preserves mobile date handling and unrelated literal words with price phrases", () => {
+    expect(matchesSearchText("tomorrow covered cheap charity", "covered charity $20", true)).toBe(true)
+    expect(matchesSearchText("tomorrow covered cheap charity", "covered charity $20", false)).toBe(false)
+    expect(matchesSearchText("covered under", "covered $10")).toBe(false)
+    expect(parse("covered under cheap", []).priceMax).toBe(25)
+  })
+
+  it("wires tested literal matching and numeric price bounds into the search page", () => {
+    const page = readFileSync(new URL("../pages/search.tsx", import.meta.url), "utf8")
+    expect(page).toContain("matchesSearchText(query, searchableText, isMobile)")
+    expect(page).toContain("if (priceMin !== undefined && spot.price < priceMin) return false")
+    expect(page).toContain("if (priceMax !== undefined && spot.price > priceMax) return false")
   })
 })
 

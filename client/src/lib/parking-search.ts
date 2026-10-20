@@ -28,6 +28,32 @@ export function withoutDateKeywords(query: string): string {
   return query.replace(/\b(today|tomorrow|this\s+week)\b/gi, " ").replace(/\s+/g, " ").trim()
 }
 
+// Keep price criteria and literal text consumption together: a price expression
+// must not also require a spot's description to contain words such as "under".
+function parsePriceQuery(query: string): Pick<ParsedSearch, "priceMin" | "priceMax"> & { literalQuery: string } {
+  const range = query.match(/\$?\b(\d+)\s*(?:\bto\b|-)\s*\$?(\d+)\b/i)
+  const under = query.match(/\b(?:under|less\s+than|below)\s*\$?(\d+)\b/i)
+  const over = query.match(/\b(?:over|more\s+than|above)\s*\$?(\d+)\b/i)
+  const cheap = query.match(/\b(?:cheap|affordable)\b/i)
+  const premium = query.match(/\b(?:expensive|premium)\b/i)
+  const match = range || under || over || cheap || premium
+  const price: Pick<ParsedSearch, "priceMin" | "priceMax"> = {}
+  if (range) {
+    price.priceMin = Number(range[1])
+    price.priceMax = Number(range[2])
+  } else if (under) price.priceMax = Number(under[1])
+  else if (over) price.priceMin = Number(over[1])
+  else if (cheap) price.priceMax = 25
+  else if (premium) price.priceMin = 30
+  return { ...price, literalQuery: match ? query.replace(match[0], " ").trim() : query }
+}
+
+export function matchesSearchText(query: string, searchableText: string, mobile = false): boolean {
+  const { literalQuery } = parsePriceQuery(mobile ? withoutDateKeywords(query) : query)
+  const text = searchableText.toLowerCase()
+  return literalQuery.toLowerCase().split(/\s+/).filter(Boolean).every(term => text.includes(term))
+}
+
 export function parseSearchInput(
   input: SearchInput,
   mobile = false,
@@ -66,21 +92,11 @@ export function parseSearchInput(
   else if (terms.some(t => ["reserved", "executive"].includes(t))) parsed.spotType = "reserved"
   else if (terms.some(t => ["regular", "normal"].includes(t))) parsed.spotType = "regular"
 
-  if (terms.some(t => ["inside", "indoor", "covered"].includes(t))) parsed.isInside = true
+  if (terms.some(t => ["inside", "indoor", "covered", "underground"].includes(t))) parsed.isInside = true
   else if (terms.some(t => ["outside", "outdoor", "open"].includes(t))) parsed.isInside = false
 
-  const rangeMatch = searchQuery.match(/\$?(\d+)\s*(?:to|-)\s*\$?(\d+)/)
-  if (rangeMatch) {
-    parsed.priceMin = parseInt(rangeMatch[1])
-    parsed.priceMax = parseInt(rangeMatch[2])
-  } else if (searchQuery.includes("under") || searchQuery.includes("less than") || searchQuery.includes("below")) {
-    const match = searchQuery.match(/(?:under|less than|below)\s*\$?(\d+)/)
-    if (match) parsed.priceMax = parseInt(match[1])
-  } else if (searchQuery.includes("over") || searchQuery.includes("more than") || searchQuery.includes("above")) {
-    const match = searchQuery.match(/(?:over|more than|above)\s*\$?(\d+)/)
-    if (match) parsed.priceMin = parseInt(match[1])
-  } else if (terms.some(t => ["cheap", "affordable"].includes(t))) parsed.priceMax = 25
-  else if (terms.some(t => ["expensive", "premium"].includes(t))) parsed.priceMin = 30
+  const { literalQuery: _literalQuery, ...price } = parsePriceQuery(searchQuery)
+  Object.assign(parsed, price)
 
   if (terms.includes("today")) setDate("today")
   else if (terms.includes("tomorrow")) setDate("tomorrow")

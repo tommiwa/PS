@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { queryClient } from "@/lib/queryClient"
 import { EnhancedSearch } from "@/components/enhanced-search"
-import { emptySearchHeading, isSearchTileAvailable, matchesSearchDate, withoutDateKeywords } from "@/lib/parking-search"
+import { emptySearchHeading, isSearchTileAvailable, matchesSearchDate, matchesSearchText } from "@/lib/parking-search"
 import { useParkingSearch } from "@/hooks/use-parking-search"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { getTodayInTimezoneSync, getTomorrowInTimezoneSync } from "@/lib/timezone"
@@ -613,9 +613,6 @@ export default function Search() {
     
     // Full text search across all relevant fields shown in UI
     if (query && query.trim()) {
-      // Mobile date keywords are already applied as date constraints, not literal spot text.
-      const queryLower = (isMobile ? withoutDateKeywords(query) : query).toLowerCase().trim()
-      
       // Format dates for search (e.g., "January 29 Jan 2026")
       const formatDateForSearch = (dateStr: string): string => {
         if (!dateStr || typeof dateStr !== 'string') return ''
@@ -709,18 +706,9 @@ export default function Search() {
         dateSearchStrings,
       ].filter(Boolean).join(' ').toLowerCase()
       
-      // Split query into individual search terms
-      const searchTerms = queryLower.split(/\s+/).filter(term => term.length > 0)
-      
-      // Full text search: match if ALL search terms are found somewhere in the searchable text
-      // This allows searches like "victoria electric" or "john monday" to match
-      const allTermsMatch = searchTerms.every(term => 
-        searchableText.includes(term) ||
-        // Also check for partial matches at word boundaries
-        searchableText.split(/\s+/).some(word => word.startsWith(term) || word.includes(term))
-      )
-      
-      if (!allTermsMatch) {
+      // Parsed price phrases (and mobile date keywords) are constraints, not
+      // literal spot text. All remaining terms must still match.
+      if (!matchesSearchText(query, searchableText, isMobile)) {
         return false
       }
     }
