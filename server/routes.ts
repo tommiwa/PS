@@ -2394,11 +2394,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get single booking by ID
   app.get("/api/bookings/:id", isAuthenticated, async (req, res) => {
     try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
       const { id } = req.params;
       const booking = await storage.getBooking(id);
       
       if (!booking) {
         return res.status(404).json({ error: "Booking not found" });
+      }
+
+      if (booking.renterId !== userId && booking.ownerId !== userId &&
+          await getAuthenticatedUserBaseRole(req) !== "admin") {
+        return res.status(403).json({ error: "Not authorized to access this booking" });
       }
       
       res.json(booking);
@@ -11481,7 +11491,7 @@ The BCI ParkShare Team`;
         return res.status(401).json({ error: "User not authenticated" });
       }
       
-      const updatedNotification = await storage.markNotificationAsRead(id);
+      const updatedNotification = await storage.markNotificationAsRead(id, userId);
       if (!updatedNotification) {
         return res.status(404).json({ error: "Notification not found" });
       }
@@ -11538,7 +11548,10 @@ The BCI ParkShare Team`;
         return res.status(401).json({ error: "User not authenticated" });
       }
       
-      await storage.deleteInAppNotification(id);
+      const deleted = await storage.deleteInAppNotification(id, userId);
+      if (!deleted) {
+        return res.status(404).json({ error: "Notification not found" });
+      }
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting notification:", error);

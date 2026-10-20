@@ -245,9 +245,9 @@ export interface IStorage {
   // In-App Notifications operations
   createInAppNotification(notification: InsertInAppNotification): Promise<InAppNotification>;
   getInAppNotifications(userId: string, includeRead?: boolean): Promise<InAppNotification[]>;
-  markNotificationAsRead(notificationId: string): Promise<InAppNotification>;
+  markNotificationAsRead(notificationId: string, userId: string): Promise<InAppNotification | undefined>;
   markAllNotificationsAsRead(userId: string): Promise<void>;
-  deleteInAppNotification(notificationId: string): Promise<void>;
+  deleteInAppNotification(notificationId: string, userId: string): Promise<boolean>;
   deleteAllUserNotifications(userId: string): Promise<void>;
   getUnreadNotificationCount(userId: string): Promise<number>;
   
@@ -3152,15 +3152,13 @@ export class MemStorage implements IStorage {
     return notifications;
   }
 
-  async markNotificationAsRead(notificationId: string): Promise<InAppNotification> {
-    const existing = await db.select().from(inAppNotifications).where(eq(inAppNotifications.id, notificationId)).limit(1);
-    if (existing.length === 0) {
-      throw new Error(`Notification ${notificationId} not found`);
-    }
-    
+  async markNotificationAsRead(notificationId: string, userId: string): Promise<InAppNotification | undefined> {
     const [updated] = await db.update(inAppNotifications)
       .set({ read: true })
-      .where(eq(inAppNotifications.id, notificationId))
+      .where(and(
+        eq(inAppNotifications.id, notificationId),
+        eq(inAppNotifications.userId, userId)
+      ))
       .returning();
     
     return updated;
@@ -3175,8 +3173,14 @@ export class MemStorage implements IStorage {
       ));
   }
 
-  async deleteInAppNotification(notificationId: string): Promise<void> {
-    await db.delete(inAppNotifications).where(eq(inAppNotifications.id, notificationId));
+  async deleteInAppNotification(notificationId: string, userId: string): Promise<boolean> {
+    const deleted = await db.delete(inAppNotifications)
+      .where(and(
+        eq(inAppNotifications.id, notificationId),
+        eq(inAppNotifications.userId, userId)
+      ))
+      .returning({ id: inAppNotifications.id });
+    return deleted.length > 0;
   }
 
   async deleteAllUserNotifications(userId: string): Promise<void> {
