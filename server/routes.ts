@@ -1,4 +1,4 @@
-import type { Express, Request, Response } from "express";
+import type { Express, Request, Response, RequestHandler } from "express";
 import { createServer, type Server } from "http";
 import { randomUUID } from "crypto";
 import { storage, PeriodRemovalError, type PeriodDayRemovalResult } from "./storage";
@@ -347,6 +347,16 @@ async function seedTermsIfMissing(): Promise<void> {
   }
 }
 
+// Privilege-changing routes require a Passport session even in development.
+// Reject demo headers before isAuthenticated/requireAdmin can trust their claims.
+const requireVerifiedSession: RequestHandler = (req, res, next) => {
+  if (req.headers['x-demo-auth'] !== undefined ||
+      !req.isAuthenticated?.() || !getAuthenticatedUserId(req)) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  return isAuthenticated(req, res, next);
+};
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Seed default terms and conditions if none exist
   await seedTermsIfMissing();
@@ -428,8 +438,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Quick fix endpoint to promote current user to admin
-  app.post('/api/auth/promote-to-admin', isAuthenticated, async (req: any, res) => {
+  // Admin-only role mutation; signed-in users must never grant themselves admin.
+  app.post('/api/auth/promote-to-admin', requireVerifiedSession, requireAdmin, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -11268,7 +11278,7 @@ The BCI ParkShare Team`;
   });
 
   // Assign waiting list user to a spot (admin) - WITH NOTIFICATIONS
-  app.post("/api/waiting-list/:id/assign", async (req, res) => {
+  app.post("/api/waiting-list/:id/assign", requireVerifiedSession, requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
       const { spotId, spotDetails } = req.body;

@@ -7,4 +7,8 @@ description: How to hit admin-only API endpoints from the shell during developme
 
 **Why:** the app's real login is Replit OIDC ("Sign In with Replit"), which the Screenshot tool cannot complete — any `appPreview` screenshot of an admin-only route just shows the sign-in card. There is no dev-login page or stored Playwright auth state in this project (`playwright.config.ts` is API/DB-level only, no browser).
 
-**How to apply:** to verify a new or changed admin API endpoint works end-to-end against real dev data, use `curl` with the `x-demo-auth` header instead of trying to screenshot the page. For UI verification, rely on code review plus vitest unit/controller tests (mock `./storage`) rather than a live screenshot.
+Privilege-changing actions must require a server-verified session even in development; do not rely on demo headers as evidence of authorization.
+
+**Why:** demo headers are client-controlled, so trusting them for persistent role changes or administrative assignments permits unauthenticated privilege escalation on exposed development instances.
+
+**How to apply:** do not assume demo authentication is allowed on every admin endpoint. Verify privilege-changing routes using real authorization middleware in HTTP tests with mocked storage, including forged demo-header cases. For endpoints that intentionally retain demo support, curl can use the header. Do not add an authentication bypass to verify signed-in UI.
