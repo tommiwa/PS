@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 import type { Server } from 'http';
@@ -189,6 +189,7 @@ vi.mock('./report-service', () => ({
 }));
 
 vi.mock('./timezone', () => ({
+  getConfiguredTimezone: vi.fn(async () => 'America/Vancouver'),
   getTodayInTimezone: vi.fn(() => '2026-04-30'),
   formatDateInTimezone: vi.fn((d: string) => d),
   isDateInPast: vi.fn(() => false),
@@ -206,6 +207,9 @@ import {
   sendBookingCancellationNotification,
 } from './notification-service';
 import { advanceOwnerRentalMilestone } from './milestone-checker';
+import { storage } from './storage';
+import { auditService } from './audit-service';
+import { getConfiguredTimezone } from './timezone';
 
 // ---------------------------------------------------------------------------
 // Test helpers
@@ -488,6 +492,101 @@ describe('Booking email notifications', () => {
   //   - Must NOT call sendBookingConfirmationNotification
   // -------------------------------------------------------------------------
   describe('POST /api/bookings/:id/cancel — renter cancellation email', () => {
+    afterEach(() => {
+      vi.useRealTimers();
+      vi.mocked(storage.getAppConfigValue).mockReset().mockResolvedValue(null);
+      vi.mocked(getConfiguredTimezone).mockReset().mockResolvedValue('America/Vancouver');
+    });
+
+    // Freeze Date only: setImmediate notifications and HTTP must still run.
+    function setupCancellation(now: string, windowHours: string = '12') {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(now));
+      mockAuthUserId.current = 'renter-1';
+      mockBookingStore.current = makeBooking({ bookingDate: '2026-05-13' });
+      mockUserStore.current = {
+        'renter-1': makeUser('renter-1'),
+        'owner-1': makeUser('owner-1'),
+      };
+      vi.mocked(storage.getAppConfigValue).mockResolvedValue(windowHours);
+      vi.mocked(storage.cancelBookingWithReason).mockClear();
+      vi.mocked(storage.updateSpotListingStatus).mockClear();
+      vi.mocked(auditService.logAction).mockClear();
+    }
+
+    it.each([
+      ['reported 10:13 BC scenario', '2026-05-12T17:13:00Z', '12', 200],
+      ['just before cutoff', '2026-05-12T18:59:59.999Z', '12', 200],
+      ['exactly at cutoff', '2026-05-12T19:00:00Z', '12', 200],
+      ['just after cutoff', '2026-05-12T19:00:00.001Z', '12', 400],
+      ['24-hour exact cutoff', '2026-05-12T07:00:00Z', '24', 200],
+      ['24-hour late cancellation', '2026-05-12T07:00:00.001Z', '24', 400],
+    ])('%s', async (_label, now, windowHours, status) => {
+      setupCancellation(now, windowHours);
+      const res = await request(app).post('/api/bookings/booking-1/cancel').send({});
+      expect(res.status).toBe(status);
+      if (status === 200) {
+        expect(res.body).toMatchObject({ status: 'cancelled', bookingDate: '2026-05-13' });
+        expect(storage.cancelBookingWithReason).toHaveBeenCalledWith('booking-1', 'Cancelled by renter');
+        expect(storage.updateSpotListingStatus).toHaveBeenCalledWith('listing-1', 'available');
+        expect(auditService.logAction).toHaveBeenCalledWith('CANCEL', 'booking', expect.anything());
+        await vi.waitFor(() => expect(sendBookingCancellationNotification).toHaveBeenCalledTimes(1));
+      } else {
+        expect(res.body.error).toContain(`${windowHours} hours`);
+        expect(storage.cancelBookingWithReason).not.toHaveBeenCalled();
+        expect(storage.updateSpotListingStatus).not.toHaveBeenCalled();
+        expect(auditService.logAction).not.toHaveBeenCalled();
+        expect(sendBookingCancellationNotification).not.toHaveBeenCalled();
+      }
+    });
+
+    it('uses the configured zone rather than a hardcoded Pacific zone', async () => {
+      setupCancellation('2026-05-12T17:13:00Z');
+      vi.mocked(getConfiguredTimezone).mockResolvedValue('Asia/Tokyo');
+      const res = await request(app).post('/api/bookings/booking-1/cancel').send({});
+      expect(res.status).toBe(400);
+      expect(storage.cancelBookingWithReason).not.toHaveBeenCalled();
+    });
+
+    it('retains the default 24-hour window when the setting is absent', async () => {
+      setupCancellation('2026-05-12T17:13:00Z');
+      vi.mocked(storage.getAppConfigValue).mockResolvedValue(null);
+      const res = await request(app).post('/api/bookings/booking-1/cancel').send({});
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('24 hours');
+      expect(storage.cancelBookingWithReason).not.toHaveBeenCalled();
+    });
+
+    it('still cancels a paid peer-to-peer booking without changing payment settlement', async () => {
+      setupCancellation('2026-05-12T17:13:00Z');
+      mockBookingStore.current.paymentStatus = 'paid';
+      vi.mocked(storage.updatePaymentStatus).mockClear();
+      const res = await request(app).post('/api/bookings/booking-1/cancel').send({});
+      expect(res.status).toBe(200);
+      expect(res.body.paymentStatus).toBe('paid');
+      expect(storage.updatePaymentStatus).not.toHaveBeenCalled();
+      expect(storage.updateSpotListingStatus).toHaveBeenCalledWith('listing-1', 'available');
+      await vi.waitFor(() => expect(sendBookingCancellationNotification).toHaveBeenCalledTimes(1));
+    });
+
+    it.each([
+      ['another renter', 403],
+      ['already cancelled', 400],
+      ['missing booking', 404],
+      ['unauthenticated', 401],
+    ])('rejects %s without cancellation side effects', async (scenario, status) => {
+      setupCancellation('2026-05-12T17:13:00Z');
+      if (scenario === 'another renter') mockAuthUserId.current = 'other-renter';
+      if (scenario === 'already cancelled') mockBookingStore.current.status = 'cancelled';
+      if (scenario === 'missing booking') mockBookingStore.current = null;
+      if (scenario === 'unauthenticated') mockAuthUserId.current = '';
+      const res = await request(app).post('/api/bookings/booking-1/cancel').send({});
+      expect(res.status).toBe(status);
+      expect(storage.cancelBookingWithReason).not.toHaveBeenCalled();
+      expect(storage.updateSpotListingStatus).not.toHaveBeenCalled();
+      expect(sendBookingCancellationNotification).not.toHaveBeenCalled();
+    });
+
     it('calls sendBookingCancellationNotification (not confirmation) when renter cancels a booking', async () => {
       mockAuthUserId.current = 'renter-1';
       // Booking date far in future to pass the 24-hour cancellation window check

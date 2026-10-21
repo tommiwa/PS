@@ -83,7 +83,8 @@ import {
   getOwnerRankings
 } from "./reports-controller";
 import { sendReportEmail, isEmailServiceAvailable } from "./report-service";
-import { getTodayInTimezone, formatDateInTimezone, isDateInPast, isDateTodayOrFuture } from "./timezone";
+import { getTodayInTimezone, formatDateInTimezone, isDateInPast, isDateTodayOrFuture, getConfiguredTimezone } from "./timezone";
+import { canCancelBooking } from "../shared/booking-cancellation";
 import { isWorkplaceServicesListing, resolveAdminListingAttribution } from "./booking-classification";
 import { logServerError, respondWithServerError, withReference } from "./error-reporting";
 import { advanceOwnerRentalMilestone, deliverOwnerRentalMilestone, advanceRenterBookingMilestone, deliverRenterBookingMilestone, checkSpendMilestones } from "./milestone-checker";
@@ -6941,11 +6942,8 @@ The BCI ParkShare Team`;
       const cancellationWindowConfig = await storage.getAppConfigValue('cancellation_window_hours');
       const cancellationWindowHours = cancellationWindowConfig ? Number(cancellationWindowConfig) : 24;
 
-      const bookingDate = new Date(booking.bookingDate + 'T00:00:00');
-      const now = new Date();
-      const hoursUntilBooking = (bookingDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-      
-      if (hoursUntilBooking < cancellationWindowHours) {
+      const timezone = await getConfiguredTimezone();
+      if (!canCancelBooking(booking.bookingDate, timezone, cancellationWindowHours)) {
         return res.status(400).json({ 
           error: `Cancellations must be made at least ${cancellationWindowHours} hours before the booking date. Please contact support if you need assistance.` 
         });

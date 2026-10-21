@@ -21,6 +21,8 @@ import { useConfirm, confirmations } from "@/hooks/use-confirm"
 import { useToast } from "@/hooks/use-toast"
 import { quickExportBookingsPDF, quickExportBookingsExcel, generateParkingReceiptPDF } from "@/utils/export-utils"
 import { getErrorMessage } from "@/lib/error-utils"
+import { useConfiguredTimezone } from "@/hooks/use-configured-timezone"
+import { canCancelBooking } from "@shared/booking-cancellation"
 
 // Helper function to calculate payroll deduction month
 // Uses date-fns for consistent handling with booking-form.tsx
@@ -53,6 +55,7 @@ interface MyBookingsProps {
 }
 
 export default function MyBookings({ viewMode }: MyBookingsProps) {
+  const timezone = useConfiguredTimezone()
   const { user, isOwner, getCurrentViewRole } = useAuth()
   // Use view role for admins, otherwise use actual role
   // If viewMode is explicitly set, use that to determine the view
@@ -298,10 +301,8 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
   const handleCancelBooking = async (bookingId: string) => {
     const booking = mockBookings.find(b => b.id === bookingId) as any
     
-    const bookingDate = new Date(booking?.bookingDate + 'T00:00:00')
-    const now = new Date()
-    const hoursUntilBooking = (bookingDate.getTime() - now.getTime()) / (1000 * 60 * 60)
-    const canCancel = hoursUntilBooking >= cancellationWindowHours
+    if (!booking) return
+    const canCancel = canCancelBooking(booking.bookingDate, timezone, cancellationWindowHours)
     
     // Check if payment was already sent for a peer-to-peer booking
     const paymentAlreadySent = booking?.paymentStatus === 'paid'
@@ -310,7 +311,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     
     let confirmed = false
     
-    if (needsPaymentSettlement) {
+    if (needsPaymentSettlement && canCancel) {
       // Show special warning for paid peer-to-peer bookings
       confirmed = await confirm({
         title: "Cancel Paid Booking?",
@@ -1184,10 +1185,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     const isCancelled = booking.status === "cancelled"
     const isActive = booking.status === "confirmed" && !isPastDate && !isCompleted
     
-    const bookingDate = new Date(booking.bookingDate + 'T00:00:00')
-    const now = new Date()
-    const hoursUntilBooking = (bookingDate.getTime() - now.getTime()) / (1000 * 60 * 60)
-    const canCancelWithin24Hours = hoursUntilBooking >= cancellationWindowHours
+    const meetsCancellationCutoff = canCancelBooking(booking.bookingDate, timezone, cancellationWindowHours)
     
     // Check if this is a payroll booking (BCI Workplace Services)
     const isPayroll = isPayrollBooking(booking)
@@ -1199,8 +1197,8 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     // - showReceipt: Only for completed bookings
     const canMarkPaid = !isPayroll && booking.status === "confirmed" && paymentStatus === 'pending' && !isCompleted && !isCancelled
     const canNotifyOwner = !isPayroll && booking.status === "confirmed" && paymentStatus === 'paid' && isPastDate && !isCompleted && !isCancelled
-    const canCancel = !isPastDate && canCancelWithin24Hours && !isCancelled
-    const withinCancellationWindow = !isPastDate && !canCancelWithin24Hours && !isCancelled
+    const canCancel = meetsCancellationCutoff && !isCancelled
+    const withinCancellationWindow = !isPastDate && !meetsCancellationCutoff && !isCancelled
 
     // Rate-limit: compute cooldown state for Notify Owner button
     const REMINDER_COOLDOWN_HOURS = 24;
@@ -1679,10 +1677,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     const isCompleted = booking.status === "completed" || (booking.status === "confirmed" && paymentStatus === 'received')
     const isCancelled = booking.status === "cancelled"
     
-    const bookingDate = new Date(booking.bookingDate + 'T00:00:00')
-    const now = new Date()
-    const hoursUntilBooking = (bookingDate.getTime() - now.getTime()) / (1000 * 60 * 60)
-    const canCancelWithin24Hours = hoursUntilBooking >= cancellationWindowHours
+    const meetsCancellationCutoff = canCancelBooking(booking.bookingDate, timezone, cancellationWindowHours)
     
     // Check if this is a payroll booking (BCI Workplace Services)
     const isPayroll = isPayrollBooking(booking)
@@ -1690,8 +1685,8 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     // Same action logic as card view - canCancel for any future non-cancelled booking within window
     const canMarkPaid = !isPayroll && booking.status === "confirmed" && paymentStatus === 'pending' && !isCompleted && !isCancelled
     const canNotifyOwner = !isPayroll && booking.status === "confirmed" && paymentStatus === 'paid' && isPastDate && !isCompleted && !isCancelled
-    const canCancel = !isPastDate && canCancelWithin24Hours && !isCancelled
-    const withinCancellationWindow = !isPastDate && !canCancelWithin24Hours && !isCancelled
+    const canCancel = meetsCancellationCutoff && !isCancelled
+    const withinCancellationWindow = !isPastDate && !meetsCancellationCutoff && !isCancelled
 
     // Rate-limit: compute cooldown state for Notify Owner button
     const REMINDER_COOLDOWN_HOURS_ROW = 24;
