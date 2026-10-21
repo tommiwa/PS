@@ -18,7 +18,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { MapPin, Filter, SortAsc, SortDesc, Calendar, Grid, Sparkles, Loader2, RefreshCw } from "lucide-react"
-import { isPastDate } from "@/utils/date-utils"
 import { apiRequest } from "@/lib/queryClient"
 import { type ParkingSpot as DBParkingSpot, type SpotTypeTable } from "@shared/schema"
 import { useToast } from "@/hooks/use-toast"
@@ -731,75 +730,9 @@ export default function Search() {
 
   // Date-specific filtering for tiles view
   const filteredSpots = baseFilteredSpots.filter(spot => {
-    if (isMobile) return matchesSearchDate(spot.availability?.date, searchCriteria)
-    const { date, dateRange } = searchCriteria
-    
-    // If no date or dateRange specified, show all base filtered spots
-    if (!date && !dateRange) return true
-    
-    // Handle dateRange filtering (e.g., "This Week" filter)
-    if (dateRange) {
-      const { start, end } = dateRange
-      if (spot.availabilityDates && spot.availabilityDates.length > 0) {
-        // Check if any availability date falls within the range
-        return spot.availabilityDates.some(d => {
-          return d >= start && d <= end && !isPastDate(d)
-        })
-      }
-      // Fallback: check old single date format
-      if (spot.availability?.date) {
-        const spotDate = spot.availability.date
-        return spotDate >= start && spotDate <= end && !isPastDate(spotDate)
-      }
-      return false
-    }
-    
-    // If no date specified but we handled dateRange above, show all
-    if (!date) return true
-    
-    // Don't show spots for past search dates
-    if (isPastDate(date)) {
-      return false;
-    }
-    
-    // Availability filtering with date constraints for tiles view
-    if (spot.isAvailable) {
-      // Check if spot has availabilityDates array (new format)
-      if (spot.availabilityDates && spot.availabilityDates.length > 0) {
-        // Check if search date is in the availability dates array
-        const isAvailableOnDate = spot.availabilityDates.includes(date)
-        return isAvailableOnDate
-      }
-      
-      // Fallback: check old single date format for backward compatibility
-      if (spot.availability?.date) {
-        const spotDate = new Date(spot.availability.date).toISOString().split('T')[0]
-        const searchDate = date
-        if (spotDate !== searchDate) {
-          return false
-        }
-        // Double-check the spot date is not in the past
-        if (isPastDate(spotDate)) {
-          return false;
-        }
-        return true
-      }
-      
-      // If no availability dates at all, don't show in tiles for date search
-      return false
-    } else {
-      // Spot is not generally available, only show if searching for its specific booking date
-      if (!spot.availability?.date) {
-        return false // Don't show unavailable spots unless they have a specific availability date
-      }
-      const spotDate = new Date(spot.availability.date).toISOString().split('T')[0]
-      const searchDate = date
-      // Don't show past bookings
-      if (isPastDate(spotDate)) {
-        return false;
-      }
-      return spotDate === searchDate
-    }
+    // Each tile represents one parking day, even if its parent listing spans
+    // many days. Never match against a different day from the parent.
+    return matchesSearchDate(spot.availability?.date, searchCriteria)
   })
 
   // Helper to check if a spot is booked on its specific date

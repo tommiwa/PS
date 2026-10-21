@@ -11,6 +11,7 @@
 - [Admin auth in dev testing](admin-dev-auth-header.md) — requireAdmin accepts an `x-demo-auth` header in non-production; use curl with it to verify new admin API endpoints since OIDC login blocks Screenshot-tool verification of admin pages.
 - [Reports-controller full-module mocks](reports-controller-mock-fanout.md) — several unrelated server test files `vi.mock('./reports-controller', () => ({...}))` with an explicit export list; adding a new export there requires updating every one of those mocks or route registration throws at import time.
 - [Search date-reference consistency](search-date-reference.md) — test early tile rejection and parsed date matching together when the phone's calendar is ahead of the parking timezone.
+- [Browser clock boundaries](browser-clock-boundaries.md) — installing a test clock does not freeze it; pause explicitly and record the browser instant with each boundary assertion.
 - [BC Pacific time policy](bc-time-policy.md) — preserve historical DST and stored booking days; runtime, browser, and database readiness require independent checks.
 - [Client timezone initialization](client-timezone-initialization.md) — wait for verified settings before date UI; refresh must retain the last known zone, not guess Pacific.
 - [Dependency compatibility constraints](dependency-compatibility.md) — keep Vite 6's esbuild family compatible; retain a verified braces depth guard until upstream ships a fix.

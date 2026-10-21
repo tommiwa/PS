@@ -12,7 +12,6 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip
 import { SpotListingForm } from "@/components/spot-listing-form"
 import { Calendar, Search, Download, Clock, CheckCircle, CheckCircle2, XCircle, Car, MapPin, DollarSign, AlertTriangle, Plus, Edit, Trash2, CreditCard, Info, Building, Ban, Eye, FileText, CalendarCheck, Receipt, LayoutGrid, List, User, Bell, X, ExternalLink, Heart, Map } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
-import { isPastDate } from "@/utils/date-utils"
 import { format, addMonths } from "date-fns"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { apiRequest, queryClient } from "@/lib/queryClient"
@@ -23,6 +22,7 @@ import { quickExportBookingsPDF, quickExportBookingsExcel, generateParkingReceip
 import { getErrorMessage } from "@/lib/error-utils"
 import { useConfiguredTimezone } from "@/hooks/use-configured-timezone"
 import { canCancelBooking } from "@shared/booking-cancellation"
+import { useCurrentTime, useParkingDay } from "@/hooks/use-parking-clock"
 
 // Helper function to calculate payroll deduction month
 // Uses date-fns for consistent handling with booking-form.tsx
@@ -56,6 +56,8 @@ interface MyBookingsProps {
 
 export default function MyBookings({ viewMode }: MyBookingsProps) {
   const timezone = useConfiguredTimezone()
+  const now = useCurrentTime()
+  const parkingDay = useParkingDay()
   const { user, isOwner, getCurrentViewRole } = useAuth()
   // Use view role for admins, otherwise use actual role
   // If viewMode is explicitly set, use that to determine the view
@@ -191,7 +193,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
 
   if (isOwnerView) {
     // For owners - categorize their listings mirroring renter tab behavior
-    const today = new Date().toISOString().split('T')[0]
+    const today = parkingDay
     
     const getListingDate = (l: any) => l.date || l.singleDate || ''
     
@@ -237,7 +239,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     unusedItems = []
   } else {
     // For renters - categorize their bookings by date and payment status
-    const today = new Date().toISOString().split('T')[0]
+    const today = parkingDay
     
     // UPCOMING Tab: All future/current bookings (regardless of payment status)
     // Even if payment confirmed (status=completed), stays here until date passes
@@ -302,7 +304,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     const booking = mockBookings.find(b => b.id === bookingId) as any
     
     if (!booking) return
-    const canCancel = canCancelBooking(booking.bookingDate, timezone, cancellationWindowHours)
+    const canCancel = canCancelBooking(booking.bookingDate, timezone, cancellationWindowHours, new Date())
     
     // Check if payment was already sent for a peer-to-peer booking
     const paymentAlreadySent = booking?.paymentStatus === 'paid'
@@ -824,7 +826,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
   // Unified Owner listing render function with proper action buttons based on status and payment
   const renderOwnerListing = (listing: any) => {
     const paymentStatus = listing.paymentStatus || null
-    const today = new Date().toISOString().split('T')[0]
+    const today = parkingDay
     const listingDate = listing.availableDate || listing.date
     const isPastDate = listingDate < today
     
@@ -1176,7 +1178,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
   const renderOwnerListingWithPayment = renderOwnerListing
 
   const renderRenterBooking = (booking: any) => {
-    const today = new Date().toISOString().split('T')[0]
+    const today = parkingDay
     const paymentStatus = booking.paymentStatus || 'pending'
     const isPastDate = booking.bookingDate < today
     
@@ -1185,7 +1187,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     const isCancelled = booking.status === "cancelled"
     const isActive = booking.status === "confirmed" && !isPastDate && !isCompleted
     
-    const meetsCancellationCutoff = canCancelBooking(booking.bookingDate, timezone, cancellationWindowHours)
+    const meetsCancellationCutoff = canCancelBooking(booking.bookingDate, timezone, cancellationWindowHours, new Date(now))
     
     // Check if this is a payroll booking (BCI Workplace Services)
     const isPayroll = isPayrollBooking(booking)
@@ -1197,8 +1199,8 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     // - showReceipt: Only for completed bookings
     const canMarkPaid = !isPayroll && booking.status === "confirmed" && paymentStatus === 'pending' && !isCompleted && !isCancelled
     const canNotifyOwner = !isPayroll && booking.status === "confirmed" && paymentStatus === 'paid' && isPastDate && !isCompleted && !isCancelled
-    const canCancel = meetsCancellationCutoff && !isCancelled
-    const withinCancellationWindow = !isPastDate && !meetsCancellationCutoff && !isCancelled
+    const canCancel = meetsCancellationCutoff && !isCancelled && !isCompleted
+    const withinCancellationWindow = !isPastDate && !meetsCancellationCutoff && !isCancelled && !isCompleted
 
     // Rate-limit: compute cooldown state for Notify Owner button
     const REMINDER_COOLDOWN_HOURS = 24;
@@ -1525,7 +1527,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
   // Compact row render for owner listings
   const renderOwnerListingCompact = (listing: any) => {
     const paymentStatus = listing.paymentStatus || null
-    const today = new Date().toISOString().split('T')[0]
+    const today = parkingDay
     const listingDate = listing.availableDate || listing.date
     const isPastDate = listingDate < today
     
@@ -1669,7 +1671,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
 
   // Compact row render for renter bookings
   const renderRenterBookingCompact = (booking: any) => {
-    const today = new Date().toISOString().split('T')[0]
+    const today = parkingDay
     const paymentStatus = booking.paymentStatus || 'pending'
     const isPastDate = booking.bookingDate < today
     
@@ -1677,7 +1679,7 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     const isCompleted = booking.status === "completed" || (booking.status === "confirmed" && paymentStatus === 'received')
     const isCancelled = booking.status === "cancelled"
     
-    const meetsCancellationCutoff = canCancelBooking(booking.bookingDate, timezone, cancellationWindowHours)
+    const meetsCancellationCutoff = canCancelBooking(booking.bookingDate, timezone, cancellationWindowHours, new Date(now))
     
     // Check if this is a payroll booking (BCI Workplace Services)
     const isPayroll = isPayrollBooking(booking)
@@ -1685,8 +1687,8 @@ export default function MyBookings({ viewMode }: MyBookingsProps) {
     // Same action logic as card view - canCancel for any future non-cancelled booking within window
     const canMarkPaid = !isPayroll && booking.status === "confirmed" && paymentStatus === 'pending' && !isCompleted && !isCancelled
     const canNotifyOwner = !isPayroll && booking.status === "confirmed" && paymentStatus === 'paid' && isPastDate && !isCompleted && !isCancelled
-    const canCancel = meetsCancellationCutoff && !isCancelled
-    const withinCancellationWindow = !isPastDate && !meetsCancellationCutoff && !isCancelled
+    const canCancel = meetsCancellationCutoff && !isCancelled && !isCompleted
+    const withinCancellationWindow = !isPastDate && !meetsCancellationCutoff && !isCancelled && !isCompleted
 
     // Rate-limit: compute cooldown state for Notify Owner button
     const REMINDER_COOLDOWN_HOURS_ROW = 24;

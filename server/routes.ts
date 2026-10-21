@@ -6939,6 +6939,10 @@ The BCI ParkShare Team`;
         return res.status(400).json({ error: "Booking is already cancelled" });
       }
 
+      if (booking.status === 'completed' || booking.paymentStatus === 'received') {
+        return res.status(400).json({ error: "Completed bookings cannot be cancelled" });
+      }
+
       const cancellationWindowConfig = await storage.getAppConfigValue('cancellation_window_hours');
       const cancellationWindowHours = cancellationWindowConfig ? Number(cancellationWindowConfig) : 24;
 

@@ -137,5 +137,5 @@ it("gates protected UI and subscribes memoized search to timezone updates", () =
   expect(gate).toContain("refetchInterval: TIMEZONE_REFRESH_MS");
   const hook = readFileSync(new URL("../hooks/use-parking-search.ts", import.meta.url), "utf8");
   expect(hook).toContain("useConfiguredTimezone()");
-  expect(hook).toContain("[applied, weekStartDay, timezone]");
+  expect(hook).toContain("[applied, weekStartDay, timezone, parkingDay]");
 });

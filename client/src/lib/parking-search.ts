@@ -1,5 +1,4 @@
 import { getTodayInTimezoneSync, getTomorrowInTimezoneSync, getEndOfWeekInTimezoneSync } from "./timezone"
-import { isPastDate } from "../utils/date-utils"
 
 export interface SearchInput {
   query: string
@@ -169,9 +168,9 @@ export function isSearchTileAvailable(spot: {
   if (!spot.isAvailable || spot.isBookable === false) return false
   const date = spot.availability?.date
   if (!date) return true
-  // The base filter must use the same calendar day as the date parser on mobile.
+  // The base filter must use the same calendar day as the date parser.
   // Otherwise a phone whose date is ahead of the parking zone drops Today first.
-  return mobile ? date >= getTodayInTimezoneSync() : !isPastDate(date)
+  return date >= getTodayInTimezoneSync()
 }
 
 export function createSearchDebouncer<T>(apply: (input: T) => void) {

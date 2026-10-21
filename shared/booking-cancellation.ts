@@ -9,6 +9,12 @@ export function getBookingCancellationDeadline(
   timezone: string,
   windowHours: number,
 ): number {
+  // Reject malformed/normalized calendar dates and invalid configuration rather
+  // than letting a negative window allow cancellations after a booking starts.
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(bookingDate) ||
+      !Number.isFinite(windowHours) || windowHours < 0) return NaN;
+  const day = new Date(`${bookingDate}T00:00:00Z`);
+  if (!Number.isFinite(day.getTime()) || day.toISOString().slice(0, 10) !== bookingDate) return NaN;
   const midnight = fromZonedTime(`${bookingDate}T00:00:00`, timezone);
   return midnight.getTime() - windowHours * 60 * 60 * 1000;
 }

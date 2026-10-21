@@ -261,7 +261,7 @@ describe("search-page base/date filtering pipeline", () => {
         .filter(spot => matchesSearchDate(spot.availability.date, criteria))
       expect(mobileResults.map(spot => spot.availability.date)).toEqual(["2026-10-20"])
       expect(expandedTiles.filter(spot => isSearchTileAvailable(spot, false)).map(spot => spot.availability.date))
-        .toEqual(["2026-10-21"])
+        .toEqual(["2026-10-20", "2026-10-21"])
     } finally {
       if (previousTZ === undefined) delete process.env.TZ
       else process.env.TZ = previousTZ
@@ -280,7 +280,7 @@ describe("search-page base/date filtering pipeline", () => {
     const baseFilter = page.slice(page.indexOf("const baseFilteredSpots ="), page.indexOf("const filteredSpots ="))
     expect(baseFilter).toContain("isSearchTileAvailable(spot, isMobile)")
     expect(baseFilter).not.toContain("isPastDate(")
-    expect(page).toContain("if (isMobile) return matchesSearchDate(spot.availability?.date, searchCriteria)")
+    expect(page).toContain("return matchesSearchDate(spot.availability?.date, searchCriteria)")
   })
 })
 
